@@ -20,7 +20,7 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/chukwa-config.sh
 
-echo "${pid}" > "$CHUKWA_HOME/var/run/buildDailyArchive.pid"
+echo "${pid}" > "$CHUKWA_PID_DIR/buildDailyArchive.pid"
 
 HADOOP_CONF_DIR="${HADOOP_HOME}/conf/"
 HADOOP_CMDE="${HADOOP_HOME}/bin/hadoop "

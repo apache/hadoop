@@ -24,8 +24,8 @@ if [ "$CHUKWA_IDENT_STRING" = "" ]; then
   export CHUKWA_IDENT_STRING="$USER"
 fi
 
-trap 'remove_cron;rm -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-processSinkFiles.sh.pid ${CHUKWA_HOME}/var/run/ProcessSinkFiles.pid; exit 0' 1 2 15
-echo "${pid}" > "$CHUKWA_HOME/var/run/ProcessSinkFiles.pid"
+trap 'remove_cron;rm -f $CHUKWA_PID_DIR/chukwa-$CHUKWA_IDENT_STRING-processSinkFiles.sh.pid ${CHUKWA_PID_DIR}/ProcessSinkFiles.pid; exit 0' 1 2 15
+echo "${pid}" > "$CHUKWA_PID_DIR/ProcessSinkFiles.pid"
 
 
 function remove_cron {
@@ -65,7 +65,7 @@ CRON
 
 if [ "X$1" = "Xstop" ]; then
   echo -n "Shutting down processSinkFiles.sh..."
-  kill -TERM `cat ${CHUKWA_HOME}/var/run/ProcessSinkFiles.pid`
+  kill -TERM `cat ${CHUKWA_PID_DIR}/ProcessSinkFiles.pid`
   echo "done"
   exit 0
 fi

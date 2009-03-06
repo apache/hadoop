@@ -793,6 +793,15 @@ fi
 mv %{buildroot}/%{name}-%{version} %{buildroot}%{_prefix}
 cd %{buildroot}%{_prefix}
 mkdir -p %{buildroot}/etc/init.d
+mkdir -p %{buildroot}/service/chukwa-agent
+mkdir -p %{buildroot}/service/chukwa-collector
+mkdir -p %{buildroot}/service/chukwa-df
+mkdir -p %{buildroot}/service/chukwa-iostat
+mkdir -p %{buildroot}/service/chukwa-netstat
+mkdir -p %{buildroot}/service/chukwa-pbsnodes
+mkdir -p %{buildroot}/service/chukwa-sar
+mkdir -p %{buildroot}/service/chukwa-top
+mkdir -p %{buildroot}/service/chukwa-torque
 cat %{buildroot}%{_prefix}/tools/init.d/chukwa-data-processors | \
 sed 's:- chukwa -c:- %{uid} -c:' | \
 sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
@@ -801,30 +810,33 @@ cat %{buildroot}%{_prefix}/tools/init.d/chukwa-collector | \
 sed 's:- chukwa -c:- %{uid} -c:' | \
 sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
 sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-collector
-cat %{buildroot}%{_prefix}/tools/init.d/chukwa-agent | \
-sed 's:- chukwa -c:- %{uid} -c:' | \
-sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
-sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-agent
-cat %{buildroot}%{_prefix}/tools/init.d/chukwa-system-metrics | \
-sed 's:- chukwa -c:- %{uid} -c:' | \
-sed 's:CHUKWA_HOME=/usr/local:CHUKWA_HOME=%{_prefix}:' | \
-sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/etc/init.d/chukwa-system-metrics
+cat %{buildroot}%{_prefix}/tools/service/chukwa-agent/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-agent/run
+cat %{buildroot}%{_prefix}/tools/service/chukwa-df/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-df/run
+cat %{buildroot}%{_prefix}/tools/service/chukwa-iostat/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-iostat/run
+cat %{buildroot}%{_prefix}/tools/service/chukwa-netstat/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-netstat/run
+cat %{buildroot}%{_prefix}/tools/service/chukwa-sar/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-sar/run
+cat %{buildroot}%{_prefix}/tools/service/chukwa-top/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-top/run
+#cat %{buildroot}%{_prefix}/tools/service/chukwa-collector/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+#sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-collector/run
+#cat %{buildroot}%{_prefix}/tools/service/chukwa-pbsnodes/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+#sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-pbsnodes/run
+#cat %{buildroot}%{_prefix}/tools/service/chukwa-torque/run | sed 's:/usr/local/chukwa:%{_prefix}:' | \
+#sed 's:CHUKWA_CONF_DIR=/usr/local/chukwa/conf:CHUKWA_CONF_DIR=%{_conf_dir}:' > %{buildroot}/service/chukwa-torque/run
+
 chmod a+x %{buildroot}/etc/init.d/chukwa-*
+chmod -R a+x %{buildroot}/service/chukwa-*
 rm -rf %{buildroot}%{_prefix}/src
 rm -rf %{buildroot}%{_prefix}/build.xml
 %post
 mkdir -p %{_prefix}
 echo "Congratulation!  You have successfully installed Chukwa."
-echo ""
-echo "To collect Data             : /etc/init.d/chukwa-system-metrics start"
-echo "To run Chukwa Agent         : /etc/init.d/chukwa-agent start"
-echo "To run Chukwa Collector     : /etc/init.d/chukwa-collector start"
-echo "To run Chukwa Data Processor: /etc/init.d/chukwa-data-processors start"
 %preun
-/etc/init.d/chukwa-data-processors stop
-/etc/init.d/chukwa-system-metrics stop
-/etc/init.d/chukwa-agent stop
-/etc/init.d/chukwa-collector stop
 echo
 %postun
 %files
@@ -834,8 +846,12 @@ echo
 %defattr(-,root,root)
 /etc/init.d/chukwa-data-processors
 /etc/init.d/chukwa-collector
-/etc/init.d/chukwa-agent
-/etc/init.d/chukwa-system-metrics
+/service/chukwa-agent/run
+/service/chukwa-df/run
+/service/chukwa-iostat/run
+/service/chukwa-netstat/run
+/service/chukwa-sar/run
+/service/chukwa-top/run
                 </echo>
 		<rpm specFile="chukwa.spec" topDir="${build.dir}" cleanBuildDir="true" failOnError="true"/>
         </target>

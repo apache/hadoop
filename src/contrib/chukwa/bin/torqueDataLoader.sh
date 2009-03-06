@@ -24,9 +24,9 @@ java=$JAVA_HOME/bin/java
 
 if [ "X$1" = "Xstop" ]; then
   echo -n "Shutting down Torque Data Loader..."
-  if [ -f ${CHUKWA_HOME}/var/run/TorqueDataLoader.pid ]; then
-    kill -TERM `cat ${CHUKWA_HOME}/var/run/TorqueDataLoader.pid`
-    rm -f ${CHUKWA_HOME}/var/run/TorqueDataLoader.pid
+  if [ -f ${CHUKWA_PID_DIR}/TorqueDataLoader.pid ]; then
+    kill -TERM `cat ${CHUKWA_PID_DIR}/TorqueDataLoader.pid`
+    rm -f ${CHUKWA_PID_DIR}/TorqueDataLoader.pid
   fi
   echo "done"
   exit 0
@@ -36,7 +36,7 @@ min=`date +%M`
 
 
 # start torque data loader
-pidFile=$CHUKWA_HOME/var/run/TorqueDataLoader.pid
+pidFile=$CHUKWA_PID_DIR/TorqueDataLoader.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
   ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep TorqueDataLoader | grep -v grep | wc -l`

@@ -23,7 +23,7 @@ bin=`cd "$bin"; pwd`
 
 EXP_DATE=`date +%Y-%m-%d`
 echo -n "SETUP Database partition..."
-echo "${pid}" > "$CHUKWA_HOME/var/run/dbSetup.pid"
+echo "${pid}" > "$CHUKWA_PID_DIR/dbSetup.pid"
 ${JAVA_HOME}/bin/java -DCLUSTER=$1 -DDATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.database.TableCreator ${EXP_DATE} 7 #>/dev/null 2>&1
 ${JAVA_HOME}/bin/java -DCLUSTER=$1 -DDATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.database.TableCreator ${EXP_DATE} 30 >/dev/null 2>&1
 ${JAVA_HOME}/bin/java -DCLUSTER=$1 -DDATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.database.TableCreator ${EXP_DATE} 91 >/dev/null 2>&1

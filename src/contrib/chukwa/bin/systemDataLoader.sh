@@ -24,35 +24,124 @@ JVM_OPTS="-Xms4M -Xmx4M"
 
 trap 'shutdown' 1 2 15
 
+function status {
+  EXISTS=0
+  RESULT=0
+  pidFile="${CHUKWA_PID_DIR}/Sar-data-loader.pid"
+  if [ -f $pidFile ]; then
+    pid=`head ${pidFile}`
+    ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+    if [ $ChildPIDRunningStatus -ge 1 ]; then
+      EXISTS=1
+    fi
+  fi
+
+  if [ ${EXISTS} -lt 1 ]; then
+    echo "sar data loader is stopped."
+    RESULT=1
+  else
+    echo "sar data loader is running."
+  fi
+
+  EXISTS=0
+  pidFile="${CHUKWA_PID_DIR}/Iostat-data-loader.pid"
+  if [ -f $pidFile ]; then
+    pid=`head ${pidFile}`
+    ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+    if [ $ChildPIDRunningStatus -ge 1 ]; then
+      EXISTS=1
+    fi
+  fi
+
+  if [ ${EXISTS} -lt 1 ]; then
+    echo "iostat data loader is stopped."
+    RESULT=1
+  else
+    echo "iostat data loader is running."
+  fi
+
+  EXISTS=0
+  pidFile="${CHUKWA_PID_DIR}/Top-data-loader.pid"
+  if [ -f $pidFile ]; then
+    pid=`head ${pidFile}`
+    ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+    if [ $ChildPIDRunningStatus -ge 1 ]; then
+      EXISTS=1
+    fi
+  fi
+
+  if [ ${EXISTS} -lt 1 ]; then
+    echo "top data loader is stopped."
+    RESULT=1
+  else
+    echo "top data loader is running."
+  fi
+
+  EXISTS=0
+  pidFile="${CHUKWA_PID_DIR}/Df-data-loader.pid"
+  if [ -f $pidFile ]; then
+    pid=`head ${pidFile}`
+    ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+    if [ $ChildPIDRunningStatus -ge 1 ]; then
+      EXISTS=1
+    fi
+  fi
+
+  if [ ${EXISTS} -lt 1 ]; then
+    echo "df data loader is stopped."
+    RESULT=1
+  else
+    echo "df data loader is running."
+  fi
+
+  EXISTS=0
+  pidFile="${CHUKWA_PID_DIR}/Netstat-data-loader.pid"
+  if [ -f $pidFile ]; then
+    pid=`head ${pidFile}`
+    ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
+    if [ $ChildPIDRunningStatus -ge 1 ]; then
+      EXISTS=1
+    fi
+  fi
+
+  if [ ${EXISTS} -lt 1 ]; then
+    echo "netstat data loader is stopped."
+    RESULT=1
+  else
+    echo "netstat data loader is running."
+  fi
+
+  exit $RESULT
+}
+
 function shutdown {
   echo -n "Shutting down System Data Loader..."
-  if [ -f ${CHUKWA_HOME}/var/run/Sar-data-loader.pid ]; then
-    kill -9 `cat ${CHUKWA_HOME}/var/run/Sar-data-loader.pid`
+  if [ -f ${CHUKWA_PID_DIR}/Sar-data-loader.pid ]; then
+    kill -9 `cat ${CHUKWA_PID_DIR}/Sar-data-loader.pid`
   fi
-  if [ -f ${CHUKWA_HOME}/var/run/Iostat-data-loader.pid ]; then
-    kill -9 `cat ${CHUKWA_HOME}/var/run/Iostat-data-loader.pid`
+  if [ -f ${CHUKWA_PID_DIR}/Iostat-data-loader.pid ]; then
+    kill -9 `cat ${CHUKWA_PID_DIR}/Iostat-data-loader.pid`
   fi
-  if [ -f ${CHUKWA_HOME}/var/run/Top-data-loader.pid ]; then
-    kill -9 `cat ${CHUKWA_HOME}/var/run/Top-data-loader.pid`
+  if [ -f ${CHUKWA_PID_DIR}/Top-data-loader.pid ]; then
+    kill -9 `cat ${CHUKWA_PID_DIR}/Top-data-loader.pid`
   fi
-  if [ -f ${CHUKWA_HOME}/var/run/Df-data-loader.pid ]; then
-    kill -9 `cat ${CHUKWA_HOME}/var/run/Df-data-loader.pid`
+  if [ -f ${CHUKWA_PID_DIR}/Df-data-loader.pid ]; then
+    kill -9 `cat ${CHUKWA_PID_DIR}/Df-data-loader.pid`
   fi
-  if [ -f ${CHUKWA_HOME}/var/run/Netstat-data-loader.pid ]; then
-    kill -9 `cat ${CHUKWA_HOME}/var/run/Netstat-data-loader.pid`
+  if [ -f ${CHUKWA_PID_DIR}/Netstat-data-loader.pid ]; then
+    kill -9 `cat ${CHUKWA_PID_DIR}/Netstat-data-loader.pid`
   fi
-  rm -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-systemDataLoader.sh.pid
+  rm -f $CHUKWA_PID_DIR/chukwa-$CHUKWA_IDENT_STRING-systemDataLoader.sh.pid
   echo "done"
   exit 0
 }
 
+if [ "X$1" = "Xstatus" ]; then
+  status
+fi
+
 if [ "X$1" = "Xstop" ]; then
-  echo -n "Shutting down System Data Loader..."
-  if [ -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-systemDataLoader.sh.pid ]; then
-    kill -TERM `head $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-systemDataLoader.sh.pid`
-  fi
-  echo "done"
-  exit 0
+  shutdown
 fi
 
 echo -n "Starting System Data Loader..."
@@ -69,7 +158,7 @@ fi
 #fi
 
 EXISTS=0
-pidFile="${CHUKWA_HOME}/var/run/Sar-data-loader.pid"
+pidFile="${CHUKWA_PID_DIR}/Sar-data-loader.pid"
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
   ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
@@ -83,7 +172,7 @@ if [ ${EXISTS} -lt 1 ]; then
 fi
 
 EXISTS=0
-pidFile="${CHUKWA_HOME}/var/run/Iostat-data-loader.pid"
+pidFile="${CHUKWA_PID_DIR}/Iostat-data-loader.pid"
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
   ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
@@ -97,7 +186,7 @@ if [ ${EXISTS} -lt 1 ]; then
 fi
 
 EXISTS=0
-pidFile="${CHUKWA_HOME}/var/run/Top-data-loader.pid"
+pidFile="${CHUKWA_PID_DIR}/Top-data-loader.pid"
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
   ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
@@ -111,7 +200,7 @@ if [ ${EXISTS} -lt 1 ]; then
 fi
 
 EXISTS=0
-pidFile="${CHUKWA_HOME}/var/run/Df-data-loader.pid"
+pidFile="${CHUKWA_PID_DIR}/Df-data-loader.pid"
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
   ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
@@ -125,7 +214,7 @@ if [ ${EXISTS} -lt 1 ]; then
 fi
 
 EXISTS=0
-pidFile="${CHUKWA_HOME}/var/run/Netstat-data-loader.pid"
+pidFile="${CHUKWA_PID_DIR}/Netstat-data-loader.pid"
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
   ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`
@@ -140,8 +229,3 @@ fi
 
 echo "done"
 
-while [ 1 ]
-do
-    # sleep until shutdown signal has been sent.
-    sleep 5
-done

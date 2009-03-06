@@ -21,5 +21,5 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/chukwa-config.sh
 
-echo "${pid}" > "$CHUKWA_HOME/var/run/dbLoader.pid"
+echo "${pid}" > "$CHUKWA_PID_DIR/dbLoader.pid"
 ${JAVA_HOME}/bin/java -DDATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR} org.apache.hadoop.chukwa.extraction.database.MetricDataLoader $1

@@ -1,0 +1,5 @@
+#!/bin/sh
+CHUKWA_CONF_DIR=/usr/local/chukwa/conf
+
+exec setuidgid gmon /usr/local/chukwa/bin/exec-data-loader.sh --config $CHUKWA_CONF_DIR netstat
+

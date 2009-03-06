@@ -22,15 +22,15 @@ bin=`cd "$bin"; pwd`
 
 if [ "X$1" = "Xstop" ]; then
   echo -n "Shutting down Node Activity Data Loader..."
-  if [ -f ${CHUKWA_HOME}/var/run/PbsNodes-data-loader.pid ]; then
-    kill -TERM `cat ${CHUKWA_HOME}/var/run/PbsNodes-data-loader.pid`
+  if [ -f ${CHUKWA_PID_DIR}/PbsNodes-data-loader.pid ]; then
+    kill -TERM `cat ${CHUKWA_PID_DIR}/PbsNodes-data-loader.pid`
   fi
   echo "done"
   exit 0
 fi
 
 EXISTS=0
-pidFile="${CHUKWA_HOME}/var/run/PbsNodes-data-loader.pid"
+pidFile="${CHUKWA_PID_DIR}/PbsNodes-data-loader.pid"
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
   ChildPIDRunningStatus=`${JPS} | grep ${pid} | grep Exec | grep -v grep | wc -l`

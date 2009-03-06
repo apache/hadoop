@@ -30,22 +30,22 @@ if [ "$CHUKWA_IDENT_STRING" = "" ]; then
 fi
 
 # monitor agent
-pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-agent.sh.pid
-if [ -f $pidFile ]; then
-  pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep agent.sh | grep -v grep | wc -l`
-  if [ $ChildPIDRunningStatus -lt 1 ]; then
-      HOSTNAME=`hostname`
-      echo "${HOSTNAME}: agent pid file exists, but process missing.  Restarting agent.sh."
-      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start agent.sh &
-  fi 
-fi
+#pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-agent.sh.pid
+#if [ -f $pidFile ]; then
+#  pid=`head ${pidFile}`
+#  ChildPIDRunningStatus=`ps ax | grep agent.sh | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
+#  if [ $ChildPIDRunningStatus -lt 1 ]; then
+#      HOSTNAME=`hostname`
+#      echo "${HOSTNAME}: agent pid file exists, but process missing.  Restarting agent.sh."
+#      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start agent.sh &
+#  fi 
+#fi
 
 # monitor collector
 pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-jettyCollector.sh.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep jettyCollector.sh | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`ps ax | grep jettyCollector.sh | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
       HOSTNAME=`hostname`
       echo "${HOSTNAME}: collector pid file exists, but process missing.  Restarting jettyCollector.sh."
@@ -57,7 +57,7 @@ fi
 pidFile=$CHUKWA_HOME/var/run/PbsNodes-data-loader.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`${JPS} | grep Exec | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
       HOSTNAME=`hostname`
       echo "${HOSTNAME}: PbsNodes-data-loader pid file exists, but process missing.  Restarting nodeActivityDataLoader.sh."
@@ -66,55 +66,55 @@ if [ -f $pidFile ]; then
 fi
 
 # monitor system data loader
-pidFile=$CHUKWA_HOME/var/run/Df-data-loader.pid
-if [ -f $pidFile ]; then
-  pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
-  if [ $ChildPIDRunningStatus -lt 1 ]; then
-      HOSTNAME=`hostname`
-      echo "${HOSTNAME}: Df-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
-      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
-  fi
-fi
+#pidFile=$CHUKWA_HOME/var/run/Df-data-loader.pid
+#if [ -f $pidFile ]; then
+#  pid=`head ${pidFile}`
+#  ChildPIDRunningStatus=`${JPS} | grep Exec | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
+#  if [ $ChildPIDRunningStatus -lt 1 ]; then
+#      HOSTNAME=`hostname`
+#      echo "${HOSTNAME}: Df-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+#      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+#  fi
+#fi
 
-pidFile=$CHUKWA_HOME/var/run/Iostat-data-loader.pid
-if [ -f $pidFile ]; then
-  pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
-  if [ $ChildPIDRunningStatus -lt 1 ]; then
-      HOSTNAME=`hostname`
-      echo "${HOSTNAME}: Iostat-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
-      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
-  fi
-fi
+#pidFile=$CHUKWA_HOME/var/run/Iostat-data-loader.pid
+#if [ -f $pidFile ]; then
+#  pid=`head ${pidFile}`
+#  ChildPIDRunningStatus=`${JPS} | grep Exec | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
+#  if [ $ChildPIDRunningStatus -lt 1 ]; then
+#      HOSTNAME=`hostname`
+#      echo "${HOSTNAME}: Iostat-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+#      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+#  fi
+#fi
 
-pidFile=$CHUKWA_HOME/var/run/Sar-data-loader.pid
-if [ -f $pidFile ]; then
-  pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
-  if [ $ChildPIDRunningStatus -lt 1 ]; then
-      HOSTNAME=`hostname`
-      echo "${HOSTNAME}: Sar-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
-      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
-  fi
-fi
+#pidFile=$CHUKWA_HOME/var/run/Sar-data-loader.pid
+#if [ -f $pidFile ]; then
+#  pid=`head ${pidFile}`
+#  ChildPIDRunningStatus=`${JPS} | grep Exec | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
+#  if [ $ChildPIDRunningStatus -lt 1 ]; then
+#      HOSTNAME=`hostname`
+#      echo "${HOSTNAME}: Sar-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+#      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+#  fi
+#fi
 
-pidFile=$CHUKWA_HOME/var/run/Top-data-loader.pid
-if [ -f $pidFile ]; then
-  pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
-  if [ $ChildPIDRunningStatus -lt 1 ]; then
-      HOSTNAME=`hostname`
-      echo "${HOSTNAME}: Top-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
-      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
-  fi
-fi
+#pidFile=$CHUKWA_HOME/var/run/Top-data-loader.pid
+#if [ -f $pidFile ]; then
+#  pid=`head ${pidFile}`
+#  ChildPIDRunningStatus=`${JPS} | grep Exec | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
+#  if [ $ChildPIDRunningStatus -lt 1 ]; then
+#      HOSTNAME=`hostname`
+#      echo "${HOSTNAME}: Top-data-loader pid file exists, but process missing.  Restarting systemDataLoader.sh."
+#      "$bin/chukwa-daemon.sh" --config $CHUKWA_CONF_DIR start systemDataLoader.sh &
+#  fi
+#fi
 
 # monitor torque data loader
 pidFile=$CHUKWA_HOME/var/run/TorqueDataLoader.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`${JPS} | grep ^${pid} | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`${JPS} | grep TorqueDataLoader | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
       HOSTNAME=`hostname`
       echo "${HOSTNAME}: pid file exists, but process missing.  Restarting torqueDataLoader.sh."
@@ -126,7 +126,7 @@ fi
 pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-processSinkFiles.sh.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep processSinkFiles.sh | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`ps ax | grep processSinkFiles.sh | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
       HOSTNAME=`hostname`
       echo "${HOSTNAME}: pid file exists, but process missing.  Restarting processSinkFiles.sh."
@@ -138,7 +138,7 @@ fi
 pidFile=$CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-dbAdmin.sh.pid
 if [ -f $pidFile ]; then
   pid=`head ${pidFile}`
-  ChildPIDRunningStatus=`ps ax | grep ${pid} | grep dbAdmin.sh | grep -v grep | wc -l`
+  ChildPIDRunningStatus=`ps ax | grep dbAdmin.sh | grep -v grep | grep -o "[^ ].*" | grep ${pid} | wc -l`
   if [ $ChildPIDRunningStatus -lt 1 ]; then
       HOSTNAME=`hostname`
       echo "${HOSTNAME}: pid file exists, but process missing.  Restarting dbAdmin.sh."

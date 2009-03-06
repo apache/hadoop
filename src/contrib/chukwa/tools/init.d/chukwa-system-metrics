@@ -76,7 +76,8 @@ case $1 in
                 [ -f /var/lock/subsys/$prog ] && restart || :
         ;;
         status)
-                ps ax | grep $DAEMON | grep -v grep >&/dev/null
+                config
+                su - gmon -c "${CHUKWA_HOME}/bin/systemDataLoader.sh status >&/dev/null"
                 RETVAL=$?
                 if [ "x$RETVAL" == "x0" ]; then
                         echo "$DAEMON is running..."

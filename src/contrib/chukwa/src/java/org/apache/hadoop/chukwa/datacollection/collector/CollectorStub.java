@@ -33,12 +33,15 @@ public class CollectorStub {
   public static Server jettyServer = null;
   public static void main(String[] args) {
 	
-	pFile=new PidFile("Collector");
-	Runtime.getRuntime().addShutdownHook(pFile); 	 	  
+    pFile=new PidFile("Collector");
+    Runtime.getRuntime().addShutdownHook(pFile); 	 	  
     try {
-      System.out.println("usage:  CollectorStub [portno] [pretend]");
-      System.out.println("note: if no portno defined, " +
-      		"defaults to value in chukwa-site.xml");
+      if(args.length>=1 && args[0].equalsIgnoreCase("-help")) {
+        System.out.println("usage:  CollectorStub [portno] [pretend]");
+        System.out.println("note: if no portno defined, " +
+     	                     "defaults to value in chukwa-site.xml");
+        System.exit(0);
+      }
  
       ChukwaConfiguration conf = new ChukwaConfiguration();
       int portNum = conf.getInt("chukwaCollector.http.port", 9999);

@@ -25,11 +25,13 @@ if [ "$CHUKWA_IDENT_STRING" = "" ]; then
   export CHUKWA_IDENT_STRING="$USER"
 fi
 
-trap 'rm -f $CHUKWA_HOME/var/run/chukwa-$CHUKWA_IDENT_STRING-dbAdmin.sh.pid ${CHUKWA_HOME}/var/run/dbAdmin.pid; exit 0' 1 2 15
+trap 'rm -f $CHUKWA_PID_DIR/chukwa-$CHUKWA_IDENT_STRING-dbAdmin.sh.pid ${CHUKWA_PID_DIR}/dbAdmin.pid; exit 0' 1 2 15
 
-JVM_OPTS="-DAPP=dbAdmin -Dlog4j.configuration=chukwa-log4j.properties -DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DDATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml -classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR}"
+CHUKWA_OPTS="-DCHUKWA_HOME=${CHUKWA_HOME} -DCHUKWA_CONF_DIR=${CHUKWA_CONF_DIR} -DCHUKWA_LOG_DIR=${CHUKWA_LOG_DIR} -DDATACONFIG=${CHUKWA_CONF_DIR}/mdl.xml"
+CLASS_OPTS="-classpath ${CLASSPATH}:${CHUKWA_CORE}:${COMMON}:${HADOOP_JAR}:${CHUKWA_CONF_DIR}"
+JVM_OPTS="-DAPP=dbAdmin -Dlog4j.configuration=chukwa-log4j.properties ${CHUKWA_OPTS} ${CLASS_OPTS}"
 
-echo "${pid}" > "${CHUKWA_HOME}/var/run/dbAdmin.pid"
+echo "${pid}" > "${CHUKWA_PID_DIR}/dbAdmin.pid"
 while [ 1 ]
   do
     EXP_DATE=`date +%Y-%m-%d`
@@ -48,6 +50,7 @@ while [ 1 ]
         ${JAVA_HOME}/bin/java -DCLUSTER=${CLUSTER} ${JVM_OPTS} org.apache.hadoop.chukwa.database.DataExpiration ${EXP_DATE} 91 &
         ${JAVA_HOME}/bin/java -DCLUSTER=${CLUSTER} ${JVM_OPTS} org.apache.hadoop.chukwa.database.DataExpiration ${EXP_DATE} 365 &
         ${JAVA_HOME}/bin/java -DCLUSTER=${CLUSTER} ${JVM_OPTS} org.apache.hadoop.chukwa.database.DataExpiration ${EXP_DATE} 3650 &
+        ${JAVA_HOME}/bin/java -DCLUSTER=${CLUSTER} -Dlog4j.configuration=${CHUKWA_CONF_DIR}/nagios-alert.properties ${CHUKWA_OPTS} ${CLASS_OPTS} org.apache.hadoop.chukwa.util.WatchDog &
     done
     end=`date +%s`
     duration=$(( $end - $start ))
