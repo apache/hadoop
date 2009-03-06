@@ -38,6 +38,7 @@ Release 0.20.0 - Unreleased
    HBASE-1238  Under upload, region servers are unable
                to compact when loaded with hundreds of regions
    HBASE-1247  checkAndSave doesn't Write Ahead Log
+   HBASE-1243  oldlogfile.dat is screwed, so is it's region
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

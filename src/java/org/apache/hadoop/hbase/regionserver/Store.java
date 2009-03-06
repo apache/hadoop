@@ -295,8 +295,15 @@ public class Store implements HConstants {
     long maxSeqIdInLog = -1;
     NavigableMap<HStoreKey, byte []> reconstructedCache =
       new TreeMap<HStoreKey, byte []>(this.comparator);
-    SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
-      reconstructionLog, this.conf);
+    SequenceFile.Reader logReader = null;
+    try {
+      logReader = new SequenceFile.Reader(this.fs, reconstructionLog, this.conf);
+    } catch (IOException e) {
+      LOG.warn("Failed opening reconstruction log though check for null-size passed. " +
+        "POSSIBLE DATA LOSS!! Soldiering on", e);
+      return;
+    }
+
     try {
       HLogKey key = new HLogKey();
       HLogEdit val = new HLogEdit();
