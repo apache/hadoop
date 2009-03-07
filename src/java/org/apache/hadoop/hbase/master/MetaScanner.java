@@ -51,7 +51,7 @@ class MetaScanner extends BaseScanner {
    * @param master
    */
   public MetaScanner(HMaster master) {
-    super(master, false, master.metaRescanInterval, master.closed);
+    super(master, false, master.metaRescanInterval, master.shutdownRequested);
   }
 
   // Don't retry if we get an error while scanning. Errors are most often

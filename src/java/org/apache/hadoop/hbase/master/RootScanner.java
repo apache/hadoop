@@ -31,7 +31,7 @@ class RootScanner extends BaseScanner {
    * @param master
    */
   public RootScanner(HMaster master) {
-    super(master, true, master.metaRescanInterval, master.closed);
+    super(master, true, master.metaRescanInterval, master.shutdownRequested);
   }
 
   /**

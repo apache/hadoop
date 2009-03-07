@@ -132,7 +132,7 @@ class RegionManager implements HConstants {
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
-  RegionManager(HMaster master) throws IOException {
+  RegionManager(HMaster master) {
     HBaseConfiguration conf = master.getConfiguration();
 
     this.master = master;
@@ -169,7 +169,7 @@ class RegionManager implements HConstants {
   
   void reassignRootRegion() {
     unsetRootRegion();
-    if (!master.shutdownRequested) {
+    if (!master.shutdownRequested.get()) {
       synchronized (regionsInTransition) {
         RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO);
         s.setUnassigned();
@@ -1014,10 +1014,8 @@ class RegionManager implements HConstants {
   /**
    * Set the root region location.
    * @param address Address of the region server where the root lives
-   * @throws IOException If there's a problem connection to ZooKeeper.
    */
-  public void setRootRegionLocation(HServerAddress address)
-  throws IOException {
+  public void setRootRegionLocation(HServerAddress address) {
     writeRootRegionLocationToZooKeeper(address);
 
     synchronized (rootRegionLocation) {

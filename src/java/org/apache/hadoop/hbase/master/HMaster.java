@@ -95,8 +95,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
-  public long getProtocolVersion(String protocol,
-      long clientVersion) {
+  public long getProtocolVersion(@SuppressWarnings("unused") String protocol,
+      @SuppressWarnings("unused") long clientVersion) {
     return HBaseRPCProtocolVersion.versionID;
   }
 
@@ -105,7 +105,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   // started here in HMaster rather than have them have to know about the
   // hosting class
   volatile AtomicBoolean closed = new AtomicBoolean(true);
-  volatile boolean shutdownRequested = false;
+  volatile AtomicBoolean shutdownRequested = new AtomicBoolean(false);
   volatile boolean fsOk = true;
   final Path rootdir;
   private final HBaseConfiguration conf;
@@ -337,7 +337,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public HServerAddress getRootRegionLocation() {
     HServerAddress rootServer = null;
-    if (!shutdownRequested && !closed.get()) {
+    if (!shutdownRequested.get() && !closed.get()) {
       rootServer = regionManager.getRootRegionLocation();
     }
     return rootServer;
@@ -367,9 +367,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     try {
       while (!closed.get()) {
         // check if we should be shutting down
-        if (shutdownRequested && serverManager.numServers() == 0) {
-          startShutdown();
-          break;
+        if (shutdownRequested.get()) {
+          // The region servers won't all exit until we stop scanning the
+          // meta regions
+          regionManager.stopScanners();
+          if (serverManager.numServers() == 0) {
+            startShutdown();
+            break;
+          }
         }
         // work on the TodoQueue. If that fails, we should shut down.
         if (!processToDoQueue()) {
@@ -380,8 +385,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.fatal("Unhandled exception. Starting shutdown.", t);
       closed.set(true);
     }
-    // The region servers won't all exit until we stop scanning the meta regions
-    regionManager.stopScanners();
     
     // Wait for all the remaining region servers to report in.
     serverManager.letRegionServersShutdown();
@@ -593,7 +596,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
-    this.shutdownRequested = true;
+    this.shutdownRequested.set(true);
   }
 
   public void createTable(HTableDescriptor desc)
@@ -958,7 +961,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   /**
    * Get the ZK wrapper object
-   * @return
+   * @return the zookeeper wrapper
    */
   public ZooKeeperWrapper getZooKeeperWrapper() {
     return zooKeeperWrapper;

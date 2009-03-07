@@ -39,6 +39,7 @@ Release 0.20.0 - Unreleased
                to compact when loaded with hundreds of regions
    HBASE-1247  checkAndSave doesn't Write Ahead Log
    HBASE-1243  oldlogfile.dat is screwed, so is it's region
+   HBASE-1169  When a shutdown is requested, stop scanning META regions immediately
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

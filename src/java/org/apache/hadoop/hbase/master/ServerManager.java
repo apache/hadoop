@@ -116,7 +116,6 @@ class ServerManager implements HConstants {
    * them or the server is shutting down.
    */
   private boolean checkForGhostReferences(final HServerInfo serverInfo) {
-    String s = serverInfo.getServerAddress().toString().trim();
     boolean result = false;
     for (long sleepTime = -1; !master.closed.get() && !result;) {
       if (sleepTime != -1) {
@@ -225,7 +224,7 @@ class ServerManager implements HConstants {
       }
     }
 
-    if (master.shutdownRequested) {
+    if (master.shutdownRequested.get()) {
       if(quiescedServers.get() >= serversToServerInfo.size()) {
         // If the only servers we know about are meta servers, then we can
         // proceed with shutdown
