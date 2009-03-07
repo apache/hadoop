@@ -3,9 +3,11 @@
   import="org.apache.hadoop.io.Writable"
   import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.client.HTable"
+  import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HServerInfo"
+  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.master.MetaRegion"
@@ -14,11 +16,13 @@
   import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
+  HBaseConfiguration conf = master.getConfiguration();
+  HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
-  HTable table = new HTable(master.getConfiguration(), tableName);
+  HTable table = new HTable(conf, tableName);
   Map<String, HServerInfo> serverToServerInfos =
 	    master.getServersToServerInfo();
-  String tableHeader = "<table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
+  String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
   HServerAddress rootLocation = master.getRootRegionLocation();
 %>
 
@@ -68,12 +72,12 @@ if ( action != null ) {
 %>
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
       <meta http-equiv="refresh" content="30"/>
-<title>Regions in <%= tableName %></title>
+<title>Table: <%= tableName %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
-<h1 id="page_title">Regions in <%= tableName %></h1>
+<h1 id="page_title">Table: <%= tableName %></h1>
 <p id="links_menu"><a href="/master.jsp">Master</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
 <%if(tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME))) {%>
@@ -94,8 +98,13 @@ if ( action != null ) {
 <%  } %>
 </table>
 <%} else {
-    try {
-	  Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo(); 
+    try { %>
+<h2>Table Attributes</h2>
+<table>
+<tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
+<tr><td>Enabled</td><td><%= hbadmin.isTableEnabled(table.getTableName()) %></td><td>Is the table enabled</td></tr>
+</table>
+<%    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo(); 
       if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
 <%      for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) { %>
