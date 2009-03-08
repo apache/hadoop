@@ -42,6 +42,13 @@ Release 0.19.2 - Unreleased
     to KILLED_UNCLEAN only for relevant type of tasks.
     (Amareshwari Sriramadasu via yhemanth)
 
+    HADOOP-5285. Fixes the issues - (1) obtainTaskCleanupTask checks whether job is
+    inited before trying to lock the JobInProgress (2) Moves the CleanupQueue class
+    outside the TaskTracker and makes it a generic class that is used by the 
+    JobTracker also for deleting the paths on the job's output fs. (3) Moves the
+    references to completedJobStore outside the block where the JobTracker is locked.
+    (ddas)
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES
