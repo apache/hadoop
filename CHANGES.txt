@@ -648,13 +648,6 @@ Release 0.20.0 - Unreleased
     
     HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)    
 
-    HADOOP-5285. Fixes the issues - (1) obtainTaskCleanupTask checks whether job is
-    inited before trying to lock the JobInProgress (2) Moves the CleanupQueue class
-    outside the TaskTracker and makes it a generic class that is used by the 
-    JobTracker also for deleting the paths on the job's output fs. (3) Moves the
-    references to completedJobStore outside the block where the JobTracker is locked.
-    (ddas)
-
     HADOOP-5241. Fixes a bug in disk-space resource estimation. Makes the estimation
     formula linear where blowUp = Total-Output/Total-Input. (Sharad Agarwal via ddas)
 
@@ -704,6 +697,13 @@ Release 0.19.2 - Unreleased
     HADOOP-5376. Fixes the code handling lost tasktrackers to set the task state
     to KILLED_UNCLEAN only for relevant type of tasks.
     (Amareshwari Sriramadasu via yhemanth)
+
+    HADOOP-5285. Fixes the issues - (1) obtainTaskCleanupTask checks whether job is
+    inited before trying to lock the JobInProgress (2) Moves the CleanupQueue class
+    outside the TaskTracker and makes it a generic class that is used by the 
+    JobTracker also for deleting the paths on the job's output fs. (3) Moves the
+    references to completedJobStore outside the block where the JobTracker is locked.
+    (ddas)
 
 Release 0.19.1 - Unreleased
 
