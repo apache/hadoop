@@ -81,9 +81,13 @@ public class SystemMetrics  implements ReduceProcessor {
 				}
 				
 				if(record.containsField("Device:")) {
+					record.add(record.getValue("Device:")+".r/s", record.getValue("r/s"));
+					record.add(record.getValue("Device:")+".w/s", record.getValue("w/s"));
 					record.add(record.getValue("Device:")+".rkB/s", record.getValue("rkB/s"));
 					record.add(record.getValue("Device:")+".wkB/s", record.getValue("wkB/s"));
 					record.add(record.getValue("Device:")+".%util", record.getValue("%util"));
+					record.removeValue("r/s");
+					record.removeValue("w/s");
 					record.removeValue("rkB/s");
 					record.removeValue("wkB/s");
 					record.removeValue("%util");
