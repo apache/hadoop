@@ -277,6 +277,9 @@ Trunk (unreleased changes)
     HADOOP-5341. Make hadoop-daemon scripts backwards compatible with the
     changes in HADOOP-4868. (Sharad Agarwal via yhemanth)
 
+    HADOOP-4695. Change TestGlobalFilter so that it allows a web page to be
+    filtered more than once for a single access.  (Kan Zhang via szetszwo) 
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
