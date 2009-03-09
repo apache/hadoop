@@ -68,7 +68,8 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <li>Version 16: Removed HMasterRegionInterface.getRootRegionLocation and
    * HMasterInterface.findRootRegion. We use ZooKeeper to store root region
    * location instead.</li>
+   * <li>Version 17: Added incrementColumnValue.</li>
    * </ul>
    */
-  public static final long versionID = 16L;
+  public static final long versionID = 17L;
 }

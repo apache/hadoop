@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ColumnNameParseException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -2584,5 +2585,80 @@ public class HRegion implements HConstants {
         }
       }
     }
+  }
+
+  
+  public long incrementColumnValue(byte[] row, byte[] column, long amount) throws IOException {
+    checkRow(row);
+    checkColumn(column);
+    
+    Integer lid = obtainRowLock(row);
+    splitsAndClosesLock.readLock().lock();
+    try {
+      HStoreKey hsk = new HStoreKey(row, column);
+      long ts = System.currentTimeMillis();
+      byte [] value = null;
+      long newval; // the new value.
+
+      Store store = getStore(column);
+
+      List<Cell> c;
+      // Try the memcache first.
+      store.lock.readLock().lock();
+      try {
+        c = store.memcache.get(hsk, 1);
+      } finally {
+        store.lock.readLock().unlock();
+      }
+      if (c.size() == 1) {
+        // Use the memcache timestamp value.
+        LOG.debug("Overwriting the memcache value for " + Bytes.toString(row) + "/" + Bytes.toString(column));
+        ts = c.get(0).getTimestamp();
+        value = c.get(0).getValue();
+      } else if (c.size() > 1) {
+        throw new DoNotRetryIOException("more than 1 value returned in incrementColumnValue from memcache");
+      }
+
+      if (value == null) {
+        // Check the store (including disk) for the previous value.
+        Cell[] cell = store.get(hsk, 1);
+        if (cell != null && cell.length == 1) {
+          LOG.debug("Using HFile previous value for " + Bytes.toString(row) + "/" + Bytes.toString(column));
+          value = cell[0].getValue();
+        } else if (cell != null && c.size() > 1) {
+          throw new DoNotRetryIOException("more than 1 value returned in incrementColumnValue from Store");
+        }
+      }
+      
+      if (value == null) {
+        // Doesn't exist
+        LOG.debug("Creating new counter value for " + Bytes.toString(row) + "/"+ Bytes.toString(column));
+        newval = amount;
+      } else {
+        newval = incrementBytes(value, amount);
+      }
+
+      BatchUpdate b = new BatchUpdate(row, ts);
+      b.put(column, Bytes.toBytes(newval));
+      batchUpdate(b, lid, true);
+      return newval;
+    } finally {
+      splitsAndClosesLock.readLock().unlock();
+      releaseRowLock(lid);
+    }
+  }
+
+  private long incrementBytes(byte[] value, long amount) throws IOException {
+    // Hopefully this doesn't happen too often.
+    if (value.length < Bytes.SIZEOF_LONG) {
+      byte [] newvalue = new byte[Bytes.SIZEOF_LONG];
+      System.arraycopy(value, 0, newvalue, newvalue.length - value.length, value.length);
+      value = newvalue;
+    } else if (value.length > Bytes.SIZEOF_LONG) {
+      throw new DoNotRetryIOException("Increment Bytes - value too big: " + value.length);
+    }
+    long v = Bytes.toLong(value);
+    v += amount;
+    return v;
   }
 }

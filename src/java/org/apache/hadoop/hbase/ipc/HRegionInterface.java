@@ -292,4 +292,18 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public void unlockRow(final byte [] regionName, final long lockId)
   throws IOException;
+  
+  /**
+   * Atomically increments a column value. If the column value isn't long-like, this could
+   * throw an exception.
+   * 
+   * @param regionName
+   * @param row
+   * @param column
+   * @param amount
+   * @return new incremented column value
+   * @throws IOException
+   */
+  public long incrementColumnValue(byte [] regionName, byte [] row,
+      byte [] column, long amount) throws IOException;
 }

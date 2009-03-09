@@ -1479,6 +1479,18 @@ public class HTable {
   public ArrayList<BatchUpdate> getWriteBuffer() {
     return writeBuffer;
   }
+  
+  public long incrementColumnValue(final byte [] row, final byte [] column,
+      final int amount) throws IOException {
+    return connection.getRegionServerWithRetries(
+        new ServerCallable<Long>(connection, tableName, row) {
+          public Long call() throws IOException {
+            return server.incrementColumnValue(
+                location.getRegionInfo().getRegionName(), row, column, amount);
+          }
+        }
+    );
+  }
 
   /**
    * Implements the scanner interface for the HBase client.

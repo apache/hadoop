@@ -2287,4 +2287,34 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
         .getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
     doMain(args, regionServerClass);
   }
+
+  /** {@inheritDoc} */
+  public long incrementColumnValue(byte[] regionName, byte[] row,
+      byte[] column, long amount) throws IOException {
+    checkOpen();
+    
+    NullPointerException npe = null;
+    if (regionName == null) {
+      npe = new NullPointerException("regionName is null");
+    } else if (row == null) {
+      npe = new NullPointerException("row is null");
+    } else if (column == null) {
+      npe = new NullPointerException("column is null");
+    }
+    if (npe != null) {
+      IOException io = new IOException(
+          "Invalid arguments to incrementColumnValue", npe);
+      throw io;
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      return region.incrementColumnValue(row, column, amount);
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+    
+    
+  }
 }
