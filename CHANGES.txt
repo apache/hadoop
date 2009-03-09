@@ -678,6 +678,9 @@ Release 0.20.0 - Unreleased
     tasktrackers forcing them to fetch all events afresh, thus avoiding missed
     task completion events on the tasktrackers. (Amar Kamat via yhemanth)
 
+    HADOOP-4695. Change TestGlobalFilter so that it allows a web page to be
+    filtered more than once for a single access.  (Kan Zhang via szetszwo) 
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
