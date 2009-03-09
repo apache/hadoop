@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -40,10 +38,10 @@ import org.apache.hadoop.conf.Configuration;
 
 public class TestServletFilter extends junit.framework.TestCase {
   static final Log LOG = LogFactory.getLog(HttpServer.class);
-  static final Map<String, Integer> COUNTS = new TreeMap<String, Integer>(); 
+  static volatile String uri = null; 
 
-  /** A very simple filter which count number of access for each uri */
-  static public class CountingFilter implements Filter {
+  /** A very simple filter which record the uri filtered. */
+  static public class SimpleFilter implements Filter {
     private FilterConfig filterConfig = null;
 
     public void init(FilterConfig filterConfig) {
@@ -59,20 +57,17 @@ public class TestServletFilter extends junit.framework.TestCase {
       if (filterConfig == null)
          return;
 
-      String uri = ((HttpServletRequest)request).getRequestURI();
+      uri = ((HttpServletRequest)request).getRequestURI();
       LOG.info("filtering " + uri);
-      Integer value = COUNTS.get(uri);
-      value = value == null? 1: value + 1;
-      COUNTS.put(uri, value);
       chain.doFilter(request, response);
     }
 
-    /** Configuration for CountingFilter */
+    /** Configuration for the filter */
     static public class Initializer extends FilterInitializer {
       public Initializer() {}
 
       void initFilter(FilterContainer container) {
-        container.addFilter("counting", CountingFilter.class.getName(), null);
+        container.addFilter("simple", SimpleFilter.class.getName(), null);
       }
     }
   }
@@ -103,7 +98,7 @@ public class TestServletFilter extends junit.framework.TestCase {
     
     //start a http server with CountingFilter
     conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
-        CountingFilter.Initializer.class.getName());
+        SimpleFilter.Initializer.class.getName());
     HttpServer http = new HttpServer("datanode", "localhost", 0, true, conf);
     http.start();
 
@@ -116,12 +111,10 @@ public class TestServletFilter extends junit.framework.TestCase {
     final String[] urls = {fsckURL, stacksURL, ajspURL, logURL, hadooplogoURL};
     final Random ran = new Random();
     final int[] sequence = new int[50];
-    final int[] counts = new int[urls.length]; 
 
     //generate a random sequence and update counts 
     for(int i = 0; i < sequence.length; i++) {
       sequence[i] = ran.nextInt(urls.length);
-      counts[sequence[i]]++;
     }
 
     //access the urls as the sequence
@@ -129,24 +122,17 @@ public class TestServletFilter extends junit.framework.TestCase {
     try {
       for(int i = 0; i < sequence.length; i++) {
         access(prefix + urls[sequence[i]]);
+
+        //make sure everything except fsck get filtered
+        if (sequence[i] == 0) {
+          assertEquals(null, uri);
+        } else {
+          assertEquals(urls[sequence[i]], uri);
+          uri = null;
+        }
       }
     } finally {
       http.stop();
     }
-
-    LOG.info("COUNTS = " + COUNTS);
-    //make sure fsck not get filtered
-    assertFalse(COUNTS.containsKey(fsckURL));
-    
-    //verify other counts
-    for(int i = 1; i < urls.length; i++) {
-      if (counts[i] == 0) {
-        assertFalse(COUNTS.containsKey(urls[i]));
-      } else {
-        assertEquals("url[" + i + "]=" + urls[i],
-            Integer.valueOf(counts[i]), COUNTS.remove(urls[i]));
-      }
-    }
-    assertTrue(COUNTS.isEmpty());
   }
 }

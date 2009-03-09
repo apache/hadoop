@@ -681,6 +681,9 @@ Release 0.20.0 - Unreleased
     HADOOP-4695. Change TestGlobalFilter so that it allows a web page to be
     filtered more than once for a single access.  (Kan Zhang via szetszwo) 
 
+    HADOOP-5298. Change TestServletFilter so that it allows a web page to be
+    filtered more than once for a single access.  (szetszwo) 
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
