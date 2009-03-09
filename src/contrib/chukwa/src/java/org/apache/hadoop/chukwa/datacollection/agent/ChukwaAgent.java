@@ -513,6 +513,8 @@ public class ChukwaAgent
     if (toStop == null) {
       log.warn("trying to stop adaptor " + number + " that isn't running");
       return offset;
+    } else {
+      adaptorPositions.remove(toStop);
     }
     
     try {    	      
