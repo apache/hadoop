@@ -167,22 +167,22 @@ public class DatabaseConfig {
 		if(timeWindow<=0) {
 			timeWindow=1;			
 		}
-		if(timeWindow > YEAR) {
-			tableType = "_century";
+		if(timeWindow > DECADE) {
+			tableType = "_decade";
 			partitionSize=CENTURY;			
-		} else if(timeWindow > QUARTER) {
-			tableType = "_century";
+		} else if(timeWindow > YEAR) {
+			tableType = "_decade";
 			partitionSize=CENTURY;
-		} else if(timeWindow > MONTH) {
+		} else if(timeWindow > QUARTER) {
 			tableType = "_decade";
 			partitionSize=DECADE;
-		} else if(timeWindow > WEEK) {
+		} else if(timeWindow > MONTH) {
 			tableType = "_year";
 			partitionSize=YEAR;
-		} else if(timeWindow > DAY) {
+		} else if(timeWindow > WEEK) {
 			tableType = "_quarter";
 			partitionSize=QUARTER;
-		} else if(timeWindow > 60*60*1000) {
+		} else if(timeWindow > DAY) {
 			tableType = "_month";
 			partitionSize=MONTH;			
 		} else {

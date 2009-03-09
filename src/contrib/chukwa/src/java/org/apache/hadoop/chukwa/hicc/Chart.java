@@ -59,7 +59,7 @@ public class Chart {
     private String[] seriesOrder=null;
     
 	public Chart(HttpServletRequest request) {
-		if(request.getParameter("boxId")!=null) {
+		if(request!=null && request.getParameter("boxId")!=null) {
 			this.id=request.getParameter("boxId");
 		} else {
 			this.id="0";
@@ -154,65 +154,72 @@ public class Chart {
     	legend = toggle;
     }
     public String plot() {
-    	String output="";
+        SimpleDateFormat format = new SimpleDateFormat("m:s:S");
+    	StringBuilder output= new StringBuilder();
     	if(dataset==null) {
-    		output = "No Data available.";
-    		return output;
-    	}
-		String dateFormat="%H:%M";
-		if(xLabel.equals("Time")) {
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	        long xMin;
-			try {
-				xMin = Long.parseLong(xLabelRange.get(0));
-    	        long xMax = Long.parseLong(xLabelRange.get(xLabelRange.size()-1));
-    	        if(xMax-xMin>31536000000L) {
-    	        	dateFormat="%y";
-    	        } else if(xMax-xMin>2592000000L) {
-    	        	dateFormat="%y-%m";
-    	        } else if(xMax-xMin>604800000L) {
-    	        	dateFormat="%m-%d";
-    	        } else if(xMax-xMin>86400000L) {
-    	        	dateFormat="%m-%d %H:%M";
-    	        }
-			} catch (NumberFormatException e) {
-				dateFormat="%y-%m-%d %H:%M";
-			}
-		}
-        String xAxisOptions = "";
-        if(xLabel.equals("Time")) {
-                xAxisOptions = "timeformat: \""+dateFormat+"\",mode: \"time\"";
-        } else {
-                xAxisOptions = "tickFormatter: function (val, axis) { return xLabels[Math.round(val)]; }, ticks: 0";
+    		output.append("No Data available.");
+    		return output.toString();
         }
-        output = "<html><link href=\"/hicc/css/default.css\" rel=\"stylesheet\" type=\"text/css\">\n" +
-		         "<body onresize=\"wholePeriod()\"><script type=\"text/javascript\" src=\"/hicc/js/jquery-1.2.6.min.js\"></script>\n"+
-		         "<script type=\"text/javascript\" src=\"/hicc/js/jquery.flot.pack.js\"></script>\n"+
-		         "<script type=\"text/javascript\" src=\"/hicc/js/excanvas.pack.js\"></script>\n"+
-		         "<center>"+title+"</center>\n"+
-		         "<div id=\"placeholder\" style=\"width:"+this.width+"px;height:"+this.height+"px;\"></div>\n"+
-		         "<div id=\"placeholderLegend\"></div>\n"+
-		         "<input type=\"hidden\" id=\"boxId\" value=\"iframe"+this.id+"\">\n"+
-		         "<script type=\"text/javascript\" src=\"/hicc/js/flot.extend.js\">\n" +
-		         "</script>\n" +
-		         "<script type=\"text/javascript\">\n"+
-                         "var xLabels=new Array();\n"+
-		         "var cw = document.body.clientWidth-70;\n"+
-		         "var ch = document.body.clientHeight-50;\n"+
-		         "document.getElementById('placeholder').style.width=cw+'px';\n"+
-		         "document.getElementById('placeholder').style.height=ch+'px';\n"+
-		         "_options={\n"+
-		         "        points: { show: false },\n"+
-		         "        xaxis: { "+xAxisOptions+" },\n"+
-		         "	  selection: { mode: \"x\" },\n"+
-		         "	  grid: {\n"+
-		         "	           clickable: true,\n"+
-		         "	           hoverable: true,\n"+
-		         "	           tickColor: \"#C0C0C0\",\n"+
-		         "	           backgroundColor:\"#FFFFFF\"\n"+
-		         "	  },\n"+
-		         "	  legend: { show: "+this.legend+" },\n"+
-                         "        yaxis: { ";
+        String dateFormat="%H:%M";
+        if(xLabel.intern()=="Time".intern()) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            long xMin;
+            try {
+                xMin = Long.parseLong(xLabelRange.get(0));
+                long xMax = Long.parseLong(xLabelRange.get(xLabelRange.size()-1));
+                if(xMax-xMin>31536000000L) {
+                    dateFormat="%y";
+                } else if(xMax-xMin>2592000000L) {
+                    dateFormat="%y-%m";
+                } else if(xMax-xMin>604800000L) {
+                    dateFormat="%m-%d";
+    	        } else if(xMax-xMin>86400000L) {
+                    dateFormat="%m-%d %H:%M";
+    	        }
+            } catch (NumberFormatException e) {
+                dateFormat="%y-%m-%d %H:%M";
+            }
+        }
+        StringBuilder xAxisOptions = new StringBuilder();
+        if(xLabel.intern()=="Time".intern()) {
+            xAxisOptions.append("timeformat: \"");
+            xAxisOptions.append(dateFormat);
+            xAxisOptions.append("\",mode: \"time\"");
+        } else {
+            xAxisOptions.append("tickFormatter: function (val, axis) { return xLabels[Math.round(val)]; }, ticks: 0");
+        }
+        if(request!=null && request.getParameter("format")==null) {
+            output.append("<html><link href=\"/hicc/css/default.css\" rel=\"stylesheet\" type=\"text/css\">\n");
+            output.append("<body onresize=\"wholePeriod()\"><script type=\"text/javascript\" src=\"/hicc/js/jquery-1.2.6.min.js\"></script>\n");
+            output.append("<script type=\"text/javascript\" src=\"/hicc/js/jquery.flot.pack.js\"></script>\n");
+            output.append("<script type=\"text/javascript\" src=\"/hicc/js/excanvas.pack.js\"></script>\n");
+            output.append("<div id=\"placeholderTitle\"><center>"+title+"</center></div>\n");
+            output.append("<div id=\"placeholder\" style=\"width:"+this.width+"px;height:"+this.height+"px;\"></div>\n");
+            output.append("<center><div id=\"placeholderLegend\"></div></center>\n");
+            output.append("<input type=\"hidden\" id=\"boxId\" value=\"iframe"+this.id+"\">\n");
+            output.append("<script type=\"text/javascript\" src=\"/hicc/js/flot.extend.js\">\n");
+            output.append("</script>\n");
+            output.append("<script type=\"text/javascript\">\n");
+            output.append("var chartTitle=\"<center>"+title+"</center>\";\n");
+            output.append("var height="+this.height+";\n");
+            output.append("var xLabels=new Array();\n");
+            output.append("var cw = document.body.clientWidth-70;\n");
+            output.append("var ch = document.body.clientHeight-50;\n");
+            output.append("document.getElementById('placeholder').style.width=cw+'px';\n");
+            output.append("document.getElementById('placeholder').style.height=ch+'px';\n");
+        }
+        output.append("_options={\n");
+        output.append("        points: { show: false },\n");
+        output.append("        xaxis: { "+xAxisOptions+" },\n");
+        output.append("	  selection: { mode: \"x\" },\n");
+        output.append("	  grid: {\n");
+        output.append("	           clickable: true,\n");
+        output.append("	           hoverable: true,\n");
+        output.append("	           tickColor: \"#C0C0C0\",\n");
+        output.append("	           backgroundColor:\"#FFFFFF\"\n");
+        output.append("	  },\n");
+        output.append("	  legend: { show: "+this.legend+", noColumns: 3, container: $(\"#placeholderLegend\") },\n");
+        output.append("        yaxis: { ");
         boolean stack = false;
         for(String type : this.chartType) {
             if(type.startsWith("stack")) {
@@ -220,143 +227,153 @@ public class Chart {
             }
         }
         if(stack) {
-            output = output + "mode: \"stack\", ";
+            output.append("mode: \"stack\", ");
         }
         if(userDefinedMax) {
-        	output = output + "tickFormatter: function(val, axis) { " +
-        	    "return val.toFixed(axis.tickDecimals) + \" %\"; }";
+            output.append("tickFormatter: function(val, axis) { return val.toFixed(axis.tickDecimals) + \" %\"; }");
         } else {
-            output = output + "tickFormatter: function(val, axis) { " +
-                "if (val >= 1000000000000000) return (val / 1000000000000000).toFixed(2) + \"x10<sup>15</sup>\";" +
-                "else if (val >= 100000000000000) return (val / 100000000000000).toFixed(2) + \"x10<sup>14</sup>\";" +
-                "else if (val >= 10000000000000) return (val / 10000000000000).toFixed(2) + \"x10<sup>13</sup>\";" +
-                "else if (val >= 1000000000000) return (val / 1000000000000).toFixed(2) + \"x10<sup>12</sup>\";" +
-                "else if (val >= 100000000000) return (val / 100000000000).toFixed(2) + \"x10<sup>11</sup>\";" +
-                "else if (val >= 10000000000) return (val / 10000000000).toFixed(2) + \"x10<sup>10</sup>\";" +
-		"else if (val >= 1000000000) return (val / 1000000000).toFixed(2) + \"x10<sup>9</sup>\";" +
-		"else if (val >= 100000000) return (val / 100000000).toFixed(2) + \"x10<sup>8</sup>\";" +
-		"else if (val >= 10000000) return (val / 10000000).toFixed(2) + \"x10<sup>7</sup>\";" +
-     		"else if (val >= 1000000) return (val / 1000000).toFixed(2) + \"x10<sup>6</sup>\";" +
-     		"else if (val >= 100000) return (val / 100000).toFixed(2) + \"x10<sup>5</sup>\";" +
-     		"else if (val >= 10000) return (val / 10000).toFixed(2) + \"x10<sup>4</sup>\";" +
-      		"else if (val >= 2000) return (val / 1000).toFixed(2) + \"x10<sup>3</sup>\";" +
-        		"else return val.toFixed(2) + \"\"; }";
+            output.append("tickFormatter: function(val, axis) { ");
+            output.append("if (val >= 1000000000000000) return (val / 1000000000000000).toFixed(2) + \"x10<sup>15</sup>\";");
+            output.append("else if (val >= 100000000000000) return (val / 100000000000000).toFixed(2) + \"x10<sup>14</sup>\";");
+            output.append("else if (val >= 10000000000000) return (val / 10000000000000).toFixed(2) + \"x10<sup>13</sup>\";");
+            output.append("else if (val >= 1000000000000) return (val / 1000000000000).toFixed(2) + \"x10<sup>12</sup>\";");
+            output.append("else if (val >= 100000000000) return (val / 100000000000).toFixed(2) + \"x10<sup>11</sup>\";");
+            output.append("else if (val >= 10000000000) return (val / 10000000000).toFixed(2) + \"x10<sup>10</sup>\";");
+            output.append("else if (val >= 1000000000) return (val / 1000000000).toFixed(2) + \"x10<sup>9</sup>\";");
+            output.append("else if (val >= 100000000) return (val / 100000000).toFixed(2) + \"x10<sup>8</sup>\";");
+            output.append("else if (val >= 10000000) return (val / 10000000).toFixed(2) + \"x10<sup>7</sup>\";");
+            output.append("else if (val >= 1000000) return (val / 1000000).toFixed(2) + \"x10<sup>6</sup>\";");
+            output.append("else if (val >= 100000) return (val / 100000).toFixed(2) + \"x10<sup>5</sup>\";");
+            output.append("else if (val >= 10000) return (val / 10000).toFixed(2) + \"x10<sup>4</sup>\";");
+            output.append("else if (val >= 2000) return (val / 1000).toFixed(2) + \"x10<sup>3</sup>\";");
+            output.append("else return val.toFixed(2) + \"\"; }");
         }
         if(userDefinedMax) {
-            output = output + ", min:0, max:"+this.max;
+            output.append(", min:0, max:");
+            output.append(this.max);
         }
-        output = output + "}\n";
-        output = output + "	};\n";
+        output.append("}\n");
+        output.append("	};\n");
         if(!xLabel.equals("Time")) {
+            output.append("xLabels = [\"");
             for(int i=0;i<xLabelRange.size();i++) {
-                output = output + "xLabels[" + i + "]=\"" + xLabelRange.get(i)+"\";\n";
+                if(i>0) {
+                    output.append("\",\"");
+                }
+                output.append(xLabelRange.get(i));
             }
+            output.append("\"];\n");
         }
-        output = output + "_series=[\n";
-/*		            ArrayList<Long> numericLabelRange = new ArrayList<Long>();
-				    if(xLabel.equals("Time")) {
-				        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-				        for(int i=0;i<xLabelRange.size();i++) {
-				        	try {
-				                Date d = formatter.parse(xLabelRange.get(i));
-				                numericLabelRange.add(d.getTime());
-				        	} catch(Exception e) {
-				        	}
-				        }                
-				    } else {
-					    for(int i=0;i<xLabelRange.size();i++) {
-					    	numericLabelRange.add(Long.parseLong(xLabelRange.get(i)));
-					    }
-				    }*/
-			        ColorPicker cp = new ColorPicker();
-		   			int i=0;
-				    for(TreeMap<String, TreeMap<String, Double>> dataMap : this.dataset) {
-		   	            String[] keyNames = null;
-		   	            if(this.seriesOrder!=null) {
-		   	            	keyNames = this.seriesOrder;
-		   	            } else {
-    		   	            keyNames = ((String[]) dataMap.keySet().toArray(new String[dataMap.size()]));
-		   	            }
-			   			int counter=0;
-			   			if(i!=0) {
-			   				if(!this.userDefinedMax) {
-			   				    this.max=0;
-			   				}
-			   			}
-			   			for(String ki : keyNames) {
-			   				TreeMap<String, Double> data = dataMap.get(ki);
-			   				if(data!=null) {
-			   				    for(String dp: data.keySet()) {
-			   				    	try {
-			   					        if(data.get(dp)>this.max) {
-			   						        if(!this.userDefinedMax) {
-			   						            this.max=data.get(dp);
-			   						        }
-			   					        }
-			   				    	} catch (NullPointerException e) {
-			   				    		// skip if this data point does not exist.
-			   				    	}
-			   				    }
-			   				}
-			   			}    			   			
-		   	            for(String seriesName : keyNames) {
-		   	   			    int counter2=0;
-					 	    if(counter!=0) {
-		   					    output+=",";
-		   				    }
-					 	    String param="fill: false";
-					 	    String type="lines";
-					 	    if(this.chartType.get(i).equals("stack-area") || this.chartType.get(i).equals("area")) {
-					 	    	param="fill: true";
-					 	    }
-					 	    if(this.chartType.get(i).equals("bar")) {
-					 	    	type="bars";
-					 	    	param="stepByStep: true";
-					 	    }
-                                                    if(this.chartType.get(i).equals("point")) {
-                                                        type="points";
-                                                        param="fill: false";
-                                                    }
-					 	    output+="  {"+type+": { show: true, "+param+" }, color: \""+cp.get(counter+1)+"\", label: \""+seriesName+"\", ";
-					 	    String showYAxis="false";
-					 	    String shortRow="false";
-					 	    if(counter==0 || i>0) {
-					 	    	showYAxis="true";
-					 	    	shortRow="false";
-					 	    }
-					 	    output+=" row: { show: "+showYAxis+",shortRow:"+shortRow+", showYAxis:"+showYAxis+"}, data:[";
-		   	        	    TreeMap<String, Double> data = dataMap.get(seriesName);
-		   	        	    for(String dp : data.keySet()) {
-		   			 	        if(counter2!=0) {
-		   					        output+=",";
-		   				        }
-                                                        if(xLabel.equals("Time")) {
-                                                            if(data.get(dp)==Double.NaN) {
-                                                                output+="[\""+dp+"\",NULL]";
-                                                            } else {
-		   				                output+="[\""+dp+"\","+data.get(dp)+"]";
-                                                            }
-                                                        } else {
-                                                            long value = xLabelRangeHash.get(dp);
-                                                            if(data.get(dp)==Double.NaN) {
-                                                                output+="[\""+dp+"\",NULL]";
-                                                            } else {
-		   				                output+="[\""+value+"\","+data.get(dp)+"]";
-                                                            }
-                                                        }
-		   				        counter2++;
-		   			        }
-		   	   			    output+="], min:0";
-                                                    if(this.userDefinedMax) {
-                                                        output+=", max:"+this.max;
-                                                    }
-                                                    output+="}";
-		   	   			    counter++;
-		   	            }
-		   	            i++;
-		    	    }          
-		output+=" ];\n"+
-		         " wholePeriod();</script></body></html>\n";
-    	return output;
+        output.append("_series=[\n");
+        ColorPicker cp = new ColorPicker();
+        int i=0;
+        for(TreeMap<String, TreeMap<String, Double>> dataMap : this.dataset) {
+		   	String[] keyNames = null;
+            if (this.seriesOrder != null) {
+                keyNames = this.seriesOrder;
+            } else {
+                keyNames = ((String[]) dataMap.keySet().toArray(
+                        new String[dataMap.size()]));
+            }
+            int counter = 0;
+            if (i != 0) {
+                if (!this.userDefinedMax) {
+                    this.max = 0;
+                }
+            }
+            for (String seriesName : keyNames) {
+                int counter2 = 0;
+                if (counter != 0) {
+                    output.append(",");
+                }
+                String param = "fill: false";
+                String type = "lines";
+                if (this.chartType.get(i).intern() == "stack-area".intern()
+                        || this.chartType.get(i).intern() == "area".intern()) {
+                    param = "fill: true";
+                }
+                if (this.chartType.get(i).intern() == "bar".intern()) {
+                    type = "bars";
+                    param = "stepByStep: true";
+                }
+                if (this.chartType.get(i).intern() == "point".intern()) {
+                    type = "points";
+                    param = "fill: false";
+                }
+                output.append("  {");
+                output.append(type);
+                output.append(": { show: true, ");
+                output.append(param);
+                output.append(" }, color: \"");
+                output.append(cp.get(counter + 1));
+                output.append("\", label: \"");
+                output.append(seriesName);
+                output.append("\", ");
+                String showYAxis = "false";
+                String shortRow = "false";
+                if (counter == 0 || i > 0) {
+                    showYAxis = "true";
+                    shortRow = "false";
+                }
+                output.append(" row: { show: ");
+                output.append(showYAxis);
+                output.append(",shortRow:");
+                output.append(shortRow);
+                output.append(", showYAxis:");
+                output.append(showYAxis);
+                output.append("}, data:[");
+                TreeMap<String, Double> data = dataMap.get(seriesName);
+                for (String dp : data.keySet()) {
+                    int rangeLabel = 0;
+                    if (counter2 != 0) {
+                        output.append(",");
+                    }
+                    if (xLabel.equals("Time")) {
+                        if (data.get(dp) == Double.NaN) {
+                            output.append("[\"");
+                            output.append(dp);
+                            output.append("\",NULL]");
+                        } else {
+                            output.append("[\"");
+                            output.append(dp);
+                            output.append("\",");
+                            output.append(data.get(dp));
+                            output.append("]");
+                        }
+                    } else {
+                        long value = xLabelRangeHash.get(dp);
+                        if (data.get(dp) == Double.NaN) {
+                            output.append("[\"");
+                            output.append(value);
+                            output.append("\",NULL]");
+                        } else {
+                            output.append("[\"");
+                            output.append(value);
+                            output.append("\",");
+                            output.append(data.get(dp));
+                            output.append("]");
+                        }
+                        rangeLabel++;
+                    }
+                    counter2++;
+                }
+                output.append("], min:0");
+                if (this.userDefinedMax) {
+                    output.append(", max:");
+                    output.append(this.max);
+                }
+                output.append("}");
+                counter++;
+            }
+            i++;
+        }          
+        output.append(" ];\n");
+        if(request!=null && request.getParameter("format")==null) {
+            output.append(" wholePeriod();</script></body></html>\n");
+        } else {
+            output.append("chartTitle=\"<center>"+this.title+"</center>\";");
+            output.append("height="+this.height+";");
+        }
+    	return output.toString();
     }            
 }
