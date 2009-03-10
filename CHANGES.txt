@@ -687,6 +687,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5432. Disable ssl during unit tests in hdfsproxy, as it is unused
     and causes failures. (cdouglas)
 
+    HADOOP-5416. Correct the shell command "fs -test" forrest doc description.
+    (Ravi Phulari via szetszwo) 
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

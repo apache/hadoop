@@ -412,8 +412,8 @@
 			<p>
 	   Options: <br/>
 	   -e check to see if the file exists. Return 0 if true. <br/>
-	   -z check to see if the file is zero length. Return 0 if true <br/>
-	   -d check return 1 if the path is directory else return 0. <br/></p>
+	   -z check to see if the file is zero length. Return 0 if true. <br/>
+	   -d check to see if the path is directory. Return 0 if true. <br/></p>
 			<p>Example:</p>
 			<ul>
 				<li>
