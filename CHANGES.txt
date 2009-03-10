@@ -714,6 +714,9 @@ Release 0.19.2 - Unreleased
     references to completedJobStore outside the block where the JobTracker is locked.
     (ddas)
 
+    HADOOP-5392. Fixes a problem to do with JT crashing during recovery when
+    the job files are garbled. (Amar Kamat vi ddas)
+ 
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
