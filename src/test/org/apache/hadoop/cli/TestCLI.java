@@ -121,7 +121,17 @@ public class TestCLI extends TestCase {
     conf.setBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
                     true);
 
-    dfsCluster = new MiniDFSCluster(conf, 1, true, null);
+    // Many of the tests expect a replication value of 1 in the output
+    conf.setInt("dfs.replication", 1);
+    
+    // Build racks and hosts configuration to test dfsAdmin -printTopology
+    String [] racks =  {"/rack1", "/rack1", "/rack2", "/rack2",
+                        "/rack2", "/rack3", "/rack4", "/rack4" };
+    String [] hosts = {"host1", "host2", "host3", "host4",
+                       "host5", "host6", "host7", "host8" };
+    
+    dfsCluster = new MiniDFSCluster(conf, 8, true, racks, hosts);
+    
     namenode = conf.get("fs.default.name", "file:///");
     clitestDataDir = new File(TEST_CACHE_DATA_DIR).
       toURI().toString().replace(' ', '+');

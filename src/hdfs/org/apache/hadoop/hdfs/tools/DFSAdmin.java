@@ -18,7 +18,11 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.TreeSet;
 
 import javax.security.auth.login.LoginException;
 
@@ -29,6 +33,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -463,6 +468,7 @@ public class DFSAdmin extends FsShell {
       "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
       "\t[-refreshServiceAcl]\n" +
+      "\t[-printTopology]\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -516,6 +522,9 @@ public class DFSAdmin extends FsShell {
     String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
       "\t\tNamenode will reload the authorization policy file.\n";
     
+    String printTopology = "-printTopology: Print a tree of the racks and their\n" +
+                           "\t\tnodes as reported by the Namenode\n";
+    
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -545,6 +554,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
     } else if ("refreshServiceAcl".equals(cmd)) {
       System.out.println(refreshServiceAcl);
+    } else if ("printTopology".equals(cmd)) {
+      System.out.println(printTopology);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -562,13 +573,13 @@ public class DFSAdmin extends FsShell {
       System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
       System.out.println(refreshServiceAcl);
+      System.out.println(printTopology);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
     }
 
   }
-
 
   /**
    * Command to ask the namenode to finalize previously performed upgrade.
@@ -645,6 +656,54 @@ public class DFSAdmin extends FsShell {
     return 0;
   }
 
+  /**
+   * Display each rack and the nodes assigned to that rack, as determined
+   * by the NameNode, in a hierarchical manner.  The nodes and racks are
+   * sorted alphabetically.
+   * 
+   * @throws IOException If an error while getting datanode report
+   */
+  public int printTopology() throws IOException {
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      DFSClient client = dfs.getClient();
+      DatanodeInfo[] report = client.datanodeReport(DatanodeReportType.ALL);
+      
+      // Build a map of rack -> nodes from the datanode report
+      HashMap<String, TreeSet<String> > tree = new HashMap<String, TreeSet<String>>();
+      for(DatanodeInfo dni : report) {
+        String location = dni.getNetworkLocation();
+        String name = dni.getName();
+        
+        if(!tree.containsKey(location)) {
+          tree.put(location, new TreeSet<String>());
+        }
+        
+        tree.get(location).add(name);
+      }
+      
+      // Sort the racks (and nodes) alphabetically, display in order
+      ArrayList<String> racks = new ArrayList<String>(tree.keySet());
+      Collections.sort(racks);
+      
+      for(String r : racks) {
+        System.out.println("Rack: " + r);
+        TreeSet<String> nodes = tree.get(r);
+
+        for(String n : nodes) {
+          System.out.print("   " + n);
+          String hostname = NetUtils.getHostNameOfIP(n);
+          if(hostname != null)
+            System.out.print(" (" + hostname + ")");
+          System.out.println();
+        }
+
+        System.out.println();
+      }
+    }
+    return 0;
+  }
+  
   private static UnixUserGroupInformation getUGI(Configuration conf) 
   throws IOException {
     UnixUserGroupInformation ugi = null;
@@ -725,6 +784,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-refreshServiceAcl".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-refreshServiceAcl]");
+    } else if ("-printTopology".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-printTopology]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -736,6 +798,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-upgradeProgress status | details | force]");
       System.err.println("           [-metasave filename]");
       System.err.println("           [-refreshServiceAcl]");
+      System.err.println("           [-printTopology]");
       System.err.println("           ["+SetQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
       System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
@@ -811,6 +874,12 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+      else if ("-printTopology".equals(cmd)) {
+        if(argv.length != 1) {
+          printUsage(cmd);
+          return exitCode;
+        }
+      }
     }
     
     // initialize DFSAdmin
@@ -853,6 +922,8 @@ public class DFSAdmin extends FsShell {
         exitCode = new SetSpaceQuotaCommand(argv, i, fs).runAll();
       } else if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshServiceAcl();
+      } else if ("-printTopology".equals(cmd)) {
+        exitCode = printTopology();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -871,7 +942,7 @@ public class DFSAdmin extends FsShell {
     } catch (RemoteException e) {
       //
       // This is a error returned by hadoop server. Print
-      // out the first line of the error mesage, ignore the stack trace.
+      // out the first line of the error message, ignore the stack trace.
       exitCode = -1;
       try {
         String[] content;

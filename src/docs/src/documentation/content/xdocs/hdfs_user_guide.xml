@@ -200,6 +200,11 @@
       been marked for decommission. Entires not present in both the lists 
       are decommissioned. 
     </li>
+    <li>
+      <code>-printTopology</code>
+      : Print the topology of the cluster. Display a tree of racks and
+      datanodes attached to the tracks as viewed by the NameNode.
+    </li>
    	</ul>
    	<p>
    	  For command usage, see <a href="commands_manual.html#dfsadmin">dfsadmin command</a>.

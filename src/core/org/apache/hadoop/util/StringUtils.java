@@ -20,22 +20,21 @@ package org.apache.hadoop.util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Locale;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.StringTokenizer;
-import java.util.Collection;
 
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * General string utils
@@ -504,15 +503,6 @@ public class StringUtils {
   }
   
   /**
-   * Return hostname without throwing exception.
-   * @return hostname
-   */
-  public static String getHostname() {
-    try {return "" + InetAddress.getLocalHost();}
-    catch(UnknownHostException uhe) {return "" + uhe;}
-  }
-
-  /**
    * Return a message for logging.
    * @param prefix prefix keyword for the message
    * @param msg content of the message
@@ -535,7 +525,7 @@ public class StringUtils {
    */
   public static void startupShutdownMessage(Class<?> clazz, String[] args,
                                      final org.apache.commons.logging.Log LOG) {
-    final String hostname = getHostname();
+    final String hostname = NetUtils.getHostname();
     final String classname = clazz.getSimpleName();
     LOG.info(
         toStartupShutdownString("STARTUP_MSG: ", new String[] {

@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     HADOOP-5144. Add a new DFSAdmin command for changing the setting of restore
     failed storage replicas in namenode. (Boris Shkolnik via szetszwo)
 
+    HADOOP-5258. Add a new DFSAdmin command to print a tree of the rack and
+    datanode topology as seen by the namenode.  (Jakob Homan via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

@@ -3335,5 +3335,33 @@
       </comparators>
     </test>
     
+    <test> <!-- Tested -->
+      <description>printTopology: verifying that the topology map is what we expect</description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -printTopology</dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <!-- miniDFS cluster started in TestCLI is set to match this output -->
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>^Rack: \/rack1\s*127.0.0.1:\d+\s\(localhost\)\s*127.0.0.1:\d+\s\(localhost\)</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>Rack: \/rack2\s*127.0.0.1:\d+\s\(localhost\)\s*127.0.0.1:\d+\s\(localhost\)\s*127.0.0.1:\d+\s\(localhost\)</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>Rack: \/rack3\s*127.0.0.1:\d+\s\(localhost\)</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>Rack: \/rack4\s*127.0.0.1:\d+\s\(localhost\)\s*127.0.0.1:\d+\s\(localhost\)</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

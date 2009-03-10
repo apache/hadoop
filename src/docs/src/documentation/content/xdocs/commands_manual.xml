@@ -516,6 +516,11 @@
                 This completes the upgrade process.</td>
 			           </tr>
 			           <tr>
+			          	<td><code>-printTopology</code></td>
+			            <td>Print a tree of the rack/datanode topology of the
+                 cluster as seen by the NameNode.</td>
+			           </tr>
+			           <tr>
 			          	<td><code>-upgradeProgress status | details | force</code></td>
 			            <td>Request current distributed upgrade status,
                 a detailed status or force the upgrade to proceed.</td>

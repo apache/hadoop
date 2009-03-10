@@ -28,6 +28,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 import java.util.*;
 
 import javax.net.SocketFactory;
@@ -440,5 +441,40 @@ public class NetUtils {
       hostNames.add(normalizeHostName(name));
     }
     return hostNames;
+  }
+
+  /**
+   * Attempt to obtain the host name of a name specified by ip address.  
+   * Check that the node name is an ip addr and if so, attempt to determine
+   * its host name.  If the name is not an IP addr, or the actual name cannot
+   * be determined, return null.
+   * 
+   * @return Host name or null
+   */
+  private static final Pattern ipPattern = // Pattern for matching hostname to ip:port
+    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:?\\d*");
+  public static String getHostNameOfIP(String ip) {
+    // If name is not an ip addr, don't bother looking it up
+    if(!ipPattern.matcher(ip).matches())
+      return null;
+    
+    String hostname = "";
+    try {
+      String n = ip.substring(0, ip.indexOf(':'));
+      hostname = InetAddress.getByName(n).getHostName();
+    } catch (UnknownHostException e) {
+      return null;
+    }
+    
+    return hostname; 
+  }
+
+  /**
+   * Return hostname without throwing exception.
+   * @return hostname
+   */
+  public static String getHostname() {
+    try {return "" + InetAddress.getLocalHost();}
+    catch(UnknownHostException uhe) {return "" + uhe;}
   }
 }

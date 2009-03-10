@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.cli.util;
 
-import java.util.Vector;
-
 /**
  *
  * Class to store CLI Test Comparators Data
