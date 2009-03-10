@@ -215,7 +215,7 @@ public class TestHdfsProxy extends TestCase {
       final Configuration proxyConf = new Configuration(false);
       proxyConf.set("hdfsproxy.dfs.namenode.address", hdfs.getUri().getHost() + ":"
           + hdfs.getUri().getPort());
-      proxyConf.set("hdfsproxy.https.address", "127.0.0.1:0");
+      proxyConf.set("hdfsproxy.https.address", "localhost:0");
       final String namenode = hdfs.getUri().toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR + "/srcdat");
@@ -226,10 +226,10 @@ public class TestHdfsProxy extends TestCase {
         assertTrue("Log directory does not exist.", hdfs.exists(new Path(
             namenode + "/logs")));
 
+        proxyConf.set("proxy.http.test.listener.addr", "localhost:0");
         proxy = new HdfsProxy(proxyConf);
-        InetSocketAddress proxyAddr = NetUtils.createSocketAddr("127.0.0.1:0");
-        proxy.setListener(proxyAddr);
         proxy.start();
+        InetSocketAddress proxyAddr = NetUtils.createSocketAddr("localhost:0");
         final String realProxyAddr = proxyAddr.getHostName() + ":"
             + proxy.getPort();
 

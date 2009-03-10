@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.net.NetUtils;
 
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.nio.SelectChannelConnector;
@@ -47,34 +48,29 @@ public class ProxyHttpServer extends HttpServer {
   /** {@inheritDoc} */
   protected Connector createBaseListener(Configuration conf)
       throws IOException {
-    SslSocketConnector sslListener = new SslSocketConnector();
-    sslListener.setKeystore(conf.get("ssl.server.keystore.location"));
-    sslListener.setPassword(conf.get("ssl.server.keystore.password", ""));
-    sslListener.setKeyPassword(conf.get("ssl.server.keystore.keypassword", ""));
-    sslListener.setKeystoreType(conf.get("ssl.server.keystore.type", "jks"));
-    sslListener.setNeedClientAuth(true);
-    System.setProperty("javax.net.ssl.trustStore",
-        conf.get("ssl.server.truststore.location", ""));
-    System.setProperty("javax.net.ssl.trustStorePassword",
-        conf.get("ssl.server.truststore.password", ""));
-    System.setProperty("javax.net.ssl.trustStoreType",
-        conf.get("ssl.server.truststore.type", "jks"));
-    return sslListener;
-  }
-
-  /**
-   * Configure an http listener on the server. Intended solely for unit testing.
-   *
-   * @param addr address to listen on
-   */
-  void setListener(InetSocketAddress addr) throws IOException {
-    if (webServer.isStarted()) {
-      throw new IOException("Failed to add listener");
+    final String sAddr;
+    if (null == (sAddr = conf.get("proxy.http.test.listener.addr"))) {
+      SslSocketConnector sslListener = new SslSocketConnector();
+      sslListener.setKeystore(conf.get("ssl.server.keystore.location"));
+      sslListener.setPassword(conf.get("ssl.server.keystore.password", ""));
+      sslListener.setKeyPassword(conf.get("ssl.server.keystore.keypassword", ""));
+      sslListener.setKeystoreType(conf.get("ssl.server.keystore.type", "jks"));
+      sslListener.setNeedClientAuth(true);
+      System.setProperty("javax.net.ssl.trustStore",
+          conf.get("ssl.server.truststore.location", ""));
+      System.setProperty("javax.net.ssl.trustStorePassword",
+          conf.get("ssl.server.truststore.password", ""));
+      System.setProperty("javax.net.ssl.trustStoreType",
+          conf.get("ssl.server.truststore.type", "jks"));
+      return sslListener;
     }
+    // unit test
+    InetSocketAddress proxyAddr = NetUtils.createSocketAddr(sAddr);
     SelectChannelConnector testlistener = new SelectChannelConnector();
     testlistener.setUseDirectBuffers(false);
-    testlistener.setHost(addr.getHostName());
-    testlistener.setPort(addr.getPort());
-    webServer.setConnectors(new Connector[] { testlistener });
+    testlistener.setHost(proxyAddr.getHostName());
+    testlistener.setPort(proxyAddr.getPort());
+    return testlistener;
   }
+
 }

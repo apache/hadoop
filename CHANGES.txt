@@ -949,6 +949,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5298. Change TestServletFilter so that it allows a web page to be
     filtered more than once for a single access.  (szetszwo) 
 
+    HADOOP-5432. Disable ssl during unit tests in hdfsproxy, as it is unused
+    and causes failures. (cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

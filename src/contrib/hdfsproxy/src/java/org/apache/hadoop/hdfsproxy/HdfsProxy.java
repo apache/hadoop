@@ -60,8 +60,12 @@ public class HdfsProxy {
     Configuration sslConf = new Configuration(false);
     sslConf.addResource(conf.get("hdfsproxy.https.server.keystore.resource",
         "ssl-server.xml"));
+    // unit testing
+    sslConf.set("proxy.http.test.listener.addr",
+                conf.get("proxy.http.test.listener.addr"));
+
     this.server = new ProxyHttpServer(sslAddr, sslConf);
-    this.server.setAttribute("proxy.https.port", sslAddr.getPort());
+    this.server.setAttribute("proxy.https.port", server.getPort());
     this.server.setAttribute("name.node.address", nnAddr);
     this.server.setAttribute("name.conf", new Configuration());
     this.server.addGlobalFilter("ProxyFilter", ProxyFilter.class.getName(), null);
@@ -69,14 +73,7 @@ public class HdfsProxy {
     this.server.addServlet("data", "/data/*", ProxyFileDataServlet.class);
     this.server.addServlet("streamFile", "/streamFile/*", ProxyStreamFile.class);
   }
-  
-  /** add an http listener, only for testing purposes */
-  void setListener(InetSocketAddress addr) throws IOException {
-    this.server.setListener(addr);
-    LOG.warn("An HTTP listener is attached to the proxy server. " +
-    		"It should only be used for testing purposes.");
-  }
-  
+
   /** return the http port if any, only for testing purposes */
   int getPort() throws IOException {
     return server.getPort();
