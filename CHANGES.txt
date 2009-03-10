@@ -87,6 +87,8 @@ Release 0.20.0 - Unreleased
    HBASE-1240  Would be nice if RowResult could be comparable
                (Erik Holstad via Stack)
    HBASE-803   Atomic increment operations (Ryan Rawson and Jon Gray via Stack)
+   HBASE-1252  Make atomic increment perform a binary increment
+               (Jonathan Gray via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

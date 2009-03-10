@@ -1481,7 +1481,7 @@ public class HTable {
   }
   
   public long incrementColumnValue(final byte [] row, final byte [] column,
-      final int amount) throws IOException {
+      final long amount) throws IOException {
     return connection.getRegionServerWithRetries(
         new ServerCallable<Long>(connection, tableName, row) {
           public Long call() throws IOException {

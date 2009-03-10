@@ -2598,7 +2598,6 @@ public class HRegion implements HConstants {
       HStoreKey hsk = new HStoreKey(row, column);
       long ts = System.currentTimeMillis();
       byte [] value = null;
-      long newval; // the new value.
 
       Store store = getStore(column);
 
@@ -2633,22 +2632,22 @@ public class HRegion implements HConstants {
       if (value == null) {
         // Doesn't exist
         LOG.debug("Creating new counter value for " + Bytes.toString(row) + "/"+ Bytes.toString(column));
-        newval = amount;
+        value = Bytes.toBytes(amount);
       } else {
-        newval = incrementBytes(value, amount);
+        value = incrementBytes(value, amount);
       }
 
       BatchUpdate b = new BatchUpdate(row, ts);
-      b.put(column, Bytes.toBytes(newval));
+      b.put(column, value);
       batchUpdate(b, lid, true);
-      return newval;
+      return Bytes.toLong(value);
     } finally {
       splitsAndClosesLock.readLock().unlock();
       releaseRowLock(lid);
     }
   }
 
-  private long incrementBytes(byte[] value, long amount) throws IOException {
+  private byte [] incrementBytes(byte[] value, long amount) throws IOException {
     // Hopefully this doesn't happen too often.
     if (value.length < Bytes.SIZEOF_LONG) {
       byte [] newvalue = new byte[Bytes.SIZEOF_LONG];
@@ -2657,8 +2656,22 @@ public class HRegion implements HConstants {
     } else if (value.length > Bytes.SIZEOF_LONG) {
       throw new DoNotRetryIOException("Increment Bytes - value too big: " + value.length);
     }
-    long v = Bytes.toLong(value);
-    v += amount;
-    return v;
+    return binaryIncrement(value, amount);
+  }
+  
+  private byte [] binaryIncrement(byte [] value, long amount) {
+    for(int i=0;i<value.length;i++) {
+      int cur = (int)(amount >> (8 * i)) % 256;
+      int val = (int)(value[value.length-i-1] & 0xff);
+      int total = cur + val;
+      if(total > 255) {
+        amount += ((long)256 << (8 * i));
+        total %= 256;
+      }
+      value[value.length-i-1] = (byte)total;
+      amount = (amount >> (8 * (i + 1))) << (8 * (i + 1));
+      if(amount == 0) return value;
+    }
+    return value;
   }
 }
