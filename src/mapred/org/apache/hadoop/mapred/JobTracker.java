@@ -807,11 +807,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           LOG.info("Calling init from RM for job " + jip.getJobID().toString());
           try {
             jip.initTasks();
-          } catch (IOException ioe) {
+          } catch (Throwable t) {
             LOG.error("Job initialization failed : \n" 
-                      + StringUtils.stringifyException(ioe));
+                      + StringUtils.stringifyException(t));
             jip.fail(); // fail the job
-            throw ioe;
+            throw new IOException(t);
           }
         }
       }
@@ -1088,19 +1088,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
      expireLaunchingTasks.removeTask(attemptId);
     }
   
-    public void recover() throws IOException {
+    public void recover() {
       // I. Init the jobs and cache the recovered job history filenames
       Map<JobID, Path> jobHistoryFilenameMap = new HashMap<JobID, Path>();
       Iterator<JobID> idIter = jobsToRecover.iterator();
       while (idIter.hasNext()) {
         JobID id = idIter.next();
-        LOG.info("Trying to recover job " + id);
-        // 1. Create the job object
-        JobInProgress job = new JobInProgress(id, JobTracker.this, conf);
-        
-        String logFileName;
-        Path jobHistoryFilePath;
+        LOG.info("Trying to recover details of job " + id);
         try {
+          // 1. Create the job object
+          JobInProgress job = new JobInProgress(id, JobTracker.this, conf);
+          String logFileName;
+          Path jobHistoryFilePath;
+
           // 2. Get the log file and the file path
           logFileName = 
             JobHistory.JobInfo.getJobHistoryFileName(job.getJobConf(), id);
@@ -1113,19 +1113,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           // This makes sure that the (master) file exists
           JobHistory.JobInfo.recoverJobHistoryFile(job.getJobConf(), 
                                                    jobHistoryFilePath);
-        } catch (IOException ioe) {
-          LOG.warn("Failed to recover job " + id + " history filename." 
-                   + " Ignoring.", ioe);
+          
+          // 4. Cache the history file name as it costs one dfs access
+          jobHistoryFilenameMap.put(job.getJobID(), jobHistoryFilePath);
+
+          // 5. Sumbit the job to the jobtracker
+          addJob(id, job);
+        } catch (Throwable t) {
+          LOG.warn("Failed to recover job " + id + " history details." 
+                   + " Ignoring.", t);
           // TODO : remove job details from the system directory
           idIter.remove();
           continue;
         }
-
-        // 4. Cache the history file name as it costs one dfs access
-        jobHistoryFilenameMap.put(job.getJobID(), jobHistoryFilePath);
-
-        // 5. Sumbit the job to the jobtracker
-        addJob(id, job);
       }
 
       long recoveryStartTime = System.currentTimeMillis();
@@ -1141,7 +1141,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         Path jobHistoryFilePath = jobHistoryFilenameMap.get(pJob.getJobID());
         String logFileName = jobHistoryFilePath.getName();
 
-        FileSystem fs = jobHistoryFilePath.getFileSystem(conf);
+        FileSystem fs;
+        try {
+          fs = jobHistoryFilePath.getFileSystem(conf);
+        } catch (IOException ioe) {
+          LOG.warn("Failed to get the filesystem for job " + id + ". Ignoring.",
+                   ioe);
+          continue;
+        }
 
         // 2. Parse the history file
         // Note that this also involves job update
@@ -1149,9 +1156,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         try {
           JobHistory.parseHistoryFromFS(jobHistoryFilePath.toString(), 
                                         listener, fs);
-        } catch (IOException e) {
-          LOG.info("JobTracker failed to recover job " + pJob.getJobID() + "."
-                     + " Ignoring it.", e);
+        } catch (Throwable t) {
+          LOG.info("JobTracker failed to recover job " + pJob.getJobID() 
+                   + " from history. Ignoring it.", t);
         }
 
         // 3. Close the listener
@@ -1170,9 +1177,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             JobHistory.JobInfo.checkpointRecovery(logFileName, 
                                                   pJob.getJobConf());
           }
-        } catch (IOException ioe) {
+        } catch (Throwable t) {
           LOG.warn("Failed to delete log file (" + logFileName + ") for job " 
-                   + id + ". Ignoring it.", ioe);
+                   + id + ". Ignoring it.", t);
         }
 
         if (pJob.isComplete()) {
@@ -1482,7 +1489,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             && !JobHistory.isDisableHistory()
             && systemDirData != null) {
           for (FileStatus status : systemDirData) {
-            recoveryManager.checkAndAddJob(status);
+            try {
+              recoveryManager.checkAndAddJob(status);
+            } catch (Throwable t) {
+              LOG.warn("Failed to add the job " + status.getPath().getName(), 
+                       t);
+            }
           }
           
           // Check if there are jobs to be recovered
@@ -1598,7 +1610,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     taskScheduler.start();
     
     //  Start the recovery after starting the scheduler
-    recoveryManager.recover();
+    try {
+      recoveryManager.recover();
+    } catch (Throwable t) {
+      LOG.warn("Recovery manager crashed! Ignoring.", t);
+    }
     
     this.expireTrackersThread = new Thread(this.expireTrackers,
                                           "expireTrackers");
@@ -3178,6 +3194,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // if job is not there in the cleanup list ... add it
         synchronized (trackerToJobsToCleanup) {
           Set<JobID> jobs = trackerToJobsToCleanup.get(trackerName);
+          if (jobs == null) {
+            jobs = new HashSet<JobID>();
+            trackerToJobsToCleanup.put(trackerName, jobs);
+          }
           jobs.add(taskId.getJobID());
         }
         continue;

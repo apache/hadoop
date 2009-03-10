@@ -25,9 +25,9 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobTracker.RecoveryManager;
 
 /**
@@ -45,9 +45,11 @@ public class TestRecoveryManager extends TestCase {
   /**
    * Tests the {@link JobTracker} against the exceptions thrown in 
    * {@link JobTracker.RecoveryManager}. It does the following :
-   *  - submits a job
+   *  - submits 2 jobs
    *  - kills the jobtracker
-   *  - restarts the jobtracker with max-tasks-per-job < total tasks in the job
+   *  - Garble job.xml for one job causing it to fail in constructor 
+   *    and job.split for another causing it to fail in init.
+   *  - restarts the jobtracker
    *  - checks if the jobtraker starts normally
    */
   public void testJobTracker() throws Exception {
@@ -63,33 +65,75 @@ public class TestRecoveryManager extends TestCase {
     
     MiniMRCluster mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
     
-    JobConf job = mr.createJobConf();
+    JobConf job1 = mr.createJobConf();
     
-    UtilsForTests.configureWaitingJobConf(job, 
-        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output"), 20, 0, 
+    UtilsForTests.configureWaitingJobConf(job1, 
+        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output1"), 2, 0, 
         "test-recovery-manager", signalFile, signalFile);
     
     // submit the faulty job
-    RunningJob rJob = (new JobClient(job)).submitJob(job);
-    LOG.info("Submitted job " + rJob.getID());
+    RunningJob rJob1 = (new JobClient(job1)).submitJob(job1);
+    LOG.info("Submitted job " + rJob1.getID());
     
-    while (rJob.mapProgress() < 0.5f) {
-      LOG.info("Waiting for job " + rJob.getID() + " to be 50% done");
+    while (rJob1.mapProgress() < 0.5f) {
+      LOG.info("Waiting for job " + rJob1.getID() + " to be 50% done");
+      UtilsForTests.waitFor(100);
+    }
+    
+    JobConf job2 = mr.createJobConf();
+    
+    UtilsForTests.configureWaitingJobConf(job2, 
+        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output2"), 30, 0, 
+        "test-recovery-manager", signalFile, signalFile);
+    
+    // submit the faulty job
+    RunningJob rJob2 = (new JobClient(job2)).submitJob(job2);
+    LOG.info("Submitted job " + rJob2.getID());
+    
+    while (rJob2.mapProgress() < 0.5f) {
+      LOG.info("Waiting for job " + rJob2.getID() + " to be 50% done");
       UtilsForTests.waitFor(100);
     }
     
     // kill the jobtracker
     LOG.info("Stopping jobtracker");
+    String sysDir = mr.getJobTrackerRunner().getJobTracker().getSystemDir();
     mr.stopJobTracker();
     
+    // delete the job.xml of job #1 causing the job to fail in constructor
+    Path jobFile = 
+      new Path(sysDir, rJob1.getID().toString() + Path.SEPARATOR + "job.xml");
+    LOG.info("Deleting job.xml file : " + jobFile.toString());
+    fs.delete(jobFile, false); // delete the job.xml file
+    
+    // create the job.xml file with 0 bytes
+    FSDataOutputStream out = fs.create(jobFile);
+    out.write(1);
+    out.close();
+
+    // delete the job.split of job #2 causing the job to fail in initTasks
+    Path jobSplitFile = 
+      new Path(sysDir, rJob2.getID().toString() + Path.SEPARATOR + "job.split");
+    LOG.info("Deleting job.split file : " + jobSplitFile.toString());
+    fs.delete(jobSplitFile, false); // delete the job.split file
+    
+    // create the job.split file with 0 bytes
+    out = fs.create(jobSplitFile);
+    out.write(1);
+    out.close();
+
     // make sure that the jobtracker is in recovery mode
     mr.getJobTrackerConf().setBoolean("mapred.jobtracker.restart.recover", 
                                       true);
-    mr.getJobTrackerConf().setInt("mapred.jobtracker.maxtasks.per.job", 10);
-    
     // start the jobtracker
     LOG.info("Starting jobtracker");
     mr.startJobTracker();
+    ClusterStatus status = 
+      mr.getJobTrackerRunner().getJobTracker().getClusterStatus(false);
+    
+    // check if the jobtracker came up or not
+    assertEquals("JobTracker crashed!", 
+                 JobTracker.State.RUNNING, status.getJobTrackerState());
     
     mr.shutdown();
   }
