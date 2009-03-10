@@ -49,6 +49,9 @@ Release 0.19.2 - Unreleased
     references to completedJobStore outside the block where the JobTracker is locked.
     (ddas)
 
+    HADOOP-5392. Fixes a problem to do with JT crashing during recovery when
+    the job files are garbled. (Amar Kamat vi ddas)
+ 
     HADOOP-5421. Removes the test TestRecoveryManager.java from the 0.19 branch
     as it has compilation issues. (ddas) 
 
