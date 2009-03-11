@@ -15,17 +15,17 @@
    limitations under the License.
 -->
 
-<Server port="8205" shutdown="SHUTDOWN" debug="4">
+<Server port="@ADMIN.PORT@" shutdown="SHUTDOWN" debug="4">
 
   <Service name="Catalina" debug="4">
 
-    <Connector port="8087"
+    <Connector port="@HTTP.PORT@"
         maxThreads="150" minSpareThreads="25" maxSpareThreads="75"
         enableLookups="false" redirectPort="8443" acceptCount="100"
         connectionTimeout="20000" disableUploadTimeout="true"
         scheme="http" secure="false"
         debug="4"/>
-    <Connector port="8443" protocol="HTTP/1.1" SSLEnabled="true"
+    <Connector port="@HTTPS.PORT@" protocol="HTTP/1.1" SSLEnabled="true"
                maxThreads="150" scheme="https" secure="true" 
                keystoreFile="${javax.net.ssl.keyStore.proxy}" keystorePass="changeme" keystoreType="JKS" clientAuth="true" sslProtocol="TLS" />
 

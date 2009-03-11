@@ -291,6 +291,9 @@ Trunk (unreleased changes)
 
     HADOOP-5458. Remove leftover Chukwa entries from build, etc. (cdouglas)
 
+    HADOOP-5386. Modify hdfsproxy unit test to start on a random port,
+    implement clover instrumentation. (Zhiyong Zhang via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

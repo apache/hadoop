@@ -26,13 +26,15 @@ import org.apache.hadoop.conf.Configuration;
 public class TestProxyUtil extends TestCase {
   
   private static String TEST_PROXY_CONF_DIR = System.getProperty("test.proxy.conf.dir", "./conf");
+  private static String TEST_PROXY_HTTPS_PORT = System.getProperty("test.proxy.https.port", "8443");
 
   public void testSendCommand() throws Exception {
       
     Configuration conf = new Configuration(false);  
     conf.addResource("ssl-client.xml");
     conf.addResource("hdfsproxy-default.xml");
-    conf.set("hdfsproxy.https.address", "localhost:8443");
+    String address = "localhost:" + TEST_PROXY_HTTPS_PORT;
+    conf.set("hdfsproxy.https.address", address);
     String hostFname = TEST_PROXY_CONF_DIR + "/hdfsproxy-hosts";
     conf.set("hdfsproxy.hosts", hostFname);    
     

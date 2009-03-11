@@ -42,25 +42,41 @@
 	<property name="reports.dir" value="${target.dir}/reports"/>
 	<property name="tomcatconfig.dir" value="${target.dir}/tomcat-config"/>
 	<property name="tomcat.container.id" value="tomcat5x"/>
-	<property name="cargo.servlet.port" value="8087"/>
 	<property name="cargo.logging" value="high"/>
 	<property name="cactus.formatter.type" value="xml"/>
 	<property name="cactus.warfile.name" value="test"/>
-	<property environment="env"/>
 	
+  
+	<available file="${hadoop.root}/build/classes" type="dir" property="test.available"/>
+	<property environment="env"/>
 	<!-- check if environment has been set -->
-  <condition property="source.conf.dir" value="${env.HADOOP_CONF_DIR}" else="${basedir}/conf">
-    <and>
-        <isset property="env.HADOOP_CONF_DIR"/>
-        <available file="${env.HADOOP_CONF_DIR}/core-site.xml"/>        
-    </and>
-  </condition>
   <condition property="proxy.conf.dir" value="${env.HDFSPROXY_CONF_DIR}" else="${basedir}/conf">
     <and>
         <isset property="env.HDFSPROXY_CONF_DIR"/>
         <available file="${env.HDFSPROXY_CONF_DIR}/hdfsproxy-default.xml"/>
     </and>
+  </condition> 
+  
+  <condition property="startCactus">
+  	<and>
+	    <or>
+	    	<equals arg1="${testcase}" arg2="TestProxyFilter" />
+				<equals arg1="${testcase}" arg2="TestProxyUtil" />
+				<not>
+					<isset property="testcase"/>
+				</not>
+	    </or>
+    	<isset property="test.available"/>
+    </and>
   </condition>
+  
+  <condition property="useClover">
+  	<and>
+    	<isset property="clover.home"/>
+    	<available file="${clover.home}/lib/clover.jar"/>
+    </and>
+  </condition>
+
 	<property name="ivy.settings.file" location="${hadoop.root}/ivy/ivysettings.xml"/>
   
   <target name="ivy-init" depends="ivy-init-antlib">
@@ -113,17 +129,17 @@
         <include name="xmlenc-${xmlenc.version}.jar"/>
         <include name="core-${core.vesion}.jar"/> 
 	    </lib>
-	    <classes dir="${source.conf.dir}" excludes="**/*.example **/*.sh"/>
-	    <classes dir="${proxy.conf.dir}" excludes="**/*.template **/*.sh"/>
+	    <classes dir="${proxy.conf.dir}" excludes="**/*.example **/*.template **/*.sh hadoop-site.xml"/>
 	    <classes dir="${build.classes}"/>
 	    <classes dir="${hadoop.root}/build/classes"/>
 			<classes dir="${test.build.dir}"/>
 	  </war>
 	</target>
+	<target name="cactifywar" depends="war,load-tasks,cactifywar-pure,cactifywar-clover" description="To include clover coverage test use -Dclover.home ..."/>
 	
-	
-	<target name="cactifywar" depends="war,load-tasks">
+	<target name="cactifywar-pure" depends="war,load-tasks" unless="useClover">
 		<mkdir dir="${target.dir}" />
+		<echo> no clover found ...</echo>
     <cactifywar srcfile="${build.dir}/${final.name}.war"
         destfile="${target.dir}/${cactus.warfile.name}.war"
         mergewebxml="${src.test.resources}/cactus-web.xml">
@@ -131,10 +147,77 @@
       <servletredirector name="ServletRedirectorSecure"
           mapping="/ServletRedirectorSecure" roles="test"/>
       <filterredirector mapping="/test/filterRedirector.jsp"/>
+      <classes dir="${proxy.conf.test}" excludes="**/*.template **/*.sh"/>
     </cactifywar>    	
 	</target>
 
-	<target name="test" depends="compile,compile-test,cactifywar" if="test.available">
+	<target name="cactifywar-clover" depends="war,load-tasks" if="useClover">
+		<mkdir dir="${target.dir}" />
+		<echo> Including clover.jar in the war file ...</echo>
+    <cactifywar srcfile="${build.dir}/${final.name}.war"
+        destfile="${target.dir}/${cactus.warfile.name}.war"
+        mergewebxml="${src.test.resources}/cactus-web.xml">
+      <servletredirector/>
+      <servletredirector name="ServletRedirectorSecure"
+          mapping="/ServletRedirectorSecure" roles="test"/>
+      <filterredirector mapping="/test/filterRedirector.jsp"/>
+      <classes dir="${proxy.conf.test}" excludes="**/*.template **/*.sh"/>
+      <lib dir="${clover.home}/lib">
+      	<include name="clover.jar"/> 
+      </lib>
+    </cactifywar>    	
+	</target>
+	
+	<target name="test" depends="compile,compile-test,test-junit,test-cactus" description="Automated Test Framework" if="test.available"/>
+	
+	<target name="test-junit" depends="compile,compile-test" if="test.available">
+		<junit fork="yes" printsummary="yes" errorProperty="tests.failed" failureProperty="tests.failed">
+        <classpath refid="test.classpath"/>
+        <sysproperty key="test.build.data" value="${build.test}/data"/>
+	      <sysproperty key="build.test" value="${build.test}"/>
+	      <sysproperty key="user.dir" value="${build.test}/data"/>
+	      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
+	      <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
+	      <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/> 
+        <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+        <sysproperty key="javax.net.ssl.trustStore" value="${ssl.keystore.proxy}"/>
+				<sysproperty key="javax.net.ssl.trustStorePassword" value="changeme"/>
+				<sysproperty key="javax.net.ssl.keyStore.proxy" value="${ssl.keystore.proxy}"/>
+				<sysproperty key="javax.net.ssl.keyStore" value="${ssl.keystore.client}"/>
+				<sysproperty key="javax.net.ssl.keyStorePassword" value="changeme"/>
+				<sysproperty key="javax.net.ssl.keyPassword" value="changeme"/>			
+				<sysproperty key="javax.net.ssl.clientCert" value="${ssl.client.cert}"/>
+        <formatter type="xml" />
+        <batchtest todir="${test.build.dir}" unless="testcase">
+           <fileset dir="${src.test}">
+             <include name="**/TestHdfsProxy.java"/>
+             <include name="**/TestProxyUgiManager.java"/>
+           </fileset>
+        </batchtest>
+        <batchtest todir="${test.build.dir}" if="testcase">
+            <fileset dir="${src.test}">
+            	<include name="**/${testcase}.java"/>
+            	<exclude name="**/TestProxyFilter.java"/>
+            	<exclude name="**/TestProxyUtil.java"/>
+            </fileset>
+         </batchtest>
+    </junit>    	
+    <fail if="tests.failed">Tests failed!</fail>
+	</target>
+
+
+	<target name="test-cactus" depends="compile,compile-test,cactifywar" if="startCactus">
+		<exec executable="${env.JAVA_HOME}/bin/java" outputproperty="cargo.servlet.admin.port">
+	    <arg line="-cp ${build.test} org.apache.hadoop.hdfsproxy.FindFreePort -random"/>
+		</exec>
+		<exec executable="${env.JAVA_HOME}/bin/java" outputproperty="cargo.servlet.http.port">
+	    <arg line="-cp ${build.test} org.apache.hadoop.hdfsproxy.FindFreePort ${cargo.servlet.admin.port}"/>
+		</exec>
+		<exec executable="${env.JAVA_HOME}/bin/java" outputproperty="cargo.servlet.https.port">
+	    <arg line="-cp ${build.test} org.apache.hadoop.hdfsproxy.FindFreePort ${cargo.servlet.http.port}"/>
+		</exec>
+		
+		<echo> Free Ports: startup-${cargo.servlet.admin.port} / http-${cargo.servlet.http.port} / https-${cargo.servlet.https.port}</echo>
 	  <echo>Please take a deep breath while Cargo gets the Tomcat for running the servlet tests...</echo>
 	  
 	  <mkdir dir="${tomcatconfig.dir}" />
@@ -143,75 +226,68 @@
 	  <mkdir dir="${tomcatconfig.dir}/temp" />
 	  <mkdir dir="${logs.dir}" />
 	  <mkdir dir="${reports.dir}" />	  
-	  <copy file="${tomcat.conf.test}/server.xml" tofile="${tomcatconfig.dir}/conf/server.xml"/>
+	  <copy file="${tomcat.conf.test}/server.xml" tofile="${tomcatconfig.dir}/conf/server.xml" overwrite="true">
+		  <filterset>
+		    <filter token="ADMIN.PORT" value="${cargo.servlet.admin.port}"/>
+		    <filter token="HTTP.PORT" value="${cargo.servlet.http.port}"/>
+		    <filter token="HTTPS.PORT" value="${cargo.servlet.https.port}"/>
+		  </filterset>
+		</copy>		
 		<copy file="${tomcat.conf.test}/web.xml" tofile="${tomcatconfig.dir}/conf/web.xml"/>
 		<copy file="${tomcat.conf.test}/tomcat-users.xml" tofile="${tomcatconfig.dir}/conf/tomcat-users.xml"/>
-        
-		<cactus warfile="${target.dir}/${cactus.warfile.name}.war" printsummary="yes" failureproperty="tests.failed">
+	
+		<cactus warfile="${target.dir}/${cactus.warfile.name}.war" fork="yes" haltonfailure="no" printsummary="yes" failureproperty="tests.failed">
 			<classpath>
 				<path refid="cactus.classpath"/>
 				<pathelement location="${build.classes}"/>
 				<pathelement location="${proxy.conf.dir}"/>
 				<pathelement location="${src.test.resources}"/>
 				<pathelement location="${src.test.resources}/proxy-config"/>
-			</classpath>		
-		
+			</classpath>			
 			<containerset>
-				<cargo containerId="${tomcat.container.id}" output="${logs.dir}/output.log" log="${logs.dir}/cargo.log">
+				<cargo containerId="${tomcat.container.id}" timeout="30000" output="${logs.dir}/output.log" log="${logs.dir}/cargo.log">
 				 <zipUrlInstaller
             installUrl="http://apache.osuosl.org/tomcat/tomcat-6/v6.0.18/bin/apache-tomcat-6.0.18.zip"
             installDir="${target.dir}/${tomcat.container.id}"/>
-				  <!--<configuration type="standalone" home="${tomcatconfig.dir}">-->
 				  <configuration type="existing" home="${tomcatconfig.dir}">
-						<property name="cargo.servlet.port" value="${cargo.servlet.port}"/>
+						<property name="cargo.servlet.port" value="${cargo.servlet.http.port}"/>
 						<property name="cargo.logging" value="${cargo.logging}"/>
 						<property name="cactus.toDir" value="${build.test}"/>
 						<deployable type="war" file="${target.dir}/${cactus.warfile.name}.war"/>
 					</configuration>
 				</cargo>
 			</containerset>
+			<sysproperty key="test.build.data" value="${build.test}/data"/>
+      <sysproperty key="build.test" value="${build.test}"/>
+      <sysproperty key="build.target" value="${target.dir}"/>
 			<sysproperty key="javax.net.ssl.trustStore" value="${ssl.keystore.proxy}"/>
 			<sysproperty key="javax.net.ssl.trustStorePassword" value="changeme"/>
 			<sysproperty key="javax.net.ssl.keyStore.proxy" value="${ssl.keystore.proxy}"/>
 			<sysproperty key="javax.net.ssl.keyStore" value="${ssl.keystore.client}"/>
 			<sysproperty key="javax.net.ssl.keyStorePassword" value="changeme"/>
-			<sysproperty key="javax.net.ssl.keyPassword" value="changeme"/>
-			
-			<sysproperty key="javax.net.ssl.clientCert" value="${ssl.client.cert}"/>
-			
-			<sysproperty key="test.build.data" value="${build.test}/data"/>
-      <sysproperty key="build.test" value="${build.test}"/>
-      <sysproperty key="build.target" value="${target.dir}"/>
-      
+			<sysproperty key="javax.net.ssl.keyPassword" value="changeme"/>			
+			<sysproperty key="javax.net.ssl.clientCert" value="${ssl.client.cert}"/>     
       <sysproperty key="test.proxy.conf.dir" value="${proxy.conf.test}"/>
-      <!-- requires fork=yes for: 
-        relative File paths to use the specified user.dir 
-        classpath to use build/contrib/*.jar
-      -->
-      <sysproperty key="user.dir" value="${build.test}/data"/>
+      <sysproperty key="test.proxy.https.port" value="${cargo.servlet.https.port}"/>
       
-      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
-      <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
-      <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/> 
-      
-			
 			<formatter type="${cactus.formatter.type}"/>
 			<batchtest todir="${reports.dir}" unless="testcase">
 				<fileset dir="${src.test}">
 					<include name="**/Test*.java"/>
+					<exclude name="**/TestHdfsProxy.java"/>
+					<exclude name="**/TestProxyUgiManager.java"/>
 				</fileset>
 			</batchtest>
 			<batchtest todir="${reports.dir}" if="testcase">
-        <fileset dir="${src.test}" includes="**/${testcase}.java"/>
+        <fileset dir="${src.test}">
+        	<include name="**/${testcase}.java"/>
+        	<exclude name="**/TestHdfsProxy.java"/>
+        	<exclude name="**/TestProxyUgiManager.java"/>
+        </fileset>
       </batchtest>
-		</cactus>
-		<junitreport todir="${reports.dir}">
-			<fileset dir="${target.dir}/${tomcat.container.id}" includes="TEST-*.xml"/>
-      <report todir="${reports.dir}" format="frames"/>
-    </junitreport>
+		</cactus>		
     <fail if="tests.failed">Tests failed!</fail>
 	</target>
-
 	<!-- ====================================================== -->
 	<!-- Macro definitions                                      -->
 	<!-- ====================================================== -->
@@ -347,6 +423,7 @@
     <pathelement location="${hadoop.root}/build/classes"/>
     <pathelement location="${hadoop.root}/build/tools"/>
     <pathelement location="${build.examples}"/>
+    <pathelement path="${clover.jar}"/>
     <path refid="contrib-classpath"/>
   </path>
   
