@@ -118,4 +118,89 @@ public class TestStringUtils extends TestCase {
     assertEquals(-1259520L, StringUtils.TraditionalBinaryPrefix.string2long("-1230k"));
     assertEquals(956703965184L, StringUtils.TraditionalBinaryPrefix.string2long("891g"));
   }
+  
+  private <T> void assertEquals(T[] expected, T[] actual) {
+    assertEquals(expected.length, actual.length);
+    for (int i = 0; i < expected.length; i++) {
+      assertEquals(expected[i], actual[i]);
+    }
+  }
+  
+  //internal to StringUtils
+  private static final String NULL_STR_VALUE = "__null__";
+  
+  public void testArrayToString() {
+    
+    //normal test
+    String[] arr1 = new String[] {"1", "2", "3", "4", "5", "6" }; 
+    String expected1 = "1,2,3,4,5,6";
+    assertEquals(expected1, StringUtils.arrayToString(arr1));
+    
+    //test with whitespace
+    String[] arr2 = new String[] {"1 ", "2 ", "3 ", "4 ", "5 ", "6 " }; 
+    String expected2 = "1 ,2 ,3 ,4 ,5 ,6 ";
+    assertEquals(expected2, StringUtils.arrayToString(arr2));
+    
+    //test with empty array
+    String[] emptyArr = new String[0];
+    assertEquals("", StringUtils.arrayToString(emptyArr));
+    
+    //test with null
+    try {
+      StringUtils.arrayToString(null);
+      fail("Should have thrown NPE");
+    }catch(NullPointerException ex) {
+    }
+    
+    //test with one element 
+    assertEquals("1", StringUtils.arrayToString(new String[] {"1"}));
+    assertEquals("", StringUtils.arrayToString(new String[] {""}));
+    assertEquals(" ", StringUtils.arrayToString(new String[] {" "}));
+    
+    
+    assertEquals(" ,1", StringUtils.arrayToString(new String[] {" ", "1"}));
+    
+    //test with null values
+    assertEquals(NULL_STR_VALUE, StringUtils.arrayToString(new String[] {null}));
+    assertEquals(NULL_STR_VALUE+",1", StringUtils.arrayToString(new String[] {null,"1"}));
+    assertEquals("1," + NULL_STR_VALUE, StringUtils.arrayToString(new String[] {"1",null}));
+    
+  }
+  
+  public void testArrayToStringToArray() {
+    
+    //normal test
+    String[] arr1 = new String[] {"1", "2", "3", "4", "5", "6" };
+    assertEquals(arr1, StringUtils.getStrings(StringUtils.arrayToString(arr1)));
+    
+    //test with whitespace
+    String[] arr2 = new String[] {"1 ", "2 ", "3 ", "4 ", "5 ", "6 " }; 
+    assertEquals(arr2, StringUtils.getStrings(StringUtils.arrayToString(arr2)));
+    
+    //test with empty array
+    String[] emptyArr = new String[0];
+    //actually returns null for empty array
+    assertNull(StringUtils.getStrings(StringUtils.arrayToString(emptyArr)));
+    
+    //test with one element 
+    String[] one = new String[] {"1"};
+    String[] empty = new String[] {""};
+    String[] ws = new String[] {" "};
+    assertEquals(one, StringUtils.getStrings(StringUtils.arrayToString(one)));
+    assertNull(StringUtils.getStrings(StringUtils.arrayToString(empty)));
+    assertEquals(ws, StringUtils.getStrings(StringUtils.arrayToString(ws)));
+    
+    String[] wsone = new String[] {" ", "1"};
+    assertEquals(wsone, StringUtils.getStrings(StringUtils.arrayToString(wsone)));
+    
+    //test with null values
+    String[] nullArr = new String[] {null};
+    String[] nullArr2 =  new String[] {null, "1"};
+    String[] nullArr3 =  new String[] {null, "null", null};
+    String[] nullArr4 =  new String[] {null, null, null};
+    assertEquals(nullArr, StringUtils.getStrings(StringUtils.arrayToString(nullArr)));
+    assertEquals(nullArr2, StringUtils.getStrings(StringUtils.arrayToString(nullArr2)));
+    assertEquals(nullArr4, StringUtils.getStrings(StringUtils.arrayToString(nullArr4)));
+  }
+  
 }
