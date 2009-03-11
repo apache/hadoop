@@ -25,11 +25,10 @@
 
 CC = gcc
 LD = gcc
-OS_ARCH=amd64
 CFLAGS =  -g -Wall -O2 -fPIC
-LDFLAGS = -L$(JAVA_HOME)/jre/lib/$(OS_ARCH)/server -ljvm -shared -m64 -Wl,-x 
+LDFLAGS = -L$(JAVA_HOME)/jre/lib/$(OS_ARCH)/server -ljvm -shared -m32 -Wl,-x 
 PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
-CPPFLAGS = -m64 -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(PLATFORM)
+CPPFLAGS = -m32 -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(PLATFORM)
 
 LIB_NAME = hdfs
 SO_NAME = lib$(LIB_NAME).so
