@@ -283,6 +283,8 @@ Trunk (unreleased changes)
     HADOOP-5456. Fix javadoc links to ClientProtocol#restoreFailedStorage(..).
     (Boris Shkolnik via szetszwo)
 
+    HADOOP-5458. Remove leftover Chukwa entries from build, etc. (cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -4,7 +4,7 @@
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
     <description>
-        Apache Hadoop Chukwa
+        FUSE plugin for HDFS
     </description>
   </info>
   <configurations defaultconfmapping="default">

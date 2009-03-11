@@ -32,15 +32,6 @@ docs/api/
 logs/
 src/contrib/ec2/bin/hadoop-ec2-env.sh
 src/contrib/index/conf/index-config.xml
-src/contrib/chukwa/conf/alert.conf
-src/contrib/chukwa/conf/chukwa-slaves
-src/contrib/chukwa/conf/initial_adaptors
-src/contrib/chukwa/conf/mdl.xml
-src/contrib/chukwa/conf/chukwa-agents
-src/contrib/chukwa/conf/chukwa-env.sh
-src/contrib/chukwa/conf/chukwa-agent-conf.xml
-src/contrib/chukwa/conf/chukwa-collector-conf.xml
-src/contrib/chukwa/conf/collectors
 src/docs/build
 src/docs/cn/build
 src/docs/cn/src/documentation/sitemap.xmap
