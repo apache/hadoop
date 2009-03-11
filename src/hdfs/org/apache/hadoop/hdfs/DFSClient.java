@@ -758,10 +758,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   
   /**
    * enable/disable restore failed storage.
-   * See {@link ClientProtocol#restoreFailedStorage()} 
+   * See {@link ClientProtocol#restoreFailedStorage(String arg)} 
    * for more details.
    * 
-   * @see ClientProtocol#restoreFailedStorage()
    */
   boolean restoreFailedStorage(String arg) throws AccessControlException {
     return namenode.restoreFailedStorage(arg);

@@ -412,7 +412,7 @@ public class DFSAdmin extends FsShell {
    * Command to enable/disable/check restoring of failed storage replicas in the namenode.
    * Usage: java DFSAdmin -restoreFailedStorage true|false|check
    * @exception IOException 
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage()
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String arg)
    */
   public int restoreFaileStorage(String arg) throws IOException {
     int exitCode = -1;
