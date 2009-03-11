@@ -118,24 +118,20 @@ public class StringUtils {
     return percentFormat.format(rounded / scale);
   }
   
-  private static final String NULL_STR_VALUE = "__null__";
-  
   /**
    * Given an array of strings, return a comma-separated list of its elements.
    * @param strs Array of strings
    * @return Empty string if strs.length is 0, comma separated list of strings
    * otherwise
    */
+  
   public static String arrayToString(String[] strs) {
     if (strs.length == 0) { return ""; }
     StringBuffer sbuf = new StringBuffer();
-    for (int idx = 0; idx < strs.length; idx++) {
-      if(idx != 0)
-        sbuf.append(",");
-      if(strs[idx] == null)
-        sbuf.append(NULL_STR_VALUE);
-      else
-        sbuf.append(strs[idx]);
+    sbuf.append(strs[0]);
+    for (int idx = 1; idx < strs.length; idx++) {
+      sbuf.append(",");
+      sbuf.append(strs[idx]);
     }
     return sbuf.toString();
   }
@@ -317,11 +313,7 @@ public class StringUtils {
     StringTokenizer tokenizer = new StringTokenizer (str,",");
     values = new ArrayList<String>();
     while (tokenizer.hasMoreTokens()) {
-      String value = tokenizer.nextToken();
-      if(value.equals(NULL_STR_VALUE))
-        values.add(null);
-      else
-        values.add(value);
+      values.add(tokenizer.nextToken());
     }
     return values;
   }
@@ -549,7 +541,6 @@ public class StringUtils {
       );
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
-      @Override
       public void run() {
         LOG.info(toStartupShutdownString("SHUTDOWN_MSG: ", new String[]{
           "Shutting down " + classname + " at " + hostname}));
