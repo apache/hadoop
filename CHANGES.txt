@@ -995,6 +995,9 @@ Release 0.19.2 - Unreleased
 
     HADOOP-5307. Fix null value handling in StringUtils#arrayToString() and 
     #getStrings(). (enis)
+
+    HADOOP-5332. Appending to files is not allowed (by default) unless
+    dfs.support.append is set to true. (dhruba)
  
 Release 0.19.1 - Unreleased
 

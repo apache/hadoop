@@ -14,4 +14,11 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.support.append</name>
+  <value>true</value>
+  <description>Allow appends to files.
+  </description>
+</property>
+
 </configuration>
