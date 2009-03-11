@@ -116,14 +116,15 @@ echo  "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 # after the tests are complete
 cd $HADOOP_HOME
 echo Y | $HADOOP_BIN_DIR/hadoop namenode -format &&
-$HADOOP_BIN_DIR/hadoop-daemon.sh $HADOOP_BIN_DIR/hdfs start namenode && sleep 2 && 
-$HADOOP_BIN_DIR/hadoop-daemon.sh $HADOOP_BIN_DIR/hdfs start datanode && sleep 2 && 
+$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start namenode && sleep 2 && 
+$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start datanode && sleep 2 && 
+sleep 20
 echo CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_INSTALL_DIR/libhdfs.so:$LIB_JVM_DIR/libjvm.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && 
 CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIB_JVM_DIR/libjvm.so:$LIBHDFS_INSTALL_DIR/libhdfs.so:" $LIBHDFS_BUILD_DIR/$HDFS_TEST
 BUILD_STATUS=$?
 sleep 3
-$HADOOP_BIN_DIR/hadoop-daemon.sh $HADOOP_BIN_DIR/hdfs stop datanode && sleep 2 && 
-$HADOOP_BIN_DIR/hadoop-daemon.sh $HADOOP_BIN_DIR/hdfs stop namenode && sleep 2 
+$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop datanode && sleep 2 && 
+$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop namenode && sleep 2 
 
 echo exiting with $BUILD_STATUS
 exit $BUILD_STATUS
