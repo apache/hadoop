@@ -353,4 +353,13 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.support.append</name>
+  <value>false</value>
+  <description>Does HDFS allow appends to files?
+               This is currently set to false because there are bugs in the
+               "append code" and is not supported in any prodction cluster.
+  </description>
+</property>
+
 </configuration>

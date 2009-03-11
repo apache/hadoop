@@ -58,6 +58,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
     final int ORG_FILE_SIZE = 3000; 
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", BLOCK_SIZE);
+    conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = null;
 
     try {

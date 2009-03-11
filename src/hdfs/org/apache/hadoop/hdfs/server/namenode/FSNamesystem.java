@@ -426,7 +426,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
                                          20*(int)(heartbeatInterval/1000));
     this.accessTimePrecision = conf.getLong("dfs.access.time.precision", 0);
-    this.supportAppends = conf.getBoolean("dfs.support.append", true);
+    this.supportAppends = conf.getBoolean("dfs.support.append", false);
   }
 
   /**
