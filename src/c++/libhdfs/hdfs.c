@@ -393,7 +393,6 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
        FSData{Input|Output}Stream f{is|os} = fs.create(f);
        return f{is|os};
     */
-
     /* Get the JNIEnv* corresponding to current thread */
     JNIEnv* env = getJNIEnv();
 
@@ -504,20 +503,17 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
                                    signature);
         goto done;
       }
+    }  else if ((flags & O_WRONLY) && (flags & O_APPEND)) {
       // WRITE/APPEND?
-      else if ((flags & O_WRONLY) && (flags & O_APPEND)) {
-        if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
-                         method, signature, jPath)) {
-          errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
-                                     "FileSystem::%s(%s)", method,
-                                     signature);
-          goto done;
-        }
+       if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
+                       method, signature, jPath)) {
+        errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
+                                   "FileSystem::%s(%s)", method,
+                                   signature);
+        goto done;
       }
-
-    }
-    // WRITE/CREATE
-    else {
+    } else {
+        // WRITE/CREATE
         jboolean jOverWrite = 1;
         if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                          method, signature, jPath, jOverWrite,

@@ -19,10 +19,13 @@
 #include "hdfsJniHelper.h"
 
 static pthread_mutex_t hdfsHashMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t jvmMutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int hashTableInited = 0;
 
 #define LOCK_HASH_TABLE() pthread_mutex_lock(&hdfsHashMutex)
 #define UNLOCK_HASH_TABLE() pthread_mutex_unlock(&hdfsHashMutex)
+#define LOCK_JVM_MUTEX() pthread_mutex_lock(&jvmMutex)
+#define UNLOCK_JVM_MUTEX() pthread_mutex_unlock(&jvmMutex)
 
 
 /** The Native return types that methods could return */
@@ -391,9 +394,14 @@ JNIEnv* getJNIEnv(void)
     jint rv = 0; 
     jint noVMs = 0;
 
+    // Only the first thread should create the JVM. The other trheads should
+    // just use the JVM created by the first thread.
+    LOCK_JVM_MUTEX();
+
     rv = JNI_GetCreatedJavaVMs(&(vmBuf[0]), vmBufLength, &noVMs);
     if (rv != 0) {
         fprintf(stderr, "JNI_GetCreatedJavaVMs failed with error: %d\n", rv);
+        UNLOCK_JVM_MUTEX();
         return NULL;
     }
 
@@ -402,6 +410,7 @@ JNIEnv* getJNIEnv(void)
         char *hadoopClassPath = getenv("CLASSPATH");
         if (hadoopClassPath == NULL) {
             fprintf(stderr, "Environment variable CLASSPATH not set!\n");
+            UNLOCK_JVM_MUTEX();
             return NULL;
         } 
         char *hadoopClassPathVMArg = "-Djava.class.path=";
@@ -447,6 +456,7 @@ JNIEnv* getJNIEnv(void)
         if (rv != 0) {
             fprintf(stderr, "Call to JNI_CreateJavaVM failed "
                     "with error: %d\n", rv);
+            UNLOCK_JVM_MUTEX();
             return NULL;
         }
 
@@ -459,9 +469,11 @@ JNIEnv* getJNIEnv(void)
         if (rv != 0) {
             fprintf(stderr, "Call to AttachCurrentThread "
                     "failed with error: %d\n", rv);
+            UNLOCK_JVM_MUTEX();
             return NULL;
         }
     }
+    UNLOCK_JVM_MUTEX();
 
     return env;
 }
