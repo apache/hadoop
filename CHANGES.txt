@@ -2084,6 +2084,9 @@ Release 0.18.4 - Unreleased
     HADOOP-5134. FSNamesystem#commitBlockSynchronization adds under-construction
     block locations to blocksMap. (Dhruba Borthakur via hairong)
 
+    HADOOP-5412. Simulated DataNode should not write to a block that's being
+    written by another thread. (hairong)
+
 Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS
