@@ -116,6 +116,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws AccessControlException if permission to append file is 
    * denied by the system. As usually on the client side the exception will 
    * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
+   * Allows appending to an existing file if the server is
+   * configured with the parameter dfs.support.append set to true, otherwise
+   * throws an IOException.
    * @throws IOException if other errors occur.
    */
   public LocatedBlock append(String src, String clientName) throws IOException;

@@ -52,6 +52,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
         AppendTestUtil.LOG.info("setUp()");
         conf = new Configuration();
         conf.setInt("io.bytes.per.checksum", 512);
+        conf.setBoolean("dfs.support.append", true);
         buffersize = conf.getInt("io.file.buffer.size", 4096);
         cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
         fs = (DistributedFileSystem)cluster.getFileSystem();
@@ -67,8 +68,6 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
   /** TC1: Append on block boundary. */
   public void testTC1() throws Exception {
-    /* HDFS append() is temporarily disabled in 0.19 */
-    if (true) return;
     final Path p = new Path("/TC1/foo");
     System.out.println("p=" + p);
 
@@ -94,8 +93,6 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
   /** TC2: Append on non-block boundary. */
   public void testTC2() throws Exception {
-    /* HDFS append() is temporarily disabled in 0.19 */
-    if (true) return;
     final Path p = new Path("/TC2/foo");
     System.out.println("p=" + p);
 
@@ -121,8 +118,6 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
   /** TC5: Only one simultaneous append. */
   public void testTC5() throws Exception {
-    /* HDFS append() is temporarily disabled in 0.19 */
-    if (true) return;
     final Path p = new Path("/TC5/foo");
     System.out.println("p=" + p);
 
@@ -150,8 +145,6 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
   /** TC7: Corrupted replicas are present. */
   public void testTC7() throws Exception {
-    /* HDFS append() is temporarily disabled in 0.19 */
-    if (true) return;
     final short repl = 2;
     final Path p = new Path("/TC7/foo");
     System.out.println("p=" + p);
@@ -197,8 +190,6 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
   /** TC11: Racing rename */
   public void testTC11() throws Exception {
-    /* HDFS append() is temporarily disabled in 0.19 */
-    if (true) return;
     final Path p = new Path("/TC11/foo");
     System.out.println("p=" + p);
 
@@ -252,8 +243,6 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
   /** TC12: Append to partial CRC chunk */
   public void testTC12() throws Exception {
-    /* HDFS append() is temporarily disabled in 0.19 */
-    if (true) return;
     final Path p = new Path("/TC12/foo");
     System.out.println("p=" + p);
     

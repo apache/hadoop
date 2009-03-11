@@ -42,15 +42,13 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1 /user/dir3
    */
   public void testWhileOpenRenameParent() throws IOException {
-    /* XXX This test is temporarily disabled since sync() is not supported in
-     * 0.18.3. This is a 0.18.3 only change. */
-    if (true) return;
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setBoolean("dfs.support.append", true);
 
     // create cluster
     System.out.println("Test 1*****************************");
@@ -117,15 +115,13 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1 /user/dir3
    */
   public void testWhileOpenRenameParentToNonexistentDir() throws IOException {
-    /* XXX This test is temporarily disabled since sync() is not supported in
-     * 0.19.1. */
-    if (true) return;
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 2************************************");
 
     // create cluster
@@ -192,15 +188,13 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1/file1 /user/dir2/
    */
   public void testWhileOpenRenameToExistentDirectory() throws IOException {
-    /* XXX This test is temporarily disabled since sync() is not supported in
-     * 0.19.1 */
-    if (true) return;
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 3************************************");
 
     // create cluster
@@ -257,15 +251,13 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1/file1 /user/dir2/
    */
   public void testWhileOpenRenameToNonExistentDirectory() throws IOException {
-    /* XXX This test is temporarily disabled since sync() is not supported in
-     * 0.19.1 */
-    if (true) return;
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 4************************************");
 
     // create cluster

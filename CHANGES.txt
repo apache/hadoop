@@ -58,6 +58,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5421. Removes the test TestRecoveryManager.java from the 0.19 branch
     as it has compilation issues. (ddas) 
 
+    HADOOP-5332. Appending to files is not allowed (by default) unless
+    dfs.support.append is set to true. (dhruba)
+
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES

@@ -317,7 +317,7 @@ int main(int argc, char **argv) {
         totalResult += (result ? 0 : 1);
     }
 
-    if (0) { // disable append tests in 0.19.x
+    {
       // TEST APPENDS
       const char *writePath = "/tmp/appends";
 

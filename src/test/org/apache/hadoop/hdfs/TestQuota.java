@@ -429,6 +429,7 @@ public class TestQuota extends TestCase {
     // set a smaller block size so that we can test with smaller 
     // diskspace quotas
     conf.set("dfs.block.size", "512");
+    conf.setBoolean("dfs.support.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
@@ -547,7 +548,6 @@ public class TestQuota extends TestCase {
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 3 * fileSpace);
       
-      /* NOTE: append() is not supported in 0.18.
       OutputStream out = dfs.append(file2);
       // appending 1 fileLen should succeed
       out.write(new byte[fileLen]);
@@ -579,10 +579,6 @@ public class TestQuota extends TestCase {
       // verify space after partial append
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 5 * fileSpace);
-      == end of append test == */
-      
-      // reduce quota for quotaDir1 to account for not appending 
-      dfs.setQuota(quotaDir1, FSConstants.QUOTA_DONT_SET, 3 * fileSpace);
       
       // Test set replication :
       
@@ -591,7 +587,7 @@ public class TestQuota extends TestCase {
       
       // verify that space is reduced by file2Len
       c = dfs.getContentSummary(dstPath);
-      assertEquals(c.getSpaceConsumed(), 3 * fileSpace - file2Len);
+      assertEquals(c.getSpaceConsumed(), 5 * fileSpace - file2Len);
       
       // now try to increase the replication and and expect an error.
       hasException = false;
@@ -604,7 +600,7 @@ public class TestQuota extends TestCase {
 
       // verify space consumed remains unchanged.
       c = dfs.getContentSummary(dstPath);
-      assertEquals(c.getSpaceConsumed(), 3 * fileSpace - file2Len);
+      assertEquals(c.getSpaceConsumed(), 5 * fileSpace - file2Len);
       
       // now increase the quota for quotaDir1 and quotaDir20
       dfs.setQuota(quotaDir1, FSConstants.QUOTA_DONT_SET, 10 * fileSpace);
@@ -614,7 +610,7 @@ public class TestQuota extends TestCase {
       dfs.setReplication(file2, (short)(replication+1));
       // verify increase in space
       c = dfs.getContentSummary(dstPath);
-      assertEquals(c.getSpaceConsumed(), 3 * fileSpace + file2Len);
+      assertEquals(c.getSpaceConsumed(), 5 * fileSpace + file2Len);
       
     } finally {
       cluster.shutdown();

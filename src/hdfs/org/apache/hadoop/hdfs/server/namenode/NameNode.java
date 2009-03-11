@@ -148,7 +148,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   private void initialize(String address, Configuration conf) throws IOException {
     InetSocketAddress socAddr = NameNode.getAddress(address);
-    this.supportAppends = conf.getBoolean("dfs.support.append", true);
+    this.supportAppends = conf.getBoolean("dfs.support.append", false);
     this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
     this.server = RPC.getServer(this, socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf);

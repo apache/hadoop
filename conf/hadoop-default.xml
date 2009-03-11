@@ -582,6 +582,15 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.support.append</name>
+  <value>false</value>
+  <description>Does HDFS allow appends to files?
+               This is currently set to false because there are bugs in the
+               "append code" and is not supported in any prodction cluster.
+  </description>
+</property>
+
+<property>
   <name>fs.s3.block.size</name>
   <value>67108864</value>
   <description>Block size to use when writing files to S3.</description>

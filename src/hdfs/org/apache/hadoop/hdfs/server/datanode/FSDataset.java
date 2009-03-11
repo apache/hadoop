@@ -297,6 +297,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
+      boolean supportAppend = conf.getBoolean("dfs.support.append", false);
       File parent = currentDir.getParentFile();
 
       this.detachDir = new File(parent, "detach");
@@ -308,7 +309,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       //
       this.tmpDir = new File(parent, "tmp");
       if (tmpDir.exists()) {
-        FileUtil.fullyDelete(tmpDir);
+        if (supportAppend) {
+          recoverDetachedBlocks(currentDir, tmpDir);
+        } else {
+          FileUtil.fullyDelete(tmpDir);
+        }
       }
       this.dataDir = new FSDir(currentDir);
       if (!tmpDir.mkdirs()) {
