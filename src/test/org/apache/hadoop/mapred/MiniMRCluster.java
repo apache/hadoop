@@ -61,7 +61,6 @@ public class MiniMRCluster {
    */
   class JobTrackerRunner implements Runnable {
     private JobTracker tracker = null;
-    private volatile boolean isActive = true;
     
     JobConf jc = null;
         
@@ -73,10 +72,6 @@ public class MiniMRCluster {
       return (tracker != null);
     }
         
-    public boolean isActive() {
-      return isActive;
-    }
-
     public int getJobTrackerPort() {
       return tracker.getTrackerPort();
     }
@@ -102,7 +97,6 @@ public class MiniMRCluster {
         tracker.offerService();
       } catch (Throwable e) {
         LOG.error("Job tracker crashed", e);
-        isActive = false;
       }
     }
         
@@ -117,7 +111,6 @@ public class MiniMRCluster {
       } catch (Throwable e) {
         LOG.error("Problem shutting down job tracker", e);
       }
-      isActive = false;
     }
   }
     
@@ -555,21 +548,6 @@ public class MiniMRCluster {
       }
     }
         
-    ClusterStatus status = jobTracker.getJobTracker().getClusterStatus(false);
-    while (jobTracker.isActive() && status.getJobTrackerState() == JobTracker.State.INITIALIZING) {
-      try {
-        LOG.info("JobTracker still initializing. Waiting.");
-        Thread.sleep(1000);
-      } catch(InterruptedException e) {}
-      status = jobTracker.getJobTracker().getClusterStatus(false);
-    }
-
-    if (!jobTracker.isActive() 
-        || status.getJobTrackerState() != JobTracker.State.RUNNING) {
-      // return if jobtracker has crashed
-      return;
-    }
- 
     // Set the configuration for the task-trackers
     this.jobTrackerPort = jobTracker.getJobTrackerPort();
     this.jobTrackerInfoPort = jobTracker.getJobTrackerInfoPort();
