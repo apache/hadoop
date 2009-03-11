@@ -156,6 +156,9 @@ Trunk (unreleased changes)
     HADOOP-5455. Document rpc metrics context to the extent dfs, mapred, and
     jvm contexts are documented. (Philip Zeyliger via cdouglas)
 
+    HADOOP-5358. Provide scripting functionality to the synthetic load
+    generator. (Jakob Homan via hairong)
+
   OPTIMIZATIONS
 
   BUG FIXES

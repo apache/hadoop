@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.loadGenerator;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
@@ -25,6 +28,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -46,6 +51,15 @@ import org.apache.hadoop.util.ToolRunner;
  * execution time of each kind of operations and the NameNode
  * throughput.
  * 
+ * The user may either specify constant duration, read and write 
+ * probabilities via the command line, or may specify a text file
+ * that acts as a script of which read and write probabilities to
+ * use for specified durations.
+ * 
+ * The script takes the form of lines of duration in seconds, read
+ * probability and write probability, each separated by white space.
+ * Blank lines and lines starting with # (comments) are ignored.
+ * 
  * After command line argument parsing and data initialization,
  * the load generator spawns the number of worker threads 
  * as specified by the user.
@@ -66,7 +80,9 @@ import org.apache.hadoop.util.ToolRunner;
  * Between two consecutive operations, the thread pauses for a random
  * amount of time in the range of [0, maxDelayBetweenOps] 
  * if the specified max delay is not zero.
- * All threads are stopped when the specified elapsed time is passed.
+ * All threads are stopped when the specified elapsed time has passed 
+ * in command-line execution, or all the lines of script have been 
+ * executed, if using a script.
  * Before exiting, the program prints the average execution for 
  * each kind of NameNode operations, and the number of requests
  * served by the NameNode.
@@ -87,16 +103,21 @@ import org.apache.hadoop.util.ToolRunner;
  *      the elapsed time of program with a default value of 0 
  *      indicating running forever
  *   -startTime <startTimeInMillis> : when the threads start to run.
+ *   -scriptFile <file name>: text file to parse for scripted operation
  */
 public class LoadGenerator extends Configured implements Tool {
+  public static final Log LOG = LogFactory.getLog(LoadGenerator.class);
+  
   private volatile boolean shouldRun = true;
   private Path root = DataGenerator.DEFAULT_ROOT;
   private FileSystem fs;
   private int maxDelayBetweenOps = 0;
   private int numOfThreads = 200;
-  private double readPr = 0.3333;
-  private double writePr = 0.3333;
-  private long elapsedTime = 0;
+  private long [] durations = {0};
+  private double [] readProbs = {0.3333};
+  private double [] writeProbs = {0.3333};
+  private volatile int currentIndex = 0;
+  long totalTime = 0;
   private long startTime = System.currentTimeMillis()+10000;
   final static private int BLOCK_SIZE = 10;
   private ArrayList<String> files = new ArrayList<String>();  // a table of file names
@@ -109,7 +130,8 @@ public class LoadGenerator extends Configured implements Tool {
     "-maxDelayBetweenOps <maxDelayBetweenOpsInMillis>\n" +
     "-numOfThreads <numOfThreads>\n" +
     "-elapsedTime <elapsedTimeInSecs>\n" +
-    "-startTime <startTimeInMillis>";
+    "-startTime <startTimeInMillis>\n" +
+    "-scriptFile <filename>";
   final private String hostname;
   
   /** Constructor */
@@ -189,9 +211,14 @@ public class LoadGenerator extends Configured implements Tool {
      */
     private void nextOp() throws IOException {
       double rn = r.nextDouble();
-      if (rn < readPr) {
+      int i = currentIndex;
+      
+      if(LOG.isDebugEnabled())
+        LOG.debug("Thread " + this.id + " moving to index " + i);
+      
+      if (rn < readProbs[i]) {
         read();
-      } else if (rn < readPr+writePr) {
+      } else if (rn < readProbs[i] + writeProbs[i]) {
         write();
       } else {
         list();
@@ -263,10 +290,27 @@ public class LoadGenerator extends Configured implements Tool {
       threads[i] = new DFSClientThread(i); 
       threads[i].start();
     }
-    if (elapsedTime>0) {
-      Thread.sleep(elapsedTime*1000);
-      shouldRun = false;
+    
+    if (durations[0] > 0) {
+      while(shouldRun) {
+        Thread.sleep(durations[currentIndex] * 1000);
+        totalTime += durations[currentIndex];
+        
+        // Are we on the final line of the script?
+        if( (currentIndex + 1) == durations.length) {
+          shouldRun = false;
+        } else {
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("Moving to index " + currentIndex + ": r = "
+                + readProbs[currentIndex] + ", w = " + writeProbs
+                + " for duration " + durations[currentIndex]);
+          }
+          currentIndex++;
+        }
+      }
     } 
+    
+    LOG.debug("Done with testing.  Waiting for threads to finish.");
     for (DFSClientThread thread : threads) {
       thread.join();
       for (int i=0; i<TOTAL_OP_TYPES; i++) {
@@ -295,9 +339,9 @@ public class LoadGenerator extends Configured implements Tool {
       System.out.println("Average write_close execution time: " + 
           (double)executionTime[WRITE_CLOSE]/totalNumOfOps[WRITE_CLOSE] + "ms");
     }
-    if (elapsedTime != 0) { 
+    if (durations[0] != 0) { 
       System.out.println("Average operations per second: " + 
-          (double)totalOps/elapsedTime +"ops/s");
+          (double)totalOps/totalTime +"ops/s");
     }
     System.out.println();
     return exitCode;
@@ -313,20 +357,34 @@ public class LoadGenerator extends Configured implements Tool {
       return -1;
     }
     int hostHashCode = hostname.hashCode();
+    boolean scriptSpecified = false;
+    
     try {
       for (int i = 0; i < args.length; i++) { // parse command line
-        if (args[i].equals("-readProbability")) {
-          readPr = Double.parseDouble(args[++i]);
-          if (readPr<0 || readPr>1) {
+        if (args[i].equals("-scriptFile")) {
+          if(loadScriptFile(args[++i]) == -1)
+            return -1;
+          scriptSpecified = true;
+        } else if (args[i].equals("-readProbability")) {
+          if(scriptSpecified) {
+            System.err.println("Can't specify probabilities and use script.");
+            return -1;
+          }
+          readProbs[0] = Double.parseDouble(args[++i]);
+          if (readProbs[0] < 0 || readProbs[0] > 1) {
             System.err.println( 
-                "The read probability must be [0, 1]: " + readPr);
+                "The read probability must be [0, 1]: " + readProbs[0]);
             return -1;
           }
         } else if (args[i].equals("-writeProbability")) {
-          writePr = Double.parseDouble(args[++i]);
-          if (writePr<0 || writePr>1) {
+          if(scriptSpecified) {
+            System.err.println("Can't specify probabilities and use script.");
+            return -1;
+          }
+          writeProbs[0] = Double.parseDouble(args[++i]);
+          if (writeProbs[0] < 0 || writeProbs[0] > 1) {
             System.err.println( 
-                "The write probability must be [0, 1]: " + writePr);
+                "The write probability must be [0, 1]: " + writeProbs[0]);
             return -1;
           }
         } else if (args[i].equals("-root")) {
@@ -343,7 +401,11 @@ public class LoadGenerator extends Configured implements Tool {
         } else if (args[i].equals("-startTime")) {
           startTime = Long.parseLong(args[++i]);
         } else if (args[i].equals("-elapsedTime")) {
-          elapsedTime = Long.parseLong(args[++i]);
+          if(scriptSpecified) {
+            System.err.println("Can't specify elapsedTime and use script.");
+            return -1;
+          }
+          durations[0] = Long.parseLong(args[++i]);
         } else if (args[i].equals("-seed")) {
           r = new Random(Long.parseLong(args[++i])+hostHashCode);
         } else {
@@ -357,12 +419,14 @@ public class LoadGenerator extends Configured implements Tool {
       System.err.println(USAGE);
       return -1;
     }
-
-    if (readPr+writePr <0 || readPr+writePr>1) {
-      System.err.println(
-          "The sum of read probability and write probability must be [0, 1]: " +
-          readPr + " "+writePr);
-      return -1;
+    
+    for(int i = 0; i < readProbs.length; i++) {
+      if (readProbs[i] + writeProbs[i] <0 || readProbs[i]+ writeProbs[i] > 1) {
+        System.err.println(
+            "The sum of read probability and write probability must be [0, 1]: "
+            + readProbs[i] + " " + writeProbs[i]);
+        return -1;
+      }
     }
     
     if (r==null) {
@@ -370,6 +434,86 @@ public class LoadGenerator extends Configured implements Tool {
     }
     
     return initFileDirTables();
+  }
+  
+  /**
+   * Read a script file of the form: lines of text with duration in seconds,
+   * read probability and write probability, separated by white space.
+   * 
+   * @param filename Script file
+   * @return 0 if successful, -1 if not
+   * @throws IOException if errors with file IO
+   */
+  private int loadScriptFile(String filename) throws IOException  {
+    FileReader fr = new FileReader(new File(filename));
+    BufferedReader br = new BufferedReader(fr);
+    ArrayList<Long> duration  = new ArrayList<Long>();
+    ArrayList<Double> readProb  = new ArrayList<Double>();
+    ArrayList<Double> writeProb = new ArrayList<Double>();
+    int lineNum = 0;
+    
+    String line;
+    // Read script, parse values, build array of duration, read and write probs
+    while((line = br.readLine()) != null) {
+      lineNum++;
+      if(line.startsWith("#") || line.isEmpty()) // skip comments and blanks
+        continue;
+      
+      String[] a = line.split("\\s");
+      if(a.length != 3) {
+        System.err.println("Line " + lineNum + 
+                           ": Incorrect number of parameters: " + line);
+      }
+      
+      try {
+        long d = Long.parseLong(a[0]);
+        if(d < 0) { 
+           System.err.println("Line " + lineNum + ": Invalid duration: " + d);
+           return -1;
+        }
+
+        double r = Double.parseDouble(a[1]);
+        if(r < 0.0 || r > 1.0 ) {
+           System.err.println("Line " + lineNum + 
+                      ": The read probability must be [0, 1]: " + r);
+           return -1;
+        }
+        
+        double w = Double.parseDouble(a[2]);
+        if(w < 0.0 || w > 1.0) {
+          System.err.println("Line " + lineNum + 
+                       ": The read probability must be [0, 1]: " + r);
+          return -1;
+        }
+        
+        readProb.add(r);
+        duration.add(d);
+        writeProb.add(w);
+      } catch( NumberFormatException nfe) {
+        System.err.println(lineNum + ": Can't parse: " + line);
+        return -1;
+      }
+    }
+    
+    br.close();
+    fr.close();
+    
+    // Copy vectors to arrays of values, to avoid autoboxing overhead later
+    durations = new long[duration.size()];
+    readProbs = new double[readProb.size()];
+    writeProbs = new double[writeProb.size()];
+    
+    for(int i = 0; i < durations.length; i++) {
+      durations[i] = duration.get(i);
+      readProbs[i] = readProb.get(i);
+      writeProbs[i] = writeProb.get(i);
+    }
+    
+    if(durations[0] == 0)
+      System.err.println("Initial duration set to 0.  " +
+          		                             "Will loop until stopped manually.");
+    
+    return 0;
   }
   
   /** Create a table that contains all directories under root and
