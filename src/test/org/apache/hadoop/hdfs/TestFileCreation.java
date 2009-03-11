@@ -56,6 +56,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     //((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
   }
 
   static final long seed = 0xDEADBEEFL;
@@ -702,5 +703,32 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
 
     System.out.println("testLeaseExpireHardLimit successful");
+  }
+
+  // test closing file system before all file handles are closed.
+  public void testFsClose() throws Exception {
+    System.out.println("test file system close start");
+    final int DATANODE_NUM = 3;
+
+    Configuration conf = new Configuration();
+
+    // create cluster
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    DistributedFileSystem dfs = null;
+    try {
+      cluster.waitActive();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+      // create a new file.
+      final String f = DIR + "foofs";
+      final Path fpath = new Path(f);
+      FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
+      out.write("something".getBytes());
+
+      // close file system without closing file
+      dfs.close();
+    } finally {
+      System.out.println("testFsClose successful");
+    }
   }
 }
