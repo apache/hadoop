@@ -205,8 +205,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public synchronized void close() throws IOException {
     if(clientRunning) {
-      clientRunning = false;
       leasechecker.close();
+      clientRunning = false;
   
       // close connections to the namenode
       RPC.stopProxy(rpcNamenode);
@@ -2140,7 +2140,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       private volatile boolean closed = false;
   
       public void run() {
-
         while (!closed && clientRunning) {
 
           // if the Responder encountered an error, shutdown Responder
@@ -2475,21 +2474,30 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               // The original bad datanode is left in the list because it is
               // conservative to remove only one datanode in one iteration.
               for (int j = 0; j < nodes.length; j++) {
-                if (nodes[j] ==  primaryNode) {
+                if (nodes[j].equals(primaryNode)) {
                   errorIndex = j; // forget original bad node.
                 }
               }
+              // remove primary node from list
+              newnodes =  new DatanodeInfo[nodes.length-1];
+              System.arraycopy(nodes, 0, newnodes, 0, errorIndex);
+              System.arraycopy(nodes, errorIndex+1, newnodes, errorIndex,
+                               newnodes.length-errorIndex);
+              nodes = newnodes;
               LOG.warn("Error Recovery for block " + block + " failed " +
                        " because recovery from primary datanode " +
                        primaryNode + " failed " + recoveryErrorCount +
-                       " times. Marking primary datanode as bad.");
+                       " times. " + " Pipeline was " + pipelineMsg +
+                       ". Marking primary datanode as bad.");
               recoveryErrorCount = 0; 
+              errorIndex = -1;
               return true;          // sleep when we return from here
             }
             String emsg = "Error Recovery for block " + block + " failed " +
                           " because recovery from primary datanode " +
                           primaryNode + " failed " + recoveryErrorCount + 
-                          " times. Aborting...";
+                          " times. "  + " Pipeline was " + pipelineMsg +
+                          ". Aborting...";
             LOG.warn(emsg);
             lastException = new IOException(emsg);
             closed = true;
@@ -2499,7 +2507,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           LOG.warn("Error Recovery for block " + block + " failed " +
                    " because recovery from primary datanode " +
                    primaryNode + " failed " + recoveryErrorCount +
-                   " times. Will retry...");
+                   " times. "  + " Pipeline was " + pipelineMsg +
+                   ". Will retry...");
           return true;          // sleep when we return from here
         } finally {
           RPC.stopProxy(primary);

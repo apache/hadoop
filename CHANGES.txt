@@ -60,6 +60,8 @@ Release 0.19.2 - Unreleased
 
     HADOOP-5333. libhdfs supports appending to files. (dhruba)
 
+    HADOOP-3998. Fix dfsclient exception when JVM is shutdown. (dhruba)
+ 
 Release 0.19.1 - 2009-02-23
 
   INCOMPATIBLE CHANGES
