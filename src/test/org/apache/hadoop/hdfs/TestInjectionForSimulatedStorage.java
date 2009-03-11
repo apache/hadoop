@@ -171,7 +171,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       
       cluster = new MiniDFSCluster(0, conf, numDataNodes*2, false,
                                    true, null, null);
-      
+      cluster.waitActive();
       Set<Block> uniqueBlocks = new HashSet<Block>();
       for (int i=0; i<blocksList.length; ++i) {
         for (int j=0; j < blocksList[i].length; ++j) {

@@ -275,7 +275,9 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   public synchronized void unfinalizeBlock(Block b) throws IOException {
-    blockMap.remove(b);
+    if (isBeingWritten(b)) {
+      blockMap.remove(b);
+    }
   }
 
   public synchronized Block[] getBlockReport() {
@@ -365,6 +367,15 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return binfo.isFinalized();
   }
 
+  /* check if a block is created but not finalized */
+  private synchronized boolean isBeingWritten(Block b) {
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      return false;
+    }
+    return !binfo.isFinalized();  
+  }
+  
   public String toString() {
     return getStorageInfo();
   }
@@ -376,6 +387,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
           throw new BlockAlreadyExistsException("Block " + b + 
               " is valid, and cannot be written to.");
       }
+    if (isBeingWritten(b)) {
+        throw new BlockAlreadyExistsException("Block " + b + 
+            " is being written, and cannot be written to.");
+    }
       BInfo binfo = new BInfo(b, true);
       blockMap.put(b, binfo);
       SimulatedOutputStream crcStream = new SimulatedOutputStream();
