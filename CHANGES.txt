@@ -153,6 +153,9 @@ Trunk (unreleased changes)
     HADOOP-5317. Provide documentation for LazyOutput Feature. 
     (Jothi Padmanabhan via johan)
 
+    HADOOP-5455. Document rpc metrics context to the extent dfs, mapred, and
+    jvm contexts are documented. (Philip Zeyliger via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
