@@ -1015,6 +1015,10 @@ Release 0.19.2 - Unreleased
     HADOOP-5333. libhdfs supports appending to files. (dhruba)
 
     HADOOP-3998. Fix dfsclient exception when JVM is shutdown. (dhruba)
+
+    HADOOP-5440. Fixes a problem to do with removing a taskId from the list
+    of taskIds that the TaskTracker's TaskMemoryManager manages.
+    (Amareshwari Sriramadasu via ddas)
  
 Release 0.19.1 - Unreleased
 
