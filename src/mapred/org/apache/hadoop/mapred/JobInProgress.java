@@ -235,9 +235,9 @@ class JobInProgress {
                                                       +"/"+jobid + ".xml");
     this.localJarFile = default_job_conf.getLocalPath(JobTracker.SUBDIR
                                                       +"/"+ jobid + ".jar");
-    Path sysDir = new Path(this.jobtracker.getSystemDir());
-    FileSystem fs = sysDir.getFileSystem(default_conf);
-    jobFile = new Path(sysDir, jobid + "/job.xml");
+    Path jobDir = jobtracker.getSystemDirectoryForJob(jobId);
+    FileSystem fs = jobDir.getFileSystem(default_conf);
+    jobFile = new Path(jobDir, "job.xml");
     fs.copyToLocalFile(jobFile, localJobFile);
     conf = new JobConf(localJobFile);
     this.priority = conf.getJobPriority();
@@ -2468,7 +2468,7 @@ class JobInProgress {
       // so we remove that directory to cleanup
       // Delete temp dfs dirs created if any, like in case of 
       // speculative exn of reduces.  
-      Path tempDir = new Path(jobtracker.getSystemDir(), jobId.toString());
+      Path tempDir = jobtracker.getSystemDirectoryForJob(getJobID());
       new CleanupQueue().addToQueue(conf,tempDir); 
     } catch (IOException e) {
       LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);

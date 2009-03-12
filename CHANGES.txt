@@ -693,6 +693,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5416. Correct the shell command "fs -test" forrest doc description.
     (Ravi Phulari via szetszwo) 
 
+    HADOOP-5327. Fixed job tracker to remove files from system directory on
+    ACL check failures and also check ACLs on restart.
+    (Amar Kamat via yhemanth)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
