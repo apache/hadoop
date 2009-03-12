@@ -2157,11 +2157,18 @@ public class TaskTracker
       //
       boolean needCleanup = false;
       synchronized (this) {
+        // Remove the task from MemoryManager, if the task SUCCEEDED or FAILED.
+        // KILLED tasks are removed in method kill(), because Kill 
+        // would result in launching a cleanup attempt before 
+        // TaskRunner returns; if remove happens here, it would remove
+        // wrong task from memory manager.
+        if (done || !wasKilled) {
+          removeFromMemoryManager(task.getTaskID());
+        }
         if (!done) {
           if (!wasKilled) {
             failures += 1;
             setTaskFailState(true);
-            removeFromMemoryManager(task.getTaskID());
             // call the script here for the failed tasks.
             if (debugCommand != null) {
               String taskStdout ="";
