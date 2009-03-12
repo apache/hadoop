@@ -2775,6 +2775,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
     
     JobInProgress job = new JobInProgress(jobId, this, this.conf);
+    
+    String queue = job.getProfile().getQueueName();
+    if(!(queueManager.getQueues().contains(queue))) {      
+      new CleanupQueue().addToQueue(conf,getSystemDirectoryForJob(jobId));
+      throw new IOException("Queue \"" + queue + "\" does not exist");        
+    }
 
     // check for access
     try {
