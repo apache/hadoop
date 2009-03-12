@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 
     HADOOP-5258. Add a new DFSAdmin command to print a tree of the rack and
     datanode topology as seen by the namenode.  (Jakob Homan via szetszwo)
+    
+    HADOOP-4756. A command line tool to access JMX properties on NameNode
+    and DataNode. (Boris Shkolnik via rangadi)
 
   IMPROVEMENTS
 

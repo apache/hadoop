@@ -4518,7 +4518,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Number of live data nodes
    * @return Number of live data nodes
    */
-  public int numLiveDataNodes() {
+  public int getNumLiveDataNodes() {
     int numLive = 0;
     synchronized (datanodeMap) {   
       for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); 
@@ -4537,7 +4537,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Number of dead data nodes
    * @return Number of dead data nodes
    */
-  public int numDeadDataNodes() {
+  public int getNumDeadDataNodes() {
     int numDead = 0;
     synchronized (datanodeMap) {   
       for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); 
