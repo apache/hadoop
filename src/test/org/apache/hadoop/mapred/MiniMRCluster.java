@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -31,12 +32,13 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.util.Service;
 
 /**
  * This class creates a single-process Map-Reduce cluster for junit testing.
  * One thread is created for each server.
  */
-public class MiniMRCluster {
+public class MiniMRCluster implements Closeable {
   private static final Log LOG = LogFactory.getLog(MiniMRCluster.class);
     
   private Thread jobTrackerThread;
@@ -52,9 +54,13 @@ public class MiniMRCluster {
     
   private String namenode;
   private UnixUserGroupInformation ugi = null;
+  private static final int TRACKER_STABILIZATION_TIMEOUT = 30000;
+
   private JobConf conf;
     
   private JobConf job;
+  /** time for a tracker to shut down : {@value} */
+  private static final long TRACKER_SHUTDOWN_TIMEOUT = 30000;
   
   /**
    * An inner class that runs a job tracker.
@@ -101,7 +107,7 @@ public class MiniMRCluster {
         tracker = JobTracker.startTracker(jc);
         tracker.offerService();
       } catch (Throwable e) {
-        LOG.error("Job tracker crashed", e);
+        LOG.error("Job tracker crashed: " + e, e);
         isActive = false;
       }
     }
@@ -110,13 +116,12 @@ public class MiniMRCluster {
      * Shutdown the job tracker and wait for it to finish.
      */
     public void shutdown() {
-      try {
-        if (tracker != null) {
-          tracker.stopTracker();
-        }
-      } catch (Throwable e) {
-        LOG.error("Problem shutting down job tracker", e);
+      JobTracker jobTracker;
+      synchronized (this) {
+        jobTracker = tracker;
+        tracker = null;
       }
+      Service.close(jobTracker);
       isActive = false;
     }
   }
@@ -177,7 +182,7 @@ public class MiniMRCluster {
       } catch (Throwable e) {
         isDead = true;
         tt = null;
-        LOG.error("task tracker " + trackerId + " crashed", e);
+        LOG.error("task tracker " + trackerId + " crashed : "+e, e);
       }
     }
         
@@ -420,7 +425,7 @@ public class MiniMRCluster {
      
      //Generate rack names if required
      if (racks == null) {
-       System.out.println("Generating rack names for tasktrackers");
+       LOG.info("Generating rack names for tasktrackers");
        racks = new String[numTaskTrackers];
        for (int i=0; i < racks.length; ++i) {
          racks[i] = NetworkTopology.DEFAULT_RACK;
@@ -429,7 +434,7 @@ public class MiniMRCluster {
      
     //Generate some hostnames if required
     if (hosts == null) {
-      System.out.println("Generating host names for tasktrackers");
+      LOG.info("Generating host names for tasktrackers");
       hosts = new String[numTaskTrackers];
       for (int i = 0; i < numTaskTrackers; i++) {
         hosts[i] = "host" + i + ".foo.com";
@@ -470,6 +475,24 @@ public class MiniMRCluster {
     }
     
     this.job = createJobConf(conf);
+    // Wait till the MR cluster stabilizes
+    long timeout = System.currentTimeMillis() +
+            TRACKER_STABILIZATION_TIMEOUT;
+    while(jobTracker.tracker.getNumResolvedTaskTrackers() != numTaskTrackers) {
+      try {
+        Thread.sleep(50);
+      } catch (InterruptedException ie) {
+        throw new IOException("Interrupted during startup");
+      }
+      if(System.currentTimeMillis() > timeout) {
+        String message = "Time out waiting for the task trackers to stabilize. "
+                + "Expected tracker count: " + numTaskTrackers
+                + "  -actual count: "
+                + jobTracker.tracker.getNumResolvedTaskTrackers();
+        LOG.error(message);
+        throw new IOException(message);
+      }
+    }
     waitUntilIdle();
   }
     
@@ -583,12 +606,11 @@ public class MiniMRCluster {
    * Kill the jobtracker.
    */
   public void stopJobTracker() {
-    //jobTracker.exit(-1);
     jobTracker.shutdown();
 
     jobTrackerThread.interrupt();
     try {
-      jobTrackerThread.join();
+      jobTrackerThread.join(TRACKER_SHUTDOWN_TIMEOUT);
     } catch (InterruptedException ex) {
       LOG.error("Problem waiting for job tracker to finish", ex);
     }
@@ -647,6 +669,25 @@ public class MiniMRCluster {
       File siteFile = new File(configDir, "mapred-site.xml");
       siteFile.delete();
     }
+  }
+    
+  /**
+   * Static operation to shut down a cluster; harmless if the cluster argument
+   * is null
+   *
+   * @param cluster cluster to shut down, or null for no cluster
+   */
+  public static void close(Closeable cluster) {
+    Service.close(cluster);
+  }
+
+  /**
+   * Shuts down the cluster.
+   *
+   * @throws IOException if an I/O error occurs
+   */
+  public void close() throws IOException {
+    shutdown();
   }
     
   public static void main(String[] args) throws IOException {

@@ -107,6 +107,15 @@ abstract class TaskTrackerAction implements Writable {
     return actionType;
   }
 
+  /**
+   * {@inheritDoc}
+   * @return the action type.
+   */
+  @Override
+  public String toString() {
+    return "TaskTrackerAction: " + actionType;
+  }
+
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeEnum(out, actionType);
   }

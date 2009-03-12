@@ -137,6 +137,11 @@ public class TestEditLog extends TestCase {
     
     editLog.close();
 
+    //check that the namesystem is still healthy
+    assertNotNull("FSNamesystem.getFSNamesystem()  is null",
+            FSNamesystem.getFSNamesystem());
+    assertNotNull("FSNamesystem.getFSNamesystem().dir is null",
+            FSNamesystem.getFSNamesystem().dir);
     // Verify that we can read in all the transactions that we have written.
     // If there were any corruptions, it is likely that the reading in
     // of these transactions will throw an exception.

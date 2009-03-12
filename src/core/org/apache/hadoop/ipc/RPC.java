@@ -301,7 +301,7 @@ public class RPC {
    * @return the proxy
    * @throws IOException if the far end through a RemoteException
    */
-  static VersionedProtocol waitForProxy(Class protocol,
+  public static VersionedProtocol waitForProxy(Class protocol,
                                                long clientVersion,
                                                InetSocketAddress addr,
                                                Configuration conf,

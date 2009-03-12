@@ -395,9 +395,7 @@ public class FSEditLog {
    */
   synchronized void processIOError(int index) {
     if (editStreams == null || editStreams.size() <= 1) {
-      FSNamesystem.LOG.fatal(
-      "Fatal Error : All storage directories are inaccessible."); 
-      Runtime.getRuntime().exit(-1);
+      processAllStorageInaccessible();
     }
     assert(index < getNumStorageDirs());
     assert(getNumStorageDirs() == editStreams.size());
@@ -417,27 +415,43 @@ public class FSEditLog {
     //
     fsimage.processIOError(parentStorageDir);
   }
-  
+
+  /**
+   * report inaccessible storage directories and trigger a fatal error
+   */
+  private void processAllStorageInaccessible() {
+    processFatalError("Fatal Error: All storage directories are inaccessible.");
+  }
+
+  /**
+   * Handle a fatal error
+   * @param message message to include in any output
+   */
+  protected void processFatalError(String message) {
+    FSNamesystem.LOG.fatal(message);
+    Runtime.getRuntime().exit(-1);
+  }
+
   /**
    * If there is an IO Error on any log operations on storage directory,
    * remove any stream associated with that directory 
    */
   synchronized void processIOError(StorageDirectory sd) {
     // Try to remove stream only if one should exist
-    if (!sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
+    if (!sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
       return;
+    }
     if (editStreams == null || editStreams.size() <= 1) {
-      FSNamesystem.LOG.fatal(
-          "Fatal Error : All storage directories are inaccessible."); 
-      Runtime.getRuntime().exit(-1);
+      processAllStorageInaccessible();
     }
     for (int idx = 0; idx < editStreams.size(); idx++) {
-      File parentStorageDir = ((EditLogFileOutputStream)editStreams
-                                       .get(idx)).getFile()
-                                       .getParentFile().getParentFile();
-      if (parentStorageDir.getName().equals(sd.getRoot().getName()))
+      File parentStorageDir = ((EditLogFileOutputStream) editStreams
+              .get(idx)).getFile()
+              .getParentFile().getParentFile();
+      if (parentStorageDir.getName().equals(sd.getRoot().getName())) {
         editStreams.remove(idx);
- }
+      }
+    }
   }
   
   /**
@@ -458,10 +472,8 @@ public class FSEditLog {
         }
       }
       if (j == numEditStreams) {
-          FSNamesystem.LOG.error("Unable to find sync log on which " +
-                                 " IO error occured. " +
-                                 "Fatal Error.");
-          Runtime.getRuntime().exit(-1);
+        processFatalError("Fatal Error: Unable to find sync log on which " +
+                                 " IO error occured. ");
       }
       processIOError(j);
     }

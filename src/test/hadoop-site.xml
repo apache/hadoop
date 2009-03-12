@@ -11,4 +11,10 @@
 
 
 
+<property>
+  <name>dfs.datanode.ipc.address</name>
+  <value>localhost:50020</value>
+  <description>address for datanodes is always the localhost. This makes for
+  a very fast test setup</description>
+</property>
 </configuration>

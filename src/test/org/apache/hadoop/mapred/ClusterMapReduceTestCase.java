@@ -93,7 +93,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
       config = props;
     }
 
-    public ConfigurableMiniMRCluster(int numTaskTrackers, String namenode,
+    private ConfigurableMiniMRCluster(int numTaskTrackers, String namenode,
                                      int numDir) throws Exception {
       super(numTaskTrackers, namenode, numDir);
     }
@@ -121,14 +121,10 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
    * @throws Exception if the cluster could not be stopped
    */
   protected void stopCluster() throws Exception {
-    if (mrCluster != null) {
-      mrCluster.shutdown();
-      mrCluster = null;
-    }
-    if (dfsCluster != null) {
-      dfsCluster.shutdown();
-      dfsCluster = null;
-    }
+    MiniMRCluster.close(mrCluster);
+    mrCluster = null;
+    MiniDFSCluster.close(dfsCluster);
+    dfsCluster = null;
   }
 
   /**
