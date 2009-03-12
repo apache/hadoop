@@ -51,11 +51,9 @@ import java.io.IOException;
 public class CBZip2InputStream extends InputStream implements BZip2Constants {
 
   private static void reportCRCError() throws IOException {
-    // The clean way would be to throw an exception.
-    // throw new IOException("crc error");
 
-    // Just print a message, like the previous versions of this class did
-    System.err.println("BZip2 CRC error");
+    throw new IOException("BZip2 CRC error");
+
   }
 
   private void makeMaps() {
