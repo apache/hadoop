@@ -94,8 +94,29 @@ public class TestLostTracker extends TestCase {
     assertTrue(tip.isComplete());
     assertEquals(tip.numKilledTasks(), 1);
     
+    // check if the task statuses for the tasks are sane
+    JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
+    for (TaskInProgress taskInProgress : jt.getJob(id).getMapTasks()) {
+      testTaskStatuses(taskInProgress.getTaskStatuses());
+    }
+    
   }
   
+  private void testTaskStatuses(TaskStatus[] tasks) {
+    for (TaskStatus status : tasks) {
+      assertTrue("Invalid start time " + status.getStartTime(), 
+                 status.getStartTime() > 0);
+      assertTrue("Invalid finish time " + status.getFinishTime(), 
+                 status.getFinishTime() > 0);
+      assertTrue("Start time (" + status.getStartTime() + ") is greater than " 
+                 + "the finish time (" + status.getFinishTime() + ")", 
+                 status.getStartTime() <= status.getFinishTime());
+      assertNotNull("Task phase information is null", status.getPhase());
+      assertNotNull("Task run-state information is null", status.getRunState());
+      assertNotNull("TaskTracker information is null", status.getTaskTracker());
+    }
+  }
+
   public void testLostTracker() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;

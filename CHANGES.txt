@@ -700,6 +700,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5395. Change the exception message when a job is submitted to an
     invalid queue. (Rahul Kumar Singh via yhemanth)
 
+    HADOOP-5276. Fixes a problem to do with updating the start time of a task when
+    the tracker that ran the task is lost. (Amar Kamat via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

@@ -2426,6 +2426,12 @@ class JobInProgress {
                                                     reason,
                                                     trackerName, phase,
                                                     new Counters());
+    // update the actual start-time of the attempt
+    TaskStatus oldStatus = tip.getTaskStatus(taskid); 
+    long startTime = oldStatus == null
+                     ? System.currentTimeMillis()
+                     : oldStatus.getStartTime();
+    status.setStartTime(startTime);
     status.setFinishTime(System.currentTimeMillis());
     boolean wasComplete = tip.isComplete();
     updateTaskStatus(tip, status, metrics);
