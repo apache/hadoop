@@ -43,23 +43,27 @@ class TaskTrackerMetricsInst extends TaskTrackerInstrumentation
     metricsRecord.setTag("sessionId", sessionId);
     context.registerUpdater(this);
   }
-    
-  synchronized void completeTask() {
+
+  @Override
+  public synchronized void completeTask(TaskAttemptID t) {
     ++numCompletedTasks;
   }
-  
-  synchronized void timedoutTask() {
+
+  @Override
+  public synchronized void timedoutTask(TaskAttemptID t) {
     ++timedoutTasks;
   }
-  
-  synchronized void taskFailedPing() {
+
+  @Override
+  public synchronized void taskFailedPing(TaskAttemptID t) {
     ++tasksFailedPing;
   }
-  
+
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
-   */  
+   */
+  @Override
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
       metricsRecord.setMetric("maps_running", tt.mapTotal);

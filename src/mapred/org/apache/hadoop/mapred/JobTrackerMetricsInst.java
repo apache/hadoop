@@ -73,26 +73,32 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
     }
   }
 
+  @Override
   public synchronized void launchMap(TaskAttemptID taskAttemptID) {
     ++numMapTasksLaunched;
   }
-    
+
+  @Override
   public synchronized void completeMap(TaskAttemptID taskAttemptID) {
     ++numMapTasksCompleted;
   }
-    
+
+  @Override
   public synchronized void launchReduce(TaskAttemptID taskAttemptID) {
     ++numReduceTasksLaunched;
   }
-    
+
+  @Override
   public synchronized void completeReduce(TaskAttemptID taskAttemptID) {
     ++numReduceTasksCompleted;
   }
-    
+
+  @Override
   public synchronized void submitJob(JobConf conf, JobID id) {
     ++numJobsSubmitted;
   }
-    
+
+  @Override
   public synchronized void completeJob(JobConf conf, JobID id) {
     ++numJobsCompleted;
   }

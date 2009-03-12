@@ -751,6 +751,8 @@ Release 0.19.2 - Unreleased
     of taskIds that the TaskTracker's TaskMemoryManager manages.
     (Amareshwari Sriramadasu via ddas)
  
+    HADOOP-5446. Restore TaskTracker metrics. (cdouglas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
