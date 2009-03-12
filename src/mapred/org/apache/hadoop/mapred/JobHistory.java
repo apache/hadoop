@@ -1180,6 +1180,26 @@ public class JobHistory {
         }
       }
     }
+
+    /**
+     * Update the finish time of task. 
+     * @param taskId task id
+     * @param finishTime finish time of task in ms
+     */
+    public static void logUpdates(TaskID taskId, long finishTime){
+      if (!disableHistory){
+        ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
+                                                     + taskId.getJobID()); 
+
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.Task, 
+                         new Keys[]{Keys.TASKID, Keys.FINISH_TIME}, 
+                         new String[]{ taskId.toString(), 
+                                       String.valueOf(finishTime)});
+        }
+      }
+    }
+
     /**
      * Log job failed event.
      * @param taskId task id
