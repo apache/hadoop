@@ -68,6 +68,8 @@ Release 0.19.2 - Unreleased
     HADOOP-5440. Fixes a problem to do with removing a taskId from the list
     of taskIds that the TaskTracker's TaskMemoryManager manages.
     (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-5446. Restore TaskTracker metrics. (cdouglas)
  
 Release 0.19.1 - 2009-02-23
 
