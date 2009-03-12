@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -217,6 +218,16 @@ public class TestQueueManager extends TestCase {
         assertTrue(ioe.getMessage().
             contains("cannot perform operation " +
             "SUBMIT_JOB on queue " + queue));
+        // check if the system directory gets cleaned up or not
+        JobTracker jobtracker = miniMRCluster.getJobTrackerRunner().getJobTracker();
+        Path sysDir = new Path(jobtracker.getSystemDir());
+        FileSystem fs = sysDir.getFileSystem(conf);
+        int size = fs.listStatus(sysDir).length;
+        while (size > 0) {
+          System.out.println("Waiting for the job files in sys directory to be cleaned up");
+          UtilsForTests.waitFor(100);
+          size = fs.listStatus(sysDir).length;
+        }
       }
     } finally {
       tearDownCluster();

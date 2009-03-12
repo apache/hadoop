@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobTracker.RecoveryManager;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Test whether the {@link RecoveryManager} is able to tolerate job-recovery 
@@ -203,6 +204,25 @@ public class TestRecoveryManager extends TestCase {
       UtilsForTests.waitFor(100);
     }
     
+    // now submit job3 with inappropriate acls
+    JobConf job3 = mr.createJobConf();
+    job3.set("hadoop.job.ugi","abc,users");
+
+    UtilsForTests.configureWaitingJobConf(job3, 
+        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output2"), 1, 0, 
+        "test-recovery-manager", signalFile, signalFile);
+    
+    // submit the job
+    RunningJob rJob3 = (new JobClient(job3)).submitJob(job3);
+    LOG.info("Submitted job " + rJob3.getID() + " with different user");
+    
+    jip = jobtracker.getJob(rJob3.getID());
+
+    while (!jip.inited()) {
+      LOG.info("Waiting for job " + jip.getJobID() + " to be inited");
+      UtilsForTests.waitFor(100);
+    }
+
     // kill the jobtracker
     LOG.info("Stopping jobtracker");
     mr.stopJobTracker();
@@ -212,15 +232,32 @@ public class TestRecoveryManager extends TestCase {
                                       true);
     mr.getJobTrackerConf().setInt("mapred.jobtracker.maxtasks.per.job", 25);
     
+    mr.getJobTrackerConf().setBoolean("mapred.acls.enabled" , true);
+    UserGroupInformation ugi = UserGroupInformation.readFrom(job1);
+    mr.getJobTrackerConf().set("mapred.queue.default.acl-submit-job", 
+                               ugi.getUserName());
+
     // start the jobtracker
     LOG.info("Starting jobtracker");
     mr.startJobTracker();
+    UtilsForTests.waitForJobTracker(jc);
     
     jobtracker = mr.getJobTrackerRunner().getJobTracker();
     
     // assert that job2 is recovered by the jobtracker as job1 would fail
     assertEquals("Recovery manager failed to tolerate job failures",
                  2, jobtracker.getAllJobs().length);
+    
+    // check if the job#1 has failed
+    JobStatus status = jobtracker.getJobStatus(rJob1.getID());
+    assertEquals("Faulty job not failed", 
+                 JobStatus.FAILED, status.getRunState());
+    
+    jip = jobtracker.getJob(rJob2.getID());
+    assertFalse("Job should be running", jip.isComplete());
+    
+    status = jobtracker.getJobStatus(rJob3.getID());
+    assertNull("Job should be missing", status);
     
     mr.shutdown();
   }
