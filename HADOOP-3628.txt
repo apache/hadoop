@@ -1,0 +1,42 @@
+HADOOP-3628 Service Lifecycle for Hadoop
+
+This branch contains the files for HADOOP-3628
+Add a lifecycle interface for Hadoop components: namenodes, job clients, etc.
+https://issues.apache.org/jira/browse/HADOOP-3628
+
+
+Command to create a patch from the files that have changed.
+
+svn diff \
+src/core/org/apache/hadoop/http/HttpServer.java \
+src/core/org/apache/hadoop/ipc/RPC.java \
+src/core/org/apache/hadoop/util/Service.java \
+src/core/org/apache/hadoop/util/MockService.java \
+src/hdfs/org/apache/hadoop/hdfs/server/datanode/DataNode.java \
+src/hdfs/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java \
+src/hdfs/org/apache/hadoop/hdfs/server/namenode/NameNode.java \
+src/hdfs/org/apache/hadoop/hdfs/server/namenode/PendingReplicationBlocks.java \
+src/mapred/org/apache/hadoop/mapred/JobEndNotifier.java \
+src/mapred/org/apache/hadoop/mapred/JobTracker.java \
+src/mapred/org/apache/hadoop/mapred/TaskTracker.java \
+src/mapred/org/apache/hadoop/mapred/TaskTrackerAction.java \
+src/mapred/org/apache/hadoop/mapred/TaskTrackerStatus.java \
+\
+src/test/org/apache/hadoop/fs/TestCopyFiles.java \
+src/test/org/apache/hadoop/fs/TestFileSystem.java \
+src/test/org/apache/hadoop/hdfs/MiniDFSCluster.java \
+src/test/org/apache/hadoop/hdfs/TestInjectionForSimulatedStorage.java \
+src/test/org/apache/hadoop/hdfs/TestMiniDFSCluster.java \
+src/test/org/apache/hadoop/hdfs/TestReplication.java \
+src/test/org/apache/hadoop/mapred/ClusterMapReduceTestCase.java \
+src/test/org/apache/hadoop/mapred/HadoopTestCase.java \
+src/test/org/apache/hadoop/mapred/MiniMRCluster.java \
+src/test/org/apache/hadoop/mapred/TestMRServerPorts.java \
+src/test/org/apache/hadoop/mapred/TestMultipleLevelCaching.java \
+src/test/org/apache/hadoop/mapred/TestRackAwareTaskPlacement.java \
+src/test/org/apache/hadoop/mapred/TestTaskTrackerLifecycle.java \
+src/test/org/apache/hadoop/mapred/pipes/TestPipes.java \
+src/test/org/apache/hadoop/util/TestServiceLifecycle.java \
+src/test/org/apache/hadoop/hdfs/TestFileAppend2.java \
+src/contrib/streaming/src/test/org/apache/hadoop/streaming/TestUlimit.java \
+> patches/hadoop-3628.patch
