@@ -347,6 +347,9 @@ Release 0.20.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
+    (Rodrigo Schmidt via zshao)
+
     HADOOP-5326. Fixes CBZip2OutputStream data corruption problem.
     (Rodrigo Schmidt via zshao)
 
