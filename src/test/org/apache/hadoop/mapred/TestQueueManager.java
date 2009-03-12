@@ -101,6 +101,22 @@ public class TestQueueManager extends TestCase {
     verifyJobSubmission(conf, false, "q1");
   }
   
+  public void testSubmissionToInvalidQueue() throws IOException{
+    JobConf conf = new JobConf();
+    conf.set("mapred.queue.names","default");
+    setUpCluster(conf);
+    String queueName = "q1";
+    try {
+      RunningJob rjob = submitSleepJob(1, 1, 100, 100, true, null, queueName);
+    } catch (IOException ioe) {      
+       assertTrue(ioe.getMessage().contains("Queue \"" + queueName + "\" does not exist"));
+       return;
+    } finally {
+      tearDownCluster();
+    }
+    fail("Job submission to invalid queue job shouldnot complete , it should fail with proper exception ");   
+  }
+  
   public void testEnabledACLForNonDefaultQueue() throws IOException,
                                                           LoginException {
     // login as self...

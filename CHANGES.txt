@@ -979,6 +979,9 @@ Release 0.20.0 - Unreleased
     ACL check failures and also check ACLs on restart.
     (Amar Kamat via yhemanth)
 
+    HADOOP-5395. Change the exception message when a job is submitted to an
+    invalid queue. (Rahul Kumar Singh via yhemanth)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
