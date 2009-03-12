@@ -89,11 +89,7 @@ public class JobEndNotifier {
 
   public static void stopNotifier() {
     running = false;
-    //copy into a variable to deal with race conditions
-    Thread notifier = thread;
-    if (notifier != null) {
-      notifier.interrupt();
-    }
+    thread.interrupt();
   }
 
   private static JobEndStatusInfo createNotification(JobConf conf,

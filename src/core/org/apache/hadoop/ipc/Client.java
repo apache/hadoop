@@ -284,9 +284,8 @@ public class Client {
     /** Connect to the server and set up the I/O streams. It then sends
      * a header to the server and starts
      * the connection thread that waits for responses.
-     * @throws IOException if the connection attempt was unsuccessful
      */
-    private synchronized void setupIOstreams() throws IOException {
+    private synchronized void setupIOstreams() {
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
@@ -309,7 +308,7 @@ public class Client {
             /* The max number of retries is 45,
              * which amounts to 20s*45 = 15 minutes retries.
              */
-            handleConnectionFailure(timeoutFailures++, maxRetries, toe);
+            handleConnectionFailure(timeoutFailures++, 45, toe);
           } catch (IOException ie) {
             handleConnectionFailure(ioFailures++, maxRetries, ie);
           }
@@ -328,7 +327,6 @@ public class Client {
       } catch (IOException e) {
         markClosed(e);
         close();
-        throw e;
       }
     }
 
@@ -360,7 +358,7 @@ public class Client {
 
       // throw the exception if the maximum number of retries is reached
       if (curRetries >= maxRetries) {
-        throw wrapException(remoteId.getAddress(), ioe);
+        throw ioe;
       }
 
       // otherwise back off and retry
@@ -369,7 +367,7 @@ public class Client {
       } catch (InterruptedException ignored) {}
       
       LOG.info("Retrying connect to server: " + server + 
-          ". Already tried " + curRetries + " time(s) out of "+ maxRetries);
+          ". Already tried " + curRetries + " time(s).");
     }
 
     /* Write the header for each connection

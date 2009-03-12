@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
-import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
@@ -550,10 +549,8 @@ public abstract class Storage extends StorageInfo {
 
     /**
      * Unlock storage.
-     * Does nothing if there is no acquired lock
-     * @throws IOException for IO problems
-     * @throws ClosedChannelException if the channel owning the lock is
-     *  already closed.
+     * 
+     * @throws IOException
      */
     public void unlock() throws IOException {
       if (this.lock == null)
@@ -706,22 +703,11 @@ public abstract class Storage extends StorageInfo {
 
   /**
    * Unlock all storage directories.
-   * @throws IOException on a failure to unlock
+   * @throws IOException
    */
   public void unlockAll() throws IOException {
-    IOException ioe = null;
-    for (StorageDirectory storageDir : storageDirs) {
-      try {
-        storageDir.unlock();
-      } catch (IOException e) {
-        LOG.warn("Failed to unlock " + storageDir.getRoot() + " : " + e, e);
-        if (ioe != null) {
-          ioe = e;
-        }
-      }
-    }
-    if (ioe != null) {
-      throw ioe;
+    for (Iterator<StorageDirectory> it = storageDirs.iterator(); it.hasNext();) {
+      it.next().unlock();
     }
   }
 

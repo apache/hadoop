@@ -58,7 +58,7 @@ public class TestHDFSServerPorts extends TestCase {
     config = new Configuration();
     config.set("dfs.name.dir", new File(hdfsDir, "name1").getPath());
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
-    config.set("dfs.http.address", "0.0.0.0:0");
+    config.set("dfs.http.address", NAME_NODE_HTTP_HOST + "0");
     NameNode.format(config);
 
     String[] args = new String[] {};

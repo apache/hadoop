@@ -46,12 +46,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
   private MiniMRCluster mr;
   private MiniDFSCluster dfs;
   private FileSystem fileSys;
-  private static final String BAILING_OUT = "Bailing out";
-  private static final String TEST_SCRIPT_BAILING_OUT
-          = "Test Script\n"+ BAILING_OUT;
-  private static final int SCRIPT_SLEEP_TIMEOUT = 60000;
-  private static final int SCRIPT_SLEEP_INTERVAL = 1000;
-
+  
   /**
    * Fail map class 
    */
@@ -60,7 +55,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
      public void map (LongWritable key, Text value, 
                      OutputCollector<Text, IntWritable> output, 
                      Reporter reporter) throws IOException {
-       System.err.println(BAILING_OUT);
+       System.err.println("Bailing out");
        throw new IOException();
      }
   }
@@ -170,17 +165,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
     // construct the task id of first map task of failmap
     TaskAttemptID taskId = new TaskAttemptID(new TaskID(jobId,true, 0), 0);
     // wait for the job to finish.
-    long timeout = System.currentTimeMillis() + SCRIPT_SLEEP_TIMEOUT;
-    while (!job.isComplete()) {
-      try {
-          Thread.sleep(SCRIPT_SLEEP_INTERVAL);
-        } catch (InterruptedException e) {
-          fail("Interrupted");
-        }
-        if(System.currentTimeMillis() > timeout) {
-          fail("Timeout waiting for the job to complete ");
-      }
-    }
+    while (!job.isComplete()) ;
     
     // return the output of debugout log.
     return readTaskLog(TaskLog.LogName.DEBUGOUT,taskId);
@@ -219,9 +204,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
                                outDir,debugDir, debugScript, input);
       
       // Assert the output of debug script.
-      if(!result.contains(TEST_SCRIPT_BAILING_OUT)) {
-        fail("Did not find " + TEST_SCRIPT_BAILING_OUT + "in \n" + result);
-      }
+      assertEquals("Test Script\nBailing out", result);
 
     } finally {  
       // close file system and shut down dfs and mapred cluster

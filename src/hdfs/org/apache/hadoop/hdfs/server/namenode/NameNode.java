@@ -45,7 +45,6 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Service;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
@@ -85,7 +84,7 @@ import java.util.Iterator;
  * NameNode implements the ClientProtocol interface, which allows
  * clients to ask for DFS services.  ClientProtocol is not
  * designed for direct use by authors of DFS client code.  End-users
- * should instead use the {@link FileSystem} class.
+ * should instead use the org.apache.nutch.hadoop.fs.FileSystem class.
  *
  * NameNode also implements the DatanodeProtocol interface, used by
  * DataNode programs that actually store DFS data blocks.  These
@@ -96,7 +95,7 @@ import java.util.Iterator;
  * secondary namenodes or rebalancing processes to get partial namenode's
  * state, for example partial blocksMap etc.
  **********************************************************/
-public class NameNode extends Service implements ClientProtocol, DatanodeProtocol,
+public class NameNode implements ClientProtocol, DatanodeProtocol,
                                  NamenodeProtocol, FSConstants,
                                  RefreshAuthorizationPolicyProtocol {
   static{
@@ -134,6 +133,8 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   /** HTTP server address */
   private InetSocketAddress httpAddress = null;
   private Thread emptier;
+  /** only used for testing purposes  */
+  private boolean stopRequested = false;
   /** Is service level authorization enabled? */
   private boolean serviceAuthEnabled = false;
   
@@ -161,17 +162,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   }
 
   public static InetSocketAddress getAddress(Configuration conf) {
-    URI fsURI = FileSystem.getDefaultUri(conf);
-    if (fsURI == null) {
-      throw new IllegalArgumentException(
-              "No default filesystem URI in the configuration");
-    }
-    String auth = fsURI.getAuthority();
-    if (auth == null) {
-      throw new IllegalArgumentException(
-              "No authority for the Filesystem URI " + fsURI);
-    }
-    return getAddress(auth);
+    return getAddress(FileSystem.getDefaultUri(conf).getAuthority());
   }
 
   public static URI getUri(InetSocketAddress namenode) {
@@ -184,7 +175,6 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
    * Initialize name-node.
    * 
    * @param conf the configuration
-   * @throws IOException for problems during initialization
    */
   private void initialize(Configuration conf) throws IOException {
     InetSocketAddress socAddr = NameNode.getAddress(conf);
@@ -271,7 +261,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   }
 
   /**
-   * Create a NameNode.
+   * Start NameNode.
    * <p>
    * The name-node can be started with one of the following startup options:
    * <ul> 
@@ -290,49 +280,14 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
    * <code>zero</code> in the conf.
    * 
    * @param conf  confirguration
-   * @throws IOException for backwards compatibility
+   * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    super(conf);
-  }
-
-  /////////////////////////////////////////////////////
-  // Service Lifecycle
-  /////////////////////////////////////////////////////
-
-  /**
-   * This method does all the startup.
-   * It is invoked from {@link #start()} when needed.
-   *
-   * @throws IOException for any problem.
-   */
-  @Override
-  protected void innerStart() throws IOException {
-    initialize(getConf());
-    setServiceState(ServiceState.LIVE);
-  }
-
-    /**
-   * {@inheritDoc}.
-   *
-   * This implementation checks for the name system being non-null and live
-   * @throws IOException for any ping failure
-   * @throws LivenessException if the name system is not running @param status
-   */
-  @Override
-  public void innerPing(ServiceStatus status) throws IOException {
-    if (namesystem == null) {
-      status.addThrowable(new LivenessException("No name system"));
-    } else {
-      try {
-        namesystem.ping();
-      } catch (IOException e) {
-        status.addThrowable(e);
-      }
-    }
-    if (httpServer == null || !httpServer.isAlive()) {
-      status.addThrowable(
-              new IOException("NameNode HttpServer is not running"));
+    try {
+      initialize(conf);
+    } catch (IOException e) {
+      this.stop();
+      throw e;
     }
   }
 
@@ -342,81 +297,34 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
    */
   public void join() {
     try {
-      if (server != null) {
-        server.join();
-      }
+      this.server.join();
     } catch (InterruptedException ie) {
     }
   }
 
   /**
-   * {@inheritDoc}
-   * To shut down, this service stops all NameNode threads and waits for them
-   * to finish. It also stops the metrics.
+   * Stop all NameNode threads and wait for all to finish.
    */
-  @Override
-  public synchronized void innerClose() throws IOException {
-    LOG.info("Closing NameNode");
+  public void stop() {
+    if (stopRequested)
+      return;
+    stopRequested = true;
     try {
-      if (httpServer != null) {
-        httpServer.stop();
-      }
+      if (httpServer != null) httpServer.stop();
     } catch (Exception e) {
-      LOG.error(StringUtils.stringifyException(e),e);
+      LOG.error(StringUtils.stringifyException(e));
     }
-    httpServer = null;
-    if (namesystem != null) {
-      namesystem.close();
-    }
-    if (emptier != null) {
-      emptier.interrupt();
-      emptier = null;
-    }
-    if (server != null) {
-      server.stop();
-      server = null;
-    }
+    if(namesystem != null) namesystem.close();
+    if(emptier != null) emptier.interrupt();
+    if(server != null) server.stop();
     if (myMetrics != null) {
       myMetrics.shutdown();
     }
     if (namesystem != null) {
       namesystem.shutdown();
-      namesystem = null;
     }
   }
   
-  /**
-   * Retained for backwards compatibility.
-   */
-  public void stop() {
-    closeQuietly();
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @return the name of this service
-   */
-  @Override
-  public String getServiceName() {
-    return "NameNode";
-  }
-
-  /**
-   * The toString operator returns the super class name/id, and the state. This
-   * gives all services a slightly useful message in a debugger or test report
-   *
-   * @return a string representation of the object.
-   */
-  @Override
-  public String toString() {
-    return getServiceName() + " instance " + super.toString() + " in state "
-            + getServiceState()
-            + (httpAddress != null ? (" at " + httpAddress + " , "): "")
-            + (server != null ? (", IPC " + server.getListenerAddress()) : "");
-  }
-
-
   /////////////////////////////////////////////////////
   // NamenodeProtocol
   /////////////////////////////////////////////////////
@@ -1061,7 +969,6 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     }
 
     NameNode namenode = new NameNode(conf);
-    deploy(namenode);
     return namenode;
   }
     

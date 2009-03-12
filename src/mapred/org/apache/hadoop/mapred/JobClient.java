@@ -1243,26 +1243,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   /** 
    * Utility that submits a job, then polls for progress until the job is
    * complete.
-   *
-   * @param job the job configuration.
-   * @return the job reference of the completed, successful, job
-   * @throws IOException any IO problem, and job failure
-   */
-  public static RunningJob runJob(JobConf job) throws IOException {
-    return runJob(job, -1);
-  }
-
-  /** 
-   * Utility that submits a job, then polls for progress until the job is
-   * complete.
    * 
    * @param job the job configuration.
-   * @param timeout timeout in milliseconds; any value less than or equal to
-   * zero means "do not time out"
-   * @return the job reference of the completed, successful, job
-   * @throws IOException any IO problem, and job failure
+   * @throws IOException
    */
-  public static RunningJob runJob(JobConf job, long timeout) throws IOException {
+  public static RunningJob runJob(JobConf job) throws IOException {
     JobClient jc = new JobClient(job);
     boolean error = true;
     RunningJob running = null;
@@ -1270,7 +1255,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     final int MAX_RETRIES = 5;
     int retries = MAX_RETRIES;
     TaskStatusFilter filter;
-    long endTime = timeout > 0 ? System.currentTimeMillis() + timeout : 0;
     try {
       filter = getTaskOutputFilter(job);
     } catch(IllegalArgumentException e) {
@@ -1366,10 +1350,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           }
           LOG.info("Communication problem with server: " +
                    StringUtils.stringifyException(ie));
-        }
-        //check for timeout
-        if (endTime > 0 && endTime > System.currentTimeMillis()) {
-          throw new IOException("Job execution timed out");
         }
       }
       if (!running.isSuccessful()) {

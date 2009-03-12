@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.util.Iterator;
 import java.util.Random;
 import java.net.*;
 
@@ -70,7 +71,7 @@ public class TestReplication extends TestCase {
     Configuration conf = fileSys.getConf();
     ClientProtocol namenode = DFSClient.createNamenode(conf);
       
-    waitForBlockReplication(name.toString(), namenode,
+    waitForBlockReplication(name.toString(), namenode, 
                             Math.min(numDatanodes, repl), -1);
     
     LocatedBlocks locations = namenode.getBlockLocations(name.toString(),0,
@@ -168,9 +169,9 @@ public class TestReplication extends TestCase {
     // Now get block details and check if the block is corrupt
     blocks = dfsClient.namenode.
               getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
-    LOG.info("Waiting until block is marked as corrupt...");
     while (blocks.get(0).isCorrupt() != true) {
       try {
+        LOG.info("Waiting until block is marked as corrupt...");
         Thread.sleep(1000);
       } catch (InterruptedException ie) {
       }
@@ -248,14 +249,16 @@ public class TestReplication extends TestCase {
       boolean replOk = true;
       LocatedBlocks blocks = namenode.getBlockLocations(filename, 0, 
                                                         Long.MAX_VALUE);
-
-      for (LocatedBlock block : blocks.getLocatedBlocks()) {
+      
+      for (Iterator<LocatedBlock> iter = blocks.getLocatedBlocks().iterator();
+           iter.hasNext();) {
+        LocatedBlock block = iter.next();
         int actual = block.getLocations().length;
-        if (actual < expected) {
+        if ( actual < expected ) {
           if (true || iters > 0) {
             LOG.info("Not enough replicas for " + block.getBlock() +
-                    " yet. Expecting " + expected + ", got " +
-                    actual + ".");
+                               " yet. Expecting " + expected + ", got " + 
+                               actual + ".");
           }
           replOk = false;
           break;
@@ -382,8 +385,10 @@ public class TestReplication extends TestCase {
       waitForBlockReplication(testFile, dfsClient.namenode, numDataNodes, -1);
       
     } finally {
-      MiniDFSCluster.close(cluster);
-    }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }  
   }
   
   /**

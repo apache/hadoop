@@ -247,13 +247,8 @@ public class TestSetupAndCleanupFailure extends TestCase {
       // they were running on a lost tracker
       testSetupAndCleanupKill(mr, dfs, false);
     } finally {
-      try {
-        if (dfs != null) { dfs.shutdown(); }
-        if (mr != null) { mr.shutdown();
-        }
-      } catch (OutOfMemoryError e) {
-        //ignore this as it means something went very wrong in the test logging
-        //any attempt to log it may make things worse
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown();
       }
     }
   }

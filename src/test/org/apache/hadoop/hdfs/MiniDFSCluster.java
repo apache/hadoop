@@ -25,14 +25,12 @@ import java.util.Collection;
 import java.nio.channels.FileChannel;
 import java.util.Random;
 import java.io.RandomAccessFile;
-import java.io.Closeable;
 
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -45,18 +43,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.*;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
  * The data directories for non-simulated DFS are under the testing directory.
  * For simulated data nodes, no underlying fs storage is used.
  */
-public class MiniDFSCluster implements Closeable {
-  private static final int WAIT_SLEEP_TIME_MILLIS = 500;
-  private static final int STARTUP_TIMEOUT_MILLIS = 30000;
+public class MiniDFSCluster {
 
   public class DataNodeProperties {
     DataNode datanode;
@@ -70,7 +63,6 @@ public class MiniDFSCluster implements Closeable {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
   private Configuration conf;
   private NameNode nameNode;
   private int numDataNodes;
@@ -289,18 +281,17 @@ public class MiniDFSCluster implements Closeable {
   }
 
   /**
-   * wait for the cluster to get out of
+   * wait for the cluster to get out of 
    * safemode.
    */
   public void waitClusterUp() {
     if (numDataNodes > 0) {
-      try {
-        while (!isClusterUp()) {
-          LOG.warn("Waiting for the Mini HDFS Cluster to start...");
-          Thread.sleep(WAIT_SLEEP_TIME_MILLIS);
+      while (!isClusterUp()) {
+        try {
+          System.err.println("Waiting for the Mini HDFS Cluster to start...");
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
         }
-      } catch (InterruptedException e) {
-        LOG.warn("Interrupted during startup", e);
       }
     }
   }
@@ -332,6 +323,7 @@ public class MiniDFSCluster implements Closeable {
                              boolean manageDfsDirs, StartupOption operation, 
                              String[] racks, String[] hosts,
                              long[] simulatedCapacities) throws IOException {
+
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
     if (conf.get("dfs.blockreport.initialDelay") == null) {
@@ -358,7 +350,7 @@ public class MiniDFSCluster implements Closeable {
     }
     //Generate some hostnames if required
     if (racks != null && hosts == null) {
-      LOG.info("Generating host names for datanodes");
+      System.out.println("Generating host names for datanodes");
       hosts = new String[numDataNodes];
       for (int i = curDatanodesNum; i < curDatanodesNum + numDataNodes; i++) {
         hosts[i - curDatanodesNum] = "host" + i + ".foo.com";
@@ -401,16 +393,16 @@ public class MiniDFSCluster implements Closeable {
         dnConf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY,
             simulatedCapacities[i-curDatanodesNum]);
       }
-      LOG.info("Starting DataNode " + i + " with dfs.data.dir: "
+      System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
                          + dnConf.get("dfs.data.dir"));
       if (hosts != null) {
         dnConf.set("slave.host.name", hosts[i - curDatanodesNum]);
-        LOG.info("Starting DataNode " + i + " with hostname set to: "
+        System.out.println("Starting DataNode " + i + " with hostname set to: " 
                            + dnConf.get("slave.host.name"));
       }
       if (racks != null) {
         String name = hosts[i - curDatanodesNum];
-        LOG.info("Adding node with hostname : " + name + " to rack "+
+        System.out.println("Adding node with hostname : " + name + " to rack "+
                             racks[i-curDatanodesNum]);
         StaticMapping.addNodeToRack(name,
                                     racks[i-curDatanodesNum]);
@@ -425,7 +417,7 @@ public class MiniDFSCluster implements Closeable {
       String ipAddr = dn.getSelfAddr().getAddress().getHostAddress();
       if (racks != null) {
         int port = dn.getSelfAddr().getPort();
-        LOG.info("Adding node with IP:port : " + ipAddr + ":" + port+
+        System.out.println("Adding node with IP:port : " + ipAddr + ":" + port+
                             " to rack " + racks[i-curDatanodesNum]);
         StaticMapping.addNodeToRack(ipAddr + ":" + port,
                                   racks[i-curDatanodesNum]);
@@ -556,8 +548,8 @@ public class MiniDFSCluster implements Closeable {
   /**
    * Shut down the servers that are up.
    */
-  public synchronized void shutdown() {
-    LOG.info("Shutting down the Mini HDFS Cluster");
+  public void shutdown() {
+    System.out.println("Shutting down the Mini HDFS Cluster");
     shutdownDataNodes();
     if (nameNode != null) {
       nameNode.stop();
@@ -565,55 +557,18 @@ public class MiniDFSCluster implements Closeable {
       nameNode = null;
     }
   }
-
-  /**
-   * Shuts down the cluster.  
-   *
-   * @throws IOException if an I/O error occurs
-   */
-  public void close() throws IOException {
-    shutdown();
-  }
-
-  /**
-   * Static operation to shut down a cluster;
-   * harmless if the cluster argument is null
-   *
-   * @param cluster cluster to shut down, or null for no cluster
-   */
-  public static void close(Closeable cluster) {
-    Service.close(cluster);
-  }
-
+  
   /**
    * Shutdown all DataNodes started by this class.  The NameNode
    * is left running so that new DataNodes may be started.
    */
   public void shutdownDataNodes() {
     for (int i = dataNodes.size()-1; i >= 0; i--) {
-      LOG.info("Shutting down DataNode " + i);
+      System.out.println("Shutting down DataNode " + i);
       DataNode dn = dataNodes.remove(i).datanode;
       dn.shutdown();
       numDataNodes--;
     }
-  }
-
-  /**
-   * Returns a string representation of the cluster.
-   *
-   * @return a string representation of the cluster
-   */
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder();
-    builder.append("Cluster up:").append(isClusterUp());
-    builder.append("\nName Node:").append(getNameNode());
-    builder.append("\nData node count:").append(dataNodes.size());
-    for (DataNodeProperties dnp : dataNodes) {
-      builder.append("\n Datanode: ").append(dnp.datanode);
-      builder.append("\n  state: ").append(dnp.datanode.getServiceState());
-    }
-    return builder.toString();
   }
 
   /*
@@ -640,15 +595,12 @@ public class MiniDFSCluster implements Closeable {
       if (blockFile.exists()) {
         // Corrupt replica by writing random bytes into replica
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
-        try {
-          FileChannel channel = raFile.getChannel();
-          String badString = "BADBAD";
-          int rand = random.nextInt((int) channel.size() / 2);
-          raFile.seek(rand);
-          raFile.write(badString.getBytes());
-        } finally {
-          raFile.close();
-        }
+        FileChannel channel = raFile.getChannel();
+        String badString = "BADBAD";
+        int rand = random.nextInt((int)channel.size()/2);
+        raFile.seek(rand);
+        raFile.write(badString.getBytes());
+        raFile.close();
       }
       corrupted = true;
     }
@@ -664,7 +616,7 @@ public class MiniDFSCluster implements Closeable {
     }
     DataNodeProperties dnprop = dataNodes.remove(i);
     DataNode dn = dnprop.datanode;
-    LOG.info("MiniDFSCluster Stopping DataNode " +
+    System.out.println("MiniDFSCluster Stopping DataNode " + 
                        dn.dnRegistration.getName() +
                        " from a total of " + (dataNodes.size() + 1) + 
                        " datanodes.");
@@ -703,10 +655,8 @@ public class MiniDFSCluster implements Closeable {
     }
   }
 
-  /**
+  /*
    * Shutdown a datanode by name.
-   * @param name datanode name
-   * @return true if a node was shut down
    */
   public synchronized DataNodeProperties stopDataNode(String name) {
     int i;
@@ -720,7 +670,7 @@ public class MiniDFSCluster implements Closeable {
   }
   
   /**
-   * @return true if the NameNode is running and is out of Safe Mode.
+   * Returns true if the NameNode is running and is out of Safe Mode.
    */
   public boolean isClusterUp() {
     if (nameNode == null) {
@@ -735,7 +685,7 @@ public class MiniDFSCluster implements Closeable {
   }
   
   /**
-   * @return true if there is at least one DataNode running.
+   * Returns true if there is at least one DataNode running.
    */
   public boolean isDataNodeUp() {
     if (dataNodes == null || dataNodes.size() == 0) {
@@ -746,15 +696,13 @@ public class MiniDFSCluster implements Closeable {
   
   /**
    * Get a client handle to the DFS cluster.
-   * @return a new filesystem, which must be closed when no longer needed.
-   * @throws IOException if the filesystem cannot be created
    */
   public FileSystem getFileSystem() throws IOException {
     return FileSystem.get(conf);
   }
 
   /**
-   * @return the directories where the namenode stores its state.
+   * Get the directories where the namenode stores its image.
    */
   public Collection<File> getNameDirs() {
     return FSNamesystem.getNamespaceDirs(conf);
@@ -777,27 +725,17 @@ public class MiniDFSCluster implements Closeable {
     InetSocketAddress addr = new InetSocketAddress("localhost",
                                                    getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
-    try {
-      DatanodeInfo[] dnInfos;
 
-      // make sure all datanodes are alive
-      long timeout=System.currentTimeMillis() + STARTUP_TIMEOUT_MILLIS;
-      while((dnInfos = client.datanodeReport(DatanodeReportType.LIVE)).length
-          != numDataNodes) {
-        try {
-          Thread.sleep(WAIT_SLEEP_TIME_MILLIS);
-          if(System.currentTimeMillis() > timeout) {
-            throw new IOException("Timeout waiting for the datanodes. "+
-                    "Expected " + numDataNodes + "but got " + dnInfos.length);
-          }
-        } catch (InterruptedException e) {
-          throw new IOException("Interrupted while waiting for the datanodes",e);
-        }
+    // make sure all datanodes are alive
+    while(client.datanodeReport(DatanodeReportType.LIVE).length
+        != numDataNodes) {
+      try {
+        Thread.sleep(500);
+      } catch (Exception e) {
       }
-    } finally {
-      client.close();
     }
 
+    client.close();
   }
   
   public void formatDataNodeDirs() throws IOException {
@@ -886,7 +824,7 @@ public class MiniDFSCluster implements Closeable {
   }
 
   /**
-   * @return the current set of datanodes
+   * Returns the current set of datanodes
    */
   DataNode[] listDataNodes() {
     DataNode[] list = new DataNode[dataNodes.size()];

@@ -136,15 +136,6 @@ class PendingReplicationBlocks {
   }
 
   /**
-   * Test for the replicator being alive.
-   * @return true if the thread is running.
-   */
-  boolean isAlive() {
-    Daemon daemon = timerThread;
-    return daemon != null && daemon.isAlive();
-  }
-
-  /**
    * An object that contains information about a block that 
    * is being replicated. It records the timestamp when the 
    * system started replicating the most recent copy of this

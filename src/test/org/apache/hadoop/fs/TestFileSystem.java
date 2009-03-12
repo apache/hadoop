@@ -65,25 +65,25 @@ public class TestFileSystem extends TestCase {
   private static final long MEGA = 1024 * 1024;
   private static final int SEEKS_PER_FILE = 4;
 
-  private static final String ROOT = System.getProperty("test.build.data","fs_test");
-  private static final Path CONTROL_DIR = new Path(ROOT, "fs_control");
-  private static final Path WRITE_DIR = new Path(ROOT, "fs_write");
-  private static final Path READ_DIR = new Path(ROOT, "fs_read");
-  private static final Path DATA_DIR = new Path(ROOT, "fs_data");
+  private static String ROOT = System.getProperty("test.build.data","fs_test");
+  private static Path CONTROL_DIR = new Path(ROOT, "fs_control");
+  private static Path WRITE_DIR = new Path(ROOT, "fs_write");
+  private static Path READ_DIR = new Path(ROOT, "fs_read");
+  private static Path DATA_DIR = new Path(ROOT, "fs_data");
 
   public void testFs() throws Exception {
-    createTestFs(10 * MEGA, 100, 0);
+    testFs(10 * MEGA, 100, 0);
   }
 
-  private static void createTestFs(long megaBytes, int numFiles, long seed)
+  public static void testFs(long megaBytes, int numFiles, long seed)
     throws Exception {
 
     FileSystem fs = FileSystem.get(conf);
 
-    if (seed == 0) {
+    if (seed == 0)
       seed = new Random().nextLong();
-      LOG.info("seed = " + seed);
-    }
+
+    LOG.info("seed = "+seed);
 
     createControlFile(fs, megaBytes, numFiles, seed);
     writeTest(fs, false);
@@ -553,7 +553,7 @@ public class TestFileSystem extends TestCase {
         }
       }
     } finally {
-      MiniDFSCluster.close(cluster);
+      if (cluster != null) cluster.shutdown(); 
     }
   }
   
@@ -563,43 +563,29 @@ public class TestFileSystem extends TestCase {
     fileSys.checkPath(new Path("hdfs://" + add.getHostName().toUpperCase() + ":" + add.getPort()));
   }
 
-  public void testCloseFileFS() throws Exception {
-    Configuration conf = new Configuration();
-    new Path("file:///").getFileSystem(conf);
-    UnixUserGroupInformation.login(conf, true);
-    FileSystem.closeAll();
-  }
+  public void testFsClose() throws Exception {
+    {
+      Configuration conf = new Configuration();
+      new Path("file:///").getFileSystem(conf);
+      UnixUserGroupInformation.login(conf, true);
+      FileSystem.closeAll();
+    }
 
-  public void testCloseHftpFS() throws Exception {
+    {
       Configuration conf = new Configuration();
       new Path("hftp://localhost:12345/").getFileSystem(conf);
       UnixUserGroupInformation.login(conf, true);
       FileSystem.closeAll();
-  }
+    }
 
-  public void testCloseHftpFSAltLogin() throws Exception {
-    Configuration conf = new Configuration();
-    FileSystem fs = new Path("hftp://localhost:12345/").getFileSystem(conf);
-    UnixUserGroupInformation.login(fs.getConf(), true);
-    FileSystem.closeAll();
-  }
-
-
-  public void testCloseHDFS() throws Exception {
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
-      URI uri = cluster.getFileSystem().getUri();
-      FileSystem fs = FileSystem.get(uri, new Configuration());
-      checkPath(cluster, fs);
+    {
       Configuration conf = new Configuration();
-      new Path(uri.toString()).getFileSystem(conf);
-      UnixUserGroupInformation.login(conf, true);
+      FileSystem fs = new Path("hftp://localhost:12345/").getFileSystem(conf);
+      UnixUserGroupInformation.login(fs.getConf(), true);
       FileSystem.closeAll();
-    } finally {
-      MiniDFSCluster.close(cluster);
     }
   }
+
 
   public void testCacheKeysAreCaseInsensitive()
     throws Exception

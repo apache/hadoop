@@ -112,11 +112,13 @@ public class TestMultipleLevelCaching extends TestCase {
        */
       TestRackAwareTaskPlacement.launchJobAndTestCounters(
     		  testName, mr, fileSys, inDir, outputPath, 1, 1, 0, 0);
+      mr.shutdown();
     } finally {
       fileSys.delete(inDir, true);
       fileSys.delete(outputPath, true);
-      MiniMRCluster.close(mr);
-      MiniDFSCluster.close(dfs);
+      if (dfs != null) { 
+        dfs.shutdown(); 
+      }
     }
   }
 }

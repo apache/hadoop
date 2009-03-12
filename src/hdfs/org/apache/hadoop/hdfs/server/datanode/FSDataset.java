@@ -185,9 +185,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
 
       File blockFiles[] = dir.listFiles();
-      if (blockFiles == null) {
-        throw new IllegalStateException("Not a valid directory: " + dir);
-      }
       for (int i = 0; i < blockFiles.length; i++) {
         if (Block.isBlockFilename(blockFiles[i])) {
           long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);

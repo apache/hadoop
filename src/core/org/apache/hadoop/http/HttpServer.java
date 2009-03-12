@@ -22,7 +22,6 @@ import java.io.PrintWriter;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
-import java.net.BindException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -458,11 +457,7 @@ public class HttpServer implements FilterContainer {
           // then try the next port number.
           if (ex instanceof BindException) {
             if (!findPort) {
-              BindException be = new BindException(
-                      "Port in use: " + listener.getHost()
-                              + ":" + listener.getPort());
-              be.initCause(ex);
-              throw be;
+              throw (BindException) ex;
             }
           } else {
             LOG.info("HttpServer.start() threw a non Bind IOException"); 
@@ -491,14 +486,6 @@ public class HttpServer implements FilterContainer {
 
   public void join() throws InterruptedException {
     webServer.join();
-  }
-
-  /**
-   * Test for the availability of the web server
-   * @return true if the web server is started, false otherwise
-   */
-  public boolean isAlive() {
-    return webServer.isStarted();
   }
 
   /**

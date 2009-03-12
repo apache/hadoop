@@ -64,15 +64,6 @@ public class TestCopyFiles extends TestCase {
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
-  private MiniDFSCluster cluster;
-
-  /**
-   * terminate any non-null cluster
-   */
-  protected void tearDown() throws Exception {
-    super.tearDown();
-    MiniDFSCluster.close(cluster);
-  }
 
   /** class MyFile contains enough information to recreate the contents of
    * a single file.
@@ -278,6 +269,8 @@ public class TestCopyFiles extends TestCase {
   /** copy files from dfs file system to dfs file system */
   public void testCopyFromDfsToDfs() throws Exception {
     String namenode = null;
+    MiniDFSCluster cluster = null;
+    try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 2, true, null);
       final FileSystem hdfs = cluster.getFileSystem();
@@ -298,10 +291,15 @@ public class TestCopyFiles extends TestCase {
         deldir(hdfs, "/srcdat");
         deldir(hdfs, "/logs");
       }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
   }
   
   /** copy files from local file system to dfs file system */
   public void testCopyFromLocalToDfs() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 1, true, null);
       final FileSystem hdfs = cluster.getFileSystem();
@@ -321,10 +319,15 @@ public class TestCopyFiles extends TestCase {
         deldir(hdfs, "/logs");
         deldir(FileSystem.get(LOCAL_FS, conf), TEST_ROOT_DIR+"/srcdat");
       }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
   }
 
   /** copy files from dfs file system to local file system */
   public void testCopyFromDfsToLocal() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
       Configuration conf = new Configuration();
       final FileSystem localfs = FileSystem.get(LOCAL_FS, conf);
       cluster = new MiniDFSCluster(conf, 1, true, null);
@@ -345,11 +348,16 @@ public class TestCopyFiles extends TestCase {
         deldir(hdfs, "/logs");
         deldir(hdfs, "/srcdat");
       }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
   }
 
   public void testCopyDfsToDfsUpdateOverwrite() throws Exception {
-    Configuration conf = new Configuration();
-    cluster = new MiniDFSCluster(conf, 2, true, null);
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 2, true, null);
       final FileSystem hdfs = cluster.getFileSystem();
       final String namenode = hdfs.getUri().toString();
       if (namenode.startsWith("hdfs://")) {
@@ -400,7 +408,9 @@ public class TestCopyFiles extends TestCase {
         deldir(hdfs, "/srcdat");
         deldir(hdfs, "/logs");
       }
-
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
   }
 
   public void testCopyDuplication() throws Exception {
@@ -476,9 +486,11 @@ public class TestCopyFiles extends TestCase {
 
   public void testPreserveOption() throws Exception {
     Configuration conf = new Configuration();
-    cluster = new MiniDFSCluster(conf, 2, true, null);
-    String nnUri = FileSystem.getDefaultUri(conf).toString();
-    FileSystem fs = FileSystem.get(URI.create(nnUri), conf);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      String nnUri = FileSystem.getDefaultUri(conf).toString();
+      FileSystem fs = FileSystem.get(URI.create(nnUri), conf);
 
       {//test preserving user
         MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
@@ -539,15 +551,19 @@ public class TestCopyFiles extends TestCase {
         deldir(fs, "/destdat");
         deldir(fs, "/srcdat");
       }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
     }
+  }
 
   public void testMapCount() throws Exception {
     String namenode = null;
+    MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(conf, 3, true, null);
-      FileSystem fs = cluster.getFileSystem();
+      dfs = new MiniDFSCluster(conf, 3, true, null);
+      FileSystem fs = dfs.getFileSystem();
       final FsShell shell = new FsShell(conf);
       namenode = fs.getUri().toString();
       mr = new MiniMRCluster(3, namenode, 1);
@@ -588,7 +604,8 @@ public class TestCopyFiles extends TestCase {
       assertTrue("Unexpected map count, logs.length=" + logs.length,
           logs.length == 2);
     } finally {
-      MiniMRCluster.close(mr);
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown(); }
     }
   }
 
@@ -697,7 +714,9 @@ public class TestCopyFiles extends TestCase {
   }
 
   public void testHftpAccessControl() throws Exception {
-      final UnixUserGroupInformation DFS_UGI = createUGI("dfs", true);
+    MiniDFSCluster cluster = null;
+    try {
+      final UnixUserGroupInformation DFS_UGI = createUGI("dfs", true); 
       final UnixUserGroupInformation USER_UGI = createUGI("user", false); 
 
       //start cluster by DFS_UGI
@@ -731,6 +750,9 @@ public class TestCopyFiles extends TestCase {
         fs.setPermission(srcrootpath, new FsPermission((short)0));
         assertEquals(-3, ToolRunner.run(distcp, args));
       }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
   }
 
   /** test -delete */

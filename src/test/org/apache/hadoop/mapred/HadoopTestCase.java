@@ -163,8 +163,22 @@ public abstract class HadoopTestCase extends TestCase {
    * @throws Exception
    */
   protected void tearDown() throws Exception {
-    MiniMRCluster.close(mrCluster);
-    MiniDFSCluster.close(dfsCluster);
+    try {
+      if (mrCluster != null) {
+        mrCluster.shutdown();
+      }
+    }
+    catch (Exception ex) {
+      System.out.println(ex);
+    }
+    try {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
+    }
+    catch (Exception ex) {
+      System.out.println(ex);
+    }
     super.tearDown();
   }
 

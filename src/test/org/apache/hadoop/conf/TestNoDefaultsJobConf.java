@@ -79,7 +79,7 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
 
     FileOutputFormat.setOutputPath(conf, outDir);
 
-    runJob(conf);
+    JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
                            getFileSystem().listStatus(outDir,
@@ -98,16 +98,6 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
       assertEquals(2, counter);
     }
 
-  }
-
-  /**
-   * Run a job, getting the timeout from a system property
-   * @param conf job configuration to use
-   * @throws IOException for any problem, including job failure
-   */
-  private void runJob(JobConf conf) throws IOException {
-    long timeout = Long.getLong("test.jobclient.timeout", 0);
-    JobClient.runJob(conf, timeout);
   }
 
 }
