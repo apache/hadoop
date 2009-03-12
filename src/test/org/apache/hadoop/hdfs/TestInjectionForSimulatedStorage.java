@@ -97,8 +97,11 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       
         if (maxWaitSec > 0 && 
             (System.currentTimeMillis() - start) > (maxWaitSec * 1000)) {
-          throw new IOException("Timedout while waiting for all blocks to " +
-                                " be replicated for " + filename);
+          throw new IOException("Timed out while waiting for all blocks to "
+                  + " be replicated for " + filename
+                  +" after " + maxWaitSec + " seconds\n"
+                  + "Expecting " + expected + ", got "
+                  + actual + ".");
         }
       
         try {
@@ -191,9 +194,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       waitForBlockReplication(testFile, dfsClient.namenode, numDataNodes, -1);
       
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      MiniDFSCluster.close(cluster);
     }
-  }  
+  }
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.cli;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.xml.parsers.SAXParser;
@@ -157,16 +158,13 @@ public class TestCLI extends TestCase {
    * Tear down
    */
   public void tearDown() throws Exception {
-    boolean success = false;
-    mrCluster.shutdown();
-    
-    dfs.close();
-    dfsCluster.shutdown();
-    success = true;
-    Thread.sleep(2000);
-
-    assertTrue("Error tearing down Mini DFS & MR clusters", success);
-    
+    MiniMRCluster.close(mrCluster);
+    try {
+      dfs.close();
+    } catch (IOException e) {
+      LOG.error("When closing dfs", e);
+    }
+    MiniDFSCluster.close(dfsCluster);
     displayResults();
   }
   

@@ -75,6 +75,7 @@ public class TestFileAppend2 extends TestCase {
   Workload[] workload = null;
   ArrayList<Path> testFiles = new ArrayList<Path>();
   volatile static boolean globalStatus = true;
+  private MiniDFSCluster cluster;
 
   //
   // create a buffer that contains the entire test file data.
@@ -116,6 +117,15 @@ public class TestFileAppend2 extends TestCase {
     }
   }
 
+  /**
+   * Tears down the fixture, for example, close a network connection. This method
+   * is called after a test is executed.
+   */
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    MiniDFSCluster.close(cluster);
+  }
 
   /**
    * Creates one file, writes a few bytes to it and then closed it.
@@ -130,7 +140,7 @@ public class TestFileAppend2 extends TestCase {
     conf.setInt("dfs.datanode.handler.count", 50);
     conf.setBoolean("dfs.support.append", true);
     initBuffer(fileSize);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
     try {
       { // test appending to a file.
@@ -263,7 +273,6 @@ public class TestFileAppend2 extends TestCase {
       throw new IOException("Throwable : " + e);
     } finally {
       fs.close();
-      cluster.shutdown();
     }
   }
 
@@ -380,7 +389,7 @@ public class TestFileAppend2 extends TestCase {
     conf.setInt("dfs.datanode.handler.count", 50);
     conf.setBoolean("dfs.support.append", true);
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, 
+    cluster = new MiniDFSCluster(conf, numDatanodes, 
                                                 true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -416,7 +425,6 @@ public class TestFileAppend2 extends TestCase {
       }
     } finally {
       fs.close();
-      cluster.shutdown();
     }
 
     // If any of the worker thread failed in their job, indicate that
