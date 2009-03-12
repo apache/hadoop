@@ -22,9 +22,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.util.StringUtils;
 
@@ -34,53 +37,88 @@ import org.apache.hadoop.util.StringUtils;
  */
 class EagerTaskInitializationListener extends JobInProgressListener {
   
+  private static final int DEFAULT_NUM_THREADS = 4;
   private static final Log LOG = LogFactory.getLog(
       EagerTaskInitializationListener.class.getName());
   
   /////////////////////////////////////////////////////////////////
   //  Used to init new jobs that have just been created
   /////////////////////////////////////////////////////////////////
-  class JobInitThread implements Runnable {
+  class JobInitManager implements Runnable {
+   
     public void run() {
-      JobInProgress job;
+      JobInProgress job = null;
       while (true) {
-        job = null;
         try {
           synchronized (jobInitQueue) {
-            while (jobInitQueue.isEmpty()) {
+            while (jobInitQueue.isEmpty() && !exitFlag) {
               jobInitQueue.wait();
             }
-            job = jobInitQueue.remove(0);
+            if (exitFlag) {
+              break;
+            }
           }
-          job.initTasks();
+          job = jobInitQueue.remove(0);
+          threadPool.execute(new InitJob(job));
         } catch (InterruptedException t) {
+          LOG.info("JobInitManagerThread interrupted.");
           break;
-        } catch (Throwable t) {
-          LOG.error("Job initialization failed:\n" +
-                    StringUtils.stringifyException(t));
-          if (job != null) {
-            job.fail();
-          }
+        } 
+      }
+      LOG.info("Shutting down thread pool");
+      threadPool.shutdownNow();
+    }
+  }
+  
+  static class InitJob implements Runnable {
+  
+    private JobInProgress job;
+    
+    public InitJob(JobInProgress job) {
+      this.job = job;
+    }
+    
+    public void run() {
+      try {
+        LOG.info("Initializing " + job.getJobID());
+        job.initTasks();
+      } catch (Throwable t) {
+        LOG.error("Job initialization failed:\n" +
+            StringUtils.stringifyException(t));
+        if (job != null) {
+          job.fail();
         }
       }
     }
   }
   
-  private JobInitThread initJobs = new JobInitThread();
-  private Thread initJobsThread;
+  private JobInitManager jobInitManager = new JobInitManager();
+  private Thread jobInitManagerThread;
   private List<JobInProgress> jobInitQueue = new ArrayList<JobInProgress>();
+  private ExecutorService threadPool;
+  private int numThreads;
+  private boolean exitFlag = false;
+  
+  public EagerTaskInitializationListener(Configuration conf) {
+    numThreads = conf.getInt("mapred.jobinit.threads", DEFAULT_NUM_THREADS);
+    threadPool = Executors.newFixedThreadPool(numThreads);
+  }
   
   public void start() throws IOException {
-    this.initJobsThread = new Thread(initJobs, "initJobs");
-    this.initJobsThread.start();
+    this.jobInitManagerThread = new Thread(jobInitManager, "jobInitManager");
+    jobInitManagerThread.setDaemon(true);
+    this.jobInitManagerThread.start();
   }
   
   public void terminate() throws IOException {
-    if (this.initJobsThread != null && this.initJobsThread.isAlive()) {
-      LOG.info("Stopping initer");
-      this.initJobsThread.interrupt();
+    if (jobInitManagerThread != null && jobInitManagerThread.isAlive()) {
+      LOG.info("Stopping Job Init Manager thread");
+      synchronized (jobInitQueue) {
+        exitFlag = true;
+        jobInitQueue.notify();
+      }
       try {
-        this.initJobsThread.join();
+        jobInitManagerThread.join();
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }

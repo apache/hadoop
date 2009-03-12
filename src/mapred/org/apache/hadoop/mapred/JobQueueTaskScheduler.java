@@ -41,8 +41,6 @@ class JobQueueTaskScheduler extends TaskScheduler {
   
   public JobQueueTaskScheduler() {
     this.jobQueueJobInProgressListener = new JobQueueJobInProgressListener();
-    this.eagerTaskInitializationListener =
-      new EagerTaskInitializationListener();
   }
   
   @Override
@@ -74,6 +72,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
     super.setConf(conf);
     padFraction = conf.getFloat("mapred.jobtracker.taskalloc.capacitypad", 
                                  0.01f);
+    this.eagerTaskInitializationListener =
+      new EagerTaskInitializationListener(conf);
   }
 
   @Override
