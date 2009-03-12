@@ -335,6 +335,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5248. A testcase that checks for the existence of job directory
     after the job completes. Fails if it exists. (ddas)
 
+    HADOOP-4664. Introduces multiple job initialization threads, where the 
+    number of threads are configurable via mapred.jobinit.threads.
+    (Matei Zaharia and Jothi Padmanabhan via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

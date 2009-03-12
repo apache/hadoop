@@ -20,7 +20,7 @@ package org.apache.hadoop.net;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A cached implementation of DNSToSwitchMapping that takes an
@@ -30,7 +30,7 @@ import java.util.TreeMap;
  *
  */
 public class CachedDNSToSwitchMapping implements DNSToSwitchMapping {
-  private Map<String, String> cache = new TreeMap<String, String>();
+  private Map<String, String> cache = new ConcurrentHashMap<String, String>();
   protected DNSToSwitchMapping rawMapping;
   
   public CachedDNSToSwitchMapping(DNSToSwitchMapping rawMapping) {

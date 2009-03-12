@@ -105,7 +105,6 @@ public class FairScheduler extends TaskScheduler {
   protected FairScheduler(Clock clock, boolean runBackgroundUpdates) {
     this.clock = clock;
     this.runBackgroundUpdates = runBackgroundUpdates;
-    this.eagerInitListener = new EagerTaskInitializationListener();
     this.jobListener = new JobListener();
   }
 
@@ -113,6 +112,7 @@ public class FairScheduler extends TaskScheduler {
   public void start() {
     try {
       Configuration conf = getConf();
+      this.eagerInitListener = new EagerTaskInitializationListener(conf);
       eagerInitListener.start();
       taskTrackerManager.addJobInProgressListener(eagerInitListener);
       taskTrackerManager.addJobInProgressListener(jobListener);
