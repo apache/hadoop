@@ -39,6 +39,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -152,7 +153,7 @@ public class DataNode extends Configured
   private final Map<Block, Block> ongoingRecovery = new HashMap<Block, Block>();
   private LinkedList<String> delHints = new LinkedList<String>();
   public final static String EMPTY_DEL_HINT = "";
-  int xmitsInProgress = 0;
+  AtomicInteger xmitsInProgress = new AtomicInteger();
   Daemon dataXceiverServer = null;
   ThreadGroup threadGroup = null;
   long blockReportInterval;
@@ -681,7 +682,7 @@ public class DataNode extends Configured
                                                        data.getCapacity(),
                                                        data.getDfsUsed(),
                                                        data.getRemaining(),
-                                                       xmitsInProgress,
+                                                       xmitsInProgress.get(),
                                                        getXceiverCount());
           myMetrics.heartbeats.inc(now() - startTime);
           //LOG.info("Just sent heartbeat, with name " + localName);
@@ -1065,7 +1066,7 @@ public class DataNode extends Configured
      * Do the deed, write the bytes
      */
     public void run() {
-      xmitsInProgress++;
+      xmitsInProgress.getAndIncrement();
       Socket sock = null;
       DataOutputStream out = null;
       BlockSender blockSender = null;
@@ -1114,10 +1115,10 @@ public class DataNode extends Configured
         LOG.warn(dnRegistration + ":Failed to transfer " + b + " to " + targets[0].getName()
             + " got " + StringUtils.stringifyException(ie));
       } finally {
+        xmitsInProgress.getAndDecrement();
         IOUtils.closeStream(blockSender);
         IOUtils.closeStream(out);
         IOUtils.closeSocket(sock);
-        xmitsInProgress--;
       }
     }
   }
@@ -1246,7 +1247,7 @@ public class DataNode extends Configured
       "data=" + data +
       ", localName='" + dnRegistration.getName() + "'" +
       ", storageID='" + dnRegistration.getStorageID() + "'" +
-      ", xmitsInProgress=" + xmitsInProgress +
+      ", xmitsInProgress=" + xmitsInProgress.get() +
       "}";
   }
   
