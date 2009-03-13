@@ -970,16 +970,20 @@ public class TestJobHistory extends TestCase {
       // existing in history file
       RunningJob job = UtilsForTests.runJobSucceed(conf, inDir, outDir);
       validateJobHistoryJobStatus(job.getID(), conf, "SUCCESS");
+      long historyCleanerRanAt = JobHistory.HistoryCleaner.getLastRan();
+      assertTrue(historyCleanerRanAt != 0);
       
       // Run a job that will be failed and validate its job status
       // existing in history file
       job = UtilsForTests.runJobFail(conf, inDir, outDir);
       validateJobHistoryJobStatus(job.getID(), conf, "FAILED");
+      assertTrue(historyCleanerRanAt == JobHistory.HistoryCleaner.getLastRan());
       
       // Run a job that will be killed and validate its job status
       // existing in history file
       job = UtilsForTests.runJobKill(conf, inDir, outDir);
       validateJobHistoryJobStatus(job.getID(), conf, "KILLED");
+      assertTrue(historyCleanerRanAt == JobHistory.HistoryCleaner.getLastRan());
       
     } finally {
       if (mr != null) {

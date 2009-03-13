@@ -98,6 +98,7 @@ public class JobHistory {
   private static final String SECONDARY_FILE_SUFFIX = ".recover";
   private static long jobHistoryBlockSize = 0;
   private static String jobtrackerHostname;
+  private static JobConf jtConf;
   /**
    * Record types are identifiers for each line of log in history files. 
    * A record type appears as the first token in a single line of log. 
@@ -160,6 +161,7 @@ public class JobHistory {
       jobHistoryBlockSize = 
         conf.getLong("mapred.jobtracker.job.history.block.size", 
                      3 * 1024 * 1024);
+      jtConf = conf;
     } catch(IOException e) {
         LOG.error("Failed to initialize JobHistory log file", e); 
         disableHistory = true;
@@ -1676,7 +1678,7 @@ public class JobHistory {
     static final long THIRTY_DAYS_IN_MS = 30 * ONE_DAY_IN_MS;
     private long now; 
     private static boolean isRunning = false; 
-    private static long lastRan; 
+    private static long lastRan = 0; 
 
     /**
      * Cleans up history data. 
@@ -1687,25 +1689,33 @@ public class JobHistory {
       }
       now = System.currentTimeMillis();
       // clean history only once a day at max
-      if (lastRan ==0 || (now - lastRan) < ONE_DAY_IN_MS){
+      if (lastRan != 0 && (now - lastRan) < ONE_DAY_IN_MS) {
         return; 
       }
       lastRan = now;  
       isRunning = true; 
-      File[] oldFiles = new File(LOG_DIR).listFiles(new FileFilter(){
-          public boolean accept(File file){
-            // delete if older than 30 days
-            if (now - file.lastModified() > THIRTY_DAYS_IN_MS){
-              return true; 
+      try {
+        Path logDir = new Path(LOG_DIR);
+        FileSystem fs = logDir.getFileSystem(jtConf);
+        FileStatus[] historyFiles = fs.listStatus(logDir);
+        // delete if older than 30 days
+        if (historyFiles != null) {
+          for (FileStatus f : historyFiles) {
+            if (now - f.getModificationTime() > THIRTY_DAYS_IN_MS) {
+              fs.delete(f.getPath(), true); 
+              LOG.info("Deleting old history file : " + f.getPath());
             }
-            return false; 
           }
-        });
-      for(File f : oldFiles){
-        f.delete(); 
-        LOG.info("Deleting old history file : " + f.getName());
+        }
+      } catch (IOException ie) {
+        LOG.info("Error cleaning up history directory" + 
+                 StringUtils.stringifyException(ie));
       }
       isRunning = false; 
+    }
+    
+    static long getLastRan() {
+      return lastRan;
     }
   }
 
