@@ -27,6 +27,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.JobInfo;
 import org.apache.hadoop.mapred.JobHistory.RecordTypes;
 
+/**
+ * Tests the JobHistory parser with different versions of job history files.
+ * This may have to change when new versions of job history files come up.
+ */
 public class TestJobHistoryVersion extends TestCase {
   private static final String HOSTNAME = "localhost";
   private static final String TIME= "1234567890123";
@@ -48,13 +52,16 @@ public class TestJobHistoryVersion extends TestCase {
              "test-history-version");
   private static final String DELIM = ".";
   
-  
-  private void writeHistoryFile(FSDataOutputStream out, boolean old)
+  /**
+   * Creates a job history file of a given specific version. This method should
+   * change if format/content of future versions of job history file changes.
+   */
+  private void writeHistoryFile(FSDataOutputStream out, long version)
   throws IOException {
-    String delim = "\n";
+    String delim = "\n"; // '\n' for version 0
     String counters = COUNTERS;
     String jobConf = "job.xml";
-    if (!old) {
+    if (version > 0) { // line delimeter should be '.' for later versions
       // Change the delimiter
       delim = DELIM + delim;
       
@@ -111,58 +118,35 @@ public class TestJobHistoryVersion extends TestCase {
   }
   
   /**
-   * Tests the JobHistory parser with old files
+   * Tests the JobHistory parser with different versions of job history files
    */
-  public void testJobHistoryWithoutVersion() throws IOException {
-    JobConf conf = new JobConf();
-    FileSystem fs = FileSystem.getLocal(conf);
+  public void testJobHistoryVersion() throws IOException {
+    // If new job history version comes up, the modified parser may fail for
+    // the history file created by writeHistoryFile().
+    for (long version = 0; version <= JobHistory.VERSION; version++) {
+      JobConf conf = new JobConf();
+      FileSystem fs = FileSystem.getLocal(conf);
     
-    // cleanup
-    fs.delete(TEST_DIR, true);
+      // cleanup
+      fs.delete(TEST_DIR, true);
     
-    Path historyPath = new Path(TEST_DIR + "/_logs/history/" + FILENAME);
+      Path historyPath = new Path(TEST_DIR + "/_logs/history/" +
+                                  FILENAME + version);
     
-    fs.delete(historyPath, false);
+      fs.delete(historyPath, false);
     
-    FSDataOutputStream out = fs.create(historyPath);
-    writeHistoryFile(out, true);
-    out.close();
+      FSDataOutputStream out = fs.create(historyPath);
+      writeHistoryFile(out, version);
+      out.close();
     
-    JobInfo job = new JobHistory.JobInfo(JOB); 
-    DefaultJobHistoryParser.parseJobTasks(historyPath.toString(), job, fs);
+      JobInfo job = new JobHistory.JobInfo(JOB); 
+      DefaultJobHistoryParser.parseJobTasks(historyPath.toString(), job, fs);
     
-    assertTrue("Failed to parse old jobhistory files", 
-               job.getAllTasks().size() > 0);
+      assertTrue("Failed to parse jobhistory files of version " + version,
+                 job.getAllTasks().size() > 0);
     
-    // cleanup
-    fs.delete(TEST_DIR, true);
-  }
-  
-  /**
-   * Tests the JobHistory parser with new file
-   */
-  public void testJobHistoryWithVersion() throws IOException {
-    JobConf conf = new JobConf();
-    FileSystem fs = FileSystem.getLocal(conf);
-    
-    // cleanup
-    fs.delete(TEST_DIR, true);
-    
-    Path historyPath = new Path(TEST_DIR + "/_logs/history/" + FILENAME);
-    
-    fs.delete(historyPath, false);
-    
-    FSDataOutputStream out = fs.create(historyPath);
-    writeHistoryFile(out, false);
-    out.close();
-    
-    JobInfo job = new JobHistory.JobInfo(JOB); 
-    DefaultJobHistoryParser.parseJobTasks(historyPath.toString(), job, fs);
-    
-    assertTrue("Failed to parse old jobhistory files", 
-               job.getAllTasks().size() > 0);
-    
-    // cleanup
-    fs.delete(TEST_DIR, true);
+      // cleanup
+      fs.delete(TEST_DIR, true);
+    }
   }
 }

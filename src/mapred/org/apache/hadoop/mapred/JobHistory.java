@@ -78,14 +78,16 @@ public class JobHistory {
   static final long VERSION = 1L;
   public static final Log LOG = LogFactory.getLog(JobHistory.class);
   private static final String DELIMITER = " ";
-  private static final char LINE_DELIMITER_CHAR = '.';
-  private static final char[] charsToEscape = new char[] {'"', '=', 
+  static final char LINE_DELIMITER_CHAR = '.';
+  static final char[] charsToEscape = new char[] {'"', '=', 
                                                 LINE_DELIMITER_CHAR};
-  private static final String KEY = "(\\w+)";
+  static final String DIGITS = "[0-9]+";
+
+  static final String KEY = "(\\w+)";
   // value is any character other than quote, but escaped quotes can be there
-  private static final String VALUE = "[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*"; 
+  static final String VALUE = "[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*"; 
   
-  private static final Pattern pattern = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
+  static final Pattern pattern = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
   
   public static final int JOB_NAME_TRIM_LENGTH = 50;
   private static String JOBTRACKER_UNIQUE_STRING = null;
@@ -637,7 +639,7 @@ public class JobHistory {
 
       // Make the pattern matching the job's history file
       final Pattern historyFilePattern = 
-        Pattern.compile(jobtrackerHostname + "_" + "[0-9]+" + "_" 
+        Pattern.compile(jobtrackerHostname + "_" + DIGITS + "_" 
                         + id.toString() + "_" + user + "_" + jobName + "+");
       // a path filter that matches 4 parts of the filenames namely
       //  - jt-hostname

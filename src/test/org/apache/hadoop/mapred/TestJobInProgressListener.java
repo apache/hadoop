@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.util.ArrayList;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -39,6 +40,9 @@ public class TestJobInProgressListener extends TestCase {
     LogFactory.getLog(TestJobInProgressListener.class);
   private final Path testDir = new Path("test-jip-listener-update");
   
+  private static String TEST_ROOT_DIR = new File(System.getProperty(
+          "test.build.data", "/tmp")).toURI().toString().replace(' ', '+');
+
   private JobConf configureJob(JobConf conf, int m, int r, 
                                Path inDir, Path outputDir,
                                String mapSignalFile, String redSignalFile) 
@@ -267,9 +271,13 @@ public class TestJobInProgressListener extends TestCase {
     
     mr.getJobTrackerRunner().getJobTracker()
       .addJobInProgressListener(myListener);
-    
-    // submit and kill the job   
-    JobID id = TestJobKillAndFail.runJobFail(job);
+
+    Path inDir = new Path(TEST_ROOT_DIR + "/jiplistenerfailjob/input");
+    Path outDir = new Path(TEST_ROOT_DIR + "/jiplistenerfailjob/output");
+
+    // submit a job that fails 
+    RunningJob rJob = UtilsForTests.runJobFail(job, inDir, outDir);
+    JobID id = rJob.getID();
 
     // check if the job failure was notified
     assertFalse("Missing event notification on failing a running job", 
@@ -288,8 +296,12 @@ public class TestJobInProgressListener extends TestCase {
     mr.getJobTrackerRunner().getJobTracker()
       .addJobInProgressListener(myListener);
     
+    Path inDir = new Path(TEST_ROOT_DIR + "/jiplistenerkilljob/input");
+    Path outDir = new Path(TEST_ROOT_DIR + "/jiplistenerkilljob/output");
+
     // submit and kill the job   
-    JobID id = TestJobKillAndFail.runJobKill(job);
+    RunningJob rJob = UtilsForTests.runJobKill(job, inDir, outDir);
+    JobID id = rJob.getID();
 
     // check if the job failure was notified
     assertFalse("Missing event notification on killing a running job", 
@@ -308,8 +320,11 @@ public class TestJobInProgressListener extends TestCase {
     mr.getJobTrackerRunner().getJobTracker()
       .addJobInProgressListener(myListener);
     
+    Path inDir = new Path(TEST_ROOT_DIR + "/jiplistenerjob/input");
+    Path outDir = new Path(TEST_ROOT_DIR + "/jiplistenerjob/output");
+
     // submit the job   
-    RunningJob rJob = TestJobKillAndFail.runJob(job);
+    RunningJob rJob = UtilsForTests.runJob(job, inDir, outDir);
     
     // wait for the job to be running
     while (rJob.getJobState() != JobStatus.RUNNING) {
@@ -363,7 +378,10 @@ public class TestJobInProgressListener extends TestCase {
     mr.getJobTrackerRunner().getJobTracker()
       .addJobInProgressListener(myListener);
     
-    RunningJob rJob = TestJobKillAndFail.runJob(job);
+    Path inDir = new Path(TEST_ROOT_DIR + "/jiplistenerjob/input");
+    Path outDir = new Path(TEST_ROOT_DIR + "/jiplistenerjob/output");
+
+    RunningJob rJob = UtilsForTests.runJob(job, inDir, outDir);
     JobID id = rJob.getID();
     LOG.info("Job : " + id.toString() + " submitted");
     

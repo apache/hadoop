@@ -299,7 +299,7 @@ class TaskInProgress {
     return !activeTasks.isEmpty();
   }
     
-  private TaskAttemptID getSuccessfulTaskid() {
+  TaskAttemptID getSuccessfulTaskid() {
     return successfulTaskId;
   }
   

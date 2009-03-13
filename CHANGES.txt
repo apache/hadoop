@@ -339,6 +339,8 @@ Release 0.20.0 - Unreleased
     number of threads are configurable via mapred.jobinit.threads.
     (Matei Zaharia and Jothi Padmanabhan via ddas)
 
+    HADOOP-4191. Adds a testcase for JobHistory. (Ravi Gummadi via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits

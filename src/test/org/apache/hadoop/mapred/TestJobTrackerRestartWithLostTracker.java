@@ -109,6 +109,10 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
                 + "upon restart", 
                 jobClient.getClusterStatus().getTaskTrackers() 
                 < mr.getNumTaskTrackers());
+
+    // validate the history file
+    TestJobHistory.validateJobHistoryFileFormat(id, job, "SUCCESS", true);
+    TestJobHistory.validateJobHistoryFileContent(mr, rJob, job);
   }
   
   public void testRestartWithLostTracker() throws IOException {

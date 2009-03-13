@@ -34,10 +34,13 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 
 /** 
@@ -526,6 +529,131 @@ public class UtilsForTests {
                                                     Reporter reporter) 
     throws IOException {
       return new RandomRecordReader(((FileSplit) split).getPath());
+    }
+  }
+
+  // Start a job and return its RunningJob object
+  static RunningJob runJob(JobConf conf, Path inDir, Path outDir)
+                    throws IOException {
+
+    FileSystem fs = FileSystem.get(conf);
+    fs.delete(outDir, true);
+    if (!fs.exists(inDir)) {
+      fs.mkdirs(inDir);
+    }
+    String input = "The quick brown fox\n" + "has many silly\n"
+        + "red fox sox\n";
+    DataOutputStream file = fs.create(new Path(inDir, "part-0"));
+    file.writeBytes(input);
+    file.close();
+
+    conf.setInputFormat(TextInputFormat.class);
+    conf.setOutputKeyClass(LongWritable.class);
+    conf.setOutputValueClass(Text.class);
+
+    FileInputFormat.setInputPaths(conf, inDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
+    conf.setNumMapTasks(1);
+    conf.setNumReduceTasks(1);
+
+    JobClient jobClient = new JobClient(conf);
+    RunningJob job = jobClient.submitJob(conf);
+
+    return job;
+  }
+
+  // Run a job that will be succeeded and wait until it completes
+  static RunningJob runJobSucceed(JobConf conf, Path inDir, Path outDir)
+         throws IOException {
+    conf.setJobName("test-job-succeed");
+    conf.setMapperClass(IdentityMapper.class);
+    conf.setReducerClass(IdentityReducer.class);
+    
+    RunningJob job = UtilsForTests.runJob(conf, inDir, outDir);
+    while (!job.isComplete()) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        break;
+      }
+    }
+
+    return job;
+  }
+
+  // Run a job that will be failed and wait until it completes
+  static RunningJob runJobFail(JobConf conf, Path inDir, Path outDir)
+         throws IOException {
+    conf.setJobName("test-job-fail");
+    conf.setMapperClass(FailMapper.class);
+    conf.setReducerClass(IdentityReducer.class);
+    
+    RunningJob job = UtilsForTests.runJob(conf, inDir, outDir);
+    while (!job.isComplete()) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        break;
+      }
+    }
+
+    return job;
+  }
+
+  // Run a job that will be killed and wait until it completes
+  static RunningJob runJobKill(JobConf conf,  Path inDir, Path outDir)
+         throws IOException {
+
+    conf.setJobName("test-job-kill");
+    conf.setMapperClass(KillMapper.class);
+    conf.setReducerClass(IdentityReducer.class);
+    
+    RunningJob job = UtilsForTests.runJob(conf, inDir, outDir);
+    while (job.getJobState() != JobStatus.RUNNING) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        break;
+      }
+    }
+    job.killJob();
+    while (job.cleanupProgress() == 0.0f) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException ie) {
+        break;
+      }
+    }
+
+    return job;
+  }
+
+  // Mapper that fails
+  static class FailMapper extends MapReduceBase implements
+      Mapper<WritableComparable, Writable, WritableComparable, Writable> {
+
+    public void map(WritableComparable key, Writable value,
+        OutputCollector<WritableComparable, Writable> out, Reporter reporter)
+        throws IOException {
+
+      throw new RuntimeException("failing map");
+    }
+  }
+
+  // Mapper that sleeps for a long time.
+  // Used for running a job that will be killed
+  static class KillMapper extends MapReduceBase implements
+      Mapper<WritableComparable, Writable, WritableComparable, Writable> {
+
+    public void map(WritableComparable key, Writable value,
+        OutputCollector<WritableComparable, Writable> out, Reporter reporter)
+        throws IOException {
+
+      try {
+        Thread.sleep(1000000);
+      } catch (InterruptedException e) {
+        // Do nothing
+      }
     }
   }
 }

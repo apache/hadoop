@@ -165,8 +165,20 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     }
     assertEquals(2, NotificationServlet.counter);
     
+    Path inDir = new Path("notificationjob/input");
+    Path outDir = new Path("notificationjob/output");
+
+    // Hack for local FS that does not have the concept of a 'mounting point'
+    if (isLocalFS()) {
+      String localPathRoot = System.getProperty("test.build.data","/tmp")
+        .toString().replace(' ', '+');;
+      inDir = new Path(localPathRoot, inDir);
+      outDir = new Path(localPathRoot, outDir);
+    }
+
     // run a job with KILLED status
-    System.out.println(TestJobKillAndFail.runJobKill(this.createJobConf()));
+    System.out.println(UtilsForTests.runJobKill(this.createJobConf(), inDir,
+                                                outDir).getID());
     synchronized(Thread.currentThread()) {
       stdPrintln("Sleeping for 2 seconds to give time for retry");
       Thread.currentThread().sleep(2000);
@@ -174,7 +186,8 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     assertEquals(4, NotificationServlet.counter);
     
     // run a job with FAILED status
-    System.out.println(TestJobKillAndFail.runJobFail(this.createJobConf()));
+    System.out.println(UtilsForTests.runJobFail(this.createJobConf(), inDir,
+                                                outDir).getID());
     synchronized(Thread.currentThread()) {
       stdPrintln("Sleeping for 2 seconds to give time for retry");
       Thread.currentThread().sleep(2000);

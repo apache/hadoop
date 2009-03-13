@@ -311,6 +311,10 @@ public class TestJobTrackerRestart extends TestCase {
     testTaskCompletionEvents(jtMapEvents.toArray(new TaskCompletionEvent[0]), 
                               trackerEvents, true, -1);
     
+    // validate the history file
+    TestJobHistory.validateJobHistoryFileFormat(id, newConf, "SUCCESS", true);
+    TestJobHistory.validateJobHistoryFileContent(mr, job, newConf);
+    
     // check if the cluster status is insane
     ClusterStatus status = jobClient.getClusterStatus();
     assertTrue("Cluster status is insane", 
