@@ -1032,6 +1032,9 @@ Release 0.19.2 - Unreleased
  
     HADOOP-5446. Restore TaskTracker metrics. (cdouglas)
 
+    HADOOP-5449. Fixes the history cleaner thread. 
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
