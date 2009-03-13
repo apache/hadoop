@@ -45,6 +45,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.Semaphore;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -108,7 +109,7 @@ public class DataNode extends Configured
   private LinkedList<Block> receivedBlockList = new LinkedList<Block>();
   private LinkedList<String> delHints = new LinkedList<String>();
   final static String EMPTY_DEL_HINT = "";
-  int xmitsInProgress = 0;
+  AtomicInteger xmitsInProgress = new AtomicInteger();
   Daemon dataXceiveServer = null;
   ThreadGroup threadGroup = null;
   long blockReportInterval;
@@ -694,7 +695,7 @@ public class DataNode extends Configured
                                                        data.getCapacity(),
                                                        data.getDfsUsed(),
                                                        data.getRemaining(),
-                                                       xmitsInProgress,
+                                                       xmitsInProgress.get(),
                                                        getXceiverCount());
           myMetrics.heartbeats.inc(now() - startTime);
           //LOG.info("Just sent heartbeat, with name " + localName);
@@ -2897,7 +2898,7 @@ public class DataNode extends Configured
      * Do the deed, write the bytes
      */
     public void run() {
-      xmitsInProgress++;
+      xmitsInProgress.getAndIncrement();
       Socket sock = null;
       DataOutputStream out = null;
       BlockSender blockSender = null;
@@ -2945,10 +2946,10 @@ public class DataNode extends Configured
         LOG.warn(dnRegistration + ":Failed to transfer " + b + " to " + targets[0].getName()
             + " got " + StringUtils.stringifyException(ie));
       } finally {
+        xmitsInProgress.getAndDecrement();
         IOUtils.closeStream(blockSender);
         IOUtils.closeStream(out);
         IOUtils.closeSocket(sock);
-        xmitsInProgress--;
       }
     }
   }
@@ -3078,7 +3079,7 @@ public class DataNode extends Configured
       "data=" + data +
       ", localName='" + dnRegistration.getName() + "'" +
       ", storageID='" + dnRegistration.getStorageID() + "'" +
-      ", xmitsInProgress=" + xmitsInProgress +
+      ", xmitsInProgress=" + xmitsInProgress.get() +
       "}";
   }
   
