@@ -138,8 +138,6 @@ Trunk (unreleased changes)
     HADOOP-5240. Skip re-building javadoc when it is already
     up-to-date. (Aaron Kimball via cutting)
 
-    HADOOP-4191. Adds a testcase for JobHistory. (Ravi Gummadi via ddas)
-
     HADOOP-5042. Add a cleanup stage to log rollover in Chukwa appender.
     (Jerome Boulon via cdouglas)
 
@@ -632,6 +630,8 @@ Release 0.20.0 - Unreleased
     HADOOP-4664. Introduces multiple job initialization threads, where the 
     number of threads are configurable via mapred.jobinit.threads.
     (Matei Zaharia and Jothi Padmanabhan via ddas)
+
+    HADOOP-4191. Adds a testcase for JobHistory. (Ravi Gummadi via ddas)
 
   OPTIMIZATIONS
 
