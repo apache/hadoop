@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.Iterator;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
@@ -48,4 +49,22 @@ public class HBaseConfiguration extends Configuration {
     addResource("hbase-default.xml");
     addResource("hbase-site.xml");
   }
+  
+  /**
+   * Returns the hash code value for this HBaseConfiguration. The hash code of a
+   * HBaseConfiguration is defined by the sum of the hash codes of its entries.
+   * 
+   * @see Configuration#iterator() How the entries are obtained.
+   */
+  @Override
+  public int hashCode() {
+    int hash = 0;
+
+    Iterator<Entry<String, String>> propertyIterator = this.iterator();
+    while (propertyIterator.hasNext()) {
+      hash ^= propertyIterator.next().hashCode();
+    }
+    return hash;
+  }
+  
 }

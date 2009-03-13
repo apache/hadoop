@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -47,10 +48,10 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
@@ -73,12 +74,13 @@ public class HConnectionManager implements HConstants {
     super();
   }
   
-  // A Map of master HServerAddress -> connection information for that instance
-  // Note that although the Map is synchronized, the objects it contains
-  // are mutable and hence require synchronized access to them
-  private static final Map<String, TableServers> HBASE_INSTANCES =
-    new ConcurrentHashMap<String, TableServers>();
-
+  // A Map of master HBaseConfiguration -> connection information for that 
+  // instance. Note that although the Map is synchronized, the objects it 
+  // contains are mutable and hence require synchronized access to them
+  private static 
+  final Map<HBaseConfiguration, TableServers> HBASE_INSTANCES = 
+    new WeakHashMap<HBaseConfiguration, TableServers>();
+  
   /**
    * Get the connection object for the instance specified by the configuration
    * If no current connection exists, create a new connection for that instance
@@ -88,11 +90,10 @@ public class HConnectionManager implements HConstants {
   public static HConnection getConnection(HBaseConfiguration conf) {
     TableServers connection;
     synchronized (HBASE_INSTANCES) {
-      String instanceName = conf.get(HBASE_DIR);
-      connection = HBASE_INSTANCES.get(instanceName);
+      connection = HBASE_INSTANCES.get(conf);
       if (connection == null) {
         connection = new TableServers(conf);
-        HBASE_INSTANCES.put(instanceName, connection);
+        HBASE_INSTANCES.put(conf, connection);
       }
     }
     return connection;
@@ -106,7 +107,7 @@ public class HConnectionManager implements HConstants {
   public static void deleteConnectionInfo(HBaseConfiguration conf,
       boolean stopProxy) {
     synchronized (HBASE_INSTANCES) {
-      TableServers t = HBASE_INSTANCES.remove(conf.get(HBASE_DIR));
+      TableServers t = HBASE_INSTANCES.remove(conf);
       if (t != null) {
         t.close(stopProxy);
       }

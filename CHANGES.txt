@@ -40,6 +40,8 @@ Release 0.20.0 - Unreleased
    HBASE-1247  checkAndSave doesn't Write Ahead Log
    HBASE-1243  oldlogfile.dat is screwed, so is it's region
    HBASE-1169  When a shutdown is requested, stop scanning META regions immediately
+   HBASE-1251  HConnectionManager.getConnection(HBaseConfiguration) returns same
+               HConnection for different HBaseConfigurations 
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
