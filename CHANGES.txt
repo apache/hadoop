@@ -344,6 +344,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5466. Change documenation CSS style for headers and code. (Corinne
     Chandel via szetszwo)
 
+    HADOOP-5275. Add ivy directory and files to built tar.
+    (Giridharan Kesavan via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
