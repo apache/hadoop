@@ -38,8 +38,9 @@ abstract class ColumnOperation extends TableOperation {
   }
 
   @Override
-  protected void processScanItem(String serverName, long startCode,
-      final HRegionInfo info) throws IOException {
+  protected void processScanItem(@SuppressWarnings("unused") String serverName,
+      final HRegionInfo info)
+  throws IOException {
     if (isEnabled(info)) {
       throw new TableNotDisabledException(tableName);
     }

@@ -92,17 +92,21 @@ abstract class TableOperation implements HConstants {
             LOG.error(COL_REGIONINFO + " not found on " + values.getRow());
             continue;
           }
-          String serverName = Writables.cellToString(values.get(COL_SERVER));
-          long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
+          String serverAddress = Writables.cellToString(values.get(COL_SERVER));
+          long startCode = Writables.cellToLong(values.get(COL_STARTCODE)); 
+          String serverName = null;
+          if (serverAddress != null && serverAddress.length() > 0) {
+            serverName = HServerInfo.getServerName(serverAddress, startCode);
+          }
           if (Bytes.compareTo(info.getTableDesc().getName(), tableName) > 0) {
             break; // Beyond any more entries for this table
           }
 
           tableExists = true;
-          if (!isBeingServed(serverName, startCode) || !isEnabled(info)) {
+          if (!isBeingServed(serverName) || !isEnabled(info)) {
             unservedRegions.add(info);
           }
-          processScanItem(serverName, startCode, info);
+          processScanItem(serverName, info);
         }
       } finally {
         if (scannerId != -1L) {
@@ -145,11 +149,11 @@ abstract class TableOperation implements HConstants {
     }
   }
   
-  protected boolean isBeingServed(String serverName, long startCode) {
+  protected boolean isBeingServed(String serverName) {
     boolean result = false;
-    if (serverName != null && serverName.length() > 0 && startCode != -1L) {
+    if (serverName != null && serverName.length() > 0) {
       HServerInfo s = master.serverManager.getServerInfo(serverName);
-      result = s != null && s.getStartCode() == startCode;
+      result = s != null;
     }
     return result;
   }
@@ -158,8 +162,8 @@ abstract class TableOperation implements HConstants {
     return !info.isOffline();
   }
 
-  protected abstract void processScanItem(String serverName, long startCode,
-    HRegionInfo info) throws IOException;
+  protected abstract void processScanItem(String serverName, HRegionInfo info)
+  throws IOException;
 
   protected abstract void postProcessMeta(MetaRegion m,
     HRegionInterface server) throws IOException;

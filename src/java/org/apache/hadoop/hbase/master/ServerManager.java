@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
@@ -71,11 +71,13 @@ class ServerManager implements HConstants {
   
   /**
    * Set of known dead servers.  On znode expiration, servers are added here.
-   * Boolean holds whether its logs have been split or not.  Initially set to
-   * false.
+   * This is needed in case of a network partitioning where the server's lease
+   * expires, but the server is still running. After the network is healed,
+   * and it's server logs are recovered, it will be told to call server startup
+   * because by then, its regions have probably been reassigned.
    */
-  private final Map<String, Boolean> deadServers =
-    new ConcurrentHashMap<String, Boolean>();
+  private final Set<String> deadServers =
+    Collections.synchronizedSet(new HashSet<String>());
 
   /** SortedMap server load -> Set of server names */
   final SortedMap<HServerLoad, Set<String>> loadToServers =
@@ -109,63 +111,36 @@ class ServerManager implements HConstants {
   }
  
   /**
-   * Look to see if we have ghost references to this regionserver such as
-   * if regionserver is on the dead servers list getting its logs processed.
-   * @param serverInfo
-   * @return True if still ghost references and we have not been able to clear
-   * them or the server is shutting down.
-   */
-  private boolean checkForGhostReferences(final HServerInfo serverInfo) {
-    boolean result = false;
-    for (long sleepTime = -1; !master.closed.get() && !result;) {
-      if (sleepTime != -1) {
-        try {
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException e) {
-          // Continue
-        }
-      }
-      // May be on list of dead servers.  If so, wait till we've cleared it.
-      String addr = serverInfo.getServerAddress().toString();
-      if (isDead(addr)) {
-        LOG.debug("Waiting on " + addr + " removal from dead list before " +
-          "processing report-for-duty request");
-        sleepTime = this.master.threadWakeFrequency;
-        continue;
-      }
-      result = true;
-    }
-    return result;
-  }
-
-  /**
    * Let the server manager know a new regionserver has come online
    * @param serverInfo
+   * @throws Leases.LeaseStillHeldException
    */
-  public void regionServerStartup(final HServerInfo serverInfo) {
-    String s = serverInfo.getServerAddress().toString().trim();
-    Watcher watcher = new ServerExpirer(serverInfo.getServerAddress()
-        .toString().trim());
-    zooKeeperWrapper.updateRSLocationGetWatch(serverInfo, watcher);
-    
-    LOG.info("Received start message from: " + s);
-    if (!checkForGhostReferences(serverInfo)) {
-      return;
+  public void regionServerStartup(final HServerInfo serverInfo) 
+  throws Leases.LeaseStillHeldException {
+    HServerInfo info = new HServerInfo(serverInfo);
+    String serverName = HServerInfo.getServerName(info);
+    if (serversToServerInfo.containsKey(serverName) ||
+        deadServers.contains(serverName)) {
+      throw new Leases.LeaseStillHeldException(serverName);
     }
+    Watcher watcher = new ServerExpirer(serverName);
+    zooKeeperWrapper.updateRSLocationGetWatch(info, watcher);
+    
+    LOG.info("Received start message from: " + serverName);
     // Go on to process the regionserver registration.
-    HServerLoad load = serversToLoad.remove(s);
+    HServerLoad load = serversToLoad.remove(serverName);
     if (load != null) {
       // The startup message was from a known server.
       // Remove stale information about the server's load.
       synchronized (loadToServers) {
         Set<String> servers = loadToServers.get(load);
         if (servers != null) {
-          servers.remove(s);
+          servers.remove(serverName);
           loadToServers.put(load, servers);
         }
       }
     }
-    HServerInfo storedInfo = serversToServerInfo.remove(s);
+    HServerInfo storedInfo = serversToServerInfo.remove(serverName);
     if (storedInfo != null && !master.closed.get()) {
       // The startup message was from a known server with the same name.
       // Timeout the old one right away.
@@ -184,15 +159,15 @@ class ServerManager implements HConstants {
     }
     // record new server
     load = new HServerLoad();
-    serverInfo.setLoad(load);
-    serversToServerInfo.put(s, serverInfo);
-    serversToLoad.put(s, load);
+    info.setLoad(load);
+    serversToServerInfo.put(serverName, info);
+    serversToLoad.put(serverName, load);
     synchronized (loadToServers) {
       Set<String> servers = loadToServers.get(load);
       if (servers == null) {
         servers = new HashSet<String>();
       }
-      servers.add(s);
+      servers.add(serverName);
       loadToServers.put(load, servers);
     }
   }
@@ -213,13 +188,16 @@ class ServerManager implements HConstants {
   public HMsg [] regionServerReport(final HServerInfo serverInfo,
     final HMsg msgs[], final HRegionInfo[] mostLoadedRegions)
   throws IOException {
-    String serverName = serverInfo.getServerAddress().toString().trim();
+    HServerInfo info = new HServerInfo(serverInfo);
+    if (isDead(info.getServerName())) {
+      throw new Leases.LeaseStillHeldException(info.getServerName());
+    }
     if (msgs.length > 0) {
       if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
-        processRegionServerExit(serverName, msgs);
+        processRegionServerExit(info, msgs);
         return EMPTY_HMSG_ARRAY;
       } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_QUIESCED)) {
-        LOG.info("Region server " + serverName + " quiesced");
+        LOG.info("Region server " + info.getServerName() + " quiesced");
         quiescedServers.incrementAndGet();
       }
     }
@@ -251,16 +229,17 @@ class ServerManager implements HConstants {
       return new HMsg [] {REGIONSERVER_STOP};
     }
 
-    HServerInfo storedInfo = serversToServerInfo.get(serverName);
+    HServerInfo storedInfo = serversToServerInfo.get(info.getServerName());
     if (storedInfo == null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("received server report from unknown server: " + serverName);
+        LOG.debug("received server report from unknown server: " +
+            info.getServerName());
       }
 
       // The HBaseMaster may have been restarted.
       // Tell the RegionServer to start over and call regionServerStartup()
       return new HMsg[]{CALL_SERVER_STARTUP};
-    } else if (storedInfo.getStartCode() != serverInfo.getStartCode()) {
+    } else if (storedInfo.getStartCode() != info.getStartCode()) {
       // This state is reachable if:
       //
       // 1) RegionServer A started
@@ -271,35 +250,37 @@ class ServerManager implements HConstants {
       // The answer is to ask A to shut down for good.
       
       if (LOG.isDebugEnabled()) {
-        LOG.debug("region server race condition detected: " + serverName);
+        LOG.debug("region server race condition detected: " +
+            info.getServerName());
       }
 
       synchronized (serversToServerInfo) {
-        removeServerInfo(serverName);
+        removeServerInfo(info.getServerName());
         serversToServerInfo.notifyAll();
       }
       
       return new HMsg[]{REGIONSERVER_STOP};
     } else {
-      return processRegionServerAllsWell(serverName, serverInfo, 
-        mostLoadedRegions, msgs);
+      return processRegionServerAllsWell(info, mostLoadedRegions, msgs);
     }
   }
 
   /** Region server is exiting */
-  private void processRegionServerExit(String serverName, HMsg[] msgs) {
+  private void processRegionServerExit(HServerInfo serverInfo, HMsg[] msgs) {
     synchronized (serversToServerInfo) {
       try {
         // HRegionServer is shutting down. 
-        if (removeServerInfo(serverName)) {
+        if (removeServerInfo(serverInfo.getServerName())) {
           // Only process the exit message if the server still has registered info.
           // Otherwise we could end up processing the server exit twice.
-          LOG.info("Region server " + serverName + ": MSG_REPORT_EXITING");
+          LOG.info("Region server " + serverInfo.getServerName() +
+            ": MSG_REPORT_EXITING");
           // Get all the regions the server was serving reassigned
           // (if we are not shutting down).
           if (!master.closed.get()) {
             for (int i = 1; i < msgs.length; i++) {
-              LOG.info("Processing " + msgs[i] + " from " + serverName);
+              LOG.info("Processing " + msgs[i] + " from " +
+                  serverInfo.getServerName());
               HRegionInfo info = msgs[i].getRegionInfo();
               synchronized (master.regionManager) {
                 if (info.isRootRegion()) {
@@ -308,7 +289,8 @@ class ServerManager implements HConstants {
                   if (info.isMetaTable()) {
                     master.regionManager.offlineMetaRegion(info.getStartKey());
                   }
-                  if (!master.regionManager.isOfflined(info.getRegionName())) {
+                  if (!master.regionManager.isOfflined(
+                      info.getRegionNameAsString())) {
                     master.regionManager.setUnassigned(info, true);
                   } else {
                     master.regionManager.removeRegion(info);
@@ -328,21 +310,19 @@ class ServerManager implements HConstants {
 
   /**
    *  RegionServer is checking in, no exceptional circumstances
-   * @param serverName
    * @param serverInfo
    * @param mostLoadedRegions
    * @param msgs
    * @return
    * @throws IOException
    */
-  private HMsg[] processRegionServerAllsWell(String serverName, 
-    HServerInfo serverInfo, HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
+  private HMsg[] processRegionServerAllsWell(HServerInfo serverInfo, HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
   throws IOException {
 
     // Refresh the info object and the load information
-    serversToServerInfo.put(serverName, serverInfo);
+    serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
 
-    HServerLoad load = serversToLoad.get(serverName);
+    HServerLoad load = serversToLoad.get(serverInfo.getServerName());
     if (load != null) {
       this.master.getMetrics().incrementRequests(load.getNumberOfRequests());
       if (!load.equals(serverInfo.getLoad())) {
@@ -352,7 +332,7 @@ class ServerManager implements HConstants {
           Set<String> servers = loadToServers.get(load);
           // Note that servers should never be null because loadToServers
           // and serversToLoad are manipulated in pairs
-          servers.remove(serverName);
+          servers.remove(serverInfo.getServerName());
           loadToServers.put(load, servers);
         }
       }
@@ -360,18 +340,18 @@ class ServerManager implements HConstants {
 
     // Set the current load information
     load = serverInfo.getLoad();
-    serversToLoad.put(serverName, load);
+    serversToLoad.put(serverInfo.getServerName(), load);
     synchronized (loadToServers) {
       Set<String> servers = loadToServers.get(load);
       if (servers == null) {
         servers = new HashSet<String>();
       }
-      servers.add(serverName);
+      servers.add(serverInfo.getServerName());
       loadToServers.put(load, servers);
     }
 
     // Next, process messages for this server
-    return processMsgs(serverName, serverInfo, mostLoadedRegions, msgs);
+    return processMsgs(serverInfo, mostLoadedRegions, msgs);
   }
 
   /** 
@@ -380,8 +360,8 @@ class ServerManager implements HConstants {
    * Note that we never need to update the server's load information because
    * that has already been done in regionServerReport.
    */
-  private HMsg[] processMsgs(String serverName, HServerInfo serverInfo, 
-    HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[])
+  private HMsg[] processMsgs(HServerInfo serverInfo,
+      HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[])
   throws IOException { 
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     if (serverInfo.getServerAddress() == null) {
@@ -392,14 +372,15 @@ class ServerManager implements HConstants {
     int openingCount = 0;
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
-      LOG.info("Received " + incomingMsgs[i] + " from " + serverName);
+      LOG.info("Received " + incomingMsgs[i] + " from " +
+          serverInfo.getServerName());
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
           openingCount++;
           break;
         
         case MSG_REPORT_OPEN:
-          processRegionOpen(serverName, serverInfo, region, returnMsgs);
+          processRegionOpen(serverInfo, region, returnMsgs);
           break;
 
         case MSG_REPORT_CLOSE:
@@ -407,8 +388,8 @@ class ServerManager implements HConstants {
           break;
 
         case MSG_REPORT_SPLIT:
-          processSplitRegion(serverName, serverInfo, region, incomingMsgs[++i],
-            incomingMsgs[++i], returnMsgs);
+          processSplitRegion(region, incomingMsgs[++i], incomingMsgs[++i],
+              returnMsgs);
           break;
 
         default:
@@ -420,11 +401,12 @@ class ServerManager implements HConstants {
 
     synchronized (master.regionManager) {
       // Tell the region server to close regions that we have marked for closing.
-      for (HRegionInfo i: master.regionManager.getMarkedToClose(serverName)) {
+      for (HRegionInfo i:
+        master.regionManager.getMarkedToClose(serverInfo.getServerName())) {
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i,
             master.regionManager.inSafeMode()));
         // Transition the region from toClose to closing state
-        master.regionManager.setPendingClose(i.getRegionName());
+        master.regionManager.setPendingClose(i.getRegionNameAsString());
       }
 
       // Figure out what the RegionServer ought to do, and write back.
@@ -432,8 +414,8 @@ class ServerManager implements HConstants {
       // Should we tell it close regions because its overloaded?  If its
       // currently opening regions, leave it alone till all are open.
       if (openingCount < this.nobalancingCount) {
-        this.master.regionManager.assignRegions(serverInfo, serverName, 
-          mostLoadedRegions, returnMsgs);
+        this.master.regionManager.assignRegions(serverInfo, mostLoadedRegions,
+            returnMsgs);
       }
       // Send any pending table actions.
       this.master.regionManager.applyActions(serverInfo, returnMsgs);
@@ -444,15 +426,13 @@ class ServerManager implements HConstants {
   /**
    * A region has split.
    *
-   * @param serverName
-   * @param serverInfo
    * @param region
    * @param splitA
    * @param splitB
    * @param returnMsgs
    */
-  private void processSplitRegion(String serverName, HServerInfo serverInfo, 
-    HRegionInfo region, HMsg splitA, HMsg splitB, ArrayList<HMsg> returnMsgs) {
+  private void processSplitRegion(HRegionInfo region, HMsg splitA, HMsg splitB,
+      ArrayList<HMsg> returnMsgs) {
 
     synchronized (master.regionManager) {
       // Cancel any actions pending for the affected region.
@@ -475,18 +455,18 @@ class ServerManager implements HConstants {
   }
 
   /** Region server is reporting that a region is now opened */
-  private void processRegionOpen(String serverName, HServerInfo serverInfo, 
+  private void processRegionOpen(HServerInfo serverInfo, 
     HRegionInfo region, ArrayList<HMsg> returnMsgs) 
   throws IOException {
     boolean duplicateAssignment = false;
     synchronized (master.regionManager) {
       if (!master.regionManager.isUnassigned(region) &&
-          !master.regionManager.isPendingOpen(region.getRegionName())) {
+          !master.regionManager.isPendingOpen(region.getRegionNameAsString())) {
         if (region.isRootRegion()) {
           // Root region
           HServerAddress rootServer = master.getRootRegionLocation();
           if (rootServer != null) {
-            if (rootServer.toString().compareTo(serverName) == 0) {
+            if (rootServer.compareTo(serverInfo.getServerAddress()) == 0) {
               // A duplicate open report from the correct server
               return;
             }
@@ -498,7 +478,8 @@ class ServerManager implements HConstants {
           // Not root region. If it is not a pending region, then we are
           // going to treat it as a duplicate assignment, although we can't 
           // tell for certain that's the case.
-          if (master.regionManager.isPendingOpen(region.getRegionName())) {
+          if (master.regionManager.isPendingOpen(
+              region.getRegionNameAsString())) {
             // A duplicate report from the correct server
             return;
           }
@@ -535,7 +516,7 @@ class ServerManager implements HConstants {
         } else {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
-          master.regionManager.setOpen(region.getRegionName());
+          master.regionManager.setOpen(region.getRegionNameAsString());
           // Queue up an update to note the region location.
           try {
             master.toDoQueue.put(
@@ -567,7 +548,7 @@ class ServerManager implements HConstants {
       }
 
       boolean offlineRegion =
-        master.regionManager.isOfflined(region.getRegionName());
+        master.regionManager.isOfflined(region.getRegionNameAsString());
       boolean reassignRegion = !region.isOffline() && !offlineRegion;
 
       // NOTE: If the region was just being closed and not offlined, we cannot
@@ -575,7 +556,7 @@ class ServerManager implements HConstants {
       //       the messages we've received. In this case, a close could be
       //       processed before an open resulting in the master not agreeing on
       //       the region's state.
-      master.regionManager.setClosed(region.getRegionName());
+      master.regionManager.setClosed(region.getRegionNameAsString());
       try {
         master.toDoQueue.put(new ProcessRegionClose(master, region,
             offlineRegion, reassignRegion));
@@ -648,11 +629,11 @@ class ServerManager implements HConstants {
   }
   
   /**
-   * @param address server address
+   * @param name server name
    * @return HServerInfo for the given server address
    */
-  public HServerInfo getServerInfo(String address) {
-    return serversToServerInfo.get(address);
+  public HServerInfo getServerInfo(String name) {
+    return serversToServerInfo.get(name);
   }
   
   /**
@@ -660,7 +641,7 @@ class ServerManager implements HConstants {
    */
   public Map<String, HServerInfo> getServersToServerInfo() {
     synchronized (serversToServerInfo) {
-      return new HashMap<String, HServerInfo>(serversToServerInfo);
+      return Collections.unmodifiableMap(serversToServerInfo);
     }
   }
 
@@ -669,16 +650,7 @@ class ServerManager implements HConstants {
    */
   public Map<String, HServerLoad> getServersToLoad() {
     synchronized (serversToLoad) {
-      return new HashMap<String, HServerLoad>(serversToLoad);
-    }
-  }
-
-  /**
-   * @return Read-only map of load to servers.
-   */
-  public Map<HServerLoad, Set<String>> getLoadToServers() {
-    synchronized (loadToServers) {
-      return new HashMap<HServerLoad, Set<String>>(loadToServers);
+      return Collections.unmodifiableMap(serversToLoad);
     }
   }
 
@@ -740,7 +712,7 @@ class ServerManager implements HConstants {
             master.regionManager.unsetRootRegion();
             rootServer = true;
           }
-          String serverName = info.getServerAddress().toString();
+          String serverName = HServerInfo.getServerName(info);
           HServerLoad load = serversToLoad.remove(serverName);
           if (load != null) {
             synchronized (loadToServers) {
@@ -751,7 +723,7 @@ class ServerManager implements HConstants {
               }
             }
           }
-          deadServers.put(server, Boolean.FALSE);
+          deadServers.add(server);
           try {
             master.toDoQueue.put(new ProcessServerShutdown(master, info,
                 rootServer));
@@ -778,6 +750,6 @@ class ServerManager implements HConstants {
    * @return true if server is dead
    */
   public boolean isDead(String serverName) {
-    return deadServers.containsKey(serverName);
+    return deadServers.contains(serverName);
   }
 }

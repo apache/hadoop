@@ -42,6 +42,10 @@ Release 0.20.0 - Unreleased
    HBASE-1169  When a shutdown is requested, stop scanning META regions immediately
    HBASE-1251  HConnectionManager.getConnection(HBaseConfiguration) returns same
                HConnection for different HBaseConfigurations 
+   HBASE-1157, HBASE-1156 If we do not take start code as a part of region
+               server recovery, we could inadvertantly try to reassign regions
+               assigned to a restarted server with a different start code;
+               Improve lease handling
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

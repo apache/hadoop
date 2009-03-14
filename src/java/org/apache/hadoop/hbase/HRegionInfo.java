@@ -23,7 +23,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.io.VersionedWritable;
@@ -59,7 +58,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
   private boolean offLine = false;
   private long regionId = -1;
-  private byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
+  private transient byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
   private String regionNameStr = "";
   private boolean split = false;
   private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
@@ -221,6 +220,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * Separate elements of a regionName.
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id
+   * @throws IOException
    */
   public static byte [][] parseRegionName(final byte [] regionName)
   throws IOException {
@@ -438,6 +438,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
   /**
    * For internal use in forcing splits ahead of file size limit.
+   * @param b
+   * @return previous value
    */
   public boolean shouldSplit(boolean b) {
     boolean old = this.splitRequest;

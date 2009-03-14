@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.SortedMap;
@@ -843,18 +841,35 @@ public class HLog implements HConstants, Syncable {
    * @return the HLog directory name
    */
   public static String getHLogDirectoryName(HServerInfo info) {
-    StringBuilder dirName = new StringBuilder("log_");
-    try {
-      dirName.append(URLEncoder.encode(
-          info.getServerAddress().getBindAddress(), UTF8_ENCODING));
-    } catch (UnsupportedEncodingException e) {
-      LOG.error("Error encoding '" + info.getServerAddress().getBindAddress()
-          + "'", e);
+    return getHLogDirectoryName(HServerInfo.getServerName(info));
+  }
+  
+  /**
+   * Construct the HLog directory name
+   * 
+   * @param serverAddress
+   * @param startCode
+   * @return the HLog directory name
+   */
+  public static String getHLogDirectoryName(String serverAddress,
+      long startCode) {
+    if (serverAddress == null || serverAddress.length() == 0) {
+      return null;
     }
+    return getHLogDirectoryName(
+        HServerInfo.getServerName(serverAddress, startCode));
+  }
+  
+  /**
+   * Construct the HLog directory name
+   * 
+   * @param serverName
+   * @return the HLog directory name
+   */
+  public static String getHLogDirectoryName(String serverName) {
+    StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);
     dirName.append("_");
-    dirName.append(info.getStartCode());
-    dirName.append("_");
-    dirName.append(info.getServerAddress().getPort());
+    dirName.append(serverName);
     return dirName.toString();
   }
 

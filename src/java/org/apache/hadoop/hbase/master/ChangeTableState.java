@@ -49,10 +49,9 @@ class ChangeTableState extends TableOperation {
   }
 
   @Override
-  protected void processScanItem(String serverName, long startCode,
-    HRegionInfo info) {
+  protected void processScanItem(String serverName, HRegionInfo info) {
       
-    if (isBeingServed(serverName, startCode)) {
+    if (isBeingServed(serverName)) {
       HashSet<HRegionInfo> regions = servedRegions.get(serverName);
       if (regions == null) {
         regions = new HashSet<HRegionInfo>();
@@ -91,7 +90,7 @@ class ChangeTableState extends TableOperation {
       synchronized (master.regionManager) {
         if (online) {
           // Bring offline regions on-line
-          if (!master.regionManager.regionIsOpening(i.getRegionName())) {
+          if (!master.regionManager.regionIsOpening(i.getRegionNameAsString())) {
             master.regionManager.setUnassigned(i, false);
           }
         } else {

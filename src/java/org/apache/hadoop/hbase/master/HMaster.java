@@ -548,7 +548,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * HMasterRegionInterface
    */
-  public MapWritable regionServerStartup(final HServerInfo serverInfo) {
+  public MapWritable regionServerStartup(final HServerInfo serverInfo)
+  throws IOException {
     // Set the address for now even tho it will not be persisted on HRS side.
     String rsAddress = HBaseServer.getRemoteAddress();
     serverInfo.setServerAddress(new HServerAddress(rsAddress,

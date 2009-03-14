@@ -28,7 +28,6 @@ import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -44,11 +43,7 @@ import org.apache.hadoop.hbase.io.RowResult;
  * serving, and the regions need to get reassigned.
  */
 class ProcessServerShutdown extends RegionServerOperation {
-  private final HServerAddress deadServer;
-  /*
-   * Cache of the server name.
-   */
-  private final String deadServerStr;
+  private final String deadServer;
   private final boolean rootRegionServer;
   private boolean rootRegionReassigned = false;
   private Path oldLogDir;
@@ -76,8 +71,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   public ProcessServerShutdown(HMaster master, HServerInfo serverInfo,
       boolean rootRegionServer) {
     super(master);
-    this.deadServer = serverInfo.getServerAddress();
-    this.deadServerStr = this.deadServer.toString();
+    this.deadServer = HServerInfo.getServerName(serverInfo);
     this.rootRegionServer = rootRegionServer;
     this.logSplit = false;
     this.rootRescanned = false;
@@ -87,7 +81,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   @Override
   public String toString() {
-    return "ProcessServerShutdown of " + this.deadServerStr;
+    return "ProcessServerShutdown of " + this.deadServer;
   }
 
   /** Finds regions that the dead region server was serving
@@ -116,8 +110,13 @@ class ProcessServerShutdown extends RegionServerOperation {
         // shutdown server but that would mean that we'd reassign regions that
         // were already out being assigned, ones that were product of a split
         // that happened while the shutdown was being processed.
-        String serverName = Writables.cellToString(values.get(COL_SERVER));
-        if (serverName == null || !deadServerStr.equals(serverName)) {
+        String serverAddress = Writables.cellToString(values.get(COL_SERVER));
+        long startCode = Writables.cellToLong(values.get(COL_STARTCODE)); 
+        String serverName = null;
+        if (serverAddress != null && serverAddress.length() > 0) {
+          serverName = HServerInfo.getServerName(serverAddress, startCode);
+        }
+        if (serverName == null || !deadServer.equals(serverName)) {
           // This isn't the server you're looking for - move along
           continue;
         }
@@ -146,7 +145,7 @@ class ProcessServerShutdown extends RegionServerOperation {
           ToDoEntry todo = new ToDoEntry(row, info);
           toDoList.add(todo);
 
-          if (master.regionManager.isOfflined(info.getRegionName()) ||
+          if (master.regionManager.isOfflined(info.getRegionNameAsString()) ||
               info.isOffline()) {
             master.regionManager.removeRegion(info);
             // Mark region offline
@@ -232,7 +231,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   @Override
   protected boolean process() throws IOException {
-    LOG.info("process shutdown of server " + this.deadServerStr +
+    LOG.info("process shutdown of server " + this.deadServer +
       ": logSplit: " +
       logSplit + ", rootRescanned: " + rootRescanned +
       ", numberOfMetaRegions: " + 
@@ -310,9 +309,9 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
     }
     // Remove this server from dead servers list.  Finished splitting logs.
-    this.master.serverManager.removeDeadServer(deadServerStr);
+    this.master.serverManager.removeDeadServer(deadServer);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed " + deadServerStr + " from deadservers Map");
+      LOG.debug("Removed " + deadServer + " from deadservers Map");
     }
     return true;
   }

@@ -38,6 +38,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private long startCode;
   private HServerLoad load;
   private int infoPort;
+  private transient volatile String serverName = null;
 
   /** default constructor - used by Writable */
   public HServerInfo() {
@@ -85,15 +86,16 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   /** @return the server address */
   public HServerAddress getServerAddress() {
-    return serverAddress;
+    return new HServerAddress(serverAddress);
   }
   
   /**
    * Change the server address.
    * @param serverAddress New server address
    */
-  public void setServerAddress(HServerAddress serverAddress) {
+  public synchronized void setServerAddress(HServerAddress serverAddress) {
     this.serverAddress = serverAddress;
+    this.serverName = null;
   }
  
   /** @return the server start code */
@@ -111,8 +113,19 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   /**
    * @param startCode the startCode to set
    */
-  public void setStartCode(long startCode) {
+  public synchronized void setStartCode(long startCode) {
     this.startCode = startCode;
+    this.serverName = null;
+  }
+  
+  /**
+   * @return the server name in the form hostname_startcode_port
+   */
+  public synchronized String getServerName() {
+    if (this.serverName == null) {
+      this.serverName = getServerName(this.serverAddress, this.startCode);
+    }
+    return this.serverName;
   }
 
   @Override
@@ -128,10 +141,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   @Override
   public int hashCode() {
-    int result = this.serverAddress.hashCode();
-    result ^= this.infoPort;
-    result ^= this.startCode;
-    return result;
+    return this.getServerName().hashCode();
   }
 
 
@@ -152,17 +162,46 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
 
   public int compareTo(HServerInfo o) {
-    int result = getServerAddress().compareTo(o.getServerAddress());
-    if (result != 0) {
-      return result;
+    return this.getServerName().compareTo(o.getServerName());
+  }
+
+  /**
+   * @param info
+   * @return the server name in the form hostname_startcode_port
+   */
+  public static String getServerName(HServerInfo info) {
+    return getServerName(info.getServerAddress(), info.getStartCode());
+  }
+  
+  /**
+   * @param serverAddress in the form hostname:port
+   * @param startCode
+   * @return the server name in the form hostname_startcode_port
+   */
+  public static String getServerName(String serverAddress, long startCode) {
+    String name = null;
+    if (serverAddress != null) {
+      HServerAddress address = new HServerAddress(serverAddress);
+      name = getServerName(address.getHostname(), address.getPort(), startCode);
     }
-    if (this.infoPort != o.infoPort) {
-      return this.infoPort - o.infoPort;
-    }
-    if (getStartCode() == o.getStartCode()) {
-      return 0;
-    }
-    // Startcodes are timestamps.
-    return (int)(getStartCode() - o.getStartCode());
+    return name;
+  }
+
+  /**
+   * @param address
+   * @param startCode
+   * @return the server name in the form hostname_startcode_port
+   */
+  public static String getServerName(HServerAddress address, long startCode) {
+    return getServerName(address.getHostname(), address.getPort(), startCode);
+  }
+
+  private static String getServerName(String hostName, int port, long startCode) {
+    StringBuilder name = new StringBuilder(hostName);
+    name.append("_");
+    name.append(startCode);
+    name.append("_");
+    name.append(port);
+    return name.toString();
   }
 }

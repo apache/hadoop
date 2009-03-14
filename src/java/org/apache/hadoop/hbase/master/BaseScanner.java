@@ -327,40 +327,40 @@ abstract class BaseScanner extends Chore implements HConstants {
   }
 
   protected void checkAssigned(final HRegionInfo info,
-    final String serverName, final long startCode) 
+      final String serverAddress, final long startCode) 
   throws IOException {
-    
-    synchronized (this.master.regionManager) {
-      /*
-       * We don't assign regions that are offline, in transition or were on
-       * a dead server. Regions that were on a dead server will get reassigned
-       * by ProcessServerShutdown
-       */
-      if(info.isOffline() ||
-          this.master.regionManager.regionIsInTransition(info.getRegionName()) ||
-          this.master.serverManager.isDead(serverName)) {
 
-        return;
-      }
-      HServerInfo storedInfo = null;
-      if (serverName.length() != 0) {
+    String serverName = null;
+    if (serverAddress != null && serverAddress.length() > 0) {
+      serverName = HServerInfo.getServerName(serverAddress, startCode);
+    }
+    HServerInfo storedInfo = null;
+    synchronized (this.master.regionManager) {
+      if (serverName != null) {
+        /*
+         * We don't assign regions that are offline, in transition or were on
+         * a dead server. Regions that were on a dead server will get reassigned
+         * by ProcessServerShutdown
+         */
+        if(info.isOffline() ||
+            this.master.regionManager.regionIsInTransition(
+                info.getRegionNameAsString()) ||
+            this.master.serverManager.isDead(serverName)) {
+
+          return;
+        }
         storedInfo = this.master.serverManager.getServerInfo(serverName);
       }
 
-      /*
-       * If the startcode is off -- either null or doesn't match the start code
-       * for the address -- then add it to the list of unassigned regions.
-       */ 
-      if (storedInfo == null || storedInfo.getStartCode() != startCode) {
+      // If we can't find the HServerInfo, then add it to the list of
+      //  unassigned regions.
 
+      if (storedInfo == null) {
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionNameAsString() +
-            " is not valid; " +
-            (storedInfo == null ? " Server '" + serverName + "' unknown." :
-                " serverInfo: " + storedInfo + ", passed startCode: " +
-                startCode + ", storedInfo.startCode: " +
-                storedInfo.getStartCode()));
+            " is not valid; " + " Server '" + serverAddress + "' startCode: " +
+            startCode + " unknown.");
         }
 
         // Recover the region server's log if there is one.
@@ -368,10 +368,9 @@ abstract class BaseScanner extends Chore implements HConstants {
         // data in the meta region. Once we are on-line, dead server log
         // recovery is handled by lease expiration and ProcessServerShutdown
         if (!this.master.regionManager.isInitialMetaScanComplete() &&
-            serverName.length() != 0) {
-          StringBuilder dirName = new StringBuilder("log_");
-          dirName.append(serverName.replace(":", "_"));
-          Path logDir = new Path(this.master.rootdir, dirName.toString());
+            serverName != null) {
+          Path logDir =
+            new Path(this.master.rootdir, HLog.getHLogDirectoryName(serverName));
           try {
             if (master.fs.exists(logDir)) {
               this.master.regionManager.splitLogLock.lock();
