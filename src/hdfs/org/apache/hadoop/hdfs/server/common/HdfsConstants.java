@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
-
 /************************************
  * Some handy internal HDFS constants
  *
@@ -32,10 +31,12 @@ public interface HdfsConstants {
     DATA_NODE;
   }
 
-  // Startup options
+  /** Startup options */
   static public enum StartupOption{
     FORMAT  ("-format"),
     REGULAR ("-regular"),
+    BACKUP  ("-backup"),
+    CHECKPOINT("-checkpoint"),
     UPGRADE ("-upgrade"),
     ROLLBACK("-rollback"),
     FINALIZE("-finalize"),
@@ -44,6 +45,17 @@ public interface HdfsConstants {
     private String name = null;
     private StartupOption(String arg) {this.name = arg;}
     public String getName() {return name;}
+    public NamenodeRole toNodeRole() {
+      switch(this) {
+      case BACKUP: 
+        return NamenodeRole.BACKUP;
+      case CHECKPOINT: 
+        return NamenodeRole.CHECKPOINT;
+      default:
+        return NamenodeRole.ACTIVE;
+      }
+    }
+
   }
 
   // Timeouts for communicating with DataNode for streaming writes/reads
@@ -51,5 +63,21 @@ public interface HdfsConstants {
   public static int WRITE_TIMEOUT = 8 * 60 * 1000;
   public static int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
 
+  /**
+   * Defines the NameNode role.
+   */
+  static public enum NamenodeRole {
+    ACTIVE    ("NameNode"),
+    BACKUP    ("Backup Node"),
+    CHECKPOINT("Checkpoint Node"),
+    STANDBY   ("Standby Node");
+
+    private String description = null;
+    private NamenodeRole(String arg) {this.description = arg;}
+  
+    public String toString() {
+      return description;
+    }
+  }
 }
 

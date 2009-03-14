@@ -58,6 +58,8 @@ Trunk (unreleased changes)
     HADOOP-4756. A command line tool to access JMX properties on NameNode
     and DataNode. (Boris Shkolnik via rangadi)
 
+    HADOOP-4539. Introduce backup node and checkpoint node. (shv)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
@@ -941,7 +943,7 @@ Release 0.20.0 - Unreleased
     formula linear where blowUp = Total-Output/Total-Input. (Sharad Agarwal via ddas)
 
     HADOOP-5142. Fix MapWritable#putAll to store key/value classes. 
-    (Doğacan Güney via enis)
+    (Do??acan G??ney via enis)
 
     HADOOP-4744. Workaround for jetty6 returning -1 when getLocalPort is invoked on
     the connector. The workaround patch retries a few times before failing.

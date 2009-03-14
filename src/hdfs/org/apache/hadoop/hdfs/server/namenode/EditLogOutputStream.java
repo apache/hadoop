@@ -26,7 +26,8 @@ import org.apache.hadoop.io.Writable;
  * A generic abstract class to support journaling of edits logs into 
  * a persistent storage.
  */
-abstract class EditLogOutputStream extends OutputStream {
+abstract class EditLogOutputStream extends OutputStream 
+implements JournalStream {
   // these are statistics counters
   private long numSync;        // number of sync(s) to disk
   private long totalTimeSync;  // total time to sync
@@ -34,13 +35,6 @@ abstract class EditLogOutputStream extends OutputStream {
   EditLogOutputStream() throws IOException {
     numSync = totalTimeSync = 0;
   }
-
-  /**
-   * Get this stream name.
-   * 
-   * @return name of the stream
-   */
-  abstract String getName();
 
   /** {@inheritDoc} */
   abstract public void write(int b) throws IOException;
@@ -57,7 +51,7 @@ abstract class EditLogOutputStream extends OutputStream {
   abstract void write(byte op, Writable ... writables) throws IOException;
 
   /**
-   * Create and initialize new edits log storage.
+   * Create and initialize underlying persistent edits log storage.
    * 
    * @throws IOException
    */
@@ -97,6 +91,10 @@ abstract class EditLogOutputStream extends OutputStream {
    */
   abstract long length() throws IOException;
 
+  boolean isOperationSupported(byte op) {
+    return true;
+  }
+
   /**
    * Return total time spent in {@link #flushAndSync()}
    */
@@ -109,5 +107,10 @@ abstract class EditLogOutputStream extends OutputStream {
    */
   long getNumSync() {
     return numSync;
+  }
+
+  @Override // Object
+  public String toString() {
+    return getName();
   }
 }

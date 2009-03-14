@@ -44,6 +44,8 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocat
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.fs.ContentSummary;
@@ -274,9 +276,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * FSNamesystem constructor.
    */
-  FSNamesystem(NameNode nn, Configuration conf) throws IOException {
+  FSNamesystem(Configuration conf) throws IOException {
     try {
-      initialize(nn, conf);
+      initialize(conf, null);
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -287,24 +289,36 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Initialize FSNamesystem.
    */
-  private void initialize(NameNode nn, Configuration conf) throws IOException {
+  private void initialize(Configuration conf, FSImage fsImage) throws IOException {
     this.systemStart = now();
     setConfigurationParameters(conf);
 
     this.registerMBean(conf); // register the MBean for the FSNamesystemStutus
-    this.dir = new FSDirectory(this, conf);
-    StartupOption startOpt = NameNode.getStartupOption(conf);
-    this.dir.loadFSImage(getNamespaceDirs(conf),
-                         getNamespaceEditsDirs(conf), startOpt);
-    long timeTakenToLoadFSImage = now() - systemStart;
-    LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
-    NameNode.getNameNodeMetrics().fsImageLoadTime.set(
-                              (int) timeTakenToLoadFSImage);
+    if(fsImage == null) {
+      this.dir = new FSDirectory(this, conf);
+      StartupOption startOpt = NameNode.getStartupOption(conf);
+      this.dir.loadFSImage(getNamespaceDirs(conf),
+                           getNamespaceEditsDirs(conf), startOpt);
+      long timeTakenToLoadFSImage = now() - systemStart;
+      LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
+      NameNode.getNameNodeMetrics().fsImageLoadTime.set(
+                                (int) timeTakenToLoadFSImage);
+    } else {
+      this.dir = new FSDirectory(fsImage, this, conf);
+    }
     this.safeMode = new SafeModeInfo(conf);
-    setBlockTotal();
     pendingReplications = new PendingReplicationBlocks(
                             conf.getInt("dfs.replication.pending.timeout.sec", 
                                         -1) * 1000L);
+    this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
+                        conf.get("dfs.hosts.exclude",""));
+  }
+
+  /**
+   * Activate FSNamesystem daemons.
+   */
+  void activate(Configuration conf) throws IOException {
+    setBlockTotal();
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(leaseManager.new Monitor());
     this.replthread = new Daemon(new ReplicationMonitor());
@@ -312,8 +326,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     lmthread.start();
     replthread.start();
 
-    this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
-                                           conf.get("dfs.hosts.exclude",""));
     this.dnthread = new Daemon(new DecommissionManager(this).new Monitor(
         conf.getInt("dfs.namenode.decommission.interval", 30),
         conf.getInt("dfs.namenode.decommission.nodes.per.interval", 5)));
@@ -334,8 +346,34 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   public static Collection<File> getNamespaceDirs(Configuration conf) {
-    Collection<String> dirNames = conf.getStringCollection("dfs.name.dir");
-    if (dirNames.isEmpty())
+    return getStorageDirs(conf, "dfs.name.dir");
+  }
+
+  public static Collection<File> getStorageDirs(Configuration conf,
+                                                String propertyName) {
+    Collection<String> dirNames = conf.getStringCollection(propertyName);
+    StartupOption startOpt = NameNode.getStartupOption(conf);
+    if(startOpt == StartupOption.IMPORT) {
+      // In case of IMPORT this will get rid of default directories 
+      // but will retain directories specified in hdfs-site.xml
+      // When importing image from a checkpoint, the name-node can
+      // start with empty set of storage directories.
+      Configuration cE = new Configuration(false);
+      cE.addResource("core-default.xml");
+      cE.addResource("core-site.xml");
+      cE.addResource("hdfs-default.xml");
+      Collection<String> dirNames2 = cE.getStringCollection(propertyName);
+      dirNames.removeAll(dirNames2);
+      if(dirNames.isEmpty())
+        LOG.warn("!!! WARNING !!!" +
+          "\n\tThe NameNode currently runs without persistent storage." +
+          "\n\tAny changes to the file system meta-data may be lost." +
+          "\n\tRecommended actions:" +
+          "\n\t\t- shutdown and restart NameNode with configured \"" 
+          + propertyName + "\" in hdfs-site.xml;" +
+          "\n\t\t- use Backup Node as a persistent and up-to-date storage " +
+          "of the file system meta-data.");
+    } else if (dirNames.isEmpty())
       dirNames.add("/tmp/hadoop/dfs/name");
     Collection<File> dirs = new ArrayList<File>(dirNames.size());
     for(String name : dirNames) {
@@ -343,17 +381,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     return dirs;
   }
-  
+
   public static Collection<File> getNamespaceEditsDirs(Configuration conf) {
-    Collection<String> editsDirNames = 
-            conf.getStringCollection("dfs.name.edits.dir");
-    if (editsDirNames.isEmpty())
-      editsDirNames.add("/tmp/hadoop/dfs/name");
-    Collection<File> dirs = new ArrayList<File>(editsDirNames.size());
-    for(String name : editsDirNames) {
-      dirs.add(new File(name));
-    }
-    return dirs;
+    return getStorageDirs(conf, "dfs.name.edits.dir");
   }
 
   /**
@@ -363,6 +393,25 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
     setConfigurationParameters(conf);
     this.dir = new FSDirectory(fsImage, this, conf);
+  }
+
+  /**
+   * Create FSNamesystem for {@link BackupNode}.
+   * Should do everything that would be done for the NameNode,
+   * except for loading the image.
+   * 
+   * @param bnImage {@link BackupStorage}
+   * @param conf configuration
+   * @throws IOException
+   */
+  FSNamesystem(Configuration conf, BackupStorage bnImage) throws IOException {
+    try {
+      initialize(conf, bnImage);
+    } catch(IOException e) {
+      LOG.error(getClass().getSimpleName() + " initialization failed.", e);
+      close();
+      throw e;
+    }
   }
 
   /**
@@ -2193,7 +2242,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         DatanodeDescriptor nodeinfo = null;
         try {
           nodeinfo = getDatanode(nodeReg);
-        } catch(UnregisteredDatanodeException e) {
+        } catch(UnregisteredNodeException e) {
           return new DatanodeCommand[]{DatanodeCommand.REGISTER};
         }
           
@@ -3788,7 +3837,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Returns TRUE if node is registered (including when it is on the 
    * exclude list and is being decommissioned). 
    */
-  private synchronized boolean verifyNodeRegistration(DatanodeRegistration nodeReg, String ipAddr) 
+  private synchronized boolean verifyNodeRegistration(DatanodeID nodeReg, String ipAddr) 
     throws IOException {
     if (!inHostsList(nodeReg, ipAddr)) {
       return false;    
@@ -3824,12 +3873,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * @throws IOException
    */
   public DatanodeDescriptor getDatanode(DatanodeID nodeID) throws IOException {
-    UnregisteredDatanodeException e = null;
+    UnregisteredNodeException e = null;
     DatanodeDescriptor node = datanodeMap.get(nodeID.getStorageID());
     if (node == null) 
       return null;
     if (!node.getName().equals(nodeID.getName())) {
-      e = new UnregisteredDatanodeException(nodeID, node);
+      e = new UnregisteredNodeException(nodeID, node);
       NameNode.stateChangeLog.fatal("BLOCK* NameSystem.getDatanode: "
                                     + e.getLocalizedMessage());
       throw e;
@@ -4310,7 +4359,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     safeMode.leave(checkForUpgrades);
   }
     
-  String getSafeModeTip() {
+  synchronized String getSafeModeTip() {
     if (!isInSafeMode())
       return "";
     return safeMode.getTurnOffTip();
@@ -4336,6 +4385,24 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     LOG.info("Roll FSImage from " + Server.getRemoteAddress());
     getFSImage().rollFSImage();
+  }
+
+  NamenodeCommand startCheckpoint(NamenodeRegistration bnReg, // backup node
+                                  NamenodeRegistration nnReg) // active name-node
+  throws IOException {
+    NamenodeCommand cmd;
+    synchronized(this) {
+      cmd = getFSImage().startCheckpoint(bnReg, nnReg);
+    }
+    LOG.info("Start checkpoint for " + bnReg.getAddress());
+    getEditLog().logSync();
+    return cmd;
+  }
+
+  synchronized void endCheckpoint(NamenodeRegistration registration,
+                            CheckpointSignature sig) throws IOException {
+    LOG.info("End checkpoint for " + registration.getAddress());
+    getFSImage().endCheckpoint(sig, registration.getRole());
   }
 
   /**
@@ -4648,5 +4715,46 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
       }
     }
+  }
+
+  /**
+   * Register a name-node.
+   * <p>
+   * Registration is allowed if there is no ongoing streaming to
+   * another backup node.
+   * We currently allow only one backup node, but multiple chackpointers 
+   * if there are no backups.
+   * 
+   * @param registration
+   * @throws IOException
+   */
+  synchronized void registerBackupNode(NamenodeRegistration registration)
+  throws IOException {
+    if(getFSImage().getNamespaceID() != registration.getNamespaceID())
+      throw new IOException("Incompatible namespaceIDs: " 
+          + " Namenode namespaceID = " + getFSImage().getNamespaceID() 
+          + "; " + registration.getRole() +
+              " node namespaceID = " + registration.getNamespaceID());
+    boolean regAllowed = getEditLog().checkBackupRegistration(registration);
+    if(!regAllowed)
+      throw new IOException("Registration is not allowed. " +
+      		"Another node is registered as a backup.");
+  }
+
+  /**
+   * Release (unregister) backup node.
+   * <p>
+   * Find and remove the backup stream corresponding to the node.
+   * @param registration
+   * @throws IOException
+   */
+  synchronized void releaseBackupNode(NamenodeRegistration registration)
+  throws IOException {
+    if(getFSImage().getNamespaceID() != registration.getNamespaceID())
+      throw new IOException("Incompatible namespaceIDs: " 
+          + " Namenode namespaceID = " + getFSImage().getNamespaceID() 
+          + "; " + registration.getRole() +
+              " node namespaceID = " + registration.getNamespaceID());
+    getEditLog().releaseBackupStream(registration);
   }
 }

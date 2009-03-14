@@ -123,8 +123,24 @@ creations/deletions), or "all".</description>
   </description>
  </property>
  
+ <property>
+  <name>dfs.backup.address</name>
+  <value>0.0.0.0:50100</value>
+  <description>
+    The backup node server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
  
- 
+ <property>
+  <name>dfs.backup.http.address</name>
+  <value>0.0.0.0:50105</value>
+  <description>
+    The backup node http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
 <property>
   <name>dfs.replication.considerLoad</name>
   <value>true</value>

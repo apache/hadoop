@@ -50,20 +50,20 @@ public class TestCheckpoint extends TestCase {
   static final int numDatanodes = 3;
   short replication = 3;
 
-  private void writeFile(FileSystem fileSys, Path name, int repl)
+  static void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true,
                                             fileSys.getConf().getInt("io.file.buffer.size", 4096),
                                             (short)repl, (long)blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
+    byte[] buffer = new byte[TestCheckpoint.fileSize];
+    Random rand = new Random(TestCheckpoint.seed);
     rand.nextBytes(buffer);
     stm.write(buffer);
     stm.close();
   }
   
   
-  private void checkFile(FileSystem fileSys, Path name, int repl)
+  static void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     assertTrue(fileSys.exists(name));
     int replication = fileSys.getFileStatus(name).getReplication();
@@ -71,7 +71,7 @@ public class TestCheckpoint extends TestCase {
     //We should probably test for more of the file properties.    
   }
   
-  private void cleanupFile(FileSystem fileSys, Path name)
+  static void cleanupFile(FileSystem fileSys, Path name)
     throws IOException {
     assertTrue(fileSys.exists(name));
     fileSys.delete(name, true);

@@ -17,11 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.WritableFactories;
 
-import org.apache.hadoop.io.*;
-
-public abstract class DatanodeCommand implements Writable {
+/**
+ * Base class for data-node command.
+ * Issued by the name-node to notify data-nodes what should be done.
+ */
+public abstract class DatanodeCommand extends ServerCommand {
   static class Register extends DatanodeCommand {
     private Register() {super(DatanodeProtocol.DNA_REGISTER);}
     public void readFields(DataInput in) {}
@@ -47,29 +53,12 @@ public abstract class DatanodeCommand implements Writable {
 
   public static final DatanodeCommand REGISTER = new Register();
   public static final DatanodeCommand FINALIZE = new Finalize();
-
-  private int action;
   
   public DatanodeCommand() {
-    this(DatanodeProtocol.DNA_UNKNOWN);
+    super();
   }
   
   DatanodeCommand(int action) {
-    this.action = action;
-  }
-
-  public int getAction() {
-    return this.action;
-  }
-  
-  ///////////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(this.action);
-  }
-  
-  public void readFields(DataInput in) throws IOException {
-    this.action = in.readInt();
+    super(action);
   }
 }

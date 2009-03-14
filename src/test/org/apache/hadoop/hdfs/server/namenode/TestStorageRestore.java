@@ -73,7 +73,7 @@ public class TestStorageRestore extends TestCase {
  
   protected void setUp() throws Exception {
     config = new Configuration();
-    String baseDir = System.getProperty("test.build.data", "/tmp");
+    String baseDir = System.getProperty("test.build.data",  "build/test/data");
     
     hdfsDir = new File(baseDir, "dfs");
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {

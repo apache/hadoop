@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -33,12 +34,12 @@ public class CheckpointSignature extends StorageInfo
   long editsTime = -1L;
   long checkpointTime = -1L;
 
-  CheckpointSignature() {}
+  public CheckpointSignature() {}
 
   CheckpointSignature(FSImage fsImage) {
     super(fsImage);
     editsTime = fsImage.getEditLog().getFsEditTime();
-    checkpointTime = fsImage.checkpointTime;
+    checkpointTime = fsImage.getCheckpointTime();
   }
 
   CheckpointSignature(String str) {
@@ -59,14 +60,17 @@ public class CheckpointSignature extends StorageInfo
          + String.valueOf(checkpointTime);
   }
 
-  void validateStorageInfo(StorageInfo si) throws IOException {
+  void validateStorageInfo(FSImage si) throws IOException {
     if(layoutVersion != si.layoutVersion
-        || namespaceID != si.namespaceID || cTime != si.cTime) {
+        || namespaceID != si.namespaceID || cTime != si.cTime
+        || checkpointTime != si.checkpointTime) {
       // checkpointTime can change when the image is saved - do not compare
-      throw new IOException("Inconsistent checkpoint fileds. "
+      throw new IOException("Inconsistent checkpoint fields.\n"
           + "LV = " + layoutVersion + " namespaceID = " + namespaceID
-          + " cTime = " + cTime + ". Expecting respectively: "
-          + si.layoutVersion + "; " + si.namespaceID + "; " + si.cTime);
+          + " cTime = " + cTime + "; checkpointTime = " + checkpointTime 
+          + ".\nExpecting respectively: "
+          + si.layoutVersion + "; " + si.namespaceID + "; " + si.cTime
+          + "; " + si.checkpointTime);
     }
   }
 
@@ -100,17 +104,13 @@ public class CheckpointSignature extends StorageInfo
   // Writable
   /////////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    out.writeInt(getLayoutVersion());
-    out.writeInt(getNamespaceID());
-    out.writeLong(getCTime());
+    super.write(out);
     out.writeLong(editsTime);
     out.writeLong(checkpointTime);
   }
 
   public void readFields(DataInput in) throws IOException {
-    layoutVersion = in.readInt();
-    namespaceID = in.readInt();
-    cTime = in.readLong();
+    super.readFields(in);
     editsTime = in.readLong();
     checkpointTime = in.readLong();
   }

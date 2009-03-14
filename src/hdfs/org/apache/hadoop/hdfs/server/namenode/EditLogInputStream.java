@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -27,14 +29,8 @@ import java.io.InputStream;
  * It should stream bytes from the storage exactly as they were written
  * into the #{@link EditLogOutputStream}.
  */
-abstract class EditLogInputStream extends InputStream {
-  /**
-   * Get this stream name.
-   * 
-   * @return name of the stream
-   */
-  abstract String getName();
-
+abstract class EditLogInputStream extends InputStream
+implements JournalStream {
   /** {@inheritDoc} */
   public abstract int available() throws IOException;
 
@@ -51,4 +47,11 @@ abstract class EditLogInputStream extends InputStream {
    * Return the size of the current edits log.
    */
   abstract long length() throws IOException;
+
+  /**
+   * Return DataInputStream based on this edit stream.
+   */
+  DataInputStream getDataInputStream() {
+    return new DataInputStream(new BufferedInputStream(this));
+  }
 }

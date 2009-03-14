@@ -239,7 +239,7 @@ public class MiniDFSCluster {
       ioe.initCause(e);
       throw ioe;
     }
-    base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
+    base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
     
     // Setup the NameNode configuration
@@ -585,7 +585,7 @@ public class MiniDFSCluster {
   boolean corruptBlockOnDataNode(int i, String blockName) throws Exception {
     Random random = new Random();
     boolean corrupted = false;
-    File dataDir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/data");
+    File dataDir = new File(getBaseDirectory() + "data");
     if (i < 0 || i >= dataNodes.size())
       return false;
     for (int dn = i*2; dn < i*2+2; dn++) {
@@ -739,7 +739,7 @@ public class MiniDFSCluster {
   }
   
   public void formatDataNodeDirs() throws IOException {
-    base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
+    base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
     if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
       throw new IOException("Cannot remove data directory: " + data_dir);
@@ -840,5 +840,9 @@ public class MiniDFSCluster {
    */
   public String getDataDirectory() {
     return data_dir.getAbsolutePath();
+  }
+
+  public static String getBaseDirectory() {
+    return System.getProperty("test.build.data", "build/test/data") + "/dfs/";
   }
 }

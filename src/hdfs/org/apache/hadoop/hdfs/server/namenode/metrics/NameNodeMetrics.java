@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.metrics.*;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsBase;
@@ -81,18 +81,18 @@ public class NameNodeMetrics implements Updater {
                     new MetricsIntValue("BlocksCorrupted", registry);
 
       
-    public NameNodeMetrics(Configuration conf, NameNode nameNode) {
+    public NameNodeMetrics(Configuration conf, NamenodeRole nameNodeRole) {
       String sessionId = conf.get("session.id");
       // Initiate Java VM metrics
-      JvmMetrics.init("NameNode", sessionId);
+      String processName = nameNodeRole.toString();
+      JvmMetrics.init(processName, sessionId);
 
-      
       // Now the Mbean for the name node - this alos registers the MBean
       namenodeActivityMBean = new NameNodeActivityMBean(registry);
       
       // Create a record for NameNode metrics
       MetricsContext metricsContext = MetricsUtil.getContext("dfs");
-      metricsRecord = MetricsUtil.createRecord(metricsContext, "namenode");
+      metricsRecord = MetricsUtil.createRecord(metricsContext, processName.toLowerCase());
       metricsRecord.setTag("sessionId", sessionId);
       metricsContext.registerUpdater(this);
       log.info("Initializing NameNodeMeterics using context object:" +

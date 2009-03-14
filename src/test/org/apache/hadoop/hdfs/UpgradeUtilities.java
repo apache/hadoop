@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
 import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
 
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -117,7 +116,6 @@ public class UpgradeUtilities {
       
       // save image
       namenode.getFSImage().saveFSImage();
-      namenode.getFSImage().getEditLog().open();
       
       // write more files
       writeFile(fs, new Path(baseDir, "file3"), buffer, bufferSize);

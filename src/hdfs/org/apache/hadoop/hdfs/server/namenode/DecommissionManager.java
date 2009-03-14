@@ -64,7 +64,7 @@ class DecommissionManager {
         try {
           Thread.sleep(recheckInterval);
         } catch (InterruptedException ie) {
-          LOG.info("Interrupted " + this.getClass().getSimpleName(), ie);
+          LOG.warn(this.getClass().getSimpleName() + " interrupted: " + ie);
         }
       }
     }

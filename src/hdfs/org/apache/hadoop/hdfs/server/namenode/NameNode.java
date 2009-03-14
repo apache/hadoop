@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.CompleteFileStatus;
@@ -37,7 +38,10 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.http.HttpServer;
@@ -123,18 +127,21 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
 
-  private FSNamesystem namesystem; 
+  protected FSNamesystem namesystem; 
+  protected NamenodeRole role;
   /** RPC server */
-  private Server server;
+  protected Server server;
   /** RPC server address */
-  private InetSocketAddress serverAddress = null;
+  protected InetSocketAddress rpcAddress = null;
   /** httpServer */
-  private HttpServer httpServer;
+  protected HttpServer httpServer;
   /** HTTP server address */
-  private InetSocketAddress httpAddress = null;
+  protected InetSocketAddress httpAddress = null;
   private Thread emptier;
   /** only used for testing purposes  */
-  private boolean stopRequested = false;
+  protected boolean stopRequested = false;
+  /** Registration information of this name-node  */
+  protected NamenodeRegistration nodeRegistration;
   /** Is service level authorization enabled? */
   private boolean serviceAuthEnabled = false;
   
@@ -172,12 +179,64 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /**
+   * Compose a "host:port" string from the address.
+   */
+  public static String getHostPortString(InetSocketAddress addr) {
+    return addr.getHostName() + ":" + addr.getPort();
+  }
+
+  //
+  // Common NameNode methods implementation for the active name-node role.
+  //
+  public NamenodeRole getRole() {
+    return role;
+  }
+
+  boolean isRole(NamenodeRole that) {
+    return role.equals(that);
+  }
+
+  protected InetSocketAddress getRpcServerAddress(Configuration conf) throws IOException {
+    return getAddress(conf);
+  }
+
+  protected void setRpcServerAddress(Configuration conf) {
+    FileSystem.setDefaultUri(conf, getUri(rpcAddress));
+  }
+
+  protected InetSocketAddress getHttpServerAddress(Configuration conf) {
+    String addr = NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
+                                "dfs.info.port", "dfs.http.address");
+    return NetUtils.createSocketAddr(addr);
+  }
+
+  protected void setHttpServerAddress(Configuration conf){
+    conf.set("dfs.http.address", getHostPortString(httpAddress));
+  }
+
+  protected void loadNamesystem(Configuration conf) throws IOException {
+    this.namesystem = new FSNamesystem(conf);
+  }
+
+  NamenodeRegistration getRegistration() {
+    return nodeRegistration;
+  }
+
+  NamenodeRegistration setRegistration() {
+    nodeRegistration = new NamenodeRegistration(
+        getHostPortString(rpcAddress),
+        getHostPortString(httpAddress),
+        getFSImage(), getRole(), getFSImage().getCheckpointTime());
+    return nodeRegistration;
+  }
+
+  /**
    * Initialize name-node.
    * 
    * @param conf the configuration
    */
-  private void initialize(Configuration conf) throws IOException {
-    InetSocketAddress socAddr = NameNode.getAddress(conf);
+  protected void initialize(Configuration conf) throws IOException {
+    InetSocketAddress socAddr = getRpcServerAddress(conf);
     int handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
     
     // set service-level authorization security policy
@@ -197,15 +256,23 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                 handlerCount, false, conf);
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
-    this.serverAddress = this.server.getListenerAddress(); 
-    FileSystem.setDefaultUri(conf, getUri(serverAddress));
-    LOG.info("Namenode up at: " + this.serverAddress);
+    this.rpcAddress = this.server.getListenerAddress(); 
+    setRpcServerAddress(conf);
+    LOG.info(getRole() + " up at: " + rpcAddress);
 
-    myMetrics = new NameNodeMetrics(conf, this);
+    myMetrics = new NameNodeMetrics(conf, role);
 
-    this.namesystem = new FSNamesystem(this, conf);
+    loadNamesystem(conf);
+    activate(conf);
+  }
+
+  /**
+   * Activate name-node servers and threads.
+   */
+  void activate(Configuration conf) throws IOException {
+    namesystem.activate(conf);
     startHttpServer(conf);
-    this.server.start();  //start RPC server   
+    server.start();  //start RPC server
     startTrashEmptier(conf);
   }
 
@@ -219,10 +286,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   private void startHttpServer(Configuration conf) throws IOException {
-    String infoAddr = 
-      NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
-                                "dfs.info.port", "dfs.http.address");
-    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    InetSocketAddress infoSocAddr = getHttpServerAddress(conf);
     String infoHost = infoSocAddr.getHostName();
     int infoPort = infoSocAddr.getPort();
     this.httpServer = new HttpServer("hdfs", infoHost, infoPort, 
@@ -256,8 +320,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     // The web-server port can be ephemeral... ensure we have the correct info
     infoPort = this.httpServer.getPort();
     this.httpAddress = new InetSocketAddress(infoHost, infoPort);
-    conf.set("dfs.http.address", infoHost + ":" + infoPort);
-    LOG.info("Web-server up at: " + infoHost + ":" + infoPort);
+    setHttpServerAddress(conf);
+    LOG.info(getRole() + " Web-server up at: " + httpAddress);
   }
 
   /**
@@ -267,10 +331,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * <ul> 
    * <li>{@link StartupOption#REGULAR REGULAR} - normal name node startup</li>
    * <li>{@link StartupOption#FORMAT FORMAT} - format name node</li>
+   * <li>{@link StartupOption#BACKUP BACKUP} - start backup node</li>
+   * <li>{@link StartupOption#CHECKPOINT CHECKPOINT} - start checkpoint node</li>
    * <li>{@link StartupOption#UPGRADE UPGRADE} - start the cluster  
    * upgrade and create a snapshot of the current file system state</li> 
    * <li>{@link StartupOption#ROLLBACK ROLLBACK} - roll the  
    *            cluster back to the previous state</li>
+   * <li>{@link StartupOption#FINALIZE FINALIZE} - finalize 
+   *            previous upgrade</li>
+   * <li>{@link StartupOption#IMPORT IMPORT} - import checkpoint</li>
    * </ul>
    * The option is passed via configuration field: 
    * <tt>dfs.namenode.startup</tt>
@@ -283,6 +352,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
+    this(conf, NamenodeRole.ACTIVE);
+  }
+
+  protected NameNode(Configuration conf, NamenodeRole role) throws IOException {
+    this.role = role;
     try {
       initialize(conf);
     } catch (IOException e) {
@@ -328,13 +402,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /////////////////////////////////////////////////////
   // NamenodeProtocol
   /////////////////////////////////////////////////////
-  /**
-   * return a list of blocks & their locations on <code>datanode</code> whose
-   * total size is <code>size</code>
-   * 
-   * @param datanode on which blocks are located
-   * @param size total size of blocks
-   */
+  @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
   throws IOException {
     if(size <= 0) {
@@ -344,7 +412,61 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
     return namesystem.getBlocks(datanode, size); 
   }
-  
+
+  @Override // NamenodeProtocol
+  public void errorReport(NamenodeRegistration registration,
+                          int errorCode, 
+                          String msg) throws IOException {
+    verifyRequest(registration);
+    LOG.info("Error report from " + registration + ": " + msg);
+    if(errorCode == FATAL)
+      namesystem.releaseBackupNode(registration);
+  }
+
+  @Override // NamenodeProtocol
+  public NamenodeRegistration register(NamenodeRegistration registration)
+  throws IOException {
+    verifyVersion(registration.getVersion());
+    namesystem.registerBackupNode(registration);
+    return setRegistration();
+  }
+
+  @Override // NamenodeProtocol
+  public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
+  throws IOException {
+    verifyRequest(registration);
+    if(!isRole(NamenodeRole.ACTIVE))
+      throw new IOException("Only an ACTIVE node can invoke startCheckpoint.");
+    return namesystem.startCheckpoint(registration, setRegistration());
+  }
+
+  @Override // NamenodeProtocol
+  public void endCheckpoint(NamenodeRegistration registration,
+                            CheckpointSignature sig) throws IOException {
+    verifyRequest(registration);
+    if(!isRole(NamenodeRole.ACTIVE))
+      throw new IOException("Only an ACTIVE node can invoke endCheckpoint.");
+    namesystem.endCheckpoint(registration, sig);
+  }
+
+  @Override // NamenodeProtocol
+  public long journalSize(NamenodeRegistration registration)
+  throws IOException {
+    verifyRequest(registration);
+    return namesystem.getEditLogSize();
+  }
+
+  /*
+   * Active name-node cannot journal.
+   */
+  @Override // NamenodeProtocol
+  public void journal(NamenodeRegistration registration,
+                      int jAction,
+                      int length,
+                      byte[] args) throws IOException {
+    throw new UnsupportedActionException("journal");
+  }
+
   /////////////////////////////////////////////////////
   // ClientProtocol
   /////////////////////////////////////////////////////
@@ -778,10 +900,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @param nodeReg data node registration
    * @throws IOException
    */
-  public void verifyRequest(DatanodeRegistration nodeReg) throws IOException {
+  public void verifyRequest(NodeRegistration nodeReg) throws IOException {
     verifyVersion(nodeReg.getVersion());
     if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID()))
-      throw new UnregisteredDatanodeException(nodeReg);
+      throw new UnregisteredNodeException(nodeReg);
   }
     
   /**
@@ -819,7 +941,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @return the address on which the NameNodes is listening to.
    */
   public InetSocketAddress getNameNodeAddress() {
-    return serverAddress;
+    return rpcAddress;
   }
 
   /**
@@ -908,6 +1030,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private static void printUsage() {
     System.err.println(
       "Usage: java NameNode [" +
+      StartupOption.BACKUP.getName() + "] | [" +
+      StartupOption.CHECKPOINT.getName() + "] | [" +
       StartupOption.FORMAT.getName() + "] | [" +
       StartupOption.UPGRADE.getName() + "] | [" +
       StartupOption.ROLLBACK.getName() + "] | [" +
@@ -924,6 +1048,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
         startOpt = StartupOption.FORMAT;
       } else if (StartupOption.REGULAR.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.REGULAR;
+      } else if (StartupOption.BACKUP.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.BACKUP;
+      } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.CHECKPOINT;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
       } else if (StartupOption.ROLLBACK.getName().equalsIgnoreCase(cmd)) {
@@ -965,11 +1093,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       case FINALIZE:
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
+      case BACKUP:
+      case CHECKPOINT:
+        return new BackupNode(conf, startOpt.toNodeRole());
       default:
+        return new NameNode(conf);
     }
-
-    NameNode namenode = new NameNode(conf);
-    return namenode;
   }
     
   /**

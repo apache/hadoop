@@ -249,6 +249,7 @@ throws IOException {
 
 <%
 NameNode nn = (NameNode)application.getAttribute("name.node");
+String namenodeRole = nn.getRole().toString();
 FSNamesystem fsn = nn.getNamesystem();
 String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
 %>
@@ -256,14 +257,14 @@ String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameN
 <html>
 
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
-<title>Hadoop NameNode <%=namenodeLabel%></title>
+<title>Hadoop <%=namenodeRole%> <%=namenodeLabel%></title>
   
 <body>
-<h1>NameNode '<%=namenodeLabel%>'</h1>
+<h1><%=namenodeRole%> '<%=namenodeLabel%>'</h1>
 <%= JspHelper.getVersionTable(fsn) %>
 <br />
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
-<b><a href="/logs/">Namenode Logs</a></b><br>
+<b><a href="/logs/"><%=namenodeRole%> Logs</a></b><br>
 <b><a href=/dfshealth.jsp> Go back to DFS home</a></b>
 <hr>
 <%

@@ -55,6 +55,7 @@ import org.apache.hadoop.util.StringUtils;
  * primary NameNode.
  *
  **********************************************************/
+@Deprecated // use BackupNode with -checkpoint argument instead.
 public class SecondaryNameNode implements Runnable {
     
   public static final Log LOG = 

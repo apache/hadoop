@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 class FSDirectory implements Closeable {
 
   final FSNamesystem namesystem;
-  final INodeDirectoryWithQuota rootDir;
+  INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
   private boolean ready = false;
   // Metrics record
@@ -93,8 +93,6 @@ class FSDirectory implements Closeable {
       }
       FSEditLog editLog = fsImage.getEditLog();
       assert editLog != null : "editLog must be initialized";
-      if (!editLog.isOpen())
-        editLog.open();
       fsImage.setCheckpointDirectories(null, null);
     } catch(IOException e) {
       fsImage.close();
@@ -594,7 +592,11 @@ class FSDirectory implements Closeable {
     }
     return dirNotEmpty;
   }
-  
+
+  boolean isEmpty() {
+    return isDirEmpty("/");
+  }
+
   /**
    * Delete a path from the name space
    * Update the count at each ancestor directory with quota
@@ -1251,7 +1253,16 @@ class FSDirectory implements Closeable {
     } 
     return status;
   }
-  
+
+  /**
+   * Reset the entire namespace tree.
+   */
+  void reset() {
+    rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
+        namesystem.createFsOwnerPermissions(new FsPermission((short)0755)),
+        Integer.MAX_VALUE, -1);
+  }
+
   /**
    * Create FileStatus by file INode 
    */

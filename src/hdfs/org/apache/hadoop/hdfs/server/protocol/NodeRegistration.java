@@ -16,27 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.protocol;
-
-import java.io.IOException;
-
+package org.apache.hadoop.hdfs.server.protocol;
 
 /**
- * This exception is thrown when a datanode that has not previously 
- * registered is trying to access the name node.
- * 
+ * Generic class specifying information, which need to be sent to the name-node
+ * during the registration process. 
  */
-public class UnregisteredDatanodeException extends IOException {
+public interface NodeRegistration {
+  /**
+   * Get address of the server node.
+   * @return hostname:portNumber
+   */
+  public String getAddress();
 
-  public UnregisteredDatanodeException(DatanodeID nodeID) {
-    super("Unregistered data node: " + nodeID.getName());
-  }
+  /**
+   * Get registration ID of the server node.
+   */
+  public String getRegistrationID();
 
-  public UnregisteredDatanodeException(DatanodeID nodeID, 
-                                       DatanodeInfo storedNode) {
-    super("Data node " + nodeID.getName() 
-          + " is attempting to report storage ID "
-          + nodeID.getStorageID() + ". Node " 
-          + storedNode.getName() + " is expected to serve this storage.");
-  }
+  /**
+   * Get layout version of the server node.
+   */
+  public int getVersion();
+
+  public String toString();
 }

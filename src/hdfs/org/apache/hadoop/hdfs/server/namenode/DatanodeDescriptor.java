@@ -367,9 +367,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   void reportDiff(BlocksMap blocksMap,
                   BlockListAsLongs newReport,
-                  Collection<Block> toAdd,
-                  Collection<Block> toRemove,
-                  Collection<Block> toInvalidate) {
+                  Collection<Block> toAdd,    // add to DatanodeDescriptor
+                  Collection<Block> toRemove, // remove from DatanodeDescriptor
+                  Collection<Block> toInvalidate) { // should be removed from DN
     // place a deilimiter in the list which separates blocks 
     // that have been reported from those that have not
     BlockInfo delimiter = new BlockInfo(new Block(), 1);

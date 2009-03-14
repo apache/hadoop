@@ -31,12 +31,12 @@ import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
 /** 
- * DatanodeRegistration class conatins all information the Namenode needs
- * to identify and verify a Datanode when it contacts the Namenode.
- * This information is sent by Datanode with each communication request.
- * 
+ * DatanodeRegistration class contains all information the name-node needs
+ * to identify and verify a data-node when it contacts the name-node.
+ * This information is sent by data-node with each communication request.
  */
-public class DatanodeRegistration extends DatanodeID implements Writable {
+public class DatanodeRegistration extends DatanodeID
+implements Writable, NodeRegistration {
   static {                                      // register a ctor
     WritableFactories.setFactory
       (DatanodeRegistration.class,
@@ -79,18 +79,22 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
     this.name = name;
   }
 
-  /**
-   */
+  @Override // NodeRegistration
   public int getVersion() {
     return storageInfo.getLayoutVersion();
   }
   
-  /**
-   */
+  @Override // NodeRegistration
   public String getRegistrationID() {
     return Storage.getRegistrationID(storageInfo);
   }
 
+  @Override // NodeRegistration
+  public String getAddress() {
+    return getName();
+  }
+
+  @Override
   public String toString() {
     return getClass().getSimpleName()
       + "(" + name
@@ -99,6 +103,7 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
       + ", ipcPort=" + ipcPort
       + ")";
   }
+
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
@@ -109,9 +114,7 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
     //TODO: move it to DatanodeID once HADOOP-2797 has been committed
     out.writeShort(ipcPort);
 
-    out.writeInt(storageInfo.getLayoutVersion());
-    out.writeInt(storageInfo.getNamespaceID());
-    out.writeLong(storageInfo.getCTime());
+    storageInfo.write(out);
   }
 
   /** {@inheritDoc} */
@@ -121,8 +124,6 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
     //TODO: move it to DatanodeID once HADOOP-2797 has been committed
     this.ipcPort = in.readShort() & 0x0000ffff;
 
-    storageInfo.layoutVersion = in.readInt();
-    storageInfo.namespaceID = in.readInt();
-    storageInfo.cTime = in.readLong();
+    storageInfo.readFields(in);
   }
 }

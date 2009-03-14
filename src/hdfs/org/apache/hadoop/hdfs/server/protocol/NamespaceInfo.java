@@ -35,7 +35,7 @@ import org.apache.hadoop.io.WritableFactory;
  * to a data-node handshake.
  * 
  */
-public class NamespaceInfo extends StorageInfo implements Writable {
+public class NamespaceInfo extends StorageInfo {
   String  buildVersion;
   int distributedUpgradeVersion;
 
@@ -71,17 +71,13 @@ public class NamespaceInfo extends StorageInfo implements Writable {
 
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, getBuildVersion());
-    out.writeInt(getLayoutVersion());
-    out.writeInt(getNamespaceID());
-    out.writeLong(getCTime());
+    super.write(out);
     out.writeInt(getDistributedUpgradeVersion());
   }
 
   public void readFields(DataInput in) throws IOException {
     buildVersion = UTF8.readString(in);
-    layoutVersion = in.readInt();
-    namespaceID = in.readInt();
-    cTime = in.readLong();
+    super.readFields(in);
     distributedUpgradeVersion = in.readInt();
   }
 }

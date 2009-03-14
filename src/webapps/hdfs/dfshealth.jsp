@@ -138,16 +138,17 @@
   
   
   public void generateConfReport( JspWriter out,
-		  FSNamesystem fsn,
+		  NameNode nn,
 		  HttpServletRequest request)
   throws IOException {
+	  FSNamesystem fsn = nn.getNamesystem();
 	  long underReplicatedBlocks = fsn.getUnderReplicatedBlocks();
 	  FSImage fsImage = fsn.getFSImage();
 	  List<Storage.StorageDirectory> removedStorageDirs = fsImage.getRemovedStorageDirs();
 	  String storageDirsSizeStr="", removedStorageDirsSizeStr="", storageDirsStr="", removedStorageDirsStr="", storageDirsDiv="", removedStorageDirsDiv="";
 
 	  //FS Image storage configuration
-	  out.print("<h3> NameNode Storage: </h3>");
+	  out.print("<h3> " + nn.getRole() + " Storage: </h3>");
 	  out.print("<div id=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"+
 	  "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
 	  
@@ -245,20 +246,21 @@
 <%
   NameNode nn = (NameNode)application.getAttribute("name.node");
   FSNamesystem fsn = nn.getNamesystem();
+  String namenodeRole = nn.getRole().toString();
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
 %>
 
 <html>
 
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
-<title>Hadoop NameNode <%=namenodeLabel%></title>
+<title>Hadoop <%=namenodeRole%> <%=namenodeLabel%></title>
     
 <body>
-<h1>NameNode '<%=namenodeLabel%>'</h1>
+<h1><%=namenodeRole%> '<%=namenodeLabel%>'</h1>
 <%= JspHelper.getVersionTable(fsn) %>
 <br />
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
-<b><a href="/logs/">Namenode Logs</a></b>
+<b><a href="/logs/"><%=namenodeRole%> Logs</a></b>
 
 <hr>
 <h3>Cluster Summary</h3>
@@ -271,7 +273,7 @@
 %>
 <hr>
 <%
-	generateConfReport(out, fsn, request);
+	generateConfReport(out, nn, request);
 %>
 <%
 out.println(ServletUtil.htmlFooter());
