@@ -129,9 +129,6 @@ Trunk (unreleased changes)
     HADOOP-5279. Remove unnecessary targets from test-patch.sh.
     (Giridharan Kesavan via nigel)
 
-    HADOOP-5275. Add ivy directory and files to built tar.
-    (Giridharan Kesavan via nigel)
-
     HADOOP-5120. Remove the use of FSNamesystem.getFSNamesystem() from 
     UpgradeManagerNamenode and UpgradeObjectNamenode.  (szetszwo)
 
@@ -637,6 +634,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5466. Change documenation CSS style for headers and code. (Corinne
     Chandel via szetszwo)
+
+    HADOOP-5275. Add ivy directory and files to built tar.
+    (Giridharan Kesavan via nigel)
 
   OPTIMIZATIONS
 
