@@ -98,6 +98,10 @@ public class JobHistory {
   private static final String SECONDARY_FILE_SUFFIX = ".recover";
   private static long jobHistoryBlockSize = 0;
   private static String jobtrackerHostname;
+  final static FsPermission HISTORY_DIR_PERMISSION =
+    FsPermission.createImmutable((short) 0750); // rwxr-x---
+  final static FsPermission HISTORY_FILE_PERMISSION =
+    FsPermission.createImmutable((short) 0740); // rwxr-----
   private static JobConf jtConf;
   /**
    * Record types are identifiers for each line of log in history files. 
@@ -154,7 +158,7 @@ public class JobHistory {
       Path logDir = new Path(LOG_DIR);
       FileSystem fs = logDir.getFileSystem(conf);
       if (!fs.exists(logDir)){
-        if (!fs.mkdirs(logDir)){
+        if (!fs.mkdirs(logDir, new FsPermission(HISTORY_DIR_PERMISSION))) {
           throw new IOException("Mkdirs failed to create " + logDir.toString());
         }
       }
@@ -828,7 +832,9 @@ public class JobHistory {
             
             int defaultBufferSize = 
               fs.getConf().getInt("io.file.buffer.size", 4096);
-            out = fs.create(logFile, FsPermission.getDefault(), true, 
+            out = fs.create(logFile, 
+                            new FsPermission(HISTORY_FILE_PERMISSION),
+                            true, 
                             defaultBufferSize, 
                             fs.getDefaultReplication(), 
                             jobHistoryBlockSize, null);
@@ -904,8 +910,15 @@ public class JobHistory {
       try {
         if (LOG_DIR != null) {
           fs = new Path(LOG_DIR).getFileSystem(jobConf);
+          int defaultBufferSize = 
+              fs.getConf().getInt("io.file.buffer.size", 4096);
           if (!fs.exists(jobFilePath)) {
-            jobFileOut = fs.create(jobFilePath);
+            jobFileOut = fs.create(jobFilePath, 
+                                   new FsPermission(HISTORY_FILE_PERMISSION),
+                                   true, 
+                                   defaultBufferSize, 
+                                   fs.getDefaultReplication(), 
+                                   fs.getDefaultBlockSize(), null);
             jobConf.writeXml(jobFileOut);
             jobFileOut.close();
           }
