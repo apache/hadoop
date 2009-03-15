@@ -33,6 +33,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobHistory.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -933,7 +934,11 @@ public class TestJobHistory extends TestCase {
     // Check if the history file exists
     assertTrue("History file does not exist", fileSys.exists(logFile));
 
-
+    // check history file permission
+    assertTrue("History file permissions does not match", 
+    fileSys.getFileStatus(logFile).getPermission().equals(
+       new FsPermission(JobHistory.HISTORY_FILE_PERMISSION)));
+    
     // check if the history file is parsable
     String[] jobDetails = JobHistory.JobInfo.decodeJobHistoryFileName(
     		                                   logFileName).split("_");

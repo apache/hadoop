@@ -362,6 +362,10 @@ Release 0.20.0 - Unreleased
     WebUI if there are such blocks. '-report' and '-metaSave' have extra
     info to track such blocks. (Raghu Angadi)
 
+    HADOOP-4783. Change permissions on history files on the jobtracker
+    to be only group readable instead of world readable.
+    (Amareshwari Sriramadasu via yhemanth)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
