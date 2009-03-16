@@ -208,6 +208,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     if(clientRunning) {
       leasechecker.close();
       clientRunning = false;
+      try {
+        leasechecker.interruptAndJoin();
+      } catch (InterruptedException ie) {
+      }
   
       // close connections to the namenode
       RPC.stopProxy(rpcNamenode);
@@ -975,9 +979,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       pendingCreates.remove(src);
     }
     
-    synchronized void interrupt() {
-      if (daemon != null) {
-        daemon.interrupt();
+    void interruptAndJoin() throws InterruptedException {
+      Daemon daemonCopy = null;
+      synchronized (this) {
+        if (daemon != null) {
+          daemon.interrupt();
+          daemonCopy = daemon;
+        }
+      }
+     
+      if (daemonCopy != null) {
+        LOG.debug("Wait for lease checker to terminate");
+        daemonCopy.join();
       }
     }
 
@@ -993,8 +1006,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           }
         }
       }
-      
-      interrupt();
     }
 
     private void renew() throws IOException {
@@ -1012,7 +1023,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     public void run() {
       long lastRenewed = 0;
-      while (clientRunning) {
+      while (clientRunning && !Thread.interrupted()) {
         if (System.currentTimeMillis() - lastRenewed > (LEASE_SOFTLIMIT_PERIOD / 2)) {
           try {
             renew();

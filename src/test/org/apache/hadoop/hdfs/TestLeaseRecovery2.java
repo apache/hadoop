@@ -80,8 +80,8 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       // sync file
       AppendTestUtil.LOG.info("sync");
       stm.sync();
-      AppendTestUtil.LOG.info("leasechecker.interrupt()");
-      dfs.dfs.leasechecker.interrupt();
+      AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
+      dfs.dfs.leasechecker.interruptAndJoin();
 
       // set the soft limit to be 1 second so that the
       // namenode triggers lease recovery on next attempt to write-for-open.
