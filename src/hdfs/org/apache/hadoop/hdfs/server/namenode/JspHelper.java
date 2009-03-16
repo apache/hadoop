@@ -60,11 +60,11 @@ public class JspHelper {
   static Random rand = new Random();
 
   public JspHelper() {
+    fsn = FSNamesystem.getFSNamesystem();
     if (DataNode.getDataNode() != null) {
       nameNodeAddr = DataNode.getDataNode().getNameNodeAddr();
     }
     else {
-      fsn = FSNamesystem.getFSNamesystem();
       nameNodeAddr = fsn.getDFSNameNodeAddress(); 
     }      
 
