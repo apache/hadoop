@@ -159,6 +159,9 @@ Trunk (unreleased changes)
     HADOOP-5358. Provide scripting functionality to the synthetic load
     generator. (Jakob Homan via hairong)
 
+    HADOOP-5442. Paginate jobhistory display and added some search
+    capabilities. (Amar Kamat via acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES
