@@ -1001,6 +1001,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5490. Fixes a synchronization problem in the EagerTaskInitializationListener
     class. (Jothi Padmanabhan via ddas)
 
+    HADOOP-5493. The shuffle copier threads return the codecs back to the pool when the
+    shuffle completes. (Jothi Padmanabhan via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
