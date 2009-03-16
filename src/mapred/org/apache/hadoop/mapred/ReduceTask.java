@@ -1214,7 +1214,7 @@ class ReduceTask extends Task {
               finish(size);
             }
           } catch (InterruptedException e) { 
-            return; // ALL DONE
+            break; // ALL DONE
           } catch (FSError e) {
             LOG.error("Task: " + reduceTask.getTaskID() + " - FSError: " + 
                       StringUtils.stringifyException(e));
@@ -1229,6 +1229,11 @@ class ReduceTask extends Task {
                       StringUtils.stringifyException(th));
           }
         }
+        
+        if (decompressor != null) {
+          CodecPool.returnDecompressor(decompressor);
+        }
+          
       }
       
       /** Copies a a map output from a remote host, via HTTP. 
