@@ -1007,6 +1007,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5493. The shuffle copier threads return the codecs back to the pool when the
     shuffle completes. (Jothi Padmanabhan via ddas)
 
+    HADOOP-5414. Fixes IO exception while executing hadoop fs -touchz fileName by
+    making sure that lease renewal thread exits before dfs client exits.
+    (hairong)
+ 
 Release 0.19.2 - Unreleased
 
   BUG FIXES
