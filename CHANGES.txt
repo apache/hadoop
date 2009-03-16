@@ -998,6 +998,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5278. Fixes a problem to do with logging the finish time of a task during
     recovery (after a JobTracker restart). (Amar Kamat via ddas)
 
+    HADOOP-5490. Fixes a synchronization problem in the EagerTaskInitializationListener
+    class. (Jothi Padmanabhan via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
