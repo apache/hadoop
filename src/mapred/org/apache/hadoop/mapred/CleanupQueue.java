@@ -91,10 +91,11 @@ class CleanupQueue {
           FileSystem fs = pathAndConf.path.getFileSystem(pathAndConf.conf);
           fs.delete(pathAndConf.path, true);
           LOG.debug("DELETED " + pathAndConf.path);
-        } catch (IOException e) {
-          LOG.warn("Error deleting path" + pathAndConf.path);
         } catch (InterruptedException t) {
-        }
+          return;
+        } catch (Exception e) {
+          LOG.warn("Error deleting path" + pathAndConf.path);
+        } 
       }
     }
   }
