@@ -735,6 +735,10 @@ Release 0.20.0 - Unreleased
     making sure that lease renewal thread exits before dfs client exits.
     (hairong)
 
+    HADOOP-5103. FileInputFormat now reuses the clusterMap network topology object
+    and that brings down the log messages in the JobClient to do with
+    NetworkTopology.add significantly. (Jothi Padmanabhan via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

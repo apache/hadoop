@@ -316,7 +316,6 @@ public class NetworkTopology {
       throw new IllegalArgumentException(
         "Not allow to add an inner node: "+NodeBase.getPath(node));
     }
-    LOG.info("Adding a new node: "+NodeBase.getPath(node));
     netlock.writeLock().lock();
     try {
       Node rack = getNode(node.getNetworkLocation());
@@ -326,6 +325,7 @@ public class NetworkTopology {
                                            + " at an illegal network location");
       }
       if (clusterMap.add(node)) {
+        LOG.info("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
           numOfRacks++;
         }
