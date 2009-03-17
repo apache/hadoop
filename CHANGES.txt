@@ -250,10 +250,6 @@ Trunk (unreleased changes)
 
     HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)
 
-    HADOOP-5103. FileInputFormat now reuses the clusterMap network topology object
-    and that brings down the log messages in the JobClient to do with 
-    NetworkTopology.add significantly. (Jothi Padmanabhan via ddas)
-
     HADOOP-5219. Adds a new property io.seqfile.local.dir for use by SequenceFile,
     which earlier used mapred.local.dir. (Sharad Agarwal via ddas)
 
@@ -1012,7 +1008,11 @@ Release 0.20.0 - Unreleased
     HADOOP-5414. Fixes IO exception while executing hadoop fs -touchz fileName by
     making sure that lease renewal thread exits before dfs client exits.
     (hairong)
- 
+
+    HADOOP-5103. FileInputFormat now reuses the clusterMap network topology object
+    and that brings down the log messages in the JobClient to do with 
+    NetworkTopology.add significantly. (Jothi Padmanabhan via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
