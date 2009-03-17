@@ -1019,6 +1019,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5281. Prevent sharing incompatible ZlibCompressor instances between
     GzipCodec and DefaultCodec. (cdouglas)
 
+    HADOOP-5463. Balancer throws "Not a host:port pair" unless port is
+    specified in fs.default.name. (Stuart White via hairong)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

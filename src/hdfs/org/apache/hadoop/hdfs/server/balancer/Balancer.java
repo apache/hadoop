@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.fs.FileSystem;
@@ -846,8 +847,7 @@ public class Balancer implements Tool {
    * set up the retry policy */ 
   private static NamenodeProtocol createNamenode(Configuration conf)
     throws IOException {
-    InetSocketAddress nameNodeAddr =
-      DataNode.createSocketAddr(FileSystem.getDefaultUri(conf).getAuthority());
+    InetSocketAddress nameNodeAddr = NameNode.getAddress(conf);
     RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
         5, 200, TimeUnit.MILLISECONDS);
     Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
