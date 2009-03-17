@@ -1068,6 +1068,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5449. Fixes the history cleaner thread. 
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5479. NameNode should not send empty block replication request to
+    DataNode. (hairong)
+
 Release 0.19.1 - Unreleased
 
   IMPROVEMENTS
