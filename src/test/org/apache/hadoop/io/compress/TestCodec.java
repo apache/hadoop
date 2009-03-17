@@ -41,6 +41,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 
 public class TestCodec extends TestCase {
 
@@ -129,6 +130,21 @@ public class TestCodec extends TestCase {
     LOG.info("SUCCESS! Completed checking " + count + " records");
   }
 
+  public void testCodecPoolGzipReuse() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean("hadoop.native.lib", true);
+    if (!ZlibFactory.isNativeZlibLoaded(conf)) {
+      LOG.warn("testCodecPoolGzipReuse skipped: native libs not loaded");
+      return;
+    }
+    GzipCodec gzc = ReflectionUtils.newInstance(GzipCodec.class, conf);
+    DefaultCodec dfc = ReflectionUtils.newInstance(DefaultCodec.class, conf);
+    Compressor c1 = CodecPool.getCompressor(gzc);
+    Compressor c2 = CodecPool.getCompressor(dfc);
+    CodecPool.returnCompressor(c1);
+    CodecPool.returnCompressor(c2);
+    assertTrue("Got mismatched ZlibCompressor", c2 != CodecPool.getCompressor(gzc));
+  }
 
   public void testSequenceFileDefaultCodec() throws IOException, ClassNotFoundException, 
       InstantiationException, IllegalAccessException {

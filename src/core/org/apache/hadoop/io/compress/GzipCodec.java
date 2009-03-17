@@ -153,16 +153,15 @@ public class GzipCodec extends DefaultCodec {
   }
 
   public Compressor createCompressor() {
-    return (ZlibFactory.isNativeZlibLoaded(conf)) ?
-               new ZlibCompressor(ZlibCompressor.CompressionLevel.DEFAULT_COMPRESSION,
-                                  ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
-                                  ZlibCompressor.CompressionHeader.GZIP_FORMAT,
-                                  64*1024) :
-               null;
+    return (ZlibFactory.isNativeZlibLoaded(conf))
+      ? new GzipZlibCompressor()
+      : null;
   }
 
   public Class<? extends Compressor> getCompressorType() {
-    return ZlibFactory.getZlibCompressorType(conf);
+    return ZlibFactory.isNativeZlibLoaded(conf)
+      ? GzipZlibCompressor.class
+      : BuiltInZlibDeflater.class;
   }
 
   public CompressionInputStream createInputStream(InputStream in) 
@@ -185,18 +184,33 @@ public class GzipCodec extends DefaultCodec {
   }
 
   public Decompressor createDecompressor() {
-    return (ZlibFactory.isNativeZlibLoaded(conf)) ?
-               new ZlibDecompressor(ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB,
-                                    64*1024) :
-               null;                               
+    return (ZlibFactory.isNativeZlibLoaded(conf))
+      ? new GzipZlibDecompressor()
+      : null;
   }
 
   public Class<? extends Decompressor> getDecompressorType() {
-    return ZlibFactory.getZlibDecompressorType(conf);
+    return ZlibFactory.isNativeZlibLoaded(conf)
+      ? GzipZlibDecompressor.class
+      : BuiltInZlibInflater.class;
   }
 
   public String getDefaultExtension() {
     return ".gz";
+  }
+
+  static final class GzipZlibCompressor extends ZlibCompressor {
+    public GzipZlibCompressor() {
+      super(ZlibCompressor.CompressionLevel.DEFAULT_COMPRESSION,
+          ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
+          ZlibCompressor.CompressionHeader.GZIP_FORMAT, 64*1024);
+    }
+  }
+
+  static final class GzipZlibDecompressor extends ZlibDecompressor {
+    public GzipZlibDecompressor() {
+      super(ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB, 64*1024);
+    }
   }
 
 }
