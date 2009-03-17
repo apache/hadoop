@@ -294,6 +294,8 @@ Trunk (unreleased changes)
     HADOOP-5386. Modify hdfsproxy unit test to start on a random port,
     implement clover instrumentation. (Zhiyong Zhang via cdouglas)
 
+    HADOOP-5511. Add Apache License to EditLogBackupOutputStream. (shv)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
