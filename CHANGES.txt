@@ -797,6 +797,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5479. NameNode should not send empty block replication request to
     DataNode. (hairong)
 
+    HADOOP-5259. Job with output hdfs:/user/<username>/outputpath (no 
+    authority) fails with Wrong FS. (Doug Cutting via hairong)
+
 Release 0.19.1 - 2009-02-23 
 
   IMPROVEMENTS

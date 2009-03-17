@@ -277,6 +277,11 @@ public class TestMiniMRWithDFS extends TestCase {
       result = launchWordCount(jobConf, inDir, outDir, input, 3, 1);
       assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                    "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
+      final Path outDir2 = new Path("hdfs:/test/wc/output2");
+      jobConf.set("fs.default.name", "hdfs://localhost:" + NameNode.DEFAULT_PORT);
+      result = launchWordCount(jobConf, inDir, outDir2, input, 3, 1);
+      assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
+                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
     } catch (java.net.BindException be) {
       LOG.info("Skip the test this time because can not start namenode on port "
           + NameNode.DEFAULT_PORT, be);

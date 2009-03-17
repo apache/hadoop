@@ -281,7 +281,15 @@ public abstract class FileSystem extends Configured implements Closeable {
 
       if (thatAuthority == null &&                // path's authority is null
           thisAuthority != null) {                // fs has an authority
-        URI defaultUri = getDefaultUri(getConf()); // & is the default fs
+        URI defaultUri = getDefaultUri(getConf()); // & is the conf default 
+        if (thisScheme.equalsIgnoreCase(defaultUri.getScheme()) &&
+            thisAuthority.equalsIgnoreCase(defaultUri.getAuthority()))
+          return;
+        try {                                     // or the default fs's uri
+          defaultUri = get(getConf()).getUri();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
         if (thisScheme.equalsIgnoreCase(defaultUri.getScheme()) &&
             thisAuthority.equalsIgnoreCase(defaultUri.getAuthority()))
           return;
