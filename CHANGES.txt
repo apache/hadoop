@@ -742,6 +742,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5483. Fixes a problem in the Directory Cleanup Thread due to which
     TestMiniMRWithDFS sometimes used to fail. (ddas) 
 
+    HADOOP-5281. Prevent sharing incompatible ZlibCompressor instances between
+    GzipCodec and DefaultCodec. (cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
