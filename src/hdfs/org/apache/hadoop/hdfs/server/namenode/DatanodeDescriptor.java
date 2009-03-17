@@ -68,20 +68,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
 
     /** Dequeue */
-    synchronized List<BlockTargetPair> poll(int numTargets) {
-      if (numTargets <= 0 || blockq.isEmpty()) {
+    synchronized List<BlockTargetPair> poll(int numBlocks) {
+      if (numBlocks <= 0 || blockq.isEmpty()) {
         return null;
       }
-      else {
-        List<BlockTargetPair> results = new ArrayList<BlockTargetPair>();
-        for(; !blockq.isEmpty() && numTargets > 0; ) {
-          numTargets -= blockq.peek().targets.length; 
-          if (numTargets >= 0) {
-            results.add(blockq.poll());
-          }
-        }
-        return results;
+
+      List<BlockTargetPair> results = new ArrayList<BlockTargetPair>();
+      for(; !blockq.isEmpty() && numBlocks > 0; numBlocks--) {
+        results.add(blockq.poll());
       }
+      return results;
     }
   }
 

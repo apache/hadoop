@@ -2463,12 +2463,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
 
         // choose replication targets
-        int maxTargets = 
-          maxReplicationStreams - srcNode.getNumberOfBlocksToBeReplicated();
-        assert maxTargets > 0 : "Datanode " + srcNode.getName() 
-              + " should have not been selected as a source for replication.";
         DatanodeDescriptor targets[] = replicator.chooseTarget(
-            Math.min(requiredReplication - numEffectiveReplicas, maxTargets),
+            requiredReplication - numEffectiveReplicas,
             srcNode, containingNodes, null, block.getNumBytes());
         if(targets.length == 0)
           continue;
@@ -2483,13 +2479,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         // Move the block-replication into a "pending" state.
         // The reason we use 'pending' is so we can retry
         // replications that fail after an appropriate amount of time.
+        pendingReplications.add(block, targets.length);
+        NameNode.stateChangeLog.debug(
+            "BLOCK* block " + block
+            + " is moved from neededReplications to pendingReplications");
+        
+        // remove from neededReplications
         if(numEffectiveReplicas + targets.length >= requiredReplication) {
           neededReplicationsIterator.remove(); // remove from neededReplications
           replIndex--;
-          pendingReplications.add(block, targets.length);
-          NameNode.stateChangeLog.debug(
-              "BLOCK* block " + block
-              + " is moved from neededReplications to pendingReplications");
         }
         if (NameNode.stateChangeLog.isInfoEnabled()) {
           StringBuffer targetList = new StringBuffer("datanode(s)");
