@@ -739,6 +739,9 @@ Release 0.20.0 - Unreleased
     and that brings down the log messages in the JobClient to do with
     NetworkTopology.add significantly. (Jothi Padmanabhan via ddas)
 
+    HADOOP-5483. Fixes a problem in the Directory Cleanup Thread due to which
+    TestMiniMRWithDFS sometimes used to fail. (ddas) 
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
