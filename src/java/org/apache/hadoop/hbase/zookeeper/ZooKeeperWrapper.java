@@ -52,7 +52,7 @@ public class ZooKeeperWrapper implements HConstants {
   protected static final Log LOG = LogFactory.getLog(ZooKeeperWrapper.class);
 
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
-  private static final String ZNODE_PATH_SEPARATOR = "/";
+  private static final char ZNODE_PATH_SEPARATOR = '/';
 
   private static String quorumServers = null;
   static {
@@ -62,7 +62,6 @@ public class ZooKeeperWrapper implements HConstants {
   private final ZooKeeper zooKeeper;
   private final WatcherWrapper watcher;
 
-  private final String parentZNode;
   private final String rootRegionZNode;
   private final String outOfSafeModeZNode;
   private final String rsZNode;
@@ -90,8 +89,7 @@ public class ZooKeeperWrapper implements HConstants {
                             ZOOKEEPER_CONFIG_NAME);
     }
 
-    int sessionTimeout = conf.getInt(ZOOKEEPER_SESSION_TIMEOUT,
-                                     DEFAULT_ZOOKEEPER_SESSION_TIMEOUT);
+    int sessionTimeout = conf.getInt("zookeeper.session.timeout", 10 * 1000);
     this.watcher = new WatcherWrapper(watcher);
     try {
       zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, this.watcher);
@@ -100,19 +98,17 @@ public class ZooKeeperWrapper implements HConstants {
       throw new IOException(e);
     }
 
-    parentZNode = conf.get(ZOOKEEPER_PARENT_ZNODE,
-                           DEFAULT_ZOOKEEPER_PARENT_ZNODE);
+    String parentZNode = conf.get("zookeeper.znode.parent", "/hbase");
 
-    String rootServerZNodeName = conf.get(ZOOKEEPER_ROOT_SERVER_ZNODE,
-                                          DEFAULT_ZOOKEEPER_ROOT_SERVER_ZNODE);
-    String outOfSafeModeZNodeName = conf.get(ZOOKEEPER_SAFE_MODE_ZNODE,
-        DEFAULT_ZOOKEEPER_SAFE_MODE_ZNODE);
-    String rsZNodeName = conf.get(ZOOKEEPER_RS_ZNODE,
-        DEFAULT_ZOOKEEPER_RS_ZNODE);
+    String rootServerZNodeName = conf.get("zookeeper.znode.rootserver",
+                                          "root-region-server");
+    String outOfSafeModeZNodeName = conf.get("zookeeper.znode.safemode",
+                                             "safe-mode");
+    String rsZNodeName = conf.get("zookeeper.znode.rs", "rs");
     
-    rootRegionZNode = getZNode(rootServerZNodeName);
-    outOfSafeModeZNode = getZNode(outOfSafeModeZNodeName);
-    rsZNode = getZNode(rsZNodeName);
+    rootRegionZNode = getZNode(parentZNode, rootServerZNodeName);
+    outOfSafeModeZNode = getZNode(parentZNode, outOfSafeModeZNodeName);
+    rsZNode = getZNode(parentZNode, rsZNodeName);
   }
 
   /**
@@ -364,7 +360,7 @@ public class ZooKeeperWrapper implements HConstants {
   public boolean writeRSLocation(HServerInfo info) {
     ensureExists(rsZNode);
     byte[] data = Bytes.toBytes(info.getServerAddress().getBindAddress());
-    String znode = rsZNode + ZNODE_PATH_SEPARATOR + info.getStartCode();
+    String znode = joinPath(rsZNode, Long.toString(info.getStartCode()));
     try {
       zooKeeper.create(znode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
       LOG.debug("Created ZNode " + znode
@@ -427,9 +423,12 @@ public class ZooKeeperWrapper implements HConstants {
     }
   }
   
-  private String getZNode(String znodeName) {
-    return znodeName.startsWith(ZNODE_PATH_SEPARATOR) ? 
-      znodeName :
-      parentZNode + ZNODE_PATH_SEPARATOR + znodeName;
+  private String getZNode(String parentZNode, String znodeName) {
+    return znodeName.charAt(0) == ZNODE_PATH_SEPARATOR ?
+        znodeName : joinPath(parentZNode, znodeName);
+  }
+
+  private String joinPath(String parent, String child) {
+    return parent + ZNODE_PATH_SEPARATOR + child;
   }
 }
