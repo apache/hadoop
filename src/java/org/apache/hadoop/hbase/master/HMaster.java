@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +93,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class HMaster extends Thread implements HConstants, HMasterInterface, 
   HMasterRegionInterface {
-  
+
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
   public long getProtocolVersion(@SuppressWarnings("unused") String protocol,
@@ -116,6 +117,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   final long maxRegionOpenTime;
   final int leaseTimeout;
   private final ZooKeeperWrapper zooKeeperWrapper;
+  private final ZKMasterAddressWatcher zkMasterAddressWatcher;
 
   volatile DelayQueue<RegionServerOperation> delayedToDoQueue =
     new DelayQueue<RegionServerOperation>();
@@ -148,39 +150,38 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   RegionManager regionManager;
   
   private MasterMetrics metrics;
-  
-  /** Build the HMaster out of a raw configuration item.
-   * 
-   * @param conf - Configuration object
-   * @throws IOException
-   */
-  public HMaster(HBaseConfiguration conf) throws IOException {
-    this(new Path(conf.get(HBASE_DIR)),
-        new HServerAddress(conf.get(MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS)),
-        conf);
-  }
 
   /** 
-   * Build the HMaster
-   * @param rd base directory of this HBase instance.  Must be fully
-   * qualified so includes filesystem to use.
-   * @param address server address and port number
+   * Build the HMaster out of a raw configuration item.
    * @param conf configuration
    * 
    * @throws IOException
    */
-  public HMaster(Path rd, HServerAddress address, HBaseConfiguration conf)
-  throws IOException {
+  public HMaster(HBaseConfiguration conf) throws IOException {
+    // find out our address. If it's set in config, use that, otherwise look it
+    // up in DNS.
+    String addressStr = conf.get(MASTER_ADDRESS);
+    if (addressStr == null) {
+      addressStr = conf.get("hbase.master.hostname");
+      if (addressStr == null) {
+        addressStr = InetAddress.getLocalHost().getCanonicalHostName();
+      }
+      addressStr += ":";
+      addressStr += conf.get("hbase.master.port", Integer.toString(DEFAULT_MASTER_PORT));
+    }
+    HServerAddress address = new HServerAddress(addressStr);
+    LOG.info("My address is " + address);
+
     this.conf = conf;
+    this.rootdir = new Path(conf.get(HBASE_DIR));
     try {
-      FSUtils.validateRootPath(rd);
+      FSUtils.validateRootPath(this.rootdir);
     } catch (IOException e) {
       LOG.fatal("Not starting HMaster because the root directory path '" +
-          rd.toString() + "' is not valid. Check the setting of the" +
+          this.rootdir + "' is not valid. Check the setting of the" +
           " configuration parameter '" + HBASE_DIR + "'", e);
       throw e;
     }
-    this.rootdir = rd;
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     // The filesystem hbase wants to use is probably not what is set into
     // fs.default.name; its value is probably the default.
@@ -233,7 +234,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     //  The rpc-server port can be ephemeral... ensure we have the correct info
     this.address = new HServerAddress(server.getListenerAddress());
-    conf.set(MASTER_ADDRESS, address.toString());
 
     this.connection = ServerConnectionManager.getConnection(conf);
 
@@ -243,12 +243,24 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
     
     zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    zkMasterAddressWatcher = new ZKMasterAddressWatcher(zooKeeperWrapper);
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
+
+    writeAddressToZooKeeper();
 
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster initialized on " + this.address.toString());
+  }
+
+  private void writeAddressToZooKeeper() {
+    while (true) {
+      zkMasterAddressWatcher.waitForMasterAddressAvailability();
+      if (zooKeeperWrapper.writeMasterAddress(address)) {
+        return;
+      }
+    }
   }
 
   private void bootstrap() throws IOException {

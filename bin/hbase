@@ -182,41 +182,38 @@ fi
 # restore ordinary behaviour
 unset IFS
 
-# We kill the ZK instance using a hard coded port, to be changed
-if [ "$COMMAND" = "zookeeper" ] && [ "$@" = "start" ] ; then
-  exec "$JAVA" $JAVA_HEAP_MAX -classpath "$CLASSPATH" org.apache.zookeeper.server.quorum.QuorumPeerMain conf/zoo.cfg
+# figure out which class to run
+if [ "$COMMAND" = "shell" ] ; then
+  CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
+elif [ "$COMMAND" = "master" ] ; then
+  CLASS='org.apache.hadoop.hbase.master.HMaster'
+elif [ "$COMMAND" = "regionserver" ] ; then
+  CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
+elif [ "$COMMAND" = "rest" ] ; then
+  CLASS='org.apache.hadoop.hbase.rest.Dispatcher'
+elif [ "$COMMAND" = "thrift" ] ; then
+  CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
+elif [ "$COMMAND" = "migrate" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.Migrate'
+elif [ "$COMMAND" = "zookeeper" ] ; then
+  CLASS='org.apache.hadoop.hbase.zookeeper.HQuorumPeer'
 else
-  # figure out which class to run
-  if [ "$COMMAND" = "shell" ] ; then
-    CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
-  elif [ "$COMMAND" = "master" ] ; then
-    CLASS='org.apache.hadoop.hbase.master.HMaster'
-  elif [ "$COMMAND" = "regionserver" ] ; then
-    CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
-  elif [ "$COMMAND" = "rest" ] ; then
-    CLASS='org.apache.hadoop.hbase.rest.Dispatcher'
-  elif [ "$COMMAND" = "thrift" ] ; then
-    CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
-  elif [ "$COMMAND" = "migrate" ] ; then
-    CLASS='org.apache.hadoop.hbase.util.Migrate'
-  else
-    CLASS=$COMMAND
-  fi
-
-  # Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
-  # and are named like the following: java_pid21612.hprof. Apparently it doesn't
-  # 'cost' to have this flag enabled. Its a 1.6 flag only. See:
-  # http://blogs.sun.com/alanb/entry/outofmemoryerror_looks_a_bit_better 
-  HBASE_OPTS="$HBASE_OPTS -XX:+HeapDumpOnOutOfMemoryError"
-  HBASE_OPTS="$HBASE_OPTS -Dhbase.log.dir=$HBASE_LOG_DIR"
-  HBASE_OPTS="$HBASE_OPTS -Dhbase.log.file=$HBASE_LOGFILE"
-  HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
-  HBASE_OPTS="$HBASE_OPTS -Dhbase.id.str=$HBASE_IDENT_STRING"
-  HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger=${HBASE_ROOT_LOGGER:-INFO,console}"
-  if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-    HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
-  fi  
-
-  # run it
-  exec "$JAVA" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+  CLASS=$COMMAND
 fi
+
+# Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
+# and are named like the following: java_pid21612.hprof. Apparently it doesn't
+# 'cost' to have this flag enabled. Its a 1.6 flag only. See:
+# http://blogs.sun.com/alanb/entry/outofmemoryerror_looks_a_bit_better
+HBASE_OPTS="$HBASE_OPTS -XX:+HeapDumpOnOutOfMemoryError"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.log.dir=$HBASE_LOG_DIR"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.log.file=$HBASE_LOGFILE"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.id.str=$HBASE_IDENT_STRING"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger=${HBASE_ROOT_LOGGER:-INFO,console}"
+if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
+  HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
+fi
+
+# run it
+exec "$JAVA" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"

@@ -31,12 +31,26 @@
     </description>
   </property>
   <property>
-    <name>hbase.master</name>
-    <value>local</value>
-    <description>The host and port that the HBase master runs at.
-    A value of 'local' runs the master and a regionserver in
-    a single process.
+    <name>run.distributed</name>
+    <value>false</value>
+    <description>Enable this to run a distributed HBase. When this is disabled
+    (the default) HBase runs all processes on the current host in a local mode.
     </description>
+  </property>
+  <property>
+    <name>hbase.master.hostname</name>
+    <value>localhost</value>
+    <description>The host that the HBase master runs at.</description>
+  </property>
+  <property>
+    <name>hbase.master.port</name>
+    <value>60000</value>
+    <description>The port master should bind to.</description>
+  </property>
+  <property>
+    <name>hbase.tmp.dir</name>
+    <value>/tmp/hbase-${user.name}</value>
+    <description>Temporary directory on the local filesystem.</description>
   </property>
   <property>
     <name>hbase.master.info.port</name>

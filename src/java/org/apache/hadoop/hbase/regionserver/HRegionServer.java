@@ -1128,9 +1128,22 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
    * Run initialization using parameters passed us by the master.
    */
   private MapWritable reportForDuty(final Sleeper sleeper) {
+    HServerAddress masterAddress = null;
+    while (masterAddress == null) {
+      if (stopRequested.get()) {
+        return null;
+      }
+      try {
+        masterAddress = zooKeeperWrapper.readMasterAddressOrThrow();
+      } catch (IOException e) {
+        LOG.warn("Unable to read master address from ZooKeeper. Retrying." +
+                 " Error was:", e);
+        sleeper.sleep();
+      }
+    }
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Telling master at " +
-        conf.get(MASTER_ADDRESS) + " that we are up");
+      LOG.debug("Telling master at " + masterAddress + " that we are up");
     }
     HMasterRegionInterface master = null;
     while (!stopRequested.get() && master == null) {
@@ -1139,7 +1152,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
         // should retry indefinitely.
         master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
-            new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
+            masterAddress.getInetSocketAddress(),
             this.conf, -1);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);

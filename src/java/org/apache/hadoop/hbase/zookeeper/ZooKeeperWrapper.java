@@ -65,14 +65,14 @@ public class ZooKeeperWrapper implements HConstants {
   private final String rootRegionZNode;
   private final String outOfSafeModeZNode;
   private final String rsZNode;
+  private final String masterElectionZNode;
 
   /**
    * Create a ZooKeeperWrapper.
    * @param conf HBaseConfiguration to read settings from.
    * @throws IOException If a connection error occurs.
    */
-  public ZooKeeperWrapper(HBaseConfiguration conf)
-  throws IOException {
+  public ZooKeeperWrapper(HBaseConfiguration conf) throws IOException { 
     this(conf, null);
   }
 
@@ -105,10 +105,13 @@ public class ZooKeeperWrapper implements HConstants {
     String outOfSafeModeZNodeName = conf.get("zookeeper.znode.safemode",
                                              "safe-mode");
     String rsZNodeName = conf.get("zookeeper.znode.rs", "rs");
+    String masterAddressZNodeName = conf.get("zookeeper.znode.master",
+      "master");
     
     rootRegionZNode = getZNode(parentZNode, rootServerZNodeName);
     outOfSafeModeZNode = getZNode(parentZNode, outOfSafeModeZNodeName);
     rsZNode = getZNode(parentZNode, rsZNodeName);
+    masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
   }
 
   /**
@@ -157,16 +160,10 @@ public class ZooKeeperWrapper implements HConstants {
       return;
     }
 
-    // If no server.X lines exist, then we're using a single instance ZooKeeper
-    // on the master node.
     if (servers.isEmpty()) {
-      HBaseConfiguration conf = new HBaseConfiguration();
-      String masterAddress = conf.get(MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS);
-      String masterHost = "localhost";
-      if (!masterAddress.equals("local")) {
-        masterHost = masterAddress.substring(0, masterAddress.indexOf(':'));
-      }
-      servers.add(masterHost);
+      LOG.fatal("No server.X lines found in conf/zoo.cfg. HBase must have a " +
+                "ZooKeeper cluster configured for its operation.");
+      System.exit(-1);
     }
 
     StringBuilder hostPortBuilder = new StringBuilder();
@@ -195,17 +192,48 @@ public class ZooKeeperWrapper implements HConstants {
    *         there was a problem reading the ZNode.
    */
   public HServerAddress readRootRegionLocation() {
+    return readAddress(rootRegionZNode, null);
+  }
+
+  /**
+   * Read address of master server.
+   * @return HServerAddress of master server.
+   * @throws IOException if there's a problem reading the ZNode.
+   */
+  public HServerAddress readMasterAddressOrThrow() throws IOException {
+    return readAddressOrThrow(masterElectionZNode, null);
+  }
+
+  /**
+   * Read master address and set a watch on it.
+   * @param watcher Watcher to set on master address ZNode if not null.
+   * @return HServerAddress of master or null if there was a problem reading the
+   *         ZNode. The watcher is set only if the result is not null.
+   */
+  public HServerAddress readMasterAddress(Watcher watcher) {
+    return readAddress(masterElectionZNode, watcher);
+  }
+
+  private HServerAddress readAddress(String znode, Watcher watcher) {
+    try {
+      return readAddressOrThrow(znode, watcher);
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  private HServerAddress readAddressOrThrow(String znode, Watcher watcher) throws IOException {
     byte[] data;
     try {
-      data = zooKeeper.getData(rootRegionZNode, false, null);
+      data = zooKeeper.getData(znode, watcher, null);
     } catch (InterruptedException e) {
-      return null;
+      throw new IOException(e);
     } catch (KeeperException e) {
-      return null;
+      throw new IOException(e);
     }
 
     String addressString = Bytes.toString(data);
-    LOG.debug("Read ZNode " + rootRegionZNode + " got " + addressString);
+    LOG.debug("Read ZNode " + znode + " got " + addressString);
     HServerAddress address = new HServerAddress(addressString);
     return address;
   }
@@ -313,6 +341,26 @@ public class ZooKeeperWrapper implements HConstants {
     }
 
     return createRootRegionLocation(addressString);
+  }
+
+  public boolean writeMasterAddress(HServerAddress address) {
+    if (!ensureParentExists(masterElectionZNode)) {
+      return false;
+    }
+
+    String addressStr = address.toString();
+    byte[] data = Bytes.toBytes(addressStr);
+    try {
+      zooKeeper.create(masterElectionZNode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+      LOG.debug("Wrote master address " + address + " to ZooKeeper");
+      return true;
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to write master address " + address + " to ZooKeeper", e);
+    } catch (KeeperException e) {
+      LOG.warn("Failed to write master address " + address + " to ZooKeeper", e);
+    }
+
+    return false;
   }
 
   /**

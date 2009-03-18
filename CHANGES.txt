@@ -7,6 +7,8 @@ Release 0.20.0 - Unreleased
    HBASE-1146  Replace the HRS leases with Zookeeper
    HBASE-61    Create an HBase-specific MapFile implementation
                (Ryan Rawson via Stack)
+   HBASE-1145  Ensure that there is only 1 Master with Zookeeper (Removes
+               hbase.master) (Nitay Joffe via Stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
@@ -99,6 +101,7 @@ Release 0.20.0 - Unreleased
                (Ryan Rawson via Stack)
    HBASE-1265  HLogEdit static constants should be final (Nitay Joffe via Stack)
    HBASE-1244  ZooKeeperWrapper constants cleanup (Nitay Joffe via Stack)
+
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

@@ -89,13 +89,10 @@ public class LocalHBaseCluster implements HConstants {
   public LocalHBaseCluster(final HBaseConfiguration conf,
     final int noRegionServers)
   throws IOException {
-    super();
     this.conf = conf;
     doLocal(conf);
     // Create the master
     this.master = new HMaster(conf);
-    // Set the master's port for the HRegionServers
-    conf.set(MASTER_ADDRESS, this.master.getMasterAddress().toString());
     // Start the HRegionServers.  Always have region servers come up on
     // port '0' so there won't be clashes over default port as unit tests
     // start/stop ports at different times during the life of the test.
@@ -330,10 +327,11 @@ public class LocalHBaseCluster implements HConstants {
     if (!isLocal(c)) {
       return c;
     }
-    // Need to rewrite address in Configuration if not done already.
+    // Need to rewrite address in Configuration if not done already. This is
+    // for the case when we're using the deprecated master.address property.
     String address = c.get(MASTER_ADDRESS);
     if (address == null) {
-      throw new NullPointerException("Address is null for " + MASTER_ADDRESS);
+      return c;
     }
     String port = address.startsWith(LOCAL_COLON)?
       address.substring(LOCAL_COLON.length()):
@@ -341,15 +339,17 @@ public class LocalHBaseCluster implements HConstants {
     c.set(MASTER_ADDRESS, "localhost:" + port);
     return c;
   }
-  
+
   /**
    * @param c Configuration to check.
    * @return True if a 'local' address in hbase.master value.
    */
   public static boolean isLocal(final Configuration c) {
     String address = c.get(MASTER_ADDRESS);
-    return address == null || address.equals(LOCAL) ||
-      address.startsWith(LOCAL_COLON);
+    boolean addressIsLocal = address == null || address.equals(LOCAL) ||
+                             address.startsWith(LOCAL_COLON);
+    boolean distributedOff = !c.getBoolean("run.distributed", false);
+    return addressIsLocal && distributedOff;
   }
   
   /**

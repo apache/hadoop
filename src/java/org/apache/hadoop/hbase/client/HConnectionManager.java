@@ -198,6 +198,12 @@ public class HConnectionManager implements HConstants {
     }
     
     public HMasterInterface getMaster() throws MasterNotRunningException {
+      try {
+        getZooKeeperWrapper();
+      } catch (IOException e) {
+        throw new MasterNotRunningException(e);
+      }
+
       HServerAddress masterLocation = null;
       synchronized (this.masterLock) {
         for (int tries = 0;
@@ -205,10 +211,10 @@ public class HConnectionManager implements HConstants {
           !this.masterChecked && this.master == null &&
           tries < numRetries;
         tries++) {
-          
-          masterLocation = new HServerAddress(this.conf.get(MASTER_ADDRESS,
-            DEFAULT_MASTER_ADDRESS));
+
           try {
+            masterLocation = zooKeeperWrapper.readMasterAddressOrThrow();
+
             HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
                 HMasterInterface.class, HBaseRPCProtocolVersion.versionID, 
                 masterLocation.getInetSocketAddress(), this.conf);

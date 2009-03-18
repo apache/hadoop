@@ -38,4 +38,12 @@ public class MasterNotRunningException extends IOException {
   public MasterNotRunningException(String s) {
     super(s);
   }
+
+  /**
+   * Constructor taking another exception.
+   * @param e Exception to grab data from.
+   */
+  public MasterNotRunningException(Exception e) {
+    super(e);
+  }
 }

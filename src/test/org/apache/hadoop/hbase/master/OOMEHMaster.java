@@ -42,11 +42,6 @@ public class OOMEHMaster extends HMaster {
   public OOMEHMaster(HBaseConfiguration conf) throws IOException {
     super(conf);
   }
-
-  public OOMEHMaster(Path dir, HServerAddress address, HBaseConfiguration conf)
-      throws IOException {
-    super(dir, address, conf);
-  }
   
   @Override
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg[] msgs, 
