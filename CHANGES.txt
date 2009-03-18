@@ -1022,6 +1022,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5463. Balancer throws "Not a host:port pair" unless port is
     specified in fs.default.name. (Stuart White via hairong)
 
+    HADOOP-5514. Fix JobTracker metrics and add metrics for wating, failed
+    tasks. (cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

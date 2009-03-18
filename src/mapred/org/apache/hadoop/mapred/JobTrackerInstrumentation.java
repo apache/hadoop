@@ -31,16 +31,27 @@ class JobTrackerInstrumentation {
   public void completeMap(TaskAttemptID taskAttemptID)
   { }
 
+  public void failedMap(TaskAttemptID taskAttemptID)
+  { }
+
   public void launchReduce(TaskAttemptID taskAttemptID)
   { }
 
   public void completeReduce(TaskAttemptID taskAttemptID)
-  {  }
+  { }
   
+  public void failedReduce(TaskAttemptID taskAttemptID)
+  { }
+
   public void submitJob(JobConf conf, JobID id) 
   { }
     
   public void completeJob(JobConf conf, JobID id) 
   { }
 
+  public void addWaiting(JobID id, int tasks)
+  { }
+
+  public void decWaiting(JobID id, int tasks)
+  { }
 }

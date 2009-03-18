@@ -253,7 +253,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                      tip.isMapTask()? TaskStatus.Phase.MAP:
                                      TaskStatus.Phase.STARTING,
                                      TaskStatus.State.FAILED,
-                                     trackerName, myInstrumentation);
+                                     trackerName);
                   }
                   itr.remove();
                 } else {
@@ -931,7 +931,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // This will add the tip failed event in the new log
         tip.getJob().failedTask(tip, id, status.getDiagnosticInfo(), 
                                 status.getPhase(), status.getRunState(), 
-                                status.getTaskTracker(), myInstrumentation);
+                                status.getTaskTracker());
       }
     }
     
@@ -1045,7 +1045,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       taskStatus.setCounters(counter);
       
       // II. Replay the status
-      job.updateTaskStatus(tip, taskStatus, myInstrumentation);
+      job.updateTaskStatus(tip, taskStatus);
       
       // III. Prevent the task from expiry
       expireLaunchingTasks.removeTask(attemptId);
@@ -1082,7 +1082,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       taskStatus.setDiagnosticInfo(diagInfo); // diag info
 
       // II. Update the task status
-     job.updateTaskStatus(tip, taskStatus, myInstrumentation);
+     job.updateTaskStatus(tip, taskStatus);
 
      // III. Prevent the task from expiry
      expireLaunchingTasks.removeTask(attemptId);
@@ -1231,7 +1231,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
-  private JobTrackerInstrumentation myInstrumentation = null;
+  private final JobTrackerInstrumentation myInstrumentation;
     
   /////////////////////////////////////////////////////////////////
   // The real JobTracker
@@ -1457,18 +1457,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     trackerIdentifier = getDateFormat().format(new Date());
 
-    Class<? extends JobTrackerInstrumentation> metricsInst = getInstrumentationClass(jobConf);
+    // Initialize instrumentation
+    JobTrackerInstrumentation tmp;
+    Class<? extends JobTrackerInstrumentation> metricsInst =
+      getInstrumentationClass(jobConf);
     try {
       java.lang.reflect.Constructor<? extends JobTrackerInstrumentation> c =
         metricsInst.getConstructor(new Class[] {JobTracker.class, JobConf.class} );
-      this.myInstrumentation = c.newInstance(this, jobConf);
+      tmp = c.newInstance(this, jobConf);
     } catch(Exception e) {
       //Reflection can throw lots of exceptions -- handle them all by 
       //falling back on the default.
       LOG.error("failed to initialize job tracker metrics", e);
-      this.myInstrumentation = new JobTrackerMetricsInst(this, jobConf);
+      tmp = new JobTrackerMetricsInst(this, jobConf);
     }
- 
+    myInstrumentation = tmp;
     
     // The rpc/web-server ports can be ephemeral ports... 
     // ... ensure we have the correct info
@@ -1611,6 +1614,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         t, JobTrackerInstrumentation.class);
   }
 
+  JobTrackerInstrumentation getInstrumentation() {
+    return myInstrumentation;
+  }
+
   public static InetSocketAddress getAddress(Configuration conf) {
     String jobTrackerStr =
       conf.get("mapred.job.tracker", "localhost:8012");
@@ -1736,12 +1743,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // taskid --> TIP
     taskidToTIPMap.put(taskid, tip);
     
-    // Note this launch
-    if (taskid.isMap()) {
-      myInstrumentation.launchMap(taskid);
-    } else {
-      myInstrumentation.launchReduce(taskid);
-    }
   }
     
   void removeTaskEntry(TaskAttemptID taskid) {
@@ -3249,7 +3250,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
         // Update the job and inform the listeners if necessary
         JobStatus prevStatus = (JobStatus)job.getStatus().clone();
-        job.updateTaskStatus(tip, report, myInstrumentation);
+        job.updateTaskStatus(tip, report);
         JobStatus newStatus = (JobStatus)job.getStatus().clone();
         
         // Update the listeners if an incomplete job completes
@@ -3278,8 +3279,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             }
             failedFetchMap.getJob().fetchFailureNotification(failedFetchMap, 
                                                              mapTaskId, 
-                                                             failedFetchTrackerName, 
-                                                             myInstrumentation);
+                                                             failedFetchTrackerName);
           }
         }
       }
@@ -3329,7 +3329,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                TaskStatus.Phase.MAP : 
                                TaskStatus.Phase.REDUCE), 
                             killState,
-                            trackerName, myInstrumentation);
+                            trackerName);
             jobsWithFailures.add(job);
           }
         } else {
