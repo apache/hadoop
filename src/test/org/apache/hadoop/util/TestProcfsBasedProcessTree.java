@@ -165,7 +165,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
       assertEquals(false, p.isAnyProcessInTreeAlive());
     }
     else {// process should be gone
-      assertEquals(false, p.isAlive());
+      assertFalse("ProcessTree must have been gone", p.isAlive());
     }
     // Not able to join thread sometimes when forking with large N.
     try {
@@ -174,5 +174,13 @@ public class TestProcfsBasedProcessTree extends TestCase {
     } catch (InterruptedException ie) {
       LOG.info("Interrupted while joining RogueTaskThread.");
     }
+
+    // ProcessTree is gone now. Any further calls should be sane.
+    p = p.getProcessTree();
+    assertFalse("ProcessTree must have been gone", p.isAlive());
+    assertTrue("Cumulative vmem for the gone-process is "
+        + p.getCumulativeVmem() + " . It should be zero.", p
+        .getCumulativeVmem() == 0);
+    assertTrue(p.toString().equals("[ ]"));
   }
 }

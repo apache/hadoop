@@ -1025,6 +1025,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5514. Fix JobTracker metrics and add metrics for wating, failed
     tasks. (cdouglas)
 
+    HADOOP-5516. Fix NullPointerException in TaskMemoryManagerThread that comes when
+    monitored processes disappear when the thread is running.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
