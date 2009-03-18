@@ -85,7 +85,8 @@ public class ProcfsBasedProcessTree {
   }
 
   /**
-   * Get the process-tree with latest state.
+   * Get the process-tree with latest state. If the root-process is not alive,
+   * an empty tree will be returned.
    * 
    * @return the process-tree with latest state.
    */
@@ -101,12 +102,17 @@ public class ProcfsBasedProcessTree {
       for (Integer proc : processList) {
         // Get information for each process
         ProcessInfo pInfo = new ProcessInfo(proc);
-        constructProcessInfo(pInfo);
-        allProcessInfo.put(proc, pInfo);
-        if (proc.equals(this.pid)) {
-          me = pInfo; // cache 'me'
-          processTree.put(proc, pInfo);
+        if (constructProcessInfo(pInfo) != null) {
+          allProcessInfo.put(proc, pInfo);
+          if (proc.equals(this.pid)) {
+            me = pInfo; // cache 'me'
+            processTree.put(proc, pInfo);
+          }
         }
+      }
+
+      if (me == null) {
+        return this; 
       }
 
       // Add each process to its parent.
