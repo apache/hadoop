@@ -22,15 +22,21 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 
 class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater {
-  private MetricsRecord metricsRecord = null;
-  int numMapTasksLaunched = 0;
-  int numMapTasksCompleted = 0;
-  int numReduceTasksLaunched = 0;
-  int numReduceTasksCompleted = 0;
+  private final MetricsRecord metricsRecord;
+
+  private int numMapTasksLaunched = 0;
+  private int numMapTasksCompleted = 0;
+  private int numMapTasksFailed = 0;
+  private int numReduceTasksLaunched = 0;
+  private int numReduceTasksCompleted = 0;
+  private int numReduceTasksFailed = 0;
   private int numJobsSubmitted = 0;
   private int numJobsCompleted = 0;
+  private int numWaitingTasks = 0;
     
   public JobTrackerMetricsInst(JobTracker tracker, JobConf conf) {
     super(tracker, conf);
@@ -52,15 +58,21 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
     synchronized (this) {
       metricsRecord.incrMetric("maps_launched", numMapTasksLaunched);
       metricsRecord.incrMetric("maps_completed", numMapTasksCompleted);
+      metricsRecord.incrMetric("maps_failed", numMapTasksFailed);
       metricsRecord.incrMetric("reduces_launched", numReduceTasksLaunched);
       metricsRecord.incrMetric("reduces_completed", numReduceTasksCompleted);
+      metricsRecord.incrMetric("reduces_failed", numReduceTasksFailed);
       metricsRecord.incrMetric("jobs_submitted", numJobsSubmitted);
       metricsRecord.incrMetric("jobs_completed", numJobsCompleted);
-            
+      metricsRecord.incrMetric("waiting_tasks", numWaitingTasks);
+
       numMapTasksLaunched = 0;
       numMapTasksCompleted = 0;
+      numMapTasksFailed = 0;
       numReduceTasksLaunched = 0;
       numReduceTasksCompleted = 0;
+      numReduceTasksFailed = 0;
+      numWaitingTasks = 0;
       numJobsSubmitted = 0;
       numJobsCompleted = 0;
     }
@@ -76,6 +88,7 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   @Override
   public synchronized void launchMap(TaskAttemptID taskAttemptID) {
     ++numMapTasksLaunched;
+    decWaiting(taskAttemptID.getJobID(), 1);
   }
 
   @Override
@@ -84,13 +97,26 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   }
 
   @Override
+  public synchronized void failedMap(TaskAttemptID taskAttemptID) {
+    ++numMapTasksFailed;
+    addWaiting(taskAttemptID.getJobID(), 1);
+  }
+
+  @Override
   public synchronized void launchReduce(TaskAttemptID taskAttemptID) {
     ++numReduceTasksLaunched;
+    decWaiting(taskAttemptID.getJobID(), 1);
   }
 
   @Override
   public synchronized void completeReduce(TaskAttemptID taskAttemptID) {
     ++numReduceTasksCompleted;
+  }
+
+  @Override
+  public synchronized void failedReduce(TaskAttemptID taskAttemptID) {
+    ++numReduceTasksFailed;
+    addWaiting(taskAttemptID.getJobID(), 1);
   }
 
   @Override
@@ -101,5 +127,15 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   @Override
   public synchronized void completeJob(JobConf conf, JobID id) {
     ++numJobsCompleted;
+  }
+
+  @Override
+  public synchronized void addWaiting(JobID id, int tasks) {
+    numWaitingTasks += tasks;
+  }
+
+  @Override
+  public synchronized void decWaiting(JobID id, int tasks) {
+    numWaitingTasks -= tasks;
   }
 }
