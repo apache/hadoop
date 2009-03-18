@@ -365,7 +365,7 @@ public class Job extends JobContext {
    * @return the counters for this job.
    * @throws IOException
    */
-  public Iterable<CounterGroup> getCounters() throws IOException {
+  public Counters getCounters() throws IOException {
     ensureState(JobState.RUNNING);
     return new Counters(info.getCounters());
   }
@@ -385,7 +385,6 @@ public class Job extends JobContext {
     int numReduces = conf.getNumReduceTasks();
     String oldMapperClass = "mapred.mapper.class";
     String oldReduceClass = "mapred.reducer.class";
-    String oldCombineClass = "mapred.combiner.class";
     conf.setBooleanIfUnset("mapred.mapper.new-api",
                            conf.get(oldMapperClass) == null);
     if (conf.getUseNewMapper()) {
@@ -393,7 +392,6 @@ public class Job extends JobContext {
       ensureNotSet("mapred.input.format.class", mode);
       ensureNotSet(oldMapperClass, mode);
       if (numReduces != 0) {
-        ensureNotSet(oldCombineClass, mode);
         ensureNotSet("mapred.partitioner.class", mode);
        } else {
         ensureNotSet("mapred.output.format.class", mode);
@@ -403,7 +401,6 @@ public class Job extends JobContext {
       ensureNotSet(JobContext.INPUT_FORMAT_CLASS_ATTR, mode);
       ensureNotSet(JobContext.MAP_CLASS_ATTR, mode);
       if (numReduces != 0) {
-        ensureNotSet(JobContext.COMBINE_CLASS_ATTR, mode);
         ensureNotSet(JobContext.PARTITIONER_CLASS_ATTR, mode);
        } else {
         ensureNotSet(JobContext.OUTPUT_FORMAT_CLASS_ATTR, mode);
@@ -416,12 +413,10 @@ public class Job extends JobContext {
         String mode = "new reduce API";
         ensureNotSet("mapred.output.format.class", mode);
         ensureNotSet(oldReduceClass, mode);   
-        ensureNotSet(oldCombineClass, mode);
       } else {
         String mode = "reduce compatability";
         ensureNotSet(JobContext.OUTPUT_FORMAT_CLASS_ATTR, mode);
         ensureNotSet(JobContext.REDUCE_CLASS_ATTR, mode);   
-        ensureNotSet(JobContext.COMBINE_CLASS_ATTR, mode);        
       }
     }   
   }

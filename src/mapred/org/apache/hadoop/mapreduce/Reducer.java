@@ -121,6 +121,7 @@ public abstract class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
     extends ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
     public Context(Configuration conf, TaskAttemptID taskid,
                    RawKeyValueIterator input, 
+                   Counter inputCounter,
                    RecordWriter<KEYOUT,VALUEOUT> output,
                    OutputCommitter committer,
                    StatusReporter reporter,
@@ -128,8 +129,8 @@ public abstract class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
                    Class<KEYIN> keyClass,
                    Class<VALUEIN> valueClass
                    ) throws IOException, InterruptedException {
-      super(conf, taskid, input, output, committer, reporter, comparator, 
-            keyClass, valueClass);
+      super(conf, taskid, input, inputCounter, output, committer, reporter, 
+            comparator, keyClass, valueClass);
     }
   }
 
