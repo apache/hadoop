@@ -38,20 +38,11 @@ import org.apache.hadoop.hbase.HConstants;
 public class HLogEdit implements Writable, HConstants {
 
   /** Value stored for a deleted item */
-  public static byte [] DELETED_BYTES = null;
+  public static final byte [] DELETED_BYTES = Bytes.toBytes("HBASE::DELETEVAL");
 
   /** Value written to HLog on a complete cache flush */
-  public static byte [] COMPLETE_CACHE_FLUSH = null;
+  public static final byte [] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
 
-  static {
-    try {
-      DELETED_BYTES = "HBASE::DELETEVAL".getBytes(UTF8_ENCODING);
-      COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      assert(false);
-    }
-  }
-  
   /**
    * @param value
    * @return True if an entry and its content is {@link #DELETED_BYTES}.

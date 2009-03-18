@@ -97,6 +97,7 @@ Release 0.20.0 - Unreleased
                (Jonathan Gray via Stack)
    HBASE-1258,1259 ganglia metrics for 'requests' is confusing
                (Ryan Rawson via Stack)
+   HBASE-1265  HLogEdit static constants should be final (Nitay Joffe via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
