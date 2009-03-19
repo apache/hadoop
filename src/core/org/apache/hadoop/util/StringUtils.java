@@ -533,6 +533,7 @@ public class StringUtils {
             "  host = " + hostname,
             "  args = " + Arrays.asList(args),
             "  version = " + VersionInfo.getVersion(),
+            "  classpath = " + System.getProperty("java.class.path"),
             "  build = " + VersionInfo.getUrl() + " -r "
                          + VersionInfo.getRevision()  
                          + "; compiled by '" + VersionInfo.getUser()

@@ -26,6 +26,9 @@ Trunk (unreleased changes)
     HADOOP-4942. Remove deprecated FileSystem methods getName() and
     getNamed(String name, Configuration conf).  (Jakob Homan via szetszwo)
 
+    HADOOP-5486. Removes the CLASSPATH string from the command line and instead
+    exports it in the environment. (Amareshwari Sriramadasu via ddas)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
