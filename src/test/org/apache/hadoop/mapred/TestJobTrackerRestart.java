@@ -65,7 +65,7 @@ public class TestJobTrackerRestart extends TestCase {
       jobs[i] = new JobConf(conf);
       Path newOutputDir = outputDir.suffix(String.valueOf(numJobsSubmitted++));
       UtilsForTests.configureWaitingJobConf(jobs[i], inDir, newOutputDir, 
-          numMaps[i], numReds[i], "jt-restart-test-job", mapSignalFile, 
+          numMaps[i], numReds[i], "jt restart test job", mapSignalFile, 
           reduceSignalFile);
       jobs[i].setJobPriority(priorities[i]);
     }
