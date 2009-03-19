@@ -96,9 +96,10 @@ public class TestMapReduceLocal extends TestCase {
                             ) throws IOException,
                                      InterruptedException,
                                      ClassNotFoundException {
+    final String COUNTER_GROUP = "org.apache.hadoop.mapred.Task$Counter";
     localFs.delete(new Path(TEST_ROOT_DIR + "/in"), true);
     localFs.delete(new Path(TEST_ROOT_DIR + "/out"), true);    
-    writeFile("in/part1", "this is a test\nof word count\n");
+    writeFile("in/part1", "this is a test\nof word count test\ntest\n");
     writeFile("in/part2", "more test");
     Job job = new Job(conf, "word count");     
     job.setJarByClass(WordCount.class);
@@ -112,8 +113,21 @@ public class TestMapReduceLocal extends TestCase {
     assertTrue(job.waitForCompletion());
     String out = readFile("out/part-r-00000");
     System.out.println(out);
-    assertEquals("a\t1\ncount\t1\nis\t1\nmore\t1\nof\t1\ntest\t2\nthis\t1\nword\t1\n",
+    assertEquals("a\t1\ncount\t1\nis\t1\nmore\t1\nof\t1\ntest\t4\nthis\t1\nword\t1\n",
                  out);
+    Counters ctrs = job.getCounters();
+    System.out.println("Counters: " + ctrs);
+    long combineIn = ctrs.findCounter(COUNTER_GROUP,
+                                      "COMBINE_INPUT_RECORDS").getValue();
+    long combineOut = ctrs.findCounter(COUNTER_GROUP, 
+                                       "COMBINE_OUTPUT_RECORDS").getValue();
+    long reduceIn = ctrs.findCounter(COUNTER_GROUP,
+                                     "REDUCE_INPUT_RECORDS").getValue();
+    long mapOut = ctrs.findCounter(COUNTER_GROUP, 
+                                   "MAP_OUTPUT_RECORDS").getValue();
+    assertEquals("map out = combine in", mapOut, combineIn);
+    assertEquals("combine out = reduce in", combineOut, reduceIn);
+    assertTrue("combine in > combine out", combineIn > combineOut);
   }
 
   private void runSecondarySort(Configuration conf) throws IOException,

@@ -119,8 +119,6 @@ class ReduceTask extends Task {
     getCounters().findCounter(Counter.REDUCE_INPUT_RECORDS);
   private Counters.Counter reduceOutputCounter = 
     getCounters().findCounter(Counter.REDUCE_OUTPUT_RECORDS);
-  private Counters.Counter reduceCombineInputCounter =
-    getCounters().findCounter(Counter.COMBINE_INPUT_RECORDS);
   private Counters.Counter reduceCombineOutputCounter =
     getCounters().findCounter(Counter.COMBINE_OUTPUT_RECORDS);
 
@@ -518,7 +516,7 @@ class ReduceTask extends Task {
   private <INKEY,INVALUE,OUTKEY,OUTVALUE>
   void runNewReducer(JobConf job,
                      final TaskUmbilicalProtocol umbilical,
-                     final Reporter reporter,
+                     final TaskReporter reporter,
                      RawKeyValueIterator rIter,
                      RawComparator<INKEY> comparator,
                      Class<INKEY> keyClass,
@@ -536,39 +534,14 @@ class ReduceTask extends Task {
       (org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE>)
         outputFormat.getRecordWriter(taskContext);
     job.setBoolean("mapred.skip.on", isSkipping());
-    org.apache.hadoop.mapreduce.Reducer<INKEY,INVALUE,OUTKEY,OUTVALUE>.Context 
-         reducerContext = null;
-    try {
-      Constructor<org.apache.hadoop.mapreduce.Reducer.Context> contextConstructor =
-        org.apache.hadoop.mapreduce.Reducer.Context.class.getConstructor
-        (new Class[]{org.apache.hadoop.mapreduce.Reducer.class,
-            Configuration.class,
-            org.apache.hadoop.mapreduce.TaskAttemptID.class,
-            RawKeyValueIterator.class,
-            org.apache.hadoop.mapreduce.RecordWriter.class,
-            org.apache.hadoop.mapreduce.OutputCommitter.class,
-            org.apache.hadoop.mapreduce.StatusReporter.class,
-            RawComparator.class,
-            Class.class,
-            Class.class});
-
-      reducerContext = contextConstructor.newInstance(reducer, job, 
-                                                      getTaskID(),
-                                                      rIter, output, committer,
-                                                      reporter, comparator, 
-                                                      keyClass, valueClass);
-
-      reducer.run(reducerContext);
-      output.close(reducerContext);
-    } catch (NoSuchMethodException e) {
-      throw new IOException("Can't find Context constructor", e);
-    } catch (InstantiationException e) {
-      throw new IOException("Can't create Context", e);
-    } catch (InvocationTargetException e) {
-      throw new IOException("Can't invoke Context constructor", e);
-    } catch (IllegalAccessException e) {
-      throw new IOException("Can't invoke Context constructor", e);
-    }
+    org.apache.hadoop.mapreduce.Reducer.Context 
+         reducerContext = createReduceContext(reducer, job, getTaskID(),
+                                               rIter, reduceInputValueCounter, 
+                                               output, committer,
+                                               reporter, comparator, keyClass,
+                                               valueClass);
+    reducer.run(reducerContext);
+    output.close(reducerContext);
   }
 
   class ReduceCopier<K, V> implements MRConstants {
@@ -722,14 +695,14 @@ class ReduceTask extends Task {
     private volatile int maxFetchRetriesPerMap;
     
     /**
-     * Combiner class to run during in-memory merge, if defined.
+     * Combiner runner, if a combiner is needed
      */
-    private final Class<? extends Reducer> combinerClass;
+    private CombinerRunner combinerRunner;
 
     /**
      * Resettable collector used for combine.
      */
-    private final CombineOutputCollector combineCollector;
+    private CombineOutputCollector combineCollector = null;
 
     /**
      * Maximum percent of failed fetch attempt before killing the reduce task.
@@ -1680,7 +1653,8 @@ class ReduceTask extends Task {
     }
     
     public ReduceCopier(TaskUmbilicalProtocol umbilical, JobConf conf,
-                        TaskReporter reporter)throws IOException {
+                        TaskReporter reporter
+                        )throws ClassNotFoundException, IOException {
       
       configureClasspath(conf);
       this.reporter = reporter;
@@ -1693,10 +1667,15 @@ class ReduceTask extends Task {
       this.numCopiers = conf.getInt("mapred.reduce.parallel.copies", 5);
       this.maxInFlight = 4 * numCopiers;
       this.maxBackoff = conf.getInt("mapred.reduce.copy.backoff", 300);
-      this.combinerClass = conf.getCombinerClass();
-      combineCollector = (null != combinerClass)
-        ? new CombineOutputCollector(reduceCombineOutputCounter)
-        : null;
+      Counters.Counter combineInputCounter = 
+        reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS);
+      this.combinerRunner = CombinerRunner.create(conf, getTaskID(),
+                                                  combineInputCounter,
+                                                  reporter, null);
+      if (combinerRunner != null) {
+        combineCollector = 
+          new CombineOutputCollector(reduceCombineOutputCounter);
+      }
       
       this.ioSortFactor = conf.getInt("io.sort.factor", 10);
       // the exponential backoff formula
@@ -2507,11 +2486,11 @@ class ReduceTask extends Task {
                                conf.getOutputKeyComparator(), reporter,
                                spilledRecordsCounter, null);
           
-          if (null == combinerClass) {
+          if (combinerRunner == null) {
             Merger.writeFile(rIter, writer, reporter, conf);
           } else {
             combineCollector.setWriter(writer);
-            combineAndSpill(rIter, reduceCombineInputCounter);
+            combinerRunner.combine(rIter, combineCollector);
           }
           writer.close();
 
@@ -2533,29 +2512,6 @@ class ReduceTask extends Task {
         synchronized (mapOutputFilesOnDisk) {
           addToMapOutputFilesOnDisk(status);
         }
-      }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void combineAndSpill(
-        RawKeyValueIterator kvIter,
-        Counters.Counter inCounter) throws IOException {
-      JobConf job = (JobConf)getConf();
-      Reducer combiner = ReflectionUtils.newInstance(combinerClass, job);
-      Class keyClass = job.getMapOutputKeyClass();
-      Class valClass = job.getMapOutputValueClass();
-      RawComparator comparator = job.getOutputKeyComparator();
-      try {
-        CombineValuesIterator values = new CombineValuesIterator(
-            kvIter, comparator, keyClass, valClass, job, Reporter.NULL,
-            inCounter);
-        while (values.more()) {
-          combiner.reduce(values.getKey(), values, combineCollector,
-              Reporter.NULL);
-          values.nextKey();
-        }
-      } finally {
-        combiner.close();
       }
     }
 

@@ -642,8 +642,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5255. Fix use of Math.abs to avoid overflow. (Jonathan Ellis via
     cdouglas)
 
-    HADOOP-5269. Fixes a problem to do with tasktracker holding on to FAILED_UNCLEAN
-    or KILLED_UNCLEAN tasks forever. (Amareshwari Sriramadasu via ddas) 
+    HADOOP-5269. Fixes a problem to do with tasktracker holding on to 
+    FAILED_UNCLEAN or KILLED_UNCLEAN tasks forever. (Amareshwari Sriramadasu
+    via ddas) 
 
     HADOOP-5214. Fixes a ConcurrentModificationException while the Fairshare
     Scheduler accesses the tasktrackers stored by the JobTracker.
@@ -651,37 +652,41 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5233. Addresses the three issues - Race condition in updating
     status, NPE in TaskTracker task localization when the conf file is missing
-    (HADOOP-5234) and NPE in handling KillTaskAction of a cleanup task (HADOOP-5235).
-    (Amareshwari Sriramadasu via ddas)
+    (HADOOP-5234) and NPE in handling KillTaskAction of a cleanup task 
+    (HADOOP-5235). (Amareshwari Sriramadasu via ddas)
 
     HADOOP-5247. Introduces a broadcast of KillJobAction to all trackers when
-    a job finishes. This fixes a bunch of problems to do with NPE when a completed
-    job is not in memory and a tasktracker comes to the jobtracker with a status
-    report of a task belonging to that job. (Amar Kamat via ddas)
+    a job finishes. This fixes a bunch of problems to do with NPE when a 
+    completed job is not in memory and a tasktracker comes to the jobtracker 
+    with a status report of a task belonging to that job. (Amar Kamat via ddas)
 
-    HADOOP-5282. Fixed job history logs for task attempts that are failed by the
-    JobTracker, say due to lost task trackers. (Amar Kamat via yhemanth)
+    HADOOP-5282. Fixed job history logs for task attempts that are
+    failed by the JobTracker, say due to lost task trackers. (Amar
+    Kamat via yhemanth)
 
     HADOOP-4963. Fixes a logging to do with getting the location of
     map output file. (Amareshwari Sriramadasu via ddas)
     
     HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)    
 
-    HADOOP-5241. Fixes a bug in disk-space resource estimation. Makes the estimation
-    formula linear where blowUp = Total-Output/Total-Input. (Sharad Agarwal via ddas)
+    HADOOP-5241. Fixes a bug in disk-space resource estimation. Makes
+    the estimation formula linear where blowUp =
+    Total-Output/Total-Input. (Sharad Agarwal via ddas)
 
     HADOOP-5142. Fix MapWritable#putAll to store key/value classes. 
     (Doğacan Güney via enis)
 
-    HADOOP-4744. Workaround for jetty6 returning -1 when getLocalPort is invoked on
-    the connector. The workaround patch retries a few times before failing.
-    (Jothi Padmanabhan via yhemanth)
+    HADOOP-4744. Workaround for jetty6 returning -1 when getLocalPort
+    is invoked on the connector. The workaround patch retries a few
+    times before failing.  (Jothi Padmanabhan via yhemanth)
 
-    HADOOP-5280. Adds a check to prevent a task state transition from FAILED to any of
-    UNASSIGNED, RUNNING, COMMIT_PENDING or SUCCEEDED. (ddas) 
+    HADOOP-5280. Adds a check to prevent a task state transition from
+    FAILED to any of UNASSIGNED, RUNNING, COMMIT_PENDING or
+    SUCCEEDED. (ddas)
 
-    HADOOP-5272. Fixes a problem to do with detecting whether an attempt is the first
-    attempt of a Task. This affects JobTracker restart. (Amar Kamat via ddas)
+    HADOOP-5272. Fixes a problem to do with detecting whether an
+    attempt is the first attempt of a Task. This affects JobTracker
+    restart. (Amar Kamat via ddas)
 
     HADOOP-5306. Fixes a problem to do with logging/parsing the http port of a 
     lost tracker. Affects JobTracker restart. (Amar Kamat via ddas)
@@ -690,12 +695,13 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5274. Fix gridmix2 dependency on wordcount example. (cdouglas)
 
-    HADOOP-5145. Balancer sometimes runs out of memory after running days or weeks.
-    (hairong)
+    HADOOP-5145. Balancer sometimes runs out of memory after running
+    days or weeks.  (hairong)
 
-    HADOOP-5338. Fix jobtracker restart to clear task completion events cached by
-    tasktrackers forcing them to fetch all events afresh, thus avoiding missed
-    task completion events on the tasktrackers. (Amar Kamat via yhemanth)
+    HADOOP-5338. Fix jobtracker restart to clear task completion
+    events cached by tasktrackers forcing them to fetch all events
+    afresh, thus avoiding missed task completion events on the
+    tasktrackers. (Amar Kamat via yhemanth)
 
     HADOOP-4695. Change TestGlobalFilter so that it allows a web page to be
     filtered more than once for a single access.  (Kan Zhang via szetszwo) 
@@ -716,28 +722,32 @@ Release 0.20.0 - Unreleased
     HADOOP-5395. Change the exception message when a job is submitted to an
     invalid queue. (Rahul Kumar Singh via yhemanth)
 
-    HADOOP-5276. Fixes a problem to do with updating the start time of a task when
-    the tracker that ran the task is lost. (Amar Kamat via ddas)
+    HADOOP-5276. Fixes a problem to do with updating the start time of
+    a task when the tracker that ran the task is lost. (Amar Kamat via
+    ddas)
 
-    HADOOP-5278. Fixes a problem to do with logging the finish time of a task 
-    during recovery (after a JobTracker restart). (Amar Kamat via ddas)
+    HADOOP-5278. Fixes a problem to do with logging the finish time of
+    a task during recovery (after a JobTracker restart). (Amar Kamat
+    via ddas)
 
-    HADOOP-5490. Fixes a synchronization problem in the EagerTaskInitializationListener
-    class. (Jothi Padmanabhan via ddas)
+    HADOOP-5490. Fixes a synchronization problem in the
+    EagerTaskInitializationListener class. (Jothi Padmanabhan via
+    ddas)
 
-    HADOOP-5493. The shuffle copier threads return the codecs back to the pool when the
-    shuffle completes. (Jothi Padmanabhan via ddas)
+    HADOOP-5493. The shuffle copier threads return the codecs back to
+    the pool when the shuffle completes. (Jothi Padmanabhan via ddas)
 
     HADOOP-5505. Fix JspHelper initialization in the context of
     MiniDFSCluster. (Raghu Angadi)
 
-    HADOOP-5414. Fixes IO exception while executing hadoop fs -touchz fileName by
-    making sure that lease renewal thread exits before dfs client exits.
-    (hairong)
+    HADOOP-5414. Fixes IO exception while executing hadoop fs -touchz
+    fileName by making sure that lease renewal thread exits before dfs
+    client exits.  (hairong)
 
-    HADOOP-5103. FileInputFormat now reuses the clusterMap network topology object
-    and that brings down the log messages in the JobClient to do with
-    NetworkTopology.add significantly. (Jothi Padmanabhan via ddas)
+    HADOOP-5103. FileInputFormat now reuses the clusterMap network
+    topology object and that brings down the log messages in the
+    JobClient to do with NetworkTopology.add significantly. (Jothi
+    Padmanabhan via ddas)
 
     HADOOP-5483. Fixes a problem in the Directory Cleanup Thread due to which
     TestMiniMRWithDFS sometimes used to fail. (ddas) 
@@ -751,9 +761,11 @@ Release 0.20.0 - Unreleased
     HADOOP-5514. Fix JobTracker metrics and add metrics for wating, failed
     tasks. (cdouglas)
 
-    HADOOP-5516. Fix NullPointerException in TaskMemoryManagerThread that comes when
-    monitored processes disappear when the thread is running.
-    (Vinod Kumar Vavilapalli via yhemanth)
+    HADOOP-5516. Fix NullPointerException in TaskMemoryManagerThread
+    that comes when monitored processes disappear when the thread is
+    running.  (Vinod Kumar Vavilapalli via yhemanth)
+
+    HADOOP-5382. Support combiners in the new context object API. (omalley)
 
 Release 0.19.2 - Unreleased
 
