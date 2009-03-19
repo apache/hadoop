@@ -52,6 +52,7 @@ Release 0.20.0 - Unreleased
                (Ryan Rawson via Stack)
    HBASE-1268  ZooKeeper config parsing can break HBase startup
                (Nitay Joffe via Stack)
+   HBASE-1270  Fix TestInfoServers (Nitay Joffe via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

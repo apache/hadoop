@@ -50,11 +50,11 @@ public class TestInfoServers extends HBaseClusterTestCase {
     new HTable(conf, ".META.");
     int port = cluster.getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
-      "/index.html"), "Master");
+      "/index.html"), "master");
     port = cluster.getRegionThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
-      "/index.html"), "Region Server");
+      "/index.html"), "regionserver");
   }
   
   private void assertHasExpectedContent(final URL u, final String expected)
@@ -71,6 +71,6 @@ public class TestInfoServers extends HBaseClusterTestCase {
     }
     bis.close();
     String content = sb.toString();
-    assertTrue(content.matches(expected));
+    assertTrue(content.contains(expected));
   }
 }
