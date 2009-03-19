@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Properties;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.zookeeper.server.ServerConfig;
@@ -43,7 +44,19 @@ public class HQuorumPeerTest extends HBaseTestCase {
       "server.0=${hbase.master.hostname}:2888:3888\n";
 
     InputStream is = new ByteArrayInputStream(s.getBytes());
-    HQuorumPeer.parseConfig(is);
+    Properties properties = HQuorumPeer.parseConfig(is);
+
+    String userName = System.getProperty("user.name");
+    String dataDir = "/tmp/hbase-" + userName + "/zookeeper";
+
+    assertEquals(Integer.valueOf(2000), Integer.valueOf(properties.getProperty("tickTime")));
+    assertEquals(Integer.valueOf(10), Integer.valueOf(properties.getProperty("initLimit")));
+    assertEquals(Integer.valueOf(5), Integer.valueOf(properties.getProperty("syncLimit")));
+    assertEquals(dataDir, properties.get("dataDir"));
+    assertEquals(Integer.valueOf(2181), Integer.valueOf(properties.getProperty("clientPort")));
+    assertEquals("localhost:2888:3888", properties.get("server.0"));
+
+    QuorumPeerConfig.parseProperties(properties);
 
     int tickTime = QuorumPeerConfig.getTickTime();
     assertEquals(2000, tickTime);
@@ -51,8 +64,6 @@ public class HQuorumPeerTest extends HBaseTestCase {
     assertEquals(10, initLimit);
     int syncLimit = QuorumPeerConfig.getSyncLimit();
     assertEquals(5, syncLimit);
-    String userName = System.getProperty("user.name");
-    String dataDir = "/tmp/hbase-" + userName + "/zookeeper";
     assertEquals(dataDir, ServerConfig.getDataDir());
     assertEquals(2181, ServerConfig.getClientPort());
     Map<Long,QuorumServer> servers = QuorumPeerConfig.getServers();

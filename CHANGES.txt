@@ -50,6 +50,8 @@ Release 0.20.0 - Unreleased
                Improve lease handling
    HBASE-1267  binary keys broken in trunk (again) -- part 2 and 3
                (Ryan Rawson via Stack)
+   HBASE-1268  ZooKeeper config parsing can break HBase startup
+               (Nitay Joffe via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

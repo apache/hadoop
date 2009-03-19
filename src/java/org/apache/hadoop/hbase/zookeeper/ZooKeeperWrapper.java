@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -123,16 +122,9 @@ public class ZooKeeperWrapper implements HConstants {
   }
 
   private static void loadZooKeeperConfig() {
-    InputStream inputStream =
-      ZooKeeperWrapper.class.getClassLoader().getResourceAsStream(ZOOKEEPER_CONFIG_NAME);
-    if (inputStream == null) {
-      LOG.error("fail to open ZooKeeper config file " + ZOOKEEPER_CONFIG_NAME);
-      return;
-    }
-
-    Properties properties = new Properties();
+    Properties properties = null;
     try {
-      properties.load(inputStream);
+      properties = HQuorumPeer.parseZooKeeperConfig();
     } catch (IOException e) {
       LOG.error("fail to read properties from " + ZOOKEEPER_CONFIG_NAME);
       return;

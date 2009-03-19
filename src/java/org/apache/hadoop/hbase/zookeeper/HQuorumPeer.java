@@ -55,7 +55,8 @@ public class HQuorumPeer implements HConstants {
    */
   public static void main(String[] args) {
     try {
-      parseConfig();
+      Properties properties = parseZooKeeperConfig();
+      QuorumPeerConfig.parseProperties(properties);
     } catch (Exception e) {
       e.printStackTrace();
       System.exit(-1);
@@ -68,23 +69,24 @@ public class HQuorumPeer implements HConstants {
   }
 
   /**
-   * Parse zoo.cfg, injecting HBase Configuration variables in.
-   * @throws Exception if anything goes wrong parsing config
+   * Parse ZooKeeper's zoo.cfg, injecting HBase Configuration variables in.
+   * @return Properties parsed from config stream with variables substituted.
+   * @throws IOException if anything goes wrong parsing config
    */
-  public static void parseConfig() throws Exception {
+  public static Properties parseZooKeeperConfig() throws IOException {
     ClassLoader cl = HQuorumPeer.class.getClassLoader();
     InputStream inputStream = cl.getResourceAsStream(ZOOKEEPER_CONFIG_NAME);
-    parseConfig(inputStream);
+    return parseConfig(inputStream);
   }
 
   /**
-   * This is a separate method from parseConfig() so that we can test by passing
-   * in our own InputStreams rather than reading directly from zoo.cfg.
-   * Parse zoo.cfg, injecting HBase Configuration variables in.
-   * @param inputStream InputStream to parse.
-   * @throws Exception if anything goes wrong parsing config
+   * Parse ZooKeeper's zoo.cfg, injecting HBase Configuration variables in.
+   * This method is used for testing so we can pass our own InputStream.
+   * @param inputStream InputStream to read from.
+   * @return Properties parsed from config stream with variables substituted.
+   * @throws IOException if anything goes wrong parsing config
    */
-  public static void parseConfig(InputStream inputStream) throws Exception {
+  public static Properties parseConfig(InputStream inputStream) throws IOException {
     HBaseConfiguration conf = new HBaseConfiguration();
     Properties properties = new Properties();
     try {
@@ -129,7 +131,6 @@ public class HQuorumPeer implements HConstants {
       String key = entry.getKey().toString().trim();
       properties.setProperty(key, newValue.toString());
     }
-
-    QuorumPeerConfig.parseProperties(properties);
+    return properties;
   }
 }
