@@ -308,6 +308,8 @@ Trunk (unreleased changes)
 
     HADOOP-5511. Add Apache License to EditLogBackupOutputStream. (shv)
 
+    HADOOP-5507. Fix JMXGet javadoc warnings.  (Boris Shkolnik via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

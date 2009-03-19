@@ -42,29 +42,29 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import sun.management.ConnectorAddressLink;
-
 /**
- *  tool to get data from NameNode or DataNode using MBeans
- *  currently the following MBeans are available (under hadoop domain):
- *  hadoop:service=NameNode,name=FSNamesystemState (static)
- *  hadoop:service=NameNode,name=NameNodeActivity (dynamic)
- *  hadoop:service=NameNode,name=RpcActivityForPort9000 (dynamic)
- *  hadoop:service=DataNode,name=RpcActivityForPort50020 (dynamic)
- *  hadoop:name=service=DataNode,FSDatasetState-UndefinedStorageId663800459 (static)
- *  hadoop:service=DataNode,name=DataNodeActivity-UndefinedStorageId-520845215 (dynamic)
- *   
- *   
- *   implementation note: 
- *   all logging is sent to System.err (since it is a command line tool)
+ * tool to get data from NameNode or DataNode using MBeans currently the
+ * following MBeans are available (under hadoop domain):
+ * hadoop:service=NameNode,name=FSNamesystemState (static)
+ * hadoop:service=NameNode,name=NameNodeActivity (dynamic)
+ * hadoop:service=NameNode,name=RpcActivityForPort9000 (dynamic)
+ * hadoop:service=DataNode,name=RpcActivityForPort50020 (dynamic)
+ * hadoop:name=service=DataNode,FSDatasetState-UndefinedStorageId663800459
+ * (static)
+ * hadoop:service=DataNode,name=DataNodeActivity-UndefinedStorageId-520845215
+ * (dynamic)
+ * 
+ * 
+ * implementation note: all logging is sent to System.err (since it is a command
+ * line tool)
  */
 public class JMXGet {
 
   private static final String format = "%s=%s\n";
   private ArrayList<ObjectName> hadoopObjectNames;
   private MBeanServerConnection mbsc;
-  private String service = "NameNode", port ="", server="localhost";
-  private String localVMPid = null;
+  private String service = "NameNode", port = "", server = "localhost";
+  private String localVMUrl = null;
 
   public JMXGet() {
   }
@@ -81,8 +81,8 @@ public class JMXGet {
     this.server = server;
   }
 
-  public void setLocalVMPid(String pid) {
-    this.localVMPid = pid;
+  public void setLocalVMUrl(String url) {
+    this.localVMUrl = url;
   }
 
   /**
@@ -93,14 +93,14 @@ public class JMXGet {
 
     Object val = null;
 
-    for (ObjectName oname: hadoopObjectNames) {
+    for (ObjectName oname : hadoopObjectNames) {
       err(">>>>>>>>jmx name: " + oname.getCanonicalKeyPropertyListString());
       MBeanInfo mbinfo = mbsc.getMBeanInfo(oname);
-      MBeanAttributeInfo [] mbinfos = mbinfo.getAttributes();
+      MBeanAttributeInfo[] mbinfos = mbinfo.getAttributes();
 
-      for (MBeanAttributeInfo mb: mbinfos) {
+      for (MBeanAttributeInfo mb : mbinfos) {
         val = mbsc.getAttribute(oname, mb.getName());
-        System.out.format(format,mb.getName(),val.toString());
+        System.out.format(format, mb.getName(), val.toString());
       }
     }
   }
@@ -108,17 +108,17 @@ public class JMXGet {
   /**
    * get single value by key
    */
-  public String getValue(String key) throws Exception{
+  public String getValue(String key) throws Exception {
 
     Object val = null;
 
-    for (ObjectName oname: hadoopObjectNames) {
+    for (ObjectName oname : hadoopObjectNames) {
       try {
         val = mbsc.getAttribute(oname, key);
       } catch (AttributeNotFoundException anfe) {
-        /*just go to the next */
+        /* just go to the next */
         continue;
-      } catch(ReflectionException re) {
+      } catch (ReflectionException re) {
         if (re.getCause() instanceof NoSuchMethodException) {
           continue;
         }
@@ -130,31 +130,34 @@ public class JMXGet {
     return (val == null) ? null : val.toString();
   }
 
-
   /**
-   * @param args
    * @throws Exception
-   * initializes MBeanServer
+   *           initializes MBeanServer
    */
-  public void init() throws Exception{
+  public void init() throws Exception {
 
-    err("init: server="+server+";port="+port+";service="+
-        service+";localVMPid="+localVMPid);
+    err("init: server=" + server + ";port=" + port + ";service=" + service
+        + ";localVMUrl=" + localVMUrl);
 
     String url_string = null;
-    // build connection url 
-    if (localVMPid != null) {
-      // from the file /tmp/hsperfdata*
-      url_string = ConnectorAddressLink.importFrom(Integer.parseInt(localVMPid));
+    // build connection url
+    if (localVMUrl != null) {
+      // use
+      // jstat -snap <vmpid> | grep sun.management.JMXConnectorServer.address
+      // to get url
+      url_string = localVMUrl;
+      err("url string for local pid = " + localVMUrl + " = " + url_string);
+
     } else if (!port.isEmpty() && !server.isEmpty()) {
       // using server and port
-      url_string = "service:jmx:rmi:///jndi/rmi://"+server+ ":"+port+"/jmxrmi";
+      url_string = "service:jmx:rmi:///jndi/rmi://" + server + ":" + port
+      + "/jmxrmi";
     } // else url stays null
 
     // Create an RMI connector client and
     // connect it to the RMI connector server
 
-    if (url_string == null) { //assume local vm (for example for Testing)
+    if (url_string == null) { // assume local vm (for example for Testing)
       mbsc = ManagementFactory.getPlatformMBeanServer();
     } else {
       JMXServiceURL url = new JMXServiceURL(url_string);
@@ -182,16 +185,16 @@ public class JMXGet {
     //
     err("\nMBeanServer default domain = " + mbsc.getDefaultDomain());
 
-    // Get MBean count 
+    // Get MBean count
     //
     err("\nMBean count = " + mbsc.getMBeanCount());
 
     // Query MBean names for specific domain "hadoop" and service
-    ObjectName query = new ObjectName("hadoop:service="+service+",*");
+    ObjectName query = new ObjectName("hadoop:service=" + service + ",*");
     hadoopObjectNames = new ArrayList<ObjectName>(5);
     err("\nQuery MBeanServer MBeans:");
-    Set<ObjectName> names =
-      new TreeSet<ObjectName>(mbsc.queryNames(query, null));
+    Set<ObjectName> names = new TreeSet<ObjectName>(mbsc
+        .queryNames(query, null));
 
     for (ObjectName name : names) {
       hadoopObjectNames.add(name);
@@ -203,11 +206,10 @@ public class JMXGet {
   /**
    * Print JMXGet usage information
    */
-  static void  printUsage(Options opts) {
+  static void printUsage(Options opts) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("jmxget options are: ", opts);
   }
-
 
   /**
    * @param msg
@@ -219,8 +221,8 @@ public class JMXGet {
   /**
    * parse args
    */
-  private static CommandLine parseArgs(Options opts, String ...args) 
-  throws IllegalArgumentException{
+  private static CommandLine parseArgs(Options opts, String... args)
+  throws IllegalArgumentException {
 
     OptionBuilder.withArgName("NameNode|DataNode");
     OptionBuilder.hasArg();
@@ -229,7 +231,8 @@ public class JMXGet {
 
     OptionBuilder.withArgName("mbean server");
     OptionBuilder.hasArg();
-    OptionBuilder.withDescription("specify mbean server (localhost by default)");
+    OptionBuilder
+    .withDescription("specify mbean server (localhost by default)");
     Option jmx_server = OptionBuilder.create("server");
 
     OptionBuilder.withDescription("print help");
@@ -237,13 +240,16 @@ public class JMXGet {
 
     OptionBuilder.withArgName("mbean server port");
     OptionBuilder.hasArg();
-    OptionBuilder.withDescription("specify mbean server port, " +
-    "if missing - it will try to connect to MBean Server in the same VM");
+    OptionBuilder.withDescription("specify mbean server port, "
+        + "if missing - it will try to connect to MBean Server in the same VM");
     Option jmx_port = OptionBuilder.create("port");
 
-    OptionBuilder.withArgName("VM's pid");
+    OptionBuilder.withArgName("VM's connector url");
     OptionBuilder.hasArg();
-    OptionBuilder.withDescription("connect to the VM on the same machine");
+    OptionBuilder.withDescription("connect to the VM on the same machine;"
+        + "\n use:\n jstat -J-Djstat.showUnsupported=true -snap <vmpid> | "
+        + "grep sun.management.JMXConnectorServer.address\n "
+        + "to find the url");
     Option jmx_localVM = OptionBuilder.create("localVM");
 
     opts.addOption(jmx_server);
@@ -252,19 +258,20 @@ public class JMXGet {
     opts.addOption(jmx_port);
     opts.addOption(jmx_localVM);
 
-    CommandLine commandLine=null;
+    CommandLine commandLine = null;
     CommandLineParser parser = new GnuParser();
     try {
       commandLine = parser.parse(opts, args, true);
-    } catch(ParseException e) {
+    } catch (ParseException e) {
       printUsage(opts);
-      throw new IllegalArgumentException("invalid args: " + e.getMessage()); 
+      throw new IllegalArgumentException("invalid args: " + e.getMessage());
     }
     return commandLine;
   }
 
   /**
    * main
+   * 
    * @param args
    */
   public static void main(String[] args) {
@@ -290,18 +297,18 @@ public class JMXGet {
     JMXGet jm = new JMXGet();
 
     if (commandLine.hasOption("port")) {
-      jm.setPort(commandLine.getOptionValue("port")); 
+      jm.setPort(commandLine.getOptionValue("port"));
     }
     if (commandLine.hasOption("service")) {
-      jm.setService(commandLine.getOptionValue("service")); 
+      jm.setService(commandLine.getOptionValue("service"));
     }
     if (commandLine.hasOption("server")) {
-      jm.setServer(commandLine.getOptionValue("server")); 
+      jm.setServer(commandLine.getOptionValue("server"));
     }
 
     if (commandLine.hasOption("localVM")) {
       // from the file /tmp/hsperfdata*
-      jm.setLocalVMPid(commandLine.getOptionValue("localVM"));
+      jm.setLocalVMUrl(commandLine.getOptionValue("localVM"));
     }
 
     if (commandLine.hasOption("help")) {
@@ -318,15 +325,15 @@ public class JMXGet {
       if (args.length == 0) {
         jm.printAllValues();
       } else {
-        for (String key: args) {
+        for (String key : args) {
           err("key = " + key);
           String val = jm.getValue(key);
-          if (val!=null)
-            System.out.format(JMXGet.format,key,val);
+          if (val != null)
+            System.out.format(JMXGet.format, key, val);
         }
       }
       res = 0;
-    } catch (Exception  re) {
+    } catch (Exception re) {
       re.printStackTrace();
       res = -1;
     }
