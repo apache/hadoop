@@ -46,7 +46,7 @@ class Child {
   public static final Log LOG =
     LogFactory.getLog(TaskTracker.class);
 
-  static volatile TaskAttemptID taskid;
+  static volatile TaskAttemptID taskid = null;
   static volatile boolean isCleanup;
 
   public static void main(String[] args) throws Throwable {
@@ -58,9 +58,8 @@ class Child {
     InetSocketAddress address = new InetSocketAddress(host, port);
     final TaskAttemptID firstTaskid = TaskAttemptID.forName(args[2]);
     final int SLEEP_LONGER_COUNT = 5;
-    taskid = firstTaskid;
     int jvmIdInt = Integer.parseInt(args[3]);
-    JVMId jvmId = new JVMId(taskid.getJobID(),taskid.isMap(),jvmIdInt);
+    JVMId jvmId = new JVMId(firstTaskid.getJobID(),firstTaskid.isMap(),jvmIdInt);
     TaskUmbilicalProtocol umbilical =
       (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
           TaskUmbilicalProtocol.versionID,
@@ -98,6 +97,7 @@ class Child {
     Task task = null;
     try {
       while (true) {
+        taskid = null;
         JvmTask myTask = umbilical.getTask(jvmId);
         if (myTask.shouldDie()) {
           break;
@@ -180,7 +180,9 @@ class Child {
       // Report back any failures, for diagnostic purposes
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       throwable.printStackTrace(new PrintStream(baos));
-      umbilical.reportDiagnosticInfo(taskid, baos.toString());
+      if (taskid != null) {
+        umbilical.reportDiagnosticInfo(taskid, baos.toString());
+      }
     } finally {
       RPC.stopProxy(umbilical);
       MetricsContext metricsContext = MetricsUtil.getContext("mapred");
@@ -189,6 +191,10 @@ class Child {
       // This assumes that on return from Task.run() 
       // there is no more logging done.
       LogManager.shutdown();
+      // do synclogs
+      if (taskid != null) {
+        TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
+      }
     }
   }
 }
