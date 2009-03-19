@@ -618,4 +618,20 @@ public class TestFileSystem extends TestCase {
     assertTrue(map.containsKey(lowercaseCachekey2));    
 
   }
+
+  public static void testFsUniqueness(long megaBytes, int numFiles, long seed)
+    throws Exception {
+
+    // multiple invocations of FileSystem.get return the same object.
+    FileSystem fs1 = FileSystem.get(conf);
+    FileSystem fs2 = FileSystem.get(conf);
+    assertTrue(fs1 == fs2);
+
+    // multiple invocations of FileSystem.newInstance return different objects
+    fs1 = FileSystem.newInstance(conf);
+    fs2 = FileSystem.newInstance(conf);
+    assertTrue(fs1 != fs2 && !fs1.equals(fs2));
+    fs1.close();
+    fs2.close();
+  }
 }

@@ -158,10 +158,15 @@ done:
 
 
 hdfsFS hdfsConnect(const char* host, tPort port) {
-  // conect with NULL as user name/groups
+  // connect with NULL as user name/groups
   return hdfsConnectAsUser(host, port, NULL, NULL, 0);
 }
 
+/** Always return a new FileSystem handle */
+hdfsFS hdfsConnectNewInstance(const char* host, tPort port) {
+  // connect with NULL as user name/groups
+  return hdfsConnectAsUserNewInstance(host, port, NULL, NULL, 0);
+}
 
 hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const char **groups, int groups_size )
 {
@@ -345,6 +350,187 @@ hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const 
 }
 
 
+/** Always return a new FileSystem handle */
+hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port, const char *user , const char **groups, int groups_size )
+{
+    // JAVA EQUIVALENT:
+    //  FileSystem fs = FileSystem.get(new Configuration());
+    //  return fs;
+
+    JNIEnv *env = 0;
+    jobject jConfiguration = NULL;
+    jobject jFS = NULL;
+    jobject jURI = NULL;
+    jstring jURIString = NULL;
+    jvalue  jVal;
+    jthrowable jExc = NULL;
+    char    *cURI = 0;
+    jobject gFsRef = NULL;
+
+
+    //Get the JNIEnv* corresponding to current thread
+    env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
+
+    //Create the org.apache.hadoop.conf.Configuration object
+    jConfiguration =
+        constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
+
+    if (jConfiguration == NULL) {
+        fprintf(stderr, "Can't construct instance of class "
+                "org.apache.hadoop.conf.Configuration\n");
+        errno = EINTERNAL;
+        return NULL;
+    }
+ 
+    if (user != NULL) {
+
+      if (groups == NULL || groups_size <= 0) {
+        fprintf(stderr, "ERROR: groups must not be empty/null\n");
+        errno = EINVAL;
+        return NULL;
+      }
+
+      jstring jUserString = (*env)->NewStringUTF(env, user);
+      jarray jGroups = constructNewArrayString(env, &jExc, groups, groups_size);
+      if (jGroups == NULL) {
+        errno = EINTERNAL;
+        fprintf(stderr, "ERROR: could not construct groups array\n");
+        return NULL;
+      }
+
+      jobject jUgi;
+      if ((jUgi = constructNewObjectOfClass(env, &jExc, HADOOP_UNIX_USER_GROUP_INFO, JMETHOD2(JPARAM(JAVA_STRING), JARRPARAM(JAVA_STRING), JAVA_VOID), jUserString, jGroups)) == NULL) {
+        fprintf(stderr,"failed to construct hadoop user unix group info object\n");
+        errno = errnoFromException(jExc, env, HADOOP_UNIX_USER_GROUP_INFO,
+                                   "init");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
+        if (jGroups != NULL) {
+          destroyLocalReference(env, jGroups);
+        }          
+        return NULL;
+      }
+#define USE_UUGI
+#ifdef USE_UUGI
+
+      // UnixUserGroupInformation.UGI_PROPERTY_NAME
+      jstring jAttrString = (*env)->NewStringUTF(env,"hadoop.job.ugi");
+      
+      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_UNIX_USER_GROUP_INFO, "saveToConf",
+                       JMETHOD3(JPARAM(HADOOP_CONF), JPARAM(JAVA_STRING), JPARAM(HADOOP_UNIX_USER_GROUP_INFO), JAVA_VOID),
+                       jConfiguration, jAttrString, jUgi) != 0) {
+        errno = errnoFromException(jExc, env, HADOOP_FSPERM,
+                                   "init");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
+        if (jGroups != NULL) {
+          destroyLocalReference(env, jGroups);
+        }          
+        destroyLocalReference(env, jUgi);
+        return NULL;
+      }
+
+      destroyLocalReference(env, jUserString);
+      destroyLocalReference(env, jGroups);
+      destroyLocalReference(env, jUgi);
+    }
+#else
+    
+    // what does "current" mean in the context of libhdfs ? does it mean for the last hdfs connection we used?
+    // that's why this code cannot be activated. We know the above use of the conf object should work well with 
+    // multiple connections.
+      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_USER_GROUP_INFO, "setCurrentUGI",
+                       JMETHOD1(JPARAM(HADOOP_USER_GROUP_INFO), JAVA_VOID),
+                       jUgi) != 0) {
+        errno = errnoFromException(jExc, env, HADOOP_USER_GROUP_INFO,
+                                   "setCurrentUGI");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
+        if (jGroups != NULL) {
+          destroyLocalReference(env, jGroups);
+        }          
+        destroyLocalReference(env, jUgi);
+        return NULL;
+      }
+
+      destroyLocalReference(env, jUserString);
+      destroyLocalReference(env, jGroups);
+      destroyLocalReference(env, jUgi);
+    }
+#endif      
+    //Check what type of FileSystem the caller wants...
+    if (host == NULL) {
+        // fs = FileSytem::newInstanceLocal(conf);
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "newInstanceLocal",
+                         JMETHOD1(JPARAM(HADOOP_CONF),
+                                  JPARAM(HADOOP_LOCALFS)),
+                         jConfiguration) != 0) {
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "FileSystem::newInstanceLocal");
+            goto done;
+        }
+        jFS = jVal.l;
+    }
+    else if (!strcmp(host, "default") && port == 0) {
+        //fs = FileSystem::get(conf); 
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL,
+                         HADOOP_FS, "newInstance",
+                         JMETHOD1(JPARAM(HADOOP_CONF),
+                                  JPARAM(HADOOP_FS)),
+                         jConfiguration) != 0) {
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "FileSystem::newInstance");
+            goto done;
+        }
+        jFS = jVal.l;
+    }
+    else {
+        // fs = FileSystem::newInstance(URI, conf);
+        cURI = malloc(strlen(host)+16);
+        sprintf(cURI, "hdfs://%s:%d", host, (int)(port));
+
+        jURIString = (*env)->NewStringUTF(env, cURI);
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, JAVA_NET_URI,
+                         "create", "(Ljava/lang/String;)Ljava/net/URI;",
+                         jURIString) != 0) {
+            errno = errnoFromException(jExc, env, "java.net.URI::create");
+            goto done;
+        }
+        jURI = jVal.l;
+
+        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "newInstance",
+                         JMETHOD2(JPARAM(JAVA_NET_URI),
+                                  JPARAM(HADOOP_CONF), JPARAM(HADOOP_FS)),
+                         jURI, jConfiguration) != 0) {
+            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                       "Filesystem::newInstance(URI, Configuration)");
+            goto done;
+        }
+
+        jFS = jVal.l;
+    }
+
+  done:
+    
+    // Release unnecessary local references
+    destroyLocalReference(env, jConfiguration);
+    destroyLocalReference(env, jURIString);
+    destroyLocalReference(env, jURI);
+
+    if (cURI) free(cURI);
+
+    /* Create a global reference for this fs */
+    if (jFS) {
+        gFsRef = (*env)->NewGlobalRef(env, jFS);
+        destroyLocalReference(env, jFS);
+    }
+
+    return gFsRef;
+}
 
 int hdfsDisconnect(hdfsFS fs)
 {

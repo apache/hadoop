@@ -90,7 +90,6 @@ extern  "C" {
     };
     typedef struct hdfsFile_internal* hdfsFile;
       
-
     /** 
      * hdfsConnectAsUser - Connect to a hdfs file system as a specific user
      * Connect to the hdfs.
@@ -120,6 +119,14 @@ extern  "C" {
      */
      hdfsFS hdfsConnect(const char* host, tPort port);
 
+
+    /**
+     * This are the same as hdfsConnectAsUser except that every invocation returns a new FileSystem handle.
+     * Applications should call a hdfsDisconnect for every call to hdfsConnectAsUserNewInstance.
+     */
+     hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port, const char *user , const char *groups[], int groups_size );
+     hdfsFS hdfsConnectNewInstance(const char* host, tPort port);
+     hdfsFS hdfsConnectPath(const char* uri);
 
     /** 
      * hdfsDisconnect - Disconnect from the hdfs file system.

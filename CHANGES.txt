@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     SequenceFile.CompressedBytes and SequenceFile.UncompressedBytes.
     (hong tang via mahadev)
 
+    HADOOP-4655. New method FileSystem.newInstance() that always returns
+    a newly allocated FileSystem object. (dhruba)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -185,6 +185,47 @@ public abstract class FileSystem extends Configured implements Closeable {
     return CACHE.get(uri, conf);
   }
 
+  /** Returns the FileSystem for this URI's scheme and authority.  The scheme
+   * of the URI determines a configuration property name,
+   * <tt>fs.<i>scheme</i>.class</tt> whose value names the FileSystem class.
+   * The entire URI is passed to the FileSystem instance's initialize method.
+   * This always returns a new FileSystem object.
+   */
+  public static FileSystem newInstance(URI uri, Configuration conf) throws IOException {
+    String scheme = uri.getScheme();
+    String authority = uri.getAuthority();
+
+    if (scheme == null) {                       // no scheme: use default FS
+      return newInstance(conf);
+    }
+
+    if (authority == null) {                       // no authority
+      URI defaultUri = getDefaultUri(conf);
+      if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
+          && defaultUri.getAuthority() != null) {  // & default has authority
+        return newInstance(defaultUri, conf);              // return default
+      }
+    }
+    return CACHE.getUnique(uri, conf);
+  }
+
+  /** Returns a unique configured filesystem implementation.
+   * This always returns a new FileSystem object. */
+  public static FileSystem newInstance(Configuration conf) throws IOException {
+    return newInstance(getDefaultUri(conf), conf);
+  }
+
+  /**
+   * Get a unique local file system object
+   * @param conf the configuration to configure the file system with
+   * @return a LocalFileSystem
+   * This always returns a new FileSystem object.
+   */
+  public static LocalFileSystem newInstanceLocal(Configuration conf)
+    throws IOException {
+    return (LocalFileSystem)newInstance(LocalFileSystem.NAME, conf);
+  }
+
   private static class ClientFinalizer extends Thread {
     public synchronized void run() {
       try {
@@ -1360,8 +1401,21 @@ public abstract class FileSystem extends Configured implements Closeable {
   static class Cache {
     private final Map<Key, FileSystem> map = new HashMap<Key, FileSystem>();
 
+    /** A variable that makes all objects in the cache unique */
+    private static AtomicLong unique = new AtomicLong(1);
+
     synchronized FileSystem get(URI uri, Configuration conf) throws IOException{
       Key key = new Key(uri, conf);
+      return getInternal(uri, conf, key);
+    }
+
+    /** The objects inserted into the cache using this method are all unique */
+    synchronized FileSystem getUnique(URI uri, Configuration conf) throws IOException{
+      Key key = new Key(uri, conf, unique.getAndIncrement());
+      return getInternal(uri, conf, key);
+    }
+
+    private FileSystem getInternal(URI uri, Configuration conf, Key key) throws IOException{
       FileSystem fs = map.get(key);
       if (fs == null) {
         fs = createFileSystem(uri, conf);
@@ -1416,10 +1470,16 @@ public abstract class FileSystem extends Configured implements Closeable {
       final String scheme;
       final String authority;
       final String username;
+      final long unique;   // an artificial way to make a key unique
 
       Key(URI uri, Configuration conf) throws IOException {
+        this(uri, conf, 0);
+      }
+
+      Key(URI uri, Configuration conf, long unique) throws IOException {
         scheme = uri.getScheme()==null?"":uri.getScheme().toLowerCase();
         authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
+        this.unique = unique;
         UserGroupInformation ugi = UserGroupInformation.readFrom(conf);
         if (ugi == null) {
           try {
@@ -1433,7 +1493,7 @@ public abstract class FileSystem extends Configured implements Closeable {
 
       /** {@inheritDoc} */
       public int hashCode() {
-        return (scheme + authority + username).hashCode();
+        return (scheme + authority + username).hashCode() + (int)unique;
       }
 
       static boolean isEqual(Object a, Object b) {
@@ -1449,7 +1509,8 @@ public abstract class FileSystem extends Configured implements Closeable {
           Key that = (Key)obj;
           return isEqual(this.scheme, that.scheme)
                  && isEqual(this.authority, that.authority)
-                 && isEqual(this.username, that.username);
+                 && isEqual(this.username, that.username)
+                 && (this.unique == that.unique);
         }
         return false;        
       }
