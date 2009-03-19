@@ -600,11 +600,14 @@ public class SequenceFile {
     }
     
     private void reset(DataInputStream in, int length) throws IOException {
-      data = new byte[length];
+      if (data == null) {
+        data = new byte[length];
+      } else if (length > data.length) {
+        data = new byte[Math.max(length, data.length * 2)];
+      }
       dataSize = -1;
-      
-      in.readFully(data);
-      dataSize = data.length;
+      in.readFully(data, 0, length);
+      dataSize = length;
     }
     
     public int getSize() {
@@ -638,11 +641,14 @@ public class SequenceFile {
     }
 
     private void reset(DataInputStream in, int length) throws IOException {
-      data = new byte[length];
+      if (data == null) {
+        data = new byte[length];
+      } else if (length > data.length) {
+        data = new byte[Math.max(length, data.length * 2)];
+      } 
       dataSize = -1;
-
-      in.readFully(data);
-      dataSize = data.length;
+      in.readFully(data, 0, length);
+      dataSize = length;
     }
     
     public int getSize() {

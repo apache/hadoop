@@ -171,6 +171,10 @@ Trunk (unreleased changes)
     HADOOP-5521. Removes dependency of TestJobInProgress on RESTART_COUNT 
     JobHistory tag. (Ravi Gummadi via ddas)
 
+    HADOOP-5196. avoiding unnecessary byte[] allocation in 
+    SequenceFile.CompressedBytes and SequenceFile.UncompressedBytes.
+    (hong tang via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
