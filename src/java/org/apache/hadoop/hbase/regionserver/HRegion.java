@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -1221,6 +1222,9 @@ public class HRegion implements HConstants {
       // See HRegionServer#RegionListener for how the expire on HRegionServer
       // invokes a HRegion#abort.
       byte [] row = b.getRow();
+      if (this.regionInfo.isMetaRegion()) {
+        LOG.debug("batchUpdate on row for .META.: " + Bytes.toString(row));
+      }
       // If we did not pass an existing row lock, obtain a new one
       Integer lid = getLock(lockid,row);
       long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP) ?
@@ -1942,6 +1946,7 @@ public class HRegion implements HConstants {
     private TreeMap<byte [], Cell>[] resultSets;
     private HStoreKey[] keys;
     private RowFilterInterface filter;
+    private HStoreKey.StoreKeyComparator comparator;
 
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
@@ -1951,6 +1956,11 @@ public class HRegion implements HConstants {
       this.filter = filter;
       this.scanners = new InternalScanner[stores.length];
       try {
+        this.comparator = regionInfo.isRootRegion()?
+            new HStoreKey.RootStoreKeyComparator(): regionInfo.isMetaRegion()?
+              new HStoreKey.MetaStoreKeyComparator():
+                new HStoreKey.StoreKeyComparator();
+        
         for (int i = 0; i < stores.length; i++) {
           // Only pass relevant columns to each store
           List<byte[]> columns = new ArrayList<byte[]>();
@@ -2009,8 +2019,8 @@ public class HRegion implements HConstants {
         for (int i = 0; i < this.keys.length; i++) {
           if (scanners[i] != null &&
              (chosenRow == null ||
-               (Bytes.compareTo(this.keys[i].getRow(), chosenRow) < 0) ||
-               ((Bytes.compareTo(this.keys[i].getRow(), chosenRow) == 0) &&
+               (this.comparator.compareRows(this.keys[i].getRow(), chosenRow) < 0) ||
+               ((this.comparator.compareRows(this.keys[i].getRow(), chosenRow) == 0) &&
                       (keys[i].getTimestamp() > chosenTimestamp)))) {
             chosenRow = keys[i].getRow();
             chosenTimestamp = keys[i].getTimestamp();
@@ -2027,7 +2037,7 @@ public class HRegion implements HConstants {
 
           for (int i = 0; i < scanners.length; i++) {
             if (scanners[i] != null &&
-              Bytes.compareTo(this.keys[i].getRow(), chosenRow) == 0) {
+              this.comparator.compareRows(this.keys[i].getRow(), chosenRow) == 0) {
               // NOTE: We used to do results.putAll(resultSets[i]);
               // but this had the effect of overwriting newer
               // values with older ones. So now we only insert
@@ -2049,7 +2059,7 @@ public class HRegion implements HConstants {
           // If the current scanner is non-null AND has a lower-or-equal
           // row label, then its timestamp is bad. We need to advance it.
           while ((scanners[i] != null) &&
-              (Bytes.compareTo(this.keys[i].getRow(), chosenRow) <= 0)) {
+              (this.comparator.compareRows(this.keys[i].getRow(), chosenRow) <= 0)) {
             resultSets[i].clear();
             if (!scanners[i].next(keys[i], resultSets[i])) {
               closeScanner(i);

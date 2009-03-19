@@ -48,6 +48,7 @@ Release 0.20.0 - Unreleased
                server recovery, we could inadvertantly try to reassign regions
                assigned to a restarted server with a different start code;
                Improve lease handling
+   HBASE-1267  binary keys broken in trunk (again) (Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
