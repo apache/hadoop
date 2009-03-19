@@ -1611,13 +1611,20 @@
             Setup the job during initialization. For example, create
             the temporary output directory for the job during the
             initialization of the job. 
+            Job setup is done by a separate task when the job is
+            in PREP state and after initializing tasks. Once the setup task
+            completes, the job will be moved to RUNNING state.
           </li>
           <li>
             Cleanup the job after the job completion. For example, remove the
             temporary output directory after the job completion.
+            Job cleanup is done by a separate task at the end of the job.
+            Job is declared SUCCEDED/FAILED/KILLED after the cleanup
+            task completes.
           </li>
           <li>
             Setup the task temporary output.
+            Task setup is done as part of the same task, during task initialization.
           </li> 
           <li>
             Check whether a task needs a commit. This is to avoid the commit
@@ -1625,13 +1632,20 @@
           </li>
           <li>
             Commit of the task output. 
+            Once task is done, the task will commit it's output if required.  
           </li> 
           <li>
             Discard the task commit.
+            If the task has been failed/killed, the output will be cleaned-up. 
+            If task could not cleanup (in exception block), a separate task 
+            will be launched with same attempt-id to do the cleanup.
           </li>
         </ol>
         <p><code>FileOutputCommitter</code> is the default 
-        <code>OutputCommitter</code>.</p>
+        <code>OutputCommitter</code>. Job setup/cleanup tasks occupy 
+        map or reduce slots, whichever is free on the TaskTracker. And
+        JobCleanup task, TaskCleanup tasks and JobSetup task have the highest
+        priority, and in that order.</p>
         </section>
  
         <section>
