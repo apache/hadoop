@@ -638,13 +638,12 @@ public class JobHistory {
       if (LOG_DIR == null) {
         return null;
       }
-      
-      jobName = escapeRegexChars( jobName );
 
       // Make the pattern matching the job's history file
       final Pattern historyFilePattern = 
         Pattern.compile(jobtrackerHostname + "_" + DIGITS + "_" 
-                        + id.toString() + "_" + user + "_" + jobName + "+");
+                        + id.toString() + "_" + user + "_" 
+                        + escapeRegexChars(jobName) + "+");
       // a path filter that matches 4 parts of the filenames namely
       //  - jt-hostname
       //  - job-id
@@ -669,6 +668,8 @@ public class JobHistory {
       if (statuses.length == 0) {
         filename = 
           encodeJobHistoryFileName(getNewJobHistoryFileName(jobConf, id));
+        LOG.info("Nothing to recover! Generating a new filename " + filename 
+                 + " for job " + id);
       } else {
         // return filename considering that fact the name can be a 
         // secondary filename like filename.recover
@@ -679,6 +680,8 @@ public class JobHistory {
           filename = filename.substring(0, newLength);
         }
         filename = encodeJobHistoryFileName(filename);
+        LOG.info("Recovered job history filename for job " + id + " is " 
+                 + filename);
       }
       return filename;
     }
@@ -696,6 +699,7 @@ public class JobHistory {
       Path logPath = JobHistory.JobInfo.getJobHistoryLogLocation(fileName);
       if (logPath != null) {
         FileSystem fs = logPath.getFileSystem(conf);
+        LOG.info("Deleting job history file " + logPath.getName());
         fs.delete(logPath, false);
       }
       // do the same for the user file too
@@ -723,23 +727,57 @@ public class JobHistory {
     public synchronized static Path recoverJobHistoryFile(JobConf conf, 
                                                           Path logFilePath) 
     throws IOException {
+      Path ret;
       FileSystem fs = logFilePath.getFileSystem(conf);
-      String tmpFilename = getSecondaryJobHistoryFile(logFilePath.getName());
+      String logFileName = logFilePath.getName();
+      String tmpFilename = getSecondaryJobHistoryFile(logFileName);
       Path logDir = logFilePath.getParent();
       Path tmpFilePath = new Path(logDir, tmpFilename);
       if (fs.exists(logFilePath)) {
+        LOG.info(logFileName + " exists!");
         if (fs.exists(tmpFilePath)) {
+          LOG.info("Deleting " + tmpFilename 
+                   + "  and using " + logFileName + " for recovery.");
           fs.delete(tmpFilePath, false);
         }
-        return tmpFilePath;
+        ret = tmpFilePath;
       } else {
+        LOG.info(logFileName + " doesnt exist! Using " 
+                 + tmpFilename + " for recovery.");
         if (fs.exists(tmpFilePath)) {
+          LOG.info("Renaming " + tmpFilename + " to " + logFileName);
           fs.rename(tmpFilePath, logFilePath);
-          return tmpFilePath;
+          ret = tmpFilePath;
         } else {
-          return logFilePath;
+          ret = logFilePath;
         }
       }
+
+      // do the same for the user files too
+      logFilePath = getJobHistoryLogLocationForUser(logFileName, conf);
+      if (logFilePath != null) {
+        fs = logFilePath.getFileSystem(conf);
+        logDir = logFilePath.getParent();
+        tmpFilePath = new Path(logDir, tmpFilename);
+        if (fs.exists(logFilePath)) {
+          LOG.info(logFileName + " exists!");
+          if (fs.exists(tmpFilePath)) {
+            LOG.info("Deleting " + tmpFilename + "  and making " + logFileName 
+                     + " as the master history file for user.");
+            fs.delete(tmpFilePath, false);
+          }
+        } else {
+          LOG.info(logFileName + " doesnt exist! Using " 
+                   + tmpFilename + " as the master history file for user.");
+          if (fs.exists(tmpFilePath)) {
+            LOG.info("Renaming " + tmpFilename + " to " + logFileName 
+                     + " in user directory");
+            fs.rename(tmpFilePath, logFilePath);
+          }
+        }
+      }
+      
+      return ret;
     }
 
     /** Finalize the recovery and make one file in the end. 
@@ -763,6 +801,7 @@ public class JobHistory {
         // rename the tmp file to the master file. Note that this should be 
         // done only when the file is closed and handles are released.
         if(fs.exists(tmpLogPath)) {
+          LOG.info("Renaming " + tmpLogFileName + " to " + masterLogFileName);
           fs.rename(tmpLogPath, masterLogPath);
         }
       }
@@ -777,6 +816,8 @@ public class JobHistory {
       if (masterLogPath != null) {
         FileSystem fs = masterLogPath.getFileSystem(conf);
         if (fs.exists(tmpLogPath)) {
+          LOG.info("Renaming " + tmpLogFileName + " to " + masterLogFileName
+                   + " in user directory");
           fs.rename(tmpLogPath, masterLogPath);
         }
       }
@@ -827,6 +868,7 @@ public class JobHistory {
             fs = new Path(LOG_DIR).getFileSystem(jobConf);
             
             logFile = recoverJobHistoryFile(jobConf, logFile);
+            logFileName = logFile.getName();
             
             int defaultBufferSize = 
               fs.getConf().getInt("io.file.buffer.size", 4096);
@@ -840,13 +882,15 @@ public class JobHistory {
             writers.add(writer);
           }
           if (userLogFile != null) {
+            // Get the actual filename as recoverJobHistoryFile() might return
+            // a different filename
             userLogDir = userLogFile.getParent().toString();
+            userLogFile = new Path(userLogDir, logFileName);
+            
             // create output stream for logging 
             // in hadoop.job.history.user.location
             fs = userLogFile.getFileSystem(jobConf);
  
-            userLogFile = recoverJobHistoryFile(jobConf, userLogFile);
-            
             out = fs.create(userLogFile, true, 4096);
             writer = new PrintWriter(out);
             writers.add(writer);
