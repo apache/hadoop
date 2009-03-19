@@ -132,14 +132,13 @@ public class TestJobHistory extends TestCase {
                   "at line " + lineNum, id != null);
         String time = values.get(Keys.LAUNCH_TIME);
         if (time != null) {
-          if (values.get(Keys.RESTART_COUNT) == null) {// restart is fine
-            assertFalse ("Duplicate Job LAUNCH_TIME is seen in history " +
-                         "file at line " + lineNum, isJobLaunched);
-          }
-          else {// JT restart
+          if (isJobLaunched) {
+            // We assume that if we see LAUNCH_TIME again, it is because of JT restart
             isJTRestarted = true;
           }
-          isJobLaunched = true;
+          else {// job launched first time
+            isJobLaunched = true;
+          }
         }
         time = values.get(Keys.FINISH_TIME);
         if (time != null) {
