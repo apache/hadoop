@@ -87,35 +87,36 @@ public class FairSchedulerServlet extends HttpServlet {
     }
     if (request.getParameter("setPool") != null) {
       Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
+      PoolManager poolMgr = null;
       synchronized (scheduler) {
-        PoolManager poolMgr = scheduler.getPoolManager();
-        String pool = request.getParameter("setPool");
-        String jobId = request.getParameter("jobid");
-        for (JobInProgress job: runningJobs) {
-          if (job.getProfile().getJobID().toString().equals(jobId)) {
-            poolMgr.setPool(job, pool);
-            scheduler.update();
-            break;
-          }
-        }
+        poolMgr = scheduler.getPoolManager();
       }
+      String pool = request.getParameter("setPool");
+      String jobId = request.getParameter("jobid");
+      for (JobInProgress job: runningJobs) {
+        if (job.getProfile().getJobID().toString().equals(jobId)) {
+          synchronized(scheduler){
+            poolMgr.setPool(job, pool);
+          }
+          scheduler.update();
+          break;
+        }
+      }      
       response.sendRedirect("/scheduler" + (advancedView ? "?advanced" : ""));
       return;
     }
     if (request.getParameter("setPriority") != null) {
-      Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
-      synchronized (scheduler) {
-        JobPriority priority = JobPriority.valueOf(request.getParameter(
-            "setPriority"));
-        String jobId = request.getParameter("jobid");
-        for (JobInProgress job: runningJobs) {
-          if (job.getProfile().getJobID().toString().equals(jobId)) {
-            job.setPriority(priority);
-            scheduler.update();
-            break;
-          }
+      Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();      
+      JobPriority priority = JobPriority.valueOf(request.getParameter(
+          "setPriority"));
+      String jobId = request.getParameter("jobid");
+      for (JobInProgress job: runningJobs) {
+        if (job.getProfile().getJobID().toString().equals(jobId)) {
+          job.setPriority(priority);
+          scheduler.update();
+          break;
         }
-      }
+      }      
       response.sendRedirect("/scheduler" + (advancedView ? "?advanced" : ""));
       return;
     }
