@@ -30,8 +30,6 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
-
 
 /** 
  * This class is for maintaining the various regionserver statistics
@@ -96,6 +94,7 @@ public class RegionServerMetrics implements Updater {
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
+   * @param unused 
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {

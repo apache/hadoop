@@ -40,7 +40,7 @@ import org.apache.hadoop.util.ToolRunner;
 /** Test stand alone merge tool that can merge arbitrary regions */
 public class TestMergeTool extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestMergeTool.class);
-  protected static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
+  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   private final HRegionInfo[] sourceRegions = new HRegionInfo[5];
   private final HRegion[] regions = new HRegion[5];
   private HTableDescriptor desc;
@@ -175,7 +175,7 @@ public class TestMergeTool extends HBaseTestCase {
     for (int i = 0; i < upperbound; i++) {
       for (int j = 0; j < rows[i].length; j++) {
         byte[] bytes = merged.get(rows[i][j], COLUMN_NAME, -1, -1)[0].getValue();
-        assertNotNull(rows[i][j].toString(), bytes);
+        assertNotNull(Bytes.toString(rows[i][j]), bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }
     }

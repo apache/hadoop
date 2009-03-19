@@ -46,7 +46,10 @@ public class IndexSpecification implements Writable {
   // Id of this index, unique within a table.
   private String indexId;
 
-  /** Construct an "simple" index spec for a single column. */
+  /** Construct an "simple" index spec for a single column. 
+   * @param indexId 
+   * @param indexedColumn
+   */
   public IndexSpecification(String indexId, byte[] indexedColumn) {
     this(indexId, new byte[][] { indexedColumn }, null,
         new SimpleIndexKeyGenerator(indexedColumn));

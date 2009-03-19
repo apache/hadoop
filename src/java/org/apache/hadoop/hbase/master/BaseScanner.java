@@ -110,7 +110,7 @@ abstract class BaseScanner extends Chore implements HConstants {
   
   // will use this variable to synchronize and make sure we aren't interrupted 
   // mid-scan
-  final Integer scannerLock = new Integer(0);
+  final Object scannerLock = new Object();
   
   BaseScanner(final HMaster master, final boolean rootRegion, final int period,
       final AtomicBoolean stop) {

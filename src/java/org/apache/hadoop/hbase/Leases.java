@@ -69,7 +69,10 @@ public class Leases extends Thread {
     this.leasePeriod = leasePeriod;
     this.leaseCheckFrequency = leaseCheckFrequency;
   }
-  
+
+  /**
+   * @see java.lang.Thread#run()
+   */
   @Override
   public void run() {
     while (!stopRequested || (stopRequested && leaseQueue.size() > 0) ) {
@@ -230,6 +233,15 @@ public class Leases extends Thread {
 
     @Override
     public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
       return this.hashCode() == ((Lease) obj).hashCode();
     }
     

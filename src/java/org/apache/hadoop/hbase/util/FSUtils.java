@@ -63,8 +63,9 @@ public class FSUtils {
 
   /**
    * Check if directory exists.  If it does not, create it.
+   * @param fs 
    * @param dir
-   * @return
+   * @return Path
    * @throws IOException
    */
   public Path checkdir(final FileSystem fs, final Path dir) throws IOException {
@@ -78,7 +79,7 @@ public class FSUtils {
    * Create file.
    * @param fs
    * @param p
-   * @return
+   * @return Path
    * @throws IOException
    */
   public static Path create(final FileSystem fs, final Path p)

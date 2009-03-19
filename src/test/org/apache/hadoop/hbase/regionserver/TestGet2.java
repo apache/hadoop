@@ -165,8 +165,10 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
     }  
   }
 
-  /** For HBASE-694 */
-  public void testGetClosestRowBefore2() throws IOException{
+  /** For HBASE-694 
+   * @throws IOException
+   */
+  public void testGetClosestRowBefore2() throws IOException {
 
     HRegion region = null;
     BatchUpdate batchUpdate = null;
@@ -302,9 +304,10 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
   
   /**
    * Test file of multiple deletes and with deletes as final key.
+   * @throws IOException 
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-751">HBASE-751</a>
    */
-  public void testGetClosestRowBefore3() throws IOException{
+  public void testGetClosestRowBefore3() throws IOException {
     HRegion region = null;
     BatchUpdate batchUpdate = null;
     try {
@@ -607,6 +610,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
 
   /**
    * For HBASE-40
+   * @throws IOException 
    */
   public void testGetFullWithSpecifiedColumns() throws IOException {
     HRegion region = null;

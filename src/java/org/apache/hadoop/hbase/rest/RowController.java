@@ -42,8 +42,8 @@ public class RowController extends AbstractController {
   }
 
   @Override
-  protected AbstractModel generateModel(
-      @SuppressWarnings("hiding") HBaseConfiguration conf, HBaseAdmin admin) {
+  protected AbstractModel generateModel(HBaseConfiguration conf,
+      HBaseAdmin admin) {
     return new RowModel(conf, admin);
   }
 

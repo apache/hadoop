@@ -34,7 +34,7 @@ import org.apache.commons.logging.LogFactory;
 public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
   static final Log LOG =
     LogFactory.getLog(AbstractMergeTestBase.class.getName());
-  protected static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
+  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   protected final Random rand = new Random();
   protected HTableDescriptor desc;
   protected ImmutableBytesWritable value;
@@ -44,7 +44,9 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
     this(true);
   }
   
-  /** constructor */
+  /** constructor 
+   * @param startMiniHBase
+   */
   public AbstractMergeTestBase(boolean startMiniHBase) {
     super();
     

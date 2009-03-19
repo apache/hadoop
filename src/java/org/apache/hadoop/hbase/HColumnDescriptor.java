@@ -61,6 +61,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @see org.apache.hadoop.io.SequenceFile.Writer
    * @deprecated Replaced by {@link Compression.Algorithm}.
    */
+  @Deprecated
   public static enum CompressionType {
     /** Do not compress records. */
     NONE, 
@@ -95,6 +96,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * Default maximum cell length.
    */
   public static final int DEFAULT_LENGTH = Integer.MAX_VALUE;
+  /** Default maximum cell length as an Integer. */
   public static final Integer DEFAULT_LENGTH_INTEGER =
     Integer.valueOf(DEFAULT_LENGTH);
   
@@ -226,6 +228,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @param inMemory If true, column data should be kept in an HRegionServer's
    * cache
    * @param blockCacheEnabled If true, MapFile blocks should be cached
+   * @param blocksize
    * @param maxValueLength Restrict values to &lt;= this value
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
@@ -522,6 +525,9 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     setValue(MAPFILE_INDEX_INTERVAL, Integer.toString(interval));
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     StringBuffer s = new StringBuffer();
@@ -541,12 +547,27 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     s.append('}');
     return s.toString();
   }
-  
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof HColumnDescriptor)) {
+      return false;
+    }
     return compareTo((HColumnDescriptor)obj) == 0;
   }
-  
+
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.name);

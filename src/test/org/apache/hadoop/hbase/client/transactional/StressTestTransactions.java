@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * the sum is as expected.
  */
 public class StressTestTransactions extends HBaseClusterTestCase {
-  private static final Log LOG = LogFactory
+  protected static final Log LOG = LogFactory
       .getLog(StressTestTransactions.class);
 
   private static final int NUM_TABLES = 3;
@@ -60,14 +60,14 @@ public class StressTestTransactions extends HBaseClusterTestCase {
   private static final int NUM_SINGLE_TABLE_THREADS = 6;
   private static final int NUM_MULTI_TABLE_THREADS = 6;
   private static final int PRE_COMMIT_SLEEP = 10;
-  private static final Random RAND = new Random();
+  protected static final Random RAND = new Random();
 
   private static final byte[] FAMILY = Bytes.toBytes("family:");
-  private static final byte[] COL = Bytes.toBytes("family:a");
+  static final byte[] COL = Bytes.toBytes("family:a");
 
   private HBaseAdmin admin;
-  private TransactionalTable[] tables;
-  private TransactionManager transactionManager;
+  protected TransactionalTable[] tables;
+  protected TransactionManager transactionManager;
 
   /** constructor */
   public StressTestTransactions() {
@@ -115,18 +115,17 @@ public class StressTestTransactions extends HBaseClusterTestCase {
     }
   }
 
-  private byte[] makeSTRow(final int i) {
+  protected byte[] makeSTRow(final int i) {
     return Bytes.toBytes("st" + i);
   }
 
-  private byte[] makeMTRow(final int i) {
+  protected byte[] makeMTRow(final int i) {
     return Bytes.toBytes("mt" + i);
   }
 
-  private static int nextThreadNum = 1;
-  private static final AtomicBoolean stopRequest = new AtomicBoolean(false);
-  private static final AtomicBoolean consistencyFailure = new AtomicBoolean(
-      false);
+  static int nextThreadNum = 1;
+  protected static final AtomicBoolean stopRequest = new AtomicBoolean(false);
+  static final AtomicBoolean consistencyFailure = new AtomicBoolean(false);
 
   // Thread which runs transactions
   abstract class TransactionThread extends Thread {

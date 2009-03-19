@@ -117,7 +117,7 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
   }
   
   // Below methods copied from BytesWritable
-  
+
   @Override
   public int hashCode() {
     return WritableComparator.hashBytes(bytes, this.bytes.length);
@@ -146,7 +146,10 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
       WritableComparator.compareBytes(this.bytes, 0, this.bytes.length, that,
         0, that.length);
   }
-  
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object right_obj) {
     if (right_obj instanceof byte []) {
@@ -157,7 +160,10 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
     }
     return false;
   }
-  
+
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() { 
     StringBuffer sb = new StringBuffer(3*this.bytes.length);
@@ -186,7 +192,10 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
     public Comparator() {
       super(ImmutableBytesWritable.class);
     }
-    
+
+    /**
+     * @see org.apache.hadoop.io.WritableComparator#compare(byte[], int, int, byte[], int, int)
+     */
     @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       return comparator.compare(b1, s1, l1, b2, s2, l2);

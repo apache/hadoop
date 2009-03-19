@@ -50,7 +50,6 @@ import org.apache.hadoop.mapred.Reporter;
  * a particular cell, and write it back to the table.
  */
 public class TestTableMapReduce extends MultiRegionTable {
-  @SuppressWarnings("hiding")
   private static final Log LOG =
     LogFactory.getLog(TestTableMapReduce.class.getName());
 
@@ -79,11 +78,15 @@ public class TestTableMapReduce extends MultiRegionTable {
   implements TableMap<ImmutableBytesWritable, BatchUpdate> {
     /**
      * Pass the key, and reversed value to reduce
+     * @param key 
+     * @param value 
+     * @param output 
+     * @param reporter 
+     * @throws IOException 
      */
-    @SuppressWarnings("unchecked")
     public void map(ImmutableBytesWritable key, RowResult value,
       OutputCollector<ImmutableBytesWritable, BatchUpdate> output,
-      @SuppressWarnings("unused") Reporter reporter) 
+      Reporter reporter) 
     throws IOException {
       if (value.size() != 1) {
         throw new IOException("There should only be one input column");
@@ -120,7 +123,6 @@ public class TestTableMapReduce extends MultiRegionTable {
   }
 
   private void runTestOnTable(HTable table) throws IOException {
-    @SuppressWarnings("deprecation")
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
     JobConf jobConf = null;
@@ -149,7 +151,6 @@ public class TestTableMapReduce extends MultiRegionTable {
     }
   }
 
-  @SuppressWarnings("null")
   private void verify(String tableName) throws IOException {
     HTable table = new HTable(conf, tableName);
     boolean verified = false;

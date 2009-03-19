@@ -77,7 +77,7 @@ public interface RESTConstants {
 
   static class FactoryMap {
 
-    protected static boolean created = false;
+    static boolean created = false;
     protected HashMap<String, FilterFactory> map = new HashMap<String, FilterFactory>();
 
     protected FactoryMap() {
@@ -89,9 +89,8 @@ public interface RESTConstants {
         FactoryMap f = new FactoryMap();
         f.initialize();
         return f;
-      } else {
-        return null;
       }
+      return null;
     }
 
     public FilterFactory get(String c) {

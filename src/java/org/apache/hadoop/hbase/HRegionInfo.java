@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
@@ -34,7 +35,7 @@ import org.apache.hadoop.io.WritableComparable;
  * HRegions' table descriptor, etc.
  */
 public class HRegionInfo extends VersionedWritable implements WritableComparable<HRegionInfo>{
-  private final byte VERSION = 0;
+  private static final byte VERSION = 0;
 
   /**
    * @param regionName
@@ -70,10 +71,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   private boolean splitRequest = false;
 
   private void setHashCode() {
-    int result = this.regionName.hashCode();
+    int result = Arrays.hashCode(this.regionName);
     result ^= this.regionId;
-    result ^= this.startKey.hashCode();
-    result ^= this.endKey.hashCode();
+    result ^= Arrays.hashCode(this.startKey);
+    result ^= Arrays.hashCode(this.endKey);
     result ^= Boolean.valueOf(this.offLine).hashCode();
     result ^= this.tableDesc.hashCode();
     this.hashCode = result;
@@ -351,6 +352,9 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.offLine = offLine;
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return "REGION => {" + HConstants.NAME + " => '" +
@@ -363,12 +367,27 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       (isSplit()? " SPLIT => true,": "") +
       " TABLE => {" + this.tableDesc.toString() + "}";
   }
-    
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null) {
+      return false;
+    }
+    if (!(o instanceof HRegionInfo)) {
+      return false;
+    }
     return this.compareTo((HRegionInfo)o) == 0;
   }
-  
+
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     return this.hashCode;

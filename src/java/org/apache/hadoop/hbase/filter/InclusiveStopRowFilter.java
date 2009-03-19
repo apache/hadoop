@@ -40,7 +40,10 @@ public class InclusiveStopRowFilter extends StopRowFilter{
   public InclusiveStopRowFilter(final byte [] stopRowKey) {
     super(stopRowKey);
   }
-  
+
+  /**
+   * @see org.apache.hadoop.hbase.filter.StopRowFilter#filterRowKey(byte[])
+   */
   @Override
   public boolean filterRowKey(final byte [] rowKey) {
     if (rowKey == null) {

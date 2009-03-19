@@ -43,7 +43,7 @@ public class TableController extends AbstractController {
 
   @Override
   protected AbstractModel generateModel(
-      @SuppressWarnings("hiding") HBaseConfiguration conf, HBaseAdmin admin) {
+      HBaseConfiguration conf, HBaseAdmin admin) {
     return new TableModel(conf, admin);
   }
 

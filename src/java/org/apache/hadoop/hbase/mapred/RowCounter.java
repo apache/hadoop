@@ -82,7 +82,6 @@ implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
    * @return the JobConf
    * @throws IOException
    */
-  @SuppressWarnings("unused")
   public JobConf createSubmittableJob(String[] args) throws IOException {
     JobConf c = new JobConf(getConf(), RowCounter.class);
     c.setJobName(NAME);

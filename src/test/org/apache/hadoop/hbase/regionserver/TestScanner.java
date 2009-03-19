@@ -283,6 +283,7 @@ public class TestScanner extends HBaseTestCase {
 
   /**
    * Test basic stop row filter works.
+   * @throws Exception 
    */
   public void testStopRow() throws Exception {
     byte [] startrow = Bytes.toBytes("bbb");

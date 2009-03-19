@@ -190,7 +190,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
 
     for(int i = 0; i < 100; i++) {
       byte [] row = rows[i];
-      String value = row.toString();
+      String value = Bytes.toString(row);
       BatchUpdate b = new BatchUpdate(row);
       b.put(CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
       table.commit(b);
@@ -222,8 +222,8 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     for(int i = 0; i < testKeys.length; i++) {
       Cell value = table.get(testKeys[i], CONTENTS);
       if(value != null && value.getValue().length != 0) {
-        LOG.error("non existant key: " + testKeys[i] + " returned value: " +
-            new String(value.getValue(), HConstants.UTF8_ENCODING));
+        LOG.error("non existant key: " + Bytes.toString(testKeys[i]) + " returned value: " +
+            Bytes.toString(value.getValue()));
         fail();
       }
     }

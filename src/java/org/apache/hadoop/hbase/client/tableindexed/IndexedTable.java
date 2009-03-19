@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class IndexedTable extends TransactionalTable {
 
   // FIXME, these belong elsewhere
-  public static final byte[] INDEX_COL_FAMILY_NAME = Bytes.toBytes("__INDEX__");
-  public static final byte[] INDEX_COL_FAMILY = Bytes.add(
+  static final byte[] INDEX_COL_FAMILY_NAME = Bytes.toBytes("__INDEX__");
+  static final byte[] INDEX_COL_FAMILY = Bytes.add(
       INDEX_COL_FAMILY_NAME, new byte[] { HStoreKey.COLUMN_FAMILY_DELIMITER });
   public static final byte[] INDEX_BASE_ROW_COLUMN = Bytes.add(
       INDEX_COL_FAMILY, Bytes.toBytes("ROW"));

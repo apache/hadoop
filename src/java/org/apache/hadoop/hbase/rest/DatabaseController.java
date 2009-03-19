@@ -38,8 +38,7 @@ public class DatabaseController extends AbstractController {
   }
 
   @Override
-  protected AbstractModel generateModel(
-      @SuppressWarnings("hiding") HBaseConfiguration conf,
+  protected AbstractModel generateModel(HBaseConfiguration conf,
       HBaseAdmin admin) {
     return new DatabaseModel(conf, admin);
   }

@@ -28,14 +28,14 @@ import java.nio.ByteBuffer;
 public interface BlockCache {
   /**
    * Add block to cache.
-   * @param blockNumber Zero-based file block number.
+   * @param blockName Zero-based file block number.
    * @param buf The block contents wrapped in a ByteBuffer.
    */
   public void cacheBlock(String blockName, ByteBuffer buf);
   
   /**
    * Fetch block from cache.
-   * @param blockNumber Block number to fetch.
+   * @param blockName Block number to fetch.
    * @return Block or null if block is not in the cache.
    */
   public ByteBuffer getBlock(String blockName);  

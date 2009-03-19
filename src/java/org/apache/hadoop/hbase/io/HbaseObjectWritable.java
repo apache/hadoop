@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -173,7 +174,10 @@ public class HbaseObjectWritable implements Writable, Configurable {
     this.declaredClass = instance.getClass();
     this.instance = instance;
   }
-  
+
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return "OW[class=" + declaredClass + ",value=" + instance + "]";

@@ -67,9 +67,9 @@ class TransactionState {
    * Simple container of the range of the scanners we've opened. Used to check
    * for conflicting writes.
    */
-  private class ScanRange {
-    private byte[] startRow;
-    private byte[] endRow;
+  private static class ScanRange {
+    protected byte[] startRow;
+    protected byte[] endRow;
 
     public ScanRange(byte[] startRow, byte[] endRow) {
       this.startRow = startRow;
@@ -80,7 +80,7 @@ class TransactionState {
      * Check if this scan range contains the given key.
      * 
      * @param rowKey
-     * @return
+     * @return boolean
      */
     public boolean contains(byte[] rowKey) {
       if (startRow != null && Bytes.compareTo(rowKey, startRow) < 0) {
@@ -260,7 +260,7 @@ class TransactionState {
   /**
    * Set the startSequenceNumber.
    * 
-   * @param startSequenceNumber.
+   * @param startSequenceNumber
    */
   void setStartSequenceNumber(final int startSequenceNumber) {
     this.startSequenceNumber = startSequenceNumber;

@@ -66,20 +66,20 @@ public class HBaseClient {
   
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseClass");
-  private Hashtable<ConnectionId, Connection> connections =
+  protected Hashtable<ConnectionId, Connection> connections =
     new Hashtable<ConnectionId, Connection>();
 
-  private Class<? extends Writable> valueClass;   // class of call values
-  private int counter;                            // counter for call ids
-  private AtomicBoolean running = new AtomicBoolean(true); // if client runs
-  final private Configuration conf;
-  final private int maxIdleTime; //connections will be culled if it was idle for 
+  protected Class<? extends Writable> valueClass;   // class of call values
+  protected int counter;                            // counter for call ids
+  protected AtomicBoolean running = new AtomicBoolean(true); // if client runs
+  final protected Configuration conf;
+  final protected int maxIdleTime; //connections will be culled if it was idle for 
                            //maxIdleTime msecs
-  final private int maxRetries; //the max. no. of retries for socket connections
-  private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
-  private int pingInterval; // how often sends ping to the server in msecs
+  final protected int maxRetries; //the max. no. of retries for socket connections
+  protected boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  protected int pingInterval; // how often sends ping to the server in msecs
 
-  private SocketFactory socketFactory;           // how to create sockets
+  protected SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
   
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
@@ -187,7 +187,7 @@ public class HBaseClient {
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
-    private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
+    protected AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
 
     public Connection(InetSocketAddress address) throws IOException {
@@ -219,7 +219,7 @@ public class HBaseClient {
      * @param call to add
      * @return true if the call was added.
      */
-    private synchronized boolean addCall(Call call) {
+    protected synchronized boolean addCall(Call call) {
       if (shouldCloseConnection.get())
         return false;
       calls.put(call.id, call);
@@ -244,9 +244,8 @@ public class HBaseClient {
       private void handleTimeout(SocketTimeoutException e) throws IOException {
         if (shouldCloseConnection.get() || !running.get()) {
           throw e;
-        } else {
-          sendPing();
         }
+        sendPing();
       }
       
       /** Read a byte from the stream.
@@ -254,6 +253,7 @@ public class HBaseClient {
        * until a byte is read.
        * @throws IOException for any IO problem other than socket timeout
        */
+      @Override
       public int read() throws IOException {
         do {
           try {
@@ -270,6 +270,7 @@ public class HBaseClient {
        * 
        * @return the total number of bytes read; -1 if the connection is closed.
        */
+      @Override
       public int read(byte[] buf, int off, int len) throws IOException {
         do {
           try {
@@ -285,7 +286,7 @@ public class HBaseClient {
      * a header to the server and starts
      * the connection thread that waits for responses.
      */
-    private synchronized void setupIOstreams() {
+    protected synchronized void setupIOstreams() {
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
@@ -423,7 +424,7 @@ public class HBaseClient {
     /* Send a ping to the server if the time elapsed 
      * since last I/O activity is equal to or greater than the ping interval
      */
-    private synchronized void sendPing() throws IOException {
+    protected synchronized void sendPing() throws IOException {
       long curTime = System.currentTimeMillis();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
@@ -434,6 +435,7 @@ public class HBaseClient {
       }
     }
 
+    @Override
     public void run() {
       if (LOG.isDebugEnabled())
         LOG.debug(getName() + ": starting, having connections " 
@@ -453,6 +455,7 @@ public class HBaseClient {
     /** Initiates a call by sending the parameter to the remote server.
      * Note: this is not called from the Connection thread, but by other
      * threads.
+     * @param call
      */
     public void sendParam(Call call) {
       if (shouldCloseConnection.get()) {
@@ -580,7 +583,7 @@ public class HBaseClient {
   /** Call implementation used for parallel calls. */
   private class ParallelCall extends Call {
     private ParallelResults results;
-    private int index;
+    protected int index;
     
     public ParallelCall(Writable param, ParallelResults results, int index) {
       super(param);
@@ -589,6 +592,7 @@ public class HBaseClient {
     }
 
     /** Deliver result to result collector. */
+    @Override
     protected void callComplete() {
       results.callComplete(this);
     }
@@ -596,16 +600,19 @@ public class HBaseClient {
 
   /** Result collector for parallel calls. */
   private static class ParallelResults {
-    private Writable[] values;
-    private int size;
-    private int count;
+    protected Writable[] values;
+    protected int size;
+    protected int count;
 
     public ParallelResults(int size) {
       this.values = new Writable[size];
       this.size = size;
     }
 
-    /** Collect a result. */
+    /**
+     * Collect a result.
+     * @param call
+     */
     public synchronized void callComplete(ParallelCall call) {
       values[call.index] = call.value;            // store the value
       count++;                                    // count it
@@ -614,8 +621,13 @@ public class HBaseClient {
     }
   }
 
-  /** Construct an IPC client whose values are of the given {@link Writable}
-   * class. */
+  /**
+   * Construct an IPC client whose values are of the given {@link Writable}
+   * class.
+   * @param valueClass
+   * @param conf
+   * @param factory
+   */
   public HBaseClient(Class<? extends Writable> valueClass, Configuration conf, 
       SocketFactory factory) {
     this.valueClass = valueClass;
@@ -677,15 +689,20 @@ public class HBaseClient {
 
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
-   * network problems or if the remote code threw an exception. */
+   * network problems or if the remote code threw an exception. 
+   * @param param 
+   * @param address 
+   * @return Writable 
+   * @throws IOException
+   */
   public Writable call(Writable param, InetSocketAddress address)
-  throws InterruptedException, IOException {
+  throws IOException {
       return call(param, address, null);
   }
   
   public Writable call(Writable param, InetSocketAddress addr, 
                        UserGroupInformation ticket)  
-                       throws InterruptedException, IOException {
+                       throws IOException {
     Call call = new Call(param);
     Connection connection = getConnection(addr, ticket, call);
     connection.sendParam(call);                 // send the parameter
@@ -700,12 +717,11 @@ public class HBaseClient {
         if (call.error instanceof RemoteException) {
           call.error.fillInStackTrace();
           throw call.error;
-        } else { // local exception
-          throw wrapException(addr, call.error);
         }
-      } else {
-        return call.value;
+        // local exception
+        throw wrapException(addr, call.error);
       }
+      return call.value;
     }
   }
 
@@ -743,7 +759,12 @@ public class HBaseClient {
   /** Makes a set of calls in parallel.  Each parameter is sent to the
    * corresponding address.  When all values are available, or have timed out
    * or errored, the collected results are returned in an array.  The array
-   * contains nulls for calls that timed out or errored.  */
+   * contains nulls for calls that timed out or errored.  
+   * @param params 
+   * @param addresses 
+   * @return  Writable[]
+   * @throws IOException
+   */
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
     throws IOException {
     if (addresses.length == 0) return new Writable[0];

@@ -24,14 +24,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.Map;
-import java.util.TreeMap;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.regionserver.HLogEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -39,9 +35,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestPrefixRowFilter extends TestCase {
   RowFilterInterface mainFilter;
-  final char FIRST_CHAR = 'a';
-  final char LAST_CHAR = 'e';
-  final String HOST_PREFIX = "org.apache.site-";
+  static final char FIRST_CHAR = 'a';
+  static final char LAST_CHAR = 'e';
+  static final String HOST_PREFIX = "org.apache.site-";
   static byte [] GOOD_BYTES = null;
 
   static {

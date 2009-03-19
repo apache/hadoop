@@ -24,7 +24,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,8 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestForceSplit extends HBaseClusterTestCase {
   private static final byte[] tableName = Bytes.toBytes("test");
   private static final byte[] columnName = Bytes.toBytes("a:");
-  private static final byte[] key_mmi = Bytes.toBytes("mmi");
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     this.conf.setInt("hbase.io.index.interval", 32);
@@ -46,6 +45,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
 
   /**
    * the test
+   * @throws Exception 
    * @throws IOException
    */
   public void testHTable() throws Exception {

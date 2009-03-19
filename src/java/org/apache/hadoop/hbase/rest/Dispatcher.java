@@ -21,9 +21,7 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -42,7 +40,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.mortbay.http.NCSARequestLog;
 import org.mortbay.http.SocketListener;
-import org.mortbay.jetty.servlet.WebApplicationContext;
 
 /**
  * Servlet implementation class for hbase REST interface. Presumes container
@@ -389,8 +386,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
     }
   }
 
-  protected IHBaseRestParser getParser(HttpServletRequest request)
-      throws HBaseRestException {
+  protected IHBaseRestParser getParser(HttpServletRequest request) {
     return HBaseRestParserFactory.getParser(ContentType.getContentType(request
         .getHeader("content-type")));
   }
@@ -478,8 +474,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
     NCSARequestLog ncsa = new NCSARequestLog();
     ncsa.setLogLatency(true);
     webServer.setRequestLog(ncsa);
-    WebApplicationContext context = webServer.addWebApplication("/", InfoServer
-        .getWebAppDir("rest"));
+    webServer.addWebApplication("/", InfoServer.getWebAppDir("rest"));
     webServer.start();
   }
 

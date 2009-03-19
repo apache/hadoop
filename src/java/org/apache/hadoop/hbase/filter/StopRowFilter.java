@@ -94,6 +94,10 @@ public class StopRowFilter implements RowFilterInterface {
   /**
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling the rowKey-only version of filter.
+   * @param rowKey 
+   * @param colKey 
+   * @param data 
+   * @return boolean
    */
   public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
       final byte[] data) {
@@ -103,6 +107,8 @@ public class StopRowFilter implements RowFilterInterface {
   /**
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling filterAllRemaining().
+   * @param columns 
+   * @return boolean
    */
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     return filterAllRemaining();

@@ -42,6 +42,11 @@ implements TableReduce<ImmutableBytesWritable, BatchUpdate> {
   
   /**
    * No aggregation, output pairs of (key, record)
+   * @param key 
+   * @param values 
+   * @param output 
+   * @param reporter 
+   * @throws IOException 
    */
   public void reduce(ImmutableBytesWritable key, Iterator<BatchUpdate> values,
       OutputCollector<ImmutableBytesWritable, BatchUpdate> output,

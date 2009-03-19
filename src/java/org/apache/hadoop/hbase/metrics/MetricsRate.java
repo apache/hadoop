@@ -53,7 +53,7 @@ public class MetricsRate {
     long now = System.currentTimeMillis();
     long diff = (now-ts)/1000;
     if (diff == 0) diff = 1; // sigh this is crap.
-    this.prevRate = value / diff;
+    this.prevRate = (float)value / diff;
     this.value = 0;
     this.ts = now;
   }

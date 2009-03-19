@@ -52,6 +52,9 @@ public abstract class Chore extends Thread {
     this.stop = s;
   }
 
+  /**
+   * @see java.lang.Thread#run()
+   */
   @Override
   public void run() {
     try {

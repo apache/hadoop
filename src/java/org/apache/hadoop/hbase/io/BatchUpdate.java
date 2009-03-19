@@ -299,7 +299,10 @@ implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {
   public Iterator<BatchOperation> iterator() {
     return operations.iterator();
   }
-  
+
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

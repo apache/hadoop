@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
- * Abstract class that implemetns Callable, used by retryable actions.
+ * Abstract class that implements Callable, used by retryable actions.
  * @param <T> the class that the ServerCallable handles
  */
 public abstract class ServerCallable<T> implements Callable<T> {

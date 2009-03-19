@@ -48,7 +48,6 @@ public class Reference implements Writable {
 
   /**
    * Constructor
-   * @param r
    * @param s This is a serialized storekey with the row we are to split on,
    * an empty column and a timestamp of the LATEST_TIMESTAMP.  This is the first
    * possible entry in a row.  This is what we are splitting around.
@@ -74,6 +73,10 @@ public class Reference implements Writable {
     return splitkey;
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
+  @Override
   public String toString() {
     return "" + this.region;
   }

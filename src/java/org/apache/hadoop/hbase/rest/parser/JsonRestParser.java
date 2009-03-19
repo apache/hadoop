@@ -23,7 +23,6 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.rest.RESTConstants;
 import org.apache.hadoop.hbase.rest.descriptors.RowUpdateDescriptor;
 import org.apache.hadoop.hbase.rest.descriptors.ScannerDescriptor;

@@ -275,11 +275,10 @@ public class ThriftServer {
         if (columns == null) {
           return ThriftUtilities.rowResultFromHBase(table.getRow(row,
                                                         timestamp));
-        } else {
-          byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
-          return ThriftUtilities.rowResultFromHBase(table.getRow(row,
-                                                        columnArr, timestamp));
         }
+        byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
+        return ThriftUtilities.rowResultFromHBase(table.getRow(row,
+                                                      columnArr, timestamp));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

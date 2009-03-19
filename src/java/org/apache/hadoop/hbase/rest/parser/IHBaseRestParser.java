@@ -35,7 +35,7 @@ public interface IHBaseRestParser {
    * Parses a HTableDescriptor given the input array.
    * 
    * @param input
-   * @return
+   * @return HTableDescriptor
    * @throws HBaseRestException
    */
   public HTableDescriptor getTableDescriptor(byte[] input)

@@ -234,9 +234,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
 
   private synchronized Boolean calculateIsMetaRegion() {
     byte [] value = getValue(IS_META_KEY);
-    return (value != null)? new Boolean(Bytes.toString(value)): Boolean.FALSE;
+    return (value != null)? Boolean.valueOf(Bytes.toString(value)): Boolean.FALSE;
   }
-  
+
   private boolean isSomething(final ImmutableBytesWritable key,
       final boolean valueIfNull) {
     byte [] value = getValue(key);
@@ -513,11 +513,26 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     return s.toString();
   }
 
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof HTableDescriptor)) {
+      return false;
+    }
     return compareTo((HTableDescriptor)obj) == 0;
   }
-  
+
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.name);

@@ -201,8 +201,9 @@ public class MetaUtils {
         HRegionInfo info = Writables.getHRegionInfoOrNull(
             results.get(HConstants.COL_REGIONINFO).getValue());
         if (info == null) {
-          LOG.warn("region info is null for row " + key.getRow() +
-              " in table " + HConstants.ROOT_TABLE_NAME);
+          LOG.warn("region info is null for row " +
+              Bytes.toString(key.getRow()) + " in table " +
+              Bytes.toString(HConstants.ROOT_TABLE_NAME));
           continue;
         }
         if (!listener.processRow(info)) {
@@ -253,8 +254,8 @@ public class MetaUtils {
         HRegionInfo info = Writables.getHRegionInfoOrNull(
             results.get(HConstants.COL_REGIONINFO).getValue());
         if (info == null) {
-          LOG.warn("regioninfo null for row " + key.getRow() + " in table " +
-            Bytes.toString(m.getTableDesc().getName()));
+          LOG.warn("regioninfo null for row " + Bytes.toString(key.getRow()) +
+            " in table " + Bytes.toString(m.getTableDesc().getName()));
           continue;
         }
         if (!listener.processRow(info)) {
@@ -303,7 +304,7 @@ public class MetaUtils {
     HTable t = new HTable(c, HConstants.META_TABLE_NAME);
     Cell cell = t.get(row, HConstants.COL_REGIONINFO);
     if (cell == null) {
-      throw new IOException("no information for row " + row);
+      throw new IOException("no information for row " + Bytes.toString(row));
     }
     // Throws exception if null.
     HRegionInfo info = Writables.getHRegionInfo(cell);

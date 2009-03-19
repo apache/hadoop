@@ -153,6 +153,9 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
     valueMap.put(ts, val);
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     if (valueMap.size() == 1) {
@@ -225,9 +228,7 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
     }
   }
 
-  /*
-   * (non-Javadoc)
-   * 
+  /**
    * @see
    * org.apache.hadoop.hbase.rest.serializer.ISerializable#restSerialize(org
    * .apache.hadoop.hbase.rest.serializer.IRestSerializer)

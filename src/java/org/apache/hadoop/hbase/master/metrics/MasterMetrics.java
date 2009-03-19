@@ -61,6 +61,7 @@ public class MasterMetrics implements Updater {
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
+   * @param unused 
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {

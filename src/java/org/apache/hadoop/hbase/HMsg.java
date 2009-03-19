@@ -215,6 +215,9 @@ public class HMsg implements Writable {
     return this.safeMode;
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -230,15 +233,30 @@ public class HMsg implements Writable {
     sb.append(": safeMode=" + safeMode);
     return sb.toString();
   }
-  
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
     HMsg that = (HMsg)obj;
     return this.type.equals(that.type) &&
       (this.info != null)? this.info.equals(that.info):
         that.info == null;
   }
-  
+
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     int result = this.type.hashCode();

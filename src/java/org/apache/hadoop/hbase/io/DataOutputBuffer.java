@@ -98,25 +98,37 @@ public class DataOutputBuffer extends DataOutputStream {
 
   /** Returns the current contents of the buffer.
    *  Data is only valid to {@link #getLength()}.
+   * @return byte[] 
    */
   public byte[] getData() { return buffer.getData(); }
 
-  /** Returns the length of the valid data currently in the buffer. */
+  /** Returns the length of the valid data currently in the buffer. 
+   * @return int
+   */
   public int getLength() { return buffer.getLength(); }
 
-  /** Resets the buffer to empty. */
+  /** Resets the buffer to empty. 
+   * @return DataOutputBuffer
+   */
   public DataOutputBuffer reset() {
     this.written = 0;
     buffer.reset();
     return this;
   }
 
-  /** Writes bytes from a DataInput directly into the buffer. */
+  /** Writes bytes from a DataInput directly into the buffer. 
+   * @param in 
+   * @param length 
+   * @throws IOException
+   */
   public void write(DataInput in, int length) throws IOException {
     buffer.write(in, length);
   }
 
-  /** Write to a file stream */
+  /** Write to a file stream 
+   * @param out 
+   * @throws IOException
+   */
   public void writeTo(OutputStream out) throws IOException {
     buffer.writeTo(out);
   }

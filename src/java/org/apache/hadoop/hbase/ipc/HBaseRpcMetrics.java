@@ -47,7 +47,7 @@ public class HBaseRpcMetrics implements Updater {
   private MetricsRecord metricsRecord;
   private static Log LOG = LogFactory.getLog(HBaseRpcMetrics.class);
   
-  public HBaseRpcMetrics(String hostName, String port, HBaseServer server) {
+  public HBaseRpcMetrics(String hostName, String port) {
     MetricsContext context = MetricsUtil.getContext("rpc");
     metricsRecord = MetricsUtil.createRecord(context, "metrics");
 
@@ -75,6 +75,7 @@ public class HBaseRpcMetrics implements Updater {
   
   /**
    * Push the metrics to the monitoring subsystem on doUpdate() call.
+   * @param context
    */
   public void doUpdates(MetricsContext context) {
     rpcQueueTime.pushMetric(metricsRecord);

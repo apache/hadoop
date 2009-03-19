@@ -122,7 +122,7 @@ public class HLog implements HConstants, Syncable {
 
   private volatile boolean closed = false;
 
-  private final Integer sequenceLock = new Integer(0);
+  private final Object sequenceLock = new Object();
   private volatile long logSeqNum = 0;
 
   private volatile long filenum = 0;
@@ -136,7 +136,7 @@ public class HLog implements HConstants, Syncable {
 
   // We synchronize on updateLock to prevent updates and to prevent a log roll
   // during an update
-  private final Integer updateLock = new Integer(0);
+  private final Object updateLock = new Object();
   
   /*
    * If more than this many logs, force flush of oldest region to oldest edit

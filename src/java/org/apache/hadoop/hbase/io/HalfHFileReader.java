@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * A facade for a {@link org.apache.hadoop.io.hfile.HFile.Reader} that serves up
+ * A facade for a {@link org.apache.hadoop.hbase.io.hfile.HFile.Reader} that serves up
  * either the top or bottom half of a HFile where 'bottom' is the first half
  * of the file containing the keys that sort lowest and 'top' is the second half
  * of the file with keys that sort greater than those of the bottom half.
@@ -43,18 +43,18 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>This type works in tandem with the {@link Reference} type.  This class
  * is used reading while Reference is used writing.
  * 
- * <p>This file is not splitable.  Calls to {@link #midKey()} return null.
+ * <p>This file is not splitable.  Calls to {@link #midkey()} return null.
  */
 public class HalfHFileReader extends HFile.Reader {
   static final Log LOG = LogFactory.getLog(HalfHFileReader.class);
-  private final boolean top;
+  protected final boolean top;
   // This is the key we split around.  Its the first possible entry on a row:
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
-  private final byte [] splitkey;
+  protected final byte [] splitkey;
 
   /**
    * @param fs
-   * @param f
+   * @param p
    * @param c
    * @param r
    * @throws IOException
@@ -77,6 +77,7 @@ public class HalfHFileReader extends HFile.Reader {
     return this.top;
   }
 
+  @Override
   public HFileScanner getScanner() {
     final HFileScanner s = super.getScanner();
     return new HFileScanner() {
@@ -179,22 +180,23 @@ public class HalfHFileReader extends HFile.Reader {
     };
   }
 
+  @Override
   public byte[] getLastKey() {
     if (top) {
       return super.getLastKey(); 
-    } else {
-      HFileScanner scanner = getScanner();
-      try {
-        if (scanner.seekBefore(this.splitkey)) {
-          return Bytes.toBytes(scanner.getKey());
-        }
-      } catch (IOException e) {
-        LOG.warn("Failed seekBefore " + Bytes.toString(this.splitkey), e);
-      }
-      return null;
     }
+    HFileScanner scanner = getScanner();
+    try {
+      if (scanner.seekBefore(this.splitkey)) {
+        return Bytes.toBytes(scanner.getKey());
+      }
+    } catch (IOException e) {
+      LOG.warn("Failed seekBefore " + Bytes.toString(this.splitkey), e);
+    }
+    return null;
   }
 
+  @Override
   public byte[] midkey() throws IOException {
     // Returns null to indicate file is not splitable.
     return null;

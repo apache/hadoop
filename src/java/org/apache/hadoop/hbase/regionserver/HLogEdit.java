@@ -61,6 +61,8 @@ public class HLogEdit implements Writable, HConstants {
 
   /**
    * @param value
+   * @param offset 
+   * @param length 
    * @return True if an entry and its content is {@link #DELETED_BYTES}.
    */
   public static boolean isDeleted(final byte [] value, final int offset,

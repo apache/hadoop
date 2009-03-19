@@ -110,7 +110,7 @@ class HMerge implements HConstants {
 
       this.tabledir = new Path(
           fs.makeQualified(new Path(conf.get(HBASE_DIR))),
-          tableName.toString()
+          Bytes.toString(tableName)
       );
       Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
           HREGION_LOGDIR_NAME);
@@ -162,16 +162,16 @@ class HMerge implements HConstants {
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than
           // one half of the desired maximum size
-          LOG.info("merging regions " + currentRegion.getRegionName()
-              + " and " + nextRegion.getRegionName());
+          LOG.info("merging regions " + Bytes.toString(currentRegion.getRegionName())
+              + " and " + Bytes.toString(nextRegion.getRegionName()));
           HRegion mergedRegion =
             HRegion.mergeAdjacent(currentRegion, nextRegion);
           updateMeta(currentRegion.getRegionName(), nextRegion.getRegionName(),
               mergedRegion);
           break;
         }
-        LOG.info("not merging regions " + currentRegion.getRegionName()
-            + " and " + nextRegion.getRegionName());
+        LOG.info("not merging regions " + Bytes.toString(currentRegion.getRegionName())
+            + " and " + Bytes.toString(nextRegion.getRegionName()));
         currentRegion.close();
         currentRegion = nextRegion;
         currentSize = nextSize;
@@ -216,7 +216,7 @@ class HMerge implements HConstants {
         Cell regionInfo = results.get(COL_REGIONINFO);
         if (regionInfo == null || regionInfo.getValue().length == 0) {
           throw new NoSuchElementException("meta region entry missing " +
-            COL_REGIONINFO);
+              Bytes.toString(COL_REGIONINFO));
         }
         HRegionInfo region = Writables.getHRegionInfo(regionInfo.getValue());
         if (!Bytes.equals(region.getTableDesc().getName(), this.tableName)) {
@@ -249,7 +249,7 @@ class HMerge implements HConstants {
       RowResult currentRow = metaScanner.next();
       boolean foundResult = false;
       while (currentRow != null) {
-        LOG.info("Row: <" + currentRow.getRow() + ">");
+        LOG.info("Row: <" + Bytes.toString(currentRow.getRow()) + ">");
         Cell regionInfo = currentRow.get(COL_REGIONINFO);
         if (regionInfo == null || regionInfo.getValue().length == 0) {
           currentRow = metaScanner.next();
@@ -289,7 +289,7 @@ class HMerge implements HConstants {
         }
         table.deleteAll(regionsToDelete[r]);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + regionsToDelete[r]);
+          LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
         }
       }
       newRegion.getRegionInfo().setOffline(true);
@@ -301,7 +301,7 @@ class HMerge implements HConstants {
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
-            + newRegion.getRegionName());
+            + Bytes.toString(newRegion.getRegionName()));
       }
     }
   }
@@ -378,7 +378,7 @@ class HMerge implements HConstants {
         root.batchUpdate(b,null);
 
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + regionsToDelete[r]);
+          LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
         }
       }
       HRegionInfo newInfo = newRegion.getRegionInfo();
@@ -387,7 +387,7 @@ class HMerge implements HConstants {
       b.put(COL_REGIONINFO, Writables.getBytes(newInfo));
       root.batchUpdate(b,null);
       if(LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + newRegion.getRegionName());
+        LOG.debug("updated columns in row: " + Bytes.toString(newRegion.getRegionName()));
       }
     }
   }

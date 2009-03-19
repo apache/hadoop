@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 /** Test regexp filters HBASE-476 */
 public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
 
-  @SuppressWarnings("hiding")
   private static final Log LOG = LogFactory.getLog(TestRowFilterAfterWrite.class.getName());
 
   static final String TABLE_NAME = "TestTable";
@@ -184,7 +183,7 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
       try {
         for (RowResult result : scanner) {
           if (printValues) {
-            LOG.info("row: " + result.getRow());
+            LOG.info("row: " + Bytes.toString(result.getRow()));
             for (Map.Entry<byte [], Cell> e : result.entrySet()) {
               LOG.info(" column: " + e.getKey() + " value: "
                   + new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));

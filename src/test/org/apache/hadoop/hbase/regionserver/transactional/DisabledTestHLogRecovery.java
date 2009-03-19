@@ -46,12 +46,12 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class DisabledTestHLogRecovery extends HBaseClusterTestCase {
-  private static final Log LOG = LogFactory.getLog(DisabledTestHLogRecovery.class);
+  protected static final Log LOG = LogFactory.getLog(DisabledTestHLogRecovery.class);
 
   private static final String TABLE_NAME = "table1";
 
   private static final byte[] FAMILY = Bytes.toBytes("family:");
-  private static final byte[] COL_A = Bytes.toBytes("family:a");
+  static final byte[] COL_A = Bytes.toBytes("family:a");
 
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");
@@ -198,7 +198,7 @@ public class DisabledTestHLogRecovery extends HBaseClusterTestCase {
         + (abort ? "aborted" : "shut down"));
   }
 
-  private void verify(final int numRuns) throws IOException {
+  protected void verify(final int numRuns) throws IOException {
     // Reads
     int row1 = Bytes.toInt(table.get(ROW1, COL_A).getValue());
     int row2 = Bytes.toInt(table.get(ROW2, COL_A).getValue());
@@ -265,18 +265,12 @@ public class DisabledTestHLogRecovery extends HBaseClusterTestCase {
           LOG.fatal("could not re-open meta table because", e);
           fail();
         }
-        Scanner scanner = null;
         try {
           verify(numRuns);
           LOG.info("Success!");
         } catch (Exception e) {
           e.printStackTrace();
           fail();
-        } finally {
-          if (scanner != null) {
-            LOG.info("Closing scanner " + scanner);
-            scanner.close();
-          }
         }
       }
     };

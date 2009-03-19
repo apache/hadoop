@@ -86,12 +86,14 @@ public abstract class HBaseServer {
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
 
-  private static final ThreadLocal<HBaseServer> SERVER = new ThreadLocal<HBaseServer>();
+  protected static final ThreadLocal<HBaseServer> SERVER = new ThreadLocal<HBaseServer>();
 
   /** Returns the server instance called under or null.  May be called under
    * {@link #call(Writable, long)} implementations, and under {@link Writable}
    * methods of paramters and return values.  Permits applications to access
-   * the server context.*/
+   * the server context.
+   * @return HBaseServer
+   */
   public static HBaseServer get() {
     return SERVER.get();
   }
@@ -99,10 +101,11 @@ public abstract class HBaseServer {
   /** This is set to Call object before Handler invokes an RPC and reset
    * after the call returns.
    */
-  private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
+  protected static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
   
   /** Returns the remote side ip address when invoked inside an RPC 
    *  Returns null incase of an error.
+   *  @return InetAddress
    */
   public static InetAddress getRemoteIp() {
     Call call = CurCall.get();
@@ -113,46 +116,47 @@ public abstract class HBaseServer {
   }
   /** Returns remote address as a string when invoked inside an RPC.
    *  Returns null in case of an error.
+   *  @return String
    */
   public static String getRemoteAddress() {
     InetAddress addr = getRemoteIp();
     return (addr == null) ? null : addr.getHostAddress();
   }
 
-  private String bindAddress; 
-  private int port;                               // port we listen on
+  protected String bindAddress; 
+  protected int port;                             // port we listen on
   private int handlerCount;                       // number of handler threads
-  private Class<? extends Writable> paramClass;   // class of call parameters
-  private int maxIdleTime;                        // the maximum idle time after 
+  protected Class<? extends Writable> paramClass; // class of call parameters
+  protected int maxIdleTime;                      // the maximum idle time after 
                                                   // which a client may be disconnected
-  private int thresholdIdleConnections;           // the number of idle connections
+  protected int thresholdIdleConnections;         // the number of idle connections
                                                   // after which we will start
                                                   // cleaning up idle 
                                                   // connections
   int maxConnectionsToNuke;                       // the max number of 
                                                   // connections to nuke
-                                                  //during a cleanup
+                                                  // during a cleanup
   
   protected HBaseRpcMetrics  rpcMetrics;
   
-  private Configuration conf;
+  protected Configuration conf;
 
   private int maxQueueSize;
-  private int socketSendBufferSize;
-  private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  protected int socketSendBufferSize;
+  protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
-  volatile private boolean running = true;         // true while server runs
-  private BlockingQueue<Call> callQueue; // queued calls
+  volatile protected boolean running = true;         // true while server runs
+  protected BlockingQueue<Call> callQueue; // queued calls
 
-  private List<Connection> connectionList = 
+  protected List<Connection> connectionList = 
     Collections.synchronizedList(new LinkedList<Connection>());
   //maintain a list
   //of client connections
   private Listener listener = null;
-  private Responder responder = null;
-  private int numConnections = 0;
+  protected Responder responder = null;
+  protected int numConnections = 0;
   private Handler[] handlers = null;
-  private HBaseRPCErrorHandler errorHandler = null;
+  protected HBaseRPCErrorHandler errorHandler = null;
 
   /**
    * A convenience method to bind to a given address and report 
@@ -179,20 +183,19 @@ public abstract class HBaseServer {
       if ("Unresolved address".equals(e.getMessage())) {
         throw new UnknownHostException("Invalid hostname for server: " + 
                                        address.getHostName());
-      } else {
-        throw e;
       }
+      throw e;
     }
   }
 
   /** A call queued for handling. */
   private static class Call {
-    private int id;                               // the client's call id
-    private Writable param;                       // the parameter passed
-    private Connection connection;                // connection to client
-    private long timestamp;     // the time received when response is null
+    protected int id;                             // the client's call id
+    protected Writable param;                     // the parameter passed
+    protected Connection connection;              // connection to client
+    protected long timestamp;      // the time received when response is null
                                    // the time served when response is not null
-    private ByteBuffer response;                      // the response for this call
+    protected ByteBuffer response;                // the response for this call
 
     public Call(int id, Writable param, Connection connection) {
       this.id = id;
@@ -317,7 +320,7 @@ public abstract class HBaseServer {
           if (errorHandler != null) {
             if (errorHandler.checkOOME(e)) {
               LOG.info(getName() + ": exiting on OOME");
-              closeCurrentConnection(key, e);
+              closeCurrentConnection(key);
               cleanupConnections(true);
               return;
             }
@@ -326,7 +329,7 @@ public abstract class HBaseServer {
             // log the event and sleep for a minute and give 
             // some thread(s) a chance to finish
             LOG.warn("Out of Memory in server select", e);
-            closeCurrentConnection(key, e);
+            closeCurrentConnection(key);
             cleanupConnections(true);
             try { Thread.sleep(60000); } catch (Exception ie) {}
       }
@@ -336,7 +339,7 @@ public abstract class HBaseServer {
                      StringUtils.stringifyException(e));
           }
         } catch (Exception e) {
-          closeCurrentConnection(key, e);
+          closeCurrentConnection(key);
         }
         cleanupConnections(false);
       }
@@ -358,7 +361,7 @@ public abstract class HBaseServer {
       }
     }
 
-    private void closeCurrentConnection(SelectionKey key, Throwable e) {
+    private void closeCurrentConnection(SelectionKey key) {
       if (key != null) {
         Connection c = (Connection)key.attachment();
         if (c != null) {
@@ -385,7 +388,7 @@ public abstract class HBaseServer {
         channel.configureBlocking(false);
         channel.socket().setTcpNoDelay(tcpNoDelay);
         SelectionKey readKey = channel.register(selector, SelectionKey.OP_READ);
-        c = new Connection(readKey, channel, System.currentTimeMillis());
+        c = new Connection(channel, System.currentTimeMillis());
         readKey.attach(c);
         synchronized (connectionList) {
           connectionList.add(numConnections, c);
@@ -504,11 +507,7 @@ public abstract class HBaseServer {
           }
           
           for(Call call : calls) {
-            try {
-              doPurge(call, now);
-            } catch (IOException e) {
-              LOG.warn("Error in purging old calls " + e);
-            }
+            doPurge(call, now);
           }
         } catch (OutOfMemoryError e) {
           if (errorHandler != null) {
@@ -562,14 +561,14 @@ public abstract class HBaseServer {
     // Remove calls that have been pending in the responseQueue 
     // for a long time.
     //
-    private void doPurge(Call call, long now) throws IOException {
+    private void doPurge(Call call, long now) {
       LinkedList<Call> responseQueue = call.connection.responseQueue;
       synchronized (responseQueue) {
         Iterator<Call> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
-          call = iter.next();
-          if (now > call.timestamp + PURGE_INTERVAL) {
-            closeConnection(call.connection);
+          Call nextCall = iter.next();
+          if (now > nextCall.timestamp + PURGE_INTERVAL) {
+            closeConnection(nextCall.connection);
             break;
           }
         }
@@ -698,22 +697,21 @@ public abstract class HBaseServer {
                                          //version are read
     private boolean headerRead = false;  //if the connection header that
                                          //follows version is read.
-    private SocketChannel channel;
+    protected SocketChannel channel;
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
-    private LinkedList<Call> responseQueue;
+    protected LinkedList<Call> responseQueue;
     private volatile int rpcCount = 0; // number of outstanding rpcs
     private long lastContact;
     private int dataLength;
-    private Socket socket;
+    protected Socket socket;
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
     private String hostAddress;
     private int remotePort;
-    private UserGroupInformation ticket = null;
+    protected UserGroupInformation ticket = null;
 
-    public Connection(SelectionKey key, SocketChannel channel, 
-                      long lastContact) {
+    public Connection(SocketChannel channel, long lastContact) {
       this.channel = channel;
       this.lastContact = lastContact;
       this.data = null;
@@ -760,7 +758,7 @@ public abstract class HBaseServer {
     }
     
     /* Decrement the outstanding RPC count */
-    private void decRpcCount() {
+    protected void decRpcCount() {
       rpcCount--;
     }
     
@@ -769,7 +767,7 @@ public abstract class HBaseServer {
       rpcCount++;
     }
     
-    private boolean timedOut(long currentTime) {
+    protected boolean timedOut(long currentTime) {
       if (isIdle() && currentTime -  lastContact > maxIdleTime)
         return true;
       return false;
@@ -831,12 +829,11 @@ public abstract class HBaseServer {
             processData();
             data = null;
             return count;
-          } else {
-            processHeader();
-            headerRead = true;
-            data = null;
-            continue;
           }
+          processHeader();
+          headerRead = true;
+          data = null;
+          continue;
         } 
         return count;
       }
@@ -867,7 +864,7 @@ public abstract class HBaseServer {
       callQueue.put(call);              // queue the call; maybe blocked here
     }
 
-    private synchronized void close() throws IOException {
+    protected synchronized void close() {
       data = null;
       dataLengthBuffer = null;
       if (!channel.isOpen())
@@ -995,30 +992,28 @@ public abstract class HBaseServer {
     listener = new Listener();
     this.port = listener.getAddress().getPort();    
     this.rpcMetrics = new HBaseRpcMetrics(serverName,
-                          Integer.toString(this.port), this);
+                          Integer.toString(this.port));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
-
 
     // Create the responder here
     responder = new Responder();
   }
 
-  private void closeConnection(Connection connection) {
+  protected void closeConnection(Connection connection) {
     synchronized (connectionList) {
       if (connectionList.remove(connection))
         numConnections--;
     }
-    try {
-      connection.close();
-    } catch (IOException e) {
-    }
+    connection.close();
   }
   
-  /** Sets the socket buffer size used for responding to RPCs */
+  /** Sets the socket buffer size used for responding to RPCs.
+   * @param size
+   */
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
   /** Starts the service.  Must be called before any calls will be handled. */
-  public synchronized void start() throws IOException {
+  public synchronized void start() {
     responder.start();
     listener.start();
     handlers = new Handler[handlerCount];
@@ -1052,6 +1047,7 @@ public abstract class HBaseServer {
   /** Wait for the server to be stopped.
    * Does not wait for all subthreads to finish.
    *  See {@link #stop()}.
+   * @throws InterruptedException
    */
   public synchronized void join() throws InterruptedException {
     while (running) {
@@ -1067,11 +1063,15 @@ public abstract class HBaseServer {
     return listener.getAddress();
   }
   
-  /** Called for each call. */
+  /** Called for each call. 
+   * @param param 
+   * @param receiveTime 
+   * @return Writable 
+   * @throws IOException
+   */
   public abstract Writable call(Writable param, long receiveTime)
                                                 throws IOException;
-  
-  
+
   /**
    * The number of open RPC conections
    * @return the number of open rpc connections
@@ -1113,14 +1113,12 @@ public abstract class HBaseServer {
    *
    * @see WritableByteChannel#write(ByteBuffer)
    */
-  private static int channelWrite(WritableByteChannel channel, 
-                                  ByteBuffer buffer) throws IOException {
-    
+  protected static int channelWrite(WritableByteChannel channel, 
+                                    ByteBuffer buffer) throws IOException {
     return (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
            channel.write(buffer) : channelIO(null, channel, buffer);
   }
-  
-  
+
   /**
    * This is a wrapper around {@link ReadableByteChannel#read(ByteBuffer)}.
    * If the amount of data is large, it writes to channel in smaller chunks. 
@@ -1129,13 +1127,12 @@ public abstract class HBaseServer {
    * 
    * @see ReadableByteChannel#read(ByteBuffer)
    */
-  private static int channelRead(ReadableByteChannel channel, 
-                                 ByteBuffer buffer) throws IOException {
-    
+  protected static int channelRead(ReadableByteChannel channel, 
+                                   ByteBuffer buffer) throws IOException {
     return (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
            channel.read(buffer) : channelIO(channel, null, buffer);
   }
-  
+
   /**
    * Helper for {@link #channelRead(ReadableByteChannel, ByteBuffer)}
    * and {@link #channelWrite(WritableByteChannel, ByteBuffer)}. Only

@@ -122,16 +122,25 @@ public class BlockFSInputStream extends FSInputStream {
     }, 1, 1, TimeUnit.SECONDS);
   }
 
+  /**
+   * @see org.apache.hadoop.fs.FSInputStream#getPos()
+   */
   @Override
   public synchronized long getPos() {
     return pos;
   }
 
+  /**
+   * @see java.io.InputStream#available()
+   */
   @Override
   public synchronized int available() {
     return (int) (fileLength - pos);
   }
 
+  /**
+   * @see org.apache.hadoop.fs.FSInputStream#seek(long)
+   */
   @Override
   public synchronized void seek(long targetPos) throws IOException {
     if (targetPos > fileLength) {
@@ -141,12 +150,18 @@ public class BlockFSInputStream extends FSInputStream {
     blockEnd = -1;
   }
 
+  /**
+   * @see org.apache.hadoop.fs.FSInputStream#seekToNewSource(long)
+   */
   @Override
   public synchronized boolean seekToNewSource(long targetPos)
       throws IOException {
     return false;
   }
 
+  /**
+   * @see java.io.InputStream#read()
+   */
   @Override
   public synchronized int read() throws IOException {
     if (closed) {
@@ -165,6 +180,9 @@ public class BlockFSInputStream extends FSInputStream {
     return result;
   }
 
+  /**
+   * @see java.io.InputStream#read(byte[], int, int)
+   */
   @Override
   public synchronized int read(byte buf[], int off, int len) throws IOException {
     if (closed) {
@@ -206,6 +224,9 @@ public class BlockFSInputStream extends FSInputStream {
 
   }
 
+  /**
+   * @see java.io.InputStream#close()
+   */
   @Override
   public void close() throws IOException {
     if (closed) {
@@ -234,11 +255,17 @@ public class BlockFSInputStream extends FSInputStream {
     return false;
   }
 
+  /**
+   * @see java.io.InputStream#mark(int)
+   */
   @Override
   public void mark(int readLimit) {
     // Do nothing
   }
 
+  /**
+   * @see java.io.InputStream#reset()
+   */
   @Override
   public void reset() throws IOException {
     throw new IOException("Mark not supported");

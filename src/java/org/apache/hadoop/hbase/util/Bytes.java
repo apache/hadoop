@@ -299,6 +299,7 @@ public class Bytes {
   /**
    * Converts a byte array to a long value
    * @param bytes
+   * @param offset 
    * @return the long value
    */
   public static long toLong(byte[] bytes, int offset) {
@@ -308,6 +309,8 @@ public class Bytes {
   /**
    * Converts a byte array to a long value
    * @param bytes
+   * @param offset 
+   * @param length 
    * @return the long value
    */
   public static long toLong(byte[] bytes, int offset,final int length) {

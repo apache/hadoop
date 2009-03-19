@@ -76,7 +76,7 @@ import org.apache.hadoop.mapred.TextOutputFormat;
  * runs an individual client. Each client does about 1GB of data.
  */
 public class PerformanceEvaluation implements HConstants {
-  private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
+  protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
   
   private static final int ROW_LENGTH = 1000;
   private static final int ONE_GB = 1024 * 1024 * 1000;
@@ -84,7 +84,7 @@ public class PerformanceEvaluation implements HConstants {
   
   static final byte [] COLUMN_NAME = Bytes.toBytes(COLUMN_FAMILY_STR + "data");
   
-  protected static HTableDescriptor TABLE_DESCRIPTOR;
+  protected static final HTableDescriptor TABLE_DESCRIPTOR;
   static {
     TABLE_DESCRIPTOR = new HTableDescriptor("TestTable");
     TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
@@ -170,7 +170,7 @@ public class PerformanceEvaluation implements HConstants {
       this.pe = new PerformanceEvaluation(new HBaseConfiguration(j));
     }
     
-    public void map(@SuppressWarnings("unused") final Object key,
+    public void map(final Object key,
       final Object value, final OutputCollector output,
       final Reporter reporter)
     throws IOException {
@@ -370,7 +370,6 @@ public class PerformanceEvaluation implements HConstants {
       this.table.setWriteBufferSize(1024*1024*12);
     }
 
-    @SuppressWarnings("unused")
     void testTakedown()  throws IOException {
       this.table.flushCommits();
     }
@@ -418,11 +417,12 @@ public class PerformanceEvaluation implements HConstants {
       super(conf, startRow, perClientRunRows, totalRows, status);
     }
     
-    void testRow(@SuppressWarnings("unused") final int i) throws IOException {
+    @Override
+    void testRow(final int i) throws IOException {
       Scanner s = this.table.getScanner(new byte [][] {COLUMN_NAME},
         getRandomRow(this.rand, this.totalRows),
         new WhileMatchRowFilter(new PageRowFilter(120)));
-      int count = 0;
+      //int count = 0;
       for (RowResult rr = null; (rr = s.next()) != null;) {
         // LOG.info("" + count++ + " " + rr.toString());
       }
@@ -448,7 +448,7 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     @Override
-    void testRow(@SuppressWarnings("unused") final int i) throws IOException {
+    void testRow(final int i) throws IOException {
       this.table.get(getRandomRow(this.rand, this.totalRows), COLUMN_NAME);
     }
 
@@ -471,7 +471,7 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     @Override
-    void testRow(@SuppressWarnings("unused") final int i) throws IOException {
+    void testRow(final int i) throws IOException {
       byte [] row = getRandomRow(this.rand, this.totalRows);
       BatchUpdate b = new BatchUpdate(row);
       b.put(COLUMN_NAME, generateValue(this.rand));
@@ -509,7 +509,7 @@ public class PerformanceEvaluation implements HConstants {
     
     
     @Override
-    void testRow(@SuppressWarnings("unused") final int i) throws IOException {
+    void testRow(final int i) throws IOException {
       testScanner.next();
     }
 
@@ -620,7 +620,7 @@ public class PerformanceEvaluation implements HConstants {
           totalRows, status);
         totalElapsedTime = t.test();
     } else {
-      new IllegalArgumentException("Invalid command value: " + cmd);
+      throw new IllegalArgumentException("Invalid command value: " + cmd);
     }
     status.setStatus("Finished " + cmd + " in " + totalElapsedTime +
       "ms at offset " + startRow + " for " + perClientRunRows + " rows");
@@ -629,7 +629,6 @@ public class PerformanceEvaluation implements HConstants {
   
   private void runNIsOne(final String cmd) {
     Status status = new Status() {
-      @SuppressWarnings("unused")
       public void setStatus(String msg) throws IOException {
         LOG.info(msg);
       }

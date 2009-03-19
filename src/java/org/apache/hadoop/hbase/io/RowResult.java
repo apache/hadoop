@@ -46,7 +46,7 @@ import agilejson.TOJSON;
  * Holds row name and then a map of columns to cells.
  */
 public class RowResult implements Writable, SortedMap<byte [], Cell>,
-  Comparable, ISerializable {
+  Comparable<RowResult>, ISerializable {
   private byte [] row = null;
   private final HbaseMapWritable<byte [], Cell> cells;
 
@@ -79,13 +79,12 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   // Map interface
   // 
   
-  public Cell put(@SuppressWarnings("unused") byte [] key,
-    @SuppressWarnings("unused") Cell value) {
+  public Cell put(byte [] key, Cell value) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
   @SuppressWarnings("unchecked")
-  public void putAll(@SuppressWarnings("unused") Map map) {
+  public void putAll(Map map) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
@@ -93,7 +92,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
     return this.cells.get(key);
   }
 
-  public Cell remove(@SuppressWarnings("unused") Object key) {
+  public Cell remove(Object key) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
@@ -105,7 +104,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
     return cells.containsKey(Bytes.toBytes(key));
   }
 
-  public boolean containsValue(@SuppressWarnings("unused") Object value) {
+  public boolean containsValue(Object value) {
     throw new UnsupportedOperationException("Don't support containsValue!");
   }
 
@@ -212,7 +211,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
       this.cell = cell;
     }
     
-    public Cell setValue(@SuppressWarnings("unused") Cell c) {
+    public Cell setValue(Cell c) {
       throw new UnsupportedOperationException("RowResult is read-only!");
     }
     
@@ -289,7 +288,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
    *  @param o the RowResult Object to compare to
    *  @return the compare number
    */
-  public int compareTo(Object o){
-    return Bytes.compareTo(this.row, ((RowResult)o).getRow());
+  public int compareTo(RowResult o){
+    return Bytes.compareTo(this.row, o.getRow());
   }
 }

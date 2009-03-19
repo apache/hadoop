@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -101,6 +102,7 @@ public class TestSplit extends HBaseClusterTestCase {
       final HRegion regionForThread = region;
       
       Thread splitThread = new Thread() {
+        @Override
         public void run() {
           try {
             split(regionForThread, midkey);
@@ -235,8 +237,8 @@ public class TestSplit extends HBaseClusterTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       boolean first = true;
       OUTER_LOOP: while(s.next(curKey, curVals)) {
-        for(byte [] col: curVals.keySet()) {
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] val = entry.getValue().getValue();
           byte [] curval = val;
           if (first) {
             first = false;
@@ -252,7 +254,7 @@ public class TestSplit extends HBaseClusterTestCase {
     }
   }
   
-  private HRegion [] split(final HRegion r, final byte [] splitRow)
+  protected HRegion [] split(final HRegion r, final byte [] splitRow)
   throws IOException {
     // Assert can get mid key from passed region.
     assertGet(r, COLFAMILY_NAME3, splitRow);

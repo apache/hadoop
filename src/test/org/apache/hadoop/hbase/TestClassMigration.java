@@ -253,8 +253,8 @@ public class TestClassMigration extends TestCase {
      */
     public static byte[] getBytes(final HStoreKey hsk)
     throws UnsupportedEncodingException {
-      StringBuilder s = new StringBuilder(hsk.getRow().toString());
-      s.append(hsk.getColumn().toString());
+      StringBuilder s = new StringBuilder(Bytes.toString(hsk.getRow()));
+      s.append(Bytes.toString(hsk.getColumn()));
       return s.toString().getBytes(HConstants.UTF8_ENCODING);
     }
   }

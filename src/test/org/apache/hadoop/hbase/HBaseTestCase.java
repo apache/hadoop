@@ -65,8 +65,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected static final char FIRST_CHAR = 'a';
   protected static final char LAST_CHAR = 'z';
   protected static final String PUNCTUATION = "~`@#$%^&*()-_+=:;',.<>/?[]{}|";
-  protected static final byte [] START_KEY_BYTES =
-    {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
+  protected static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   protected String START_KEY;
   protected static final int MAXVERSIONS = 3;
   
@@ -74,7 +73,7 @@ public abstract class HBaseTestCase extends TestCase {
     initialize();
   }
   
-  protected volatile HBaseConfiguration conf;
+  public volatile HBaseConfiguration conf;
 
   /** constructor */
   public HBaseTestCase() {
@@ -385,20 +384,12 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public static class HRegionIncommon implements Incommon, FlushCache {
     final HRegion region;
-    private BatchUpdate batch;
-    
-    private void checkBatch() {
-      if (batch == null) {
-        throw new IllegalStateException("No update in progress");
-      }
-    }
     
     /**
      * @param HRegion
      */
     public HRegionIncommon(final HRegion HRegion) {
       this.region = HRegion;
-      this.batch = null;
     }
     
     public void commit(BatchUpdate batchUpdate) throws IOException {
@@ -451,7 +442,6 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public static class HTableIncommon implements Incommon {
     final HTable table;
-    private BatchUpdate batch;
 
     /**
      * @param table
@@ -459,7 +449,6 @@ public abstract class HBaseTestCase extends TestCase {
     public HTableIncommon(final HTable table) {
       super();
       this.table = table;
-      this.batch = null;
     }
     
     public void commit(BatchUpdate batchUpdate) throws IOException {
@@ -524,6 +513,7 @@ public abstract class HBaseTestCase extends TestCase {
       scanner.close();
     }
     
+    @SuppressWarnings("unchecked")
     public Iterator iterator() {
       return scanner.iterator();
     }
@@ -545,7 +535,7 @@ public abstract class HBaseTestCase extends TestCase {
       scanner.close();
     }
     
-    public Iterator iterator() {
+    public Iterator<Map.Entry<HStoreKey, SortedMap<byte [], Cell>>> iterator() {
       throw new UnsupportedOperationException();
     }
   }
@@ -556,14 +546,14 @@ public abstract class HBaseTestCase extends TestCase {
     Map<byte [], Cell> result = region.getFull(row, null, timestamp, 1, null);
     Cell cell_value = result.get(column);
     if(value == null){
-      assertEquals(column.toString() + " at timestamp " + timestamp, null, cell_value);
+      assertEquals(Bytes.toString(column) + " at timestamp " + timestamp, null, cell_value);
     } else {
       if (cell_value == null) {
-        fail(column.toString() + " at timestamp " + timestamp + 
+        fail(Bytes.toString(column) + " at timestamp " + timestamp + 
           "\" was expected to be \"" + value + " but was null");
       }
       if (cell_value != null) {
-        assertEquals(column.toString() + " at timestamp " 
+        assertEquals(Bytes.toString(column) + " at timestamp " 
             + timestamp, value, new String(cell_value.getValue()));
       }
     }
@@ -577,7 +567,6 @@ public abstract class HBaseTestCase extends TestCase {
    * If debugging is enabled, reconfigures loggin so that the root log level is
    * set to WARN and the logging level for the package is set to DEBUG.
    */
-  @SuppressWarnings("unchecked")
   public static void initialize() {
     if (System.getProperty(TEST_DIRECTORY_KEY) == null) {
       System.setProperty(TEST_DIRECTORY_KEY, new File(

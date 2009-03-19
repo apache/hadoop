@@ -34,11 +34,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.server.NIOServerCnxn;
-import org.apache.zookeeper.server.ServerStats;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 import org.apache.zookeeper.server.quorum.QuorumPeer;
-import org.apache.zookeeper.server.quorum.QuorumStats;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 
 /**
@@ -57,8 +55,6 @@ public class MiniZooKeeperCluster {
   private static final int SYNC_LIMIT = 3;
   private static final int CONNECTION_TIMEOUT = 30000;
 
-  private HBaseConfiguration conf;
-
   private boolean started;
   private int numPeers;
   private File baseDir;
@@ -69,11 +65,9 @@ public class MiniZooKeeperCluster {
   private NIOServerCnxn.Factory standaloneServerFactory;
 
   /**
-   * @param conf
    * @throws IOException
    */
-  public MiniZooKeeperCluster(HBaseConfiguration conf) throws IOException {
-    this.conf = conf;
+  public MiniZooKeeperCluster() throws IOException {
     this.started = false;
   }
 

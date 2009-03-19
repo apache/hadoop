@@ -57,6 +57,7 @@ public interface HFileScanner {
    * that: k[i] < key.  Furthermore: there may be a k[i+1], such that
    * k[i] < key <= k[i+1] but there may also NOT be a k[i+1], and next() will
    * return false (EOF).
+   * @throws IOException
    */
   public boolean seekBefore(byte [] key) throws IOException;
   /**

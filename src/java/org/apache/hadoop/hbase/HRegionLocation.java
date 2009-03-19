@@ -37,18 +37,36 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     this.regionInfo = regionInfo;
     this.serverAddress = serverAddress;
   }
-  
+
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return "address: " + this.serverAddress.toString() + ", regioninfo: " +
       this.regionInfo;
   }
-  
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null) {
+      return false;
+    }
+    if (!(o instanceof HRegionLocation)) {
+      return false;
+    }
     return this.compareTo((HRegionLocation)o) == 0;
   }
-  
+
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     int result = this.regionInfo.hashCode();

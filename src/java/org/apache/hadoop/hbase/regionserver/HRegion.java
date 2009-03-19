@@ -192,7 +192,7 @@ public class HRegion implements HConstants {
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock =
     new ReentrantReadWriteLock();
-  private final Integer splitLock = new Integer(0);
+  private final Object splitLock = new Object();
   private long minSequenceId;
   final AtomicInteger activeScannerCount = new AtomicInteger(0);
 
@@ -2474,7 +2474,8 @@ public class HRegion implements HConstants {
 
     LOG.info("starting merge of regions: " + a + " and " + b +
       " into new region " + newRegionInfo.toString() +
-        " with start key <" + startKey + "> and end key <" + endKey + ">");
+        " with start key <" + Bytes.toString(startKey) + "> and end key <" +
+        Bytes.toString(endKey) + ">");
 
     // Move HStoreFiles under new region directory
     
@@ -2665,7 +2666,7 @@ public class HRegion implements HConstants {
   private byte [] binaryIncrement(byte [] value, long amount) {
     for(int i=0;i<value.length;i++) {
       int cur = (int)(amount >> (8 * i)) % 256;
-      int val = (int)(value[value.length-i-1] & 0xff);
+      int val = value[value.length-i-1] & 0xff;
       int total = cur + val;
       if(total > 255) {
         amount += ((long)256 << (8 * i));

@@ -27,13 +27,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.rest.RESTConstants;
 import org.apache.hadoop.hbase.rest.descriptors.RowUpdateDescriptor;
 import org.apache.hadoop.hbase.rest.descriptors.ScannerDescriptor;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
-import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

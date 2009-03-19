@@ -55,7 +55,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  * SequenceFile.Sorter}.
  */
 public class MapFile {
-  private static final Log LOG = LogFactory.getLog(MapFile.class);
+  protected static final Log LOG = LogFactory.getLog(MapFile.class);
 
   /** The name of the index file. */
   public static final String INDEX_FILE_NAME = "index";
@@ -83,7 +83,14 @@ public class MapFile {
     private WritableComparable lastKey;
 
 
-    /** Create the named map for keys of the named class. */
+    /** Create the named map for keys of the named class. 
+     * @param conf 
+     * @param fs 
+     * @param dirName 
+     * @param keyClass 
+     * @param valClass 
+     * @throws IOException
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass, Class valClass)
       throws IOException {
@@ -92,7 +99,16 @@ public class MapFile {
            SequenceFile.getCompressionType(conf));
     }
 
-    /** Create the named map for keys of the named class. */
+    /** Create the named map for keys of the named class. 
+     * @param conf 
+     * @param fs 
+     * @param dirName 
+     * @param keyClass 
+     * @param valClass 
+     * @param compress 
+     * @param progress 
+     * @throws IOException
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass, Class valClass,
                   CompressionType compress, Progressable progress)
@@ -111,7 +127,15 @@ public class MapFile {
            compress, codec, progress);
     }
 
-    /** Create the named map for keys of the named class. */
+    /** Create the named map for keys of the named class. 
+     * @param conf 
+     * @param fs 
+     * @param dirName 
+     * @param keyClass 
+     * @param valClass 
+     * @param compress 
+     * @throws IOException
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass, Class valClass,
                   CompressionType compress)
@@ -119,21 +143,45 @@ public class MapFile {
       this(conf, fs, dirName, WritableComparator.get(keyClass), valClass, compress);
     }
 
-    /** Create the named map using the named key comparator. */
+    /** Create the named map using the named key comparator. 
+     * @param conf 
+     * @param fs 
+     * @param dirName 
+     * @param comparator 
+     * @param valClass 
+     * @throws IOException
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass)
       throws IOException {
       this(conf, fs, dirName, comparator, valClass,
            SequenceFile.getCompressionType(conf));
     }
-    /** Create the named map using the named key comparator. */
+    /** Create the named map using the named key comparator. 
+     * @param conf 
+     * @param fs 
+     * @param dirName 
+     * @param comparator 
+     * @param valClass 
+     * @param compress 
+     * @throws IOException
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass,
                   SequenceFile.CompressionType compress)
       throws IOException {
       this(conf, fs, dirName, comparator, valClass, compress, null);
     }
-    /** Create the named map using the named key comparator. */
+    /** Create the named map using the named key comparator. 
+     * @param conf 
+     * @param fs 
+     * @param dirName 
+     * @param comparator 
+     * @param valClass 
+     * @param compress 
+     * @param progress 
+     * @throws IOException
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass,
                   SequenceFile.CompressionType compress,
@@ -142,7 +190,17 @@ public class MapFile {
       this(conf, fs, dirName, comparator, valClass, 
            compress, new DefaultCodec(), progress);
     }
-    /** Create the named map using the named key comparator. */
+    /** Create the named map using the named key comparator. 
+     * @param conf 
+     * @param fs 
+     * @param dirName 
+     * @param comparator 
+     * @param valClass 
+     * @param compress 
+     * @param codec 
+     * @param progress 
+     * @throws IOException
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass,
                   SequenceFile.CompressionType compress, CompressionCodec codec,
@@ -182,6 +240,8 @@ public class MapFile {
     public void setIndexInterval(int interval) { indexInterval = interval; }
 
     /** Sets the index interval and stores it in conf
+     * @param conf 
+     * @param interval 
      * @see #getIndexInterval()
      */
     public static void setIndexInterval(Configuration conf, int interval) {
@@ -265,13 +325,24 @@ public class MapFile {
      */
     public Class<?> getValueClass() { return data.getValueClass(); }
 
-    /** Construct a map reader for the named map.*/
+    /** Construct a map reader for the named map.
+     * @param fs 
+     * @param dirName 
+     * @param conf 
+     * @throws IOException
+     */
     public Reader(FileSystem fs, String dirName, Configuration conf) throws IOException {
       this(fs, dirName, null, conf);
       INDEX_SKIP = conf.getInt("io.map.index.skip", 0);
     }
 
-    /** Construct a map reader for the named map using the named comparator.*/
+    /** Construct a map reader for the named map using the named comparator.
+     * @param fs 
+     * @param dirName 
+     * @param comparator 
+     * @param conf 
+     * @throws IOException
+     */
     public Reader(FileSystem fs, String dirName, WritableComparator comparator, Configuration conf)
       throws IOException {
       this(fs, dirName, comparator, conf, true);
@@ -344,9 +415,8 @@ public class MapFile {
           if (skip > 0) {
             skip--;
             continue;                             // skip this entry
-          } else {
-            skip = INDEX_SKIP;                    // reset skip
           }
+          skip = INDEX_SKIP;                    // reset skip
 
           if (count == keys.length) {                // time to grow arrays
             int newLength = (keys.length*3)/2;
@@ -541,8 +611,8 @@ public class MapFile {
       if (seek(key)) {
         data.getCurrentValue(val);
         return val;
-      } else
-        return null;
+      }
+      return null;
     }
 
     /* (non-Javadoc)
@@ -587,7 +657,12 @@ public class MapFile {
 
   }
 
-  /** Renames an existing map directory. */
+  /** Renames an existing map directory. 
+   * @param fs 
+   * @param oldName 
+   * @param newName 
+   * @throws IOException
+   */
   public static void rename(FileSystem fs, String oldName, String newName)
     throws IOException {
     Path oldDir = new Path(oldName);
@@ -597,7 +672,11 @@ public class MapFile {
     }
   }
 
-  /** Deletes the named map file. */
+  /** Deletes the named map file. 
+   * @param fs 
+   * @param name 
+   * @throws IOException
+   */
   public static void delete(FileSystem fs, String name) throws IOException {
     Path dir = new Path(name);
     Path data = new Path(dir, DATA_FILE_NAME);
@@ -615,6 +694,7 @@ public class MapFile {
    * @param keyClass key class (has to be a subclass of Writable)
    * @param valueClass value class (has to be a subclass of Writable)
    * @param dryrun do not perform any changes, just report what needs to be done
+   * @param conf 
    * @return number of valid entries in this MapFile, or -1 if no fixing was needed
    * @throws Exception
    */

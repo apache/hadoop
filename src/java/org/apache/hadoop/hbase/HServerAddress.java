@@ -109,16 +109,34 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     return address;
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return (stringValue == null ? "" : stringValue);
   }
 
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null) {
+      return false;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
     return this.compareTo((HServerAddress)o) == 0;
   }
-  
+
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     int result = this.address.hashCode();

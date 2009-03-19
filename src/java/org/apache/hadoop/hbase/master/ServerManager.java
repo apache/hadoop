@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.HMsg.Type;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -76,7 +77,7 @@ class ServerManager implements HConstants {
    * and it's server logs are recovered, it will be told to call server startup
    * because by then, its regions have probably been reassigned.
    */
-  private final Set<String> deadServers =
+  protected final Set<String> deadServers =
     Collections.synchronizedSet(new HashSet<String>());
 
   /** SortedMap server load -> Set of server names */
@@ -87,7 +88,7 @@ class ServerManager implements HConstants {
   final Map<String, HServerLoad> serversToLoad =
     new ConcurrentHashMap<String, HServerLoad>();  
 
-  private HMaster master;
+  protected HMaster master;
   
   // Last time we logged average load.
   private volatile long lastLogOfAverageLaod = 0;
@@ -490,7 +491,7 @@ class ServerManager implements HConstants {
       if (duplicateAssignment) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("region server " + serverInfo.getServerAddress().toString()
-              + " should not have opened region " + region.getRegionName());
+              + " should not have opened region " + Bytes.toString(region.getRegionName()));
         }
 
         // This Region should not have been opened.

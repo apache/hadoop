@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,8 +78,8 @@ public class MetaRegion implements Comparable<MetaRegion> {
 
   @Override
   public int hashCode() {
-    int result = this.regionName.hashCode();
-    result ^= this.startKey.hashCode();
+    int result = Arrays.hashCode(this.regionName);
+    result ^= Arrays.hashCode(this.startKey);
     return result;
   }
 

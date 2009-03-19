@@ -67,7 +67,10 @@ public class ScannerCallable extends ServerCallable<RowResult[]> {
       instantiated = true;
     }
   }
-  
+
+  /**
+   * @see java.util.concurrent.Callable#call()
+   */
   public RowResult[] call() throws IOException {
     if (scannerId != -1L && closed) {
       server.close(scannerId);

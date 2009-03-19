@@ -143,11 +143,10 @@ public class TableModel extends AbstractModel {
 
   /**
    * Get table metadata.
-   * 
-   * @param request
-   * @param response
+   *
    * @param tableName
-   * @throws IOException
+   * @return HTableDescriptor
+   * @throws HBaseRestException
    */
   public HTableDescriptor getTableMetadata(final String tableName)
       throws HBaseRestException {
@@ -173,9 +172,9 @@ public class TableModel extends AbstractModel {
 
   /**
    * Return region offsets.
-   * 
-   * @param request
-   * @param response
+   * @param tableName 
+   * @return Regions
+   * @throws HBaseRestException 
    */
   public Regions getTableRegions(final String tableName)
       throws HBaseRestException {
@@ -239,7 +238,7 @@ public class TableModel extends AbstractModel {
     }
   }
 
-  public class Regions implements ISerializable {
+  public static class Regions implements ISerializable {
     byte[][] regionKey;
 
     public Regions(byte[][] bs) {

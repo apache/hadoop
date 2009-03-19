@@ -39,7 +39,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public abstract class HBaseClusterTestCase extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(HBaseClusterTestCase.class);
-  protected MiniHBaseCluster cluster;
+  public MiniHBaseCluster cluster;
   protected MiniDFSCluster dfsCluster;
   protected MiniZooKeeperCluster zooKeeperCluster;
   protected int regionServers;
@@ -97,7 +97,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
     // Note that this is done before we create the MiniHBaseCluster because we
     // need to edit the config to add the ZooKeeper servers.
-    this.zooKeeperCluster = new MiniZooKeeperCluster(conf);
+    this.zooKeeperCluster = new MiniZooKeeperCluster();
     this.zooKeeperCluster.startup(numZooKeeperPeers, testDir);
 
     // start the mini cluster

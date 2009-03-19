@@ -35,7 +35,7 @@ import junit.framework.TestCase;
 public class TestPageRowFilter extends TestCase {
   
   RowFilterInterface mainFilter;
-  final int ROW_LIMIT = 3;
+  static final int ROW_LIMIT = 3;
   
   @Override
   protected void setUp() throws Exception {

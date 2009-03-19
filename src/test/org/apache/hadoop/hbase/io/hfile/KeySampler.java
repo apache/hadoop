@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.hadoop.io.BytesWritable;
@@ -37,14 +35,14 @@ class KeySampler {
   private static final int MIN_KEY_LEN = 4;
 
   public KeySampler(Random random, byte [] first, byte [] last,
-      DiscreteRNG keyLenRNG) throws IOException {
+      DiscreteRNG keyLenRNG) {
     this.random = random;
     min = keyPrefixToInt(first);
     max = keyPrefixToInt(last);
     this.keyLenRNG = keyLenRNG;
   }
 
-  private int keyPrefixToInt(byte [] key) throws IOException {
+  private int keyPrefixToInt(byte [] key) {
     byte[] b = key;
     int o = 0;
     return (b[o] & 0xff) << 24 | (b[o + 1] & 0xff) << 16

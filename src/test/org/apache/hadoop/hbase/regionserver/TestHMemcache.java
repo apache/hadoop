@@ -153,15 +153,17 @@ public class TestHMemcache extends TestCase {
   private void isExpectedRowWithoutTimestamps(final int rowIndex,
       TreeMap<byte [], Cell> row) {
     int i = 0;
-    for (byte [] colname: row.keySet()) {
+    for (Map.Entry<byte[], Cell> entry : row.entrySet()) {
+      byte[] colname = entry.getKey();
+      Cell cell = entry.getValue();
       String expectedColname = Bytes.toString(getColumnName(rowIndex, i++));
       String colnameStr = Bytes.toString(colname);
       assertEquals("Column name", colnameStr, expectedColname);
       // Value is column name as bytes.  Usually result is
       // 100 bytes in size at least. This is the default size
-      // for BytesWriteable.  For comparison, comvert bytes to
+      // for BytesWriteable.  For comparison, convert bytes to
       // String and trim to remove trailing null bytes.
-      byte [] value = row.get(colname).getValue();
+      byte [] value = cell.getValue();
       String colvalueStr = Bytes.toString(value).trim();
       assertEquals("Content", colnameStr, colvalueStr);
     }

@@ -136,7 +136,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
   protected final HBaseConfiguration conf;
 
   private final ServerConnection connection;
-  private final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
+  protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
   private final Random rand = new Random();
@@ -757,6 +757,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
    * Thread for toggling safemode after some configurable interval.
    */
   private class CompactionLimitThread extends Thread {
+    protected CompactionLimitThread() {}
+
     @Override
     public void run() {
       // First wait until we exit safe mode
@@ -1233,8 +1235,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
    * Data structure to hold a HMsg and retries count.
    */
   private static class ToDoEntry {
-    private int tries;
-    private final HMsg msg;
+    protected int tries;
+    protected final HMsg msg;
     ToDoEntry(HMsg msg) {
       this.tries = 0;
       this.msg = msg;
@@ -1406,14 +1408,14 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     return r; 
   }
   
-  /*
+  /**
    * Add a MSG_REPORT_PROCESS_OPEN to the outbound queue.
    * This method is called while region is in the queue of regions to process
    * and then while the region is being opened, it is called from the Worker
    * thread that is running the region open.
    * @param hri Region to add the message for
    */
-  protected void addProcessingMessage(final HRegionInfo hri) {
+  public void addProcessingMessage(final HRegionInfo hri) {
     getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
   }
 

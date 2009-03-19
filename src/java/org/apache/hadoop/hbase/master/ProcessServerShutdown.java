@@ -51,7 +51,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private boolean rootRescanned;
   
 
-  private class ToDoEntry {
+  private static class ToDoEntry {
     boolean regionOffline;
     final byte [] row;
     final HRegionInfo info;

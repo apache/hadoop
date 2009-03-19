@@ -596,6 +596,7 @@ public class HTable {
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
+   * @param numVersions 
    * @param rl row lock
    * @return RowResult is empty if row does not exist.
    * @throws IOException

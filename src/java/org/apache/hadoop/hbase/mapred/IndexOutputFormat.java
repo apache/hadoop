@@ -45,6 +45,8 @@ public class IndexOutputFormat extends
     FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
   static final Log LOG = LogFactory.getLog(IndexOutputFormat.class);
 
+  private Random random = new Random();
+
   @Override
   public RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper>
   getRecordWriter(final FileSystem fs, JobConf job, String name,
@@ -53,7 +55,7 @@ public class IndexOutputFormat extends
 
     final Path perm = new Path(FileOutputFormat.getOutputPath(job), name);
     final Path temp = job.getLocalPath("index/_"
-        + Integer.toString(new Random().nextInt()));
+        + Integer.toString(random.nextInt()));
 
     LOG.info("To index into " + perm);
 

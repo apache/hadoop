@@ -76,11 +76,10 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
   private static final int FIRST_ROW = 1;
   private static final int NUM_VALS = 1000;
   private static final byte [] CONTENTS = Bytes.toBytes("contents:");
-  private static final byte [] CONTENTS_MINUS_COLON = Bytes.toBytes("contents");
-  private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
+  private static final String CONTENTS_BASIC_STR = "contents:basic";
+  private static final byte [] CONTENTS_BASIC = Bytes.toBytes(CONTENTS_BASIC_STR);
   private static final String CONTENTSTR = "contentstr";
   private static final byte [] ANCHOR = Bytes.toBytes("anchor:");
-  private static final byte [] ANCHOR_MINUS_COLON = Bytes.toBytes("anchor");
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
 
@@ -115,23 +114,25 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
     byte [] collabel = null;
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      byte [] rowlabel = Bytes.toBytes("row_" + k);
+      String rowlabelStr = "row_" + k;
+      byte [] rowlabel = Bytes.toBytes(rowlabelStr);
 
       byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC).getValue();
-      assertNotNull("no data for row " + rowlabel + "/" + CONTENTS_BASIC,
+      assertNotNull("no data for row " + rowlabelStr + "/" + CONTENTS_BASIC_STR,
           bodydata);
       String bodystr = new String(bodydata, HConstants.UTF8_ENCODING);
       String teststr = CONTENTSTR + k;
-      assertTrue("Incorrect value for key: (" + rowlabel + "/" +
-          CONTENTS_BASIC + "), expected: '" + teststr + "' got: '" +
+      assertTrue("Incorrect value for key: (" + rowlabelStr + "/" +
+          CONTENTS_BASIC_STR + "), expected: '" + teststr + "' got: '" +
           bodystr + "'", teststr.compareTo(bodystr) == 0);
       
-      collabel = Bytes.toBytes(ANCHORNUM + k);
+      String collabelStr = ANCHORNUM + k;
+      collabel = Bytes.toBytes(collabelStr);
       bodydata = table.get(rowlabel, collabel).getValue();
-      assertNotNull("no data for row " + rowlabel + "/" + collabel, bodydata);
+      assertNotNull("no data for row " + rowlabelStr + "/" + collabelStr, bodydata);
       bodystr = new String(bodydata, HConstants.UTF8_ENCODING);
       teststr = ANCHORSTR + k;
-      assertTrue("Incorrect value for key: (" + rowlabel + "/" + collabel +
+      assertTrue("Incorrect value for key: (" + rowlabelStr + "/" + collabelStr +
           "), expected: '" + teststr + "' got: '" + bodystr + "'",
           teststr.compareTo(bodystr) == 0);
     }
@@ -158,15 +159,15 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
           byte val[] = curVals.get(col).getValue();
           String curval = Bytes.toString(val);
           if (Bytes.compareTo(col, CONTENTS_BASIC) == 0) {
-            assertTrue("Error at:" + curVals.getRow() 
-                + ", Value for " + col + " should start with: " + CONTENTSTR
+            assertTrue("Error at:" + Bytes.toString(curVals.getRow()) 
+                + ", Value for " + Bytes.toString(col) + " should start with: " + CONTENTSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
           } else if (Bytes.toString(col).startsWith(ANCHORNUM)) {
-            assertTrue("Error at:" + curVals.getRow()
-                + ", Value for " + col + " should start with: " + ANCHORSTR
+            assertTrue("Error at:" + Bytes.toString(curVals.getRow())
+                + ", Value for " + Bytes.toString(col) + " should start with: " + ANCHORSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(ANCHORSTR));
             anchorFetched++;

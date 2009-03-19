@@ -42,7 +42,6 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
    * @param regionInfo
    * @throws IOException
    */
-  @SuppressWarnings("unused")
   public ProcessRegionOpen(HMaster master, HServerInfo info,
       HRegionInfo regionInfo)
   throws IOException {

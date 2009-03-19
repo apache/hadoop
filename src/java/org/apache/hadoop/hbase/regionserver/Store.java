@@ -102,7 +102,7 @@ public class Store implements HConstants {
   private int maxFilesToCompact;
   private final long desiredMaxFileSize;
   private volatile long storeSize = 0L;
-  private final Integer flushLock = new Integer(0);
+  private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   final byte [] storeName;
   private final String storeNameStr;
@@ -126,7 +126,7 @@ public class Store implements HConstants {
   private volatile long maxSeqId = -1;
 
   private final Path compactionDir;
-  private final Integer compactLock = new Integer(0);
+  private final Object compactLock = new Object();
   private final int compactionThreshold;
   private final int blocksize;
   private final boolean bloomfilter;
@@ -255,7 +255,7 @@ public class Store implements HConstants {
       // but this is probably not what we want long term.  If we got here there
       // has been data-loss
       LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + this.storeName +
+        " opening " + Bytes.toString(this.storeName) +
         " -- continuing.  Probably lack-of-HADOOP-1700 causing DATA LOSS!", e);
     } catch (IOException e) {
       // Presume we got here because of some HDFS issue. Don't just keep going.
@@ -263,7 +263,7 @@ public class Store implements HConstants {
       // again until human intervention but alternative has us skipping logs
       // and losing edits: HBASE-642.
       LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + this.storeName, e);
+        " opening " + Bytes.toString(this.storeName), e);
       throw e;
     }
   }
@@ -1799,7 +1799,7 @@ public class Store implements HConstants {
   /*
    * Datastructure that holds size and row to split a file around.
    */
-  class StoreSize {
+  static class StoreSize {
     private final long size;
     private final byte[] key;
     StoreSize(long size, byte[] key) {

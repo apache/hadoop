@@ -180,6 +180,9 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       out.writeInt(storefileIndexSizeMB);
     }
 
+    /**
+     * @see java.lang.Object#toString()
+     */
     @Override
     public String toString() {
       StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "stores",
@@ -249,7 +252,10 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     // return load;
     return numberOfRegions;
   }
-  
+
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return toString(1);
@@ -273,11 +279,26 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     return sb.toString();
   }
 
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null) {
+      return false;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
     return compareTo((HServerLoad)o) == 0;
   }
-  
+
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     int result = Integer.valueOf(numberOfRequests).hashCode();

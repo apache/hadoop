@@ -74,14 +74,14 @@ public class TestInclusiveStopRowFilter extends TestCase {
   }
   
   private void stopRowTests(RowFilterInterface filter) throws Exception {
-    assertFalse("Filtering on " + GOOD_ROW, filter.filterRowKey(GOOD_ROW));
-    assertFalse("Filtering on " + STOP_ROW, filter.filterRowKey(STOP_ROW));
-    assertTrue("Filtering on " + PAST_STOP_ROW, filter.filterRowKey(PAST_STOP_ROW));
+    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW), filter.filterRowKey(GOOD_ROW));
+    assertFalse("Filtering on " + Bytes.toString(STOP_ROW), filter.filterRowKey(STOP_ROW));
+    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW), filter.filterRowKey(PAST_STOP_ROW));
     
-    assertFalse("Filtering on " + GOOD_ROW, filter.filterColumn(GOOD_ROW, null, 
+    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW), filter.filterColumn(GOOD_ROW, null, 
       null));
-    assertFalse("Filtering on " + STOP_ROW, filter.filterColumn(STOP_ROW, null, null));
-    assertTrue("Filtering on " + PAST_STOP_ROW, filter.filterColumn(PAST_STOP_ROW, 
+    assertFalse("Filtering on " + Bytes.toString(STOP_ROW), filter.filterColumn(STOP_ROW, null, null));
+    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW), filter.filterColumn(PAST_STOP_ROW, 
       null, null));
 
     assertFalse("FilterAllRemaining", filter.filterAllRemaining());

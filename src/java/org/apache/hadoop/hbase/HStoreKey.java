@@ -258,15 +258,30 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     Bytes.compareTo(getColumn(), 0, delimiterIndex, that.getColumn(), 0,
         delimiterIndex) == 0;
   }
-  
+
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return Bytes.toString(this.row) + "/" + Bytes.toString(this.column) + "/" +
       timestamp;
   }
-  
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(final Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
     final HStoreKey other = (HStoreKey)obj;
     // Do a quick check.
     if (this.row.length != other.row.length ||
@@ -277,6 +292,10 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     return compareTo(other) == 0;
   }
 
+  /**
+   * @see java.lang.Object#hashCode()
+   */
+  @Override
   public int hashCode() {
     int c = Bytes.hashCode(getRow());
     c ^= Bytes.hashCode(getColumn());
@@ -287,8 +306,11 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   // Comparable
 
   /**
+   * @param o 
+   * @return int
    * @deprecated Use Comparators instead.  This can give wrong results.
    */
+  @Deprecated
   public int compareTo(final HStoreKey o) {
     return compareTo(this, o);
   }
@@ -300,6 +322,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @deprecated Use Comparators instead.  This can give wrong results because
    * does not take into account special handling needed for meta and root rows.
    */
+  @Deprecated
   static int compareTo(final HStoreKey left, final HStoreKey right) {
     // We can be passed null
     if (left == null && right == null) return 0;
@@ -412,7 +435,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     final byte [][] result = new byte [2][];
     final int index = getFamilyDelimiterIndex(c);
     if (index == -1) {
-      throw new ColumnNameParseException("Impossible column name: " + c);
+      throw new ColumnNameParseException("Impossible column name: " + Bytes.toString(c));
     }
     result[0] = new byte [index];
     System.arraycopy(c, 0, result[0], 0, index);
@@ -429,7 +452,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * buffer.
    */
   public static int getFamilyDelimiterIndex(final byte [] b) {
-    return getDelimiter(b, 0, b.length, (int)COLUMN_FAMILY_DELIMITER);
+    return getDelimiter(b, 0, b.length, COLUMN_FAMILY_DELIMITER);
   }
 
   private static int getRequiredDelimiterInReverse(final byte [] b,
@@ -735,6 +758,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * Use this comparing keys in the -ROOT_ table.
    */
   public static class HStoreKeyRootComparator extends HStoreKeyMetaComparator {
+    @Override
     protected int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       return compareRootRows(left, loffset, llength, right, roffset, rlength);
@@ -746,6 +770,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * Use this comprator for keys in the .META. table.
    */
   public static class HStoreKeyMetaComparator extends HStoreKeyComparator {
+    @Override
     protected int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       return compareMetaRows(left, loffset, llength, right, roffset, rlength);
@@ -760,6 +785,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       super(HStoreKey.class);
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public int compare(final WritableComparable l,
         final WritableComparable r) {
@@ -807,6 +833,9 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    */
   public static class RootStoreKeyComparator
   extends MetaStoreKeyComparator {
+    private static final long serialVersionUID = 1L;
+
+    @Override
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       return compareRootRows(left, loffset, llength, right, roffset, rlength);
@@ -817,6 +846,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * StoreKeyComparator for the .META. table.
    */
   public static class MetaStoreKeyComparator extends StoreKeyComparator {
+    @Override
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       return compareMetaRows(left, loffset, llength, right, roffset, rlength);
@@ -1069,8 +1099,8 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
    * @return Compatible raw comparator
    */
   public static StoreKeyComparator getRawComparator(final HRegionInfo hri) {
-    return hri.isRootRegion()? ROOT_COMPARATOR:
-      hri.isMetaRegion()? META_COMPARATOR: META_COMPARATOR;
+    return hri.isRootRegion() ? ROOT_COMPARATOR :
+      hri.isMetaRegion() ? META_COMPARATOR : PLAIN_COMPARATOR;
   }
 
   /**

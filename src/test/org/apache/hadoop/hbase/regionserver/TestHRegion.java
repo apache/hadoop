@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -70,7 +71,8 @@ public class TestHRegion extends HBaseTestCase {
   
   private static final int FIRST_ROW = 1;
   private static final int NUM_VALS = 1000;
-  private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
+  private static final String CONTENTS_BASIC_STR = "contents:basic";
+  private static final byte [] CONTENTS_BASIC = Bytes.toBytes(CONTENTS_BASIC_STR);
   private static final String CONTENTSTR = "contentstr";
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
@@ -83,9 +85,12 @@ public class TestHRegion extends HBaseTestCase {
   HRegionIncommon region = null;
   
   private static int numInserted = 0;
-  
+
+  /**
+   * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
+   */
   @Override
-  public void setUp() throws Exception {
+  protected void setUp() throws Exception {
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 
     conf.setLong("hbase.hregion.max.filesize", 65536);
@@ -145,20 +150,22 @@ public class TestHRegion extends HBaseTestCase {
 
     byte [] collabel = null;
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      byte [] rowlabel = Bytes.toBytes("row_" + k);
+      String rowlabelStr = "row_" + k;
+      byte [] rowlabel = Bytes.toBytes(rowlabelStr);
       if (k % 100 == 0) LOG.info(Bytes.toString(rowlabel));
       byte [] bodydata = region.get(rowlabel, CONTENTS_BASIC).getValue();
       assertNotNull(bodydata);
       String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       String teststr = CONTENTSTR + k;
-      assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
+      assertEquals("Incorrect value for key: (" + rowlabelStr + "," + CONTENTS_BASIC_STR
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
           bodystr, teststr);
-      collabel = Bytes.toBytes(ANCHORNUM + k);
+      String collabelStr = ANCHORNUM + k;
+      collabel = Bytes.toBytes(collabelStr);
       bodydata = region.get(rowlabel, collabel).getValue();
       bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       teststr = ANCHORSTR + k;
-      assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
+      assertEquals("Incorrect value for key: (" + rowlabelStr + "," + collabelStr
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
           bodystr, teststr);
     }
@@ -205,8 +212,8 @@ public class TestHRegion extends HBaseTestCase {
             try {
               byte [] rowid = Bytes.toBytes(Integer.toString(i));
               lockids[i] = r.obtainRowLock(rowid);
-              rowid.equals(r.getRowFromLock(lockids[i]));
-              LOG.debug(getName() + " locked " + rowid.toString());
+              assertEquals(rowid, r.getRowFromLock(lockids[i]));
+              LOG.debug(getName() + " locked " + Bytes.toString(rowid));
             } catch (IOException e) {
               e.printStackTrace();
             }
@@ -289,16 +296,16 @@ public class TestHRegion extends HBaseTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          byte [] col = it.next();
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] col = entry.getKey();
+          byte [] val = entry.getValue().getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if (Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Error at:" + curKey.getRow() + "/"
+              assertEquals("Error at:" + Bytes.toString(curKey.getRow()) + "/"
                   + curKey.getTimestamp()
-                  + ", Value for " + col + " should be: " + k
+                  + ", Value for " + Bytes.toString(col) + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
@@ -338,16 +345,16 @@ public class TestHRegion extends HBaseTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          byte [] col = it.next();
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] col = entry.getKey();
+          byte [] val = entry.getValue().getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if (Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Error at:" + curKey.getRow() + "/"
+              assertEquals("Error at:" + Bytes.toString(curKey.getRow()) + "/"
                   + curKey.getTimestamp()
-                  + ", Value for " + col + " should be: " + k
+                  + ", Value for " + Bytes.toString(col) + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
@@ -397,16 +404,16 @@ public class TestHRegion extends HBaseTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          byte [] col = it.next();
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] col = entry.getKey();
+          byte [] val = entry.getValue().getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if(Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Error at:" + curKey.getRow() + "/"
+              assertEquals("Error at:" + Bytes.toString(curKey.getRow()) + "/"
                   + curKey.getTimestamp()
-                  + ", Value for " + col + " should be: " + k
+                  + ", Value for " + Bytes.toString(col) + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
@@ -445,14 +452,14 @@ public class TestHRegion extends HBaseTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          byte [] col = it.next();
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] col = entry.getKey();
+          byte [] val = entry.getValue().getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
             if (Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Value for " + col + " should be: " + k
+              assertEquals("Value for " + Bytes.toString(col) + " should be: " + k
                   + ", but was fetched as: " + curval, curval, k);
               numFetched++;
             }
@@ -481,14 +488,14 @@ public class TestHRegion extends HBaseTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 500;
       while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          byte [] col = it.next();
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] col = entry.getKey();
+          byte [] val = entry.getValue().getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
             if (Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Value for " + col + " should be: " + k
+              assertEquals("Value for " + Bytes.toString(col) + " should be: " + k
                   + ", but was fetched as: " + curval, curval, k);
               numFetched++;
             }
@@ -567,19 +574,19 @@ public class TestHRegion extends HBaseTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          byte [] col = it.next();
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] col = entry.getKey();
+          byte [] val = entry.getValue().getValue();
           String curval = Bytes.toString(val);
           if(Bytes.compareTo(col, CONTENTS_BASIC) == 0) {
-            assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
-                + ", Value for " + col + " should start with: " + CONTENTSTR
+            assertTrue("Error at:" + Bytes.toString(curKey.getRow()) + "/" + curKey.getTimestamp()
+                + ", Value for " + Bytes.toString(col) + " should start with: " + CONTENTSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
           } else if (Bytes.toString(col).startsWith(ANCHORNUM)) {
-            assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
+            assertTrue("Error at:" + Bytes.toString(curKey.getRow()) + "/" + curKey.getTimestamp()
                 + ", Value for " + Bytes.toString(col) +
                 " should start with: " + ANCHORSTR
                 + ", but was fetched as: " + curval,
@@ -587,7 +594,7 @@ public class TestHRegion extends HBaseTestCase {
             anchorFetched++;
             
           } else {
-            LOG.info("UNEXPECTED COLUMN " + col);
+            LOG.info("UNEXPECTED COLUMN " + Bytes.toString(col));
           }
         }
         curVals.clear();
@@ -621,15 +628,15 @@ public class TestHRegion extends HBaseTestCase {
         new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          byte [] col = it.next();
-          byte [] val = curVals.get(col).getValue();
+        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
+          byte [] col = entry.getKey();
+          byte [] val = entry.getValue().getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
 
           for (int j = 0; j < cols.length; j++) {
             if (Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Value for " + col + " should be: " + k
+              assertEquals("Value for " + Bytes.toString(col) + " should be: " + k
                   + ", but was fetched as: " + curval, curval, k);
               numFetched++;
             }

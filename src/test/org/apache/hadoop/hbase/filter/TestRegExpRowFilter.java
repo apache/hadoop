@@ -40,9 +40,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestRegExpRowFilter extends TestCase {
   TreeMap<byte [], Cell> colvalues;
   RowFilterInterface mainFilter;
-  final char FIRST_CHAR = 'a';
-  final char LAST_CHAR = 'e';
-  final String HOST_PREFIX = "org.apache.site-";
+  static final char FIRST_CHAR = 'a';
+  static final char LAST_CHAR = 'e';
+  static final String HOST_PREFIX = "org.apache.site-";
   static byte [] GOOD_BYTES = null;
 
   static {

@@ -42,7 +42,7 @@ public class TimestampController extends AbstractController {
 
   @Override
   protected AbstractModel generateModel(
-      @SuppressWarnings("hiding") HBaseConfiguration conf, HBaseAdmin admin) {
+      HBaseConfiguration conf, HBaseAdmin admin) {
     return new TimestampModel(conf, admin);
   }
 

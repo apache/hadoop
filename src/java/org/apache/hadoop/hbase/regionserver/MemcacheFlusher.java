@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -144,7 +145,7 @@ class MemcacheFlusher extends Thread implements FlushRequester {
         continue;
       } catch (Exception ex) {
         LOG.error("Cache flush failed" +
-          (r != null ? (" for region " + r.getRegionName()) : ""),
+          (r != null ? (" for region " + Bytes.toString(r.getRegionName())) : ""),
           ex);
         if (!server.checkFileSystem()) {
           break;
@@ -239,7 +240,7 @@ class MemcacheFlusher extends Thread implements FlushRequester {
       return false;
     } catch (IOException ex) {
       LOG.error("Cache flush failed"
-          + (region != null ? (" for region " + region.getRegionName()) : ""),
+          + (region != null ? (" for region " + Bytes.toString(region.getRegionName())) : ""),
           RemoteExceptionHandler.checkIOException(ex));
       if (!server.checkFileSystem()) {
         return false;
@@ -269,7 +270,7 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   private synchronized void flushSomeRegions() {
     // keep flushing until we hit the low water mark
     long globalMemcacheSize = -1;
-    ArrayList<HRegion> regionsToCompact = new ArrayList();
+    ArrayList<HRegion> regionsToCompact = new ArrayList<HRegion>();
     for (SortedMap<Long, HRegion> m =
         this.server.getCopyOfOnlineRegionsSortedBySize();
       (globalMemcacheSize = server.getGlobalMemcacheSize()) >=

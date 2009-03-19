@@ -40,7 +40,7 @@ import org.apache.hadoop.io.WritableComparable;
  * </p>
  */
 public class MapFilePerformanceEvaluation {
-  private final HBaseConfiguration conf;
+  protected final HBaseConfiguration conf;
   private static final int ROW_LENGTH = 10;
   private static final int ROW_COUNT = 100000;
   
@@ -61,7 +61,7 @@ public class MapFilePerformanceEvaluation {
     return w;
   }
 
-  private void runBenchmarks(final String[] args) throws Exception {
+  private void runBenchmarks() throws Exception {
     final FileSystem fs = FileSystem.get(this.conf);
     final Path mf = fs.makeQualified(new Path("performanceevaluation.mapfile"));
     if (fs.exists(mf)) {
@@ -112,7 +112,7 @@ public class MapFilePerformanceEvaluation {
     });
   }
   
-  private void runBenchmark(RowOrientedBenchmark benchmark, int rowCount)
+  protected void runBenchmark(RowOrientedBenchmark benchmark, int rowCount)
     throws Exception {
     LOG.info("Running " + benchmark.getClass().getSimpleName() + " for " +
         rowCount + " rows.");
@@ -249,7 +249,7 @@ public class MapFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       this.reader.next(key, value);
       PerformanceEvaluationCommons.assertKey(this.key.get(),
         format(i, this.verify).get());
@@ -273,7 +273,7 @@ public class MapFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       ImmutableBytesWritable k = getRandomRow();
       ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
       PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
@@ -294,7 +294,7 @@ public class MapFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       ImmutableBytesWritable ibw = getRandomRow();
       WritableComparable<?> wc = this.reader.getClosest(ibw, this.value);
       if (wc == null) {
@@ -323,7 +323,7 @@ public class MapFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       ImmutableBytesWritable k = getGaussianRandomRow();
       ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
       PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
@@ -338,10 +338,11 @@ public class MapFilePerformanceEvaluation {
 
   /**
    * @param args
+   * @throws Exception 
    * @throws IOException 
    */
   public static void main(String[] args) throws Exception {
     new MapFilePerformanceEvaluation(new HBaseConfiguration()).
-      runBenchmarks(args);
+      runBenchmarks();
   }
 }

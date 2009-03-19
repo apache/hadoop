@@ -35,6 +35,7 @@ public class PrefixRowFilter implements RowFilterInterface {
   
   /**
    * Constructor that takes a row prefix to filter on
+   * @param prefix 
    */
   public PrefixRowFilter(byte[] prefix) {
     this.prefix = prefix;

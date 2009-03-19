@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -42,9 +40,6 @@ import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
  */
 public class ScannerModel extends AbstractModel {
 
-  @SuppressWarnings("unused")
-  private Log LOG = LogFactory.getLog(TableModel.class);
-
   public ScannerModel(HBaseConfiguration config, HBaseAdmin admin) {
     super.initialize(config, admin);
   }
@@ -54,11 +49,11 @@ public class ScannerModel extends AbstractModel {
   //
   protected static class ScannerMaster {
 
-    protected static Map<Integer, Scanner> scannerMap = new ConcurrentHashMap<Integer, Scanner>();
-    protected static AtomicInteger nextScannerId = new AtomicInteger(1);
+    protected static final Map<Integer, Scanner> scannerMap = new ConcurrentHashMap<Integer, Scanner>();
+    protected static final AtomicInteger nextScannerId = new AtomicInteger(1);
 
     public Integer addScanner(Scanner scanner) {
-      Integer i = new Integer(nextScannerId.getAndIncrement());
+      Integer i = Integer.valueOf(nextScannerId.getAndIncrement());
       scannerMap.put(i, scanner);
       return i;
     }
@@ -81,7 +76,7 @@ public class ScannerModel extends AbstractModel {
     }
   }
 
-  protected static ScannerMaster scannerMaster = new ScannerMaster();
+  protected static final ScannerMaster scannerMaster = new ScannerMaster();
 
   /**
    * returns the next numResults RowResults from the Scaner mapped to Integer

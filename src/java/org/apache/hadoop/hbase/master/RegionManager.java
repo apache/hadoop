@@ -1315,6 +1315,12 @@ class RegionManager implements HConstants {
     
     @Override
     public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
       return this.compareTo((RegionState) o) == 0;
     }
     

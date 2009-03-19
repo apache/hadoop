@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -64,10 +63,11 @@ public class TestGet extends HBaseTestCase {
     Map<byte [], Cell> values = r.getFull(ROW_KEY);
     
     // assertEquals(4, values.keySet().size());
-    for(Iterator<byte []> i = values.keySet().iterator(); i.hasNext(); ) {
-      byte [] column = i.next();
+    for (Map.Entry<byte[], Cell> entry : values.entrySet()) {
+      byte[] column = entry.getKey();
+      Cell cell = entry.getValue();
       if (Bytes.equals(column, HConstants.COL_SERVER)) {
-        String server = Writables.cellToString(values.get(column));
+        String server = Writables.cellToString(cell);
         assertEquals(expectedServer, server);
         LOG.info(server);
       }

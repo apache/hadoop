@@ -86,7 +86,7 @@ public class TransactionalRegion extends HRegion {
   static final Log LOG = LogFactory.getLog(TransactionalRegion.class);
 
   // Collection of active transactions (PENDING) keyed by id.
-  private Map<String, TransactionState> transactionsById = new HashMap<String, TransactionState>();
+  protected Map<String, TransactionState> transactionsById = new HashMap<String, TransactionState>();
 
   // Map of recent transactions that are COMMIT_PENDING or COMMITED keyed by
   // their sequence number
@@ -533,7 +533,7 @@ public class TransactionalRegion extends HRegion {
     transactionsById.remove(key);
   }
 
-  private TransactionState getTransactionState(final long transactionId)
+  protected TransactionState getTransactionState(final long transactionId)
       throws UnknownTransactionException {
     String key = String.valueOf(transactionId);
     TransactionState state = null;
@@ -622,8 +622,7 @@ public class TransactionalRegion extends HRegion {
   }
 
   // TODO, resolve from the global transaction log
-  @SuppressWarnings("unused")
-  private void resolveTransactionFromLog(final long transactionId) {
+  protected void resolveTransactionFromLog() {
     throw new RuntimeException("Globaql transaction log is not Implemented");
   }
 
@@ -653,7 +652,7 @@ public class TransactionalRegion extends HRegion {
         LOG.info("Transaction " + s.getTransactionId()
             + " expired in COMMIT_PENDING state");
         LOG.info("Checking transaction status in transaction log");
-        resolveTransactionFromLog(s.getTransactionId());
+        resolveTransactionFromLog();
         break;
       default:
         LOG.warn("Unexpected status on expired lease");

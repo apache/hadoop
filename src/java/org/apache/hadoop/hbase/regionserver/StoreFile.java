@@ -158,7 +158,7 @@ public class StoreFile implements HConstants {
    * @return Calculated path to parent region file.
    * @throws IOException
    */
-  static Path getReferredToFile(final Path p) throws IOException {
+  static Path getReferredToFile(final Path p) {
     Matcher m = REF_NAME_PARSER.matcher(p.getName());
     if (m == null || !m.matches()) {
       LOG.warn("Failed match of store file name " + p.toString());
@@ -252,6 +252,7 @@ public class StoreFile implements HConstants {
       super(fs, path, cache);
     }
 
+    @Override
     protected String toStringFirstKey() {
       String result = "";
       try {
@@ -262,6 +263,7 @@ public class StoreFile implements HConstants {
       return result;
     }
 
+    @Override
     protected String toStringLastKey() {
       String result = "";
       try {
@@ -287,6 +289,7 @@ public class StoreFile implements HConstants {
       return super.toString() + (isTop()? ", half=top": ", half=bottom");
     }
 
+    @Override
     protected String toStringFirstKey() {
       String result = "";
       try {
@@ -297,6 +300,7 @@ public class StoreFile implements HConstants {
       return result;
     }
 
+    @Override
     protected String toStringLastKey() {
       String result = "";
       try {
@@ -320,7 +324,6 @@ public class StoreFile implements HConstants {
 
   /**
    * @throws IOException
-   * @see #open()
    */
   public synchronized void close() throws IOException {
     if (this.reader != null) {
@@ -329,6 +332,7 @@ public class StoreFile implements HConstants {
     }
   }
 
+  @Override
   public String toString() {
     return this.path.toString() +
       (isReference()? "-" + this.referencePath + "-" + reference.toString(): "");
@@ -388,6 +392,7 @@ public class StoreFile implements HConstants {
    * @param blocksize
    * @param algorithm Pass null to get default.
    * @param c Pass null to get default.
+   * @param bloomfilter 
    * @return HFile.Writer
    * @throws IOException
    */

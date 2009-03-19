@@ -59,6 +59,11 @@ implements TableMap<ImmutableBytesWritable, RowResult> {
 
   /**
    * Pass the key, value to reduce
+   * @param key 
+   * @param value 
+   * @param output 
+   * @param reporter 
+   * @throws IOException 
    */
   public void map(ImmutableBytesWritable key, RowResult value,
       OutputCollector<ImmutableBytesWritable,RowResult> output,

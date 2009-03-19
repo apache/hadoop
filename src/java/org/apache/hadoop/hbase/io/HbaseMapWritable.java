@@ -168,6 +168,9 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
     return b;
   }
   
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return this.instance.toString();

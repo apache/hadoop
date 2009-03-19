@@ -71,6 +71,6 @@ public class TestInfoServers extends HBaseClusterTestCase {
     }
     bis.close();
     String content = sb.toString();
-    content.matches(expected);
+    assertTrue(content.matches(expected));
   }
 }

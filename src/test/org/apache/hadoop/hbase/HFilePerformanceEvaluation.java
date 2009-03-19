@@ -112,7 +112,7 @@ public class HFilePerformanceEvaluation {
     
   }
   
-  private void runBenchmark(RowOrientedBenchmark benchmark, int rowCount)
+  protected void runBenchmark(RowOrientedBenchmark benchmark, int rowCount)
     throws Exception {
     LOG.info("Running " + benchmark.getClass().getSimpleName() + " for " +
         rowCount + " rows.");
@@ -240,8 +240,7 @@ public class HFilePerformanceEvaluation {
     private HFileScanner scanner;
     
     public SequentialReadBenchmark(Configuration conf, FileSystem fs,
-      Path mf, int totalRows)
-    throws IOException {
+      Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
     }
     
@@ -253,7 +252,7 @@ public class HFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       if (this.scanner.next()) {
         ByteBuffer k = this.scanner.getKey();
         PerformanceEvaluationCommons.assertKey(format(i + 1), k);
@@ -279,7 +278,7 @@ public class HFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner();
       byte [] b = getRandomRow();
       scanner.seekTo(b);
@@ -303,7 +302,7 @@ public class HFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner();
       byte [] b = getRandomRow();
       if (scanner.seekTo(b) != 0) {
@@ -337,7 +336,7 @@ public class HFilePerformanceEvaluation {
     }
 
     @Override
-    void doRow(@SuppressWarnings("unused") int i) throws Exception {
+    void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner();
       scanner.seekTo(getGaussianRandomRowBytes());
       for (int ii = 0; ii < 30; ii++) {
@@ -357,6 +356,7 @@ public class HFilePerformanceEvaluation {
   
   /**
    * @param args
+   * @throws Exception 
    * @throws IOException 
    */
   public static void main(String[] args) throws Exception {

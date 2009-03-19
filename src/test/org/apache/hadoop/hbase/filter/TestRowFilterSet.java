@@ -43,8 +43,8 @@ public class TestRowFilterSet extends TestCase {
   RowFilterInterface filterMPALL;
   RowFilterInterface filterMPONE;
   static final int MAX_PAGES = 5;
-  final char FIRST_CHAR = 'a';
-  final char LAST_CHAR = 'e';
+  static final char FIRST_CHAR = 'a';
+  static final char LAST_CHAR = 'e';
   TreeMap<byte [], Cell> colvalues;
   static byte[] GOOD_BYTES = null;
   static byte[] BAD_BYTES = null;

@@ -85,7 +85,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
 
   /** @return the server address */
-  public HServerAddress getServerAddress() {
+  public synchronized HServerAddress getServerAddress() {
     return new HServerAddress(serverAddress);
   }
   
@@ -99,7 +99,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
  
   /** @return the server start code */
-  public long getStartCode() {
+  public synchronized long getStartCode() {
     return startCode;
   }
   
@@ -128,17 +128,35 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     return this.serverName;
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return "address: " + this.serverAddress + ", startcode: " + this.startCode
     + ", load: (" + this.load.toString() + ")";
   }
 
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
   @Override
   public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
     return compareTo((HServerInfo)obj) == 0;
   }
 
+  /**
+   * @see java.lang.Object#hashCode()
+   */
   @Override
   public int hashCode() {
     return this.getServerName().hashCode();

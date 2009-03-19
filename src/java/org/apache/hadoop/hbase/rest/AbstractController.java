@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.rest;
 
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -31,8 +29,6 @@ import org.apache.hadoop.hbase.rest.parser.IHBaseRestParser;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public abstract class AbstractController implements RESTConstants {
-
-  private Log LOG = LogFactory.getLog(AbstractController.class);
   protected Configuration conf;
   protected AbstractModel model;
 

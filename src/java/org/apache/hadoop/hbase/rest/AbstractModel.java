@@ -49,7 +49,7 @@ public abstract class AbstractModel {
     public static Encoding EBase64 = new Encoding() {
 
       public String encode(byte[] b) throws HBaseRestException {
-        return new String(Base64.encodeBytes(b));
+        return Base64.encodeBytes(b);
       }
     };
     public static Encoding EUTF8 = new Encoding() {
@@ -60,7 +60,7 @@ public abstract class AbstractModel {
     };
   }
 
-  protected static Encodings.Encoding encoding = Encodings.EUTF8;
+  protected static final Encodings.Encoding encoding = Encodings.EUTF8;
 
   public void initialize(HBaseConfiguration conf, HBaseAdmin admin) {
     this.conf = conf;
@@ -85,7 +85,7 @@ public abstract class AbstractModel {
     }
   }
 
-  protected static byte COLON = Bytes.toBytes(":")[0];
+  protected static final byte COLON = Bytes.toBytes(":")[0];
 
   protected boolean isColumnFamily(byte[] columnName) {
     for (int i = 0; i < columnName.length; i++) {

@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.rest.RESTConstants;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
-import org.apache.hadoop.hbase.rest.filter.FilterFactoryConstants.MalformedFilterException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

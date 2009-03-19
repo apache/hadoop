@@ -45,7 +45,6 @@ import org.onelab.filter.Key;
 // TODO should be fixed generic warnings from MapFile methods
 @SuppressWarnings("unchecked")
 public class BloomFilterMapFile extends HBaseMapFile {
-  @SuppressWarnings("hiding")
   static final Log LOG = LogFactory.getLog(BloomFilterMapFile.class);
   protected static final String BLOOMFILTER_FILE_NAME = "filter";
 
@@ -89,7 +88,10 @@ public class BloomFilterMapFile extends HBaseMapFile {
       }
       return filter;
     }
-    
+
+    /**
+     * @see org.apache.hadoop.hbase.io.MapFile.Reader#get(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
+     */
     @Override
     public Writable get(WritableComparable key, Writable val)
     throws IOException {
@@ -108,6 +110,9 @@ public class BloomFilterMapFile extends HBaseMapFile {
       return null;
     }
 
+    /**
+     * @see org.apache.hadoop.hbase.io.MapFile.Reader#getClosest(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
+     */
     @Override
     public WritableComparable getClosest(WritableComparable key,
         Writable val) throws IOException {
@@ -199,6 +204,9 @@ public class BloomFilterMapFile extends HBaseMapFile {
       }
     }
 
+    /**
+     * @see org.apache.hadoop.hbase.io.MapFile.Writer#append(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
+     */
     @Override
     public void append(WritableComparable key, Writable val)
     throws IOException {
@@ -208,6 +216,9 @@ public class BloomFilterMapFile extends HBaseMapFile {
       super.append(key, val);
     }
 
+    /**
+     * @see org.apache.hadoop.hbase.io.MapFile.Writer#close()
+     */
     @Override
     public synchronized void close() throws IOException {
       super.close();

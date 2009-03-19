@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TimestampTestBase;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Tests user specifiable time stamps putting, getting and scanning.  Also
@@ -34,13 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * run against an HRegion and against an HTable: i.e. both local and remote.
  */
 public class TestTimestamp extends HBaseClusterTestCase {
-  private static final Log LOG =
-    LogFactory.getLog(TestTimestamp.class.getName());
-  
   private static final String COLUMN_NAME = "contents:";
-  private static final byte [] COLUMN = Bytes.toBytes(COLUMN_NAME);
-  // When creating column descriptor, how many versions of a cell to allow.
-  private static final int VERSIONS = 3;
   
   /** constructor */
   public TestTimestamp() {

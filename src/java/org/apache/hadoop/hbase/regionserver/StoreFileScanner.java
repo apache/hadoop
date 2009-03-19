@@ -191,7 +191,7 @@ implements ChangedReadersObserver {
   }
 
   // Data stucture to hold next, viable row (and timestamp).
-  class ViableRow {
+  static class ViableRow {
     private final byte [] row;
     private final long ts;
 

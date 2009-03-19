@@ -47,6 +47,7 @@ public abstract class AbstractRestSerializer implements IRestSerializer {
    * should be called whenever creating a RestSerializer object.
    * 
    * @param response
+   * @param prettyPrint 
    */
   public AbstractRestSerializer(HttpServletResponse response,
       boolean prettyPrint) {

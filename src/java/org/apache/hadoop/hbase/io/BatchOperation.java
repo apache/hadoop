@@ -110,6 +110,9 @@ public class BatchOperation implements Writable, HeapSize {
     return this.value != null;
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return "column => " + Bytes.toString(this.column) + ", value => '...'";

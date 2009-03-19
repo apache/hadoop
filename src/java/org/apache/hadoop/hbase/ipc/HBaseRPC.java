@@ -78,7 +78,7 @@ public class HBaseRPC {
   // Leave this out in the hadoop ipc package but keep class name.  Do this
   // so that we dont' get the logging of this class's invocations by doing our
   // blanket enabling DEBUG on the o.a.h.h. package.
-  private static final Log LOG =
+  protected static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HbaseRPC");
 
   private HBaseRPC() {
@@ -236,6 +236,8 @@ public class HBaseRPC {
     private Map<SocketFactory, HBaseClient> clients =
       new HashMap<SocketFactory, HBaseClient>();
 
+    protected ClientCache() {}
+
     /**
      * Construct & cache an IPC client with the user-provided SocketFactory 
      * if no cached client exists.
@@ -243,7 +245,7 @@ public class HBaseRPC {
      * @param conf Configuration
      * @return an IPC client
      */
-    private synchronized HBaseClient getClient(Configuration conf,
+    protected synchronized HBaseClient getClient(Configuration conf,
         SocketFactory factory) {
       // Construct & cache client.  The configuration is only used for timeout,
       // and Clients have connection pools.  So we can either (a) lose some
@@ -256,7 +258,7 @@ public class HBaseRPC {
         client = new HBaseClient(HbaseObjectWritable.class, conf, factory);
         clients.put(factory, client);
       } else {
-        ((HBaseClient)client).incCount();
+        client.incCount();
       }
       return client;
     }
@@ -268,7 +270,7 @@ public class HBaseRPC {
      * @param conf Configuration
      * @return an IPC client
      */
-    private synchronized HBaseClient getClient(Configuration conf) {
+    protected synchronized HBaseClient getClient(Configuration conf) {
       return getClient(conf, SocketFactory.getDefault());
     }
 
@@ -276,20 +278,20 @@ public class HBaseRPC {
      * Stop a RPC client connection 
      * A RPC client is closed only when its reference count becomes zero.
      */
-    private void stopClient(HBaseClient client) {
+    protected void stopClient(HBaseClient client) {
       synchronized (this) {
-        ((HBaseClient)client).decCount();
-        if (((HBaseClient)client).isZeroReference()) {
-          clients.remove(((HBaseClient)client).getSocketFactory());
+        client.decCount();
+        if (client.isZeroReference()) {
+          clients.remove(client.getSocketFactory());
         }
       }
-      if (((HBaseClient)client).isZeroReference()) {
+      if (client.isZeroReference()) {
         client.stop();
       }
     }
   }
 
-  private static ClientCache CLIENTS = new ClientCache();
+  protected final static ClientCache CLIENTS = new ClientCache();
   
   private static class Invoker implements InvocationHandler {
     private InetSocketAddress address;
@@ -310,9 +312,8 @@ public class HBaseRPC {
       this.client = CLIENTS.getClient(conf, factory);
     }
 
-    public Object invoke(@SuppressWarnings("unused") Object proxy,
-        Method method, Object[] args)
-      throws Throwable {
+    public Object invoke(Object proxy, Method method, Object[] args)
+        throws Throwable {
       final boolean logDebug = LOG.isDebugEnabled();
       long startTime = 0;
       if (logDebug) {
@@ -328,7 +329,7 @@ public class HBaseRPC {
     }
     
     /* close the IPC client that's responsible for this invoker's RPCs */ 
-    synchronized private void close() {
+    synchronized protected void close() {
       if (!isClosed) {
         isClosed = true;
         CLIENTS.stopClient(client);
@@ -468,10 +469,9 @@ public class HBaseRPC {
                                                   clientVersion);
     if (serverVersion == clientVersion) {
       return proxy;
-    } else {
-      throw new VersionMismatch(protocol.getName(), clientVersion, 
-                                serverVersion);
     }
+    throw new VersionMismatch(protocol.getName(), clientVersion, 
+                              serverVersion);
   }
 
   /**
@@ -657,11 +657,10 @@ public class HBaseRPC {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
           throw (IOException)target;
-        } else {
-          IOException ioe = new IOException(target.toString());
-          ioe.setStackTrace(target.getStackTrace());
-          throw ioe;
         }
+        IOException ioe = new IOException(target.toString());
+        ioe.setStackTrace(target.getStackTrace());
+        throw ioe;
       } catch (Throwable e) {
         IOException ioe = new IOException(e.toString());
         ioe.setStackTrace(e.getStackTrace());
@@ -670,9 +669,10 @@ public class HBaseRPC {
     }
   }
 
-  private static void log(String value) {
-    if (value!= null && value.length() > 55)
-      value = value.substring(0, 55)+"...";
-    LOG.info(value);
+  protected static void log(String value) {
+    String v = value;
+    if (v != null && v.length() > 55)
+      v = v.substring(0, 55)+"...";
+    LOG.info(v);
   }
 }

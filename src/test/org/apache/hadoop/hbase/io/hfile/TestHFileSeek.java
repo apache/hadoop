@@ -163,7 +163,6 @@ public class TestHFileSeek extends TestCase {
             keyLenGen);
     HFileScanner scanner = reader.getScanner();
     BytesWritable key = new BytesWritable();
-    BytesWritable val = new BytesWritable();
     timer.reset();
     timer.start();
     for (int i = 0; i < options.seekCount; ++i) {
@@ -181,7 +180,6 @@ public class TestHFileSeek extends TestCase {
       }
     }
     timer.stop();
-    double duration = (double) timer.read() / 1000; // in us.
     System.out.printf(
         "time: %s...avg seek: %s...%d hit...%d miss...avg I/O size: %.2fKB\n",
         timer.toString(), NanoTimer.nanoTimeToString(timer.read()
@@ -236,14 +234,6 @@ public class TestHFileSeek extends TestCase {
     int dictSize = 1000;
     int minWordLen = 5;
     int maxWordLen = 20;
-    int osInputBufferSize = 64 * 1024;
-    int osOutputBufferSize = 64 * 1024;
-    int fsInputBufferSizeNone = 0;
-    int fsInputBufferSizeLzo = 0;
-    int fsInputBufferSizeGz = 0;
-    int fsOutputBufferSizeNone = 1;
-    int fsOutputBufferSizeLzo = 1;
-    int fsOutputBufferSizeGz = 1;
    
     String rootDir =
         System.getProperty("test.build.data", "/tmp/TestTFileSeek");

@@ -108,7 +108,7 @@ public class TestRowFilterOnMultipleFamilies extends HBaseClusterTestCase {
       try {
         for (RowResult result : scanner) {
           if (printValues) {
-            LOG.info("row: " + result.getRow());
+            LOG.info("row: " + Bytes.toString(result.getRow()));
 
             for (Map.Entry<byte [], Cell> e : result.entrySet()) {
               LOG.info(" column: " + e.getKey() + " value: "

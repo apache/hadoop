@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 /**
  * A generic class for pairs.
+ * @param <T1> 
+ * @param <T2> 
  */
 public class Pair<T1, T2> implements Serializable
 {
@@ -49,6 +51,7 @@ public class Pair<T1, T2> implements Serializable
 
   /**
    * Return the first element stored in the pair.
+   * @return T1
    */
   public T1 getFirst()
   {
@@ -57,6 +60,7 @@ public class Pair<T1, T2> implements Serializable
 
   /**
    * Return the second element stored in the pair.
+   * @return T2
    */
   public T2 getSecond()
   {

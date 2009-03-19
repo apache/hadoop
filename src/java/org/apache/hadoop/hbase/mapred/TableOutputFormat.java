@@ -50,7 +50,7 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
    * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) 
    * and write to an HBase table
    */
-  protected class TableRecordWriter
+  protected static class TableRecordWriter
     implements RecordWriter<ImmutableBytesWritable, BatchUpdate> {
     private HTable m_table;
 

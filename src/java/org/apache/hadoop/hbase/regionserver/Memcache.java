@@ -84,7 +84,8 @@ class Memcache {
   /**
    * Constructor.
    * @param ttl The TTL for cache entries, in milliseconds.
-   * @param regionInfo The HRI for this cache 
+   * @param c 
+   * @param rc
    */
   public Memcache(final long ttl, final Comparator<HStoreKey> c,
       final HStoreKey.StoreKeyComparator rc) {
@@ -454,7 +455,7 @@ class Memcache {
             if (Store.notExpiredAndNotInDeletes(this.ttl, 
                 found_key, now, deletes)) {
               candidateKeys.put(stripTimestamp(found_key),
-                new Long(found_key.getTimestamp()));
+                Long.valueOf(found_key.getTimestamp()));
             } else {
               if (deletedOrExpiredRow == null) {
                 deletedOrExpiredRow = new HStoreKey(found_key);
@@ -523,7 +524,7 @@ class Memcache {
           if (Store.notExpiredAndNotInDeletes(this.ttl, found_key, now, deletes)) {
             lastRowFound = found_key.getRow();
             candidateKeys.put(stripTimestamp(found_key), 
-              new Long(found_key.getTimestamp()));
+              Long.valueOf(found_key.getTimestamp()));
           } else {
             expires.add(found_key);
             if (LOG.isDebugEnabled()) {

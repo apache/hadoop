@@ -89,7 +89,8 @@ abstract class TableOperation implements HConstants {
           HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
-            LOG.error(COL_REGIONINFO + " not found on " + values.getRow());
+            LOG.error(Bytes.toString(COL_REGIONINFO) + " not found on " +
+                      Bytes.toString(values.getRow()));
             continue;
           }
           String serverAddress = Writables.cellToString(values.get(COL_SERVER));
@@ -125,7 +126,7 @@ abstract class TableOperation implements HConstants {
       if (emptyRows.size() > 0) {
         LOG.warn("Found " + emptyRows.size() +
             " rows with empty HRegionInfo while scanning meta region " +
-            m.getRegionName());
+            Bytes.toString(m.getRegionName()));
         master.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
       }
 

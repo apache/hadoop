@@ -94,7 +94,6 @@ public class TestTableIndex extends MultiRegionTable {
    * 
    * @throws IOException
    */
-  @SuppressWarnings("static-access")
   public void testTableIndex() throws IOException {
     boolean printResults = false;
     if (printResults) {
@@ -256,7 +255,7 @@ public class TestTableIndex extends MultiRegionTable {
   /**
    * @param args unused
    */
-  public static void main(@SuppressWarnings("unused") String[] args) {
+  public static void main(String[] args) {
     TestRunner.run(new TestSuite(TestTableIndex.class));
   }
 }

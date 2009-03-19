@@ -29,6 +29,7 @@ public interface FilterFactoryConstants {
   static String VALUE = "value";
 
   static class MalformedFilterException extends HBaseRestException {
+    private static final long serialVersionUID = 1L;
 
     public MalformedFilterException() {
     }

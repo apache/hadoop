@@ -41,7 +41,8 @@ public class RestCell extends Cell {
   }
   
   /**
-   * 
+   * @param name 
+   * @param cell
    */
   public RestCell(byte[] name, Cell cell) {
     super(cell.getValue(), cell.getTimestamp());

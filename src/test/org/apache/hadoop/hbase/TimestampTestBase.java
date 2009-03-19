@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -33,9 +31,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * run against an HRegion and against an HTable: i.e. both local and remote.
  */
 public class TimestampTestBase extends HBaseTestCase {
-  private static final Log LOG =
-    LogFactory.getLog(TimestampTestBase.class.getName());
-
   private static final long T0 = 10L;
   private static final long T1 = 100L;
   private static final long T2 = 200L;

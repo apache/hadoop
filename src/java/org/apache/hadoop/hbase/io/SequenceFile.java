@@ -205,7 +205,7 @@ public class SequenceFile {
   private static final byte BLOCK_COMPRESS_VERSION = (byte)4;
   private static final byte CUSTOM_COMPRESS_VERSION = (byte)5;
   private static final byte VERSION_WITH_METADATA = (byte)6;
-  private static byte[] VERSION = new byte[] {
+  protected static byte[] VERSION = new byte[] {
     (byte)'S', (byte)'E', (byte)'Q', VERSION_WITH_METADATA
   };
 
@@ -594,12 +594,15 @@ public class SequenceFile {
     /** Write compressed bytes to outStream. 
      * Note: that it will NOT compress the bytes if they are not compressed.
      * @param outStream : Stream to write compressed bytes into.
+     * @throws IllegalArgumentException 
+     * @throws IOException 
      */
     public void writeCompressedBytes(DataOutputStream outStream) 
       throws IllegalArgumentException, IOException;
 
     /**
      * Size of stored data.
+     * @return int
      */
     public int getSize();
   }
@@ -770,11 +773,13 @@ public class SequenceFile {
       return true;
     }
 
+    @Override
     public int hashCode() {
       assert false : "hashCode not designed";
       return 42; // any arbitrary constant will do 
     }
-    
+
+    @Override
     public String toString() {
       StringBuffer sb = new StringBuffer();
       sb.append("size: ").append(this.theMetadata.size()).append("\n");
@@ -830,14 +835,30 @@ public class SequenceFile {
     Writer()
     {}
     
-    /** Create the named file. */
+    /** Create the named file. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @throws IOException
+     */
     public Writer(FileSystem fs, Configuration conf, Path name, 
                   Class keyClass, Class valClass)
       throws IOException {
       this(fs, conf, name, keyClass, valClass, null, new Metadata());
     }
     
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param progress 
+     * @param metadata 
+     * @throws IOException
+     */
     public Writer(FileSystem fs, Configuration conf, Path name, 
                   Class keyClass, Class valClass,
                   Progressable progress, Metadata metadata)
@@ -848,13 +869,25 @@ public class SequenceFile {
            progress, metadata);
     }
     
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param bufferSize 
+     * @param replication 
+     * @param blockSize 
+     * @param progress 
+     * @param metadata 
+     * @throws IOException
+     */
     public Writer(FileSystem fs, Configuration conf, Path name,
                   Class keyClass, Class valClass,
                   int bufferSize, short replication, long blockSize,
                   Progressable progress, Metadata metadata)
       throws IOException {
-      init(name, conf,
+      init(conf,
            fs.create(name, true, bufferSize, replication, blockSize, progress),
               keyClass, valClass, false, null, metadata);
       initializeFileHeader();
@@ -863,11 +896,11 @@ public class SequenceFile {
     }
 
     /** Write to an arbitrary stream using a specified buffer size. */
-    private Writer(Configuration conf, FSDataOutputStream out, 
-                   Class keyClass, Class valClass, Metadata metadata)
+    protected Writer(Configuration conf, FSDataOutputStream out, 
+                  Class keyClass, Class valClass, Metadata metadata)
       throws IOException {
       this.ownOutputStream = false;
-      init(null, conf, out, keyClass, valClass, false, null, metadata);
+      init(conf, out, keyClass, valClass, false, null, metadata);
       
       initializeFileHeader();
       writeFileHeader();
@@ -907,7 +940,7 @@ public class SequenceFile {
     
     /** Initialize. */
     @SuppressWarnings("unchecked")
-    void init(Path name, Configuration conf, FSDataOutputStream out,
+    void init(Configuration conf, FSDataOutputStream out,
               Class keyClass, Class valClass,
               boolean compress, CompressionCodec codec, Metadata metadata) 
       throws IOException {
@@ -934,16 +967,24 @@ public class SequenceFile {
       }
     }
     
-    /** Returns the class of keys in this file. */
+    /** Returns the class of keys in this file. 
+     * @return Class
+     */
     public Class getKeyClass() { return keyClass; }
 
-    /** Returns the class of values in this file. */
+    /** Returns the class of values in this file. 
+     * @return Class
+     */
     public Class getValueClass() { return valClass; }
 
-    /** Returns the compression codec of data in this file. */
+    /** Returns the compression codec of data in this file. 
+     * @return CompressionCodec
+     */
     public CompressionCodec getCompressionCodec() { return codec; }
     
-    /** create a sync point */
+    /** create a sync point 
+     * @throws IOException
+     */
     public void sync() throws IOException {
       if (sync != null && lastSyncPos != out.getPos()) {
         out.writeInt(SYNC_ESCAPE);                // mark the start of the sync
@@ -955,7 +996,9 @@ public class SequenceFile {
     /** Returns the configuration of this file. */
     Configuration getConf() { return conf; }
     
-    /** Close the file. */
+    /** Close the file. 
+     * @throws IOException
+     */
     public synchronized void close() throws IOException {
       keySerializer.close();
       uncompressedValSerializer.close();
@@ -985,13 +1028,21 @@ public class SequenceFile {
       }
     }
 
-    /** Append a key/value pair. */
+    /** Append a key/value pair. 
+     * @param key 
+     * @param val 
+     * @throws IOException
+     */
     public synchronized void append(Writable key, Writable val)
       throws IOException {
       append((Object) key, (Object) val);
     }
 
-    /** Append a key/value pair. */
+    /** Append a key/value pair. 
+     * @param key 
+     * @param val 
+     * @throws IOException
+     */
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1060,14 +1111,32 @@ public class SequenceFile {
   /** Write key/compressed-value pairs to a sequence-format file. */
   static class RecordCompressWriter extends Writer {
     
-    /** Create the named file. */
+    /** Create the named file. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param codec 
+     * @throws IOException
+     */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                 Class keyClass, Class valClass, CompressionCodec codec) 
       throws IOException {
       this(conf, fs.create(name), keyClass, valClass, codec, new Metadata());
     }
     
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param codec 
+     * @param progress 
+     * @param metadata 
+     * @throws IOException
+     */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                 Class keyClass, Class valClass, CompressionCodec codec,
                                 Progressable progress, Metadata metadata)
@@ -1078,14 +1147,27 @@ public class SequenceFile {
            progress, metadata);
     }
 
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param bufferSize 
+     * @param replication 
+     * @param blockSize 
+     * @param codec 
+     * @param progress 
+     * @param metadata 
+     * @throws IOException
+     */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name,
                                 Class keyClass, Class valClass,
                                 int bufferSize, short replication, long blockSize,
                                 CompressionCodec codec,
                                 Progressable progress, Metadata metadata)
       throws IOException {
-      super.init(name, conf,
+      super.init(conf,
                  fs.create(name, true, bufferSize, replication, blockSize, progress),
                  keyClass, valClass, true, codec, metadata);
 
@@ -1094,7 +1176,16 @@ public class SequenceFile {
       finalizeFileHeader();
     }
 
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param codec 
+     * @param progress 
+     * @throws IOException
+     */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                 Class keyClass, Class valClass, CompressionCodec codec,
                                 Progressable progress)
@@ -1103,11 +1194,11 @@ public class SequenceFile {
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
-    private RecordCompressWriter(Configuration conf, FSDataOutputStream out,
-                                 Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
+    protected RecordCompressWriter(Configuration conf, FSDataOutputStream out,
+                                Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
       this.ownOutputStream = false;
-      super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
+      super.init(conf, out, keyClass, valClass, true, codec, metadata);
       
       initializeFileHeader();
       writeFileHeader();
@@ -1115,10 +1206,13 @@ public class SequenceFile {
       
     }
     
+    @Override
     boolean isCompressed() { return true; }
+    @Override
     boolean isBlockCompressed() { return false; }
 
     /** Append a key/value pair. */
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1151,6 +1245,7 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
+    @Override
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
 
@@ -1181,7 +1276,15 @@ public class SequenceFile {
 
     private int compressionBlockSize;
     
-    /** Create the named file. */
+    /** Create the named file. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param codec 
+     * @throws IOException
+     */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                Class keyClass, Class valClass, CompressionCodec codec) 
       throws IOException {
@@ -1191,7 +1294,17 @@ public class SequenceFile {
            null, new Metadata());
     }
     
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param codec 
+     * @param progress 
+     * @param metadata 
+     * @throws IOException
+     */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                Class keyClass, Class valClass, CompressionCodec codec,
                                Progressable progress, Metadata metadata)
@@ -1202,14 +1315,27 @@ public class SequenceFile {
            progress, metadata);
     }
 
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param bufferSize 
+     * @param replication 
+     * @param blockSize 
+     * @param codec 
+     * @param progress 
+     * @param metadata 
+     * @throws IOException
+     */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name,
                                Class keyClass, Class valClass,
                                int bufferSize, short replication, long blockSize,
                                CompressionCodec codec,
                                Progressable progress, Metadata metadata)
       throws IOException {
-      super.init(name, conf,
+      super.init(conf,
                  fs.create(name, true, bufferSize, replication, blockSize, progress),
                  keyClass, valClass, true, codec, metadata);
       init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
@@ -1219,7 +1345,16 @@ public class SequenceFile {
       finalizeFileHeader();
     }
 
-    /** Create the named file with write-progress reporter. */
+    /** Create the named file with write-progress reporter. 
+     * @param fs 
+     * @param conf 
+     * @param name 
+     * @param keyClass 
+     * @param valClass 
+     * @param codec 
+     * @param progress 
+     * @throws IOException
+     */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                Class keyClass, Class valClass, CompressionCodec codec,
                                Progressable progress)
@@ -1228,11 +1363,11 @@ public class SequenceFile {
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
-    private BlockCompressWriter(Configuration conf, FSDataOutputStream out,
-                                Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
+    protected BlockCompressWriter(Configuration conf, FSDataOutputStream out,
+                               Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
       this.ownOutputStream = false;
-      super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
+      super.init(conf, out, keyClass, valClass, true, codec, metadata);
       init(1000000);
       
       initializeFileHeader();
@@ -1240,7 +1375,9 @@ public class SequenceFile {
       finalizeFileHeader();
     }
     
+    @Override
     boolean isCompressed() { return true; }
+    @Override
     boolean isBlockCompressed() { return true; }
 
     /** Initialize */
@@ -1268,6 +1405,7 @@ public class SequenceFile {
     }
     
     /** Compress and flush contents to dfs */
+    @Override
     public synchronized void sync() throws IOException {
       if (noBufferedRecords > 0) {
         super.sync();
@@ -1305,6 +1443,7 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1337,6 +1476,7 @@ public class SequenceFile {
     }
     
     /** Append a key/value pair. */
+    @Override
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
       
@@ -1420,7 +1560,12 @@ public class SequenceFile {
     private Deserializer keyDeserializer;
     private Deserializer valDeserializer;
 
-    /** Open the named file. */
+    /** Open the named file. 
+     * @param fs 
+     * @param file 
+     * @param conf 
+     * @throws IOException
+     */
     public Reader(FileSystem fs, Path file, Configuration conf)
       throws IOException {
       this(fs, file, conf.getInt("io.file.buffer.size", 4096), conf, false);
@@ -1577,7 +1722,9 @@ public class SequenceFile {
       return sf.getDeserializer(c);
     }
     
-    /** Close the file. */
+    /** Close the file. 
+     * @throws IOException
+     */
     public synchronized void close() throws IOException {
       // Return the decompressors to the pool
       CodecPool.returnDecompressor(keyLenDecompressor);
@@ -1598,12 +1745,16 @@ public class SequenceFile {
       in.close();
     }
 
-    /** Returns the name of the key class. */
+    /** Returns the name of the key class. 
+     * @return String
+     */
     public String getKeyClassName() {
       return keyClassName;
     }
 
-    /** Returns the class of keys in this file. */
+    /** Returns the class of keys in this file. 
+     * @return Class
+     */
     public synchronized Class<?> getKeyClass() {
       if (null == keyClass) {
         try {
@@ -1615,12 +1766,16 @@ public class SequenceFile {
       return keyClass;
     }
 
-    /** Returns the name of the value class. */
+    /** Returns the name of the value class. 
+     * @return String
+     */
     public String getValueClassName() {
       return valClassName;
     }
 
-    /** Returns the class of values in this file. */
+    /** Returns the class of values in this file. 
+     * @return Class
+     */
     public synchronized Class<?> getValueClass() {
       if (null == valClass) {
         try {
@@ -1632,7 +1787,9 @@ public class SequenceFile {
       return valClass;
     }
 
-    /** Returns true if values are compressed. */
+    /** Returns true if values are compressed. 
+     * @return
+     */
     public boolean isCompressed() { return decompress; }
     
     /** Returns true if records are block-compressed. */

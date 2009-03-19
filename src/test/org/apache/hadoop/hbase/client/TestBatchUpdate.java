@@ -99,7 +99,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
     for (RowResult r : scanner) {
       for(Map.Entry<byte [], Cell> e: r.entrySet()) {
-        System.out.println(r.getRow() + ": row: " + e.getKey() + " value: " + 
+        System.out.println(Bytes.toString(r.getRow()) + ": row: " + e.getKey() + " value: " + 
             new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
       }
     }
@@ -146,7 +146,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       byte [][] columns = { CONTENTS };
       Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
       int nbRows = 0;
-      for(RowResult row : scanner)
+      for(@SuppressWarnings("unused") RowResult row : scanner)
         nbRows++;
       assertEquals(NB_BATCH_ROWS, nbRows);
     } catch (IOException e) {
@@ -168,7 +168,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       byte [][] columns = { CONTENTS };
       Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
       int nbRows = 0;
-      for(RowResult row : scanner)
+      for(@SuppressWarnings("unused") RowResult row : scanner)
         nbRows++;
       assertEquals(0, nbRows);  
       scanner.close();
@@ -177,7 +177,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       
       scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
       nbRows = 0;
-      for(RowResult row : scanner)
+      for(@SuppressWarnings("unused") RowResult row : scanner)
         nbRows++;
       assertEquals(NB_BATCH_ROWS*10, nbRows);
     } catch (IOException e) {
@@ -202,7 +202,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       byte [][] columns = { CONTENTS };
       Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
       int nbRows = 0;
-      for(RowResult row : scanner)
+      for(@SuppressWarnings("unused") RowResult row : scanner)
         nbRows++;
       assertEquals(NB_BATCH_ROWS*10, nbRows);
     } catch (IOException e) {

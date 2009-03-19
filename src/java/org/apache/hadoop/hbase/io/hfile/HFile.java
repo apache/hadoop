@@ -143,6 +143,7 @@ public class HFile {
    */
   public final static Compression.Algorithm DEFAULT_COMPRESSION_ALGORITHM =
     Compression.Algorithm.NONE;
+  /** Default compression name: none. */
   public final static String DEFAULT_COMPRESSION =
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
@@ -228,7 +229,6 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param comparator
-     * @param bloomfilter
      * @throws IOException 
      * @throws IOException
      */
@@ -268,7 +268,6 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param c
-     * @param bloomfilter
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
@@ -428,6 +427,7 @@ public class HFile {
       return this.path;
     }
 
+    @Override
     public String toString() {
       return "writer=" + this.name + ", compression=" +
         this.compressAlgo.getName();
@@ -664,6 +664,7 @@ public class HFile {
       this.name = this.istream.toString();
     }
 
+    @Override
     public String toString() {
       return "reader=" + this.name +
           (!isFileInfoLoaded()? "":
@@ -1244,6 +1245,7 @@ public class HFile {
       }
     }
 
+    @Override
     public String toString() {
       return "fileinfoOffset=" + fileinfoOffset +
       ", dataIndexOffset=" + dataIndexOffset +
@@ -1413,6 +1415,7 @@ public class HFile {
       return bi;
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("size=" + count);

@@ -122,14 +122,14 @@ public class HConnectionManager implements HConstants {
     private final int numRetries;
     private final int maxRPCAttempts;
 
-    private final Integer masterLock = new Integer(0);
+    private final Object masterLock = new Object();
     private volatile boolean closed;
     private volatile HMasterInterface master;
     private volatile boolean masterChecked;
     
-    private final Integer rootRegionLock = new Integer(0);
-    private final Integer metaRegionLock = new Integer(0);
-    private final Integer userRegionLock = new Integer(0);
+    private final Object rootRegionLock = new Object();
+    private final Object metaRegionLock = new Object();
+    private final Object userRegionLock = new Object();
         
     private volatile HBaseConfiguration conf;
     
@@ -405,7 +405,7 @@ public class HConnectionManager implements HConstants {
       
     }
     
-    private class HTableDescriptorFinder 
+    private static class HTableDescriptorFinder 
     implements MetaScanner.MetaScannerVisitor {
         byte[] tableName;
         HTableDescriptor result;

@@ -74,36 +74,57 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
+  /**
+   * @see org.apache.hadoop.hbase.HTableDescriptor#setInMemory(boolean)
+   */
   @Override
   public void setInMemory(boolean inMemory) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
+  /**
+   * @see org.apache.hadoop.hbase.HTableDescriptor#setReadOnly(boolean)
+   */
   @Override
   public void setReadOnly(boolean readOnly) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
+  /**
+   * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(byte[], byte[])
+   */
   @Override
   public void setValue(byte[] key, byte[] value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
+  /**
+   * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(java.lang.String, java.lang.String)
+   */
   @Override
   public void setValue(String key, String value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
+  /**
+   * @see org.apache.hadoop.hbase.HTableDescriptor#setMaxFileSize(long)
+   */
   @Override
   public void setMaxFileSize(long maxFileSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
+  /**
+   * @see org.apache.hadoop.hbase.HTableDescriptor#setMemcacheFlushSize(int)
+   */
   @Override
   public void setMemcacheFlushSize(int memcacheFlushSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
-  
+
+  /**
+   * @see org.apache.hadoop.hbase.HTableDescriptor#addIndex(org.apache.hadoop.hbase.client.tableindexed.IndexSpecification)
+   */
   @Override
   public void addIndex(IndexSpecification index) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only"); 

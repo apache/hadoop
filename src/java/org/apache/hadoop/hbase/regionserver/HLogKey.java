@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
+import java.util.Arrays;
 
 /**
  * A Key for an entry in the change log.
@@ -94,13 +95,19 @@ public class HLogKey implements WritableComparable<HLogKey> {
   
   @Override
   public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
     return compareTo((HLogKey)obj) == 0;
   }
   
   @Override
   public int hashCode() {
-    int result = this.regionName.hashCode();
-    result ^= this.row.hashCode(); 
+    int result = Arrays.hashCode(this.regionName);
+    result ^= Arrays.hashCode(this.row);
     result ^= this.logSeqNum;
     return result;
   }

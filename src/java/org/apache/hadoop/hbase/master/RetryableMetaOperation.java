@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Sleeper;
 
 /**
@@ -75,8 +76,8 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
           if (LOG.isDebugEnabled()) {
             StringBuilder message = new StringBuilder(
                 "Trying to contact region server for regionName '" + 
-                m.getRegionName() + "', but failed after " + (tries + 1)  + 
-                " attempts.\n");
+                Bytes.toString(m.getRegionName()) + "', but failed after " +
+                (tries + 1) + " attempts.\n");
             int i = 1;
             for (IOException e2 : exceptions) {
               message.append("Exception " + i + ":\n" + e2);

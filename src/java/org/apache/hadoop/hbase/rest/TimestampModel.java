@@ -95,7 +95,7 @@ public class TimestampModel extends AbstractModel {
    * @param tableName
    * @param rowName
    * @param timestamp
-   * @return
+   * @return RowResult
    * @throws HBaseRestException
    */
   public RowResult get(byte[] tableName, byte[] rowName, long timestamp)

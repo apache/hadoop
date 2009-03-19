@@ -67,6 +67,9 @@ public class TransactionState {
     return transactionId;
   }
 
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
     return "id: " + transactionId + ", particpants: "

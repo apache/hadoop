@@ -187,28 +187,28 @@ public class Merge extends Configured implements Tool {
    * Merges two regions from a user table.
    */
   private void mergeTwoRegions() throws IOException {
-    LOG.info("Merging regions " + this.region1.toString() + " and " +
-      this.region2.toString() + " in table " + this.tableName.toString());
+    LOG.info("Merging regions " + Bytes.toString(this.region1) + " and " +
+        Bytes.toString(this.region2) + " in table " + Bytes.toString(this.tableName));
     // Scan the root region for all the meta regions that contain the regions
     // we're merging.
     MetaScannerListener listener = new MetaScannerListener(region1, region2);
     this.utils.scanRootRegion(listener);
     HRegionInfo meta1 = listener.getMeta1();
     if (meta1 == null) {
-      throw new IOException("Could not find meta region for " + region1);
+      throw new IOException("Could not find meta region for " + Bytes.toString(region1));
     }
     HRegionInfo meta2 = listener.getMeta2();
     if (meta2 == null) {
-      throw new IOException("Could not find meta region for " + region2);
+      throw new IOException("Could not find meta region for " + Bytes.toString(region2));
     }
-    LOG.info("Found meta for region1 " + meta1.getRegionName() +
-      ", meta for region2 " + meta2.getRegionName());
+    LOG.info("Found meta for region1 " + Bytes.toString(meta1.getRegionName()) +
+      ", meta for region2 " + Bytes.toString(meta2.getRegionName()));
     HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
     Cell[] cells1 = metaRegion1.get(region1, HConstants.COL_REGIONINFO, -1, -1);
     HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null : cells1[0]);
     if (info1== null) {
-      throw new NullPointerException("info1 is null using key " + region1 +
-        " in " + meta1);
+      throw new NullPointerException("info1 is null using key " +
+          Bytes.toString(region1) + " in " + meta1);
     }
 
     HRegion metaRegion2 = null;
@@ -231,7 +231,7 @@ public class Merge extends Configured implements Tool {
     HRegionInfo mergedInfo = listener.getMeta1();
     if (mergedInfo == null) {
       throw new IOException("Could not find meta region for " +
-          merged.getRegionName());
+          Bytes.toString(merged.getRegionName()));
     }
     HRegion mergeMeta = null;
     if (Bytes.equals(mergedInfo.getRegionName(), meta1.getRegionName())) {
@@ -258,12 +258,12 @@ public class Merge extends Configured implements Tool {
       HRegion meta2)
   throws IOException {
     if (info1 == null) {
-      throw new IOException("Could not find " + region1 + " in " +
-          meta1.getRegionName());
+      throw new IOException("Could not find " + Bytes.toString(region1) + " in " +
+          Bytes.toString(meta1.getRegionName()));
     }
     if (info2 == null) {
-      throw new IOException("Cound not find " + region2 + " in " +
-          meta2.getRegionName());
+      throw new IOException("Cound not find " + Bytes.toString(region2) + " in " +
+          Bytes.toString(meta2.getRegionName()));
     }
     HRegion merged = null;
     HLog log = utils.getLog();

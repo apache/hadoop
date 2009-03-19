@@ -283,7 +283,7 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
       try {
         scanners[i].close();
       } catch (IOException e) {
-        LOG.warn(store.storeName + " failed closing scanner " + i, e);
+        LOG.warn(Bytes.toString(store.storeName) + " failed closing scanner " + i, e);
       }
     } finally {
       scanners[i] = null;
