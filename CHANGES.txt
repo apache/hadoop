@@ -77,7 +77,10 @@ Release 0.19.2 - Unreleased
     HADOOP-5479. NameNode should not send empty block replication request to
     DataNode. (hairong)
 
-Release 0.19.1 - 2009-02-23
+    HADOOP-5522. Documents the setup/cleanup tasks in the mapred tutorial.
+    (Amareshwari Sriramadasu via ddas)
+
+Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 
     incomplete as a result. committed only to 0.19.x. (Raghu Angadi)
