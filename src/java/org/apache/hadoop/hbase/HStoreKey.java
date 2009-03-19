@@ -792,7 +792,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       } else if (left.getTimestamp() > right.getTimestamp()) {
         result = -1;
       }
-      return result;
+      return 0; // are equal
     }
 
     protected int compareRows(final byte [] left, final int loffset,

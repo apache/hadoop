@@ -265,7 +265,7 @@ class Memcache {
     if (b == null) {
       return a;
     }
-    return Bytes.compareTo(a, b) <= 0? a: b;
+    return this.rawcomparator.compareRows(a, b) <= 0? a: b;
   }
 
   /**
@@ -300,7 +300,7 @@ class Memcache {
       // Iterate until we fall into the next row; i.e. move off current row
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
-        if (Bytes.compareTo(itKey.getRow(), row) <= 0)
+        if (this.rawcomparator.compareRows(itKey.getRow(), row) <= 0)
           continue;
         // Note: Not suppressing deletes or expired cells.
         result = itKey.getRow();
@@ -433,7 +433,7 @@ class Memcache {
     // the search key, or a range of values between the first candidate key
     // and the ultimate search key (or the end of the cache)
     if (!tailMap.isEmpty() &&
-        Bytes.compareTo(tailMap.firstKey().getRow(),
+        this.rawcomparator.compareRows(tailMap.firstKey().getRow(),
           search_key.getRow()) <= 0) {
       Iterator<HStoreKey> key_iterator = tailMap.keySet().iterator();
 
@@ -442,9 +442,9 @@ class Memcache {
       HStoreKey deletedOrExpiredRow = null;
       for (HStoreKey found_key = null; key_iterator.hasNext() &&
           (found_key == null ||
-            Bytes.compareTo(found_key.getRow(), row) <= 0);) {
+            this.rawcomparator.compareRows(found_key.getRow(), row) <= 0);) {
         found_key = key_iterator.next();
-        if (Bytes.compareTo(found_key.getRow(), row) <= 0) {
+        if (this.rawcomparator.compareRows(found_key.getRow(), row) <= 0) {
           if (HLogEdit.isDeleted(tailMap.get(found_key))) {
             Store.handleDeleted(found_key, candidateKeys, deletes);
             if (deletedOrExpiredRow == null) {
