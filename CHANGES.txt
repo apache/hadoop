@@ -1053,6 +1053,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5471. Fixes a problem to do with updating the log.index file in the 
     case where a cleanup task is run. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5534. Fixed a deadlock in Fair scheduler's servlet.
+    (Rahul Kumar Singh via yhemanth)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
