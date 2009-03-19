@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -1222,9 +1221,6 @@ public class HRegion implements HConstants {
       // See HRegionServer#RegionListener for how the expire on HRegionServer
       // invokes a HRegion#abort.
       byte [] row = b.getRow();
-      if (this.regionInfo.isMetaRegion()) {
-        LOG.debug("batchUpdate on row for .META.: " + Bytes.toString(row));
-      }
       // If we did not pass an existing row lock, obtain a new one
       Integer lid = getLock(lockid,row);
       long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP) ?
@@ -1956,10 +1952,7 @@ public class HRegion implements HConstants {
       this.filter = filter;
       this.scanners = new InternalScanner[stores.length];
       try {
-        this.comparator = regionInfo.isRootRegion()?
-            new HStoreKey.RootStoreKeyComparator(): regionInfo.isMetaRegion()?
-              new HStoreKey.MetaStoreKeyComparator():
-                new HStoreKey.StoreKeyComparator();
+        this.comparator = HStoreKey.getRawComparator(regionInfo);
         
         for (int i = 0; i < stores.length; i++) {
           // Only pass relevant columns to each store
