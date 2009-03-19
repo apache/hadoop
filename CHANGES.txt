@@ -351,9 +351,6 @@ Release 0.20.0 - Unreleased
     HADOOP-5275. Add ivy directory and files to built tar.
     (Giridharan Kesavan via nigel)
 
-    HADOOP-5521. Removes dependency of TestJobInProgress on RESTART_COUNT 
-    JobHistory tag. (Ravi Gummadi via ddas)
-
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
