@@ -35,6 +35,9 @@ import org.apache.hadoop.fs.FileSystem;
  */
 public class TestMRServerPorts extends TestCase {
   TestHDFSServerPorts hdfs = new TestHDFSServerPorts();
+  private static final String STARTED_UNEXPECTEDLY
+          = "the Job tracker should not have started";
+  private static final String FAILED_TO_START = "The Job tracker did not start";
 
   // Runs the JT in a separate thread
   private static class JTRunner extends Thread {
@@ -85,7 +88,6 @@ public class TestMRServerPorts extends TestCase {
         return false;
       throw e;
     }
-    jt.fs.close();
     jt.stopTracker();
     return true;
   }
@@ -122,21 +124,21 @@ public class TestMRServerPorts extends TestCase {
       conf2.set("mapred.job.tracker.http.address",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       boolean started = canStartJobTracker(conf2);
-      assertFalse(started); // should fail
+      assertFalse(STARTED_UNEXPECTEDLY, started); // should fail
 
       // bind http server to the same port as name-node
       conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
       conf2.set("mapred.job.tracker.http.address",
         hdfs.getConfig().get("dfs.http.address"));
       started = canStartJobTracker(conf2);
-      assertFalse(started); // should fail again
+      assertFalse(STARTED_UNEXPECTEDLY, started); // should fail again
 
       // both ports are different from the name-node ones
       conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
       conf2.set("mapred.job.tracker.http.address",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       started = canStartJobTracker(conf2);
-      assertTrue(started); // should start now
+      assertTrue(FAILED_TO_START, started); // should start now
 
     } finally {
       hdfs.stopNameNode(nn);
@@ -163,7 +165,7 @@ public class TestMRServerPorts extends TestCase {
       conf2.set("mapred.task.tracker.http.address",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       boolean started = canStartTaskTracker(conf2);
-      assertFalse(started); // should fail
+      assertFalse(STARTED_UNEXPECTEDLY, started); // should fail
 
       // bind http server to the same port as name-node
       conf2.set("mapred.task.tracker.report.address",
@@ -171,7 +173,7 @@ public class TestMRServerPorts extends TestCase {
       conf2.set("mapred.task.tracker.http.address",
         hdfs.getConfig().get("dfs.http.address"));
       started = canStartTaskTracker(conf2);
-      assertFalse(started); // should fail again
+      assertFalse(STARTED_UNEXPECTEDLY, started); // should fail again
 
       // both ports are different from the name-node ones
       conf2.set("mapred.task.tracker.report.address",
@@ -179,7 +181,7 @@ public class TestMRServerPorts extends TestCase {
       conf2.set("mapred.task.tracker.http.address",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       started = canStartTaskTracker(conf2);
-      assertTrue(started); // should start now
+      assertTrue(FAILED_TO_START, started); // should start now
     } finally {
       if (jt != null) {
         jt.fs.close();

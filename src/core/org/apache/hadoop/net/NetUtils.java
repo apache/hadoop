@@ -26,6 +26,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
@@ -180,8 +181,11 @@ public class NetUtils {
     String oldAddr = conf.get(oldBindAddressName);
     String oldPort = conf.get(oldPortName);
     String newAddrPort = conf.get(newBindAddressName);
-    if (oldAddr == null && oldPort == null) {
+    if (oldAddr == null && oldPort == null && newAddrPort != null) {
       return newAddrPort;
+    }
+    if (newAddrPort == null) {
+      throw new IllegalArgumentException("No value for " + newBindAddressName);
     }
     String[] newAddrPortParts = newAddrPort.split(":",2);
     if (newAddrPortParts.length != 2) {
@@ -395,14 +399,18 @@ public class NetUtils {
     if (socket == null || endpoint == null || timeout < 0) {
       throw new IllegalArgumentException("Illegal argument for connect()");
     }
-    
-    SocketChannel ch = socket.getChannel();
-    
-    if (ch == null) {
-      // let the default implementation handle it.
-      socket.connect(endpoint, timeout);
-    } else {
-      SocketIOWithTimeout.connect(ch, endpoint, timeout);
+    try {
+      SocketChannel ch = socket.getChannel();
+
+      if (ch == null) {
+        // let the default implementation handle it.
+        socket.connect(endpoint, timeout);
+      } else {
+        SocketIOWithTimeout.connect(ch, endpoint, timeout);
+      }
+    } catch (ConnectException e) {
+      throw (ConnectException) new ConnectException(
+              e + " connecting to " + endpoint).initCause(e);
     }
   }
   

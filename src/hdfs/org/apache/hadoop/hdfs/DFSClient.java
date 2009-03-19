@@ -1384,7 +1384,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     synchronized void openInfo() throws IOException {
       LocatedBlocks newInfo = callGetBlockLocations(namenode, src, 0, prefetchSize);
       if (newInfo == null) {
-        throw new IOException("Cannot open filename " + src);
+        throw new FileNotFoundException("Cannot open HDFS file " + src);
       }
 
       if (locatedBlocks != null) {
@@ -3084,7 +3084,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * resources associated with this stream.
      */
     private synchronized void closeInternal() throws IOException {
-      checkOpen();
+      if ( !clientRunning ) {
+          return;
+      }
       isClosed();
 
       try {

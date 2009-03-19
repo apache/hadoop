@@ -185,6 +185,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Properties properties;
   private Properties overlay;
   private ClassLoader classLoader;
+  private static final String ERROR_PARSING_CONF_FILE = 
+          "Error parsing configuration resource ";
+
   {
     classLoader = Thread.currentThread().getContextClassLoader();
     if (classLoader == null) {
@@ -973,7 +976,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
-  private synchronized Properties getProps() {
+  protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
       loadResources(properties, resources, quietmode);
@@ -1157,16 +1160,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
         
     } catch (IOException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal(ERROR_PARSING_CONF_FILE + name + " : " + e, e);
       throw new RuntimeException(e);
     } catch (DOMException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal(ERROR_PARSING_CONF_FILE + name + " : " + e, e);
       throw new RuntimeException(e);
     } catch (SAXException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal(ERROR_PARSING_CONF_FILE + name + " : " + e, e);
       throw new RuntimeException(e);
     } catch (ParserConfigurationException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal(ERROR_PARSING_CONF_FILE + name + " : " + e, e);
       throw new RuntimeException(e);
     }
   }

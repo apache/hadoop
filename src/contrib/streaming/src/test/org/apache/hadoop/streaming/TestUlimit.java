@@ -71,7 +71,7 @@ public class TestUlimit extends TestCase {
    * it to succeed. Then program is launched with insufficient memory and 
    * is expected to be a failure.  
    */
-  public void testCommandLine() {
+  public void testCommandLine() throws Exception {
     if (StreamUtil.isCygwin()) {
       return;
     }
@@ -88,11 +88,9 @@ public class TestUlimit extends TestCase {
       fs.delete(outputPath, true);
       assertFalse("output not cleaned up", fs.exists(outputPath));
       mr.waitUntilIdle();
-    } catch(IOException e) {
-      fail(e.toString());
     } finally {
-      mr.shutdown();
-      dfs.shutdown();
+      MiniDFSCluster.close(dfs);
+      MiniMRCluster.close(mr);
     }
   }
 

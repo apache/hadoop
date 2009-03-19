@@ -151,14 +151,11 @@ public class TestRackAwareTaskPlacement extends TestCase {
       launchJobAndTestCounters(testName, mr, fileSys, inDir, outputPath, 3, 0,
                                0, 3);
       mr.shutdown();
+      mr=null;
       
     } finally {
-      if (dfs != null) { 
-        dfs.shutdown(); 
-      }
-      if (mr != null) { 
-        mr.shutdown();
-      }
+      MiniDFSCluster.close(dfs);
+      MiniMRCluster.close(mr);
     }
   }
   static RunningJob launchJob(JobConf jobConf, Path inDir, Path outputPath, 

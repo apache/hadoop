@@ -81,8 +81,8 @@ public class TestPipes extends TestCase {
       runNonPipedProgram(mr, dfs, new Path(cppExamples,"bin/wordcount-nopipe"));
       mr.waitUntilIdle();
     } finally {
-      mr.shutdown();
-      dfs.shutdown();
+      MiniMRCluster.close(mr);
+      MiniDFSCluster.close(dfs);
     }
   }
 
