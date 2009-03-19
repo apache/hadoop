@@ -165,6 +165,9 @@ Trunk (unreleased changes)
     HADOOP-5442. Paginate jobhistory display and added some search
     capabilities. (Amar Kamat via acmurthy) 
 
+    HADOOP-4842. Streaming now allows specifiying a command for the combiner.
+    (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
