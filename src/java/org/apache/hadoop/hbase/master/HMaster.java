@@ -641,7 +641,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   private synchronized void createTable(final HRegionInfo newRegion) 
   throws IOException {
-    byte [] tableName = newRegion.getTableDesc().getName();
+    String tableName = newRegion.getTableDesc().getNameAsString();
     // 1. Check to see if table already exists. Get meta region where
     // table would sit should it exist. Open scanner on it. If a region
     // for the table we want to create already exists, then table already
@@ -650,15 +650,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         
     byte [] metaRegionName = m.getRegionName();
     HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
+    byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
     long scannerid = srvr.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
-      tableName, LATEST_TIMESTAMP, null);
+        firstRowInTable, LATEST_TIMESTAMP, null);
     try {
       RowResult data = srvr.next(scannerid);
       if (data != null && data.size() > 0) {
         HRegionInfo info = Writables.getHRegionInfo(data.get(COL_REGIONINFO));
-        if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+        if (info.getTableDesc().getNameAsString().equals(tableName)) {
           // A region for this table already exists. Ergo table exists.
-          throw new TableExistsException(Bytes.toString(tableName));
+          throw new TableExistsException(tableName);
         }
       }
     } finally {
@@ -710,13 +711,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     List<Pair<HRegionInfo,HServerAddress>> result =
         new ArrayList<Pair<HRegionInfo,HServerAddress>>();
     Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
+    byte [] firstRowInTable = Bytes.toBytes(Bytes.toString(tableName) + ",,");
     for (MetaRegion m: regions) {
       byte [] metaRegionName = m.getRegionName();
       HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
       long scannerid = 
         srvr.openScanner(metaRegionName, 
           new byte[][] {COL_REGIONINFO, COL_SERVER},
-          tableName, 
+          firstRowInTable, 
           LATEST_TIMESTAMP, 
           null);
       try {
@@ -748,12 +750,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     throws IOException {
     Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
     for (MetaRegion m: regions) {
+      byte [] firstRowInTable = Bytes.toBytes(Bytes.toString(tableName) + ",,");
       byte [] metaRegionName = m.getRegionName();
       HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
       long scannerid = 
           srvr.openScanner(metaRegionName, 
             new byte[][] {COL_REGIONINFO, COL_SERVER},
-            tableName, 
+            firstRowInTable, 
             LATEST_TIMESTAMP, 
             null);
       try {

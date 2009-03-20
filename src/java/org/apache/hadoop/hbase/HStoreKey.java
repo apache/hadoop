@@ -803,8 +803,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
         return result;
       }
       result = left.getColumn() == null && right.getColumn() == null? 0:
-        left.getColumn() == null && right.getColumn() != null? -1:
-          left.getColumn() != null && right.getColumn() == null? 1:
+        left.getColumn() == null ? -1:right.getColumn() == null? 1:
             Bytes.compareTo(left.getColumn(), right.getColumn());
       if (result != 0) {
         return result;
@@ -818,7 +817,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
       } else if (left.getTimestamp() > right.getTimestamp()) {
         result = -1;
       }
-      return 0; // are equal
+      return result; // are equal
     }
 
     protected int compareRows(final byte [] left, final int loffset,
