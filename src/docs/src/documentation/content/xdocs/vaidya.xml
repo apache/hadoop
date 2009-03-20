@@ -20,7 +20,7 @@
 <document>
   
   <header>
-    <title>Hadoop Vaidya: A Performance Diagnostic Tool for Map-Reduce Jobs</title>
+    <title>Vaidya Guide</title>
   </header>
   
   <body>
@@ -28,13 +28,13 @@
     <section>
       <title>Purpose</title>
       
-      <p>This document describes various user-facing facets of the Hadoop Vaidya tool. It
-         describes both, how to execute a default set of rules against your Map-Reduce job counters,
-         as well as how to write and execute new rules to detect specific performance problems. 
+      <p>This document describes various user-facing facets of Hadoop Vaidya, a performance diagnostic tool for map/reduce jobs. It
+         describes how to execute a default set of rules against your map/reduce job counters and
+         how to write and execute new rules to detect specific performance problems. 
       </p>
-      <p>At present few sample test rules are provided with the tool with the objective of growing the rules database over the time. 
-         You are welcome to contribute the new rules for everyone's benefit and for that follow the similar
-         <a href="http://wiki.apache.org/hadoop/HowToContribute">procedure</a> 
+      <p>A few sample test rules are provided with the tool with the objective of growing the rules database over the time. 
+         You are welcome to contribute new rules for everyone's benefit; to do so, follow the 
+         <a href="http://wiki.apache.org/hadoop/HowToContribute">How to Contribute</a> procedure
          specified on Apache Hadoop website.
       </p>
     </section>

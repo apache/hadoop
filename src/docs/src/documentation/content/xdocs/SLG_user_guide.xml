@@ -17,13 +17,13 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
 	<header>
-		<title> HDFS Utilities: Synthetic Load Generator User Guide </title>
+		<title> HDFS Synthetic Load Generator Guide </title>
 	</header>
 	<body>
 		<section>
 			<title> Description </title>
 			<p>
-        The synthetic load generator is a tool for testing NameNode behavior
+        The synthetic load generator (SLG) is a tool for testing NameNode behavior
         under different client loads. The user can generate different mixes 
         of read, write, and list requests by specifying the probabilities of
         read and write. The user controls the intensity of the load by adjusting

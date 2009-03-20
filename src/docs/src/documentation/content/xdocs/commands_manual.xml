@@ -18,14 +18,14 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
 	<header>
-		<title>Hadoop Command Guide</title>
+		<title>Commands Guide</title>
 	</header>
 	
 	<body>
 		<section>
 			<title>Overview</title>
 			<p>
-				All the hadoop commands are invoked by the bin/hadoop script. Running hadoop
+				All hadoop commands are invoked by the bin/hadoop script. Running the hadoop
 				script without any arguments prints the description for all commands.
 			</p>
 			<p>
@@ -55,7 +55,7 @@
 			 <section>
 				<title>Generic Options</title>
 				<p>
-				  Following are supported by <a href="commands_manual.html#dfsadmin">dfsadmin</a>, 
+				  The following options are supported by <a href="commands_manual.html#dfsadmin">dfsadmin</a>, 
 				  <a href="commands_manual.html#fs">fs</a>, <a href="commands_manual.html#fsck">fsck</a> and 
 				  <a href="commands_manual.html#job">job</a>. 
 				  Applications should implement 
