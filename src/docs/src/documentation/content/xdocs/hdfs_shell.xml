@@ -18,15 +18,15 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
 	<header>
-		<title>Hadoop FS Shell Guide</title>
+		<title>HDFS File System Shell Guide</title>
 	</header>
 	<body>
 		<section>
-			<title> FS Shell </title>
+			<title>Overview</title>
 			<p>
       The FileSystem (FS) shell is invoked by 
       <code>bin/hadoop fs &lt;args&gt;</code>.
-      All the FS shell commands take path URIs as arguments. The URI
+      All FS shell commands take path URIs as arguments. The URI
       format is <em>scheme://autority/path</em>. For HDFS the scheme
       is <em>hdfs</em>, and for the local filesystem the scheme
       is <em>file</em>. The scheme and authority are optional. If not
