@@ -1065,8 +1065,11 @@ Release 0.20.0 - Unreleased
     HADOOP-5534. Fixed a deadlock in Fair scheduler's servlet.
     (Rahul Kumar Singh via yhemanth)
 
-    HADOOP-5328. Fixes a problem in the renaming of job history files during job
-    recovery. Amar Kamat via ddas)
+    HADOOP-5328. Fixes a problem in the renaming of job history files during 
+    job recovery. Amar Kamat via ddas)
+
+    HADOOP-5417. Don't ignore InterruptedExceptions that happen when calling 
+    into rpc. (omalley)
 
 Release 0.19.2 - Unreleased
 

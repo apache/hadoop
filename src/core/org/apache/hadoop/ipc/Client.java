@@ -718,11 +718,20 @@ public class Client {
     Call call = new Call(param);
     Connection connection = getConnection(addr, protocol, ticket, call);
     connection.sendParam(call);                 // send the parameter
+    boolean interrupted = false;
     synchronized (call) {
       while (!call.done) {
         try {
           call.wait();                           // wait for the result
-        } catch (InterruptedException ignored) {}
+        } catch (InterruptedException ie) {
+          // save the fact that we were interrupted
+          interrupted = true;
+        }
+      }
+
+      if (interrupted) {
+        // set the interrupt flag now that we are done waiting
+        Thread.currentThread().interrupt();
       }
 
       if (call.error != null) {
