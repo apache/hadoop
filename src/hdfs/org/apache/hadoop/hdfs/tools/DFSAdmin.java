@@ -196,7 +196,7 @@ public class DFSAdmin extends FsShell {
     private static final String USAGE =
       "-"+NAME+" <quota> <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-      "Set the dik space quota <quota> for each directory <dirName>.\n" + 
+      "Set the disk space quota <quota> for each directory <dirName>.\n" + 
       "\t\tThe directory quota is a long integer that puts a hard limit\n" +
       "\t\ton the number of names in the directory tree.\n" +
       "\t\tQuota can also be speciefied with a binary prefix for terabytes,\n" +
