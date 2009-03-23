@@ -83,6 +83,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5549. ReplicationMonitor should schedule both replication and
     deletion work in one iteration. (hairong)
 
+    HADOOP-5554. DataNodeCluster and CreateEditsLog should create blocks with
+    the same generation stamp value. (hairong via szetszwo)
+
 Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 
