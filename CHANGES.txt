@@ -846,6 +846,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5522. Documents the setup/cleanup tasks in the mapred tutorial.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5549. ReplicationMonitor should schedule both replication and
+    deletion work in one iteration. (hairong)
+
 Release 0.19.1 - 2009-02-23 
 
   IMPROVEMENTS
