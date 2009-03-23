@@ -2373,8 +2373,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     underReplicatedBlocksCount = neededReplications.size();
     scheduledReplicationBlocksCount = workFound;
     
-    if(workFound == 0)
-      workFound = computeInvalidateWork(nodesToProcess);
+    workFound += computeInvalidateWork(nodesToProcess);
     return workFound;
   }
 
