@@ -90,11 +90,18 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
 
     byte [] row_70001 = Bytes.toBytes("row_70001");
     byte [] row_80001 = Bytes.toBytes("row_80001");
-    
+
+    // XXX: Note that the number of rows we put in is different for each region
+    // because currently we don't have a good mechanism to handle merging two
+    // store files with the same sequence id. We can't just dumbly stick them
+    // in because it will screw up the order when the store files are loaded up.
+    // The sequence ids are used for arranging the store files, so if two files
+    // have the same id, one will overwrite the other one in our listing, which
+    // is very bad. See HBASE-1212 and HBASE-1274.
     HRegion[] regions = {
       createAregion(null, row_70001, 1, 70000),
       createAregion(row_70001, row_80001, 70001, 10000),
-      createAregion(row_80001, null, 80001, 10000)
+      createAregion(row_80001, null, 80001, 11000)
     };
     
     // Now create the root and meta regions and insert the data regions

@@ -2380,7 +2380,7 @@ public class HRegion implements HConstants {
   }
 
   /**
-   * Merge two HRegions.  The regions must be adjacent andmust not overlap.
+   * Merge two HRegions.  The regions must be adjacent and must not overlap.
    * 
    * @param srcA
    * @param srcB
@@ -2497,7 +2497,7 @@ public class HRegion implements HConstants {
           // Can't have same sequenceid since on open of a store, this is what
           // distingushes the files (see the map of stores how its keyed by
           // sequenceid).
-          throw new IOException("Files have same sequenceid");
+          throw new IOException("Files have same sequenceid: " + seqA);
         }
       }
       for (StoreFile hsf: srcFiles) {

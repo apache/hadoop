@@ -55,6 +55,7 @@ Release 0.20.0 - Unreleased
    HBASE-1270  Fix TestInfoServers (Nitay Joffe via Stack)
    HBASE-1277  HStoreKey: Wrong comparator logic (Evgeny Ryabitskiy)
    HBASE-1275  TestTable.testCreateTable broken (Ryan Rawson via Stack)
+   HBASE-1274  TestMergeTable is broken in Hudson (Nitay Joffe via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
