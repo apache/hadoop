@@ -243,6 +243,7 @@ public class TestFairScheduler extends TestCase {
     conf = new JobConf();
     conf.set("mapred.fairscheduler.allocation.file", ALLOC_FILE);
     conf.set("mapred.fairscheduler.poolnameproperty", POOL_PROPERTY);
+    conf.set("mapred.fairscheduler.assignmultiple", "false");
     taskTrackerManager = new FakeTaskTrackerManager();
     clock = new FakeClock();
     scheduler = new FairScheduler(clock, false);

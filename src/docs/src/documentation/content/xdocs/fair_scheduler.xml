@@ -189,7 +189,7 @@
         <td>
           Allows the scheduler to assign both a map task and a reduce task 
           on each heartbeat, which improves cluster throughput when there 
-          are many small tasks to run. Boolean value, default: false.
+          are many small tasks to run. Boolean value, default: true.
         </td>
         </tr>
         <tr>

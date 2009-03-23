@@ -134,7 +134,7 @@ public class FairScheduler extends TaskScheduler {
             weightAdjClass, conf);
       }
       assignMultiple = conf.getBoolean("mapred.fairscheduler.assignmultiple",
-          false);
+          true);
       sizeBasedWeight = conf.getBoolean("mapred.fairscheduler.sizebasedweight",
           false);
       initialized = true;
