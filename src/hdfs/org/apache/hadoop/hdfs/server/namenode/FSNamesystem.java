@@ -2392,8 +2392,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       corruptReplicaBlocksCount = corruptReplicas.size();
     }
     
-    if(workFound == 0)
-      workFound = computeInvalidateWork(nodesToProcess);
+    workFound += computeInvalidateWork(nodesToProcess);
     return workFound;
   }
 
