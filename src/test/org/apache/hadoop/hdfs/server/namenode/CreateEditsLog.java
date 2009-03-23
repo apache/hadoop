@@ -53,6 +53,8 @@ public class CreateEditsLog {
   static final String BASE_PATH = "/createdViaInjectingInEditsLog";
   static final String EDITS_DIR = "/tmp/EditsLogOut";
   static String edits_dir = EDITS_DIR;
+  static final public long BLOCK_GENERATION_STAMP =
+    GenerationStamp.FIRST_VALID_STAMP;
   
   static void addFiles(FSEditLog editLog, int numFiles, short replication, 
                          int blocksPerFile, long startingBlockId,
@@ -66,7 +68,7 @@ public class CreateEditsLog {
     BlockInfo[] blocks = new BlockInfo[blocksPerFile];
     for (int iB = 0; iB < blocksPerFile; ++iB) {
       blocks[iB] = 
-       new BlockInfo(new Block(0, blockSize, GenerationStamp.FIRST_VALID_STAMP),
+       new BlockInfo(new Block(0, blockSize, BLOCK_GENERATION_STAMP),
                                replication);
     }
     
