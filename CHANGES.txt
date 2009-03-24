@@ -2356,6 +2356,9 @@ Release 0.18.3 - 2009-01-27
     HADOOP-4983. Fixes a problem in updating Counters in the status reporting.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5557. Fixes some minor problems in TestOverReplicatedBlocks.
+    (szetszwo)
+
 Release 0.18.2 - 2008-11-03
 
   BUG FIXES
