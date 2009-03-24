@@ -209,18 +209,28 @@
 	  Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally <code>addnl</code> can be set to enable adding a newline character at the end of each file.  
 	  </p>
 		</section>
-		<section>
-			<title> ls </title>
-			<p>
-				<code>Usage: hadoop fs -ls &lt;args&gt;</code>
-			</p>
-			<p>
-		 For a file returns stat on the file with the following format:<br/><code>filename &lt;number of replicas&gt; filesize modification_date modification_time permissions userid groupid</code><br/>
-	         For a directory it returns list of its direct children as in unix.
-	         A directory is listed as: <br/><code>dirname &lt;dir&gt; modification_time modification_time permissions userid groupid</code><br/>
-	         Example:<br/><code>hadoop fs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://nn.example.com/user/hadoop/dir1 /nonexistentfile</code><br/>
-	         Exit Code:<br/><code> Returns 0 on success and -1 on error. </code><br/></p>
-		</section>
+       <section>
+           <title>ls</title>
+           <p>
+               <code>Usage: hadoop fs -ls &lt;args&gt;</code>
+           </p>
+           <p>For a file returns stat on the file with the following format:</p>
+           <p>
+               <code>permissions number_of_replicas userid  groupid  filesize modification_date modification_time filename</code>
+           </p>
+           <p>For a directory it returns list of its direct children as in unix.A directory is listed as:</p>
+           <p>
+               <code>permissions userid groupid modification_date modification_time dirname</code>
+           </p>
+           <p>Example:</p>
+           <p>
+               <code>hadoop fs -ls /user/hadoop/file1 </code>
+           </p>
+           <p>Exit Code:</p>
+           <p>
+               <code>Returns 0 on success and -1 on error.</code>
+           </p>
+       </section>
 		<section>
 			<title>lsr</title>
 			<p><code>Usage: hadoop fs -lsr &lt;args&gt;</code><br/>
