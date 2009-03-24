@@ -171,7 +171,7 @@ public class TestRecoveryManager extends TestCase {
     job1.setJobPriority(JobPriority.HIGH);
     
     UtilsForTests.configureWaitingJobConf(job1, 
-        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output"), 30, 0, 
+        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output3"), 30, 0, 
         "test-recovery-manager", signalFile, signalFile);
     
     // submit the faulty job
@@ -189,7 +189,7 @@ public class TestRecoveryManager extends TestCase {
 
     String signalFile1 = new Path(TEST_DIR, "signal1").toString();
     UtilsForTests.configureWaitingJobConf(job2, 
-        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output1"), 20, 0, 
+        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output4"), 20, 0, 
         "test-recovery-manager", signalFile1, signalFile1);
     
     // submit the job
@@ -209,7 +209,7 @@ public class TestRecoveryManager extends TestCase {
     job3.set("hadoop.job.ugi","abc,users");
 
     UtilsForTests.configureWaitingJobConf(job3, 
-        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output2"), 1, 0, 
+        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output5"), 1, 0, 
         "test-recovery-manager", signalFile, signalFile);
     
     // submit the job

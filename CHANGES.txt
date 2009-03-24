@@ -1080,6 +1080,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5519. Remove claims from mapred-default.xml that prime numbers
     of tasks are helpful.  (Owen O'Malley via szetszwo)
 
+    HADOOP-5484. TestRecoveryManager fails wtih FileAlreadyExistsException.
+    (Amar Kamat via hairong)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
