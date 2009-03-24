@@ -178,6 +178,9 @@ Trunk (unreleased changes)
     HADOOP-4655. New method FileSystem.newInstance() that always returns
     a newly allocated FileSystem object. (dhruba)
 
+    HADOOP-4788. Set Fair scheduler to assign both a map and a reduce on each
+    heartbeat by default. (matei)
+
   OPTIMIZATIONS
 
   BUG FIXES
