@@ -1,1 +1,0 @@
-{"pages_count":1,"description":"New View","pages":[{"title":"Default Page","columns":1,"layout":[[{"module":"welcome.html","version":"1.0","parameters":[],"refresh":"0","title":"Default Widget","id":"defaultwidget"}]],"colSize":[99]}]}

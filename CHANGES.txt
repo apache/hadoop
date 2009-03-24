@@ -75,6 +75,8 @@ Release 0.20.0 - Unreleased
     to be only group readable instead of world readable.
     (Amareshwari Sriramadasu via yhemanth)
 
+    HADOOP-5531. Removed Chukwa from Hadoop 0.20.0. (nigel)
+
   NEW FEATURES
 
     HADOOP-4575. Add a proxy service for relaying HsftpFileSystem requests.
