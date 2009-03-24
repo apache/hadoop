@@ -1086,6 +1086,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5484. TestRecoveryManager fails wtih FileAlreadyExistsException.
     (Amar Kamat via hairong)
 
+    HADOOP-5564. Limit the JVM heap size in the java command for initializing
+    JAVA_PLATFORM.  (Suresh Srinivas via szetszwo)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
