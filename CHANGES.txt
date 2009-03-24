@@ -1194,6 +1194,9 @@ Release 0.18.4 - Unreleased
     providing synchronized modification to the counter xmitsInProgress in
     DataNode. (hairong)
 
+    HADOOP-5557. Fixes some minor problems in TestOverReplicatedBlocks.
+    (szetszwo)
+
 Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS
@@ -1316,9 +1319,6 @@ Release 0.18.3 - 2009-01-27
     (Amareshwari Sriramadasu via ddas)
 
     HADOOP-4924. Fixes a race condition in TaskTracker re-init. (ddas)
-
-    HADOOP-5557. Fixes some minor problems in TestOverReplicatedBlocks.
-    (szetszwo)
 
 Release 0.18.2 - 2008-11-03
 
