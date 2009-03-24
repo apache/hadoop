@@ -65,11 +65,17 @@ under the hbase/lib directory.
 <p>The version of Thrift used to generate the Java files is release 20080411p1 from
 the <a href="http://developers.facebook.com/thrift/">thrift homepage</a>.</p>
 
-<p>The ThriftServer is run like:
+<p>To start ThriftServer, use:
 <pre>
-  ./bin/hbase thrift -h|--help | [--port=PORT] start
+  ./bin/hbase-daemon.sh start thrift [--port=PORT]
 </pre>
 The default port is 9090.
+</p>
+
+<p>To stop, use:
+<pre>
+  ./bin/hbase-daemon.sh stop thrift
+</pre>
 </p>
 </body>
 </html>
