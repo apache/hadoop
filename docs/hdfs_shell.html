@@ -248,7 +248,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#getmerge"> getmerge </a>
 </li>
 <li>
-<a href="#ls"> ls </a>
+<a href="#ls">ls</a>
 </li>
 <li>
 <a href="#lsr">lsr</a>
@@ -545,35 +545,44 @@ document.write("Last Published: " + document.lastModified);
 	  Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally <span class="codefrag">addnl</span> can be set to enable adding a newline character at the end of each file.  
 	  </p>
 <a name="N101B7"></a><a name="ls"></a>
-<h3 class="h4"> ls </h3>
+<h3 class="h4">ls</h3>
 <p>
-				
+               
 <span class="codefrag">Usage: hadoop fs -ls &lt;args&gt;</span>
-			
+           
 </p>
+<p>For a file returns stat on the file with the following format:</p>
 <p>
-		 For a file returns stat on the file with the following format:<br>
-<span class="codefrag">filename &lt;number of replicas&gt; filesize modification_date modification_time permissions userid groupid</span>
-<br>
-	         For a directory it returns list of its direct children as in unix.
-	         A directory is listed as: <br>
-<span class="codefrag">dirname &lt;dir&gt; modification_time modification_time permissions userid groupid</span>
-<br>
-	         Example:<br>
-<span class="codefrag">hadoop fs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://nn.example.com/user/hadoop/dir1 /nonexistentfile</span>
-<br>
-	         Exit Code:<br>
-<span class="codefrag"> Returns 0 on success and -1 on error. </span>
-<br>
+               
+<span class="codefrag">permissions number_of_replicas userid  groupid  filesize modification_date modification_time filename</span>
+           
 </p>
-<a name="N101DA"></a><a name="lsr"></a>
+<p>For a directory it returns list of its direct children as in unix.A directory is listed as:</p>
+<p>
+               
+<span class="codefrag">permissions userid groupid modification_date modification_time dirname</span>
+           
+</p>
+<p>Example:</p>
+<p>
+               
+<span class="codefrag">hadoop fs -ls /user/hadoop/file1 </span>
+           
+</p>
+<p>Exit Code:</p>
+<p>
+               
+<span class="codefrag">Returns 0 on success and -1 on error.</span>
+           
+</p>
+<a name="N101E8"></a><a name="lsr"></a>
 <h3 class="h4">lsr</h3>
 <p>
 <span class="codefrag">Usage: hadoop fs -lsr &lt;args&gt;</span>
 <br>
 	      Recursive version of <span class="codefrag">ls</span>. Similar to Unix <span class="codefrag">ls -R</span>.
 	      </p>
-<a name="N101ED"></a><a name="mkdir"></a>
+<a name="N101FB"></a><a name="mkdir"></a>
 <h3 class="h4"> mkdir </h3>
 <p>
 				
@@ -608,7 +617,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Returns 0 on success and -1 on error.</span>
 			
 </p>
-<a name="N1021A"></a><a name="moveFromLocal"></a>
+<a name="N10228"></a><a name="moveFromLocal"></a>
 <h3 class="h4"> moveFromLocal </h3>
 <p>
 				
@@ -616,7 +625,7 @@ document.write("Last Published: " + document.lastModified);
 			
 </p>
 <p>Similar to <a href="#put"><strong>put</strong></a> command, except that the source <span class="codefrag">localsrc</span> is deleted after it's copied. </p>
-<a name="N10232"></a><a name="moveToLocal"></a>
+<a name="N10240"></a><a name="moveToLocal"></a>
 <h3 class="h4"> moveToLocal</h3>
 <p>
 				
@@ -624,7 +633,7 @@ document.write("Last Published: " + document.lastModified);
 			
 </p>
 <p>Displays a "Not implemented yet" message.</p>
-<a name="N10242"></a><a name="mv"></a>
+<a name="N10250"></a><a name="mv"></a>
 <h3 class="h4"> mv </h3>
 <p>
 				
@@ -657,7 +666,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 			
 </p>
-<a name="N1026C"></a><a name="put"></a>
+<a name="N1027A"></a><a name="put"></a>
 <h3 class="h4"> put </h3>
 <p>
 				
@@ -698,7 +707,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 			
 </p>
-<a name="N102A2"></a><a name="rm"></a>
+<a name="N102B0"></a><a name="rm"></a>
 <h3 class="h4"> rm </h3>
 <p>
 				
@@ -724,7 +733,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 			
 </p>
-<a name="N102C6"></a><a name="rmr"></a>
+<a name="N102D4"></a><a name="rmr"></a>
 <h3 class="h4"> rmr </h3>
 <p>
 				
@@ -755,7 +764,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 			
 </p>
-<a name="N102F0"></a><a name="setrep"></a>
+<a name="N102FE"></a><a name="setrep"></a>
 <h3 class="h4"> setrep </h3>
 <p>
 				
@@ -781,7 +790,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Returns 0 on success and -1 on error. </span>
 			
 </p>
-<a name="N10315"></a><a name="stat"></a>
+<a name="N10323"></a><a name="stat"></a>
 <h3 class="h4"> stat </h3>
 <p>
 				
@@ -805,7 +814,7 @@ document.write("Last Published: " + document.lastModified);
 	   
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 </p>
-<a name="N10338"></a><a name="tail"></a>
+<a name="N10346"></a><a name="tail"></a>
 <h3 class="h4"> tail </h3>
 <p>
 				
@@ -829,7 +838,7 @@ document.write("Last Published: " + document.lastModified);
 	   
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 </p>
-<a name="N1035B"></a><a name="test"></a>
+<a name="N10369"></a><a name="test"></a>
 <h3 class="h4"> test </h3>
 <p>
 				
@@ -852,7 +861,7 @@ document.write("Last Published: " + document.lastModified);
 </li>
 			
 </ul>
-<a name="N1037E"></a><a name="text"></a>
+<a name="N1038C"></a><a name="text"></a>
 <h3 class="h4"> text </h3>
 <p>
 				
@@ -864,7 +873,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
 	   Takes a source file and outputs the file in text format. The allowed formats are zip and TextRecordInputStream.
 	  </p>
-<a name="N10390"></a><a name="touchz"></a>
+<a name="N1039E"></a><a name="touchz"></a>
 <h3 class="h4"> touchz </h3>
 <p>
 				
