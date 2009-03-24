@@ -86,6 +86,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5554. DataNodeCluster and CreateEditsLog should create blocks with
     the same generation stamp value. (hairong via szetszwo)
 
+    HADOOP-5231. Clones the TaskStatus before passing it to the JobInProgress.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 
