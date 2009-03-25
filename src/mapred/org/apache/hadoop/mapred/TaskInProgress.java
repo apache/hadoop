@@ -418,7 +418,8 @@ class TaskInProgress {
    * Returns whether the task attempt should be committed or not 
    */
   public boolean shouldCommit(TaskAttemptID taskid) {
-    return !isComplete() && taskToCommit.equals(taskid);
+    return !isComplete() && isCommitPending(taskid) && 
+           taskToCommit.equals(taskid);
   }
 
   /**
@@ -540,14 +541,12 @@ class TaskInProgress {
         return false;
       }
       
+      //Do not accept any status once the task is marked FAILED/KILLED
       //This is to handle the case of the JobTracker timing out a task
-      //due to launch delay, but the TT comes back with one of the 
-      //states mentioned in the newState
-      if (oldState == TaskStatus.State.FAILED && 
-          (newState == TaskStatus.State.UNASSIGNED ||
-           newState == TaskStatus.State.RUNNING || 
-           newState == TaskStatus.State.COMMIT_PENDING ||
-           newState == TaskStatus.State.SUCCEEDED)) {
+      //due to launch delay, but the TT comes back with any state or 
+      //TT got expired
+      if (oldState == TaskStatus.State.FAILED ||
+          oldState == TaskStatus.State.KILLED) {
         tasksToKill.put(taskid, true);
         return false;	  
       }
