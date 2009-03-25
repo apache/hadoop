@@ -58,6 +58,7 @@ Release 0.20.0 - Unreleased
    HBASE-1274  TestMergeTable is broken in Hudson (Nitay Joffe via Stack)
    HBASE-1283  thrift's package descrpition needs to update for start/stop
                procedure (Rong-en Fan via Stack)
+   HBASE-1284  drop table drops all disabled tables
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

@@ -44,7 +44,6 @@ class TableDelete extends TableOperation {
   @Override
   protected void processScanItem(String serverName,
       final HRegionInfo info) throws IOException {
-    
     if (isEnabled(info)) {
       throw new TableNotDisabledException(tableName);
     }
@@ -54,6 +53,10 @@ class TableDelete extends TableOperation {
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
     for (HRegionInfo i: unservedRegions) {
+      if (!Bytes.equals(this.tableName, i.getTableDesc().getName())) {
+        // Don't delete regions that are not from our table.
+        continue;
+      }
       // Delete the region
       try {
         HRegion.removeRegionFromMETA(server, m.getRegionName(), i.getRegionName());
