@@ -316,6 +316,9 @@ Trunk (unreleased changes)
     HADOOP-5210. Solves a problem in the progress report of the reduce task.
     (Ravi Gummadi via ddas)
 
+    HADOOP-5191. Accessing HDFS with any ip or hostname should work as long 
+    as it points to the interface NameNode is listening on. (Raghu Angadi)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -79,7 +79,7 @@ public class DistributedFileSystem extends FileSystem {
 
     InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
     this.dfs = new DFSClient(namenode, conf, statistics);
-    this.uri = NameNode.getUri(namenode);
+    this.uri = URI.create("hdfs://" + uri.getAuthority());
     this.workingDir = getHomeDirectory();
   }
 
@@ -92,7 +92,8 @@ public class DistributedFileSystem extends FileSystem {
     if (thatUri.getScheme() != null
         && thatUri.getScheme().equalsIgnoreCase(thisUri.getScheme())
         && thatUri.getPort() == NameNode.DEFAULT_PORT
-        && thisUri.getPort() == -1
+        && (thisUri.getPort() == -1 || 
+            thisUri.getPort() == NameNode.DEFAULT_PORT)
         && thatAuthority.substring(0,thatAuthority.indexOf(":"))
         .equalsIgnoreCase(thisUri.getAuthority()))
       return;

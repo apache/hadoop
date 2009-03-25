@@ -112,6 +112,24 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
         assertFalse(dfs.dfs.isLeaseCheckerStarted());
         dfs.close();
       }
+      
+      { // test accessing DFS with ip address. should work with any hostname
+        // alias or ip address that points to the interface that NameNode
+        // is listening on. In this case, it is localhost.
+        String uri = "hdfs://127.0.0.1:" + cluster.getNameNodePort() + 
+                      "/test/ipAddress/file";
+        Path path = new Path(uri);
+        FileSystem fs = FileSystem.get(path.toUri(), conf);
+        FSDataOutputStream out = fs.create(path);
+        byte[] buf = new byte[1024];
+        out.write(buf);
+        out.close();
+        
+        FSDataInputStream in = fs.open(path);
+        in.readFully(buf);
+        in.close();
+        fs.close();
+      }
     }
     finally {
       if (cluster != null) {cluster.shutdown();}
