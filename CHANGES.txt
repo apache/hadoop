@@ -310,6 +310,9 @@ Trunk (unreleased changes)
 
     HADOOP-5507. Fix JMXGet javadoc warnings.  (Boris Shkolnik via szetszwo)
 
+    HADOOP-5210. Solves a problem in the progress report of the reduce task.
+    (Ravi Gummadi via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
