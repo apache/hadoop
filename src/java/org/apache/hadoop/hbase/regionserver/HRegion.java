@@ -2613,23 +2613,20 @@ public class HRegion implements HConstants {
       } finally {
         store.lock.readLock().unlock();
       }
-      if (c.size() == 1) {
+      // Pick the latest value out of List<Cell> c:
+      if (c.size() >= 1) {
         // Use the memcache timestamp value.
         LOG.debug("Overwriting the memcache value for " + Bytes.toString(row) + "/" + Bytes.toString(column));
         ts = c.get(0).getTimestamp();
         value = c.get(0).getValue();
-      } else if (c.size() > 1) {
-        throw new DoNotRetryIOException("more than 1 value returned in incrementColumnValue from memcache");
       }
 
       if (value == null) {
         // Check the store (including disk) for the previous value.
         Cell[] cell = store.get(hsk, 1);
-        if (cell != null && cell.length == 1) {
+        if (cell != null && cell.length >= 1) {
           LOG.debug("Using HFile previous value for " + Bytes.toString(row) + "/" + Bytes.toString(column));
           value = cell[0].getValue();
-        } else if (cell != null && c.size() > 1) {
-          throw new DoNotRetryIOException("more than 1 value returned in incrementColumnValue from Store");
         }
       }
       
