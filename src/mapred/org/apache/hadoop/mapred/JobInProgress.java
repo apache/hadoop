@@ -2114,6 +2114,7 @@ class JobInProgress {
   }
   
   private synchronized void terminateJob(int jobTerminationState) {
+    final JobTrackerInstrumentation metrics = jobtracker.getInstrumentation();
     if ((status.getRunState() == JobStatus.RUNNING) ||
         (status.getRunState() == JobStatus.PREP)) {
       if (jobTerminationState == JobStatus.FAILED) {
@@ -2134,6 +2135,7 @@ class JobInProgress {
                                      this.finishedReduceTasks);
       }
       garbageCollect();
+      metrics.terminateJob(this.conf, this.status.getJobID());
     }
   }
 
