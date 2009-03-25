@@ -181,6 +181,9 @@ Trunk (unreleased changes)
     HADOOP-4788. Set Fair scheduler to assign both a map and a reduce on each
     heartbeat by default. (matei)
 
+    HADOOP-5491.  In contrib/index, better control memory usage.
+    (Ning Li via cutting)
+
   OPTIMIZATIONS
 
   BUG FIXES

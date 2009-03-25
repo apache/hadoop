@@ -151,6 +151,7 @@ public class TestIndexUpdater extends TestCase {
     iconf.setIndexMaxFieldLength(2);
     iconf.setIndexUseCompoundFile(true);
     iconf.setIndexMaxNumSegments(1);
+    iconf.setMaxRAMSizeInBytes(20480);
 
     long versionNumber = -1;
     long generation = -1;

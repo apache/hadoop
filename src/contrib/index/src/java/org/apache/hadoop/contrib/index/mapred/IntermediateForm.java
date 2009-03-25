@@ -151,6 +151,19 @@ public class IntermediateForm implements Writable {
     }
   }
 
+  /**
+   * The total size of files in the directory and ram used by the index writer.
+   * It does not include memory used by the delete list.
+   * @return the total size in bytes
+   */
+  public long totalSizeInBytes() throws IOException {
+    long size = dir.sizeInBytes();
+    if (writer != null) {
+      size += writer.ramSizeInBytes();
+    }
+    return size;
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */

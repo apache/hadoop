@@ -235,4 +235,20 @@ public class IndexUpdateConfiguration {
     conf.setBoolean("sea.use.compound.file", useCompoundFile);
   }
 
+  /**
+   * Get the max ram index size in bytes. The default is 50M.
+   * @return the max ram index size in bytes
+   */
+  public long getMaxRAMSizeInBytes() {
+    return conf.getLong("sea.max.ramsize.bytes", 50L << 20);
+  }
+
+  /**
+   * Set the max ram index size in bytes.
+   * @param b  the max ram index size in bytes
+   */
+  public void setMaxRAMSizeInBytes(long b) {
+    conf.setLong("sea.max.ramsize.bytes", b);
+  }
+
 }

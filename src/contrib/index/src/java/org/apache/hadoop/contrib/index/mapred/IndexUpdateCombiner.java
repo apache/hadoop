@@ -40,6 +40,8 @@ public class IndexUpdateCombiner extends MapReduceBase implements
   static final Log LOG = LogFactory.getLog(IndexUpdateCombiner.class);
 
   IndexUpdateConfiguration iconf;
+  long maxSizeInBytes;
+  long nearMaxSizeInBytes;
 
   /* (non-Javadoc)
    * @see org.apache.hadoop.mapred.Reducer#reduce(java.lang.Object, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
@@ -48,17 +50,47 @@ public class IndexUpdateCombiner extends MapReduceBase implements
       OutputCollector<Shard, IntermediateForm> output, Reporter reporter)
       throws IOException {
 
-    LOG.info("Construct a form writer for " + key);
-    IntermediateForm form = new IntermediateForm();
-    form.configure(iconf);
+    String message = key.toString();
+    IntermediateForm form = null;
+
     while (values.hasNext()) {
       IntermediateForm singleDocForm = values.next();
-      form.process(singleDocForm);
-    }
-    form.closeWriter();
-    LOG.info("Closed the form writer for " + key + ", form = " + form);
+      long formSize = form == null ? 0 : form.totalSizeInBytes();
+      long singleDocFormSize = singleDocForm.totalSizeInBytes();
 
-    output.collect(key, form);
+      if (form != null && formSize + singleDocFormSize > maxSizeInBytes) {
+        closeForm(form, message);
+        output.collect(key, form);
+        form = null;
+      }
+
+      if (form == null && singleDocFormSize >= nearMaxSizeInBytes) {
+        output.collect(key, singleDocForm);
+      } else {
+        if (form == null) {
+          form = createForm(message);
+        }
+        form.process(singleDocForm);
+      }
+    }
+
+    if (form != null) {
+      closeForm(form, message);
+      output.collect(key, form);
+    }
+  }
+
+  private IntermediateForm createForm(String message) throws IOException {
+    LOG.info("Construct a form writer for " + message);
+    IntermediateForm form = new IntermediateForm();
+    form.configure(iconf);
+    return form;
+  }
+
+  private void closeForm(IntermediateForm form, String message)
+      throws IOException {
+    form.closeWriter();
+    LOG.info("Closed the form writer for " + message + ", form = " + form);
   }
 
   /* (non-Javadoc)
@@ -66,6 +98,8 @@ public class IndexUpdateCombiner extends MapReduceBase implements
    */
   public void configure(JobConf job) {
     iconf = new IndexUpdateConfiguration(job);
+    maxSizeInBytes = iconf.getMaxRAMSizeInBytes();
+    nearMaxSizeInBytes = maxSizeInBytes - (maxSizeInBytes >>> 3); // 7/8 of max
   }
 
   /* (non-Javadoc)
