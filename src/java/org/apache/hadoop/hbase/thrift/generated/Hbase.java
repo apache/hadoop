@@ -57,6 +57,10 @@ public class Hbase {
      */
     public boolean isTableEnabled(byte[] tableName) throws IOError, TException;
 
+    public void compact(byte[] tableNameOrRegionName) throws IOError, TException;
+
+    public void majorCompact(byte[] tableNameOrRegionName) throws IOError, TException;
+
     /**
      * List all the userspace tables.
      * @return - returns a list of names
@@ -484,6 +488,72 @@ public class Hbase {
         throw result.io;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "isTableEnabled failed: unknown result");
+    }
+
+    public void compact(byte[] tableNameOrRegionName) throws IOError, TException
+    {
+      send_compact(tableNameOrRegionName);
+      recv_compact();
+    }
+
+    public void send_compact(byte[] tableNameOrRegionName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("compact", TMessageType.CALL, seqid_));
+      compact_args args = new compact_args();
+      args.tableNameOrRegionName = tableNameOrRegionName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public void recv_compact() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      compact_result result = new compact_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.io) {
+        throw result.io;
+      }
+      return;
+    }
+
+    public void majorCompact(byte[] tableNameOrRegionName) throws IOError, TException
+    {
+      send_majorCompact(tableNameOrRegionName);
+      recv_majorCompact();
+    }
+
+    public void send_majorCompact(byte[] tableNameOrRegionName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("majorCompact", TMessageType.CALL, seqid_));
+      majorCompact_args args = new majorCompact_args();
+      args.tableNameOrRegionName = tableNameOrRegionName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public void recv_majorCompact() throws IOError, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      majorCompact_result result = new majorCompact_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.io) {
+        throw result.io;
+      }
+      return;
     }
 
     public List<byte[]> getTableNames() throws IOError, TException
@@ -1481,6 +1551,8 @@ public class Hbase {
       processMap_.put("enableTable", new enableTable());
       processMap_.put("disableTable", new disableTable());
       processMap_.put("isTableEnabled", new isTableEnabled());
+      processMap_.put("compact", new compact());
+      processMap_.put("majorCompact", new majorCompact());
       processMap_.put("getTableNames", new getTableNames());
       processMap_.put("getColumnDescriptors", new getColumnDescriptors());
       processMap_.put("getTableRegions", new getTableRegions());
@@ -1591,6 +1663,48 @@ public class Hbase {
           result.__isset.io = true;
         }
         oprot.writeMessageBegin(new TMessage("isTableEnabled", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class compact implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        compact_args args = new compact_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        compact_result result = new compact_result();
+        try {
+          iface_.compact(args.tableNameOrRegionName);
+        } catch (IOError io) {
+          result.io = io;
+          result.__isset.io = true;
+        }
+        oprot.writeMessageBegin(new TMessage("compact", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class majorCompact implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        majorCompact_args args = new majorCompact_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        majorCompact_result result = new majorCompact_result();
+        try {
+          iface_.majorCompact(args.tableNameOrRegionName);
+        } catch (IOError io) {
+          result.io = io;
+          result.__isset.io = true;
+        }
+        oprot.writeMessageBegin(new TMessage("majorCompact", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -2301,7 +2415,7 @@ public class Hbase {
 
   }
 
-  public static class enableTable_result implements TBase, java.io.Serializable   {
+  public final static class enableTable_result implements TBase, java.io.Serializable   {
     public IOError io;
 
     public final Isset __isset = new Isset();
@@ -2399,7 +2513,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("enableTable_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -2507,7 +2621,7 @@ public class Hbase {
 
   }
 
-  public static class disableTable_result implements TBase, java.io.Serializable   {
+  public final static class disableTable_result implements TBase, java.io.Serializable   {
     public IOError io;
 
     public final Isset __isset = new Isset();
@@ -2605,7 +2719,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("disableTable_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -2713,7 +2827,7 @@ public class Hbase {
 
   }
 
-  public static class isTableEnabled_result implements TBase, java.io.Serializable   {
+  public final static class isTableEnabled_result implements TBase, java.io.Serializable   {
     public boolean success;
     public IOError io;
 
@@ -2842,7 +2956,419 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class compact_args implements TBase, java.io.Serializable   {
+    public byte[] tableNameOrRegionName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableNameOrRegionName = false;
+    }
+
+    public compact_args() {
+    }
+
+    public compact_args(
+      byte[] tableNameOrRegionName)
+    {
+      this();
+      this.tableNameOrRegionName = tableNameOrRegionName;
+      this.__isset.tableNameOrRegionName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof compact_args)
+        return this.equals((compact_args)that);
+      return false;
+    }
+
+    public boolean equals(compact_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableNameOrRegionName = true && (this.tableNameOrRegionName != null);
+      boolean that_present_tableNameOrRegionName = true && (that.tableNameOrRegionName != null);
+      if (this_present_tableNameOrRegionName || that_present_tableNameOrRegionName) {
+        if (!(this_present_tableNameOrRegionName && that_present_tableNameOrRegionName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableNameOrRegionName, that.tableNameOrRegionName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRING) {
+              this.tableNameOrRegionName = iprot.readBinary();
+              this.__isset.tableNameOrRegionName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("compact_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableNameOrRegionName != null) {
+        field.name = "tableNameOrRegionName";
+        field.type = TType.STRING;
+        field.id = 1;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.tableNameOrRegionName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("compact_args(");
+      sb.append("tableNameOrRegionName:");
+      sb.append(this.tableNameOrRegionName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public final static class compact_result implements TBase, java.io.Serializable   {
+    public IOError io;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean io = false;
+    }
+
+    public compact_result() {
+    }
+
+    public compact_result(
+      IOError io)
+    {
+      this();
+      this.io = io;
+      this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof compact_result)
+        return this.equals((compact_result)that);
+      return false;
+    }
+
+    public boolean equals(compact_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+              this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("compact_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.io) {
+        if (this.io != null) {
+          field.name = "io";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("compact_result(");
+      sb.append("io:");
+      sb.append(this.io.toString());
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class majorCompact_args implements TBase, java.io.Serializable   {
+    public byte[] tableNameOrRegionName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableNameOrRegionName = false;
+    }
+
+    public majorCompact_args() {
+    }
+
+    public majorCompact_args(
+      byte[] tableNameOrRegionName)
+    {
+      this();
+      this.tableNameOrRegionName = tableNameOrRegionName;
+      this.__isset.tableNameOrRegionName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof majorCompact_args)
+        return this.equals((majorCompact_args)that);
+      return false;
+    }
+
+    public boolean equals(majorCompact_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableNameOrRegionName = true && (this.tableNameOrRegionName != null);
+      boolean that_present_tableNameOrRegionName = true && (that.tableNameOrRegionName != null);
+      if (this_present_tableNameOrRegionName || that_present_tableNameOrRegionName) {
+        if (!(this_present_tableNameOrRegionName && that_present_tableNameOrRegionName))
+          return false;
+        if (!java.util.Arrays.equals(this.tableNameOrRegionName, that.tableNameOrRegionName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRING) {
+              this.tableNameOrRegionName = iprot.readBinary();
+              this.__isset.tableNameOrRegionName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("majorCompact_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableNameOrRegionName != null) {
+        field.name = "tableNameOrRegionName";
+        field.type = TType.STRING;
+        field.id = 1;
+        oprot.writeFieldBegin(field);
+        oprot.writeBinary(this.tableNameOrRegionName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("majorCompact_args(");
+      sb.append("tableNameOrRegionName:");
+      sb.append(this.tableNameOrRegionName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public final static class majorCompact_result implements TBase, java.io.Serializable   {
+    public IOError io;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean io = false;
+    }
+
+    public majorCompact_result() {
+    }
+
+    public majorCompact_result(
+      IOError io)
+    {
+      this();
+      this.io = io;
+      this.__isset.io = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof majorCompact_result)
+        return this.equals((majorCompact_result)that);
+      return false;
+    }
+
+    public boolean equals(majorCompact_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && (this.io != null);
+      boolean that_present_io = true && (that.io != null);
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+              this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("majorCompact_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.io) {
+        if (this.io != null) {
+          field.name = "io";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("majorCompact_result(");
+      sb.append("io:");
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -2907,7 +3433,7 @@ public class Hbase {
 
   }
 
-  public static class getTableNames_result implements TBase, java.io.Serializable   {
+  public final static class getTableNames_result implements TBase, java.io.Serializable   {
     public List<byte[]> success;
     public IOError io;
 
@@ -3054,7 +3580,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -3162,7 +3688,7 @@ public class Hbase {
 
   }
 
-  public static class getColumnDescriptors_result implements TBase, java.io.Serializable   {
+  public final static class getColumnDescriptors_result implements TBase, java.io.Serializable   {
     public Map<byte[],ColumnDescriptor> success;
     public IOError io;
 
@@ -3313,7 +3839,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -3421,7 +3947,7 @@ public class Hbase {
 
   }
 
-  public static class getTableRegions_result implements TBase, java.io.Serializable   {
+  public final static class getTableRegions_result implements TBase, java.io.Serializable   {
     public List<TRegionInfo> success;
     public IOError io;
 
@@ -3569,7 +4095,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -3726,7 +4252,7 @@ public class Hbase {
 
   }
 
-  public static class createTable_result implements TBase, java.io.Serializable   {
+  public final static class createTable_result implements TBase, java.io.Serializable   {
     public IOError io;
     public IllegalArgument ia;
     public AlreadyExists exist;
@@ -3888,11 +4414,11 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("createTable_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",ia:");
-      sb.append(this.ia);
+      sb.append(this.ia.toString());
       sb.append(",exist:");
-      sb.append(this.exist);
+      sb.append(this.exist.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -4000,7 +4526,7 @@ public class Hbase {
 
   }
 
-  public static class deleteTable_result implements TBase, java.io.Serializable   {
+  public final static class deleteTable_result implements TBase, java.io.Serializable   {
     public IOError io;
     public NotFound nf;
 
@@ -4130,9 +4656,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteTable_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",nf:");
-      sb.append(this.nf);
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -4304,7 +4830,7 @@ public class Hbase {
 
   }
 
-  public static class get_result implements TBase, java.io.Serializable   {
+  public final static class get_result implements TBase, java.io.Serializable   {
     public TCell success;
     public IOError io;
     public NotFound nf;
@@ -4466,11 +4992,11 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("get_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",nf:");
-      sb.append(this.nf);
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -4672,7 +5198,7 @@ public class Hbase {
 
   }
 
-  public static class getVer_result implements TBase, java.io.Serializable   {
+  public final static class getVer_result implements TBase, java.io.Serializable   {
     public List<TCell> success;
     public IOError io;
     public NotFound nf;
@@ -4852,9 +5378,9 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",nf:");
-      sb.append(this.nf);
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -5086,7 +5612,7 @@ public class Hbase {
 
   }
 
-  public static class getVerTs_result implements TBase, java.io.Serializable   {
+  public final static class getVerTs_result implements TBase, java.io.Serializable   {
     public List<TCell> success;
     public IOError io;
     public NotFound nf;
@@ -5266,9 +5792,9 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",nf:");
-      sb.append(this.nf);
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -5408,7 +5934,7 @@ public class Hbase {
 
   }
 
-  public static class getRow_result implements TBase, java.io.Serializable   {
+  public final static class getRow_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
 
@@ -5538,9 +6064,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRow_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -5728,7 +6254,7 @@ public class Hbase {
 
   }
 
-  public static class getRowWithColumns_result implements TBase, java.io.Serializable   {
+  public final static class getRowWithColumns_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
 
@@ -5858,9 +6384,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRowWithColumns_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -6030,7 +6556,7 @@ public class Hbase {
 
   }
 
-  public static class getRowTs_result implements TBase, java.io.Serializable   {
+  public final static class getRowTs_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
 
@@ -6160,9 +6686,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRowTs_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -6380,7 +6906,7 @@ public class Hbase {
 
   }
 
-  public static class getRowWithColumnsTs_result implements TBase, java.io.Serializable   {
+  public final static class getRowWithColumnsTs_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
 
@@ -6510,9 +7036,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("getRowWithColumnsTs_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -6701,7 +7227,7 @@ public class Hbase {
 
   }
 
-  public static class mutateRow_result implements TBase, java.io.Serializable   {
+  public final static class mutateRow_result implements TBase, java.io.Serializable   {
     public IOError io;
     public IllegalArgument ia;
 
@@ -6831,9 +7357,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRow_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",ia:");
-      sb.append(this.ia);
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -7052,7 +7578,7 @@ public class Hbase {
 
   }
 
-  public static class mutateRowTs_result implements TBase, java.io.Serializable   {
+  public final static class mutateRowTs_result implements TBase, java.io.Serializable   {
     public IOError io;
     public IllegalArgument ia;
 
@@ -7182,9 +7708,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRowTs_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",ia:");
-      sb.append(this.ia);
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -7341,7 +7867,7 @@ public class Hbase {
 
   }
 
-  public static class mutateRows_result implements TBase, java.io.Serializable   {
+  public final static class mutateRows_result implements TBase, java.io.Serializable   {
     public IOError io;
     public IllegalArgument ia;
 
@@ -7471,9 +7997,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRows_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",ia:");
-      sb.append(this.ia);
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -7660,7 +8186,7 @@ public class Hbase {
 
   }
 
-  public static class mutateRowsTs_result implements TBase, java.io.Serializable   {
+  public final static class mutateRowsTs_result implements TBase, java.io.Serializable   {
     public IOError io;
     public IllegalArgument ia;
 
@@ -7790,9 +8316,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("mutateRowsTs_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",ia:");
-      sb.append(this.ia);
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -7964,7 +8490,7 @@ public class Hbase {
 
   }
 
-  public static class deleteAll_result implements TBase, java.io.Serializable   {
+  public final static class deleteAll_result implements TBase, java.io.Serializable   {
     public IOError io;
 
     public final Isset __isset = new Isset();
@@ -8062,7 +8588,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAll_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -8264,7 +8790,7 @@ public class Hbase {
 
   }
 
-  public static class deleteAllTs_result implements TBase, java.io.Serializable   {
+  public final static class deleteAllTs_result implements TBase, java.io.Serializable   {
     public IOError io;
 
     public final Isset __isset = new Isset();
@@ -8362,7 +8888,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllTs_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -8502,7 +9028,7 @@ public class Hbase {
 
   }
 
-  public static class deleteAllRow_result implements TBase, java.io.Serializable   {
+  public final static class deleteAllRow_result implements TBase, java.io.Serializable   {
     public IOError io;
 
     public final Isset __isset = new Isset();
@@ -8600,7 +9126,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRow_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -8770,7 +9296,7 @@ public class Hbase {
 
   }
 
-  public static class deleteAllRowTs_result implements TBase, java.io.Serializable   {
+  public final static class deleteAllRowTs_result implements TBase, java.io.Serializable   {
     public IOError io;
 
     public final Isset __isset = new Isset();
@@ -8868,7 +9394,7 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRowTs_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -9056,7 +9582,7 @@ public class Hbase {
 
   }
 
-  public static class scannerOpen_result implements TBase, java.io.Serializable   {
+  public final static class scannerOpen_result implements TBase, java.io.Serializable   {
     public int success;
     public IOError io;
 
@@ -9185,7 +9711,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -9405,7 +9931,7 @@ public class Hbase {
 
   }
 
-  public static class scannerOpenWithStop_result implements TBase, java.io.Serializable   {
+  public final static class scannerOpenWithStop_result implements TBase, java.io.Serializable   {
     public int success;
     public IOError io;
 
@@ -9534,7 +10060,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -9752,7 +10278,7 @@ public class Hbase {
 
   }
 
-  public static class scannerOpenTs_result implements TBase, java.io.Serializable   {
+  public final static class scannerOpenTs_result implements TBase, java.io.Serializable   {
     public int success;
     public IOError io;
 
@@ -9881,7 +10407,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -10131,7 +10657,7 @@ public class Hbase {
 
   }
 
-  public static class scannerOpenWithStopTs_result implements TBase, java.io.Serializable   {
+  public final static class scannerOpenWithStopTs_result implements TBase, java.io.Serializable   {
     public int success;
     public IOError io;
 
@@ -10260,7 +10786,7 @@ public class Hbase {
       sb.append("success:");
       sb.append(this.success);
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -10366,7 +10892,7 @@ public class Hbase {
 
   }
 
-  public static class scannerGet_result implements TBase, java.io.Serializable   {
+  public final static class scannerGet_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
     public IllegalArgument ia;
@@ -10560,13 +11086,13 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerGet_result(");
       sb.append("success:");
-      sb.append(this.success);
+      sb.append(this.success.toString());
       sb.append(",io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",ia:");
-      sb.append(this.ia);
+      sb.append(this.ia.toString());
       sb.append(",nf:");
-      sb.append(this.nf);
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -10672,7 +11198,7 @@ public class Hbase {
 
   }
 
-  public static class scannerClose_result implements TBase, java.io.Serializable   {
+  public final static class scannerClose_result implements TBase, java.io.Serializable   {
     public IOError io;
     public IllegalArgument ia;
 
@@ -10802,9 +11328,9 @@ public class Hbase {
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerClose_result(");
       sb.append("io:");
-      sb.append(this.io);
+      sb.append(this.io.toString());
       sb.append(",ia:");
-      sb.append(this.ia);
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }

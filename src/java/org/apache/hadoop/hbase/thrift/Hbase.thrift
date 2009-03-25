@@ -183,6 +183,12 @@ service Hbase {
   bool isTableEnabled(1:Bytes tableName)
     throws (1:IOError io)
     
+  void compact(1:Bytes tableNameOrRegionName)
+    throws (1:IOError io)
+  
+  void majorCompact(1:Bytes tableNameOrRegionName)
+    throws (1:IOError io)
+    
   /**
    * List all the userspace tables.
    * @return - returns a list of names

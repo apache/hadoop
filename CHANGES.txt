@@ -117,6 +117,7 @@ Release 0.20.0 - Unreleased
                synthetic accessors (Nitay Joffe via Stack)
    HBASE-1273  ZooKeeper WARN spits out lots of useless messages
                (Nitay Joffe via Stack)
+   HBASE-1285  Forcing compactions should be available via thrift
 
 
 Release 0.19.0 - 01/21/2009

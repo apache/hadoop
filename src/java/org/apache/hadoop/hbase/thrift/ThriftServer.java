@@ -163,6 +163,22 @@ public class ThriftServer {
       }
     }
     
+    public void compact(byte[] tableNameOrRegionName) throws IOError, TException {
+      try{
+        admin.compact(tableNameOrRegionName);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
+    public void majorCompact(byte[] tableNameOrRegionName) throws IOError, TException {
+      try{
+        admin.majorCompact(tableNameOrRegionName);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }    
+    }
+    
     public List<byte[]> getTableNames() throws IOError {
       try {
         HTableDescriptor[] tables = this.admin.listTables();
@@ -504,7 +520,7 @@ public class ThriftServer {
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
-    }
+    }    
   }
   
   //
