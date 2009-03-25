@@ -104,9 +104,6 @@
                             </section>
                         </manifest>
 
-			<fileset dir="${basedir}/src/java">
-				<include name="org/apache/hadoop/hdfsproxy/**/*.java"/>
-			</fileset>
 		</jar>
 	</target>
 	
@@ -370,12 +367,16 @@
 		</chmod>
 
 	</target>
+	
 	<target name="package" depends="local-package" description="Build distribution">
-                <mkdir dir="${dist.dir}/contrib/${name}"/>
-                <copy todir="${dist.dir}/contrib/${name}">
-                        <fileset dir="${build.dir}/${final.name}"/>
-                </copy>
-                <chmod dir="${dist.dir}/contrib/${name}/bin" perm="a+x" includes="*"/>
+    <mkdir dir="${dist.dir}/contrib/${name}"/>
+    <copy todir="${dist.dir}/contrib/${name}">
+      <fileset dir="${build.dir}/${final.name}">
+      	<exclude name="**/lib/**" />
+      	<exclude name="**/src/**" />
+      </fileset>
+    </copy>
+    <chmod dir="${dist.dir}/contrib/${name}/bin" perm="a+x" includes="*"/>                
 	</target>
 
 	<!-- ================================================================== -->

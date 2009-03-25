@@ -1101,6 +1101,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5565. Add API for failing/finalized jobs to the JT metrics
     instrumentation. (Jerome Boulon via cdouglas)
 
+    HADOOP-5390. Remove duplicate jars from tarball, src from binary tarball
+    added by hdfsproxy. (Zhiyong Zhang via cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
