@@ -49,6 +49,12 @@ class JobTrackerInstrumentation {
   public void completeJob(JobConf conf, JobID id) 
   { }
 
+  public void terminateJob(JobConf conf, JobID id) 
+  { }
+  
+  public void finalizeJob(JobConf conf, JobID id) 
+  { }
+  
   public void addWaiting(JobID id, int tasks)
   { }
 

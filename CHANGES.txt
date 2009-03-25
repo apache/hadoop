@@ -799,6 +799,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5564. Limit the JVM heap size in the java command for initializing
     JAVA_PLATFORM.  (Suresh Srinivas via szetszwo)
 
+    HADOOP-5565. Add API for failing/finalized jobs to the JT metrics
+    instrumentation. (Jerome Boulon via cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

@@ -1894,6 +1894,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       LOG.info("Failed to finalize the log file recovery for job " + id, ioe);
     }
 
+    final JobTrackerInstrumentation metrics = getInstrumentation();
+    metrics.finalizeJob(conf, id);
+    
     long now = System.currentTimeMillis();
     
     // mark the job for cleanup at all the trackers
