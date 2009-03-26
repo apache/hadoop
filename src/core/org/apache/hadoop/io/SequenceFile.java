@@ -2233,6 +2233,7 @@ public class SequenceFile {
     private Class valClass;
 
     private Configuration conf;
+    private Metadata metadata;
     
     private Progressable progressable = null;
 
@@ -2245,6 +2246,12 @@ public class SequenceFile {
     /** Sort and merge using an arbitrary {@link RawComparator}. */
     public Sorter(FileSystem fs, RawComparator comparator, Class keyClass, 
                   Class valClass, Configuration conf) {
+      this(fs, comparator, keyClass, valClass, conf, new Metadata());
+    }
+
+    /** Sort and merge using an arbitrary {@link RawComparator}. */
+    public Sorter(FileSystem fs, RawComparator comparator, Class keyClass,
+                  Class valClass, Configuration conf, Metadata metadata) {
       this.fs = fs;
       this.comparator = comparator;
       this.keyClass = keyClass;
@@ -2252,6 +2259,7 @@ public class SequenceFile {
       this.memory = conf.getInt("io.sort.mb", 100) * 1024 * 1024;
       this.factor = conf.getInt("io.sort.factor", 100);
       this.conf = conf;
+      this.metadata = metadata;
     }
 
     /** Set the number of streams to merge at once.*/
@@ -2495,7 +2503,7 @@ public class SequenceFile {
         long segmentStart = out.getPos();
         Writer writer = createWriter(conf, out, keyClass, valClass, 
                                      isCompressed, isBlockCompressed, codec, 
-                                     new Metadata());
+                                     done ? metadata : new Metadata());
         
         if (!done) {
           writer.sync = null;                     // disable sync on temp files

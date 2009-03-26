@@ -184,6 +184,9 @@ Trunk (unreleased changes)
     HADOOP-5491.  In contrib/index, better control memory usage.
     (Ning Li via cutting)
 
+    HADOOP-5423. Include option of preserving file metadata in
+    SequenceFile::sort. (Michael Tamm via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

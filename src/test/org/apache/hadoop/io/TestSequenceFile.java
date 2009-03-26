@@ -307,10 +307,10 @@ public class TestSequenceFile extends TestCase {
   public void testSequenceFileMetadata() throws Exception {
     LOG.info("Testing SequenceFile with metadata");
     int count = 1024 * 10;
-    int megabytes = 1;
-    int factor = 5;
     CompressionCodec codec = new DefaultCodec();
     Path file = new Path(System.getProperty("test.build.data",".")+"/test.seq.metadata");
+    Path sortedFile =
+      new Path(System.getProperty("test.build.data",".")+"/test.sorted.seq.metadata");
     Path recordCompressedFile = 
       new Path(System.getProperty("test.build.data",".")+"/test.rc.seq.metadata");
     Path blockCompressedFile = 
@@ -352,6 +352,14 @@ public class TestSequenceFile extends TestCase {
         LOG.info("The retrieved metadata:\n" + aMetadata.toString());
         throw new RuntimeException("metadata not match:  " + 3);
       }
+      // SequenceFile.Sorter
+      sortMetadataTest(fs, file, sortedFile, theMetadata);
+      aMetadata = readMetadata(fs, recordCompressedFile);
+      if (!theMetadata.equals(aMetadata)) {
+        LOG.info("The original metadata:\n" + theMetadata.toString());
+        LOG.info("The retrieved metadata:\n" + aMetadata.toString());
+        throw new RuntimeException("metadata not match:  " + 4);
+      }
     } finally {
       fs.close();
     }
@@ -361,7 +369,7 @@ public class TestSequenceFile extends TestCase {
   
   private static SequenceFile.Metadata readMetadata(FileSystem fs, Path file)
     throws IOException {
-    LOG.info("reading file: " + file.toString() + "\n");
+    LOG.info("reading file: " + file.toString());
     SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
     SequenceFile.Metadata meta = reader.getMetadata(); 
     reader.close();
@@ -372,7 +380,7 @@ public class TestSequenceFile extends TestCase {
                                         CompressionType compressionType, CompressionCodec codec, SequenceFile.Metadata metadata)
     throws IOException {
     fs.delete(file, true);
-    LOG.info("creating " + count + " records with metadata and with" + compressionType +
+    LOG.info("creating " + count + " records with metadata and with " + compressionType +
              " compression");
     SequenceFile.Writer writer = 
       SequenceFile.createWriter(fs, conf, file, 
@@ -386,6 +394,15 @@ public class TestSequenceFile extends TestCase {
       writer.append(key, value);
     }
     writer.close();
+  }
+
+  private static void sortMetadataTest(FileSystem fs, Path unsortedFile, Path sortedFile, SequenceFile.Metadata metadata)
+    throws IOException {
+    fs.delete(sortedFile, true);
+    LOG.info("sorting: " + unsortedFile + " to: " + sortedFile);
+    final WritableComparator comparator = WritableComparator.get(RandomDatum.class);
+    SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs, comparator, RandomDatum.class, RandomDatum.class, conf, metadata);
+    sorter.sort(new Path[] { unsortedFile }, sortedFile, false);
   }
 
   public void testClose() throws IOException {
