@@ -20,8 +20,8 @@
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
-  Map<String, HServerInfo> serverToServerInfos =
-	    master.getServersToServerInfo();
+  Map<HServerAddress, HServerInfo> serverAddressToServerInfos =
+      master.getServerAddressToServerInfo();
   String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
   HServerAddress rootLocation = master.getRootRegionLocation();
 %>
@@ -32,9 +32,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <%
-String action = request.getParameter("action");
-String key = request.getParameter("key");
-if ( action != null ) {
+  String action = request.getParameter("action");
+  String key = request.getParameter("key");
+  if ( action != null ) {
 %>
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
       <meta http-equiv="refresh" content="5; url=/"/>
@@ -80,49 +80,76 @@ if ( action != null ) {
 <h1 id="page_title">Table: <%= tableName %></h1>
 <p id="links_menu"><a href="/master.jsp">Master</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
-<%if(tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME))) {%>
+<%
+  if(tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME))) {
+%>
 <%= tableHeader %>
-<%  int infoPort = serverToServerInfos.get(rootLocation.getBindAddress()+":"+rootLocation.getPort()).getInfoPort();
-    String url = "http://" + rootLocation.getHostname() + ":" + infoPort + "/";%> 
-<tr><td><%= tableName %></td><td><a href="<%= url %>"><%= rootLocation.getHostname() %>:<%= rootLocation.getPort() %></a></td><td>-</td><td></td><td>-</td></tr>
+<%
+  int infoPort = serverAddressToServerInfos.get(rootLocation).getInfoPort();
+  String url = "http://" + rootLocation.getHostname() + ":" + infoPort + "/";
+%>
+<tr>
+  <td><%= tableName %></td>
+  <td><a href="<%= url %>"><%= rootLocation.getHostname() %>:<%= rootLocation.getPort() %></a></td>
+  <td>-</td>
+  <td></td>
+  <td>-</td>
+</tr>
 </table>
-<%} else if(tableName.equals(Bytes.toString(HConstants.META_TABLE_NAME))) { %>
+<%
+  } else if(tableName.equals(Bytes.toString(HConstants.META_TABLE_NAME))) {
+%>
 <%= tableHeader %>
-<%  Map<byte [], MetaRegion> onlineRegions = master.getOnlineMetaRegions();
-    for (MetaRegion meta: onlineRegions.values()) {
-      int infoPort = serverToServerInfos.get(meta.getServer().getBindAddress()+":"+meta.getServer().getPort()).getInfoPort();
-      String url = "http://" + meta.getServer().getHostname() + ":" + infoPort + "/";%> 
-<tr><td><%= Bytes.toString(meta.getRegionName()) %></td>
-    <td><a href="<%= url %>"><%= meta.getServer().getHostname() %>:<%= meta.getServer().getPort() %></a></td>
-    <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td>-</td></tr>
+<%
+  Map<byte [], MetaRegion> onlineRegions = master.getOnlineMetaRegions();
+  for (MetaRegion meta: onlineRegions.values()) {
+    int infoPort = serverAddressToServerInfos.get(meta.getServer()).getInfoPort();
+    String url = "http://" + meta.getServer().getHostname() + ":" + infoPort + "/";
+%>
+<tr>
+  <td><%= Bytes.toString(meta.getRegionName()) %></td>
+    <td><a href="<%= url %>"><%= meta.getServer().toString() %></a></td>
+    <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td>-</td>
+</tr>
 <%  } %>
 </table>
 <%} else {
-    try { %>
+  try { %>
 <h2>Table Attributes</h2>
 <table>
-<tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
-<tr><td>Enabled</td><td><%= hbadmin.isTableEnabled(table.getTableName()) %></td><td>Is the table enabled</td></tr>
+  <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
+  <tr><td>Enabled</td><td><%= hbadmin.isTableEnabled(table.getTableName()) %></td><td>Is the table enabled</td></tr>
 </table>
-<%    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo(); 
-      if(regions != null && regions.size() > 0) { %>
+<%
+  Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
+  if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
-<%      for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) { %>
-<%        int infoPort = serverToServerInfos.get(hriEntry.getValue().getBindAddress()+":"+hriEntry.getValue().getPort()).getInfoPort();
-          String urlRegionHistorian = "/regionhistorian.jsp?regionname="+hriEntry.getKey().getRegionNameAsString();
-          String urlRegionServer = "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";  %>
-<tr><td><a href="<%= urlRegionHistorian %>"><%= hriEntry.getKey().getRegionNameAsString()%></a></td>
-    <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname() %>:<%= hriEntry.getValue().getPort() %></a></td>
-    <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toString(hriEntry.getKey().getStartKey())%></td>
-    <td><%= Bytes.toString(hriEntry.getKey().getEndKey())%></td></tr>
-<%      } %>
+<%
+  for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) {
+    
+    int infoPort = serverAddressToServerInfos.get(
+        hriEntry.getValue()).getInfoPort();
+    
+    String urlRegionHistorian =
+        "/regionhistorian.jsp?regionname="+hriEntry.getKey().getRegionNameAsString();
+
+    String urlRegionServer =
+        "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";
+%>
+<tr>
+  <td><a href="<%= urlRegionHistorian %>"><%= hriEntry.getKey().getRegionNameAsString()%></a></td>
+  <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().toString() %></a></td>
+  <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toString(hriEntry.getKey().getStartKey())%></td>
+  <td><%= Bytes.toString(hriEntry.getKey().getEndKey())%></td>
+</tr>
+<% } %>
 </table>
-<%    } 
-    }
-    catch(Exception ex) {
-      ex.printStackTrace();
-    } 
-  }%>
+<% }
+} catch(Exception ex) {
+  ex.printStackTrace();
+}
+} // end else
+%>
 
 <p><hr><p>
 Actions:

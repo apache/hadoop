@@ -69,6 +69,9 @@ class ServerManager implements HConstants {
   /** The map of known server names to server info */
   final Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
+
+  final Map<HServerAddress, HServerInfo> serverAddressToServerInfo =
+      new ConcurrentHashMap<HServerAddress, HServerInfo>();
   
   /**
    * Set of known dead servers.  On znode expiration, servers are added here.
@@ -124,7 +127,7 @@ class ServerManager implements HConstants {
         deadServers.contains(serverName)) {
       throw new Leases.LeaseStillHeldException(serverName);
     }
-    Watcher watcher = new ServerExpirer(serverName);
+    Watcher watcher = new ServerExpirer(serverName, info.getServerAddress());
     zooKeeperWrapper.updateRSLocationGetWatch(info, watcher);
     
     LOG.info("Received start message from: " + serverName);
@@ -162,6 +165,7 @@ class ServerManager implements HConstants {
     load = new HServerLoad();
     info.setLoad(load);
     serversToServerInfo.put(serverName, info);
+    serverAddressToServerInfo.put(info.getServerAddress(), info);
     serversToLoad.put(serverName, load);
     synchronized (loadToServers) {
       Set<String> servers = loadToServers.get(load);
@@ -256,7 +260,7 @@ class ServerManager implements HConstants {
       }
 
       synchronized (serversToServerInfo) {
-        removeServerInfo(info.getServerName());
+        removeServerInfo(info.getServerName(), info.getServerAddress());
         serversToServerInfo.notifyAll();
       }
       
@@ -271,7 +275,8 @@ class ServerManager implements HConstants {
     synchronized (serversToServerInfo) {
       try {
         // HRegionServer is shutting down. 
-        if (removeServerInfo(serverInfo.getServerName())) {
+        if (removeServerInfo(serverInfo.getServerName(),
+            serverInfo.getServerAddress())) {
           // Only process the exit message if the server still has registered info.
           // Otherwise we could end up processing the server exit twice.
           LOG.info("Region server " + serverInfo.getServerName() +
@@ -321,6 +326,7 @@ class ServerManager implements HConstants {
   throws IOException {
 
     // Refresh the info object and the load information
+    serverAddressToServerInfo.put(serverInfo.getServerAddress(), serverInfo);
     serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
 
     HServerLoad load = serversToLoad.get(serverInfo.getServerName());
@@ -568,8 +574,10 @@ class ServerManager implements HConstants {
   }
   
   /** Update a server load information because it's shutting down*/
-  private boolean removeServerInfo(final String serverName) {
+  private boolean removeServerInfo(final String serverName,
+                                   final HServerAddress serverAddress) {
     boolean infoUpdated = false;
+    serverAddressToServerInfo.remove(serverAddress);
     HServerInfo info = serversToServerInfo.remove(serverName);
     // Only update load information once.
     // This method can be called a couple of times during shutdown.
@@ -646,6 +654,13 @@ class ServerManager implements HConstants {
     }
   }
 
+  public Map<HServerAddress, HServerInfo> getServerAddressToServerInfo() {
+    // we use this one because all the puts to this map are parallel/synced with the other map.
+    synchronized (serversToServerInfo) {
+      return Collections.unmodifiableMap(serverAddressToServerInfo);
+    }
+  }
+
   /**
    * @return Read-only map of servers to load.
    */
@@ -692,15 +707,18 @@ class ServerManager implements HConstants {
   /** Watcher triggered when a RS znode is deleted */
   private class ServerExpirer implements Watcher {
     private String server;
+    private HServerAddress serverAddress;
 
-    ServerExpirer(String server) {
+    ServerExpirer(String server, HServerAddress serverAddress) {
       this.server = server;
+      this.serverAddress = serverAddress;
     }
 
     public void process(WatchedEvent event) {
       if(event.getType().equals(EventType.NodeDeleted)) {
         LOG.info(server + " znode expired");
         // Remove the server from the known servers list and update load info
+        serverAddressToServerInfo.remove(serverAddress);
         HServerInfo info = serversToServerInfo.remove(server);
         boolean rootServer = false;
         if (info != null) {

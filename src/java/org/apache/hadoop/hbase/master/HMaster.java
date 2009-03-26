@@ -320,6 +320,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return serverManager.getServersToServerInfo();
   }
 
+  public Map<HServerAddress, HServerInfo> getServerAddressToServerInfo() {
+    return serverManager.getServerAddressToServerInfo();
+  }
+
   /**
    * @return Read-only map of servers to load.
    */
