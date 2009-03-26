@@ -1115,6 +1115,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5066. Building binary tarball should not build docs/javadocs, copy
     src, or run jdiff. (Giridharan Kesavan via cdouglas)
 
+    HADOOP-5459. Fix undetected CRC errors where intermediate output is closed
+    before it has been completely consumed. (cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
