@@ -120,6 +120,10 @@ public class HQuorumPeer implements HConstants {
           LOG.fatal(msg);
           throw new IOException(msg);
         }
+        // Special case for 'hbase.master.hostname' property being 'local'
+        if (variable.equals(HConstants.MASTER_HOST_NAME) && substituteValue.equals("local")) {
+          substituteValue = "localhost";
+        }
         newValue.append(substituteValue);
 
         varEnd += VARIABLE_END_LENGTH;

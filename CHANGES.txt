@@ -9,6 +9,8 @@ Release 0.20.0 - Unreleased
                (Ryan Rawson via Stack)
    HBASE-1145  Ensure that there is only 1 Master with Zookeeper (Removes
                hbase.master) (Nitay Joffe via Stack)
+   HBASE-1289  Remove "hbase.fully.distributed" option and update docs
+               (Nitay Joffe via Stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)

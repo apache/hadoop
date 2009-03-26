@@ -119,22 +119,24 @@ create them if you let it).
 </p>
 
 <h3><a name="fully-distrib">Fully-Distributed Operation</a></h3>
-For running a fully-distributed operation on more than one host, the following configurations 
-must be made <i>in addition</i> to those described in the 
-<a href="#pseudo-distrib">pseudo-distributed operation</a> section above.  In 
-<code>hbase-site.xml</code>, you must also configure <code>hbase.master</code> to the 
-<code>host:port</code> pair on which the HMaster runs 
-(<a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">read about the HBase master, 
-regionservers, etc</a>).  For example, adding the below to your <code>hbase-site.xml</code> says the 
-master is up on port 60000 on the host example.org:
+For running a fully-distributed operation on more than one host, the following
+configurations must be made <i>in addition</i> to those described in the
+<a href="#pseudo-distrib">pseudo-distributed operation</a> section above.
+In <code>hbase-site.xml</code>, you must also configure
+<code>hbase.master.hostname</code> to the host on which the HBase master runs
+(<a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">read 
+about the HBase master, regionservers, etc</a>).
+For example, adding the below to your <code>hbase-site.xml</code> says the
+master is up on the host example.org:
 </p>
 <pre>
 &lt;configuration&gt;
   ...
   &lt;property&gt;
-    &lt;name&gt;hbase.master&lt;/name&gt;
-    &lt;value&gt;example.org:60000&lt;/value&gt;
-    &lt;description&gt;The host and port that the HBase master runs at.
+    &lt;name&gt;hbase.master.hostname&lt;/name&gt;
+    &lt;value&gt;example.org&lt;/value&gt;
+    &lt;description&gt;The host that the HBase master runs at.
+      A value of 'local' runs the master and regionserver in a single process.
     &lt;/description&gt;
   &lt;/property&gt;
   ...

@@ -161,7 +161,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // up in DNS.
     String addressStr = conf.get(MASTER_ADDRESS);
     if (addressStr == null) {
-      addressStr = conf.get("hbase.master.hostname");
+      addressStr = conf.get(MASTER_HOST_NAME);
       if (addressStr == null) {
         addressStr = InetAddress.getLocalHost().getCanonicalHostName();
       }
@@ -968,8 +968,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           " from meta region: " +
           Bytes.toString(metaRegionName) + " because HRegionInfo was empty");
       } catch (IOException e) {
-        LOG.error("deleting region: " + regionName + " from meta region: " +
-            metaRegionName, e);
+        LOG.error("deleting region: " + Bytes.toString(regionName) +
+            " from meta region: " + Bytes.toString(metaRegionName), e);
       }
     }
   }
@@ -1037,9 +1037,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
 
       if (cmd.equals("stop")) {
-        if (LocalHBaseCluster.isLocal(conf)) {
-          conf = LocalHBaseCluster.doLocal(conf);
-        }
         HBaseAdmin adm = null;
         try {
           adm = new HBaseAdmin(conf);

@@ -71,5 +71,29 @@ public class HQuorumPeerTest extends HBaseTestCase {
     assertTrue(servers.containsKey(Long.valueOf(0)));
     QuorumServer server = servers.get(Long.valueOf(0));
     assertEquals("localhost", server.addr.getHostName());
+
+    // Override with system property.
+    System.setProperty("hbase.master.hostname", "foo.bar");
+    is = new ByteArrayInputStream(s.getBytes());
+    properties = HQuorumPeer.parseConfig(is);
+    assertEquals("foo.bar:2888:3888", properties.get("server.0"));
+
+    QuorumPeerConfig.parseProperties(properties);
+
+    servers = QuorumPeerConfig.getServers();
+    server = servers.get(Long.valueOf(0));
+    assertEquals("foo.bar", server.addr.getHostName());
+
+    // Special case for property 'hbase.master.hostname' being 'local'
+    System.setProperty("hbase.master.hostname", "local");
+    is = new ByteArrayInputStream(s.getBytes());
+    properties = HQuorumPeer.parseConfig(is);
+    assertEquals("localhost:2888:3888", properties.get("server.0"));
+
+    QuorumPeerConfig.parseProperties(properties);
+
+    servers = QuorumPeerConfig.getServers();
+    server = servers.get(Long.valueOf(0));
+    assertEquals("localhost", server.addr.getHostName());
   }
 }

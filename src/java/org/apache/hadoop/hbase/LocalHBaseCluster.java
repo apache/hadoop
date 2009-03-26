@@ -323,20 +323,26 @@ public class LocalHBaseCluster implements HConstants {
    * @return The passed <code>c</code> configuration modified if hbase.master
    * value was 'local' otherwise, unaltered.
    */
-  public static HBaseConfiguration doLocal(final HBaseConfiguration c) {
+  private static HBaseConfiguration doLocal(final HBaseConfiguration c) {
     if (!isLocal(c)) {
       return c;
     }
-    // Need to rewrite address in Configuration if not done already. This is
-    // for the case when we're using the deprecated master.address property.
+
+    // Need to rewrite address in Configuration if not done already.
     String address = c.get(MASTER_ADDRESS);
-    if (address == null) {
-      return c;
+    if (address != null) {
+      String port = address.startsWith(LOCAL_COLON)?
+        address.substring(LOCAL_COLON.length()):
+        Integer.toString(DEFAULT_MASTER_PORT);
+      c.set(MASTER_ADDRESS, "localhost:" + port);
     }
-    String port = address.startsWith(LOCAL_COLON)?
-      address.substring(LOCAL_COLON.length()):
-      Integer.toString(DEFAULT_MASTER_PORT);
-    c.set(MASTER_ADDRESS, "localhost:" + port);
+
+    // Need to rewrite host in Configuration if not done already.
+    String host = c.get(MASTER_HOST_NAME);
+    if (host != null && host.equals(LOCAL)) {
+      c.set(MASTER_HOST_NAME, "localhost");
+    }
+
     return c;
   }
 
@@ -348,10 +354,11 @@ public class LocalHBaseCluster implements HConstants {
     String address = c.get(MASTER_ADDRESS);
     boolean addressIsLocal = address == null || address.equals(LOCAL) ||
                              address.startsWith(LOCAL_COLON);
-    boolean distributedOff = !c.getBoolean("run.distributed", false);
-    return addressIsLocal && distributedOff;
+    String host = c.get(MASTER_HOST_NAME);
+    boolean hostIsLocal = host == null || host.equals(LOCAL);
+    return addressIsLocal && hostIsLocal;
   }
-  
+
   /**
    * Test things basically work.
    * @param args

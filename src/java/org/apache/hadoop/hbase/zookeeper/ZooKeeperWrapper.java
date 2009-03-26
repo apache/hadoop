@@ -335,6 +335,11 @@ public class ZooKeeperWrapper implements HConstants {
     return createRootRegionLocation(addressString);
   }
 
+  /**
+   * Write address of master to ZooKeeper.
+   * @param address HServerAddress of master.
+   * @return true if operation succeeded, false otherwise.
+   */
   public boolean writeMasterAddress(HServerAddress address) {
     if (!ensureParentExists(masterElectionZNode)) {
       return false;

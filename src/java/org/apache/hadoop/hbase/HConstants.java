@@ -65,15 +65,14 @@ public interface HConstants {
   /** Parameter name for master address */
   static final String MASTER_ADDRESS = "hbase.master";
 
+  /** Parameter name for master host name. */
+  static final String MASTER_HOST_NAME = "hbase.master.hostname";
+
   /** default host address */
   static final String DEFAULT_HOST = "0.0.0.0";
 
   /** default port that the master listens on */
   static final int DEFAULT_MASTER_PORT = 60000;
-  
-  /** Default master address */
-  static final String DEFAULT_MASTER_ADDRESS = DEFAULT_HOST + ":" +
-    DEFAULT_MASTER_PORT;
 
   /** default port for master web api */
   static final int DEFAULT_MASTER_INFOPORT = 60010;
