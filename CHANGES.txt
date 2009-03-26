@@ -805,6 +805,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5390. Remove duplicate jars from tarball, src from binary tarball
     added by hdfsproxy. (Zhiyong Zhang via cdouglas)
 
+    HADOOP-5066. Building binary tarball should not build docs/javadocs, copy
+    src, or run jdiff. (Giridharan Kesavan via cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
