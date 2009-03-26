@@ -322,6 +322,9 @@ Trunk (unreleased changes)
     HADOOP-5191. Accessing HDFS with any ip or hostname should work as long 
     as it points to the interface NameNode is listening on. (Raghu Angadi)
 
+    HADOOP-5561. Add javadoc.maxmemory parameter to build, preventing OOM
+    exceptions from javadoc-dev. (Jacob Homan via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
