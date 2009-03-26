@@ -35,6 +35,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.util.Shell;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,7 +88,6 @@ public class TestKillSubProcesses extends TestCase {
     JobInProgress jip = jt.getJob(job.getID());
     for(TaskReport tr : mapReports) {
       TaskInProgress tip = jip.getTaskInProgress(tr.getTaskID());
-      assertTrue(tip.isRunning());
 
       // for this tip, get active tasks of all attempts
       while(tip.getActiveTasks().size() == 0) {
@@ -240,6 +240,12 @@ public class TestKillSubProcesses extends TestCase {
   }
 
   public void testJobKill() throws IOException {
+    if (Shell.WINDOWS) {
+      System.out.println(
+             "setsid doesn't work on WINDOWS as expected. Not testing");
+      return;
+    }
+    
     JobConf conf=null;
     try {
       mr = new MiniMRCluster(1, "file:///", 1);

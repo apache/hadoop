@@ -50,6 +50,7 @@ import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 
 /** Base class for tasks. */
 abstract class Task implements Writable, Configurable {
@@ -313,7 +314,9 @@ abstract class Task implements Writable, Configurable {
     out.writeBoolean(jobSetup);
     out.writeBoolean(writeSkipRecs);
     out.writeBoolean(taskCleanup);  
-    Text.writeString(out, pidFile);
+    if(!Shell.WINDOWS) {
+      Text.writeString(out, pidFile);
+    }
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -333,7 +336,9 @@ abstract class Task implements Writable, Configurable {
     if (taskCleanup) {
       setPhase(TaskStatus.Phase.CLEANUP);
     }
-    pidFile = Text.readString(in);
+    if(!Shell.WINDOWS) {
+      pidFile = Text.readString(in);
+    }
   }
 
   @Override

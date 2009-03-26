@@ -35,6 +35,7 @@ import org.apache.hadoop.mapred.JvmTask;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.util.Shell;
 import org.apache.log4j.LogManager;
 
 /** 
@@ -123,13 +124,13 @@ class Child {
         //are viewable immediately
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
-        if (srcPidPath == null) {
+        if (srcPidPath == null && !Shell.WINDOWS) {
           // get the first task's path for the first time
           srcPidPath = new Path(task.getPidFile());
         }
         //since the JVM is running multiple tasks potentially, we need
         //to do symlink stuff only for the subsequent tasks
-        if (!taskid.equals(firstTaskid)) {
+        if (!taskid.equals(firstTaskid) && !Shell.WINDOWS) {
           dstPidPath = new Path(task.getPidFile());
           FileUtil.symLink(srcPidPath.toUri().getPath(), 
               dstPidPath.toUri().getPath());
@@ -155,7 +156,7 @@ class Child {
           task.run(job, umbilical);             // run the task
         } finally {
           TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
-          if (!taskid.equals(firstTaskid)) {
+          if (!taskid.equals(firstTaskid) && !Shell.WINDOWS) {
             // delete the pid-file's symlink
             new File(dstPidPath.toUri().getPath()).delete();
           }

@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.util.Shell;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -461,7 +462,7 @@ public class TaskLog {
     StringBuffer mergedCmd = new StringBuffer();
     
     // Spit out the pid to pidFileName
-    if (pidFileName != null) {
+    if (pidFileName != null && !Shell.WINDOWS) {
       mergedCmd.append("echo $$ > ");
       mergedCmd.append(pidFileName);
       mergedCmd.append(" ;");
@@ -473,7 +474,8 @@ public class TaskLog {
     }
     if (tailLength > 0) {
       mergedCmd.append("(");
-    } else if(ProcessTree.isSetsidAvailable && useSetsid) {
+    } else if(ProcessTree.isSetsidAvailable && useSetsid &&
+        !Shell.WINDOWS) {
       mergedCmd.append("exec setsid ");
     } else {
       mergedCmd.append("exec ");

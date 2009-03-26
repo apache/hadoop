@@ -333,6 +333,9 @@ Trunk (unreleased changes)
     HADOOP-5477. Fix rare failure in TestCLI for hosts returning variations of
     'localhost'. (Jacob Homan via cdouglas)
 
+    HADOOP-5194. Disables setsid for tasks run on cygwin. 
+    (Ravi Gummadi via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

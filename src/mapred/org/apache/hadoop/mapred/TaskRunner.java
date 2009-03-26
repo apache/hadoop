@@ -368,11 +368,15 @@ abstract class TaskRunner extends Thread {
       vargs.add(Integer.toString(address.getPort())); 
       vargs.add(taskid.toString());                      // pass task identifier
 
-      String pidFile = lDirAlloc.getLocalPathForWrite(
+      String pidFile = "";
+      if (!Shell.WINDOWS) {
+        pidFile = lDirAlloc.getLocalPathForWrite(
             (TaskTracker.getPidFile(t.getJobID().toString(),
                t.getTaskID().toString(), t.isTaskCleanupTask())),
             this.conf).toString();
-      t.setPidFile(pidFile);
+        t.setPidFile(pidFile);
+      }
+      
       tracker.addToMemoryManager(t.getTaskID(), conf, pidFile);
 
       // set memory limit using ulimit if feasible and necessary ...

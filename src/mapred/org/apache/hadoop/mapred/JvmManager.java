@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.ProcessTree;
 
@@ -366,19 +367,24 @@ class JvmManager {
         if (shexec != null) {
           Process process = shexec.getProcess();
           if (process != null) {
-            Path pidFilePath = new Path(env.pidFile);
-            String pid = ProcessTree.getPidFromPidFile(
+            if (Shell.WINDOWS) {
+              process.destroy();
+            }
+            else {
+              Path pidFilePath = new Path(env.pidFile);
+              String pid = ProcessTree.getPidFromPidFile(
                                                     pidFilePath.toString());
 
-            long sleeptimeBeforeSigkill = env.conf.getLong(
-                 "mapred.tasktracker.tasks.sleeptime-before-sigkill",
-                 ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+              long sleeptimeBeforeSigkill = env.conf.getLong(
+                   "mapred.tasktracker.tasks.sleeptime-before-sigkill",
+                   ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
 
-            ProcessTree.destroy(pid, sleeptimeBeforeSigkill,
-                     ProcessTree.isSetsidAvailable, false);
-            try {
-              LOG.info("Process exited with exit code:" + process.waitFor());
-            } catch (InterruptedException ie) {}
+              ProcessTree.destroy(pid, sleeptimeBeforeSigkill,
+                       ProcessTree.isSetsidAvailable, false);
+              try {
+                LOG.info("Process exited with exit code:" + process.waitFor());
+              } catch (InterruptedException ie) {}
+            }
           }
         }
         removeJvm(jvmId);
