@@ -123,7 +123,8 @@ Release 0.20.0 - Unreleased
                (Nitay Joffe via Stack)
    HBASE-1285  Forcing compactions should be available via thrift
                (Tim Sell via Stack)
-
+   HBASE-1186  Memory-aware Maps with LRU eviction for cell cache 
+               (Jonathan Gray via Andrew Purtell)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
