@@ -327,6 +327,9 @@ Trunk (unreleased changes)
     HADOOP-5561. Add javadoc.maxmemory parameter to build, preventing OOM
     exceptions from javadoc-dev. (Jacob Homan via cdouglas)
 
+    HADOOP-5149. Modify HistoryViewer to ignore unfamiliar files in the log
+    directory. (Hong Tang via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -32,8 +32,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.mapred.DefaultJobHistoryParser.*;
-import org.apache.hadoop.mapred.JobHistory.*;
+import org.apache.hadoop.mapred.DefaultJobHistoryParser.FailedOnNodesFilter;
+import org.apache.hadoop.mapred.DefaultJobHistoryParser.KilledOnNodesFilter;
+import org.apache.hadoop.mapred.DefaultJobHistoryParser.NodesFilter;
+import org.apache.hadoop.mapred.JobHistory.JobInfo;
+import org.apache.hadoop.mapred.JobHistory.Keys;
+import org.apache.hadoop.mapred.JobHistory.ReduceAttempt;
+import org.apache.hadoop.mapred.JobHistory.TaskAttempt;
+import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -72,18 +78,29 @@ class HistoryViewer {
       }
       Path[] jobFiles = FileUtil.stat2Paths(fs.listStatus(historyLogDir,
                                                           jobLogFileFilter));
-      if (jobFiles.length == 0) {
-        throw new IOException("Not a valid history directory " 
-                              + historyLogDir.toString());
+      boolean initialized = false;
+      for (Path p : jobFiles) {
+        jobLogFile = p.toString();
+
+        String[] jobDetails =
+            JobInfo.decodeJobHistoryFileName(p.getName()).split("_");
+        if (jobDetails.length < 5) {
+          // NOT a valid name
+          System.err.println("Ignore unrecognized file: " + p.getName());
+          continue;
+        }
+        trackerHostName = jobDetails[0];
+        trackerStartTime = jobDetails[1];
+        jobId = jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];
+        job = new JobHistory.JobInfo(jobId);
+        DefaultJobHistoryParser.parseJobTasks(jobLogFile, job, fs);
+        initialized = true;
+        break;
       }
-      jobLogFile = jobFiles[0].toString();
-      String[] jobDetails = 
-          JobInfo.decodeJobHistoryFileName(jobFiles[0].getName()).split("_");
-      trackerHostName = jobDetails[0];
-      trackerStartTime = jobDetails[1];
-      jobId = jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];
-      job = new JobHistory.JobInfo(jobId); 
-      DefaultJobHistoryParser.parseJobTasks(jobFiles[0].toString(), job, fs);
+      if (!initialized) {
+        throw new IOException("No valid history found in directory: "
+            + historyLogDir.toString());
+      }
     } catch(Exception e) {
       throw new IOException("Not able to initialize History viewer", e);
     }
