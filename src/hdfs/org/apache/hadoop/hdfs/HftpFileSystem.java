@@ -91,26 +91,15 @@ public class HftpFileSystem extends FileSystem {
     nnAddr = NetUtils.createSocketAddr(name.toString());
   }
   
-  /** randomly pick one from all available IP addresses of a given hostname */
-  protected String pickOneAddress(String hostname) throws UnknownHostException {
-    if ("localhost".equals(hostname))
-      return hostname;
-    InetAddress[] addrs = InetAddress.getAllByName(hostname);
-    if (addrs.length > 1)
-      return addrs[ran.nextInt(addrs.length)].getHostAddress();
-    return addrs[0].getHostAddress();
-  }
 
   @Override
   public URI getUri() {
     try {
-      return new URI("hftp", null, pickOneAddress(nnAddr.getHostName()), nnAddr.getPort(),
+      return new URI("hftp", null, nnAddr.getHostName(), nnAddr.getPort(),
                      null, null, null);
     } catch (URISyntaxException e) {
       return null;
-    } catch (UnknownHostException e) {
-      return null;
-    }
+    } 
   }
 
   /**
@@ -121,7 +110,7 @@ public class HftpFileSystem extends FileSystem {
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     try {
-      final URL url = new URI("http", null, pickOneAddress(nnAddr.getHostName()),
+      final URL url = new URI("http", null, nnAddr.getHostName(),
           nnAddr.getPort(), path, query, null).toURL();
       if (LOG.isTraceEnabled()) {
         LOG.trace("url=" + url);

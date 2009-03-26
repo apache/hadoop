@@ -57,10 +57,21 @@
           <param-value>value1 used for testing</param-value>
         </init-param>
     </servlet>
-
+		
+		<servlet>
+      <servlet-name>Simple</servlet-name>
+      <description> A Simple Servlet </description>
+      <servlet-class>org.apache.hadoop.hdfsproxy.SimpleServlet</servlet-class>
+    </servlet>
+    
     <servlet-mapping>
         <servlet-name>ServletRedirector_TestOverride</servlet-name>
         <url-pattern>/ServletRedirectorOverride</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>Simple</servlet-name>
+        <url-pattern>/simple/*</url-pattern>
     </servlet-mapping>
 
 </web-app>

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.hdfs.DFSClient;
@@ -32,6 +33,14 @@ import org.apache.hadoop.conf.Configuration;
 public class ProxyStreamFile extends StreamFile {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
+  /** {@inheritDoc} */
+  @Override
+  public void init() throws ServletException {
+    ServletContext context = getServletContext();
+    if (context.getAttribute("name.conf") == null) { 
+      context.setAttribute("name.conf", new Configuration());
+    }    
+  }
 
   /** {@inheritDoc} */
   @Override
@@ -50,6 +59,8 @@ public class ProxyStreamFile extends StreamFile {
   /** {@inheritDoc} */
   @Override
   protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    return (UnixUserGroupInformation) request.getAttribute("authorized.ugi");
+    String userID = (String) request.getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    UnixUserGroupInformation ugi = ProxyUgiManager.getUgiForUser(userID);
+    return ugi;
   }
 }

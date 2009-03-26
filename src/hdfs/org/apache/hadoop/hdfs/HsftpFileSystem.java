@@ -69,7 +69,7 @@ public class HsftpFileSystem extends HftpFileSystem {
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     try {
-      final URL url = new URI("https", null, pickOneAddress(nnAddr.getHostName()),
+      final URL url = new URI("https", null, nnAddr.getHostName(),
           nnAddr.getPort(), path, query, null).toURL();
       HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();
       // bypass hostname verification
@@ -83,13 +83,11 @@ public class HsftpFileSystem extends HftpFileSystem {
   @Override
   public URI getUri() {
     try {
-      return new URI("hsftp", null, pickOneAddress(nnAddr.getHostName()), nnAddr.getPort(),
+      return new URI("hsftp", null, nnAddr.getHostName(), nnAddr.getPort(),
                      null, null, null);
     } catch (URISyntaxException e) {
       return null;
-    } catch (UnknownHostException e) {
-      return null;
-    }
+    } 
   }
 
   /**

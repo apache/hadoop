@@ -63,6 +63,9 @@ Trunk (unreleased changes)
 
     HADOOP-4539. Introduce backup node and checkpoint node. (shv)
 
+    HADOOP-5363. Add support for proxying connections to multiple clusters with
+    different versions to hdfsproxy. (Zhiyong Zhang via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

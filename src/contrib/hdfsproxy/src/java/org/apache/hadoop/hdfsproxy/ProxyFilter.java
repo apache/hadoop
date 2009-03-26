@@ -61,14 +61,14 @@ public class ProxyFilter implements Filter {
       .compile("^(/clearUgiCache)$");
   /** Pattern for a filter to find out if a request is HFTP/HSFTP request */
   protected static final Pattern HFTP_PATTERN = Pattern
-      .compile("^(/listPaths|/data|/streamFile)$");
+      .compile("^(/listPaths|/data|/streamFile|/file)$");
   /**
    * Pattern for a filter to find out if an HFTP/HSFTP request stores its file
    * path in the extra path information associated with the URL; if not, the
    * file path is stored in request parameter "filename"
    */
   protected static final Pattern FILEPATH_PATTERN = Pattern
-      .compile("^(/listPaths|/data)$");
+      .compile("^(/listPaths|/data|/file)$");
 
   private static volatile Map<String, Set<Path>> permsMap;
   private static volatile Map<String, Set<BigInteger>> certsMap;
@@ -88,14 +88,16 @@ public class ProxyFilter implements Filter {
     Configuration conf = new Configuration(false);
     conf.addResource("hdfsproxy-default.xml");
     conf.addResource("ssl-server.xml");
+    conf.addResource("hdfsproxy-site.xml");
     String nn = conf.get("hdfsproxy.dfs.namenode.address");
     if (nn == null) {
       throw new ServletException("Proxy source cluster name node address not speficied");
     }
     InetSocketAddress nAddr = NetUtils.createSocketAddr(nn);
     context.setAttribute("name.node.address", nAddr);
-    context.setAttribute("name.conf", new Configuration());
-           
+    context.setAttribute("name.conf", new Configuration());   
+    
+    context.setAttribute("org.apache.hadoop.hdfsproxy.conf", conf);
     LOG.info("proxyFilter initialization success: " + nn);
   }
 
@@ -165,7 +167,7 @@ public class ProxyFilter implements Filter {
 
     HttpServletRequest rqst = (HttpServletRequest) request;
     HttpServletResponse rsp = (HttpServletResponse) response;
-
+    
     if (LOG.isDebugEnabled()) {
       StringBuilder b = new StringBuilder("Request from ").append(
           rqst.getRemoteHost()).append("/").append(rqst.getRemoteAddr())
@@ -264,7 +266,10 @@ public class ProxyFilter implements Filter {
       userID = userID.substring(3);
       
       String servletPath = rqst.getServletPath();
-      if (unitTest) servletPath = rqst.getParameter("TestSevletPathInfo");
+      if (unitTest) { 
+        servletPath = rqst.getParameter("TestSevletPathInfo");
+        LOG.info("this is for unit test purpose only");
+      }
       
       if (HFTP_PATTERN.matcher(servletPath).matches()) {
         // request is an HSFTP request
@@ -317,11 +322,16 @@ public class ProxyFilter implements Filter {
         return;
       }
       rqst.setAttribute("authorized.ugi", ugi);
+      rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", userID);
     } else if(rqst.getScheme().equalsIgnoreCase("http")) { // http request, set ugi for servlets, only for testing purposes
       String ugi = rqst.getParameter("ugi");
       if (ugi != null) {
         rqst.setAttribute("authorized.ugi", new UnixUserGroupInformation(ugi
           .split(",")));
+        String[] ugiStr = ugi.split(",");
+        if(ugiStr.length > 0) {
+          rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", ugiStr[0]);
+        }
       } 
     }
     chain.doFilter(request, response);

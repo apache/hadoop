@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdfsproxy;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,6 +37,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
 
@@ -46,7 +52,7 @@ public class ProxyUtil {
   public static final Log LOG = LogFactory.getLog(ProxyUtil.class);
   
   private static enum UtilityOption {
-    RELOAD("-reloadPermFiles"), CLEAR("-clearUgiCache");
+    RELOAD("-reloadPermFiles"), CLEAR("-clearUgiCache"), GET("-get");
 
     private String name = null;
 
@@ -163,14 +169,48 @@ public class ProxyUtil {
     }
     return true;
   }
+  
+  
+  static FSDataInputStream open(Configuration conf, String hostname, int port, String path) throws IOException {
+    setupSslProps(conf);
+    HttpURLConnection connection = null;
+    connection = openConnection(hostname, port, path);
+    connection.connect();
+    final InputStream in = connection.getInputStream();
+    return new FSDataInputStream(new FSInputStream() {
+        public int read() throws IOException {
+          return in.read();
+        }
+        public int read(byte[] b, int off, int len) throws IOException {
+          return in.read(b, off, len);
+        }
+
+        public void close() throws IOException {
+          in.close();
+        }
+
+        public void seek(long pos) throws IOException {
+          throw new IOException("Can't seek!");
+        }
+        public long getPos() throws IOException {
+          throw new IOException("Position unknown!");
+        }
+        public boolean seekToNewSource(long targetPos) throws IOException {
+          return false;
+        }
+      });
+  }
 
   public static void main(String[] args) throws Exception {
-    if(args.length != 1 || 
+    if(args.length < 1 || 
         (!UtilityOption.RELOAD.getName().equalsIgnoreCase(args[0]) 
-            && !UtilityOption.CLEAR.getName().equalsIgnoreCase(args[0]))) {
+            && !UtilityOption.CLEAR.getName().equalsIgnoreCase(args[0])
+            && !UtilityOption.GET.getName().equalsIgnoreCase(args[0])) ||
+            (UtilityOption.GET.getName().equalsIgnoreCase(args[0]) && args.length != 4)) {
       System.err.println("Usage: ProxyUtil ["
           + UtilityOption.RELOAD.getName() + "] | ["
-          + UtilityOption.CLEAR.getName() + "]");
+          + UtilityOption.CLEAR.getName() + "] | ["
+          + UtilityOption.GET.getName() + " <hostname> <#port> <path> ]");
       System.exit(0);      
     }
     Configuration conf = new Configuration(false);   
@@ -179,10 +219,17 @@ public class ProxyUtil {
      
     if (UtilityOption.RELOAD.getName().equalsIgnoreCase(args[0])) {
       // reload user-certs.xml and user-permissions.xml files
-      boolean error = sendCommand(conf, "/reloadPermFiles");
-    } else {
+      sendCommand(conf, "/reloadPermFiles");
+    } else if (UtilityOption.CLEAR.getName().equalsIgnoreCase(args[0])) {
       // clear UGI caches
-      boolean error = sendCommand(conf, "/clearUgiCache");
+      sendCommand(conf, "/clearUgiCache");
+    } else {
+      String hostname = args[1];
+      int port = Integer.parseInt(args[2]);
+      String path = args[3];
+      InputStream in = open(conf, hostname, port, path);
+      IOUtils.copyBytes(in, System.out, conf, false);
+      in.close();
     }
   }
         

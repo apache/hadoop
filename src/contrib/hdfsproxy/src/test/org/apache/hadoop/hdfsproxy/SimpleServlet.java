@@ -15,35 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hdfsproxy;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import java.io.PrintWriter;
+import java.io.IOException;
 
-/** {@inheritDoc} */
-public class ProxyListPathsServlet extends ListPathsServlet {
-  /** For java.io.Serializable */
+
+/**
+ * simple servlet for forward testing purpose
+ */
+
+public class SimpleServlet extends HttpServlet {
+ 
+  /**
+   * 
+   */
   private static final long serialVersionUID = 1L;
-  
-  /** {@inheritDoc} */
-  @Override
-  public void init() throws ServletException {
-    ServletContext context = getServletContext();
-    if (context.getAttribute("name.conf") == null) { 
-      context.setAttribute("name.conf", new Configuration());
-    }    
+
+  public void doGet(HttpServletRequest request, HttpServletResponse response)
+    throws IOException {
+	  response.setContentType("text/html");
+	  PrintWriter out = response.getWriter();	  
+	  out.print("<html><head/><body>");
+    out.print("A GET request");
+    out.print("</body></html>");
+	  out.close();
+	  return;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    String userID = (String) request.getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    UnixUserGroupInformation ugi = ProxyUgiManager.getUgiForUser(userID);
-    return ugi;
-  }
 }

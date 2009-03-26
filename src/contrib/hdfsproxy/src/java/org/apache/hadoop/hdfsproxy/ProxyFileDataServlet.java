@@ -21,8 +21,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
@@ -32,6 +36,15 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 public class ProxyFileDataServlet extends FileDataServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
+  
+  /** {@inheritDoc} */
+  @Override
+  public void init() throws ServletException {
+    ServletContext context = getServletContext();
+    if (context.getAttribute("name.conf") == null) { 
+      context.setAttribute("name.conf", new Configuration());
+    }    
+  }
 
   /** {@inheritDoc} */
   @Override
@@ -46,6 +59,8 @@ public class ProxyFileDataServlet extends FileDataServlet {
   /** {@inheritDoc} */
   @Override
   protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    return (UnixUserGroupInformation) request.getAttribute("authorized.ugi");
+    String userID = (String) request.getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    UnixUserGroupInformation ugi = ProxyUgiManager.getUgiForUser(userID);
+    return ugi;
   }
 }
