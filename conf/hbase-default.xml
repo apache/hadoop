@@ -31,16 +31,11 @@
     </description>
   </property>
   <property>
-    <name>run.distributed</name>
-    <value>false</value>
-    <description>Enable this to run a distributed HBase. When this is disabled
-    (the default) HBase runs all processes on the current host in a local mode.
-    </description>
-  </property>
-  <property>
     <name>hbase.master.hostname</name>
-    <value>localhost</value>
-    <description>The host that the HBase master runs at.</description>
+    <value>local</value>
+    <description>The host that the HBase master runs at.
+      A value of 'local' runs the master and regionserver in a single process.
+    </description>
   </property>
   <property>
     <name>hbase.master.port</name>
