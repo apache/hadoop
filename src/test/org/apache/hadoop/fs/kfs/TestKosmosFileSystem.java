@@ -147,6 +147,7 @@ public class TestKosmosFileSystem extends TestCase {
         // Read the stuff back and verify it is correct
         FSDataInputStream s2 = kosmosFileSystem.open(file1, 4096);
         int v;
+        long nread = 0;
 
         v = s2.read();
         assertEquals(v, 32);
@@ -161,12 +162,36 @@ public class TestKosmosFileSystem extends TestCase {
 
         byte[] buf = new byte[bufsz];
         s2.read(buf, 0, buf.length);
+        nread = s2.getPos();
+
         for (int i = 0; i < data.length; i++)
             assertEquals(data[i], buf[i]);
 
         assertEquals(s2.available(), 0);
 
         s2.close();
+
+        // append some data to the file
+        try {
+            s1 = kosmosFileSystem.append(file1);
+            for (int i = 0; i < data.length; i++)
+                data[i] = (byte) (i % 17);
+            // write the data
+            s1.write(data, 0, data.length);
+            // flush out the changes
+            s1.close();
+
+            // read it back and validate
+            s2 = kosmosFileSystem.open(file1, 4096);
+            s2.seek(nread);
+            s2.read(buf, 0, buf.length);
+            for (int i = 0; i < data.length; i++)
+                assertEquals(data[i], buf[i]);
+
+            s2.close();
+        } catch (Exception e) {
+            System.out.println("append isn't supported by the underlying fs");
+        }
 
         kosmosFileSystem.delete(file1, true);
         assertFalse(kosmosFileSystem.exists(file1));        

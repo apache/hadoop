@@ -37,11 +37,17 @@ class KFSOutputStream extends OutputStream {
 
     private String path;
     private KfsOutputChannel kfsChannel;
+    private Progressable progressReporter;
 
-    public KFSOutputStream(KfsAccess kfsAccess, String path, short replication) {
+    public KFSOutputStream(KfsAccess kfsAccess, String path, short replication,
+                           boolean append, Progressable prog) {
         this.path = path;
 
-        this.kfsChannel = kfsAccess.kfs_create(path, replication);
+        if ((append) && (kfsAccess.kfs_isFile(path)))
+                this.kfsChannel = kfsAccess.kfs_append(path);
+        else
+                this.kfsChannel = kfsAccess.kfs_create(path, replication);
+        this.progressReporter = prog;
     }
 
     public long getPos() throws IOException {
@@ -66,6 +72,8 @@ class KFSOutputStream extends OutputStream {
             throw new IOException("File closed");
         }
 
+        // touch the progress before going into KFS since the call can block
+        progressReporter.progress();
         kfsChannel.write(ByteBuffer.wrap(b, off, len));
     }
 
@@ -73,6 +81,8 @@ class KFSOutputStream extends OutputStream {
         if (kfsChannel == null) {
             throw new IOException("File closed");
         }
+        // touch the progress before going into KFS since the call can block
+        progressReporter.progress();
         kfsChannel.sync();
     }
 

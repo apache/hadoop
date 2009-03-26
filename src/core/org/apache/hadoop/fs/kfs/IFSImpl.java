@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Progressable;
 
 interface IFSImpl {
     public boolean exists(String path) throws IOException;
@@ -52,7 +53,8 @@ interface IFSImpl {
     public String[][] getDataLocation(String path, long start, long len) throws IOException;
 
     public long getModificationTime(String path) throws IOException;
-    public FSDataOutputStream create(String path, short replication, int bufferSize) throws IOException;
+    public FSDataOutputStream create(String path, short replication, int bufferSize, Progressable progress) throws IOException;
     public FSDataInputStream open(String path, int bufferSize) throws IOException;
+    public FSDataOutputStream append(String path, int bufferSize, Progressable progress) throws IOException;
     
 };

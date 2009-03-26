@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.util.Progressable;
 
 public class KFSEmulationImpl implements IFSImpl {
     FileSystem localFS;
@@ -130,7 +130,13 @@ public class KFSEmulationImpl implements IFSImpl {
         return s.getModificationTime();
     }
 
-    public FSDataOutputStream create(String path, short replication, int bufferSize) throws IOException {
+    public FSDataOutputStream append(String path, int bufferSize, Progressable progress) throws IOException {
+        // besides path/overwrite, the other args don't matter for
+        // testing purposes.
+        return localFS.append(new Path(path));
+    }
+
+    public FSDataOutputStream create(String path, short replication, int bufferSize, Progressable progress) throws IOException {
         // besides path/overwrite, the other args don't matter for
         // testing purposes.
         return localFS.create(new Path(path));

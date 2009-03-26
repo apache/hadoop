@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 
 import org.kosmix.kosmosfs.access.KfsAccess;
 import org.kosmix.kosmosfs.access.KfsFileAttr;
+import org.apache.hadoop.util.Progressable;
 
 class KFSImpl implements IFSImpl {
     private KfsAccess kfsAccess = null;
@@ -132,13 +133,19 @@ class KFSImpl implements IFSImpl {
         return kfsAccess.kfs_getModificationTime(path);
     }
 
-    public FSDataOutputStream create(String path, short replication, int bufferSize) throws IOException {
-        return new FSDataOutputStream(new KFSOutputStream(kfsAccess, path, replication), 
-                                      statistics);
-    }
-
     public FSDataInputStream open(String path, int bufferSize) throws IOException {
         return new FSDataInputStream(new KFSInputStream(kfsAccess, path, 
                                                         statistics));
+    }
+
+    public FSDataOutputStream create(String path, short replication, int bufferSize, Progressable progress) throws IOException {
+        return new FSDataOutputStream(new KFSOutputStream(kfsAccess, path, replication, false, progress), 
+                                      statistics);
+    }
+
+    public FSDataOutputStream append(String path, int bufferSize, Progressable progress) throws IOException {
+        // when opening for append, # of replicas is ignored
+        return new FSDataOutputStream(new KFSOutputStream(kfsAccess, path, (short) 1, true, progress), 
+                                      statistics);
     }
 }

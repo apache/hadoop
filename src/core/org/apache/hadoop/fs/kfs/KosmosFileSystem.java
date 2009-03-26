@@ -168,11 +168,18 @@ public class KosmosFileSystem extends FileSystem {
         }
     }
     
-    /** This optional operation is not yet supported. */
     @Override
     public FSDataOutputStream append(Path f, int bufferSize,
         Progressable progress) throws IOException {
-      throw new IOException("Not supported");
+        Path parent = f.getParent();
+        if (parent != null && !mkdirs(parent)) {
+            throw new IOException("Mkdirs failed to create " + parent);
+        }
+
+        Path absolute = makeAbsolute(f);
+        String srep = absolute.toUri().getPath();
+
+        return kfsImpl.append(srep, bufferSize, progress);
     }
 
     @Override
@@ -197,7 +204,7 @@ public class KosmosFileSystem extends FileSystem {
         Path absolute = makeAbsolute(file);
         String srep = absolute.toUri().getPath();
 
-        return kfsImpl.create(srep, replication, bufferSize);
+        return kfsImpl.create(srep, replication, bufferSize, progress);
     }
 
     @Override

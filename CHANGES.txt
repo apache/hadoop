@@ -190,6 +190,8 @@ Trunk (unreleased changes)
     HADOOP-5423. Include option of preserving file metadata in
     SequenceFile::sort. (Michael Tamm via cdouglas)
 
+    HADOOP-5331. Add support for KFS appends. (Sriram Rao via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
