@@ -859,7 +859,7 @@ class JobInProgress {
       // It _is_ safe to add the TaskCompletionEvent.Status.SUCCEEDED
       // *before* calling TIP.completedTask since:
       // a. One and only one task of a TIP is declared as a SUCCESS, the
-      //    other (speculative tasks) are marked KILLED by the TaskCommitThread
+      //    other (speculative tasks) are marked KILLED
       // b. TIP.completedTask *does not* throw _any_ exception at all.
       if (taskEvent != null) {
         this.taskCompletionEvents.add(taskEvent);
@@ -1970,11 +1970,8 @@ class JobInProgress {
     final JobTrackerInstrumentation metrics = jobtracker.getInstrumentation();
         
     // Sanity check: is the TIP already complete? 
-    // It _is_ safe to not decrement running{Map|Reduce}Tasks and
-    // finished{Map|Reduce}Tasks variables here because one and only
-    // one task-attempt of a TIP gets to completedTask. This is because
-    // the TaskCommitThread in the JobTracker marks other, completed, 
-    // speculative tasks as _complete_.
+    // This would not happen, 
+    // because no two tasks are SUCCEEDED at the same time. 
     if (tip.isComplete()) {
       // Mark this task as KILLED
       tip.alreadyCompletedTask(taskid);

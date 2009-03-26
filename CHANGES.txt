@@ -339,6 +339,9 @@ Trunk (unreleased changes)
     HADOOP-5194. Disables setsid for tasks run on cygwin. 
     (Ravi Gummadi via ddas)
 
+    HADOOP-5322. Fix misleading/outdated comments in JobInProgress.
+    (Amareshwari Sriramadasu via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
