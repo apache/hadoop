@@ -116,6 +116,8 @@ public class DistributedCache {
   // cacheID to cacheStatus mapping
   private static TreeMap<String, CacheStatus> cachedArchives = new TreeMap<String, CacheStatus>();
   
+  private static TreeMap<Path, Long> baseDirSize = new TreeMap<Path, Long>();
+  
   // default total cache size
   private static final long DEFAULT_CACHE_SIZE = 10737418240L;
 
@@ -195,7 +197,7 @@ public class DistributedCache {
       lcacheStatus = cachedArchives.get(cacheId);
       if (lcacheStatus == null) {
         // was never localized
-        lcacheStatus = new CacheStatus(new Path(baseDir, new Path(cacheId)));
+        lcacheStatus = new CacheStatus(baseDir, new Path(baseDir, new Path(cacheId)));
         cachedArchives.put(cacheId, lcacheStatus);
       }
 
@@ -207,7 +209,13 @@ public class DistributedCache {
     }
 
     // try deleting stuff if you can
-    long size = FileUtil.getDU(new File(baseDir.toString()));
+    long size = 0;
+    synchronized (baseDirSize) {
+      Long get = baseDirSize.get(baseDir);
+      if ( get != null ) {
+    	size = get.longValue();
+      }
+    }
     // setting the cache size to a default of 10GB
     long allowedSize = conf.getLong("local.cache.size", DEFAULT_CACHE_SIZE);
     if (allowedSize < size) {
@@ -285,6 +293,13 @@ public class DistributedCache {
           if (lcacheStatus.refcount == 0) {
             // delete this cache entry
             FileSystem.getLocal(conf).delete(lcacheStatus.localLoadPath, true);
+            synchronized (baseDirSize) {
+              Long dirSize = baseDirSize.get(lcacheStatus.baseDir);
+              if ( dirSize != null ) {
+            	dirSize -= lcacheStatus.size;
+            	baseDirSize.put(lcacheStatus.baseDir, dirSize);
+              }
+            }
             it.remove();
           }
         }
@@ -367,6 +382,13 @@ public class DistributedCache {
       
       FileSystem localFs = FileSystem.getLocal(conf);
       localFs.delete(cacheStatus.localLoadPath, true);
+      synchronized (baseDirSize) {
+    	Long dirSize = baseDirSize.get(cacheStatus.baseDir);
+    	if ( dirSize != null ) {
+    	  dirSize -= cacheStatus.size;
+    	  baseDirSize.put(cacheStatus.baseDir, dirSize);
+    	}
+      }
       Path parchive = new Path(cacheStatus.localLoadPath,
                                new Path(cacheStatus.localLoadPath.getName()));
       
@@ -390,6 +412,18 @@ public class DistributedCache {
         }
         // else will not do anyhting
         // and copy the file into the dir as it is
+      }
+      
+      long cacheSize = FileUtil.getDU(new File(parchive.getParent().toString()));
+      cacheStatus.size = cacheSize;
+      synchronized (baseDirSize) {
+      	Long dirSize = baseDirSize.get(cacheStatus.baseDir);
+      	if( dirSize == null ) {
+      	  dirSize = Long.valueOf(cacheSize);
+      	} else {
+      	  dirSize += cacheSize;
+      	}
+      	baseDirSize.put(cacheStatus.baseDir, dirSize);
       }
       
       // do chmod here 
@@ -811,6 +845,12 @@ public class DistributedCache {
 
     // the local load path of this cache
     Path localLoadPath;
+    
+    //the base dir where the cache lies
+    Path baseDir;
+    
+    //the size of this cache
+    long size;
 
     // number of instances using this cache
     int refcount;
@@ -818,12 +858,14 @@ public class DistributedCache {
     // the cache-file modification time
     long mtime;
 
-    public CacheStatus(Path localLoadPath) {
+    public CacheStatus(Path baseDir, Path localLoadPath) {
       super();
       this.currentStatus = false;
       this.localLoadPath = localLoadPath;
       this.refcount = 0;
       this.mtime = -1;
+      this.baseDir = baseDir;
+      this.size = 0;
     }
   }
 
