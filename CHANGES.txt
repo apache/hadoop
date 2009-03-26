@@ -195,6 +195,9 @@ Trunk (unreleased changes)
     HADOOP-4365. Make Configuration::getProps protected in support of
     meaningful subclassing. (Steve Loughran via cdouglas)
 
+    HADOOP-4780. Cache the size of directories in DistributedCache, avoiding
+    long delays in recalculating it. (He Yongqiang via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
