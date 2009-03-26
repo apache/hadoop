@@ -192,6 +192,9 @@ Trunk (unreleased changes)
 
     HADOOP-5331. Add support for KFS appends. (Sriram Rao via cdouglas)
 
+    HADOOP-4365. Make Configuration::getProps protected in support of
+    meaningful subclassing. (Steve Loughran via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

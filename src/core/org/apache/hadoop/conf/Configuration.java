@@ -973,7 +973,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
-  private synchronized Properties getProps() {
+  protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
       loadResources(properties, resources, quietmode);
