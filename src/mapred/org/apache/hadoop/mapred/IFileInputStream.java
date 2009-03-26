@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -36,7 +37,7 @@ class IFileInputStream extends InputStream {
   private final long dataLength;
   private DataChecksum sum;
   private long currentOffset = 0;
-  private byte b[]; 
+  private final byte b[] = new byte[1];
   private byte csum[] = null;
   private int checksumSize;
   
@@ -52,14 +53,24 @@ class IFileInputStream extends InputStream {
     checksumSize = sum.getChecksumSize();
     length = len;
     dataLength = length - checksumSize;
-    b = new byte[1];
   }
 
   /**
-   * Close the input stream.
+   * Close the input stream. Note that we need to read to the end of the
+   * stream to validate the checksum.
    */
   @Override
   public void close() throws IOException {
+    if (currentOffset < dataLength) {
+      byte[] t = new byte[Math.min((int)
+            (Integer.MAX_VALUE & (dataLength - currentOffset)), 32 * 1024)];
+      while (currentOffset < dataLength) {
+        int n = read(t, 0, t.length);
+        if (0 == n) {
+          throw new EOFException("Could not validate checksum");
+        }
+      }
+    }
     in.close();
   }
   
