@@ -95,6 +95,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5374. Fixes a NPE problem in getTasksToSave method.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-4780. Cache the size of directories in DistributedCache, avoiding
+    long delays in recalculating it. (He Yongqiang via cdouglas)
+
 Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 
