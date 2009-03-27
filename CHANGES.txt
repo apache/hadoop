@@ -1136,6 +1136,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5571. Remove widening primitive conversion in TupleWritable mask
     manipulation. (Jingkei Ly via cdouglas)
 
+    HADOOP-5588. Remove an unnecessary call to listStatus(..) in
+    FileSystem.globStatusInternal(..).  (Hairong Kuang via szetszwo)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

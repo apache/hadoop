@@ -919,9 +919,23 @@ public abstract class FileSystem extends Configured implements Closeable {
     } else {
       // Now work on the last component of the path
       GlobFilter fp = new GlobFilter(components[components.length - 1], filter);
-      results = listStatus(parentPaths, fp);
       if (fp.hasPattern()) { // last component has a pattern
+        // list parent directories and then glob the results
+        results = listStatus(parentPaths, fp);
         hasGlob[0] = true;
+      } else { // last component does not have a pattern
+        // get all the path names
+        ArrayList<Path> filteredPaths = new ArrayList<Path>(parentPaths.length);
+        for (int i = 0; i < parentPaths.length; i++) {
+          parentPaths[i] = new Path(parentPaths[i],
+            components[components.length - 1]);
+          if (fp.accept(parentPaths[i])) {
+            filteredPaths.add(parentPaths[i]);
+          }
+        }
+        // get all their statuses
+        results = getFileStatus(
+            filteredPaths.toArray(new Path[filteredPaths.size()]));
       }
     }
 
