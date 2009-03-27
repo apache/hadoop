@@ -811,6 +811,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5459. Fix undetected CRC errors where intermediate output is closed
     before it has been completely consumed. (cdouglas)
 
+    HADOOP-5571. Remove widening primitive conversion in TupleWritable mask
+    manipulation. (Jingkei Ly via cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
