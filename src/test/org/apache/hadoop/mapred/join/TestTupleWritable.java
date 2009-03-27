@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -31,6 +32,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 public class TestTupleWritable extends TestCase {
@@ -130,4 +132,43 @@ public class TestTupleWritable extends TestCase {
     assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
   }
 
+  public void testWideTuple() throws Exception {
+    Text emptyText = new Text("Should be empty");
+    Writable[] values = new Writable[64];
+    Arrays.fill(values,emptyText);
+    values[42] = new Text("Number 42");
+                                     
+    TupleWritable tuple = new TupleWritable(values);
+    tuple.setWritten(42);
+    
+    for (int pos=0; pos<tuple.size();pos++) {
+      boolean has = tuple.has(pos);
+      if (pos == 42) {
+        assertTrue(has);
+      }
+      else {
+        assertFalse("Tuple position is incorrectly labelled as set: " + pos, has);
+      }
+    }
+  }
+  
+  public void testWideTuple2() throws Exception {
+    Text emptyText = new Text("Should be empty");
+    Writable[] values = new Writable[64];
+    Arrays.fill(values,emptyText);
+    values[9] = new Text("Number 9");
+                                     
+    TupleWritable tuple = new TupleWritable(values);
+    tuple.setWritten(9);
+    
+    for (int pos=0; pos<tuple.size();pos++) {
+      boolean has = tuple.has(pos);
+      if (pos == 9) {
+        assertTrue(has);
+      }
+      else {
+        assertFalse("Tuple position is incorrectly labelled as set: " + pos, has);
+      }
+    }
+  }
 }

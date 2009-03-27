@@ -63,7 +63,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    * Return true if tuple has an element at the position provided.
    */
   public boolean has(int i) {
-    return 0 != ((1 << i) & written);
+    return 0 != ((1L << i) & written);
   }
 
   /**
@@ -205,7 +205,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    * Record that the tuple contains an element at the position provided.
    */
   void setWritten(int i) {
-    written |= 1 << i;
+    written |= 1L << i;
   }
 
   /**
@@ -213,7 +213,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    * provided.
    */
   void clearWritten(int i) {
-    written &= -1 ^ (1 << i);
+    written &= -1 ^ (1L << i);
   }
 
   /**
