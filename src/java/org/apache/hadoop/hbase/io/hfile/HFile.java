@@ -909,6 +909,8 @@ public class HFile {
         decompressor, 0);
       ByteBuffer buf = ByteBuffer.allocate(decompressedSize);
       IOUtils.readFully(is, buf.array(), 0, buf.capacity());
+      is.close();
+      this.compressAlgo.returnDecompressor(decompressor);
       return buf;
     }
 

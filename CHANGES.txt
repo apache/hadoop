@@ -63,6 +63,8 @@ Release 0.20.0 - Unreleased
    HBASE-1284  drop table drops all disabled tables
    HBASE-1290  table.jsp either 500s out or doesnt list the regions (Ryan
                Rawson via Andrew Purtell)
+   HBASE-1293  hfile doesn't recycle decompressors (Ryan Rawson via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
