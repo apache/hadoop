@@ -287,7 +287,7 @@ class RegionManager implements HConstants {
         this.historian.addRegionAssignment(s.getRegionInfo(),
             info.getServerName());
         returnMsgs.add(
-            new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo(), inSafeMode()));
+            new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo()));
         if (--nregions <= 0) {
           break;
         }
@@ -415,7 +415,7 @@ class RegionManager implements HConstants {
       s.setPendingOpen(info.getServerName());
       this.historian.addRegionAssignment(s.getRegionInfo(), info.getServerName());
       returnMsgs.add(
-          new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo(), inSafeMode()));
+          new HMsg(HMsg.Type.MSG_REGION_OPEN, s.getRegionInfo()));
     }
   }
   
@@ -455,7 +455,7 @@ class RegionManager implements HConstants {
       }
       // make a message to close the region
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, currentRegion,
-        OVERLOADED, inSafeMode()));
+        OVERLOADED));
       // mark the region as closing
       setClosing(info.getServerName(), currentRegion, false);
       setPendingClose(regionName);
@@ -1129,7 +1129,7 @@ class RegionManager implements HConstants {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Sending " + msg + " " + pair.getFirst() + " to " + addr);
           }
-          returnMsgs.add(new HMsg(msg, pair.getFirst(), inSafeMode()));
+          returnMsgs.add(new HMsg(msg, pair.getFirst()));
           i.remove();
         }
       }

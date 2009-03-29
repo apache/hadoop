@@ -410,8 +410,7 @@ class ServerManager implements HConstants {
       // Tell the region server to close regions that we have marked for closing.
       for (HRegionInfo i:
         master.regionManager.getMarkedToClose(serverInfo.getServerName())) {
-        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i,
-            master.regionManager.inSafeMode()));
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
         // Transition the region from toClose to closing state
         master.regionManager.setPendingClose(i.getRegionNameAsString());
       }
@@ -505,8 +504,7 @@ class ServerManager implements HConstants {
         // Otherwise the HMaster will think the Region was closed on purpose, 
         // and then try to reopen it elsewhere; that's not what we want.
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE_WITHOUT_REPORT,
-            region, "Duplicate assignment".getBytes(),
-            master.regionManager.inSafeMode()));
+            region, "Duplicate assignment".getBytes()));
       } else {
         if (region.isRootRegion()) {
           // it was assigned, and it's not a duplicate assignment, so take it out 

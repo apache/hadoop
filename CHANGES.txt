@@ -65,6 +65,7 @@ Release 0.20.0 - Unreleased
                Rawson via Andrew Purtell)
    HBASE-1293  hfile doesn't recycle decompressors (Ryan Rawson via Andrew
                Purtell)
+   HBASE-1150  HMsg carries safemode flag; remove (Nitay Joffe via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

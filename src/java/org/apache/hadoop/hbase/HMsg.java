@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -114,7 +113,6 @@ public class HMsg implements Writable {
   private Type type = null;
   private HRegionInfo info = null;
   private byte[] message = null;
-  private boolean safeMode = false;
 
   /** Default constructor. Used during deserialization */
   public HMsg() {
@@ -126,7 +124,7 @@ public class HMsg implements Writable {
    * @param type Message type
    */
   public HMsg(final HMsg.Type type) {
-    this(type, new HRegionInfo(), null, false);
+    this(type, new HRegionInfo(), null);
   }
   
   /**
@@ -135,22 +133,9 @@ public class HMsg implements Writable {
    * @param hri Region to which message <code>type</code> applies
    */
   public HMsg(final HMsg.Type type, final HRegionInfo hri) {
-    this(type, hri, null, false);
+    this(type, hri, null);
   }
-  
-  /**
-   * Constructor used by master to inform region servers if we are still in 
-   * safe mode.
-   * 
-   * @param type
-   * @param hri
-   * @param safeMode
-   */
-  public HMsg(final HMsg.Type type, final HRegionInfo hri,
-      final boolean safeMode) {
-    this(type, hri, null, safeMode);
-  }
-  
+
   /**
    * Construct a message with the specified message and HRegionInfo
    * 
@@ -160,19 +145,6 @@ public class HMsg implements Writable {
    * @param msg Optional message (Stringified exception, etc.)
    */
   public HMsg(final HMsg.Type type, final HRegionInfo hri, final byte[] msg) {
-    this(type, hri, msg, false);
-  }
-
-  /**
-   * Used by the master to inform region servers if we are still in safe mode
-   * 
-   * @param type
-   * @param hri
-   * @param msg
-   * @param safemode
-   */
-  public HMsg(final HMsg.Type type, final HRegionInfo hri, final byte[] msg,
-      final boolean safemode) {
     if (type == null) {
       throw new NullPointerException("Message type cannot be null");
     }
@@ -182,7 +154,6 @@ public class HMsg implements Writable {
     }
     this.info = hri;
     this.message = msg;
-    this.safeMode = safemode;
   }
 
   /**
@@ -209,11 +180,6 @@ public class HMsg implements Writable {
   public byte[] getMessage() {
     return this.message;
   }
-  
-  /** @return safe mode */
-  public boolean isInSafeMode() {
-    return this.safeMode;
-  }
 
   /**
    * @see java.lang.Object#toString()
@@ -230,7 +196,6 @@ public class HMsg implements Writable {
     if (this.message != null && this.message.length > 0) {
       sb.append(": " + Bytes.toString(this.message));
     }
-    sb.append(": safeMode=" + safeMode);
     return sb.toString();
   }
 
@@ -270,6 +235,9 @@ public class HMsg implements Writable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
+   */
   public void write(DataOutput out) throws IOException {
      out.writeInt(this.type.ordinal());
      this.info.write(out);
@@ -279,9 +247,11 @@ public class HMsg implements Writable {
        out.writeBoolean(true);
        Bytes.writeByteArray(out, this.message);
      }
-     out.writeBoolean(this.safeMode);
    }
 
+  /**
+   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+   */
   public void readFields(DataInput in) throws IOException {
      int ordinal = in.readInt();
      this.type = HMsg.Type.values()[ordinal];
@@ -290,6 +260,5 @@ public class HMsg implements Writable {
      if (hasMessage) {
        this.message = Bytes.readByteArray(in);
      }
-     this.safeMode = in.readBoolean();
    }
 }

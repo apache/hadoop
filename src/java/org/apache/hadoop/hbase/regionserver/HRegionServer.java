@@ -380,7 +380,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
                 i++) {
               LOG.info(msgs[i].toString());
               if (safeMode.get()) {
-                if (!msgs[i].isInSafeMode()) {
+                if (zooKeeperWrapper.checkOutOfSafeMode()) {
                   this.connection.unsetRootRegionLocation();
                   synchronized (safeMode) {
                     safeMode.set(false);
