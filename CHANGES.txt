@@ -817,6 +817,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5588. Remove an unnecessary call to listStatus(..) in
     FileSystem.globStatusInternal(..).  (Hairong Kuang via szetszwo)
 
+    HADOOP-5473. Solves a race condition in killing a task - the state is KILLED
+    if there is a user request pending to kill the task and the TT reported
+    the state as SUCCESS. (Amareshwari Sriramadasu via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
