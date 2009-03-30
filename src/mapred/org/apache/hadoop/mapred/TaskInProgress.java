@@ -590,7 +590,8 @@ class TaskInProgress {
       // Check if the user manually KILLED/FAILED this task-attempt...
       Boolean shouldFail = tasksToKill.remove(taskid);
       if (shouldFail != null) {
-        if (isCleanupAttempt(taskid) || jobSetup || jobCleanup) {
+        if (status.getRunState() == TaskStatus.State.FAILED ||
+            status.getRunState() == TaskStatus.State.KILLED) {
           taskState = (shouldFail) ? TaskStatus.State.FAILED :
                                      TaskStatus.State.KILLED;
         } else {
@@ -969,6 +970,10 @@ class TaskInProgress {
     return taskStatuses.get(taskid).getTaskTracker();
   }
     
+  boolean wasKilled(TaskAttemptID taskid) {
+    return tasksToKill.containsKey(taskid);
+  }
+  
   /**
    * Has this task already failed on this machine?
    * @param trackerHost The task tracker hostname

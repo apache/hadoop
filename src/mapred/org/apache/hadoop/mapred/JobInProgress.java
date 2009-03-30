@@ -748,7 +748,10 @@ class JobInProgress {
     // mark the task as KILLED.
     // In case of task with no promotion the task tracker will mark the task 
     // as SUCCEEDED.
-    if (wasComplete && (status.getRunState() == TaskStatus.State.SUCCEEDED)) {
+    // User has requested to kill the task, but TT reported SUCCEEDED, 
+    // mark the task KILLED.
+    if ((wasComplete || tip.wasKilled(taskid)) && 
+        (status.getRunState() == TaskStatus.State.SUCCEEDED)) {
       status.setRunState(TaskStatus.State.KILLED);
     }
     
