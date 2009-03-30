@@ -29,12 +29,20 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
  * Cluster connection.
  * {@link HConnectionManager} manages instances of this class.
  */
 public interface HConnection {
+  /**
+   * Retrieve ZooKeeperWrapper used by the connection.
+   * @return ZooKeeperWrapper handle being used by the connection.
+   * @throws IOException
+   */
+  public ZooKeeperWrapper getZooKeeperWrapper() throws IOException;
+
   /**
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException

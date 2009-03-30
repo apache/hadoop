@@ -21,14 +21,24 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
 
 /**
  *
  */
 public class TestZooKeeper extends HBaseClusterTestCase {
+  private static class EmptyWatcher implements Watcher {
+    public EmptyWatcher() {}
+    public void process(WatchedEvent event) {}
+  }
+
   @Override
   protected void setUp() throws Exception {
     setOpenMetaTable(false);
@@ -70,5 +80,30 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     conf.set("zookeeper.znode.safemode", "/a/b/c/d/e");
     ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf);
     assertTrue(zooKeeper.writeOutOfSafeMode());
+  }
+
+  /**
+   * See HBASE-1232 and http://wiki.apache.org/hadoop/ZooKeeper/FAQ#4.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public void testClientSessionExpired() throws IOException, InterruptedException {
+    new HTable(conf, HConstants.META_TABLE_NAME);
+
+    String quorumServers = zooKeeperCluster.getQuorumServers();
+    int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
+    Watcher watcher = new EmptyWatcher();
+    HConnection connection = HConnectionManager.getConnection(conf);
+    ZooKeeperWrapper connectionZK = connection.getZooKeeperWrapper();
+    long sessionID = connectionZK.getSessionID();
+    byte[] password = connectionZK.getSessionPassword();
+
+    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, watcher, sessionID, password);
+    zk.close();
+
+    Thread.sleep(sessionTimeout * 3);
+
+    System.err.println("ZooKeeper should have timed out");
+    connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
   }
 }

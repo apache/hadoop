@@ -114,6 +114,24 @@ public class ZooKeeperWrapper implements HConstants {
   }
 
   /**
+   * This is for testing KeeperException.SessionExpiredExcseption.
+   * See HBASE-1232.
+   * @return long session ID of this ZooKeeper session.
+   */
+  public long getSessionID() {
+    return zooKeeper.getSessionId();
+  }
+
+  /**
+   * This is for testing KeeperException.SessionExpiredExcseption.
+   * See HBASE-1232.
+   * @return byte[] password of this ZooKeeper session.
+   */
+  public byte[] getSessionPassword() {
+    return zooKeeper.getSessionPasswd();
+  }
+
+  /**
    * This is for tests to directly set the ZooKeeper quorum servers.
    * @param servers comma separated host:port ZooKeeper quorum servers.
    */

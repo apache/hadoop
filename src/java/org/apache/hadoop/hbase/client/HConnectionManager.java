@@ -57,6 +57,9 @@ import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -114,7 +117,7 @@ public class HConnectionManager implements HConstants {
   }
 
   /* Encapsulates finding the servers for an HBase instance */
-  private static class TableServers implements ServerConnection, HConstants {
+  private static class TableServers implements ServerConnection, HConstants, Watcher {
     private static final Log LOG = LogFactory.getLog(TableServers.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
@@ -182,6 +185,29 @@ public class HConnectionManager implements HConstants {
       return this.pause * HConstants.RETRY_BACKOFF[ntries];
     }
 
+    /**
+     * Called by ZooKeeper when an event occurs on our connection. We use this to
+     * detect our session expiring. When our session expires, we have lost our
+     * connection to ZooKeeper. Our handle is dead, and we need to recreate it.
+     *
+     * See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
+     * for more information.
+     *
+     * @param event WatchedEvent witnessed by ZooKeeper.
+     */
+    public void process(WatchedEvent event) {
+      KeeperState state = event.getState();
+      LOG.debug("Got ZooKeeper event, state: " + state + ", type: " +
+                event.getType() + ", path: " + event.getPath());
+      if (state == KeeperState.Expired) {
+        resetZooKeeper();
+      }
+    }
+
+    private synchronized void resetZooKeeper() {
+      zooKeeperWrapper = null;
+    }
+
     // Used by master and region servers during safe mode only
     public void unsetRootRegionLocation() {
       this.rootRegionLocation = null;
@@ -197,8 +223,9 @@ public class HConnectionManager implements HConstants {
     }
     
     public HMasterInterface getMaster() throws MasterNotRunningException {
+      ZooKeeperWrapper zk = null;
       try {
-        getZooKeeperWrapper();
+        zk = getZooKeeperWrapper();
       } catch (IOException e) {
         throw new MasterNotRunningException(e);
       }
@@ -212,7 +239,7 @@ public class HConnectionManager implements HConstants {
         tries++) {
 
           try {
-            masterLocation = zooKeeperWrapper.readMasterAddressOrThrow();
+            masterLocation = zk.readMasterAddressOrThrow();
 
             HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
                 HMasterInterface.class, HBaseRPCProtocolVersion.versionID, 
@@ -758,9 +785,9 @@ public class HConnectionManager implements HConstants {
       return server;
     }
 
-    private synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
+    public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
       if (zooKeeperWrapper == null) {
-        zooKeeperWrapper = new ZooKeeperWrapper(conf);
+        zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
       }
       return zooKeeperWrapper;
     }
@@ -778,7 +805,7 @@ public class HConnectionManager implements HConstants {
 
       // We lazily instantiate the ZooKeeper object because we don't want to
       // make the constructor have to throw IOException or handle it itself.
-      ZooKeeperWrapper zooKeeperWrapper = getZooKeeperWrapper();
+      ZooKeeperWrapper zk = getZooKeeperWrapper();
 
       HServerAddress rootRegionAddress = null;
       for (int tries = 0; tries < numRetries; tries++) {
@@ -787,9 +814,9 @@ public class HConnectionManager implements HConstants {
         while (rootRegionAddress == null && localTimeouts < numRetries) {
           // Don't read root region until we're out of safe mode so we know
           // that the meta regions have been assigned.
-          boolean outOfSafeMode = zooKeeperWrapper.checkOutOfSafeMode();
+          boolean outOfSafeMode = zk.checkOutOfSafeMode();
           if (outOfSafeMode) {
-            rootRegionAddress = zooKeeperWrapper.readRootRegionLocation();
+            rootRegionAddress = zk.readRootRegionLocation();
           }
           if (rootRegionAddress == null) {
             try {

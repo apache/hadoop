@@ -564,7 +564,7 @@ public abstract class HBaseTestCase extends TestCase {
    * 
    * Sets the configuration parameter TEST_DIRECTORY_KEY if not already set.
    * Sets the boolean debugging if "DEBUGGING" is set in the environment.
-   * If debugging is enabled, reconfigures loggin so that the root log level is
+   * If debugging is enabled, reconfigures logging so that the root log level is
    * set to WARN and the logging level for the package is set to DEBUG.
    */
   public static void initialize() {

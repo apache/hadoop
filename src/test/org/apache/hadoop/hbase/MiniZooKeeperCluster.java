@@ -58,16 +58,15 @@ public class MiniZooKeeperCluster {
   private boolean started;
   private int numPeers;
   private File baseDir;
+  private String quorumServers;
 
   // for distributed mode.
   private QuorumPeer[] quorumPeers;
   // for standalone mode.
   private NIOServerCnxn.Factory standaloneServerFactory;
 
-  /**
-   * @throws IOException
-   */
-  public MiniZooKeeperCluster() throws IOException {
+  /** Create mini ZooKeeper cluster. */
+  public MiniZooKeeperCluster() {
     this.started = false;
   }
 
@@ -79,6 +78,13 @@ public class MiniZooKeeperCluster {
     // set env and directly in order to handle static init/gc issues
     System.setProperty("zookeeper.preAllocSize", "100");
     FileTxnLog.setPreallocSize(100);
+  }
+
+  /**
+   * @return String ZooKeeper quorum servers.
+   */
+  public String getQuorumServers() {
+    return quorumServers;
   }
 
   /**
@@ -116,7 +122,8 @@ public class MiniZooKeeperCluster {
     standaloneServerFactory = new NIOServerCnxn.Factory(CLIENT_PORT_START);
     standaloneServerFactory.startup(server);
 
-    ZooKeeperWrapper.setQuorumServers("localhost:" + CLIENT_PORT_START);
+    quorumServers = "localhost:" + CLIENT_PORT_START;
+    ZooKeeperWrapper.setQuorumServers(quorumServers);
 
     if (!waitForServerUp(CLIENT_PORT_START, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for startup of standalone server");
@@ -152,8 +159,8 @@ public class MiniZooKeeperCluster {
       serversBuffer.append("localhost:" + port);
     }
 
-    String servers = serversBuffer.toString();
-    ZooKeeperWrapper.setQuorumServers(servers);
+    quorumServers = serversBuffer.toString();
+    ZooKeeperWrapper.setQuorumServers(quorumServers);
 
     // Start quorum peer threads.
     for (QuorumPeer qp : quorumPeers) {
