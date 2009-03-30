@@ -1216,6 +1216,9 @@ Release 0.19.2 - Unreleased
     HADOOP-4780. Cache the size of directories in DistributedCache, avoiding
     long delays in recalculating it. (He Yongqiang via cdouglas)
 
+    HADOOP-5551. Prevent directory destruction on file create.
+    (Brian Bockelman via shv)
+
 Release 0.19.1 - 2009-02-23 
 
   IMPROVEMENTS
