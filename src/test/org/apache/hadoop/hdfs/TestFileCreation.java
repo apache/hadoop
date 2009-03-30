@@ -187,6 +187,22 @@ public class TestFileCreation extends junit.framework.TestCase {
       System.out.println(fs.getFileStatus(path).isDir()); 
       assertTrue("/ should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
+
+      //
+      // Create a directory inside /, then try to overwrite it
+      //
+      Path dir1 = new Path("/test_dir");
+      fs.mkdirs(dir1);
+      System.out.println("createFile: Creating " + dir1.getName() + 
+        " for overwrite of existing directory.");
+      try {
+        fs.create(dir1, true); // Create path, overwrite=true
+        fs.close();
+        assertTrue("Did not prevent directory from being overwritten.", false);
+      } catch (IOException ie) {
+        if (!ie.getMessage().contains("already exists as a directory."))
+          throw ie;
+      }
       
       // create a new file in home directory. Do not close it.
       //

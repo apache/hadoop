@@ -1029,8 +1029,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (!DFSUtil.isValidName(src)) {
       throw new IOException("Invalid file name: " + src);
     }
+
+    // Verify that the destination does not exist as a directory already.
+    boolean pathExists = dir.exists(src);
+    if (pathExists && dir.isDir(src)) {
+      throw new IOException("Cannot create file "+ src + "; already exists as a directory.");
+    }
+
     if (isPermissionEnabled) {
-      if (append || (overwrite && dir.exists(src))) {
+      if (append || (overwrite && pathExists)) {
         checkPathAccess(src, FsAction.WRITE);
       }
       else {
