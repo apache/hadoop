@@ -2756,13 +2756,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         LOG.debug("Connecting to " + nodes[0].getName());
         InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
         s = socketFactory.createSocket();
-        int timeoutValue = 3000 * nodes.length + socketTimeout;
+        int timeoutValue = (socketTimeout > 0) ? 
+                           (3000 * nodes.length + socketTimeout) : 0;
         NetUtils.connect(s, target, timeoutValue);
         s.setSoTimeout(timeoutValue);
         s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
         LOG.debug("Send buf size " + s.getSendBufferSize());
-        long writeTimeout = HdfsConstants.WRITE_TIMEOUT_EXTENSION * nodes.length +
-                            datanodeWriteTimeout;
+        long writeTimeout = (datanodeWriteTimeout > 0) ? 
+             (HdfsConstants.WRITE_TIMEOUT_EXTENSION * nodes.length +
+              datanodeWriteTimeout) : 0;
 
         //
         // Xmit header info to datanode

@@ -345,6 +345,9 @@ Trunk (unreleased changes)
     HADOOP-5198. Fixes a problem to do with the task PID file being absent and 
     the JvmManager trying to look for it. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5464. DFSClient did not treat write timeout of 0 properly.
+    (Raghu Angadi)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
