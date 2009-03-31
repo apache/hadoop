@@ -135,11 +135,16 @@ public class WritableComparator implements RawComparator {
   }
 
   /** Compute hash for binary data. */
-  public static int hashBytes(byte[] bytes, int length) {
+  public static int hashBytes(byte[] bytes, int offset, int length) {
     int hash = 1;
-    for (int i = 0; i < length; i++)
+    for (int i = offset; i < offset + length; i++)
       hash = (31 * hash) + (int)bytes[i];
     return hash;
+  }
+  
+  /** Compute hash for binary data. */
+  public static int hashBytes(byte[] bytes, int length) {
+    return hashBytes(bytes, 0, length);
   }
 
   /** Parse an unsigned short from a byte array. */
