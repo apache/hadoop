@@ -374,16 +374,17 @@ class JvmManager {
               Path pidFilePath = new Path(env.pidFile);
               String pid = ProcessTree.getPidFromPidFile(
                                                     pidFilePath.toString());
+              if (pid != null) {
+                long sleeptimeBeforeSigkill = env.conf.getLong(
+                     "mapred.tasktracker.tasks.sleeptime-before-sigkill",
+                     ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
 
-              long sleeptimeBeforeSigkill = env.conf.getLong(
-                   "mapred.tasktracker.tasks.sleeptime-before-sigkill",
-                   ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
-
-              ProcessTree.destroy(pid, sleeptimeBeforeSigkill,
-                       ProcessTree.isSetsidAvailable, false);
-              try {
-                LOG.info("Process exited with exit code:" + process.waitFor());
-              } catch (InterruptedException ie) {}
+                ProcessTree.destroy(pid, sleeptimeBeforeSigkill,
+                         ProcessTree.isSetsidAvailable, false);
+                try {
+                  LOG.info("Process exited with exit code:" + process.waitFor());
+                } catch (InterruptedException ie) {}
+              }
             }
           }
         }
