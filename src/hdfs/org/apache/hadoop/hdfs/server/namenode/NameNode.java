@@ -205,9 +205,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
-    String addr = NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
-                                "dfs.info.port", "dfs.http.address");
-    return NetUtils.createSocketAddr(addr);
+    return  NetUtils.createSocketAddr(
+        conf.get("dfs.http.address", "0.0.0.0:50070"));
   }
 
   protected void setHttpServerAddress(Configuration conf){

@@ -164,46 +164,6 @@ public class NetUtils {
   }
 
   /**
-   * Handle the transition from pairs of attributes specifying a host and port
-   * to a single colon separated one.
-   * @param conf the configuration to check
-   * @param oldBindAddressName the old address attribute name
-   * @param oldPortName the old port attribute name
-   * @param newBindAddressName the new combined name
-   * @return the complete address from the configuration
-   */
-  @Deprecated
-  public static String getServerAddress(Configuration conf,
-                                        String oldBindAddressName,
-                                        String oldPortName,
-                                        String newBindAddressName) {
-    String oldAddr = conf.get(oldBindAddressName);
-    String oldPort = conf.get(oldPortName);
-    String newAddrPort = conf.get(newBindAddressName);
-    if (oldAddr == null && oldPort == null) {
-      return newAddrPort;
-    }
-    String[] newAddrPortParts = newAddrPort.split(":",2);
-    if (newAddrPortParts.length != 2) {
-      throw new IllegalArgumentException("Invalid address/port: " + 
-                                         newAddrPort);
-    }
-    if (oldAddr == null) {
-      oldAddr = newAddrPortParts[0];
-    } else {
-      LOG.warn("Configuration parameter " + oldBindAddressName +
-               " is deprecated. Use " + newBindAddressName + " instead.");
-    }
-    if (oldPort == null) {
-      oldPort = newAddrPortParts[1];
-    } else {
-      LOG.warn("Configuration parameter " + oldPortName +
-               " is deprecated. Use " + newBindAddressName + " instead.");      
-    }
-    return oldAddr + ":" + oldPort;
-  }
-  
-  /**
    * Adds a static resolution for host. This can be used for setting up
    * hostnames with names that are fake to point to a well known host. For e.g.
    * in some testcases we require to have daemons with different hostnames

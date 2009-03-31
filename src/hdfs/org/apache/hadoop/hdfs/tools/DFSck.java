@@ -77,12 +77,7 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UnixUserGroupInformation.login(conf, true);
   }
-  
-  private String getInfoServer() throws IOException {
-    return NetUtils.getServerAddress(getConf(), "dfs.info.bindAddress", 
-                                     "dfs.info.port", "dfs.http.address");
-  }
-  
+
   /**
    * Print fsck usage information
    */
@@ -112,7 +107,8 @@ public class DFSck extends Configured implements Tool {
     }
 
     final StringBuffer url = new StringBuffer("http://");
-    url.append(getInfoServer()).append("/fsck?ugi=").append(ugi).append("&path=");
+    url.append(getConf().get("dfs.http.address", "0.0.0.0:50070"));
+    url.append("/fsck?ugi=").append(ugi).append("&path=");
 
     String dir = "/";
     // find top-level dir first

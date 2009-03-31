@@ -255,12 +255,8 @@ public class DataNode extends Configured
     this.transferToAllowed = conf.getBoolean("dfs.datanode.transferTo.allowed", 
                                              true);
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
-    String address = 
-      NetUtils.getServerAddress(conf,
-                                "dfs.datanode.bindAddress", 
-                                "dfs.datanode.port",
-                                "dfs.datanode.address");
-    InetSocketAddress socAddr = NetUtils.createSocketAddr(address);
+    InetSocketAddress socAddr = NetUtils.createSocketAddr(
+        conf.get("dfs.datanode.address", "0.0.0.0:50010"));
     int tmpPort = socAddr.getPort();
     storage = new DataStorage();
     // construct registration
@@ -348,12 +344,8 @@ public class DataNode extends Configured
     }
 
     //create a servlet to serve full-file content
-    String infoAddr = 
-      NetUtils.getServerAddress(conf, 
-                              "dfs.datanode.info.bindAddress", 
-                              "dfs.datanode.info.port",
-                              "dfs.datanode.http.address");
-    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(
+        conf.get("dfs.datanode.http.address", "0.0.0.0:50075"));
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = new HttpServer("datanode", infoHost, tmpInfoPort,

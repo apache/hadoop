@@ -167,12 +167,8 @@ public class SecondaryNameNode implements Runnable {
     checkpointSize = conf.getLong("fs.checkpoint.size", 4194304);
 
     // initialize the webserver for uploading files.
-    String infoAddr = 
-      NetUtils.getServerAddress(conf, 
-                                "dfs.secondary.info.bindAddress",
-                                "dfs.secondary.info.port",
-                                "dfs.secondary.http.address");
-    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(
+        conf.get("dfs.secondary.http.address", "0.0.0.0:50090"));
     infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
@@ -306,8 +302,7 @@ public class SecondaryNameNode implements Runnable {
     if (!"hdfs".equals(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
-    return NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
-                                     "dfs.info.port", "dfs.http.address");
+    return conf.get("dfs.http.address", "0.0.0.0:50070");
   }
 
   /**

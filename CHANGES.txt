@@ -29,6 +29,8 @@ Trunk (unreleased changes)
     HADOOP-5486. Removes the CLASSPATH string from the command line and instead
     exports it in the environment. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2827. Remove deprecated NetUtils::getServerAddress. (cdouglas)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
