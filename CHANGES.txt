@@ -821,6 +821,9 @@ Release 0.20.0 - Unreleased
     if there is a user request pending to kill the task and the TT reported
     the state as SUCCESS. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5576. Fix LocalRunner to work with the new context object API in
+    mapreduce. (Tom White via omalley)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
