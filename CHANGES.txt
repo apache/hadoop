@@ -333,13 +333,13 @@ Trunk (unreleased changes)
     as it points to the interface NameNode is listening on. (Raghu Angadi)
 
     HADOOP-5561. Add javadoc.maxmemory parameter to build, preventing OOM
-    exceptions from javadoc-dev. (Jacob Homan via cdouglas)
+    exceptions from javadoc-dev. (Jakob Homan via cdouglas)
 
     HADOOP-5149. Modify HistoryViewer to ignore unfamiliar files in the log
     directory. (Hong Tang via cdouglas)
 
     HADOOP-5477. Fix rare failure in TestCLI for hosts returning variations of
-    'localhost'. (Jacob Homan via cdouglas)
+    'localhost'. (Jakob Homan via cdouglas)
 
     HADOOP-5194. Disables setsid for tasks run on cygwin. 
     (Ravi Gummadi via ddas)
