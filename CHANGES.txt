@@ -68,9 +68,6 @@ Trunk (unreleased changes)
     HADOOP-5363. Add support for proxying connections to multiple clusters with
     different versions to hdfsproxy. (Zhiyong Zhang via cdouglas)
 
-    HADOOP-5528. Add a configurable hash partitioner operating on ranges of
-    BinaryComparable keys. (Klaas Bosteels via cdouglas)
-
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
