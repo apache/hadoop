@@ -828,6 +828,10 @@ Release 0.20.0 - Unreleased
     updated before the JVM exits. Also makes the update to log.index atomic.
     (Ravi Gummadi via ddas)
 
+    HADOOP-5577. Add a verbose flag to mapreduce.Job.waitForCompletion to get
+    the running job's information printed to the user's stdout as it runs.
+    (omalley)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

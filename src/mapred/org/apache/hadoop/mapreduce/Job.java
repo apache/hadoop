@@ -38,7 +38,7 @@ import org.apache.hadoop.mapred.TaskCompletionEvent;
 public class Job extends JobContext {  
   public static enum JobState {DEFINE, RUNNING};
   private JobState state = JobState.DEFINE;
-  private JobClient jobTracker;
+  private JobClient jobClient;
   private RunningJob info;
 
   public Job() throws IOException {
@@ -47,7 +47,7 @@ public class Job extends JobContext {
 
   public Job(Configuration conf) throws IOException {
     super(conf, null);
-    jobTracker = new JobClient((JobConf) getConfiguration());
+    jobClient = new JobClient((JobConf) getConfiguration());
   }
 
   public Job(Configuration conf, String jobName) throws IOException {
@@ -429,22 +429,29 @@ public class Job extends JobContext {
                               ClassNotFoundException {
     ensureState(JobState.DEFINE);
     setUseNewAPI();
-    info = jobTracker.submitJobInternal(conf);
+    info = jobClient.submitJobInternal(conf);
     state = JobState.RUNNING;
    }
   
   /**
    * Submit the job to the cluster and wait for it to finish.
+   * @param verbose print the progress to the user
    * @return true if the job succeeded
    * @throws IOException thrown if the communication with the 
    *         <code>JobTracker</code> is lost
    */
-  public boolean waitForCompletion() throws IOException, InterruptedException,
+  public boolean waitForCompletion(boolean verbose
+                                   ) throws IOException, InterruptedException,
                                             ClassNotFoundException {
     if (state == JobState.DEFINE) {
       submit();
     }
-    info.waitForCompletion();
+    if (verbose) {
+      jobClient.monitorAndPrintJob(conf, info);
+    } else {
+      info.waitForCompletion();
+    }
     return isSuccessful();
   }
+  
 }

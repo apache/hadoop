@@ -111,7 +111,7 @@ public class TestMapReduceLocal extends TestCase {
     job.setOutputValueClass(IntWritable.class);
     FileInputFormat.addInputPath(job, new Path(TEST_ROOT_DIR + "/in"));
     FileOutputFormat.setOutputPath(job, new Path(TEST_ROOT_DIR + "/out"));
-    assertTrue(job.waitForCompletion());
+    assertTrue(job.waitForCompletion(false));
     String out = readFile("out/part-r-00000");
     System.out.println(out);
     assertEquals("a\t1\ncount\t1\nis\t1\nmore\t1\nof\t1\ntest\t4\nthis\t1\nword\t1\n",
@@ -156,7 +156,7 @@ public class TestMapReduceLocal extends TestCase {
     
     FileInputFormat.addInputPath(job, new Path(TEST_ROOT_DIR + "/in"));
     FileOutputFormat.setOutputPath(job, new Path(TEST_ROOT_DIR + "/out"));
-    assertTrue(job.waitForCompletion());
+    assertTrue(job.waitForCompletion(true));
     String out = readFile("out/part-r-00000");
     assertEquals("------------------------------------------------\n" +
                  "-3\t23\n" +
