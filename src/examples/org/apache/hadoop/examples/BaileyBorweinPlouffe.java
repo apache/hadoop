@@ -363,7 +363,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
     out.println("\nStarting Job ...");
     final long startTime = System.currentTimeMillis();
     try {
-      if (!job.waitForCompletion()) {
+      if (!job.waitForCompletion(true)) {
         out.println("Job failed.");
         System.exit(1);
       }

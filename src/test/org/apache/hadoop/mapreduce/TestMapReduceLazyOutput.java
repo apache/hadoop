@@ -107,7 +107,7 @@ public class TestMapReduceLazyOutput extends TestCase {
     } else {
       job.setOutputFormatClass(TextOutputFormat.class);
     }
-    assertTrue(job.waitForCompletion());
+    assertTrue(job.waitForCompletion(true));
   }
 
   public void createInput(FileSystem fs, int numMappers) throws Exception {

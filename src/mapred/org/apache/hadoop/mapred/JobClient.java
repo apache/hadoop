@@ -1245,126 +1245,107 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * complete.
    * 
    * @param job the job configuration.
-   * @throws IOException
+   * @throws IOException if the job fails
    */
   public static RunningJob runJob(JobConf job) throws IOException {
     JobClient jc = new JobClient(job);
-    boolean error = true;
-    RunningJob running = null;
-    String lastReport = null;
-    final int MAX_RETRIES = 5;
-    int retries = MAX_RETRIES;
-    TaskStatusFilter filter;
+    RunningJob rj = jc.submitJob(job);
     try {
-      filter = getTaskOutputFilter(job);
-    } catch(IllegalArgumentException e) {
-      LOG.warn("Invalid Output filter : " + e.getMessage() + 
-               " Valid values are : NONE, FAILED, SUCCEEDED, ALL");
-      throw e;
-    }
-    try {
-      running = jc.submitJob(job);
-      JobID jobId = running.getID();
-      LOG.info("Running job: " + jobId);
-      int eventCounter = 0;
-      boolean profiling = job.getProfileEnabled();
-      Configuration.IntegerRanges mapRanges = job.getProfileTaskRange(true);
-      Configuration.IntegerRanges reduceRanges = job.getProfileTaskRange(false);
-        
-      while (true) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {}
-        try {
-          if (running.isComplete()) {
-            break;
-          }
-          running = jc.getJob(jobId);
-          if (running == null) {
-            throw new IOException("Unable to fetch job status from server.");
-          }
-          String report = 
-            (" map " + StringUtils.formatPercent(running.mapProgress(), 0)+
-             " reduce " + 
-             StringUtils.formatPercent(running.reduceProgress(), 0));
-          if (!report.equals(lastReport)) {
-            LOG.info(report);
-            lastReport = report;
-          }
-            
-          TaskCompletionEvent[] events = 
-            running.getTaskCompletionEvents(eventCounter); 
-          eventCounter += events.length;
-          for(TaskCompletionEvent event : events){
-            TaskCompletionEvent.Status status = event.getTaskStatus();
-            if (profiling && 
-                (status == TaskCompletionEvent.Status.SUCCEEDED ||
-                 status == TaskCompletionEvent.Status.FAILED) &&
-                (event.isMap ? mapRanges : reduceRanges).
-                   isIncluded(event.idWithinJob())) {
-              downloadProfile(event);
-            }
-            switch(filter){
-            case NONE:
-              break;
-            case SUCCEEDED:
-              if (event.getTaskStatus() == 
-                TaskCompletionEvent.Status.SUCCEEDED){
-                LOG.info(event.toString());
-                displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
-              }
-              break; 
-            case FAILED:
-              if (event.getTaskStatus() == 
-                TaskCompletionEvent.Status.FAILED){
-                LOG.info(event.toString());
-                // Displaying the task diagnostic information
-                TaskAttemptID taskId = event.getTaskAttemptId();
-                String[] taskDiagnostics = 
-                  jc.jobSubmitClient.getTaskDiagnostics(taskId); 
-                if (taskDiagnostics != null) {
-                  for(String diagnostics : taskDiagnostics){
-                    System.err.println(diagnostics);
-                  }
-                }
-                // Displaying the task logs
-                displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
-              }
-              break; 
-            case KILLED:
-              if (event.getTaskStatus() == TaskCompletionEvent.Status.KILLED){
-                LOG.info(event.toString());
-              }
-              break; 
-            case ALL:
-              LOG.info(event.toString());
-              displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
-              break;
-            }
-          }
-          retries = MAX_RETRIES;
-        } catch (IOException ie) {
-          if (--retries == 0) {
-            LOG.warn("Final attempt failed, killing job.");
-            throw ie;
-          }
-          LOG.info("Communication problem with server: " +
-                   StringUtils.stringifyException(ie));
-        }
-      }
-      if (!running.isSuccessful()) {
+      if (!jc.monitorAndPrintJob(job, rj)) {
         throw new IOException("Job failed!");
       }
-      LOG.info("Job complete: " + jobId);
-      running.getCounters().log(LOG);
-      error = false;
-    } finally {
-      if (error && (running != null)) {
-        running.killJob();
-      }
-      jc.close();
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
     }
-    return running;
+    return rj;
+  }
+  
+  /**
+   * Monitor a job and print status in real-time as progress is made and tasks 
+   * fail.
+   * @param conf the job's configuration
+   * @param job the job to track
+   * @return true if the job succeeded
+   * @throws IOException if communication to the JobTracker fails
+   */
+  public boolean monitorAndPrintJob(JobConf conf, 
+                                    RunningJob job
+  ) throws IOException, InterruptedException {
+    String lastReport = null;
+    TaskStatusFilter filter;
+    filter = getTaskOutputFilter(conf);
+    JobID jobId = job.getID();
+    LOG.info("Running job: " + jobId);
+    int eventCounter = 0;
+    boolean profiling = conf.getProfileEnabled();
+    Configuration.IntegerRanges mapRanges = conf.getProfileTaskRange(true);
+    Configuration.IntegerRanges reduceRanges = conf.getProfileTaskRange(false);
+
+    while (!job.isComplete()) {
+      Thread.sleep(1000);
+      String report = 
+        (" map " + StringUtils.formatPercent(job.mapProgress(), 0)+
+            " reduce " + 
+            StringUtils.formatPercent(job.reduceProgress(), 0));
+      if (!report.equals(lastReport)) {
+        LOG.info(report);
+        lastReport = report;
+      }
+
+      TaskCompletionEvent[] events = 
+        job.getTaskCompletionEvents(eventCounter); 
+      eventCounter += events.length;
+      for(TaskCompletionEvent event : events){
+        TaskCompletionEvent.Status status = event.getTaskStatus();
+        if (profiling && 
+            (status == TaskCompletionEvent.Status.SUCCEEDED ||
+                status == TaskCompletionEvent.Status.FAILED) &&
+                (event.isMap ? mapRanges : reduceRanges).
+                isIncluded(event.idWithinJob())) {
+          downloadProfile(event);
+        }
+        switch(filter){
+        case NONE:
+          break;
+        case SUCCEEDED:
+          if (event.getTaskStatus() == 
+            TaskCompletionEvent.Status.SUCCEEDED){
+            LOG.info(event.toString());
+            displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
+          }
+          break; 
+        case FAILED:
+          if (event.getTaskStatus() == 
+            TaskCompletionEvent.Status.FAILED){
+            LOG.info(event.toString());
+            // Displaying the task diagnostic information
+            TaskAttemptID taskId = event.getTaskAttemptId();
+            String[] taskDiagnostics = 
+              jobSubmitClient.getTaskDiagnostics(taskId); 
+            if (taskDiagnostics != null) {
+              for(String diagnostics : taskDiagnostics){
+                System.err.println(diagnostics);
+              }
+            }
+            // Displaying the task logs
+            displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
+          }
+          break; 
+        case KILLED:
+          if (event.getTaskStatus() == TaskCompletionEvent.Status.KILLED){
+            LOG.info(event.toString());
+          }
+          break; 
+        case ALL:
+          LOG.info(event.toString());
+          displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
+          break;
+        }
+      }
+    }
+    LOG.info("Job complete: " + jobId);
+    job.getCounters().log(LOG);
+    return job.isSuccessful();
   }
 
   static String getTaskLogURL(TaskAttemptID taskId, String baseUrl) {
