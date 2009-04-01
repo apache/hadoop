@@ -37,6 +37,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.util.Shell;
 import org.apache.log4j.LogManager;
+import org.apache.hadoop.util.StringUtils;
 
 /** 
  * The main() for child processes. 
@@ -68,6 +69,16 @@ class Child {
           defaultConf);
     int numTasksToExecute = -1; //-1 signifies "no limit"
     int numTasksExecuted = 0;
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        try {
+          if (taskid != null) {
+            TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
+          }
+        } catch (Throwable throwable) {
+        }
+      }
+    });
     Thread t = new Thread() {
       public void run() {
         //every so often wake up and syncLogs so that we can track
@@ -192,10 +203,6 @@ class Child {
       // This assumes that on return from Task.run() 
       // there is no more logging done.
       LogManager.shutdown();
-      // do synclogs
-      if (taskid != null) {
-        TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
-      }
     }
   }
 }

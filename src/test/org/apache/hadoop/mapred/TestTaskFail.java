@@ -32,6 +32,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 
 public class TestTaskFail extends TestCase {
+  private static String taskLog = "Task attempt log";
+  private static String cleanupLog = "cleanup attempt log";
+
   public static class MapperClass extends MapReduceBase
   implements Mapper<LongWritable, Text, Text, IntWritable> {
     String taskid;
@@ -41,6 +44,7 @@ public class TestTaskFail extends TestCase {
     public void map (LongWritable key, Text value, 
                      OutputCollector<Text, IntWritable> output, 
                      Reporter reporter) throws IOException {
+      System.err.println(taskLog);
       if (taskid.endsWith("_0")) {
         throw new IOException();
       } else if (taskid.endsWith("_1")) {
@@ -49,14 +53,23 @@ public class TestTaskFail extends TestCase {
     }
   }
 
+  static class CommitterWithLogs extends FileOutputCommitter {
+    public void abortTask(TaskAttemptContext context) throws IOException {
+      System.err.println(cleanupLog);
+      super.abortTask(context);
+    }
+  }
+
   static class CommitterWithFailTaskCleanup extends FileOutputCommitter {
     public void abortTask(TaskAttemptContext context) throws IOException {
+      System.err.println(cleanupLog);
       System.exit(-1);
     }
   }
 
   static class CommitterWithFailTaskCleanup2 extends FileOutputCommitter {
     public void abortTask(TaskAttemptContext context) throws IOException {
+      System.err.println(cleanupLog);
       throw new IOException();
     }
   }
@@ -109,6 +122,12 @@ public class TestTaskFail extends TestCase {
       mr.getJobTrackerRunner().getJobTracker().getTaskStatus(attemptId);
     assertTrue(ts != null);
     assertEquals(TaskStatus.State.FAILED, ts.getRunState());
+    // validate task logs: tasklog should contain both task logs
+    // and cleanup logs
+    String log = TestMiniMRMapRedDebugScript.readTaskLog(
+                      TaskLog.LogName.STDERR, attemptId, false);
+    assertTrue(log.contains(taskLog));
+    assertTrue(log.contains(cleanupLog));
     
     attemptId =  new TaskAttemptID(new TaskID(jobId, true, 0), 1);
     // this should be cleanup attempt since the second attempt fails
@@ -117,6 +136,15 @@ public class TestTaskFail extends TestCase {
     ts = mr.getJobTrackerRunner().getJobTracker().getTaskStatus(attemptId);
     assertTrue(ts != null);
     assertEquals(TaskStatus.State.FAILED, ts.getRunState());
+    // validate tasklogs for task attempt
+    log = TestMiniMRMapRedDebugScript.readTaskLog(
+               TaskLog.LogName.STDERR, attemptId, false);
+    assertTrue(log.contains(taskLog));
+
+    // validate tasklogs for cleanup attempt
+    log = TestMiniMRMapRedDebugScript.readTaskLog(
+               TaskLog.LogName.STDERR, attemptId, true);
+    assertTrue(log.contains(cleanupLog));
   }
   
   public void testWithDFS() throws IOException {
@@ -134,11 +162,12 @@ public class TestTaskFail extends TestCase {
       final Path outDir = new Path("./output");
       String input = "The quick brown fox\nhas many silly\nred fox sox\n";
       // launch job with fail tasks
-      RunningJob rJob = launchJob(mr.createJobConf(), inDir, outDir, input);
+      JobConf jobConf = mr.createJobConf();
+      jobConf.setOutputCommitter(CommitterWithLogs.class);
+      RunningJob rJob = launchJob(jobConf, inDir, outDir, input);
       rJob.waitForCompletion();
       validateJob(rJob, mr);
       // launch job with fail tasks and fail-cleanups
-      JobConf jobConf = mr.createJobConf();
       fileSys.delete(outDir, true);
       jobConf.setOutputCommitter(CommitterWithFailTaskCleanup.class);
       rJob = launchJob(jobConf, inDir, outDir, input);
