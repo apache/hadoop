@@ -95,7 +95,7 @@ class JobInProgress {
   private volatile boolean jobFailed = false;
 
   JobPriority priority = JobPriority.NORMAL;
-  JobTracker jobtracker = null;
+  final JobTracker jobtracker;
 
   // NetworkTopology Node to the set of TIPs
   Map<Node, List<TaskInProgress>> nonRunningMapCache;
@@ -213,6 +213,7 @@ class JobInProgress {
     this.numReduceTasks = conf.getNumReduceTasks();
     this.maxLevel = NetworkTopology.DEFAULT_HOST_LEVEL;
     this.anyCacheLevel = this.maxLevel+1;
+    this.jobtracker = null;
   }
   
   /**
@@ -2117,7 +2118,6 @@ class JobInProgress {
   }
   
   private synchronized void terminateJob(int jobTerminationState) {
-    final JobTrackerInstrumentation metrics = jobtracker.getInstrumentation();
     if ((status.getRunState() == JobStatus.RUNNING) ||
         (status.getRunState() == JobStatus.PREP)) {
       if (jobTerminationState == JobStatus.FAILED) {
@@ -2138,7 +2138,8 @@ class JobInProgress {
                                      this.finishedReduceTasks);
       }
       garbageCollect();
-      metrics.terminateJob(this.conf, this.status.getJobID());
+      jobtracker.getInstrumentation().terminateJob(
+          this.conf, this.status.getJobID());
     }
   }
 

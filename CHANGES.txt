@@ -832,6 +832,8 @@ Release 0.20.0 - Unreleased
     the running job's information printed to the user's stdout as it runs.
     (omalley)
 
+    HADOOP-5607. Fix NPE in TestCapacityScheduler. (cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
