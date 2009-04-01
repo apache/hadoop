@@ -33,7 +33,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -51,7 +56,13 @@ public class TaskLog {
     new File(System.getProperty("hadoop.log.dir"), 
              "userlogs").getAbsoluteFile();
   
+  static LocalFileSystem localFS = null;
   static {
+    try {
+      localFS = FileSystem.getLocal(new Configuration());
+    } catch (IOException ioe) {
+      LOG.warn("Getting local file system failed.");
+    }
     if (!LOG_DIR.exists()) {
       LOG_DIR.mkdirs();
     }
@@ -126,6 +137,9 @@ public class TaskLog {
     return l;
   }
   
+  private static File getTmpIndexFile(String taskid) {
+    return new File(getBaseDir(taskid), "log.tmp");
+  }
   public static File getIndexFile(String taskid) {
     return getIndexFile(taskid, false);
   }
@@ -148,9 +162,12 @@ public class TaskLog {
   private static void writeToIndexFile(TaskAttemptID firstTaskid,
                                        boolean isCleanup) 
   throws IOException {
-    File indexFile = getIndexFile(currentTaskid.toString(), isCleanup);
+    // To ensure atomicity of updates to index file, write to temporary index
+    // file first and then rename.
+    File tmpIndexFile = getTmpIndexFile(currentTaskid.toString());
+    
     BufferedOutputStream bos = 
-      new BufferedOutputStream(new FileOutputStream(indexFile,false));
+      new BufferedOutputStream(new FileOutputStream(tmpIndexFile,false));
     DataOutputStream dos = new DataOutputStream(bos);
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
@@ -169,6 +186,11 @@ public class TaskLog {
     dos.writeBytes(Long.toString(getTaskLogFile(firstTaskid, LogName.SYSLOG)
         .length() - prevLogLength)+"\n");
     dos.close();
+
+    File indexFile = getIndexFile(currentTaskid.toString(), isCleanup);
+    Path indexFilePath = new Path(indexFile.getAbsolutePath());
+    Path tmpIndexFilePath = new Path(tmpIndexFile.getAbsolutePath());
+    localFS.rename (tmpIndexFilePath, indexFilePath);
   }
   private static void resetPrevLengths(TaskAttemptID firstTaskid) {
     prevOutLength = getTaskLogFile(firstTaskid, LogName.STDOUT).length();

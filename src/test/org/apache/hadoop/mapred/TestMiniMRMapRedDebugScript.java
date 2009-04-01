@@ -62,20 +62,23 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
 
   /**
    * Reads tasklog and returns it as string after trimming it.
-   * @param filter Task log filer; can be STDOUT, STDERR,
+   * @param filter Task log filter; can be STDOUT, STDERR,
    *                SYSLOG, DEBUGOUT, DEBUGERR
    * @param taskId The task id for which the log has to collected
+   * @param isCleanup whether the task is a cleanup attempt or not.
    * @return task log as string
    * @throws IOException
    */
-  public static String readTaskLog(TaskLog.LogName  filter, TaskAttemptID taskId)
+  public static String readTaskLog(TaskLog.LogName  filter, 
+                                   TaskAttemptID taskId, 
+                                   boolean isCleanup)
   throws IOException {
     // string buffer to store task log
     StringBuffer result = new StringBuffer();
     int res;
 
     // reads the whole tasklog into inputstream
-    InputStream taskLogReader = new TaskLog.Reader(taskId, filter, 0, -1);
+    InputStream taskLogReader = new TaskLog.Reader(taskId, filter, 0, -1, isCleanup);
     // construct string log from inputstream.
     byte[] b = new byte[65536];
     while (true) {
@@ -168,7 +171,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
     while (!job.isComplete()) ;
     
     // return the output of debugout log.
-    return readTaskLog(TaskLog.LogName.DEBUGOUT,taskId);
+    return readTaskLog(TaskLog.LogName.DEBUGOUT,taskId, false);
   }
 
   /**

@@ -824,6 +824,10 @@ Release 0.20.0 - Unreleased
     HADOOP-5576. Fix LocalRunner to work with the new context object API in
     mapreduce. (Tom White via omalley)
 
+    HADOOP-4374. Installs a shutdown hook in the Task JVM so that log.index is
+    updated before the JVM exits. Also makes the update to log.index atomic.
+    (Ravi Gummadi via ddas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
