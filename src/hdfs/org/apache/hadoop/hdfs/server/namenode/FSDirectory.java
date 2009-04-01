@@ -45,7 +45,6 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
  *************************************************/
 class FSDirectory implements Closeable {
 
-  final FSNamesystem namesystem;
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
   private boolean ready = false;
@@ -64,14 +63,18 @@ class FSDirectory implements Closeable {
   }
 
   FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
+    fsImage.setFSNamesystem(ns);
     rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
         ns.createFsOwnerPermissions(new FsPermission((short)0755)),
         Integer.MAX_VALUE, -1);
     this.fsImage = fsImage;
-    namesystem = ns;
     initialize(conf);
   }
     
+  private FSNamesystem getFSNamesystem() {
+    return fsImage.getFSNamesystem();
+  }
+
   private void initialize(Configuration conf) {
     MetricsContext metricsContext = MetricsUtil.getContext("dfs");
     directoryMetrics = MetricsUtil.createRecord(metricsContext, "FSDirectory");
@@ -199,7 +202,7 @@ class FSDirectory implements Closeable {
           // Add file->block mapping
           INodeFile newF = (INodeFile)newNode;
           for (int i = 0; i < nrBlocks; i++) {
-            newF.setBlock(i, namesystem.blocksMap.addINode(blocks[i], newF));
+            newF.setBlock(i, getFSNamesystem().blocksMap.addINode(blocks[i], newF));
           }
         }
       } catch (IOException e) {
@@ -247,7 +250,7 @@ class FSDirectory implements Closeable {
         // Add file->block mapping
         INodeFile newF = (INodeFile)newNode;
         for (int i = 0; i < nrBlocks; i++) {
-          newF.setBlock(i, namesystem.blocksMap.addINode(blocks[i], newF));
+          newF.setBlock(i, getFSNamesystem().blocksMap.addINode(blocks[i], newF));
         }
       }
     }
@@ -269,8 +272,8 @@ class FSDirectory implements Closeable {
                   fileNode.getPreferredBlockSize()*fileNode.getReplication());
       
       // associate the new list of blocks with this file
-      namesystem.blocksMap.addINode(block, fileNode);
-      BlockInfo blockInfo = namesystem.blocksMap.getStoredBlock(block);
+      getFSNamesystem().blocksMap.addINode(block, fileNode);
+      BlockInfo blockInfo = getFSNamesystem().blocksMap.getStoredBlock(block);
       fileNode.addBlock(blockInfo);
 
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
@@ -321,9 +324,9 @@ class FSDirectory implements Closeable {
     synchronized (rootDir) {
       // modify file-> block and blocksMap
       fileNode.removeBlock(block);
-      namesystem.blocksMap.removeINode(block);
+      getFSNamesystem().blocksMap.removeINode(block);
       // If block is removed from blocksMap remove it from corruptReplicasMap
-      namesystem.corruptReplicas.removeFromCorruptReplicasMap(block);
+      getFSNamesystem().corruptReplicas.removeFromCorruptReplicasMap(block);
 
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
@@ -631,7 +634,7 @@ class FSDirectory implements Closeable {
           ArrayList<Block> v = new ArrayList<Block>();
           int filesRemoved = targetNode.collectSubtreeBlocksAndClear(v);
           incrDeletedFileCount(filesRemoved);
-          namesystem.removePathAndBlocks(src, v);
+          getFSNamesystem().removePathAndBlocks(src, v);
           if (NameNode.stateChangeLog.isDebugEnabled()) {
             NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
               +src+" is removed");
@@ -692,7 +695,7 @@ class FSDirectory implements Closeable {
       
       int index = 0;
       for (Block b : newnode.getBlocks()) {
-        BlockInfo info = namesystem.blocksMap.addINode(b, newnode);
+        BlockInfo info = getFSNamesystem().blocksMap.addINode(b, newnode);
         newnode.setBlock(index, info); // inode refers to the block in BlocksMap
         index++;
       }
@@ -940,7 +943,7 @@ class FSDirectory implements Closeable {
         }
         // Directory creation also count towards FilesCreated
         // to match count of files_deleted metric. 
-        if (namesystem != null)
+        if (getFSNamesystem() != null)
           NameNode.getNameNodeMetrics().numFilesCreated.inc();
         fsImage.getEditLog().logMkDir(cur, inodes[i]);
         NameNode.stateChangeLog.debug(
@@ -1244,7 +1247,7 @@ class FSDirectory implements Closeable {
 
       // if the last access time update was within the last precision interval, then
       // no need to store access time
-      if (atime <= inodeTime + namesystem.getAccessTimePrecision() && !force) {
+      if (atime <= inodeTime + getFSNamesystem().getAccessTimePrecision() && !force) {
         status =  false;
       } else {
         inode.setAccessTime(atime);
@@ -1259,7 +1262,7 @@ class FSDirectory implements Closeable {
    */
   void reset() {
     rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-        namesystem.createFsOwnerPermissions(new FsPermission((short)0755)),
+        getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
         Integer.MAX_VALUE, -1);
   }
 

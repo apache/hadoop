@@ -529,7 +529,7 @@ public class FSEditLog {
    * This is where we apply edits that we've been writing to disk all
    * along.
    */
-  static int loadFSEdits(EditLogInputStream edits) throws IOException {
+  int loadFSEdits(EditLogInputStream edits) throws IOException {
     DataInputStream in = edits.getDataInputStream();
     long startTime = FSNamesystem.now();
     int numEdits = loadFSEdits(in, true);
@@ -539,8 +539,7 @@ public class FSEditLog {
     return numEdits;
   }
 
-  static int loadFSEdits(DataInputStream in,
-                         boolean closeOnExit) throws IOException {
+  int loadFSEdits(DataInputStream in, boolean closeOnExit) throws IOException {
     int numEdits = 0;
     int logVersion = 0;
 
@@ -576,9 +575,9 @@ public class FSEditLog {
     return numEdits;
   }
 
-  static int loadEditRecords(int logVersion, DataInputStream in,
+  int loadEditRecords(int logVersion, DataInputStream in,
                              boolean closeOnExit) throws IOException {
-    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSNamesystem fsNamesys = fsimage.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
     String clientName = null;
@@ -773,7 +772,7 @@ public class FSEditLog {
         case OP_SET_GENSTAMP: {
           numOpSetGenStamp++;
           long lw = in.readLong();
-          fsDir.namesystem.setGenerationStamp(lw);
+          fsNamesys.setGenerationStamp(lw);
           break;
         } 
         case OP_DATANODE_ADD: {
@@ -883,8 +882,8 @@ public class FSEditLog {
     }
   }
   
-  static short adjustReplication(short replication) {
-    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+  short adjustReplication(short replication) {
+    FSNamesystem fsNamesys = fsimage.getFSNamesystem();
     short minReplication = fsNamesys.getMinReplication();
     if (replication<minReplication) {
       replication = minReplication;

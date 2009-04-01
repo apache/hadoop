@@ -188,11 +188,6 @@ public class BackupStorage extends FSImage {
     renameCheckpoint();
   }
 
-  private FSNamesystem getFSNamesystem() {
-    // HADOOP-5119 should get rid of this.
-    return FSNamesystem.getFSNamesystem();
-  }
-
   private Object getFSDirectoryRootLock() {
     return getFSNamesystem().dir.rootDir;
   }
@@ -232,7 +227,7 @@ public class BackupStorage extends FSImage {
           waitSpoolEnd();
           // update NameSpace in memory
           backupInputStream.setBytes(data);
-          FSEditLog.loadEditRecords(getLayoutVersion(),
+          editLog.loadEditRecords(getLayoutVersion(),
                     backupInputStream.getDataInputStream(), true);
           getFSNamesystem().dir.updateCountForINodeWithQuota(); // inefficient!
           break;
@@ -352,11 +347,11 @@ public class BackupStorage extends FSImage {
       // load edits.new
       EditLogFileInputStream edits = new EditLogFileInputStream(jSpoolFile);
       DataInputStream in = edits.getDataInputStream();
-      numEdits += FSEditLog.loadFSEdits(in, false);
+      numEdits += editLog.loadFSEdits(in, false);
   
       // first time reached the end of spool
       jsState = JSpoolState.WAIT;
-      numEdits += FSEditLog.loadEditRecords(getLayoutVersion(), in, true);
+      numEdits += editLog.loadEditRecords(getLayoutVersion(), in, true);
       getFSNamesystem().dir.updateCountForINodeWithQuota();
       edits.close();
     }

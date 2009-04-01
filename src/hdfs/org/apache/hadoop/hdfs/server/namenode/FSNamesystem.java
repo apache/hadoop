@@ -246,7 +246,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private long missingBlocksInCurIter = 0;
   private long missingBlocksInPrevIter = 0; 
 
-  private static FSNamesystem fsNamesystemObject;
   private SafeModeInfo safeMode;  // safe mode information
   private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
     
@@ -419,7 +418,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   private void setConfigurationParameters(Configuration conf) 
                                           throws IOException {
-    fsNamesystemObject = this;
     try {
       fsOwner = UnixUserGroupInformation.login(conf);
     } catch (LoginException e) {
@@ -482,15 +480,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return defaultPermission;
   }
   
-  /** Return the FSNamesystem object
-   * @deprecated FSNamesystem object should be obtained from the container
-   *             object such as a NameNode object. 
-   */
-  @Deprecated
-  public static FSNamesystem getFSNamesystem() {
-    return fsNamesystemObject;
-  } 
-
   NamespaceInfo getNamespaceInfo() {
     return new NamespaceInfo(dir.fsImage.getNamespaceID(),
                              dir.fsImage.getCTime(),

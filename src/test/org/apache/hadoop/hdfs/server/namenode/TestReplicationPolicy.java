@@ -60,7 +60,7 @@ public class TestReplicationPolicy extends TestCase {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
+    FSNamesystem fsNamesystem = namenode.getNamesystem();
     replicator = fsNamesystem.replicator;
     cluster = fsNamesystem.clusterMap;
     // construct network topology

@@ -114,6 +114,7 @@ public class FSImage extends Storage {
     }
   }
 
+  protected FSNamesystem namesystem = null;
   protected long checkpointTime = -1L;  // The age of the image
   protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
@@ -122,15 +123,7 @@ public class FSImage extends Storage {
    * flag that controls if we try to restore failed storages
    */
   private boolean restoreFailedStorage = false;
-  public void setRestoreFailedStorage(boolean val) {
-    LOG.info("set restore failed storage to " + val);
-    restoreFailedStorage=val;
-  }
-  
-  public boolean getRestoreFailedStorage() {
-    return restoreFailedStorage;
-  }
-  
+
   /**
    * list of failed (and thus removed) storages
    */
@@ -156,8 +149,13 @@ public class FSImage extends Storage {
   /**
    */
   FSImage() {
+    this((FSNamesystem)null);
+  }
+
+  FSImage(FSNamesystem ns) {
     super(NodeType.NAME_NODE);
     this.editLog = new FSEditLog(this);
+    setFSNamesystem(ns);
   }
 
   /**
@@ -181,6 +179,23 @@ public class FSImage extends Storage {
     dirs.add(imageDir);
     editsDirs.add(imageDir);
     setStorageDirectories(dirs, editsDirs);
+  }
+  
+  protected FSNamesystem getFSNamesystem() {
+    return namesystem;
+  }
+
+  void setFSNamesystem(FSNamesystem ns) {
+    namesystem = ns;
+  }
+
+  public void setRestoreFailedStorage(boolean val) {
+    LOG.info("set restore failed storage to " + val);
+    restoreFailedStorage=val;
+  }
+  
+  public boolean getRestoreFailedStorage() {
+    return restoreFailedStorage;
   }
   
   void setStorageDirectories(Collection<File> fsNameDirs,
@@ -488,7 +503,7 @@ public class FSImage extends Storage {
     // a previous fs states in at least one of the storage directories.
     // Directories that don't have previous state do not rollback
     boolean canRollback = false;
-    FSImage prevState = new FSImage();
+    FSImage prevState = new FSImage(getFSNamesystem());
     prevState.layoutVersion = FSConstants.LAYOUT_VERSION;
     for (Iterator<StorageDirectory> it = 
                        dirIterator(); it.hasNext();) {
@@ -564,8 +579,8 @@ public class FSImage extends Storage {
    * @throws IOException
    */
   void doImportCheckpoint() throws IOException {
-    FSImage ckptImage = new FSImage();
-    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSNamesystem fsNamesys = getFSNamesystem();
+    FSImage ckptImage = new FSImage(fsNamesys);
     // replace real image with the checkpoint image
     FSImage realImage = fsNamesys.getFSImage();
     assert realImage == this;
@@ -903,7 +918,7 @@ public class FSImage extends Storage {
     assert this.getLayoutVersion() < 0 : "Negative layout version is expected.";
     assert curFile != null : "curFile is null";
 
-    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSNamesystem fsNamesys = getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
 
     //
@@ -946,7 +961,7 @@ public class FSImage extends Storage {
       needToSave = (imgVersion != FSConstants.LAYOUT_VERSION);
 
       // read file info
-      short replication = FSNamesystem.getFSNamesystem().getDefaultReplication();
+      short replication = fsNamesys.getDefaultReplication();
 
       LOG.info("Number of files = " + numFiles);
 
@@ -959,7 +974,7 @@ public class FSImage extends Storage {
         long blockSize = 0;
         path = readString(in);
         replication = in.readShort();
-        replication = FSEditLog.adjustReplication(replication);
+        replication = editLog.adjustReplication(replication);
         modificationTime = in.readLong();
         if (imgVersion <= -17) {
           atime = in.readLong();
@@ -1069,16 +1084,16 @@ public class FSImage extends Storage {
     int numEdits = 0;
     EditLogFileInputStream edits = 
       new EditLogFileInputStream(getImageFile(sd, NameNodeFile.EDITS));
-    numEdits = FSEditLog.loadFSEdits(edits);
+    numEdits = editLog.loadFSEdits(edits);
     edits.close();
     File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
     if (editsNew.exists() && editsNew.length() > 0) {
       edits = new EditLogFileInputStream(editsNew);
-      numEdits += FSEditLog.loadFSEdits(edits);
+      numEdits += editLog.loadFSEdits(edits);
       edits.close();
     }
     // update the counts.
-    FSNamesystem.getFSNamesystem().dir.updateCountForINodeWithQuota();    
+    getFSNamesystem().dir.updateCountForINodeWithQuota();    
     return numEdits;
   }
 
@@ -1086,7 +1101,7 @@ public class FSImage extends Storage {
    * Save the contents of the FS image to the file.
    */
   void saveFSImage(File newFile) throws IOException {
-    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSNamesystem fsNamesys = getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
     long startTime = FSNamesystem.now();
     //
@@ -1737,22 +1752,24 @@ public class FSImage extends Storage {
   }
 
   private boolean getDistributedUpgradeState() {
-    return FSNamesystem.getFSNamesystem().getDistributedUpgradeState();
+    FSNamesystem ns = getFSNamesystem();
+    return ns == null ? false : ns.getDistributedUpgradeState();
   }
 
   private int getDistributedUpgradeVersion() {
-    return FSNamesystem.getFSNamesystem().getDistributedUpgradeVersion();
+    FSNamesystem ns = getFSNamesystem();
+    return ns == null ? 0 : ns.getDistributedUpgradeVersion();
   }
 
   private void setDistributedUpgradeState(boolean uState, int uVersion) {
-    FSNamesystem.getFSNamesystem().upgradeManager.setUpgradeState(uState, uVersion);
+    getFSNamesystem().upgradeManager.setUpgradeState(uState, uVersion);
   }
 
   private void verifyDistributedUpgradeProgress(StartupOption startOpt
                                                 ) throws IOException {
     if(startOpt == StartupOption.ROLLBACK || startOpt == StartupOption.IMPORT)
       return;
-    UpgradeManager um = FSNamesystem.getFSNamesystem().upgradeManager;
+    UpgradeManager um = getFSNamesystem().upgradeManager;
     assert um != null : "FSNameSystem.upgradeManager is null.";
     if(startOpt != StartupOption.UPGRADE) {
       if(um.getUpgradeState())
@@ -1767,11 +1784,11 @@ public class FSImage extends Storage {
   }
 
   private void initializeDistributedUpgrade() throws IOException {
-    UpgradeManagerNamenode um = FSNamesystem.getFSNamesystem().upgradeManager;
+    UpgradeManagerNamenode um = getFSNamesystem().upgradeManager;
     if(! um.initializeUpgrade())
       return;
     // write new upgrade state into disk
-    FSNamesystem.getFSNamesystem().getFSImage().writeAll();
+    writeAll();
     NameNode.LOG.info("\n   Distributed upgrade for NameNode version " 
         + um.getUpgradeVersion() + " to current LV " 
         + FSConstants.LAYOUT_VERSION + " is initialized.");

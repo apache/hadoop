@@ -353,6 +353,9 @@ Trunk (unreleased changes)
     HADOOP-5464. DFSClient did not treat write timeout of 0 properly.
     (Raghu Angadi)
 
+    HADOOP-2413. Remove the static variable FSNamesystem.fsNamesystemObject.
+    (Konstantin Shvachko via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
