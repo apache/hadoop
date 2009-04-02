@@ -68,6 +68,8 @@ Release 0.20.0 - Unreleased
    HBASE-1150  HMsg carries safemode flag; remove (Nitay Joffe via Stack)
    HBASE-1232  zookeeper client wont reconnect if there is a problem (Nitay
                Joffe via Andrew Purtell)
+   HBASE-1303  Secondary index configuration prevents HBase from starting
+               (Ken Weiner via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

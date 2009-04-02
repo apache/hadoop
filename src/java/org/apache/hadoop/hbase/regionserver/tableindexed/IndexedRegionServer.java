@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.ipc.IndexedRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionalRegionServer;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 
 /**
  * RegionServer which maintains secondary indexes.
@@ -45,6 +46,15 @@ public class IndexedRegionServer extends TransactionalRegionServer implements
   public IndexedRegionServer(HServerAddress serverAddress,
       HBaseConfiguration conf) throws IOException {
     super(serverAddress, conf);
+  }
+
+  @Override
+  public long getProtocolVersion(final String protocol, final long clientVersion)
+      throws IOException {
+    if (protocol.equals(IndexedRegionInterface.class.getName())) {
+      return HBaseRPCProtocolVersion.versionID;
+    }
+    return super.getProtocolVersion(protocol, clientVersion);
   }
 
   @Override
