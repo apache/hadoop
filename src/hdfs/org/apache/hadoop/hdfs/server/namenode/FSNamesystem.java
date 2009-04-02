@@ -1582,7 +1582,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                             " does not exist. ");
     }
     
-    if (!blocksMap.contains(blk, node)) {
+    final BlockInfo storedBlockInfo = blocksMap.getStoredBlock(blk);
+    if (storedBlockInfo == null) {
       // Check if the replica is in the blockMap, if not 
       // ignore the request for now. This could happen when BlockScanner
       // thread of Datanode reports bad block before Block reports are sent
@@ -1592,16 +1593,23 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                    "as corrupt as it does not exists in " +
                                    "blocksMap");
     } else {
-      INodeFile inode = blocksMap.getINode(blk);
-      assert inode!=null : (blk + " in blocksMap must belongs to a file.");
+      INodeFile inode = storedBlockInfo.getINode();
+      if (inode == null) {
+        NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: " +
+                                     "block " + blk + " could not be marked " +
+                                     "as corrupt as it does not belong to " +
+                                     "any file");
+        addToInvalidates(storedBlockInfo, node);
+        return;
+      } 
       // Add this replica to corruptReplicas Map 
-      corruptReplicas.addToCorruptReplicasMap(blk, node);
-      if (countNodes(blk).liveReplicas()>inode.getReplication()) {
+      corruptReplicas.addToCorruptReplicasMap(storedBlockInfo, node);
+      if (countNodes(storedBlockInfo).liveReplicas()>inode.getReplication()) {
         // the block is over-replicated so invalidate the replicas immediately
-        invalidateBlock(blk, node);
+        invalidateBlock(storedBlockInfo, node);
       } else {
         // add the block to neededReplication 
-        updateNeededReplications(blk, -1, 0);
+        updateNeededReplications(storedBlockInfo, -1, 0);
       }
     }
   }
