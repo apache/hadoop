@@ -18,8 +18,14 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -38,7 +44,6 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
-import org.apache.hadoop.util.StringUtils;
 
 
 /**
@@ -80,14 +85,14 @@ public class TestStorageRestore extends TestCase {
       throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
     }
     
-    hdfsDir.mkdir();
+    hdfsDir.mkdirs();
     path1 = new File(hdfsDir, "name1");
     path2 = new File(hdfsDir, "name2");
     path3 = new File(hdfsDir, "name3");
     
     path1.mkdir(); path2.mkdir(); path3.mkdir();
     if(!path2.exists() ||  !path3.exists() || !path1.exists()) {
-      throw new IOException("Couldn't create dfs.name dirs");
+      throw new IOException("Couldn't create dfs.name dirs in " + hdfsDir.getAbsolutePath());
     }
     
     String dfs_name_dir = new String(path1.getPath() + "," + path2.getPath());
@@ -117,11 +122,20 @@ public class TestStorageRestore extends TestCase {
   }
   
   /**
-   * invalidate storage by removing current directories
+   * invalidate storage by removing storage directories
    */
   public void invalidateStorage(FSImage fi) throws IOException {
-    fi.getEditLog().processIOError(2); //name3
-    fi.getEditLog().processIOError(1); // name2
+    ArrayList<StorageDirectory> al = new ArrayList<StorageDirectory>(2);
+    Iterator<StorageDirectory> it = fi.dirIterator();
+    while(it.hasNext()) {
+      StorageDirectory sd = it.next();
+      if(sd.getRoot().getAbsolutePath().equals(path2.getAbsolutePath()) ||
+          sd.getRoot().getAbsolutePath().equals(path3.getAbsolutePath())) {
+        al.add(sd);
+      }
+    }
+    // simulate an error
+    fi.processIOError(al, true);
   }
   
   /**
@@ -143,10 +157,57 @@ public class TestStorageRestore extends TestCase {
     }
   }
   
+  
+  /**
+   * This function returns a md5 hash of a file.
+   * 
+   * @param FileToMd5
+   * @return The md5 string
+   */
+  public String getFileMD5(File file) throws Exception {
+    String res = new String();
+    MessageDigest mD = MessageDigest.getInstance("MD5");
+    DataInputStream dis = new DataInputStream(new FileInputStream(file));
+
+    try {
+      while(true) {
+        mD.update(dis.readByte());
+      }
+    } catch (EOFException eof) {}
+
+    BigInteger bigInt = new BigInteger(1, mD.digest());
+    res = bigInt.toString(16);
+    dis.close();
+
+    return res;
+  }
+
+  
+  /**
+   * read currentCheckpointTime directly from the file
+   * @param currDir
+   * @return
+   * @throws IOException
+   */
+  long readCheckpointTime(File currDir) throws IOException {
+    File timeFile = new File(currDir, NameNodeFile.TIME.getName()); 
+    long timeStamp = 0L;
+    if (timeFile.exists() && timeFile.canRead()) {
+      DataInputStream in = new DataInputStream(new FileInputStream(timeFile));
+      try {
+        timeStamp = in.readLong();
+      } finally {
+        in.close();
+      }
+    }
+    return timeStamp;
+  }
+  
   /**
    *  check if files exist/not exist
+   * @throws IOException 
    */
-  public void checkFiles(boolean valid) {
+  public void checkFiles(boolean valid) throws IOException {
     //look at the valid storage
     File fsImg1 = new File(path1, Storage.STORAGE_DIR_CURRENT + "/" + NameNodeFile.IMAGE.getName());
     File fsImg2 = new File(path2, Storage.STORAGE_DIR_CURRENT + "/" + NameNodeFile.IMAGE.getName());
@@ -155,13 +216,29 @@ public class TestStorageRestore extends TestCase {
     File fsEdits1 = new File(path1, Storage.STORAGE_DIR_CURRENT + "/" + NameNodeFile.EDITS.getName());
     File fsEdits2 = new File(path2, Storage.STORAGE_DIR_CURRENT + "/" + NameNodeFile.EDITS.getName());
     File fsEdits3 = new File(path3, Storage.STORAGE_DIR_CURRENT + "/" + NameNodeFile.EDITS.getName());
-
+    
+    long chkPt1 = readCheckpointTime(new File(path1, Storage.STORAGE_DIR_CURRENT));
+    long chkPt2 = readCheckpointTime(new File(path2, Storage.STORAGE_DIR_CURRENT));
+    long chkPt3 = readCheckpointTime(new File(path3, Storage.STORAGE_DIR_CURRENT));
+    
+    String md5_1 = null,md5_2 = null,md5_3 = null;
+    try {
+      md5_1 = getFileMD5(fsEdits1);
+      md5_2 = getFileMD5(fsEdits2);
+      md5_3 = getFileMD5(fsEdits3);
+    } catch (Exception e) {
+      System.err.println("md 5 calculation failed:" + e.getLocalizedMessage());
+    }
     this.printStorages(cluster.getNameNode().getFSImage());
     
     LOG.info("++++ image files = "+fsImg1.getAbsolutePath() + "," + fsImg2.getAbsolutePath() + ","+ fsImg3.getAbsolutePath());
     LOG.info("++++ edits files = "+fsEdits1.getAbsolutePath() + "," + fsEdits2.getAbsolutePath() + ","+ fsEdits3.getAbsolutePath());
     LOG.info("checkFiles compares lengths: img1=" + fsImg1.length()  + ",img2=" + fsImg2.length()  + ",img3=" + fsImg3.length());
     LOG.info("checkFiles compares lengths: edits1=" + fsEdits1.length()  + ",edits2=" + fsEdits2.length()  + ",edits3=" + fsEdits3.length());
+    LOG.info("checkFiles compares chkPts: name1=" + chkPt1  + ",name2=" + chkPt2  + ",name3=" + chkPt3);
+    LOG.info("checkFiles compares md5s: " + fsEdits1.getAbsolutePath() + 
+        "="+ md5_1  + "," + fsEdits2.getAbsolutePath() + "=" + md5_2  + "," +
+        fsEdits3.getAbsolutePath() + "=" + md5_3);  
     
     if(valid) {
       // should be the same
@@ -169,12 +246,26 @@ public class TestStorageRestore extends TestCase {
       assertTrue(0 == fsImg3.length()); //shouldn't be created
       assertTrue(fsEdits1.length() == fsEdits2.length());
       assertTrue(fsEdits1.length() == fsEdits3.length());
+      assertTrue(md5_1.equals(md5_2));
+      assertTrue(md5_1.equals(md5_3));
+      
+      // checkpoint times
+      assertTrue(chkPt1 == chkPt2);
+      assertTrue(chkPt1 == chkPt3);
     } else {
       // should be different
       //assertTrue(fsImg1.length() != fsImg2.length());
       //assertTrue(fsImg1.length() != fsImg3.length());
       assertTrue(fsEdits1.length() != fsEdits2.length());
       assertTrue(fsEdits1.length() != fsEdits3.length());
+      
+      assertTrue(!md5_1.equals(md5_2));
+      assertTrue(!md5_1.equals(md5_3));
+      
+      
+   // checkpoint times
+      assertTrue(chkPt1 > chkPt2);
+      assertTrue(chkPt1 > chkPt3);
     }
   }
   
@@ -222,6 +313,13 @@ public class TestStorageRestore extends TestCase {
     
     checkFiles(true);
     System.out.println("****testStorageRestore: second Checkpoint done and checkFiles(true) run");
+    
+    // verify that all the logs are active
+    path = new Path("/", "test2");
+    writeFile(fs, path, 2);
+    System.out.println("****testStorageRestore: wrote a file and checkFiles(true) run");
+    checkFiles(true);
+    
     secondary.shutdown();
     cluster.shutdown();
   }

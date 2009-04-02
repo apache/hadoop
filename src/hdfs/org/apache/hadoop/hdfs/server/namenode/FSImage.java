@@ -718,34 +718,48 @@ public class FSImage extends Storage {
       } catch(IOException e) {
         // Close any edits stream associated with this dir and remove directory
         LOG.warn("incrementCheckpointTime failed on " + sd.getRoot().getPath() + ";type="+sd.getStorageDirType());
-        if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
-          editLog.processIOError(sd);
-
-        //add storage to the removed list
-        removedStorageDirs.add(sd);
-        it.remove();
       }
     }
   }
-  
+
   /**
-   * Remove storage directory given directory
+   * @param sds - array of SDs to process
+   * @param propagate - flag, if set - then call corresponding EditLog stream's 
+   * processIOError function.
    */
-  
-  void processIOError(File dirName) {
-    for (Iterator<StorageDirectory> it = 
-      dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      if (sd.getRoot().getPath().equals(dirName.getPath())) {
-        //add storage to the removed list
-        LOG.warn("FSImage:processIOError: removing storage: " + dirName.getPath());
-        try {
-          sd.unlock(); //try to unlock before removing (in case it is restored)
-        } catch (Exception e) {}
-        removedStorageDirs.add(sd);
-        it.remove();
+  void processIOError(ArrayList<StorageDirectory> sds, boolean propagate) {
+    ArrayList<EditLogOutputStream> al = null;
+    for(StorageDirectory sd:sds) {
+      // if has a stream assosiated with it - remove it too..
+      if (propagate && sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
+        EditLogOutputStream eStream = editLog.getEditsStream(sd);
+        if(al == null) al = new ArrayList<EditLogOutputStream>(1);
+        al.add(eStream);
+      }
+      
+      for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
+        StorageDirectory sd1 = it.next();
+        if (sd.equals(sd1)) {
+          //add storage to the removed list
+          LOG.warn("FSImage:processIOError: removing storage: "
+              + sd.getRoot().getPath());
+          try {
+            sd1.unlock(); //unlock before removing (in case it will be restored)
+          } catch (Exception e) {
+            // nothing
+          }
+          removedStorageDirs.add(sd1);
+          it.remove();
+          break;
+        }
       }
     }
+    // if there are some edit log streams to remove		
+    if(propagate && al != null) 
+      editLog.processIOError(al, false);
+    
+    //if called from edits log, the it will call increment from there
+    if(propagate) incrementCheckpointTime(); 
   }
 
   public FSEditLog getEditLog() {
@@ -1421,8 +1435,9 @@ public class FSImage extends Storage {
    * Renames new image
    */
   void renameCheckpoint() {
+    ArrayList<StorageDirectory> al = null;
     for (Iterator<StorageDirectory> it = 
-                       dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
+      dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
       StorageDirectory sd = it.next();
       File ckpt = getImageFile(sd, NameNodeFile.IMAGE_NEW);
       File curFile = getImageFile(sd, NameNodeFile.IMAGE);
@@ -1433,17 +1448,13 @@ public class FSImage extends Storage {
         if (!curFile.delete() || !ckpt.renameTo(curFile)) {
           LOG.warn("renaming  " + ckpt.getAbsolutePath() + " to "  + 
               curFile.getAbsolutePath() + " FAILED");
-          
-          // Close edit stream, if this directory is also used for edits
-          if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
-            editLog.processIOError(sd);
-          
-          // add storage to the removed list
-          removedStorageDirs.add(sd);
-          it.remove();
+
+          if(al == null) al = new ArrayList<StorageDirectory> (1);
+          al.add(sd);
         }
       }
     }
+    if(al != null) processIOError(al, true);
   }
 
   /**
@@ -1453,6 +1464,8 @@ public class FSImage extends Storage {
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     if(renewCheckpointTime)
       this.checkpointTime = FSNamesystem.now();
+    
+    ArrayList<StorageDirectory> al = null;
     for (Iterator<StorageDirectory> it = 
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -1474,14 +1487,12 @@ public class FSImage extends Storage {
         sd.write();
       } catch (IOException e) {
         LOG.error("Cannot write file " + sd.getRoot(), e);
-        // Close edit stream, if this directory is also used for edits
-        if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
-          editLog.processIOError(sd);
-      //add storage to the removed list
-        removedStorageDirs.add(sd);
-        it.remove();
+        
+        if(al == null) al = new ArrayList<StorageDirectory> (1);
+        al.add(sd);       
       }
     }
+    if(al != null) processIOError(al, true);
     ckptState = FSImage.CheckpointStates.START;
   }
 
@@ -1625,18 +1636,21 @@ public class FSImage extends Storage {
    * Return the name of the image file.
    */
   File getFsImageName() {
-  StorageDirectory sd = null;
-  for (Iterator<StorageDirectory> it = 
-              dirIterator(NameNodeDirType.IMAGE); it.hasNext();)
-    sd = it.next();
-  return getImageFile(sd, NameNodeFile.IMAGE); 
+    StorageDirectory sd = null;
+    for (Iterator<StorageDirectory> it = 
+      dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
+      sd = it.next();
+      if(sd.getRoot().canRead())
+        return getImageFile(sd, NameNodeFile.IMAGE); 
+    }
+    return null;
   }
 
   /**
    * See if any of removed storages iw "writable" again, and can be returned 
    * into service
    */
-  void attemptRestoreRemovedStorage() {   
+  synchronized void attemptRestoreRemovedStorage() {   
     // if directory is "alive" - copy the images there...
     if(!restoreFailedStorage || removedStorageDirs.size() == 0) 
       return; //nothing to restore
@@ -1653,6 +1667,10 @@ public class FSImage extends Storage {
         if(root.exists() && root.canWrite()) { 
           format(sd);
           LOG.info("restoring dir " + sd.getRoot().getAbsolutePath());
+          if(sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
+            File eFile = getEditFile(sd);
+            editLog.addNewEditLogStream(eFile);
+          }
           this.addStorageDir(sd); // restore
           it.remove();
         }

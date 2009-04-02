@@ -356,6 +356,9 @@ Trunk (unreleased changes)
     HADOOP-2413. Remove the static variable FSNamesystem.fsNamesystemObject.
     (Konstantin Shvachko via szetszwo)
 
+    HADOOP-4045. Fix processing of IO errors in EditsLog.
+    (Boris Shkolnik via shv)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
