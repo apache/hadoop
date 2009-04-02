@@ -37,6 +37,7 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -3910,8 +3911,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return null;
   }
 
+  /** Choose a random datanode
+   * 
+   * @return a randomly chosen datanode
+   */
   public DatanodeDescriptor getRandomDatanode() {
-    return replicator.chooseTarget(1, null, null, 0)[0];
+    return (DatanodeDescriptor)clusterMap.chooseRandom(NodeBase.ROOT);
   }
 
   /**

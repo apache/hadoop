@@ -202,6 +202,9 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-5595. NameNode does not need to run a replicator to choose a
+    random DataNode. (hairong)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
