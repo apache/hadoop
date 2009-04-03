@@ -438,7 +438,7 @@ public class MiniMRCluster {
     this.jobTrackerPort = jobTrackerPort;
     this.taskTrackerPort = taskTrackerPort;
     this.jobTrackerInfoPort = 0;
-    this.numTaskTrackers = numTaskTrackers;
+    this.numTaskTrackers = 0;
     this.namenode = namenode;
     this.ugi = ugi;
     this.conf = conf; // this is the conf the mr starts with
@@ -448,27 +448,18 @@ public class MiniMRCluster {
 
     // Create the TaskTrackers
     for (int idx = 0; idx < numTaskTrackers; idx++) {
+      String rack = null;
+      String host = null;
       if (racks != null) {
-        StaticMapping.addNodeToRack(hosts[idx],racks[idx]);
+        rack = racks[idx];
       }
       if (hosts != null) {
-        NetUtils.addStaticResolution(hosts[idx], "localhost");
+        host = hosts[idx];
       }
-      TaskTrackerRunner taskTracker;
-      taskTracker = new TaskTrackerRunner(idx, numDir, 
-          hosts == null ? null : hosts[idx], conf);
       
-      Thread taskTrackerThread = new Thread(taskTracker);
-      taskTrackerList.add(taskTracker);
-      taskTrackerThreadList.add(taskTrackerThread);
+      startTaskTracker(host, rack, idx, numDir);
     }
 
-    // Start the MiniMRCluster
-        
-    for (Thread taskTrackerThread : taskTrackerThreadList){
-      taskTrackerThread.start();
-    }
-    
     this.job = createJobConf(conf);
     waitUntilIdle();
   }
@@ -598,17 +589,41 @@ public class MiniMRCluster {
    * Kill the tasktracker.
    */
   public void stopTaskTracker(int id) {
-    taskTrackerList.get(id).shutdown();
+    TaskTrackerRunner tracker = taskTrackerList.remove(id);
+    tracker.shutdown();
 
-    taskTrackerThreadList.get(id).interrupt();
+    Thread thread = taskTrackerThreadList.remove(id);
+    thread.interrupt();
     
     try {
-      taskTrackerThreadList.get(id).join();
+      thread.join();
       // This will break the wait until idle loop
-      taskTrackerList.get(id).isDead = true;
+      tracker.isDead = true;
+      --numTaskTrackers;
     } catch (InterruptedException ex) {
       LOG.error("Problem waiting for task tracker to finish", ex);
     }
+  }
+  
+  /**
+   * Start the tasktracker.
+   */
+  public void startTaskTracker(String host, String rack, int idx, int numDir) 
+  throws IOException {
+    if (rack != null) {
+      StaticMapping.addNodeToRack(host, rack);
+    }
+    if (host != null) {
+      NetUtils.addStaticResolution(host, "localhost");
+    }
+    TaskTrackerRunner taskTracker;
+    taskTracker = new TaskTrackerRunner(idx, numDir, host, conf);
+    
+    Thread taskTrackerThread = new Thread(taskTracker);
+    taskTrackerList.add(taskTracker);
+    taskTrackerThreadList.add(taskTrackerThread);
+    taskTrackerThread.start();
+    ++numTaskTrackers;
   }
   
   /**

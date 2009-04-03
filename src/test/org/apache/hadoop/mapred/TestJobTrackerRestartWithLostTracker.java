@@ -105,10 +105,9 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     UtilsForTests.waitTillDone(jobClient);
 
     // Check if the tasks on the lost tracker got re-executed
-    assertTrue("Tracker killed while the jobtracker was down did not get lost "
-                + "upon restart", 
-                jobClient.getClusterStatus().getTaskTrackers() 
-                < mr.getNumTaskTrackers());
+    assertEquals("Tracker killed while the jobtracker was down did not get lost "
+                 + "upon restart", 
+                 jobClient.getClusterStatus().getTaskTrackers(), 1);
 
     // validate the history file
     TestJobHistory.validateJobHistoryFileFormat(id, job, "SUCCESS", true);

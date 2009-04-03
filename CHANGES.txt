@@ -836,6 +836,10 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5605. All the replicas incorrectly got marked as corrupt. (hairong)
 
+    HADOOP-5337. JobTracker, upon restart, now waits for the TaskTrackers to
+    join back before scheduling new tasks. This fixes race conditions associated
+    with greedy scheduling as was the case earlier. (Amar Kamat via ddas) 
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

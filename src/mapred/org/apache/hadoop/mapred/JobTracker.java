@@ -672,6 +672,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     Set<JobID> jobsToRecover; // set of jobs to be recovered
     
     private int totalEventsRecovered = 0;
+
+    Set<String> recoveredTrackers = 
+      Collections.synchronizedSet(new HashSet<String>());
     
     /** A custom listener that replays the events in the order in which the 
      * events (task attempts) occurred. 
@@ -848,6 +851,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return jobsToRecover.size() != 0;
     }
 
+    public boolean shouldSchedule() {
+      return recoveredTrackers.isEmpty();
+    }
+
+    private void markTracker(String trackerName) {
+      recoveredTrackers.add(trackerName);
+    }
+
+    void unMarkTracker(String trackerName) {
+      recoveredTrackers.remove(trackerName);
+    }
+
     Set<JobID> getJobsToRecover() {
       return jobsToRecover;
     }
@@ -984,6 +999,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       // IV. Register a new tracker
       boolean isTrackerRegistered = getTaskTracker(trackerName) != null;
       if (!isTrackerRegistered) {
+        markTracker(trackerName); // add the tracker to recovery-manager
         addNewTracker(ttStatus);
       }
       
@@ -2321,6 +2337,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // started JobTracker
         if (hasRestarted()) {
           addRestartInfo = true;
+          // inform the recovery manager about this tracker joining back
+          recoveryManager.unMarkTracker(trackerName);
         } else {
           // Jobtracker might have restarted but no recovery is needed
           // otherwise this code should not be reached
@@ -2362,7 +2380,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     List<TaskTrackerAction> actions = new ArrayList<TaskTrackerAction>();
       
     // Check for new tasks to be executed on the tasktracker
-    if (acceptNewTasks && !isBlacklisted) {
+    if (recoveryManager.shouldSchedule() && acceptNewTasks && !isBlacklisted) {
       TaskTrackerStatus taskTrackerStatus = getTaskTracker(trackerName);
       if (taskTrackerStatus == null) {
         LOG.warn("Unknown task tracker polling; ignoring: " + trackerName);
@@ -3305,6 +3323,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     synchronized (trackerToJobsToCleanup) {
       trackerToJobsToCleanup.remove(trackerName);
     }
+    
+    // Inform the recovery manager
+    recoveryManager.unMarkTracker(trackerName);
     
     Set<TaskAttemptID> lostTasks = trackerToTaskMap.get(trackerName);
     trackerToTaskMap.remove(trackerName);
