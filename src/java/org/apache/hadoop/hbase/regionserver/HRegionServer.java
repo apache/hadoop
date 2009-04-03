@@ -104,12 +104,16 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
-public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErrorHandler, Runnable {
+public class HRegionServer implements HConstants, HRegionInterface,
+    HBaseRPCErrorHandler, Runnable, Watcher {
   static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
@@ -215,6 +219,9 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
 
   private final ZooKeeperWrapper zooKeeperWrapper;
 
+  // A sleeper that sleeps for msgInterval.
+  private final Sleeper sleeper;
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -246,6 +253,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
     this.serverLeaseTimeout =
       conf.getInt("hbase.master.lease.period", 120 * 1000);
+
+    sleeper = new Sleeper(this.msgInterval, this.stopRequested);
 
     // Cache flushing thread.
     this.cacheFlusher = new MemcacheFlusher(conf, this);
@@ -287,6 +296,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
         "hbase-958 debugging");
     }
     this.zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    watchMasterAddress();
+
     boolean startCodeOk = false; 
     while(!startCodeOk) {
       serverInfo.setStartCode(System.currentTimeMillis());
@@ -307,7 +318,32 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
-    
+  }
+
+  /**
+   * We register ourselves as a watcher on the master address ZNode. This is
+   * called by ZooKeeper when we get an event on that ZNode. When this method
+   * is called it means either our master has died, or a new one has come up.
+   * Either way we need to update our knowledge of the master.
+   * @param event WatchedEvent from ZooKeeper.
+   */
+  public void process(WatchedEvent event) {
+    EventType type = event.getType();
+    LOG.info("Got ZooKeeper event, state: " + event.getState() + ", type: " +
+              type + ", path: " + event.getPath());
+    if (type == EventType.NodeCreated) {
+      getMaster();
+    }
+
+    // ZooKeeper watches are one time only, so we need to re-register our watch.
+    watchMasterAddress();
+  }
+
+  private void watchMasterAddress() {
+    while (!stopRequested.get() && !zooKeeperWrapper.watchMasterAddress(this)) {
+      LOG.warn("Unable to set watcher on ZooKeeper master address. Retrying.");
+      sleeper.sleep();
+    }
   }
 
   /**
@@ -317,10 +353,8 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
    */
   public void run() {
     boolean quiesceRequested = false;
-    // A sleeper that sleeps for msgInterval.
-    Sleeper sleeper = new Sleeper(this.msgInterval, this.stopRequested);
     try {
-      init(reportForDuty(sleeper));
+      init(reportForDuty());
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
@@ -391,7 +425,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
               switch(msgs[i].getType()) {
               case MSG_CALL_SERVER_STARTUP:
                 // We the MSG_CALL_SERVER_STARTUP on startup but we can also
-                // get it when the master is panicing because for instance
+                // get it when the master is panicking because for instance
                 // the HDFS has been yanked out from under it.  Be wary of
                 // this message.
                 if (checkFileSystem()) {
@@ -412,7 +446,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
                     LOG.fatal("error restarting server", e);
                     break;
                   }
-                  reportForDuty(sleeper);
+                  reportForDuty();
                   restart = true;
                 } else {
                   LOG.fatal("file system available check failed. " +
@@ -1124,16 +1158,12 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
     Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.logRoller);
   }
-  
-  /*
-   * Let the master know we're here
-   * Run initialization using parameters passed us by the master.
-   */
-  private MapWritable reportForDuty(final Sleeper sleeper) {
+
+  private boolean getMaster() {
     HServerAddress masterAddress = null;
     while (masterAddress == null) {
       if (stopRequested.get()) {
-        return null;
+        return false;
       }
       try {
         masterAddress = zooKeeperWrapper.readMasterAddressOrThrow();
@@ -1144,9 +1174,7 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
       }
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Telling master at " + masterAddress + " that we are up");
-    }
+    LOG.info("Telling master at " + masterAddress + " that we are up");
     HMasterRegionInterface master = null;
     while (!stopRequested.get() && master == null) {
       try {
@@ -1162,6 +1190,17 @@ public class HRegionServer implements HConstants, HRegionInterface, HBaseRPCErro
       }
     }
     this.hbaseMaster = master;
+    return true;
+  }
+
+  /*
+   * Let the master know we're here
+   * Run initialization using parameters passed us by the master.
+   */
+  private MapWritable reportForDuty() {
+    if (!getMaster()) {
+      return null;
+    }
     MapWritable result = null;
     long lastMsg = 0;
     while(!stopRequested.get()) {

@@ -132,6 +132,8 @@ Release 0.20.0 - Unreleased
                (Tim Sell via Stack)
    HBASE-1186  Memory-aware Maps with LRU eviction for cell cache 
                (Jonathan Gray via Andrew Purtell)
+   HBASE-1205  RegionServers should find new master when a new master comes up
+               (Nitay Joffe via Andrew Purtell)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

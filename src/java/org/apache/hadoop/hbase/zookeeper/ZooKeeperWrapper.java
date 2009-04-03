@@ -224,6 +224,26 @@ public class ZooKeeperWrapper implements HConstants {
     return readAddress(masterElectionZNode, watcher);
   }
 
+  /**
+   * Set a watcher on the master address ZNode. The watcher will be set unless
+   * an exception occurs with ZooKeeper.
+   * @param watcher Watcher to set on master address ZNode.
+   * @return true if watcher was set, false otherwise.
+   */
+  public boolean watchMasterAddress(Watcher watcher) {
+    try {
+      zooKeeper.exists(masterElectionZNode, watcher);
+    } catch (KeeperException e) {
+      LOG.warn("Failed to set watcher on ZNode " + masterElectionZNode, e);
+      return false;
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to set watcher on ZNode " + masterElectionZNode, e);
+      return false;
+    }
+    LOG.debug("Set watcher on master address ZNode " + masterElectionZNode);
+    return true;
+  }
+
   private HServerAddress readAddress(String znode, Watcher watcher) {
     try {
       return readAddressOrThrow(znode, watcher);
