@@ -88,6 +88,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -190,6 +191,9 @@ public class DataNode extends Configured
   
   public DataBlockScanner blockScanner = null;
   public Daemon blockScannerThread = null;
+  
+  /** Activated plug-ins. */
+  private List<ServicePlugin> plugins;
   
   private static final Random R = new Random();
   
@@ -390,6 +394,16 @@ public class DataNode extends Configured
     dnRegistration.setIpcPort(ipcServer.getListenerAddress().getPort());
 
     LOG.info("dnRegistration = " + dnRegistration);
+    
+    plugins = conf.getInstances("dfs.datanode.plugins", ServicePlugin.class);
+    for (ServicePlugin p: plugins) {
+      try {
+        p.start(this);
+        LOG.info("Started plug-in " + p);
+      } catch (Throwable t) {
+        LOG.warn("ServicePlugin " + p + " could not be started", t);
+      }
+    }
   }
 
   /**
@@ -557,6 +571,17 @@ public class DataNode extends Configured
    * Otherwise, deadlock might occur.
    */
   public void shutdown() {
+    if (plugins != null) {
+      for (ServicePlugin p : plugins) {
+        try {
+          p.stop();
+          LOG.info("Stopped plug-in " + p);
+        } catch (Throwable t) {
+          LOG.warn("ServicePlugin " + p + " could not be stopped", t);
+        }
+      }
+    }
+    
     if (infoServer != null) {
       try {
         infoServer.stop();

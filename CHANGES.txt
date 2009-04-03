@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-5528. Add a configurable hash partitioner operating on ranges of
     BinaryComparable keys. (Klaas Bosteels via shv)
 
+    HADOOP-5257. HDFS servers may start and stop external components through
+    a plugin interface. (Carlos Valiente via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

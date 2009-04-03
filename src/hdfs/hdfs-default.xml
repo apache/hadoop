@@ -378,4 +378,18 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.datanode.plugins</name>
+  <value></value>
+  <description>Comma-separated list of datanode plug-ins to be activated.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.plugins</name>
+  <value></value>
+  <description>Comma-separated list of namenode plug-ins to be activated.
+  </description>
+</property>
+
 </configuration>

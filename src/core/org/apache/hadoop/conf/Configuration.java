@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -839,6 +840,31 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Get the value of the <code>name</code> property as a <code>List</code>
+   * of objects implementing the interface specified by <code>xface</code>.
+   * 
+   * An exception is thrown if any of the classes does not exist, or if it does
+   * not implement the named interface.
+   * 
+   * @param name the property name.
+   * @param xface the interface implemented by the classes named by
+   *        <code>name</code>.
+   * @return a <code>List</code> of objects implementing <code>xface</code>.
+   */
+  @SuppressWarnings("unchecked")
+  public <U> List<U> getInstances(String name, Class<U> xface) {
+    List<U> ret = new ArrayList<U>();
+    Class<?>[] classes = getClasses(name);
+    for (Class<?> cl: classes) {
+      if (!xface.isAssignableFrom(cl)) {
+        throw new RuntimeException(cl + " does not implement " + xface);
+      }
+      ret.add((U)ReflectionUtils.newInstance(cl, this));
+    }
+    return ret;
   }
 
   /** 
