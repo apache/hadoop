@@ -59,8 +59,7 @@ public class RawLocalFileSystem extends FileSystem {
 
   public URI getUri() { return NAME; }
   
-  public void initialize(URI uri, Configuration conf) throws IOException {
-    super.initialize(uri, conf);
+  public void initialize(URI uri, Configuration conf) {
     setConf(conf);
   }
   

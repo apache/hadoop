@@ -37,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Text;
@@ -635,14 +634,15 @@ abstract class Task implements Writable, Configurable {
      new HashMap<String, FileSystemStatisticUpdater>();
   
   private synchronized void updateCounters() {
-    for(Statistics stat: FileSystem.getAllStatistics()) {
-      String uriScheme = stat.getScheme();
+    for(Map.Entry<String, FileSystem.Statistics> entry : 
+      FileSystem.getStatistics().entrySet()) {
+      String uriScheme = entry.getKey();
       FileSystemStatisticUpdater updater = statisticUpdaters.get(uriScheme);
       if(updater==null) {//new FileSystem has been found in the cache
-        updater = new FileSystemStatisticUpdater(uriScheme, stat);
+        updater = new FileSystemStatisticUpdater(uriScheme, entry.getValue());
         statisticUpdaters.put(uriScheme, updater);
       }
-      updater.updateCounters();      
+      updater.updateCounters();
     }
   }
 

@@ -56,7 +56,6 @@ public class FTPFileSystem extends FileSystem {
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException { // get
-    super.initialize(uri, conf);
     // get host information from uri (overrides info in conf)
     String host = uri.getHost();
     host = (host == null) ? conf.get("fs.ftp.host", null) : host;

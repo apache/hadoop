@@ -40,7 +40,6 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.VIntWritable;
 import org.apache.hadoop.io.VLongWritable;
@@ -81,7 +80,6 @@ public class TestIO extends TestCase {
       (byte) 123, true, 12345, 123456789L, (float) 1.2, 1.234,
       "random string", vector, list, map 
     };
-    byte[] appSpecificBytes = new byte[] { 1, 2, 3 };
 
     FileOutputStream ostream = new FileOutputStream(tmpfile);
     DataOutputStream dostream = new DataOutputStream(ostream);
@@ -89,7 +87,6 @@ public class TestIO extends TestCase {
     for (Object obj : objects) {
       out.write(obj);
     }
-    out.writeBytes(appSpecificBytes, 100);
     dostream.close();
     ostream.close();
 
@@ -99,7 +96,6 @@ public class TestIO extends TestCase {
     for (Object obj : objects) {
       assertEquals(obj, in.read());
     }
-    assertEquals(new Buffer(appSpecificBytes), in.read());
     distream.close();
     istream.close();
 
@@ -118,9 +114,6 @@ public class TestIO extends TestCase {
       dis = new DataInputStream(bais);
       assertEquals(obj, (new TypedBytesInput(dis)).read());
     }
-    byte[] rawBytes = in.readRaw();
-    assertEquals(new Buffer(appSpecificBytes),
-      new Buffer(rawBytes, 5, rawBytes.length - 5));
     distream.close();
     istream.close();
   }
@@ -171,8 +164,7 @@ public class TestIO extends TestCase {
       new ByteWritable((byte) 123), new BooleanWritable(true),
       new VIntWritable(12345), new VLongWritable(123456789L),
       new FloatWritable((float) 1.2), new DoubleWritable(1.234),
-      new Text("random string"),
-      new ObjectWritable("test")
+      new Text("random string")
     };
     TypedBytesWritable tbw = new TypedBytesWritable();
     tbw.setValue("typed bytes text");
@@ -209,7 +201,7 @@ public class TestIO extends TestCase {
 
     TypedBytesWritableInput in = new TypedBytesWritableInput(distream);
     for (Writable w : writables) {
-      assertEquals(w.toString(), in.read().toString());
+      assertEquals(w, in.read());
     }
 
     assertEquals(tbw.getValue().toString(), in.read().toString());

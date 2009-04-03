@@ -24,6 +24,7 @@ import java.net.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -34,7 +35,7 @@ import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.*;
 
 
 /****************************************************************
@@ -69,7 +70,6 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
-    super.initialize(uri, conf);
     setConf(conf);
 
     String host = uri.getHost();
