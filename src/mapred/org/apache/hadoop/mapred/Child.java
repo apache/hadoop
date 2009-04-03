@@ -130,7 +130,9 @@ class Child {
         task = myTask.getTask();
         taskid = task.getTaskID();
         isCleanup = task.isTaskCleanupTask();
-        
+        // reset the statistics for the task
+        FileSystem.clearStatistics();
+
         //create the index file so that the log files 
         //are viewable immediately
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);

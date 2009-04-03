@@ -124,15 +124,26 @@ public class TypedBytesOutput {
   }
 
   /**
+   * Writes a bytes array as a typed bytes sequence, using a given typecode.
+   * 
+   * @param bytes the bytes array to be written
+   * @param code the typecode to use
+   * @throws IOException
+   */
+  public void writeBytes(byte[] bytes, int code) throws IOException {
+    out.write(code);
+    out.writeInt(bytes.length);
+    out.write(bytes);
+  }
+  
+  /**
    * Writes a bytes array as a typed bytes sequence.
    * 
    * @param bytes the bytes array to be written
    * @throws IOException
    */
   public void writeBytes(byte[] bytes) throws IOException {
-    out.write(Type.BYTES.code);
-    out.writeInt(bytes.length);
-    out.write(bytes);
+    writeBytes(bytes, Type.BYTES.code);
   }
 
   /**

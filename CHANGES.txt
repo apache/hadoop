@@ -74,6 +74,9 @@ Trunk (unreleased changes)
     HADOOP-5257. HDFS servers may start and stop external components through
     a plugin interface. (Carlos Valiente via dhruba)
 
+    HADOOP-5450. Add application-specific data types to streaming's typed bytes
+    interface. (Klaas Bosteels via omalley)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

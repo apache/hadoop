@@ -40,6 +40,7 @@ import org.apache.hadoop.io.VIntWritable;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.record.Record;
 
 /**
@@ -91,6 +92,7 @@ public class TypedBytesWritableOutput {
 
   /** Creates a new instance of TypedBytesWritableOutput. */
   public TypedBytesWritableOutput(TypedBytesOutput out) {
+    this();
     this.out = out;
   }
 
@@ -209,13 +211,12 @@ public class TypedBytesWritableOutput {
   }
 
   public void writeWritable(Writable w) throws IOException {
-    out.writeVectorHeader(2);
-    out.writeString(w.getClass().getName());
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
+    WritableUtils.writeString(dos, w.getClass().getName());
     w.write(dos);
     dos.close();
-    out.writeBytes(baos.toByteArray());
+    out.writeBytes(baos.toByteArray(), Type.WRITABLE.code);
   }
 
 }

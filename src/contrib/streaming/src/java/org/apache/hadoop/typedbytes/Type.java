@@ -23,6 +23,7 @@ package org.apache.hadoop.typedbytes;
  */
 public enum Type {
 
+  // codes for supported types (< 50):
   BYTES(0),
   BYTE(1),
   BOOL(2),
@@ -34,6 +35,11 @@ public enum Type {
   VECTOR(8),
   LIST(9),
   MAP(10),
+  
+  // application-specific codes (50-200):
+  WRITABLE(50),
+  
+  // low-level codes (> 200):
   MARKER(255);
 
   final int code;

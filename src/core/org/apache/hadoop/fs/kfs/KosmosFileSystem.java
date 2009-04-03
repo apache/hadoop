@@ -62,27 +62,29 @@ public class KosmosFileSystem extends FileSystem {
 
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException {
-        try {
-	    if (kfsImpl == null) {
-                if (uri.getHost() == null) {
-                    kfsImpl = new KFSImpl(conf.get("fs.kfs.metaServerHost", ""),
-                                          conf.getInt("fs.kfs.metaServerPort", -1),
-                                          statistics);
-                } else {
-                    kfsImpl = new KFSImpl(uri.getHost(), uri.getPort(), statistics);
-                }
-	    }
-
-            this.localFs = FileSystem.getLocal(conf);
-            this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
-            this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
-            setConf(conf);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Unable to initialize KFS");
-            System.exit(-1);
+      super.initialize(uri, conf);
+      try {
+        if (kfsImpl == null) {
+          if (uri.getHost() == null) {
+            kfsImpl = new KFSImpl(conf.get("fs.kfs.metaServerHost", ""),
+                                  conf.getInt("fs.kfs.metaServerPort", -1),
+                                  statistics);
+          } else {
+            kfsImpl = new KFSImpl(uri.getHost(), uri.getPort(), statistics);
+          }
         }
+
+        this.localFs = FileSystem.getLocal(conf);
+        this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+        this.workingDir = new Path("/user", System.getProperty("user.name")
+                                   ).makeQualified(this);
+        setConf(conf);
+
+      } catch (Exception e) {
+        e.printStackTrace();
+        System.out.println("Unable to initialize KFS");
+        System.exit(-1);
+      }
     }
 
     @Override
