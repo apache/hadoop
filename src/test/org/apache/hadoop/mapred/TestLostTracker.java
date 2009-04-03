@@ -86,8 +86,7 @@ public class TestLostTracker extends TestCase {
     UtilsForTests.waitTillDone(jobClient);
 
     // Check if the tasks on the lost tracker got killed and re-executed
-    assertTrue(jobClient.getClusterStatus().getTaskTrackers() 
-                < mr.getNumTaskTrackers());
+    assertEquals(jobClient.getClusterStatus().getTaskTrackers(), 1);
     assertEquals(JobStatus.SUCCEEDED, rJob.getJobState());
     TaskInProgress tip = mr.getJobTrackerRunner().getJobTracker().
                          getTip(taskid.getTaskID());
