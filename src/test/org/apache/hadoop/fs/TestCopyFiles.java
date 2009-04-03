@@ -32,19 +32,17 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
 
 
 /**
@@ -62,7 +60,7 @@ public class TestCopyFiles extends TestCase {
   static final URI LOCAL_FS = URI.create("file:///");
   
   private static final Random RAN = new Random();
-  private static final int NFILES = 20;
+  private static final int NFILES = 7;
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
@@ -573,7 +571,7 @@ public class TestCopyFiles extends TestCase {
       for (MyFile f : files) {
         totsize += f.getSize();
       }
-      JobConf job = mr.createJobConf();
+      Configuration job = mr.createJobConf();
       job.setLong("distcp.bytes.per.map", totsize / 3);
       ToolRunner.run(new DistCp(job),
           new String[] {"-m", "100",
@@ -611,6 +609,7 @@ public class TestCopyFiles extends TestCase {
       final String nnUri = FileSystem.getDefaultUri(conf).toString();
       final FileSystem fs = FileSystem.get(URI.create(nnUri), conf);
       final DistCp distcp = new DistCp(conf);
+      final FsShell shell = new FsShell(conf);  
 
       final String srcrootdir =  "/src_root";
       final Path srcrootpath = new Path(srcrootdir); 
@@ -624,7 +623,10 @@ public class TestCopyFiles extends TestCase {
 
         ToolRunner.run(distcp,
             new String[]{"-filelimit", ""+filelimit, nnUri+srcrootdir, nnUri+dstrootdir});
-        
+        String results = execCmd(shell, "-lsr", dstrootdir);
+        results = removePrefix(results, dstrootdir);
+        System.out.println("results=" +  results);
+
         FileStatus[] dststat = getFileStatus(fs, dstrootdir, files, true);
         assertEquals(filelimit, dststat.length);
         deldir(fs, dstrootdir);
@@ -745,6 +747,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  /** test -delete */
   public void testDelete() throws Exception {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
@@ -760,31 +763,45 @@ public class TestCopyFiles extends TestCase {
       final String srcrootdir = "/src_root";
       final String dstrootdir = "/dst_root";
 
-      {//test -delete
+      {
+        //create source files
         createFiles(nnURI, srcrootdir);
-        createFiles(nnURI, dstrootdir);
-        create(fs, new Path(dstrootdir, "foo"));
-        create(fs, new Path(dstrootdir, "foobar"));
-        
-        System.out.println("srcrootdir=" +  srcrootdir);
-        shell.run(new String[]{"-lsr", srcrootdir});
-
-        System.out.println("dstrootdir=" +  dstrootdir);
-        shell.run(new String[]{"-lsr", dstrootdir});
-
-        ToolRunner.run(distcp,
-            new String[]{"-delete", "-update", "-log", "/log",
-                         nnUri+srcrootdir, nnUri+dstrootdir});
-
         String srcresults = execCmd(shell, "-lsr", srcrootdir);
         srcresults = removePrefix(srcresults, srcrootdir);
         System.out.println("srcresults=" +  srcresults);
 
+        //create some files in dst
+        createFiles(nnURI, dstrootdir);
+        System.out.println("dstrootdir=" +  dstrootdir);
+        shell.run(new String[]{"-lsr", dstrootdir});
+
+        //run distcp
+        ToolRunner.run(distcp,
+            new String[]{"-delete", "-update", "-log", "/log",
+                         nnUri+srcrootdir, nnUri+dstrootdir});
+
+        //make sure src and dst contains the same files
         String dstresults = execCmd(shell, "-lsr", dstrootdir);
         dstresults = removePrefix(dstresults, dstrootdir);
-        System.out.println("dstresults=" +  dstresults);
-        
+        System.out.println("first dstresults=" +  dstresults);
         assertEquals(srcresults, dstresults);
+
+        //create additional file in dst
+        create(fs, new Path(dstrootdir, "foo"));
+        create(fs, new Path(dstrootdir, "foobar"));
+
+        //run distcp again
+        ToolRunner.run(distcp,
+            new String[]{"-delete", "-update", "-log", "/log2",
+                         nnUri+srcrootdir, nnUri+dstrootdir});
+        
+        //make sure src and dst contains the same files
+        dstresults = execCmd(shell, "-lsr", dstrootdir);
+        dstresults = removePrefix(dstresults, dstrootdir);
+        System.out.println("second dstresults=" +  dstresults);
+        assertEquals(srcresults, dstresults);
+
+        //cleanup
         deldir(fs, dstrootdir);
         deldir(fs, srcrootdir);
       }

@@ -840,6 +840,9 @@ Release 0.20.0 - Unreleased
     join back before scheduling new tasks. This fixes race conditions associated
     with greedy scheduling as was the case earlier. (Amar Kamat via ddas) 
 
+    HADOOP-5227. Fix distcp so -update and -delete can be meaningfully
+    combined. (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
