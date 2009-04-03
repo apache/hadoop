@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.List"
   import="java.util.regex.*"
+  import="java.net.URLEncoder" 
   import="org.apache.hadoop.hbase.RegionHistorian"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.RegionHistorian.RegionHistoryInformation"
@@ -33,7 +34,7 @@
     if (m.matches()) {
       // Wrap the region name in an href so user can click on it.
       description = RegionHistorian.SPLIT_PREFIX +
-      "<a href=\"regionhistorian.jsp?regionname=" + m.group(1) + "\">" +
+      "<a href=\"regionhistorian.jsp?regionname=" + URLEncoder.encode(m.group(1), "UTF-8") + "\">" +
         m.group(1) + "</a>";
     }
     

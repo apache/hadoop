@@ -1,4 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
+  import="java.io.IOException"
+  import="java.util.Map"
+  import="java.net.URLEncoder" 
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.io.Writable"
   import="org.apache.hadoop.hbase.HTableDescriptor"
@@ -12,8 +15,6 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.util.Bytes"
-  import="java.io.IOException"
-  import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
@@ -131,7 +132,8 @@
         hriEntry.getValue()).getInfoPort();
     
     String urlRegionHistorian =
-        "/regionhistorian.jsp?regionname="+hriEntry.getKey().getRegionNameAsString();
+        "/regionhistorian.jsp?regionname=" + 
+        URLEncoder.encode(hriEntry.getKey().getRegionNameAsString(), "UTF-8");
 
     String urlRegionServer =
         "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";

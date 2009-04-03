@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
+  import="java.net.URLEncoder" 
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.master.HMaster"
@@ -54,10 +55,10 @@
   if (rootLocation != null) { %>
 <table>
 <tr><th>Table</th><th>Description</th></tr>
-<tr><td><a href=/table.jsp?name=<%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %>><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td><td>The -ROOT- table holds references to all .META. regions.</td></tr>
+<tr><td><a href=/table.jsp?name=<%= URLEncoder.encode(Bytes.toString(HConstants.ROOT_TABLE_NAME), "UTF-8") %>><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td><td>The -ROOT- table holds references to all .META. regions.</td></tr>
 <%
     if (onlineRegions != null && onlineRegions.size() > 0) { %>
-<tr><td><a href=/table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td><td>The .META. table holds references to all User Table regions</td></tr>
+<tr><td><a href=/table.jsp?name=<%= URLEncoder.encode(Bytes.toString(HConstants.META_TABLE_NAME), "UTF-8") %>><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td><td>The .META. table holds references to all User Table regions</td></tr>
   
 <%  } %>
 </table>
@@ -69,7 +70,7 @@
 <table>
 <tr><th>Table</th><th>Description</th></tr>
 <%   for(HTableDescriptor htDesc : tables ) { %>
-<tr><td><a href=/table.jsp?name=<%= htDesc.getNameAsString() %>><%= htDesc.getNameAsString() %></a> </td><td><%= htDesc.toString() %></td></tr>
+<tr><td><a href=/table.jsp?name=<%= URLEncoder.encode(htDesc.getNameAsString(), "UTF-8") %>><%= htDesc.getNameAsString() %></a> </td><td><%= htDesc.toString() %></td></tr>
 <%   }  %>
 <p> <%= tables.length %> table(s) in set.</p>
 </table>

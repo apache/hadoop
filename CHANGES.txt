@@ -70,6 +70,8 @@ Release 0.20.0 - Unreleased
                Joffe via Andrew Purtell)
    HBASE-1303  Secondary index configuration prevents HBase from starting
                (Ken Weiner via Stack)
+   HBASE-1298  master.jsp & table.jsp do not URI Encode table or region
+               names in links (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
