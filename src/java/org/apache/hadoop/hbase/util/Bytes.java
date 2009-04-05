@@ -241,7 +241,6 @@ public class Bytes {
       result[offset] = ((byte)i);
       return result;
     }
-    offset++;
 
     int len = -112;
     if (i < 0) {
