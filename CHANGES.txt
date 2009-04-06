@@ -722,6 +722,8 @@ Release 0.20.0 - Unreleased
     HADOOP-5468. Add sub-menus to forrest documentation and make some minor
     edits.  (Corinne Chandel via szetszwo)
 
+    HADOOP-5437. Fix TestMiniMRDFSSort to properly test jvm-reuse. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3293. Fixes FileInputFormat to do provide locations for splits
