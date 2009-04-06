@@ -77,6 +77,9 @@ Trunk (unreleased changes)
     HADOOP-5450. Add application-specific data types to streaming's typed bytes
     interface. (Klaas Bosteels via omalley)
 
+    HADOOP-5518. Add contrib/mrunit, a MapReduce unit test framework.
+    (Aaron Kimball via cutting)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
