@@ -80,6 +80,9 @@ Trunk (unreleased changes)
     HADOOP-5518. Add contrib/mrunit, a MapReduce unit test framework.
     (Aaron Kimball via cutting)
 
+    HADOOP-5469.  Add /metrics servlet to daemons, providing metrics
+    over HTTP as either text or JSON.  (Philip Zeyliger via cutting)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

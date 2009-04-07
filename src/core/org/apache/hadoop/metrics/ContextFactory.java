@@ -22,6 +22,8 @@ package org.apache.hadoop.metrics;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -141,6 +143,14 @@ public class ContextFactory {
     throws IOException, ClassNotFoundException, InstantiationException,
            IllegalAccessException {
     return getContext(contextName, contextName);
+  }
+  
+  /** 
+   * Returns all MetricsContexts built by this factory.
+   */
+  public synchronized Collection<MetricsContext> getAllContexts() {
+    // Make a copy to avoid race conditions with creating new contexts.
+    return new ArrayList<MetricsContext>(contextMap.values());
   }
     
   /**
