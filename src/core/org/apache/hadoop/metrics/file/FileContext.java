@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.apache.hadoop.metrics.ContextFactory;
+import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 
@@ -61,7 +62,18 @@ public class FileContext extends AbstractMetricsContext {
       file = new File(fileName);
     }
         
-    parseAndSetPeriod(PERIOD_PROPERTY);
+    String periodStr = getAttribute(PERIOD_PROPERTY);
+    if (periodStr != null) {
+      int period = 0;
+      try {
+        period = Integer.parseInt(periodStr);
+      } catch (NumberFormatException nfe) {
+      }
+      if (period <= 0) {
+        throw new MetricsException("Invalid period: " + periodStr);
+      }
+      setPeriod(period);
+    }
   }
 
   /**

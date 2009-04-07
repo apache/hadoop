@@ -37,7 +37,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.log.LogLevel;
-import org.apache.hadoop.metrics.MetricsServlet;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.mortbay.jetty.Connector;
@@ -189,7 +188,6 @@ public class HttpServer implements FilterContainer {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
-    addServlet("metrics", "/metrics", MetricsServlet.class);
   }
 
   public void addContext(Context ctxt, boolean isFiltered)
