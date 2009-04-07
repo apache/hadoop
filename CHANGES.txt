@@ -854,6 +854,9 @@ Release 0.20.0 - Unreleased
     HADOOP-3810. NameNode seems unstable on a cluster with little space left.
     (hairong)
 
+    HADOOP-5068. Fix NPE in TestCapacityScheduler.  (Vinod Kumar Vavilapalli
+    via szetszwo)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
