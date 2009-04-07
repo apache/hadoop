@@ -137,6 +137,7 @@ Release 0.20.0 - Unreleased
                (Jonathan Gray via Andrew Purtell)
    HBASE-1205  RegionServers should find new master when a new master comes up
                (Nitay Joffe via Andrew Purtell)
+   HBASE-1309  HFile rejects key in Memcache with empty value
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

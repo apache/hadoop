@@ -452,7 +452,9 @@ public class HFile {
       this.out.writeInt(value.length);
       this.valuelength += valuelength;
       this.out.write(key);
-      this.out.write(value);
+      if (value.length > 0) {
+        this.out.write(value);
+      }
       // Are we the first key in this block?
       if (this.firstKey == null) this.firstKey = key;
       this.lastKey = key;
@@ -481,8 +483,8 @@ public class HFile {
     }
 
     private void checkValue(final byte [] value) throws IOException {
-      if (value == null || value.length <= 0) {
-        throw new IOException("Value cannot be null or empty");
+      if (value == null) {
+        throw new IOException("Value cannot be null");
       }
     }
 
