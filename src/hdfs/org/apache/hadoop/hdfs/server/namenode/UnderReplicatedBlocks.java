@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
  * Blocks have only one replicas has the highest
  */
 class UnderReplicatedBlocks implements Iterable<Block> {
-  private static final int LEVEL = 3;
+  static final int LEVEL = 3;
   private List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
       
   /* constructor */
@@ -129,7 +129,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   }
       
   /* remove a block from a under replication queue given a priority*/
-  private boolean remove(Block block, int priLevel) {
+  boolean remove(Block block, int priLevel) {
     if(priLevel >= 0 && priLevel < LEVEL 
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.stateChangeLog.debug(
@@ -182,12 +182,15 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     }
   }
       
-  /* return a iterator of all the under replication blocks */
-  public synchronized Iterator<Block> iterator() {
-    return new Iterator<Block>() {
+  /* return an iterator of all the under replication blocks */
+  public synchronized BlockIterator iterator() {
+    return new BlockIterator();
+  }
+  
+    class BlockIterator implements Iterator<Block> {
       private int level;
       private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
-              
+      BlockIterator()  
       {
         level=0;
         for(int i=0; i<LEVEL; i++) {
@@ -214,6 +217,9 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       public void remove() {
         iterators.get(level).remove();
       }
+      
+      public int getPriority() {
+        return level;
     };
   }
 }
