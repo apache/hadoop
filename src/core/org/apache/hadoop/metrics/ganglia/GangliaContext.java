@@ -88,19 +88,7 @@ public class GangliaContext extends AbstractMetricsContext {
     
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
-        
-    String periodStr = getAttribute(PERIOD_PROPERTY);
-    if (periodStr != null) {
-      int period = 0;
-      try {
-        period = Integer.parseInt(periodStr);
-      } catch (NumberFormatException nfe) {
-      }
-      if (period <= 0) {
-        throw new MetricsException("Invalid period: " + periodStr);
-      }
-      setPeriod(period);
-    }
+    parseAndSetPeriod(PERIOD_PROPERTY);
         
     metricsServers = 
       Util.parse(getAttribute(SERVERS_PROPERTY), DEFAULT_PORT); 

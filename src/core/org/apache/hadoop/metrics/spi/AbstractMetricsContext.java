@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
@@ -60,7 +61,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
   private ContextFactory factory = null;
   private String contextName = null;
     
-  static class TagMap extends TreeMap<String,Object> {
+  public static class TagMap extends TreeMap<String,Object> {
     private static final long serialVersionUID = 3546309335061952993L;
     TagMap() {
       super();
@@ -83,8 +84,14 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     }
   }
   
-  static class MetricMap extends TreeMap<String,Number> {
+  public static class MetricMap extends TreeMap<String,Number> {
     private static final long serialVersionUID = -7495051861141631609L;
+    MetricMap() {
+      super();
+    }
+    MetricMap(MetricMap orig) {
+      super(orig);
+    }
   }
             
   static class RecordMap extends HashMap<TagMap,MetricMap> {
@@ -309,6 +316,28 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     }
     flush();
   }
+  
+  /**
+   * Retrieves all the records managed by this MetricsContext.
+   * Useful for monitoring systems that are polling-based.
+   * @return A non-null collection of all monitoring records.
+   */
+  public synchronized Map<String, Collection<OutputRecord>> getAllRecords() {
+    Map<String, Collection<OutputRecord>> out = new TreeMap<String, Collection<OutputRecord>>();
+    for (String recordName : bufferedData.keySet()) {
+      RecordMap recordMap = bufferedData.get(recordName);
+      synchronized (recordMap) {
+        List<OutputRecord> records = new ArrayList<OutputRecord>();
+        Set<Entry<TagMap, MetricMap>> entrySet = recordMap.entrySet();
+        for (Entry<TagMap, MetricMap> entry : entrySet) {
+          OutputRecord outRec = new OutputRecord(entry.getKey(), entry.getValue());
+          records.add(outRec);
+        }
+        out.put(recordName, records);
+      }
+    }
+    return out;
+  }
 
   /**
    * Sends a record to the metrics system.
@@ -423,5 +452,24 @@ public abstract class AbstractMetricsContext implements MetricsContext {
    */
   protected void setPeriod(int period) {
     this.period = period;
+  }
+  
+  /**
+   * If a period is set in the attribute passed in, override
+   * the default with it.
+   */
+  protected void parseAndSetPeriod(String attributeName) {
+    String periodStr = getAttribute(attributeName);
+    if (periodStr != null) {
+      int period = 0;
+      try {
+        period = Integer.parseInt(periodStr);
+      } catch (NumberFormatException nfe) {
+      }
+      if (period <= 0) {
+        throw new MetricsException("Invalid period: " + periodStr);
+      }
+      setPeriod(period);
+    }
   }
 }
