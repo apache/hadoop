@@ -308,18 +308,24 @@ class ReplicationTargetChooser {
                                           int maxNodesPerRack,
                                           List<DatanodeDescriptor> results) 
     throws NotEnoughReplicasException {
-    DatanodeDescriptor result;
-    do {
-      DatanodeDescriptor[] selectedNodes = 
-        chooseRandom(1, nodes, excludedNodes);
-      if (selectedNodes.length == 0) {
-        throw new NotEnoughReplicasException(
-                                             "Not able to place enough replicas");
+    int numOfAvailableNodes =
+      clusterMap.countNumOfAvailableNodes(nodes, excludedNodes);
+    while(numOfAvailableNodes > 0) {
+      DatanodeDescriptor choosenNode = 
+        (DatanodeDescriptor)(clusterMap.chooseRandom(nodes));
+      if (!excludedNodes.contains(choosenNode)) {
+        excludedNodes.add(choosenNode);
+        numOfAvailableNodes--;
+
+        if (isGoodTarget(choosenNode, blocksize, maxNodesPerRack, results)) {
+          results.add(choosenNode);
+          return choosenNode;
+        }
       }
-      result = (DatanodeDescriptor)(selectedNodes[0]);
-    } while(!isGoodTarget(result, blocksize, maxNodesPerRack, results));
-    results.add(result);
-    return result;
+    }
+
+    throw new NotEnoughReplicasException(
+        "Not able to place enough replicas");
   }
     
   /* Randomly choose <i>numOfReplicas</i> targets from <i>nodes</i>.
@@ -331,51 +337,27 @@ class ReplicationTargetChooser {
                             int maxNodesPerRack,
                             List<DatanodeDescriptor> results)
     throws NotEnoughReplicasException {
-    boolean toContinue = true;
-    do {
-      DatanodeDescriptor[] selectedNodes = 
-        chooseRandom(numOfReplicas, nodes, excludedNodes);
-      if (selectedNodes.length < numOfReplicas) {
-        toContinue = false;
-      }
-      for(int i=0; i<selectedNodes.length; i++) {
-        DatanodeDescriptor result = selectedNodes[i];
-        if (isGoodTarget(result, blocksize, maxNodesPerRack, results)) {
+      
+    int numOfAvailableNodes =
+      clusterMap.countNumOfAvailableNodes(nodes, excludedNodes);
+    while(numOfReplicas > 0 && numOfAvailableNodes > 0) {
+      DatanodeDescriptor choosenNode = 
+        (DatanodeDescriptor)(clusterMap.chooseRandom(nodes));
+      if (!excludedNodes.contains(choosenNode)) {
+        excludedNodes.add(choosenNode);
+        numOfAvailableNodes--;
+
+        if (isGoodTarget(choosenNode, blocksize, maxNodesPerRack, results)) {
           numOfReplicas--;
-          results.add(result);
+          results.add(choosenNode);
         }
-      } // end of for
-    } while (numOfReplicas>0 && toContinue);
+      }
+    }
       
     if (numOfReplicas>0) {
       throw new NotEnoughReplicasException(
                                            "Not able to place enough replicas");
     }
-  }
-    
-  /* Randomly choose <i>numOfNodes</i> nodes from <i>scope</i>.
-   * @return the choosen nodes
-   */
-  private DatanodeDescriptor[] chooseRandom(int numOfReplicas, 
-                                            String nodes,
-                                            List<Node> excludedNodes) {
-    List<DatanodeDescriptor> results = 
-      new ArrayList<DatanodeDescriptor>();
-    int numOfAvailableNodes =
-      clusterMap.countNumOfAvailableNodes(nodes, excludedNodes);
-    numOfReplicas = (numOfAvailableNodes<numOfReplicas)?
-      numOfAvailableNodes:numOfReplicas;
-    while(numOfReplicas > 0) {
-      DatanodeDescriptor choosenNode = 
-        (DatanodeDescriptor)(clusterMap.chooseRandom(nodes));
-      if (!excludedNodes.contains(choosenNode)) {
-        results.add(choosenNode);
-        excludedNodes.add(choosenNode);
-        numOfReplicas--;
-      }
-    }
-    return (DatanodeDescriptor[])results.toArray(
-                                                 new DatanodeDescriptor[results.size()]);    
   }
     
   /* judge if a node is a good target.
