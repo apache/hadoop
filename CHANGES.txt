@@ -851,6 +851,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5548. Add synchronization for JobTracker methods in RecoveryManager.
     (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-3810. NameNode seems unstable on a cluster with little space left.
+    (hairong)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
