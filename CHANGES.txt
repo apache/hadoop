@@ -1193,6 +1193,9 @@ Release 0.20.0 - Unreleased
     join back before scheduling new tasks. This fixes race conditions associated
     with greedy scheduling as was the case earlier. (Amar Kamat via ddas) 
 
+    HADOOP-5548. Add synchronization for JobTracker methods in RecoveryManager.
+    (Amareshwari Sriramadasu via sharad)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

@@ -736,6 +736,10 @@ class JobInProgress {
   ////////////////////////////////////////////////////
   // Status update methods
   ////////////////////////////////////////////////////
+
+  /**
+   * Assuming {@link JobTracker} is locked on entry.
+   */
   public synchronized void updateTaskStatus(TaskInProgress tip, 
                                             TaskStatus status) {
 
@@ -1258,6 +1262,9 @@ class JobInProgress {
 
   /**
    * Populate the data structures as a task is scheduled.
+   * 
+   * Assuming {@link JobTracker} is locked on entry.
+   * 
    * @param tip The tip for which the task is added
    * @param id The attempt-id for the task
    * @param tts task-tracker status
@@ -2418,6 +2425,9 @@ class JobInProgress {
 
   /**
    * Fail a task with a given reason, but without a status object.
+   * 
+   * Assuming {@link JobTracker} is locked on entry.
+   * 
    * @param tip The task's tip
    * @param taskid The task id
    * @param reason The reason that the task failed
