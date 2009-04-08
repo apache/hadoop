@@ -188,9 +188,6 @@ Trunk (unreleased changes)
     HADOOP-4842. Streaming now allows specifiying a command for the combiner.
     (Amareshwari Sriramadasu via ddas)
 
-    HADOOP-5521. Removes dependency of TestJobInProgress on RESTART_COUNT 
-    JobHistory tag. (Ravi Gummadi via ddas)
-
     HADOOP-5196. avoiding unnecessary byte[] allocation in 
     SequenceFile.CompressedBytes and SequenceFile.UncompressedBytes.
     (hong tang via mahadev)
@@ -1209,6 +1206,9 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5585. Clear FileSystem statistics between tasks when jvm-reuse
     is enabled. (omalley)
+
+    HADOOP-5521. Removes dependency of TestJobInProgress on RESTART_COUNT 
+    JobHistory tag. (Ravi Gummadi via ddas)
 
 Release 0.19.2 - Unreleased
 
