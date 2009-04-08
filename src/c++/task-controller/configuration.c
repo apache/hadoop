@@ -18,7 +18,10 @@
 
 #include "configuration.h"
 
+
 char * hadoop_conf_dir;
+
+struct configuration config={.size=0, .confdetails=NULL};
 
 //clean up method for freeing configuration
 void free_configurations() {

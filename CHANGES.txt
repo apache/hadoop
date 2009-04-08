@@ -373,6 +373,9 @@ Trunk (unreleased changes)
     HADOOP-4045. Fix processing of IO errors in EditsLog.
     (Boris Shkolnik via shv)
 
+    HADOOP-5462. Fixed a double free bug in the task-controller
+    executable. (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

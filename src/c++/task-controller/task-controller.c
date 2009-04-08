@@ -98,16 +98,12 @@ int check_tt_root(const char *tt_root) {
 
   if (mapred_local_dir == NULL) {
     if (get_mapred_local_dir() < 0) {
-      fprintf(LOGFILE, "invalid hadoop config\n");
       return -1;
     }
   }
 
   token = strtok((char *) mapred_local_dir, ",");
   if (token == NULL && mapred_local_dir != NULL) {
-#ifdef DEBUG
-    fprintf(LOGFILE,"Single hadoop.tmp.dir configured");
-#endif
     token = (char *)mapred_local_dir;
   }
 
@@ -235,7 +231,6 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
     const char *tt_root) {
   char *task_script_path = NULL;
   char *pid_path = NULL;
-  char *task_script = NULL;
   FILE *file_handle = NULL;
   int exit_code = 0;
   int i = 0;
@@ -253,10 +248,18 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
     return INVALID_TT_ROOT;
   }
 
+  //change the user
+  fclose(LOGFILE);
+  fcloseall();
+  umask(0);
+  if (change_user(user) != 0) {
+    cleanup();
+    return SETUID_OPER_FAILED;
+  }
+
   get_pid_path(jobid, taskid, tt_root, &pid_path);
 
   if (pid_path == NULL) {
-    fprintf(LOGFILE, "Invalid task-pid path provided");
     cleanup();
     return INVALID_PID_PATH;
   }
@@ -265,75 +268,30 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
   file_handle = fopen(pid_path, "w");
 
   if (file_handle == NULL) {
-    fprintf(LOGFILE, "Error opening task-pid file %s :%s\n", pid_path,
-        strerror(errno));
     exit_code = UNABLE_TO_OPEN_PID_FILE_WRITE_MODE;
     goto cleanup;
   }
 
   errno = 0;
   if (fprintf(file_handle, "%d\n", getpid()) < 0) {
-    fprintf(LOGFILE, "Error writing to task-pid file :%s\n", strerror(errno));
     exit_code = UNABLE_TO_WRITE_TO_PID_FILE;
     goto cleanup;
   }
 
   fflush(file_handle);
   fclose(file_handle);
+  //set file handle to null after closing so it would not be double closed
+  //in cleanup label
+  file_handle = NULL;
   //change the permissions of the file
   errno = 0;
-  //setting permission to 777
-
-  if (chmod(pid_path, S_IREAD | S_IEXEC | S_IWRITE | S_IROTH | S_IWOTH
-      | S_IXOTH | S_IRGRP | S_IWGRP | S_IXGRP) < 0) {
-    fprintf(LOGFILE, "Error changing permission of %s task-pid file : %s",
-        pid_path, strerror(errno));
-    errno = 0;
-    if (remove(pid_path) < 0) {
-      fprintf(LOGFILE, "Error deleting %s task-pid file : %s", pid_path,
-          strerror(errno));
-      exit_code = UNABLE_TO_CHANGE_PERMISSION_AND_DELETE_PID_FILE;
-    } else {
-      exit_code = UNABLE_TO_CHANGE_PERMISSION_OF_PID_FILE;
-    }
-    goto cleanup;
-  }
-#ifdef DEBUG
-  fprintf(LOGFILE,"changing file ownership\n");
-  fprintf(LOGFILE, "run_task_as_user : uid id %d \n", getuid());
-  fprintf(LOGFILE, "run_task_as_user : gid id %d \n", getgid());
-#endif
-  //change the owner ship of the file to the launching user.
-  if(chown(pid_path, getuid(), getgid()) <0 ) {
-    fprintf(LOGFILE, "Error changing ownership of %s task-pid file : %s",
-        pid_path, strerror(errno));
-    if(remove(pid_path) < 0) {
-      fprintf(LOGFILE, "Error deleting %s task-pid file : %s", pid_path,
-          strerror(errno));
-      exit_code = UNABLE_TO_CHANGE_OWNERSHIP_OF_PID_FILE_AND_DELETE_PID_FILE;
-    } else {
-      exit_code = UNABLE_TO_CHANGE_OWNERSHIP_OF_PID_FILE;
-    }
-    goto cleanup;
-  }
-
-
   //free pid_t path which is allocated
   free(pid_path);
-
-  //change the user
-  fcloseall();
-  fclose(LOGFILE);
-  umask(0);
-  if (change_user(user) != 0) {
-    cleanup();
-    return SETUID_OPER_FAILED;
-  }
+  pid_path = NULL;
 
   get_task_file_path(jobid, taskid, tt_root, &task_script_path);
 
   if (task_script_path == NULL) {
-    fprintf(LOGFILE, "Unable to locate task script");
     cleanup();
     return INVALID_TASK_SCRIPT_PATH;
   }
@@ -341,7 +299,6 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
   cleanup();
   execlp(task_script_path, task_script_path, NULL);
   if (errno != 0) {
-    fprintf(LOGFILE, "Error execing script %s", strerror(errno));
     free(task_script_path);
     exit_code = UNABLE_TO_EXECUTE_TASK_SCRIPT;
   }
@@ -388,23 +345,28 @@ int kill_user_task(const char *user, const char *jobid, const char *taskid,
   fprintf(LOGFILE,"kill_user_task : tt_root : %s \n", tt_root);
   fflush(LOGFILE);
 #endif
+
   if (check_tt_root(tt_root) < 0) {
-    fprintf(LOGFILE, "invalid tt root specified");
+    fprintf(LOGFILE, "invalid tt root passed %s\n", tt_root);
     cleanup();
     return INVALID_TT_ROOT;
   }
+
+  fclose(LOGFILE);
+  fcloseall();
+
+  if (change_user(user) != 0) {
+    cleanup();
+    return SETUID_OPER_FAILED;
+  }
+
   get_pid_path(jobid, taskid, tt_root, &pid_path);
   if (pid_path == NULL) {
     cleanup();
     return INVALID_PID_PATH;
   }
-#ifdef DEBUG
-  fprintf(LOGFILE,"kill_user_task : task-pid path :%s \n",pid_path);
-  fflush(LOGFILE);
-#endif
   file_handle = fopen(pid_path, "r");
   if (file_handle == NULL) {
-    fprintf(LOGFILE, "unable to open task-pid file :%s \n", pid_path);
     free(pid_path);
     cleanup();
     return UNABLE_TO_OPEN_PID_FILE_READ_MODE;
@@ -413,13 +375,8 @@ int kill_user_task(const char *user, const char *jobid, const char *taskid,
   fclose(file_handle);
   free(pid_path);
   if (pid == 0) {
-    fprintf(LOGFILE, "Unable to read task-pid from path: %s \n", pid_path);
     cleanup();
     return UNABLE_TO_READ_PID;
-  }
-  if (change_user(user) != 0) {
-    cleanup();
-    return SETUID_OPER_FAILED;
   }
   if (kill(pid, SIGTERM) < 0) {
     fprintf(LOGFILE, "%s\n", strerror(errno));

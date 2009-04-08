@@ -47,7 +47,7 @@ FILE *LOGFILE;
   #define CONF_FILE_PATTERN "%s/conf/taskcontroller.cfg"
 #endif
 
-struct configuration config;
+extern struct configuration config;
 //configuration file contents
 #ifndef HADOOP_CONF_DIR
   extern char *hadoop_conf_dir;
