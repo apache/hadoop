@@ -94,7 +94,17 @@ public class TestMiniMRDFSSort extends TestCase {
     String[] sortArgs = {sortInput.toString(), sortOutput.toString()};
     
     // Run Sort
-    assertEquals(ToolRunner.run(job, new Sort(), sortArgs), 0);
+    Sort sort = new Sort();
+    assertEquals(ToolRunner.run(job, sort, sortArgs), 0);
+    Counters counters = sort.getResult().getCounters();
+    long mapInput = counters.findCounter(Task.Counter.MAP_INPUT_BYTES
+    ).getValue();
+    long hdfsRead = counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP,
+                                         "HDFS_BYTES_READ").getValue();
+    // the hdfs read should be between 100% and 110% of the map input bytes
+    assertTrue("map input = " + mapInput + ", hdfs read = " + hdfsRead,
+               (hdfsRead < (mapInput * 1.1)) &&
+               (hdfsRead > mapInput));  
   }
   
   private static void runSortValidator(JobConf job, 
@@ -139,8 +149,6 @@ public class TestMiniMRDFSSort extends TestCase {
     job.setNumReduceTasks(0);
     RunningJob result = JobClient.runJob(job);
     long uses = result.getCounters().findCounter("jvm", "use").getValue();
-    System.out.println("maps = " + job.getNumMapTasks());
-    System.out.println(result.getCounters());
     int maps = job.getNumMapTasks();
     if (reuse) {
       assertTrue("maps = " + maps + ", uses = " + uses, maps < uses);

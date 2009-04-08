@@ -31,6 +31,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -117,11 +118,7 @@ public class ClusterWithCapacityScheduler extends TestCase {
       throws IOException {
     Configuration config = new Configuration(false);
 
-    LocalFileSystem fs = new LocalFileSystem();
-    fs.setConf(config);
-    // The above call doesn't set the configuration for the underlying
-    // RawFileSystem. Explicitly doing it.
-    fs.getRawFileSystem().setConf(config);
+    LocalFileSystem fs = FileSystem.getLocal(config);
 
     String myResourcePath = System.getProperty("test.build.data");
     Path schedulerConfigFilePath =
@@ -146,9 +143,7 @@ public class ClusterWithCapacityScheduler extends TestCase {
   private void cleanUpSchedulerConfigFile() throws IOException {
     Configuration config = new Configuration(false);
 
-    LocalFileSystem fs = new LocalFileSystem();
-    fs.setConf(config);
-    fs.getRawFileSystem().setConf(config);
+    LocalFileSystem fs = FileSystem.getLocal(config);
 
     String myResourcePath = System.getProperty("test.build.data");
     Path schedulerConfigFilePath =

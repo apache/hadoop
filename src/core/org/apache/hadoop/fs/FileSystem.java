@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -79,10 +80,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     statisticsTable =
       new IdentityHashMap<Class<? extends FileSystem>, Statistics>();
   
-  /** Recording statistics per FileSystem URI scheme */
-  private static final Map<String, Statistics> statsByUriScheme = 
-    new HashMap<String, Statistics>();
-
   /**
    * The statistics for this file system.
    */
@@ -128,8 +125,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    *   for this FileSystem
    * @param conf the configuration
    */
-  public abstract void initialize(URI name, Configuration conf)
-    throws IOException;
+  public void initialize(URI name, Configuration conf) throws IOException {
+    statistics = getStatistics(name.getScheme(), getClass());    
+  }
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
@@ -303,7 +301,6 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   protected FileSystem() {
     super(null);
-    statistics = getStatistics(this.getClass());
   }
 
   /** Check that a Path belongs to this FileSystem. */
@@ -1407,7 +1404,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
     fs.initialize(uri, conf);
-    statsByUriScheme.put(uri.getScheme(), fs.statistics);
     return fs;
   }
 
@@ -1537,9 +1533,14 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
   
   public static final class Statistics {
+    private final String scheme;
     private AtomicLong bytesRead = new AtomicLong();
     private AtomicLong bytesWritten = new AtomicLong();
     
+    public Statistics(String scheme) {
+      this.scheme = scheme;
+    }
+
     /**
      * Increment the bytes read in the statistics
      * @param newBytes the additional bytes read
@@ -1576,32 +1577,65 @@ public abstract class FileSystem extends Configured implements Closeable {
       return bytesRead + " bytes read and " + bytesWritten + 
              " bytes written";
     }
+    
+    /**
+     * Reset the counts of bytes to 0.
+     */
+    public void reset() {
+      bytesWritten.set(0);
+      bytesRead.set(0);
+    }
+    
+    /**
+     * Get the uri scheme associated with this statistics object.
+     * @return the schema associated with this set of statistics
+     */
+    public String getScheme() {
+      return scheme;
+    }
   }
   
   /**
    * Get the Map of Statistics object indexed by URI Scheme.
    * @return a Map having a key as URI scheme and value as Statistics object
+   * @deprecated use {@link #getAllStatistics} instead
    */
   public static synchronized Map<String, Statistics> getStatistics() {
-    return statsByUriScheme;
+    Map<String, Statistics> result = new HashMap<String, Statistics>();
+    for(Statistics stat: statisticsTable.values()) {
+      result.put(stat.getScheme(), stat);
+    }
+    return result;
+  }
+
+  /**
+   * Return the FileSystem classes that have Statistics
+   */
+  public static synchronized List<Statistics> getAllStatistics() {
+    return new ArrayList<Statistics>(statisticsTable.values());
   }
   
   /**
    * Get the statistics for a particular file system
-   * @deprecated Consider using {@link #getStatistics()} instead.
    * @param cls the class to lookup
    * @return a statistics object
    */
   public static synchronized 
-  Statistics getStatistics(Class<? extends FileSystem> cls) {
+  Statistics getStatistics(String scheme, Class<? extends FileSystem> cls) {
     Statistics result = statisticsTable.get(cls);
     if (result == null) {
-      result = new Statistics();
+      result = new Statistics(scheme);
       statisticsTable.put(cls, result);
     }
     return result;
   }
   
+  public static synchronized void clearStatistics() {
+    for(Statistics stat: statisticsTable.values()) {
+      stat.reset();
+    }
+  }
+
   public static synchronized
   void printStatistics() throws IOException {
     for (Map.Entry<Class<? extends FileSystem>, Statistics> pair: 

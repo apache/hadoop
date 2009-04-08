@@ -1207,6 +1207,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5068. Fix NPE in TestCapacityScheduler.  (Vinod Kumar Vavilapalli
     via szetszwo)
 
+    HADOOP-5585. Clear FileSystem statistics between tasks when jvm-reuse
+    is enabled. (omalley)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

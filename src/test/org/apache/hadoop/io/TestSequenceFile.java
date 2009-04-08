@@ -407,9 +407,7 @@ public class TestSequenceFile extends TestCase {
 
   public void testClose() throws IOException {
     Configuration conf = new Configuration();
-    LocalFileSystem fs = new LocalFileSystem();
-    fs.setConf(conf);
-    fs.getRawFileSystem().setConf(conf);
+    LocalFileSystem fs = FileSystem.getLocal(conf);
   
     // create a sequence file 1
     Path path1 = new Path(System.getProperty("test.build.data",".")+"/test1.seq");
