@@ -81,6 +81,7 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
+    super.initialize(name, conf);
     setConf(conf);
     try {
       this.ugi = UnixUserGroupInformation.login(conf, true);

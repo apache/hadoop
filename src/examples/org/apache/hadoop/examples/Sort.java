@@ -51,6 +51,7 @@ import org.apache.hadoop.util.ToolRunner;
  *            <i>in-dir</i> <i>out-dir</i> 
  */
 public class Sort<K,V> extends Configured implements Tool {
+  private RunningJob jobResult = null;
 
   static int printUsage() {
     System.out.println("sort [-m <maps>] [-r <reduces>] " +
@@ -172,7 +173,7 @@ public class Sort<K,V> extends Configured implements Tool {
         " with " + num_reduces + " reduces.");
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
-    JobClient.runJob(jobConf);
+    jobResult = JobClient.runJob(jobConf);
     Date end_time = new Date();
     System.out.println("Job ended: " + end_time);
     System.out.println("The job took " + 
@@ -187,4 +188,11 @@ public class Sort<K,V> extends Configured implements Tool {
     System.exit(res);
   }
 
+  /**
+   * Get the last job that was run using this instance.
+   * @return the results of the last job that was run
+   */
+  public RunningJob getResult() {
+    return jobResult;
+  }
 }

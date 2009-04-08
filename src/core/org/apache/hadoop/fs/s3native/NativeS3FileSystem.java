@@ -209,6 +209,7 @@ public class NativeS3FileSystem extends FileSystem {
   
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
+    super.initialize(uri, conf);
     if (store == null) {
       store = createDefaultStore(conf);
     }

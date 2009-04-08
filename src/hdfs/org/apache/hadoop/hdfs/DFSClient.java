@@ -81,7 +81,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private int socketTimeout;
   private int datanodeWriteTimeout;
   final int writePacketSize;
-  private FileSystem.Statistics stats;
+  private final FileSystem.Statistics stats;
   private int maxBlockAcquireFailures;
     
  
@@ -146,7 +146,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * Create a new DFSClient connected to the default namenode.
    */
   public DFSClient(Configuration conf) throws IOException {
-    this(NameNode.getAddress(conf), conf);
+    this(NameNode.getAddress(conf), conf, null);
   }
 
   /** 
@@ -189,8 +189,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   public DFSClient(InetSocketAddress nameNodeAddr, 
                    Configuration conf) throws IOException {
-    this(nameNodeAddr, conf, 
-         FileSystem.getStatistics(DistributedFileSystem.class));
+    this(nameNodeAddr, conf, null);
   }
 
   private void checkOpen() throws IOException {
