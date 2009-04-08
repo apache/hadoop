@@ -122,7 +122,7 @@ public class JobHistory {
     FINISHED_MAPS, FINISHED_REDUCES, JOB_STATUS, TASKID, HOSTNAME, TASK_TYPE, 
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
-    TRACKER_NAME, STATE_STRING, VERSION, RESTART_COUNT
+    TRACKER_NAME, STATE_STRING, VERSION
   }
 
   /**
@@ -1167,9 +1167,15 @@ public class JobHistory {
      * @param submitTime job's submit time
      * @param launchTime job's launch time
      * @param restartCount number of times the job got restarted
+     * @deprecated Use {@link #logJobInfo(JobID, long, long)} instead.
      */
     public static void logJobInfo(JobID jobid, long submitTime, long launchTime,
                                   int restartCount){
+      logJobInfo(jobid, submitTime, launchTime);
+    }
+
+    public static void logJobInfo(JobID jobid, long submitTime, long launchTime)
+    {
       if (!disableHistory){
         String logFileKey =  JOBTRACKER_UNIQUE_STRING + jobid; 
         ArrayList<PrintWriter> writer = openJobs.get(logFileKey); 
@@ -1177,11 +1183,10 @@ public class JobHistory {
         if (null != writer){
           JobHistory.log(writer, RecordTypes.Job,
                          new Keys[] {Keys.JOBID, Keys.SUBMIT_TIME, 
-                                     Keys.LAUNCH_TIME, Keys.RESTART_COUNT},
+                                     Keys.LAUNCH_TIME},
                          new String[] {jobid.toString(), 
                                        String.valueOf(submitTime), 
-                                       String.valueOf(launchTime),
-                                       String.valueOf(restartCount)});
+                                       String.valueOf(launchTime)});
         }
       }
     }

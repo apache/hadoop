@@ -887,7 +887,7 @@ class TaskInProgress {
     TaskAttemptID taskid = null;
     if (nextTaskId < (MAX_TASK_EXECS + maxTaskAttempts + numKilledTasks)) {
       // Make sure that the attempts are unqiue across restarts
-      int attemptId = job.numRestarts() * NUM_ATTEMPTS_PER_RESTART + nextTaskId;
+      int attemptId = job.getNumRestarts() * NUM_ATTEMPTS_PER_RESTART + nextTaskId;
       taskid = new TaskAttemptID( id, attemptId);
       ++nextTaskId;
     } else {

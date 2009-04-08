@@ -85,6 +85,7 @@ public class TestSocketFactory extends TestCase {
       assertTrue(dfs.exists(filePath));
 
       // This will test TPC to a JobTracker
+      fs = FileSystem.get(sconf);
       mr = new MiniMRCluster(1, fs.getUri().toString(), 1);
       final int jobTrackerPort = mr.getJobTrackerPort();
 
