@@ -164,7 +164,7 @@ class JobInProgress {
   long finishTime;
   
   // Indicates how many times the job got restarted
-  private int restartCount = 0;
+  private final int restartCount;
 
   private JobConf conf;
   AtomicBoolean tasksInited = new AtomicBoolean(false);
@@ -214,6 +214,7 @@ class JobInProgress {
     this.maxLevel = NetworkTopology.DEFAULT_HOST_LEVEL;
     this.anyCacheLevel = this.maxLevel+1;
     this.jobtracker = null;
+    this.restartCount = 0;
   }
   
   /**
@@ -222,6 +223,12 @@ class JobInProgress {
    */
   public JobInProgress(JobID jobid, JobTracker jobtracker, 
                        JobConf default_conf) throws IOException {
+    this(jobid, jobtracker, default_conf, 0);
+  }
+  
+  public JobInProgress(JobID jobid, JobTracker jobtracker, 
+                       JobConf default_conf, int rCount) throws IOException {
+    this.restartCount = rCount;
     this.jobId = jobid;
     String url = "http://" + jobtracker.getJobTrackerMachine() + ":" 
         + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobid;
@@ -595,19 +602,17 @@ class JobInProgress {
   }
 
   // Update the job start/launch time (upon restart) and log to history
-  synchronized void updateJobInfo(long startTime, long launchTime, int count) {
+  synchronized void updateJobInfo(long startTime, long launchTime) {
     // log and change to the job's start/launch time
     this.startTime = startTime;
     this.launchTime = launchTime;
-    // change to the job's restart count
-    this.restartCount = count;
-    JobHistory.JobInfo.logJobInfo(jobId, startTime, launchTime, count);
+    JobHistory.JobInfo.logJobInfo(jobId, startTime, launchTime);
   }
 
   /**
    * Get the number of times the job has restarted
    */
-  int numRestarts() {
+  int getNumRestarts() {
     return restartCount;
   }
   

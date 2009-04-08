@@ -543,24 +543,28 @@ public class MiniMRCluster {
     jobTrackerThread = new Thread(jobTracker);
         
     jobTrackerThread.start();
-    while (!jobTracker.isUp()) {
+    while (jobTracker.isActive() && !jobTracker.isUp()) {
       try {                                     // let daemons get started
         Thread.sleep(1000);
       } catch(InterruptedException e) {
       }
     }
         
-    ClusterStatus status = jobTracker.getJobTracker().getClusterStatus(false);
-    while (jobTracker.isActive() && status.getJobTrackerState() == JobTracker.State.INITIALIZING) {
-      try {
-        LOG.info("JobTracker still initializing. Waiting.");
-        Thread.sleep(1000);
-      } catch(InterruptedException e) {}
+    // is the jobtracker has started then wait for it to init
+    ClusterStatus status = null;
+    if (jobTracker.isUp()) {
       status = jobTracker.getJobTracker().getClusterStatus(false);
+      while (jobTracker.isActive() && status.getJobTrackerState() 
+             == JobTracker.State.INITIALIZING) {
+        try {
+          LOG.info("JobTracker still initializing. Waiting.");
+          Thread.sleep(1000);
+        } catch(InterruptedException e) {}
+        status = jobTracker.getJobTracker().getClusterStatus(false);
+      }
     }
 
-    if (!jobTracker.isActive() 
-        || status.getJobTrackerState() != JobTracker.State.RUNNING) {
+    if (!jobTracker.isActive()) {
       // return if jobtracker has crashed
       return;
     }

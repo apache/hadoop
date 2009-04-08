@@ -66,6 +66,29 @@ public class TestHDFSServerPorts extends TestCase {
     return NameNode.createNameNode(args, config);
   }
 
+  /**
+   * Start the data-node.
+   */
+  public DataNode startDataNode(int index, Configuration config) 
+  throws IOException {
+    String dataDir = System.getProperty("test.build.data");
+    File dataNodeDir = new File(dataDir, "data-" + index);
+    config.set("dfs.data.dir", dataNodeDir.getPath());
+
+    String[] args = new String[] {};
+    // NameNode will modify config with the ports it bound to
+    return DataNode.createDataNode(args, config);
+  }
+
+  /**
+   * Stop the datanode.
+   */
+  public void stopDataNode(DataNode dn) {
+    if (dn != null) {
+      dn.shutdown();
+    }
+  }
+
   public void stopNameNode(NameNode nn) {
     if (nn != null) {
       nn.stop();

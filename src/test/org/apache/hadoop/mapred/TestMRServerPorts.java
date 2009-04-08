@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.TestHDFSServerPorts;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -112,8 +113,10 @@ public class TestMRServerPorts extends TestCase {
    */
   public void testJobTrackerPorts() throws Exception {
     NameNode nn = null;
+    DataNode dn = null;
     try {
       nn = hdfs.startNameNode();
+      dn = hdfs.startDataNode(1, hdfs.getConfig());
 
       // start job tracker on the same port as name-node
       JobConf conf2 = new JobConf(hdfs.getConfig());
@@ -139,6 +142,7 @@ public class TestMRServerPorts extends TestCase {
       assertTrue(started); // should start now
 
     } finally {
+      hdfs.stopDataNode(dn);
       hdfs.stopNameNode(nn);
     }
   }
@@ -148,10 +152,12 @@ public class TestMRServerPorts extends TestCase {
    */
   public void testTaskTrackerPorts() throws Exception {
     NameNode nn = null;
+    DataNode dn = null;
     JobTracker jt = null;
     JTRunner runner = null;
     try {
       nn = hdfs.startNameNode();
+      dn = hdfs.startDataNode(2, hdfs.getConfig());
 
       JobConf conf2 = new JobConf(hdfs.getConfig());
       runner = new JTRunner();
@@ -187,6 +193,7 @@ public class TestMRServerPorts extends TestCase {
         runner.interrupt();
         runner.join();
       }
+      hdfs.stopDataNode(dn);
       hdfs.stopNameNode(nn);
     }
   }

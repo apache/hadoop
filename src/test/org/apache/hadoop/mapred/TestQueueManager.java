@@ -239,7 +239,7 @@ public class TestQueueManager extends TestCase {
         Path sysDir = new Path(jobtracker.getSystemDir());
         FileSystem fs = sysDir.getFileSystem(conf);
         int size = fs.listStatus(sysDir).length;
-        while (size > 0) {
+        while (size > 1) { // ignore the jobtracker.info file
           System.out.println("Waiting for the job files in sys directory to be cleaned up");
           UtilsForTests.waitFor(100);
           size = fs.listStatus(sysDir).length;
