@@ -209,6 +209,9 @@ Trunk (unreleased changes)
     HADOOP-4365. Make Configuration::getProps protected in support of
     meaningful subclassing. (Steve Loughran via cdouglas)
 
+    HADOOP-2413. Remove the static variable FSNamesystem.fsNamesystemObject.
+    (Konstantin Shvachko via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
@@ -297,9 +300,6 @@ Trunk (unreleased changes)
     HADOOP-5206. Synchronize "unprotected*" methods of FSDirectory on the root.
     (Jakob Homan via shv)
 
-    HADOOP-5227. Fix distcp so -update and -delete can be meaningfully
-    combined. (Tsz Wo (Nicholas), SZE via cdouglas)
-
     HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)
 
     HADOOP-5219. Adds a new property io.seqfile.local.dir for use by SequenceFile,
@@ -307,9 +307,6 @@ Trunk (unreleased changes)
 
     HADOOP-5300. Fix ant javadoc-dev target and the typo in the class name
     NameNodeActivtyMBean.  (szetszwo)
-
-    HADOOP-5305. Increase number of files and print debug messages in
-    TestCopyFiles.  (szetszwo)
 
     HADOOP-5218.  libhdfs unit test failed because it was unable to 
     start namenode/datanode. Fixed. (dhruba)
@@ -366,9 +363,6 @@ Trunk (unreleased changes)
 
     HADOOP-5464. DFSClient did not treat write timeout of 0 properly.
     (Raghu Angadi)
-
-    HADOOP-2413. Remove the static variable FSNamesystem.fsNamesystemObject.
-    (Konstantin Shvachko via szetszwo)
 
     HADOOP-4045. Fix processing of IO errors in EditsLog.
     (Boris Shkolnik via shv)
@@ -1200,6 +1194,12 @@ Release 0.20.0 - Unreleased
     HADOOP-5337. JobTracker, upon restart, now waits for the TaskTrackers to
     join back before scheduling new tasks. This fixes race conditions associated
     with greedy scheduling as was the case earlier. (Amar Kamat via ddas) 
+
+    HADOOP-5227. Fix distcp so -update and -delete can be meaningfully
+    combined. (Tsz Wo (Nicholas), SZE via cdouglas)
+
+    HADOOP-5305. Increase number of files and print debug messages in
+    TestCopyFiles.  (szetszwo)
 
     HADOOP-5548. Add synchronization for JobTracker methods in RecoveryManager.
     (Amareshwari Sriramadasu via sharad)
