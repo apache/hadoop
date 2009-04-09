@@ -886,6 +886,7 @@
     <copy todir="${build.docs}">
       <fileset dir="${docs.src}/build/site/" />
     </copy>
+    <copy file="${docs.src}/releasenotes.html" todir="${build.docs}"/>
     <style basedir="${core.src.dir}" destdir="${build.docs}"
            includes="core-default.xml" style="conf/configuration.xsl"/>
     <style basedir="${hdfs.src.dir}" destdir="${build.docs}"
