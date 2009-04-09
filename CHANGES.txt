@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.0 - Unreleased
+Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
 

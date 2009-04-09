@@ -1,1 +1,150 @@
-THIS IS A PLACEHOLDER.  REAL RELEASE NOTES WILL BE ADDED TO THIS FILE IN RELEASE BRANCHES.
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop 0.20.0 Release Notes</title>
+<STYLE type="text/css">
+		H1 {font-family: sans-serif}
+		H2 {font-family: sans-serif; margin-left: 7mm}
+		TABLE {margin-left: 7mm}
+	</STYLE>
+</head>
+<body>
+<h1>Hadoop 0.20.0 Release Notes</h1>
+		These release notes include new developer and user-facing incompatibilities, features, and major improvements. The table below is sorted by Component.
+		
+		<a name="changes"></a>
+<h2>Changes Since Hadoop 0.19.1</h2>
+<table border="1">
+<tr bgcolor="#DDDDDD">
+<th align="left">Issue</th><th align="left">Component</th><th align="left">Notes</th>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3344">HADOOP-3344</a></td><td>build</td><td>Changed build procedure for libhdfs to build correctly for different platforms. Build instructions are in the Jira item.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4253">HADOOP-4253</a></td><td>conf</td><td>Removed  from class org.apache.hadoop.fs.RawLocalFileSystem deprecated methods public String getName(), public void lock(Path p, boolean shared) and public void release(Path p).</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4454">HADOOP-4454</a></td><td>conf</td><td>Changed processing of conf/slaves file to allow # to begin a comment.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4631">HADOOP-4631</a></td><td>conf</td><td>Split hadoop-default.xml into core-default.xml, hdfs-default.xml and mapreduce-default.xml.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4035">HADOOP-4035</a></td><td>contrib/capacity-sched</td><td>Changed capacity scheduler policy to take note of task memory requirements and task tracker memory availability.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4445">HADOOP-4445</a></td><td>contrib/capacity-sched</td><td>Changed JobTracker UI to better present the number of active tasks.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4576">HADOOP-4576</a></td><td>contrib/capacity-sched</td><td>Changed capacity scheduler UI to better present number of running and pending tasks.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4179">HADOOP-4179</a></td><td>contrib/chukwa</td><td>Introduced Vaidya rule based performance diagnostic tool for Map/Reduce jobs.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4827">HADOOP-4827</a></td><td>contrib/chukwa</td><td>Improved framework for data aggregation in Chuckwa.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4843">HADOOP-4843</a></td><td>contrib/chukwa</td><td>Introduced Chuckwa collection of job history.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-5030">HADOOP-5030</a></td><td>contrib/chukwa</td><td>Changed RPM install location to the value specified by build.properties file.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-5531">HADOOP-5531</a></td><td>contrib/chukwa</td><td>Disabled Chukwa unit tests for 0.20 branch only.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4789">HADOOP-4789</a></td><td>contrib/fair-share</td><td>Changed fair scheduler to divide resources equally between pools, not jobs.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4873">HADOOP-4873</a></td><td>contrib/fair-share</td><td>Changed fair scheduler UI to display minMaps and minReduces variables.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3750">HADOOP-3750</a></td><td>dfs</td><td>Removed deprecated method parseArgs from org.apache.hadoop.fs.FileSystem.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4029">HADOOP-4029</a></td><td>dfs</td><td>Added name node storage information to the dfshealth page, and moved data node information to a separated page.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4103">HADOOP-4103</a></td><td>dfs</td><td>Modified dfsadmin -report to report under replicated blocks. blocks with corrupt replicas, and missing blocks&quot;.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4567">HADOOP-4567</a></td><td>dfs</td><td>Changed GetFileBlockLocations to return topology information for nodes that host the block replicas.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4572">HADOOP-4572</a></td><td>dfs</td><td>Moved org.apache.hadoop.hdfs.{CreateEditsLog, NNThroughputBenchmark} to org.apache.hadoop.hdfs.server.namenode.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4618">HADOOP-4618</a></td><td>dfs</td><td>Moved HTTP server from FSNameSystem to NameNode. Removed FSNamesystem.getNameNodeInfoPort(). Replaced FSNamesystem.getDFSNameNodeMachine() and FSNamesystem.getDFSNameNodePort() with new method  FSNamesystem.getDFSNameNodeAddress(). Removed constructor NameNode(bindAddress, conf).</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4826">HADOOP-4826</a></td><td>dfs</td><td>Introduced new dfsadmin command saveNamespace to command the name service to do an immediate save of the file system image.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4970">HADOOP-4970</a></td><td>dfs</td><td>Changed trash facility to use absolute path of the deleted file.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-5468">HADOOP-5468</a></td><td>documentation</td><td>Reformatted HTML documentation for Hadoop to use submenus at the left column.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3497">HADOOP-3497</a></td><td>fs</td><td>Changed the semantics of file globbing with a PathFilter (using the globStatus method of FileSystem). Previously, the filtering was too restrictive, so that a glob of /*/* and a filter that only accepts /a/b would not have matched /a/b. With this change /a/b does match. </td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4234">HADOOP-4234</a></td><td>fs</td><td>Changed KFS glue layer to allow applications to interface with multiple KFS metaservers.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4422">HADOOP-4422</a></td><td>fs/s3</td><td>Modified Hadoop file system to no longer create S3 buckets. Applications can create buckets for their S3 file systems by other means, for example, using the JetS3t API.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3063">HADOOP-3063</a></td><td>io</td><td>Introduced BloomMapFile subclass of MapFile that creates a Bloom filter from all keys.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-1230">HADOOP-1230</a></td><td>mapred</td><td>Replaced parameters with context obejcts in Mapper, Reducer, Partitioner, InputFormat, and OutputFormat classes.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-1650">HADOOP-1650</a></td><td>mapred</td><td>Upgraded all core servers to use Jetty 6</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3923">HADOOP-3923</a></td><td>mapred</td><td>Moved class org.apache.hadoop.mapred.StatusHttpServer to org.apache.hadoop.http.HttpServer.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3986">HADOOP-3986</a></td><td>mapred</td><td>Removed classes org.apache.hadoop.mapred.JobShell and org.apache.hadoop.mapred.TestJobShell. Removed from JobClient methods static void  setCommandLineConfig(Configuration conf) and public static Configuration getCommandLineConfig().</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4188">HADOOP-4188</a></td><td>mapred</td><td>Removed Task's dependency on concrete file systems by taking list from FileSystem class. Added statistics table to FileSystem class. Deprecated FileSystem method getStatistics(Class&lt;? extends FileSystem&gt; cls).</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4210">HADOOP-4210</a></td><td>mapred</td><td>Changed public class org.apache.hadoop.mapreduce.ID to be an abstract class. Removed from class org.apache.hadoop.mapreduce.ID the methods  public static ID read(DataInput in) and public static ID forName(String str).</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4305">HADOOP-4305</a></td><td>mapred</td><td>Improved TaskTracker blacklisting strategy to better exclude faulty tracker from executing tasks.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4435">HADOOP-4435</a></td><td>mapred</td><td>Changed JobTracker web status page to display the amount of heap memory in use. This changes the JobSubmissionProtocol.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4565">HADOOP-4565</a></td><td>mapred</td><td>Improved MultiFileInputFormat so that multiple blocks from the same node or same rack can be combined into a single split.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4749">HADOOP-4749</a></td><td>mapred</td><td>Added a new counter REDUCE_INPUT_BYTES.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4783">HADOOP-4783</a></td><td>mapred</td><td>Changed history directory permissions to 750 and history file permissions to 740.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3422">HADOOP-3422</a></td><td>metrics</td><td>Changed names of ganglia metrics to avoid conflicts and to better identify source function.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4284">HADOOP-4284</a></td><td>security</td><td>Introduced HttpServer method to support global filters.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4575">HADOOP-4575</a></td><td>security</td><td>Introduced independent HSFTP proxy server for authenticated access to clusters.</td>
+</tr>
+<tr>
+<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4661">HADOOP-4661</a></td><td>tools/distcp</td><td>Introduced distch tool for parallel ch{mod, own, grp}.</td>
+</tr>
+</table>
+</body>
+</html>

@@ -29,7 +29,7 @@
   <property name="name" value="hadoop"/>
   <property name="version" value="0.20.1-dev"/>
   <property name="final.name" value="${name}-${version}"/>
-  <property name="year" value="2008"/>
+  <property name="year" value="2009"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
   <property name="core.src.dir" value="${src.dir}/core"/>
