@@ -866,6 +866,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5394. JobTracker might schedule 2 attempts of the same task 
     with the same attempt id across restarts. (Amar Kamat via sharad)
 
+    HADOOP-5645. After HADOOP-4920 we need a place to checkin
+    releasenotes.html. (nigel)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
