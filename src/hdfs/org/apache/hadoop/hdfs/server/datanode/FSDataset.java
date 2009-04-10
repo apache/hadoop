@@ -26,10 +26,13 @@ import javax.management.StandardMBean;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.conf.*;
@@ -158,39 +161,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         if (!path.startsWith(blockName)) {
           continue;
         }
-        String[] vals = path.split("_");
-        if (vals.length != 3) {     // blk, blkid, genstamp.meta
+        if (blockFile == listdir[j]) {
           continue;
         }
-        String[] str = vals[2].split("\\.");
-        if (str.length != 2) {
-          continue;
-        }
-        return Long.parseLong(str[0]);
+        return Block.getGenerationStamp(listdir[j].getName());
       }
       DataNode.LOG.warn("Block " + blockFile + 
                         " does not have a metafile!");
       return Block.GRANDFATHER_GENERATION_STAMP;
-    }
-
-    /**
-     * Populate the given blockSet with any child blocks
-     * found at this node.
-     */
-    public void getBlockInfo(TreeSet<Block> blockSet) {
-      if (children != null) {
-        for (int i = 0; i < children.length; i++) {
-          children[i].getBlockInfo(blockSet);
-        }
-      }
-
-      File blockFiles[] = dir.listFiles();
-      for (int i = 0; i < blockFiles.length; i++) {
-        if (Block.isBlockFilename(blockFiles[i])) {
-          long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
-          blockSet.add(new Block(blockFiles[i], blockFiles[i].length(), genStamp));
-        }
-      }
     }
 
     void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap, FSVolume volume) {
@@ -425,10 +403,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       DiskChecker.checkDir(tmpDir);
     }
       
-    void getBlockInfo(TreeSet<Block> blockSet) {
-      dataDir.getBlockInfo(blockSet);
-    }
-      
     void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
       dataDir.getVolumeMap(volumeMap, this);
     }
@@ -506,7 +480,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return dfsUsed;
     }
 
-    synchronized long getCapacity() throws IOException {
+    long getCapacity() throws IOException {
       long capacity = 0L;
       for (int idx = 0; idx < volumes.length; idx++) {
         capacity += volumes[idx].getCapacity();
@@ -514,18 +488,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return capacity;
     }
       
-    synchronized long getRemaining() throws IOException {
+    long getRemaining() throws IOException {
       long remaining = 0L;
       for (int idx = 0; idx < volumes.length; idx++) {
         remaining += volumes[idx].getAvailable();
       }
       return remaining;
-    }
-      
-    synchronized void getBlockInfo(TreeSet<Block> blockSet) {
-      for (int idx = 0; idx < volumes.length; idx++) {
-        volumes[idx].getBlockInfo(blockSet);
-      }
     }
       
     synchronized void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
@@ -547,6 +515,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         if (idx != volumes.length - 1) { sb.append(","); }
       }
       return sb.toString();
+    }
+
+    public boolean isValid(FSVolume volume) {
+      for (int idx = 0; idx < volumes.length; idx++) {
+        if (volumes[idx] == volume) {
+          return true;
+        }
+      }
+      return false;
     }
   }
   
@@ -676,9 +653,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   FSVolumeSet volumes;
   private HashMap<Block,ActiveFile> ongoingCreates = new HashMap<Block,ActiveFile>();
   private int maxBlocksPerDir = 0;
-  private HashMap<Block,DatanodeBlockInfo> volumeMap = null;
+  HashMap<Block,DatanodeBlockInfo> volumeMap = null;
   static  Random random = new Random();
-  
+
+  // Used for synchronizing access to usage stats
+  private Object statsLock = new Object();
+
   /**
    * An FSDataset has a directory where it loads its data files.
    */
@@ -698,21 +678,27 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * Return the total space used by dfs datanode
    */
   public long getDfsUsed() throws IOException {
-    return volumes.getDfsUsed();
+    synchronized(statsLock) {
+      return volumes.getDfsUsed();
+    }
   }
   
   /**
    * Return total capacity, used and unused
    */
   public long getCapacity() throws IOException {
-    return volumes.getCapacity();
+    synchronized(statsLock) {
+      return volumes.getCapacity();
+    }
   }
 
   /**
    * Return how many bytes can still be stored in the FSDataset
    */
   public long getRemaining() throws IOException {
-    return volumes.getRemaining();
+    synchronized(statsLock) {
+      return volumes.getRemaining();
+    }
   }
 
   /**
@@ -1207,19 +1193,36 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     return true;
   }
-  
+
   /**
-   * Return a table of block data
+   * Return finalized blocks from the in-memory blockmap
    */
   public Block[] getBlockReport() {
-    TreeSet<Block> blockSet = new TreeSet<Block>();
-    volumes.getBlockInfo(blockSet);
-    Block blockTable[] = new Block[blockSet.size()];
-    int i = 0;
-    for (Iterator<Block> it = blockSet.iterator(); it.hasNext(); i++) {
-      blockTable[i] = it.next();
+    ArrayList<Block> list =  new ArrayList<Block>(volumeMap.size());
+    synchronized(this) {
+      for (Block b : volumeMap.keySet()) {
+        if (!ongoingCreates.containsKey(b)) {
+          list.add(new Block(b));
+        }
+      }
     }
-    return blockTable;
+    return list.toArray(new Block[list.size()]);
+  }
+
+  /**
+   * Get the block list from in-memory blockmap. Note if <deepcopy>
+   * is false, reference to the block in the volumeMap is returned. This block
+   * should not be changed. Suitable synchronization using {@link FSDataset}
+   * is needed to handle concurrent modification to the block.
+   */
+  synchronized Block[] getBlockList(boolean deepcopy) {
+    Block[] list = volumeMap.keySet().toArray(new Block[volumeMap.size()]);
+    if (deepcopy) {
+      for (int i = 0; i < list.length; i++) {
+        list[i] = new Block(list[i]);
+      }
+    }
+    return list;
   }
 
   /**
@@ -1429,5 +1432,191 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
   public String getStorageInfo() {
     return toString();
+  }
+
+  /**
+   * Reconcile the difference between blocks on the disk and blocks in
+   * volumeMap
+   *
+   * Check the given block for inconsistencies. Look at the
+   * current state of the block and reconcile the differences as follows:
+   * <ul>
+   * <li>If the block file is missing, delete the block from volumeMap</li>
+   * <li>If the block file exists and the block is missing in volumeMap,
+   * add the block to volumeMap <li>
+   * <li>If generation stamp does not match, then update the block with right
+   * generation stamp</li>
+   * <li>If the block length in memory does not match the actual block file length
+   * then mark the block as corrupt and update the block length in memory</li>
+   * <li>If the file in {@link DatanodeBlockInfo} does not match the file on
+   * the disk, update {@link DatanodeBlockInfo} with the correct file</li>
+   * </ul>
+   *
+   * @param blockId Block that differs
+   * @param diskFile Block file on the disk
+   * @param diskMetaFile Metadata file from on the disk
+   * @param vol Volume of the block file
+   */
+  public void checkAndUpdate(long blockId, File diskFile,
+      File diskMetaFile, FSVolume vol) {
+    Block block = new Block(blockId);
+    DataNode datanode = DataNode.getDataNode();
+    Block corruptBlock = null;
+    synchronized (this) {
+      if (ongoingCreates.get(block) != null) {
+        // Block is not finalized - ignore the difference
+        return;
+      }
+
+      final long diskGS = diskMetaFile != null && diskMetaFile.exists() ?
+          Block.getGenerationStamp(diskMetaFile.getName()) :
+            Block.GRANDFATHER_GENERATION_STAMP;
+
+      DatanodeBlockInfo memBlockInfo = volumeMap.get(block);
+      if (diskFile == null || !diskFile.exists()) {
+        if (memBlockInfo == null) {
+          // Block file does not exist and block does not exist in memory
+          // If metadata file exists then delete it
+          if (diskMetaFile != null && diskMetaFile.exists()
+              && diskMetaFile.delete()) {
+            DataNode.LOG.warn("Deleted a metadata file without a block "
+                + diskMetaFile.getAbsolutePath());
+          }
+          return;
+        }
+        if (!memBlockInfo.getFile().exists()) {
+          // Block is in memory and not on the disk
+          // Remove the block from volumeMap
+          volumeMap.remove(block);
+          if (datanode.blockScanner != null) {
+            datanode.blockScanner.deleteBlock(block);
+          }
+          DataNode.LOG.warn("Removed block " + block.getBlockId()
+              + " from memory with missing block file on the disk");
+          // Finally remove the metadata file
+          if (diskMetaFile != null && diskMetaFile.exists()
+              && diskMetaFile.delete()) {
+            DataNode.LOG.warn("Deleted a metadata file for the deleted block "
+                + diskMetaFile.getAbsolutePath());
+          }
+        }
+        return;
+      }
+      /*
+       * Block file exists on the disk
+       */
+      if (memBlockInfo == null) {
+        // Block is missing in memory - add the block to volumeMap
+        DatanodeBlockInfo diskBlockInfo = new DatanodeBlockInfo(vol, diskFile);
+        Block diskBlock = new Block(diskFile, diskFile.length(), diskGS);
+        volumeMap.put(diskBlock, diskBlockInfo);
+        if (datanode.blockScanner != null) {
+          datanode.blockScanner.addBlock(diskBlock);
+        }
+        DataNode.LOG.warn("Added missing block to memory " + diskBlock);
+        return;
+      }
+      /*
+       * Block exists in volumeMap and the block file exists on the disk
+       */
+      // Iterate to get key from volumeMap for the blockId
+      Block memBlock = getBlockKey(blockId);
+
+      // Compare block files
+      File memFile = memBlockInfo.getFile();
+      if (memFile.exists()) {
+        if (memFile.compareTo(diskFile) != 0) {
+          DataNode.LOG.warn("Block file " + memFile.getAbsolutePath()
+              + " does not match file found by scan "
+              + diskFile.getAbsolutePath());
+          // TODO: Should the diskFile be deleted?
+        }
+      } else {
+        // Block refers to a block file that does not exist.
+        // Update the block with the file found on the disk. Since the block
+        // file and metadata file are found as a pair on the disk, update
+        // the block based on the metadata file found on the disk
+        DataNode.LOG.warn("Block file in volumeMap "
+            + memFile.getAbsolutePath()
+            + " does not exist. Updating it to the file found during scan "
+            + diskFile.getAbsolutePath());
+        DatanodeBlockInfo info = volumeMap.remove(memBlock);
+        info.setFile(diskFile);
+        memFile = diskFile;
+
+        DataNode.LOG.warn("Updating generation stamp for block " + blockId
+            + " from " + memBlock.getGenerationStamp() + " to " + diskGS);
+        memBlock.setGenerationStamp(diskGS);
+        volumeMap.put(memBlock, info);
+      }
+
+      // Compare generation stamp
+      if (memBlock.getGenerationStamp() != diskGS) {
+        File memMetaFile = getMetaFile(diskFile, memBlock);
+        if (memMetaFile.exists()) {
+          if (memMetaFile.compareTo(diskMetaFile) != 0) {
+            DataNode.LOG.warn("Metadata file in memory "
+                + memMetaFile.getAbsolutePath()
+                + " does not match file found by scan "
+                + diskMetaFile.getAbsolutePath());
+          }
+        } else {
+          // Metadata file corresponding to block in memory is missing
+          // If metadata file found during the scan is on the same directory
+          // as the block file, then use the generation stamp from it
+          long gs = diskMetaFile != null && diskMetaFile.exists()
+              && diskMetaFile.getParent().equals(memFile.getParent()) ? diskGS
+              : Block.GRANDFATHER_GENERATION_STAMP;
+
+          DataNode.LOG.warn("Updating generation stamp for block " + blockId
+              + " from " + memBlock.getGenerationStamp() + " to " + gs);
+
+          DatanodeBlockInfo info = volumeMap.remove(memBlock);
+          memBlock.setGenerationStamp(gs);
+          volumeMap.put(memBlock, info);
+        }
+      }
+
+      // Compare block size
+      if (memBlock.getNumBytes() != memFile.length()) {
+        // Update the length based on the block file
+        corruptBlock = new Block(memBlock);
+        DataNode.LOG.warn("Updating size of block " + blockId + " from "
+            + memBlock.getNumBytes() + " to " + memFile.length());
+        DatanodeBlockInfo info = volumeMap.remove(memBlock);
+        memBlock.setNumBytes(memFile.length());
+        volumeMap.put(memBlock, info);
+      }
+    }
+
+    // Send corrupt block report outside the lock
+    if (corruptBlock != null) {
+      DatanodeInfo[] dnArr = { new DatanodeInfo(datanode.dnRegistration) };
+      LocatedBlock[] blocks = { new LocatedBlock(corruptBlock, dnArr) };
+      try {
+        datanode.namenode.reportBadBlocks(blocks);
+        DataNode.LOG.warn("Reporting the block " + corruptBlock
+            + " as corrupt due to length mismatch");
+      } catch (IOException e) {
+        DataNode.LOG.warn("Failed to repot bad block " + corruptBlock
+            + "Exception:" + StringUtils.stringifyException(e));
+      }
+    }
+  }
+
+  /**
+   * Get reference to the key in the volumeMap. To be called from methods that
+   * are synchronized on {@link FSDataset}
+   * @param blockId
+   * @return key from the volumeMap
+   */
+  Block getBlockKey(long blockId) {
+    assert(Thread.holdsLock(this));
+    for (Block b : volumeMap.keySet()) {
+      if (b.getBlockId() == blockId) {
+        return b;
+      }
+    }
+    return null;
   }
 }

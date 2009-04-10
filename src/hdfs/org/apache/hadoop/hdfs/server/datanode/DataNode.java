@@ -699,7 +699,6 @@ public class DataNode extends Configured
     //
     // Now loop for a long time....
     //
-
     while (shouldRun) {
       try {
         long startTime = now();
@@ -729,73 +728,10 @@ public class DataNode extends Configured
             continue;
         }
             
-        // check if there are newly received blocks
-        Block [] blockArray=null;
-        String [] delHintArray=null;
-        synchronized(receivedBlockList) {
-          synchronized(delHints) {
-            int numBlocks = receivedBlockList.size();
-            if (numBlocks > 0) {
-              if(numBlocks!=delHints.size()) {
-                LOG.warn("Panic: receiveBlockList and delHints are not of the same length" );
-              }
-              //
-              // Send newly-received blockids to namenode
-              //
-              blockArray = receivedBlockList.toArray(new Block[numBlocks]);
-              delHintArray = delHints.toArray(new String[numBlocks]);
-            }
-          }
-        }
-        if (blockArray != null) {
-          if(delHintArray == null || delHintArray.length != blockArray.length ) {
-            LOG.warn("Panic: block array & delHintArray are not the same" );
-          }
-          namenode.blockReceived(dnRegistration, blockArray, delHintArray);
-          synchronized (receivedBlockList) {
-            synchronized (delHints) {
-              for(int i=0; i<blockArray.length; i++) {
-                receivedBlockList.remove(blockArray[i]);
-                delHints.remove(delHintArray[i]);
-              }
-            }
-          }
-        }
+        reportReceivedBlocks();
 
-        // send block report
-        if (startTime - lastBlockReport > blockReportInterval) {
-          //
-          // Send latest blockinfo report if timer has expired.
-          // Get back a list of local block(s) that are obsolete
-          // and can be safely GC'ed.
-          //
-          long brStartTime = now();
-          Block[] bReport = data.getBlockReport();
-          DatanodeCommand cmd = namenode.blockReport(dnRegistration,
-                  BlockListAsLongs.convertToArrayLongs(bReport));
-          long brTime = now() - brStartTime;
-          myMetrics.blockReports.inc(brTime);
-          LOG.info("BlockReport of " + bReport.length +
-              " blocks got processed in " + brTime + " msecs");
-          //
-          // If we have sent the first block report, then wait a random
-          // time before we start the periodic block reports.
-          //
-          if (resetBlockReportTime) {
-            lastBlockReport = startTime - R.nextInt((int)(blockReportInterval));
-            resetBlockReportTime = false;
-          } else {
-            /* say the last block report was at 8:20:14. The current report 
-             * should have started around 9:20:14 (default 1 hour interval). 
-             * If current time is :
-             *   1) normal like 9:20:18, next report should be at 10:20:14
-             *   2) unexpected like 11:35:43, next report should be at 12:20:14
-             */
-            lastBlockReport += (now() - lastBlockReport) / 
-                               blockReportInterval * blockReportInterval;
-          }
-          processCommand(cmd);
-        }
+        DatanodeCommand cmd = blockReport();
+        processCommand(cmd);
 
         // start block scanner
         if (blockScanner != null && blockScannerThread == null &&
@@ -926,6 +862,88 @@ public class DataNode extends Configured
     upgradeManager.processUpgradeCommand(comm);
   }
 
+  /**
+   * Report received blocks and delete hints to the Namenode
+   * @throws IOException
+   */
+  private void reportReceivedBlocks() throws IOException {
+    //check if there are newly received blocks
+    Block [] blockArray=null;
+    String [] delHintArray=null;
+    synchronized(receivedBlockList) {
+      synchronized(delHints){
+        int numBlocks = receivedBlockList.size();
+        if (numBlocks > 0) {
+          if(numBlocks!=delHints.size()) {
+            LOG.warn("Panic: receiveBlockList and delHints are not of the same length" );
+          }
+          //
+          // Send newly-received blockids to namenode
+          //
+          blockArray = receivedBlockList.toArray(new Block[numBlocks]);
+          delHintArray = delHints.toArray(new String[numBlocks]);
+        }
+      }
+    }
+    if (blockArray != null) {
+      if(delHintArray == null || delHintArray.length != blockArray.length ) {
+        LOG.warn("Panic: block array & delHintArray are not the same" );
+      }
+      namenode.blockReceived(dnRegistration, blockArray, delHintArray);
+      synchronized(receivedBlockList) {
+        synchronized(delHints){
+          for(int i=0; i<blockArray.length; i++) {
+            receivedBlockList.remove(blockArray[i]);
+            delHints.remove(delHintArray[i]);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Report the list blocks to the Namenode
+   * @throws IOException
+   */
+  private DatanodeCommand blockReport() throws IOException {
+    // send block report
+    DatanodeCommand cmd = null;
+    long startTime = now();
+    if (startTime - lastBlockReport > blockReportInterval) {
+      //
+      // Send latest block report if timer has expired.
+      // Get back a list of local block(s) that are obsolete
+      // and can be safely GC'ed.
+      //
+      long brStartTime = now();
+      Block[] bReport = data.getBlockReport();
+
+      cmd = namenode.blockReport(dnRegistration,
+              BlockListAsLongs.convertToArrayLongs(bReport));
+      long brTime = now() - brStartTime;
+      myMetrics.blockReports.inc(brTime);
+      LOG.info("BlockReport of " + bReport.length +
+          " blocks got processed in " + brTime + " msecs");
+      //
+      // If we have sent the first block report, then wait a random
+      // time before we start the periodic block reports.
+      //
+      if (resetBlockReportTime) {
+        lastBlockReport = startTime - R.nextInt((int)(blockReportInterval));
+        resetBlockReportTime = false;
+      } else {
+        /* say the last block report was at 8:20:14. The current report
+         * should have started around 9:20:14 (default 1 hour interval).
+         * If current time is :
+         *   1) normal like 9:20:18, next report should be at 10:20:14
+         *   2) unexpected like 11:35:43, next report should be at 12:20:14
+         */
+        lastBlockReport += (now() - lastBlockReport) /
+                           blockReportInterval * blockReportInterval;
+      }
+    }
+    return cmd;
+  }
 
   /**
    * Start distributed upgrade if it should be initiated by the data-node.

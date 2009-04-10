@@ -52,7 +52,13 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 
-/*
+/**
+ * Performs two types of scanning:
+ * <li> Gets block files from the data directories and reconciles the
+ * difference between the blocks on the disk and in memory in
+ * {@link FSDataset}</li>
+ * <li> Scans the data directories for block files and verifies that
+ * the files are not corrupt</li>
  * This keeps track of blocks and their last verification times.
  * Currently it does not modify the metadata for block.
  */
@@ -96,6 +102,9 @@ class DataBlockScanner implements Runnable {
   
   BlockTransferThrottler throttler = null;
   
+  // Reconciles blocks on disk to blocks in memory
+  DirectoryScanner dirScanner;
+
   private static enum ScanType {
     REMOTE_READ,           // Verified when a block read by a client etc
     VERIFICATION_SCAN,     // scanned as part of periodic verfication
@@ -143,6 +152,8 @@ class DataBlockScanner implements Runnable {
     }
     scanPeriod *= 3600 * 1000;
     // initialized when the scanner thread is started.
+
+    dirScanner = new DirectoryScanner(dataset, conf);
   }
   
   private synchronized boolean isInitiliazed() {
@@ -586,6 +597,10 @@ class DataBlockScanner implements Runnable {
             startNewPeriod();
           }
         }
+        if (dirScanner.newScanPeriod(now)) {
+          dirScanner.reconcile();
+          now = System.currentTimeMillis();
+        }
         if ( (now - getEarliestScanTime()) >= scanPeriod ) {
           verifyFirstBlock();
         } else {
@@ -940,7 +955,6 @@ class DataBlockScanner implements Runnable {
   }
   
   public static class Servlet extends HttpServlet {
-    
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response) throws IOException {
       

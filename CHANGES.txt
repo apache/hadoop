@@ -212,6 +212,9 @@ Trunk (unreleased changes)
     HADOOP-2413. Remove the static variable FSNamesystem.fsNamesystemObject.
     (Konstantin Shvachko via szetszwo)
 
+    HADOOP-4584. Improve datanode block reports and associated file system
+    scan to avoid interefering with normal datanode operations. 
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

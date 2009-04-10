@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.io.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.io.*;
@@ -28,7 +30,8 @@ import org.apache.hadoop.io.*;
  *
  **************************************************/
 public class Block implements Writable, Comparable<Block> {
-
+  public static final String BLOCK_FILE_PREFIX = "blk_";
+  public static final String METADATA_EXTENSION = ".meta";
   static {                                      // register a ctor
     WritableFactories.setFactory
       (Block.class,
@@ -41,20 +44,41 @@ public class Block implements Writable, Comparable<Block> {
   // a generation stamp.
   public static final long GRANDFATHER_GENERATION_STAMP = 0;
 
-  /**
-   */
+  public static final Pattern blockFilePattern = Pattern
+      .compile(BLOCK_FILE_PREFIX + "(-??\\d++)$");
+  public static final Pattern metaFilePattern = Pattern
+      .compile(BLOCK_FILE_PREFIX + "(-??\\d++)_(\\d++)\\" + METADATA_EXTENSION
+          + "$");
+
   public static boolean isBlockFilename(File f) {
     String name = f.getName();
-    if ( name.startsWith( "blk_" ) && 
-        name.indexOf( '.' ) < 0 ) {
-      return true;
-    } else {
-      return false;
-    }
+    return blockFilePattern.matcher(name).matches();
   }
 
-  static long filename2id(String name) {
-    return Long.parseLong(name.substring("blk_".length()));
+  public static long filename2id(String name) {
+    Matcher m = blockFilePattern.matcher(name);
+    return m.matches() ? Long.parseLong(m.group(1)) : 0;
+  }
+
+  public static boolean isMetaFilename(String name) {
+    return metaFilePattern.matcher(name).matches();
+  }
+
+  /**
+   * Get generation stamp from the name of the metafile name
+   */
+  public static long getGenerationStamp(String metaFile) {
+    Matcher m = metaFilePattern.matcher(metaFile);
+    return m.matches() ? Long.parseLong(m.group(2))
+        : GRANDFATHER_GENERATION_STAMP;
+  }
+
+  /**
+   * Get the blockId from the name of the metafile name
+   */
+  public static long getBlockId(String metaFile) {
+    Matcher m = metaFilePattern.matcher(metaFile);
+    return m.matches() ? Long.parseLong(m.group(1)) : 0;
   }
 
   private long blockId;
@@ -96,7 +120,7 @@ public class Block implements Writable, Comparable<Block> {
   /**
    */
   public String getBlockName() {
-    return "blk_" + String.valueOf(blockId);
+    return BLOCK_FILE_PREFIX + String.valueOf(blockId);
   }
 
   /**

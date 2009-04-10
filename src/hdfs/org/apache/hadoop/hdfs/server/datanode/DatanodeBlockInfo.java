@@ -58,6 +58,10 @@ class DatanodeBlockInfo {
     return file;
   }
 
+  void setFile(File f) {
+    file = f;
+  }
+
   /**
    * Is this block already detached?
    */

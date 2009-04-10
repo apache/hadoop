@@ -271,6 +271,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.datanode.directoryscan.interval</name>
+  <value>21600</value>
+  <description>Interval in seconds for Datanode to scan data directories and
+  reconcile the difference between blocks in memory and on the disk.
+  </description>
+</property>
+
+<property>
   <name>dfs.heartbeat.interval</name>
   <value>3</value>
   <description>Determines datanode heartbeat interval in seconds.</description>
