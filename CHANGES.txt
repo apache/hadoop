@@ -213,7 +213,11 @@ Trunk (unreleased changes)
     (Konstantin Shvachko via szetszwo)
 
     HADOOP-4584. Improve datanode block reports and associated file system
-    scan to avoid interefering with normal datanode operations. 
+    scan to avoid interefering with normal datanode operations.
+    (Suresh Srinivas via rangadi)
+
+    HADOOP-5502. Documentation for backup and checkpoint nodes.
+    (Jakob Homan via shv)
 
   OPTIMIZATIONS
 

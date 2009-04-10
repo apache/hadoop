@@ -589,6 +589,18 @@
 				<table>
 			          <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
 			
+                <tr>
+                  <td><code>-regular</code></td>
+                  <td>Start namenode in standard, active role rather than as backup or checkpoint node. This is the default role.</td>
+                </tr>
+                <tr>
+                  <td><code>-checkpoint</code></td>
+                  <td>Start namenode in checkpoint role, creating periodic checkpoints of the active namenode metadata.</td>
+                </tr>
+                <tr>
+                  <td><code>-backup</code></td>
+                  <td>Start namenode in backup role, maintaining an up-to-date in-memory copy of the namespace and creating periodic checkpoints.</td>
+                </tr>
 			           <tr>
 			          	<td><code>-format</code></td>
 			            <td>Formats the namenode. It starts the namenode, formats it and then shut it down.</td>
@@ -609,7 +621,7 @@
 			           </tr>
 			           <tr>
 			          	<td><code>-importCheckpoint</code></td>
-			            <td>Loads image from a checkpoint directory and save it into the current one. Checkpoint dir 
+			            <td>Loads image from a checkpoint directory and saves it into the current one. Checkpoint directory 
 			            is read from property fs.checkpoint.dir</td>
 			           </tr>
 			     </table>
@@ -618,7 +630,10 @@
 			<section>
 				<title> secondarynamenode </title>
 				<p>
-					Runs the HDFS secondary namenode. See <a href="hdfs_user_guide.html#Secondary+Namenode">Secondary Namenode</a> 
+					Use of the Secondary NameNode has been deprecated. Instead, consider using a 
+					<a href="hdfs_user_guide.html#Checkpoint+node">Checkpoint node</a> or 
+					<a href="hdfs_user_guide.html#Backup+node">Backup node</a>. Runs the HDFS secondary 
+					namenode. See <a href="hdfs_user_guide.html#Secondary+NameNode">Secondary NameNode</a> 
 					for more info.
 				</p>
 				<p>
