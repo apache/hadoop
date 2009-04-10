@@ -132,25 +132,16 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
   }
 
   /**
-   * Add values and timestamps of another cell into this cell
-   * 
-   * @param c
-   *          Cell
-   */
-  public void mergeCell(Cell c) {
-    valueMap.putAll(c.valueMap);
-  }
-
-  /**
-   * Add a new timestamp and value to this cell
+   * Add a new timestamp and value to this cell provided timestamp does not
+   * already exist
    * 
    * @param val
-   *          value
    * @param ts
-   *          timestamp
    */
   public void add(byte[] val, long ts) {
-    valueMap.put(ts, val);
+    if (!valueMap.containsKey(ts)) {
+      valueMap.put(ts, val);
+    }
   }
 
   /**
