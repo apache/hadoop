@@ -244,9 +244,6 @@ public final class Compression {
             // throw new AssertionError(
             // "Compressor obtained from CodecPool is already finished()");
           }
-          else {
-            LOG.debug("Got a compressor: " + compressor.hashCode());
-          }
           compressor.reset();
         }
         return compressor;
@@ -256,7 +253,6 @@ public final class Compression {
 
     public void returnCompressor(Compressor compressor) {
       if (compressor != null) {
-        LOG.debug("Return a compressor: " + compressor.hashCode());
         CodecPool.returnCompressor(compressor);
       }
     }
@@ -274,9 +270,6 @@ public final class Compression {
             // throw new AssertionError(
             // "Decompressor obtained from CodecPool is already finished()");
           }
-          else {
-            LOG.debug("Got a decompressor: " + decompressor.hashCode());
-          }
           decompressor.reset();
         }
         return decompressor;
@@ -287,7 +280,6 @@ public final class Compression {
 
     public void returnDecompressor(Decompressor decompressor) {
       if (decompressor != null) {
-        LOG.debug("Returned a decompressor: " + decompressor.hashCode());
         CodecPool.returnDecompressor(decompressor);
       }
     }
