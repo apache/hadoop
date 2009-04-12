@@ -219,6 +219,10 @@ Trunk (unreleased changes)
     HADOOP-5502. Documentation for backup and checkpoint nodes.
     (Jakob Homan via shv)
 
+    HADOOP-5485. Mask actions in the fair scheduler's servlet UI based on
+    value of webinterface.private.actions. 
+    (Vinod Kumar Vavilapalli via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

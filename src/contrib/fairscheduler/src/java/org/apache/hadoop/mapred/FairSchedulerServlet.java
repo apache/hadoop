@@ -80,12 +80,14 @@ public class FairSchedulerServlet extends HttpServlet {
     // If the request has a set* param, handle that and redirect to the regular
     // view page so that the user won't resubmit the data if they hit refresh.
     boolean advancedView = request.getParameter("advanced") != null;
-    if (request.getParameter("setFifo") != null) {
+    if (JSPUtil.privateActionsAllowed()
+        && request.getParameter("setFifo") != null) {
       scheduler.setUseFifo(request.getParameter("setFifo").equals("true"));
       response.sendRedirect("/scheduler" + (advancedView ? "?advanced" : ""));
       return;
     }
-    if (request.getParameter("setPool") != null) {
+    if (JSPUtil.privateActionsAllowed()
+        && request.getParameter("setPool") != null) {
       Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
       PoolManager poolMgr = null;
       synchronized (scheduler) {
@@ -105,7 +107,8 @@ public class FairSchedulerServlet extends HttpServlet {
       response.sendRedirect("/scheduler" + (advancedView ? "?advanced" : ""));
       return;
     }
-    if (request.getParameter("setPriority") != null) {
+    if (JSPUtil.privateActionsAllowed()
+        && request.getParameter("setPriority") != null) {
       Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();      
       JobPriority priority = JobPriority.valueOf(request.getParameter(
           "setPriority"));
@@ -134,7 +137,9 @@ public class FairSchedulerServlet extends HttpServlet {
         "Job Scheduler Administration</h1>\n", hostname);
     showPools(out, advancedView);
     showJobs(out, advancedView);
-    showAdminForm(out, advancedView);
+    if (JSPUtil.privateActionsAllowed()) {
+      showAdminForm(out, advancedView);
+    }
     out.print("</body></html>\n");
     out.close();
   }
@@ -221,17 +226,20 @@ public class FairSchedulerServlet extends HttpServlet {
             profile.getJobID(), profile.getJobID());
         out.printf("<td>%s</td>\n", profile.getUser());
         out.printf("<td>%s</td>\n", profile.getJobName());
-        out.printf("<td>%s</td>\n", generateSelect(
-            scheduler.getPoolManager().getPoolNames(),
-            scheduler.getPoolManager().getPoolName(job),
-            "/scheduler?setPool=<CHOICE>&jobid=" + profile.getJobID() +
-            (advancedView ? "&advanced" : "")));
-        out.printf("<td>%s</td>\n", generateSelect(
-            Arrays.asList(new String[]
-                {"VERY_LOW", "LOW", "NORMAL", "HIGH", "VERY_HIGH"}),
-            job.getPriority().toString(),
-            "/scheduler?setPriority=<CHOICE>&jobid=" + profile.getJobID() +
-            (advancedView ? "&advanced" : "")));
+        if (JSPUtil.privateActionsAllowed()) {
+          out.printf("<td>%s</td>\n", generateSelect(scheduler
+              .getPoolManager().getPoolNames(), scheduler.getPoolManager()
+              .getPoolName(job), "/scheduler?setPool=<CHOICE>&jobid="
+              + profile.getJobID() + (advancedView ? "&advanced" : "")));
+          out.printf("<td>%s</td>\n", generateSelect(Arrays
+              .asList(new String[] { "VERY_LOW", "LOW", "NORMAL", "HIGH",
+                  "VERY_HIGH" }), job.getPriority().toString(),
+              "/scheduler?setPriority=<CHOICE>&jobid=" + profile.getJobID()
+                  + (advancedView ? "&advanced" : "")));
+        } else {
+          out.printf("<td>%s</td>\n", scheduler.getPoolManager().getPoolName(job));
+          out.printf("<td>%s</td>\n", job.getPriority().toString());
+        }
         out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
             job.finishedMaps(), job.desiredMaps(), info.runningMaps,
             info.mapFairShare);

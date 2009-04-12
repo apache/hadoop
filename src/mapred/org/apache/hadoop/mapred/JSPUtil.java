@@ -45,8 +45,7 @@ class JSPUtil {
   public static void processButtons(HttpServletRequest request,
       HttpServletResponse response, JobTracker tracker) throws IOException {
 
-    if (conf.getBoolean(PRIVATE_ACTIONS_KEY, false)
-        && request.getParameter("killJobs") != null) {
+    if (privateActionsAllowed() && request.getParameter("killJobs") != null) {
       String[] jobs = request.getParameterValues("jobCheckBox");
       if (jobs != null) {
         for (String job : jobs) {
@@ -55,8 +54,8 @@ class JSPUtil {
       }
     }
 
-    if (conf.getBoolean(PRIVATE_ACTIONS_KEY, false) && 
-          request.getParameter("changeJobPriority") != null) {
+    if (privateActionsAllowed()
+        && request.getParameter("changeJobPriority") != null) {
       String[] jobs = request.getParameterValues("jobCheckBox");
 
       if (jobs != null) {
@@ -83,9 +82,7 @@ class JSPUtil {
   public static String generateJobTable(String label, Collection<JobInProgress> jobs
       , int refresh, int rowId) throws IOException {
 
-    boolean isModifiable = label.equals("Running") 
-                                && conf.getBoolean(
-                                      PRIVATE_ACTIONS_KEY, false);
+    boolean isModifiable = label.equals("Running") && privateActionsAllowed();
     StringBuffer sb = new StringBuffer();
     
     sb.append("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n");
@@ -181,4 +178,7 @@ class JSPUtil {
     return sb.toString();
   }
 
+  static final boolean privateActionsAllowed() {
+    return conf.getBoolean(PRIVATE_ACTIONS_KEY, false);
+  }
 }
