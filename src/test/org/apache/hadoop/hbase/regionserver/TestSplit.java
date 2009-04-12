@@ -20,16 +20,17 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.TreeMap;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
@@ -210,7 +211,7 @@ public class TestSplit extends HBaseClusterTestCase {
   private void assertGet(final HRegion r, final byte [] family, final byte [] k)
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
-    Cell[] results = r.get(k, family, -1, Integer.MAX_VALUE);
+    Cell[] results = Cell.createSingleCellArray(r.get(k, family, -1, Integer.MAX_VALUE));
     for (int j = 0; j < results.length; j++) {
       byte [] tmp = results[j].getValue();
       // Row should be equal to value every time.
@@ -232,13 +233,11 @@ public class TestSplit extends HBaseClusterTestCase {
     InternalScanner s = r.getScanner(cols,
       HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       boolean first = true;
-      OUTER_LOOP: while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] val = entry.getValue().getValue();
+      OUTER_LOOP: while(s.next(curVals)) {
+        for (KeyValue kv: curVals) {
+          byte [] val = kv.getValue();
           byte [] curval = val;
           if (first) {
             first = false;

@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 import java.util.SortedMap;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -52,6 +54,10 @@ public class PrefixRowFilter implements RowFilterInterface {
   }
 
   public void rowProcessed(boolean filtered, byte [] key) {
+    rowProcessed(filtered, key, 0, key.length);
+  }
+
+  public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
     // does not care
   }
   
@@ -64,12 +70,17 @@ public class PrefixRowFilter implements RowFilterInterface {
   }
   
   public boolean filterRowKey(final byte [] rowKey) {
+    return filterRowKey(rowKey, 0, rowKey.length);
+  }
+
+
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     if (rowKey == null)
       return true;
-    if (rowKey.length < prefix.length)
+    if (length < prefix.length)
       return true;
     for(int i = 0;i < prefix.length;i++)
-      if (prefix[i] != rowKey[i])
+      if (prefix[i] != rowKey[i + offset])
         return true;
     return false;
   }
@@ -79,7 +90,17 @@ public class PrefixRowFilter implements RowFilterInterface {
     return false;
   }
 
+  public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
+      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      int voffset, int vlength) {
+    return false;
+  }
+
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
+    return false;
+  }
+
+  public boolean filterRow(List<KeyValue> results) {
     return false;
   }
 

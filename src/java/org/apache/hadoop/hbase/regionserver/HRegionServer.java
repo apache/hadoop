@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
@@ -58,7 +59,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -66,8 +66,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -76,13 +76,11 @@ import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.ValueOverMaxLengthException;
 import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
@@ -991,7 +989,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         memcacheSize += r.memcacheSize.get();
         synchronized (r.stores) {
           stores += r.stores.size();
-          for(Map.Entry<Integer, Store> ee: r.stores.entrySet()) {
+          for(Map.Entry<byte [], Store> ee: r.stores.entrySet()) {
             Store store = ee.getValue(); 
             storefiles += store.getStorefilesCount();
             try {
@@ -1573,13 +1571,15 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return getRegion(regionName).getRegionInfo();
   }
 
-  public Cell[] get(final byte [] regionName, final byte [] row,
+  public Cell [] get(final byte [] regionName, final byte [] row,
     final byte [] column, final long timestamp, final int numVersions) 
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
-      return getRegion(regionName).get(row, column, timestamp, numVersions);
+      List<KeyValue> results =
+        getRegion(regionName).get(row, column, timestamp, numVersions);
+      return Cell.createSingleCellArray(results);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1593,16 +1593,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       // convert the columns array into a set so it's easy to check later.
-      Set<byte []> columnSet = null;
+      NavigableSet<byte []> columnSet = null;
       if (columns != null) {
         columnSet = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
         columnSet.addAll(Arrays.asList(columns));
       }
-      
       HRegion region = getRegion(regionName);
       HbaseMapWritable<byte [], Cell> result =
-        region.getFull(row, columnSet, 
-          ts, numVersions, getLockFromId(lockId));
+        region.getFull(row, columnSet, ts, numVersions, getLockFromId(lockId));
       if (result == null || result.isEmpty())
         return null;
       return new RowResult(row, result);
@@ -1632,9 +1630,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return rrs.length == 0 ? null : rrs[0];
   }
 
-  public RowResult[] next(final long scannerId, int nbRows) throws IOException {
+  public RowResult [] next(final long scannerId, int nbRows) throws IOException {
     checkOpen();
-    ArrayList<RowResult> resultSets = new ArrayList<RowResult>();
+    List<List<KeyValue>> results = new ArrayList<List<KeyValue>>();
     try {
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = scanners.get(scannerName);
@@ -1642,21 +1640,19 @@ public class HRegionServer implements HConstants, HRegionInterface,
         throw new UnknownScannerException("Name: " + scannerName);
       }
       this.leases.renewLease(scannerName);
-      for(int i = 0; i < nbRows; i++) {
+      for (int i = 0; i < nbRows; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
-        HbaseMapWritable<byte [], Cell> values
-          = new HbaseMapWritable<byte [], Cell>();
-        HStoreKey key = new HStoreKey();
-        while (s.next(key, values)) {
-          if (values.size() > 0) {
+        List<KeyValue> values = new ArrayList<KeyValue>();
+        while (s.next(values)) {
+          if (!values.isEmpty()) {
             // Row has something in it. Return the value.
-            resultSets.add(new RowResult(key.getRow(), values));
+            results.add(values);
             break;
           }
         }
       }
-      return resultSets.toArray(new RowResult[resultSets.size()]);
+      return RowResult.createRowResultArray(results);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1670,7 +1666,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
-    validateValuesLength(b, region);
     try {
       cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(b, getLockFromId(b.getRowLock()));
@@ -1689,7 +1684,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       Integer[] locks = new Integer[b.length];
       for (i = 0; i < b.length; i++) {
         this.requestCount.incrementAndGet();
-        validateValuesLength(b[i], region);
         locks[i] = getLockFromId(b[i].getRowLock());
         region.batchUpdate(b[i], locks[i]);
       }
@@ -1711,7 +1705,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
-    validateValuesLength(b, region);
     try {
       cacheFlusher.reclaimMemcacheMemory();
       return region.checkAndSave(b,
@@ -1720,34 +1713,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
   }
-  
-  
-  /**
-   * Utility method to verify values length
-   * @param batchUpdate The update to verify
-   * @throws IOException Thrown if a value is too long
-   */
-  private void validateValuesLength(BatchUpdate batchUpdate, 
-      HRegion region) throws IOException {
-    HTableDescriptor desc = region.getTableDesc();
-    for (Iterator<BatchOperation> iter = 
-      batchUpdate.iterator(); iter.hasNext();) {
-      BatchOperation operation = iter.next();
-      if (operation.getValue() != null) {
-        HColumnDescriptor fam = 
-          desc.getFamily(HStoreKey.getFamily(operation.getColumn()));
-        if (fam != null) {
-          int maxLength = fam.getMaxValueLength();
-          if (operation.getValue().length > maxLength) {
-            throw new ValueOverMaxLengthException("Value in column "
-                + Bytes.toString(operation.getColumn()) + " is too long. "
-                + operation.getValue().length + " instead of " + maxLength);
-          }
-        }
-      }
-    }
-  }
-  
+
   //
   // remote scanner interface
   //
@@ -2132,8 +2098,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     HRegion region = null;
     this.lock.readLock().lock();
     try {
-      Integer key = Integer.valueOf(Bytes.hashCode(regionName));
-      region = onlineRegions.get(key);
+      region = onlineRegions.get(Integer.valueOf(Bytes.hashCode(regionName)));
       if (region == null) {
         throw new NotServingRegionException(regionName);
       }

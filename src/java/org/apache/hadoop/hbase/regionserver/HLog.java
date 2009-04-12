@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -41,11 +42,11 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
@@ -457,8 +458,8 @@ public class HLog implements HConstants, Syncable {
    * @param sync
    * @throws IOException
    */
-  void append(byte [] regionName, byte [] tableName,
-      TreeMap<HStoreKey, byte[]> edits, boolean sync)
+  void append(byte [] regionName, byte [] tableName, List<KeyValue> edits,
+    boolean sync)
   throws IOException {
     if (closed) {
       throw new IOException("Cannot append; log is closed");
@@ -473,13 +474,10 @@ public class HLog implements HConstants, Syncable {
         this.lastSeqWritten.put(regionName, Long.valueOf(seqNum[0]));
       }
       int counter = 0;
-      for (Map.Entry<HStoreKey, byte[]> es : edits.entrySet()) {
-        HStoreKey key = es.getKey();
+      for (KeyValue kv: edits) {
         HLogKey logKey =
-          new HLogKey(regionName, tableName, key.getRow(), seqNum[counter++]);
-        HLogEdit logEdit =
-          new HLogEdit(key.getColumn(), es.getValue(), key.getTimestamp());
-       doWrite(logKey, logEdit, sync);
+          new HLogKey(regionName, tableName, seqNum[counter++]);
+       doWrite(logKey, new HLogEdit(kv), sync);
 
         this.numEntries++;
       }
@@ -555,7 +553,6 @@ public class HLog implements HConstants, Syncable {
     }
     byte [] regionName = regionInfo.getRegionName();
     byte [] tableName = regionInfo.getTableDesc().getName();
-    
     synchronized (updateLock) {
       long seqNum = obtainSeqNum();
       // The 'lastSeqWritten' map holds the sequence number of the oldest
@@ -566,7 +563,7 @@ public class HLog implements HConstants, Syncable {
         this.lastSeqWritten.put(regionName, Long.valueOf(seqNum));
       }
 
-      HLogKey logKey = new HLogKey(regionName, tableName, row, seqNum);
+      HLogKey logKey = new HLogKey(regionName, tableName, seqNum);
       boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
       doWrite(logKey, logEdit, sync);
       this.numEntries++;
@@ -645,16 +642,15 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   void completeCacheFlush(final byte [] regionName, final byte [] tableName,
-      final long logSeqId) throws IOException {
-
+    final long logSeqId)
+  throws IOException {
     try {
       if (this.closed) {
         return;
       }
       synchronized (updateLock) {
-        this.writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-            new HLogEdit(HLog.METACOLUMN, HLogEdit.COMPLETE_CACHE_FLUSH,
-                System.currentTimeMillis()));
+        this.writer.append(new HLogKey(regionName, tableName, logSeqId),
+          completeCacheFlushLogEdit());
         this.numEntries++;
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {
@@ -665,6 +661,12 @@ public class HLog implements HConstants, Syncable {
     } finally {
       this.cacheFlushLock.unlock();
     }
+  }
+
+  private HLogEdit completeCacheFlushLogEdit() {
+    // TODO Profligacy!!! Fix all this creation.
+    return new HLogEdit(new KeyValue(METAROW, METACOLUMN,
+      System.currentTimeMillis(), HLogEdit.COMPLETE_CACHE_FLUSH));
   }
 
   /**

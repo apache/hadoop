@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Test for regexp filters (HBASE-527)
  */
-public class TestRowFilterOnMultipleFamilies extends HBaseClusterTestCase {
-  private static final Log LOG = LogFactory.getLog(TestRowFilterOnMultipleFamilies.class.getName());
+public class DisabledTestRowFilterOnMultipleFamilies extends HBaseClusterTestCase {
+  private static final Log LOG = LogFactory.getLog(DisabledTestRowFilterOnMultipleFamilies.class.getName());
 
   static final String TABLE_NAME = "TestTable";
   static final String COLUMN1 = "A:col1";

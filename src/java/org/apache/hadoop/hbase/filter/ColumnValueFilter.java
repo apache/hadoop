@@ -23,9 +23,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.SortedMap;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.ObjectWritable;
@@ -123,6 +125,10 @@ public class ColumnValueFilter implements RowFilterInterface {
  }
 
   public boolean filterRowKey(final byte[] rowKey) {
+    return filterRowKey(rowKey, 0, rowKey.length);
+  }
+
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     return false;
   }
 
@@ -135,7 +141,14 @@ public class ColumnValueFilter implements RowFilterInterface {
       return false;
     }
     return filterColumnValue(data); 
-    
+  }
+
+
+  public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
+      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      int voffset, int vlength) {
+    if (true) throw new RuntimeException("Not yet implemented");
+    return false;
   }
 
   private boolean filterColumnValue(final byte [] data) {
@@ -182,6 +195,12 @@ public class ColumnValueFilter implements RowFilterInterface {
       return this.filterColumnValue(colCell.getValue());
   }
 
+
+  public boolean filterRow(List<KeyValue> results) {
+    if (true) throw new RuntimeException("Not yet implemented");
+    return false;
+  }
+
   private int compare(final byte[] b1, final byte[] b2) {
     int len = Math.min(b1.length, b2.length);
 
@@ -203,6 +222,11 @@ public class ColumnValueFilter implements RowFilterInterface {
 
   public void rowProcessed(final boolean filtered,
       final byte[] key) {
+    // Nothing
+  }
+
+
+  public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
     // Nothing
   }
 
@@ -236,5 +260,4 @@ public class ColumnValueFilter implements RowFilterInterface {
         WritableByteArrayComparable.class, new HBaseConfiguration());
     out.writeBoolean(filterIfColumnMissing);
   }
-
 }

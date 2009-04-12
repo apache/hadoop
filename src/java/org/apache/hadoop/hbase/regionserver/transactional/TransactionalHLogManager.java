@@ -103,7 +103,7 @@ class TransactionalHLogManager {
         : update.getTimestamp();
 
     for (BatchOperation op : update) {
-      HLogEdit logEdit = new HLogEdit(transactionId, op, commitTime);
+      HLogEdit logEdit = new HLogEdit(transactionId, update.getRow(), op, commitTime);
       hlog.append(regionInfo, update.getRow(), logEdit);
     }
   }
@@ -181,9 +181,11 @@ class TransactionalHLogManager {
           skippedEdits++;
           continue;
         }
+        // TODO: Change all below so we are not doing a getRow and getColumn
+        // against a KeyValue.  Each invocation creates a new instance.  St.Ack.
 
         // Check this edit is for me.
-        byte[] column = val.getColumn();
+        byte[] column = val.getKeyValue().getColumn();
         Long transactionId = val.getTransactionId();
         if (!val.isTransactionEntry() || HLog.isMetaColumn(column)
             || !Bytes.equals(key.getRegionName(), regionInfo.getRegionName())) {
@@ -211,11 +213,12 @@ class TransactionalHLogManager {
             throw new IOException("Corrupted transaction log");
           }
 
-          BatchUpdate tranUpdate = new BatchUpdate(key.getRow());
-          if (val.getVal() != null) {
-            tranUpdate.put(val.getColumn(), val.getVal());
+          BatchUpdate tranUpdate = new BatchUpdate(val.getKeyValue().getRow());
+          if (val.getKeyValue().getValue() != null) {
+            tranUpdate.put(val.getKeyValue().getColumn(),
+              val.getKeyValue().getValue());
           } else {
-            tranUpdate.delete(val.getColumn());
+            tranUpdate.delete(val.getKeyValue().getColumn());
           }
           updates.add(tranUpdate);
           writeCount++;

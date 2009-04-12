@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.KeyValue;
+
 /**
  * A scanner allows you to position yourself within a HFile and
  * scan through it.  It allows you to reposition yourself as well.
@@ -49,6 +51,7 @@ public interface HFileScanner {
    * @throws IOException
    */
   public int seekTo(byte[] key) throws IOException;
+  public int seekTo(byte[] key, int offset, int length) throws IOException;
   /**
    * Consider the key stream of all the keys in the file, 
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
@@ -60,6 +63,7 @@ public interface HFileScanner {
    * @throws IOException
    */
   public boolean seekBefore(byte [] key) throws IOException;
+  public boolean seekBefore(byte []key, int offset, int length) throws IOException;
   /**
    * Positions this scanner at the start of the file.
    * @return False if empty file; i.e. a call to next would return false and
@@ -88,6 +92,10 @@ public interface HFileScanner {
    * the position is 0, the start of the buffer view.
    */
   public ByteBuffer getValue();
+  /**
+   * @return Instance of {@link KeyValue}.
+   */
+  public KeyValue getKeyValue();
   /**
    * Convenience method to get a copy of the key as a string - interpreting the
    * bytes as UTF8. You must call {@link #seekTo(byte[])} before this method.

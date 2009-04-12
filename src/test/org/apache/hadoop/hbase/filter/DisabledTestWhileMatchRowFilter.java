@@ -23,7 +23,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.util.List;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
@@ -32,7 +34,7 @@ import junit.framework.TestCase;
 /**
  * Tests for the while-match filter
  */
-public class TestWhileMatchRowFilter extends TestCase {
+public class DisabledTestWhileMatchRowFilter extends TestCase {
 
   WhileMatchRowFilter wmStopRowFilter;
   WhileMatchRowFilter wmRegExpRowFilter;
@@ -111,7 +113,7 @@ public class TestWhileMatchRowFilter extends TestCase {
         filter.filterAllRemaining());
     
     // Test filterNotNull for functionality only (no switch-cases)
-    assertFalse("filter: filterNotNull", filter.filterRow(null));
+    assertFalse("filter: filterNotNull", filter.filterRow((List<KeyValue>)null));
   }
   
   private void whileMatchRegExpTests(WhileMatchRowFilter filter) throws 

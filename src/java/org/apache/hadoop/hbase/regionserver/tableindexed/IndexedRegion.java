@@ -26,7 +26,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -106,9 +107,10 @@ class IndexedRegion extends TransactionalRegion {
       return;
     }
 
-    Set<byte[]> neededColumns = getColumnsForIndexes(indexesToUpdate);
+    NavigableSet<byte[]> neededColumns = getColumnsForIndexes(indexesToUpdate);
 
-    SortedMap<byte[], byte[]> newColumnValues = getColumnsFromBatchUpdate(batchUpdate);
+    NavigableMap<byte[], byte[]> newColumnValues =
+      getColumnsFromBatchUpdate(batchUpdate);
     Map<byte[], Cell> oldColumnCells = super.getFull(batchUpdate.getRow(),
         neededColumns, HConstants.LATEST_TIMESTAMP, 1, null);
     
@@ -117,7 +119,9 @@ class IndexedRegion extends TransactionalRegion {
       if (!op.isPut()) {
         Cell current = oldColumnCells.get(op.getColumn());
         if (current != null) {
-          Cell [] older = super.get(batchUpdate.getRow(), op.getColumn(), current.getTimestamp(), 1);
+          // TODO: Fix this profligacy!!! St.Ack
+          Cell [] older = Cell.createSingleCellArray(super.get(batchUpdate.getRow(),
+              op.getColumn(), current.getTimestamp(), 1));
           if (older != null && older.length > 0) {
             newColumnValues.put(op.getColumn(), older[0].getValue());
           }
@@ -151,8 +155,8 @@ class IndexedRegion extends TransactionalRegion {
   }
 
   /** Return the columns needed for the update. */
-  private Set<byte[]> getColumnsForIndexes(Collection<IndexSpecification> indexes) {
-    Set<byte[]> neededColumns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+  private NavigableSet<byte[]> getColumnsForIndexes(Collection<IndexSpecification> indexes) {
+    NavigableSet<byte[]> neededColumns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     for (IndexSpecification indexSpec : indexes) {
       for (byte[] col : indexSpec.getAllColumns()) {
         neededColumns.add(col);
@@ -180,8 +184,8 @@ class IndexedRegion extends TransactionalRegion {
     getIndexTable(indexSpec).deleteAll(oldIndexRow);
   }
   
-  private SortedMap<byte[], byte[]> getColumnsFromBatchUpdate(BatchUpdate b) {
-    SortedMap<byte[], byte[]> columnValues = new TreeMap<byte[], byte[]>(
+  private NavigableMap<byte[], byte[]> getColumnsFromBatchUpdate(BatchUpdate b) {
+    NavigableMap<byte[], byte[]> columnValues = new TreeMap<byte[], byte[]>(
         Bytes.BYTES_COMPARATOR);
     for (BatchOperation op : b) {
       if (op.isPut()) {
@@ -267,7 +271,7 @@ class IndexedRegion extends TransactionalRegion {
     if (getIndexes().size() != 0) {
 
       // Need all columns
-      Set<byte[]> neededColumns = getColumnsForIndexes(getIndexes());
+      NavigableSet<byte[]> neededColumns = getColumnsForIndexes(getIndexes());
 
       Map<byte[], Cell> oldColumnCells = super.getFull(row,
           neededColumns, HConstants.LATEST_TIMESTAMP, 1, null);
@@ -314,7 +318,7 @@ class IndexedRegion extends TransactionalRegion {
       }
     }
     
-    Set<byte[]> neededColumns = getColumnsForIndexes(indexesToUpdate);
+    NavigableSet<byte[]> neededColumns = getColumnsForIndexes(indexesToUpdate);
     Map<byte[], Cell> oldColumnCells = super.getFull(row,
         neededColumns, HConstants.LATEST_TIMESTAMP, 1, null);
     SortedMap<byte [], byte[]> oldColumnValues = convertToValueMap(oldColumnCells);

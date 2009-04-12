@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Tests for a prefix row filter
  */
-public class TestPrefixRowFilter extends TestCase {
+public class DisabledTestPrefixRowFilter extends TestCase {
   RowFilterInterface mainFilter;
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';

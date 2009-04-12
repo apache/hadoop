@@ -19,19 +19,20 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.util.List;
 import java.util.SortedMap;
 
-import org.apache.hadoop.io.Writable;
-
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.io.Writable;
 
 /**
  * 
  * Interface used for row-level filters applied to HRegion.HScanner scan
  * results during calls to next().
+ * TODO: Make Filters use proper comparator comparing rows.
  */
 public interface RowFilterInterface extends Writable {
-
   /**
    * Resets the state of the filter. Used prior to the start of a Region scan.
    * 
@@ -48,8 +49,24 @@ public interface RowFilterInterface extends Writable {
    * @see RowFilterSet
    * @param filtered
    * @param key
+   * @deprecated Use {@link #rowProcessed(boolean, byte[], int, int)} instead.
    */
   void rowProcessed(boolean filtered, byte [] key);
+
+  /**
+   * Called to let filter know the final decision (to pass or filter) on a 
+   * given row.  With out HScanner calling this, the filter does not know if a 
+   * row passed filtering even if it passed the row itself because other 
+   * filters may have failed the row. E.g. when this filter is a member of a 
+   * RowFilterSet with an OR operator.
+   * 
+   * @see RowFilterSet
+   * @param filtered
+   * @param key
+   * @param offset
+   * @param length
+   */
+  void rowProcessed(boolean filtered, byte [] key, int offset, int length);
 
   /**
    * Returns whether or not the filter should always be processed in any 
@@ -79,8 +96,33 @@ public interface RowFilterInterface extends Writable {
    * 
    * @param rowKey
    * @return true if given row key is filtered and row should not be processed.
+   * @deprecated Use {@link #filterRowKey(byte[], int, int)} instead.
    */
   boolean filterRowKey(final byte [] rowKey);
+
+  /**
+   * Filters on just a row key. This is the first chance to stop a row.
+   * 
+   * @param rowKey
+   * @param offset
+   * @param length
+   * @return true if given row key is filtered and row should not be processed.
+   */
+  boolean filterRowKey(final byte [] rowKey, final int offset, final int length);
+
+  /**
+   * Filters on row key, column name, and column value. This will take individual columns out of a row, 
+   * but the rest of the row will still get through.
+   * 
+   * @param rowKey row key to filter on.
+   * @param colunmName column name to filter on
+   * @param columnValue column value to filter on
+   * @return true if row filtered and should not be processed.
+   * @deprecated Use {@link #filterColumn(byte[], int, int, byte[], int, int, byte[], int, int)}
+   * instead.
+   */
+  boolean filterColumn(final byte [] rowKey, final byte [] columnName,
+      final byte [] columnValue);
 
   /**
    * Filters on row key, column name, and column value. This will take individual columns out of a row, 
@@ -91,8 +133,10 @@ public interface RowFilterInterface extends Writable {
    * @param columnValue column value to filter on
    * @return true if row filtered and should not be processed.
    */
-  boolean filterColumn(final byte [] rowKey, final byte [] colunmName,
-      final byte[] columnValue);
+  boolean filterColumn(final byte [] rowKey, final int roffset,
+      final int rlength, final byte [] colunmName, final int coffset,
+      final int clength, final byte [] columnValue, final int voffset,
+      final int vlength);
 
   /**
    * Filter on the fully assembled row. This is the last chance to stop a row. 
@@ -101,6 +145,14 @@ public interface RowFilterInterface extends Writable {
    * @return true if row filtered and should not be processed.
    */
   boolean filterRow(final SortedMap<byte [], Cell> columns);
+
+  /**
+   * Filter on the fully assembled row. This is the last chance to stop a row. 
+   * 
+   * @param results
+   * @return true if row filtered and should not be processed.
+   */
+  boolean filterRow(final List<KeyValue> results);
 
   /**
    * Validates that this filter applies only to a subset of the given columns.

@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 import java.util.SortedMap;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Cell;
 
 /**
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.io.Cell;
  * thereafter defer to the result of filterAllRemaining().
  */
 public class WhileMatchRowFilter implements RowFilterInterface {
-  
   private boolean filterAllRemaining = false;
   private RowFilterInterface filter;
 
@@ -84,10 +85,15 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
   
   public boolean filterRowKey(final byte [] rowKey) {
-    changeFAR(this.filter.filterRowKey(rowKey));
+    changeFAR(this.filter.filterRowKey(rowKey, 0, rowKey.length));
     return filterAllRemaining();
   }
-  
+
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
+    changeFAR(this.filter.filterRowKey(rowKey, offset, length));
+    return filterAllRemaining();
+  }
+
   public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
     final byte[] data) {
     changeFAR(this.filter.filterColumn(rowKey, colKey, data));
@@ -98,7 +104,12 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     changeFAR(this.filter.filterRow(columns));
     return filterAllRemaining();
   }
-  
+
+  public boolean filterRow(List<KeyValue> results) {
+    changeFAR(this.filter.filterRow(results));
+    return filterAllRemaining();
+  }
+
   /**
    * Change filterAllRemaining from false to true if value is true, otherwise 
    * leave as is.
@@ -110,7 +121,11 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
 
   public void rowProcessed(boolean filtered, byte [] rowKey) {
-    this.filter.rowProcessed(filtered, rowKey);
+    this.filter.rowProcessed(filtered, rowKey, 0, rowKey.length);
+  }
+
+  public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
+    this.filter.rowProcessed(filtered, key, offset, length);
   }
   
   public void validate(final byte [][] columns) {
@@ -139,5 +154,12 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   public void write(DataOutput out) throws IOException {
     out.writeUTF(this.filter.getClass().getName());
     this.filter.write(out);
+  }
+
+  public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
+      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      int voffset, int vlength) {
+    // TODO Auto-generated method stub
+    return false;
   }
 }

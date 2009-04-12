@@ -21,25 +21,25 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.regionserver.HLog;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.HLog;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 
 /**
  * Utility that can merge any two regions in the same table: adjacent,
@@ -140,10 +140,12 @@ public class Merge extends Configured implements Tool {
    */
   private void mergeTwoMetaRegions() throws IOException {
     HRegion rootRegion = utils.getRootRegion();
-    Cell[] cells1 = rootRegion.get(region1, HConstants.COL_REGIONINFO, -1, -1);
-    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null : cells1[0]);
-    Cell[] cells2 = rootRegion.get(region2, HConstants.COL_REGIONINFO, -1, -1);
-    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null : cells2[0]);
+    List<KeyValue> cells1 =
+      rootRegion.get(region1, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
+    List<KeyValue> cells2 =
+      rootRegion.get(region2, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
     HRegion merged = merge(info1, rootRegion, info2, rootRegion); 
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
         rootRegion.getRegionInfo());
@@ -204,8 +206,8 @@ public class Merge extends Configured implements Tool {
     LOG.info("Found meta for region1 " + Bytes.toString(meta1.getRegionName()) +
       ", meta for region2 " + Bytes.toString(meta2.getRegionName()));
     HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
-    Cell[] cells1 = metaRegion1.get(region1, HConstants.COL_REGIONINFO, -1, -1);
-    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null : cells1[0]);
+    List<KeyValue> cells1 = metaRegion1.get(region1, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
     if (info1== null) {
       throw new NullPointerException("info1 is null using key " +
           Bytes.toString(region1) + " in " + meta1);
@@ -217,8 +219,8 @@ public class Merge extends Configured implements Tool {
     } else {
       metaRegion2 = utils.getMetaRegion(meta2);
     }
-    Cell[] cells2 = metaRegion2.get(region2, HConstants.COL_REGIONINFO, -1, -1);
-    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null : cells2[0]);
+    List<KeyValue> cells2 = metaRegion2.get(region2, HConstants.COL_REGIONINFO, -1, -1);
+    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta2);
     }

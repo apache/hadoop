@@ -21,20 +21,18 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -43,15 +41,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 class StoreScanner implements InternalScanner,  ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
 
-  private InternalScanner[] scanners;
-  private TreeMap<byte [], Cell>[] resultSets;
-  private HStoreKey[] keys;
+  private InternalScanner [] scanners;
+  private List<KeyValue> [] resultSets;
   private boolean wildcardMatch = false;
   private boolean multipleMatchers = false;
   private RowFilterInterface dataFilter;
   private Store store;
   private final long timestamp;
-  private final byte [][] targetCols;
+  private final NavigableSet<byte []> columns;
   
   // Indices for memcache scanner and hstorefile scanner.
   private static final int MEMS_INDEX = 0;
@@ -62,11 +59,11 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
   private final AtomicBoolean closing = new AtomicBoolean(false);
-  
+
   /** Create an Scanner with a handle on the memcache and HStore files. */
   @SuppressWarnings("unchecked")
-  StoreScanner(Store store, byte [][] targetCols, byte [] firstRow,
-    long timestamp, RowFilterInterface filter) 
+  StoreScanner(Store store, final NavigableSet<byte []> targetCols,
+    byte [] firstRow, long timestamp, RowFilterInterface filter) 
   throws IOException {
     this.store = store;
     this.dataFilter = filter;
@@ -74,12 +71,11 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
       dataFilter.reset();
     }
     this.scanners = new InternalScanner[2];
-    this.resultSets = new TreeMap[scanners.length];
-    this.keys = new HStoreKey[scanners.length];
+    this.resultSets = new List[scanners.length];
     // Save these args in case we need them later handling change in readers
     // See updateReaders below.
     this.timestamp = timestamp;
-    this.targetCols = targetCols;
+    this.columns = targetCols;
     try {
       scanners[MEMS_INDEX] =
         store.memcache.getScanner(timestamp, targetCols, firstRow);
@@ -98,7 +94,6 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
     for (int i = MEMS_INDEX; i < scanners.length; i++) {
       setupScanner(i);
     }
-    
     this.store.addChangedReaderObserver(this);
   }
   
@@ -120,10 +115,8 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
    * @throws IOException
    */
   private void setupScanner(final int i) throws IOException {
-    this.keys[i] = new HStoreKey();
-    this.resultSets[i] = new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-    if (this.scanners[i] != null && !this.scanners[i].next(this.keys[i],
-        this.resultSets[i])) {
+    this.resultSets[i] = new ArrayList<KeyValue>();
+    if (this.scanners[i] != null && !this.scanners[i].next(this.resultSets[i])) {
       closeScanner(i);
     }
   }
@@ -138,7 +131,7 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
     return this.multipleMatchers;
   }
 
-  public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
+  public boolean next(List<KeyValue> results)
   throws IOException {
     this.lock.readLock().lock();
     try {
@@ -148,97 +141,79 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
     boolean moreToFollow = true;
     while (filtered && moreToFollow) {
       // Find the lowest-possible key.
-      byte [] chosenRow = null;
+      KeyValue chosen = null;
       long chosenTimestamp = -1;
-      for (int i = 0; i < this.keys.length; i++) {
+      for (int i = 0; i < this.scanners.length; i++) {
+        KeyValue kv = this.resultSets[i] == null || this.resultSets[i].isEmpty()?
+          null: this.resultSets[i].get(0);
+        if (kv == null) {
+          continue;
+        }
         if (scanners[i] != null &&
-            (chosenRow == null ||
-            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
-              chosenRow) < 0) ||
-            ((this.store.rawcomparator.compareRows(this.keys[i].getRow(),
-              chosenRow) == 0) &&
-            (keys[i].getTimestamp() > chosenTimestamp)))) {
-          chosenRow = keys[i].getRow();
-          chosenTimestamp = keys[i].getTimestamp();
+            (chosen == null ||
+              (this.store.comparator.compareRows(kv, chosen) < 0) ||
+              ((this.store.comparator.compareRows(kv, chosen) == 0) &&
+              (kv.getTimestamp() > chosenTimestamp)))) {
+          chosen = kv;
+          chosenTimestamp = chosen.getTimestamp();
         }
       }
-      
+
       // Filter whole row by row key?
-      filtered = dataFilter != null? dataFilter.filterRowKey(chosenRow) : false;
+      filtered = dataFilter == null || chosen == null? false:
+        dataFilter.filterRowKey(chosen.getBuffer(), chosen.getRowOffset(),
+          chosen.getRowLength());
 
-      // Store the key and results for each sub-scanner. Merge them as
-      // appropriate.
+      // Store results for each sub-scanner.
       if (chosenTimestamp >= 0 && !filtered) {
-        // Here we are setting the passed in key with current row+timestamp
-        key.setRow(chosenRow);
-        key.setVersion(chosenTimestamp);
-        key.setColumn(HConstants.EMPTY_BYTE_ARRAY);
-        // Keep list of deleted cell keys within this row.  We need this
-        // because as we go through scanners, the delete record may be in an
-        // early scanner and then the same record with a non-delete, non-null
-        // value in a later. Without history of what we've seen, we'll return
-        // deleted values. This List should not ever grow too large since we
-        // are only keeping rows and columns that match those set on the
-        // scanner and which have delete values.  If memory usage becomes a
-        // problem, could redo as bloom filter.
-        Set<HStoreKey> deletes = new HashSet<HStoreKey>();
+        NavigableSet<KeyValue> deletes =
+          new TreeSet<KeyValue>(this.store.comparatorIgnoringType);
         for (int i = 0; i < scanners.length && !filtered; i++) {
-          while ((scanners[i] != null && !filtered && moreToFollow) &&
-            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
-              chosenRow) == 0)) {
-            // If we are doing a wild card match or there are multiple
-            // matchers per column, we need to scan all the older versions of 
-            // this row to pick up the rest of the family members
-            if (!wildcardMatch
-                && !multipleMatchers
-                && (keys[i].getTimestamp() != chosenTimestamp)) {
-              break;
+          if ((scanners[i] != null && !filtered && moreToFollow &&
+              this.resultSets[i] != null && !this.resultSets[i].isEmpty())) {
+            // Test this resultset is for the 'chosen' row.
+            KeyValue firstkv = resultSets[i].get(0);
+            if (!this.store.comparator.matchingRows(firstkv, chosen)) {
+              continue;
             }
-
-            // NOTE: We used to do results.putAll(resultSets[i]);
-            // but this had the effect of overwriting newer
-            // values with older ones. So now we only insert
-            // a result if the map does not contain the key.
-            HStoreKey hsk = new HStoreKey(key.getRow(),
-              HConstants.EMPTY_BYTE_ARRAY,
-              key.getTimestamp());
-            for (Map.Entry<byte [], Cell> e : resultSets[i].entrySet()) {
-              hsk.setColumn(e.getKey());
-              if (HLogEdit.isDeleted(e.getValue().getValue())) {
-                // Only first key encountered is added; deletes is a Set.
-                deletes.add(new HStoreKey(hsk));
-              } else if ((deletes.size() == 0 || !deletes.contains(hsk)) &&
-                  !filtered &&
-                  moreToFollow &&
-                  !results.containsKey(e.getKey())) {
-                if (dataFilter != null) {
+            // Its for the 'chosen' row, work it.
+            for (KeyValue kv: resultSets[i]) {
+              if (kv.isDeleteType()) {
+                deletes.add(kv);
+              } else if ((deletes.isEmpty() || !deletes.contains(kv)) &&
+                  !filtered && moreToFollow && !results.contains(kv)) {
+                if (this.dataFilter != null) {
                   // Filter whole row by column data?
-                  filtered = dataFilter.filterColumn(chosenRow, e.getKey(),
-                      e.getValue().getValue());
+                  int rowlength = kv.getRowLength();
+                  int columnoffset = kv.getColumnOffset(rowlength);
+                  filtered = dataFilter.filterColumn(kv.getBuffer(),
+                      kv.getRowOffset(), rowlength,
+                    kv.getBuffer(), columnoffset, kv.getColumnLength(columnoffset),
+                    kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
                   if (filtered) {
                     results.clear();
                     break;
                   }
                 }
-                results.put(e.getKey(), e.getValue());
+                results.add(kv);
+                /* REMOVING BECAUSE COULD BE BUNCH OF DELETES IN RESULTS
+                   AND WE WANT TO INCLUDE THEM -- below short-circuit is
+                   probably not wanted.
+                // If we are doing a wild card match or there are multiple
+                // matchers per column, we need to scan all the older versions of 
+                // this row to pick up the rest of the family members
+                if (!wildcardMatch && !multipleMatchers &&
+                    (kv.getTimestamp() != chosenTimestamp)) {
+                  break;
+                }
+                */
               }
             }
+            // Move on to next row.
             resultSets[i].clear();
-            if (!scanners[i].next(keys[i], resultSets[i])) {
+            if (!scanners[i].next(resultSets[i])) {
               closeScanner(i);
             }
-          }
-        }
-      }
-      for (int i = 0; i < scanners.length; i++) {
-        // If the current scanner is non-null AND has a lower-or-equal
-        // row label, then its timestamp is bad. We need to advance it.
-        while ((scanners[i] != null) &&
-            (this.store.rawcomparator.compareRows(this.keys[i].getRow(),
-              chosenRow) <= 0)) {
-          resultSets[i].clear();
-          if (!scanners[i].next(keys[i], resultSets[i])) {
-            closeScanner(i);
           }
         }
       }
@@ -249,8 +224,8 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
           moreToFollow = false;
         }
       }
-      
-      if (results.size() <= 0 && !filtered) {
+
+      if (results.isEmpty() && !filtered) {
         // There were no results found for this row.  Marked it as 
         // 'filtered'-out otherwise we will not move on to the next row.
         filtered = true;
@@ -258,7 +233,7 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
     }
     
     // If we got no results, then there is no more to follow.
-    if (results == null || results.size() <= 0) {
+    if (results == null || results.isEmpty()) {
       moreToFollow = false;
     }
     
@@ -276,18 +251,18 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
       this.lock.readLock().unlock();
     }
   }
-  
+
   /** Shut down a single scanner */
   void closeScanner(int i) {
     try {
       try {
         scanners[i].close();
       } catch (IOException e) {
-        LOG.warn(Bytes.toString(store.storeName) + " failed closing scanner " + i, e);
+        LOG.warn(Bytes.toString(store.storeName) + " failed closing scanner " +
+          i, e);
       }
     } finally {
       scanners[i] = null;
-      keys[i] = null;
       resultSets[i] = null;
     }
   }
@@ -321,8 +296,9 @@ class StoreScanner implements InternalScanner,  ChangedReadersObserver {
         try {
           // I think its safe getting key from mem at this stage -- it shouldn't have
           // been flushed yet
+          // TODO: MAKE SURE WE UPDATE FROM TRUNNK.
           this.scanners[HSFS_INDEX] = new StoreFileScanner(this.store,
-              this.timestamp, this. targetCols, this.keys[MEMS_INDEX].getRow());
+              this.timestamp, this. columns, this.resultSets[MEMS_INDEX].get(0).getRow());
           checkScannerFlags(HSFS_INDEX);
           setupScanner(HSFS_INDEX);
           LOG.debug("Added a StoreFileScanner to outstanding HStoreScanner");

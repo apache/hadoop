@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
@@ -409,18 +410,21 @@ public abstract class HBaseTestCase extends TestCase {
     }
 
     public Cell get(byte [] row, byte [] column) throws IOException {
-      Cell[] result = this.region.get(row, column, -1, -1);
+      // TODO: Fix profligacy converting from List to Cell [].
+      Cell[] result = Cell.createSingleCellArray(this.region.get(row, column, -1, -1));
       return (result == null)? null : result[0];
     }
 
     public Cell[] get(byte [] row, byte [] column, int versions)
     throws IOException {
-      return this.region.get(row, column, -1, versions);
+      // TODO: Fix profligacy converting from List to Cell [].
+      return Cell.createSingleCellArray(this.region.get(row, column, -1, versions));
     }
 
     public Cell[] get(byte [] row, byte [] column, long ts, int versions)
     throws IOException {
-      return this.region.get(row, column, ts, versions);
+      // TODO: Fix profligacy converting from List to Cell [].
+      return Cell.createSingleCellArray(this.region.get(row, column, ts, versions));
     }
 
     /**
@@ -483,7 +487,7 @@ public abstract class HBaseTestCase extends TestCase {
   
   public interface ScannerIncommon 
   extends Iterable<Map.Entry<HStoreKey, SortedMap<byte [], Cell>>> {
-    public boolean next(HStoreKey key, SortedMap<byte [], Cell> values)
+    public boolean next(List<KeyValue> values)
     throws IOException;
     
     public void close() throws IOException;
@@ -495,16 +499,16 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
     
-    public boolean next(HStoreKey key, SortedMap<byte [], Cell> values)
+    public boolean next(List<KeyValue> values)
     throws IOException {
       RowResult results = scanner.next();
       if (results == null) {
         return false;
       }
-      key.setRow(results.getRow());
       values.clear();
       for (Map.Entry<byte [], Cell> entry : results.entrySet()) {
-        values.put(entry.getKey(), entry.getValue());
+        values.add(new KeyValue(results.getRow(), entry.getKey(),
+          entry.getValue().getTimestamp(), entry.getValue().getValue()));
       }
       return true;
     }
@@ -526,9 +530,9 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
     
-    public boolean next(HStoreKey key, SortedMap<byte [], Cell> values)
+    public boolean next(List<KeyValue> results)
     throws IOException {
-      return scanner.next(key, values);
+      return scanner.next(results);
     }
     
     public void close() throws IOException {
@@ -545,8 +549,9 @@ public abstract class HBaseTestCase extends TestCase {
   throws IOException {
     Map<byte [], Cell> result = region.getFull(row, null, timestamp, 1, null);
     Cell cell_value = result.get(column);
-    if(value == null){
-      assertEquals(Bytes.toString(column) + " at timestamp " + timestamp, null, cell_value);
+    if (value == null) {
+      assertEquals(Bytes.toString(column) + " at timestamp " + timestamp, null,
+        cell_value);
     } else {
       if (cell_value == null) {
         fail(Bytes.toString(column) + " at timestamp " + timestamp + 

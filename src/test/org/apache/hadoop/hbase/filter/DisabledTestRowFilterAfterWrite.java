@@ -42,9 +42,9 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** Test regexp filters HBASE-476 */
-public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
+public class DisabledTestRowFilterAfterWrite extends HBaseClusterTestCase {
 
-  private static final Log LOG = LogFactory.getLog(TestRowFilterAfterWrite.class.getName());
+  private static final Log LOG = LogFactory.getLog(DisabledTestRowFilterAfterWrite.class.getName());
 
   static final String TABLE_NAME = "TestTable";
   static final String FAMILY = "C:";
@@ -68,7 +68,7 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
   }
 
   /** constructor */
-  public TestRowFilterAfterWrite() {
+  public DisabledTestRowFilterAfterWrite() {
     super();
 
     // Make sure the cache gets flushed so we get multiple stores

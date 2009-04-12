@@ -26,34 +26,33 @@ import java.io.DataOutputStream;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
+
 import junit.framework.TestCase;
 
 /**
- * Tests the inclusive stop row filter
+ * Tests for the page row filter
  */
-public class TestInclusiveStopRowFilter extends TestCase {
-  private final byte [] STOP_ROW = Bytes.toBytes("stop_row");
-  private final byte [] GOOD_ROW = Bytes.toBytes("good_row");
-  private final byte [] PAST_STOP_ROW = Bytes.toBytes("zzzzzz");
+public class DisabledTestPageRowFilter extends TestCase {
   
   RowFilterInterface mainFilter;
-
+  static final int ROW_LIMIT = 3;
+  
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    mainFilter = new InclusiveStopRowFilter(STOP_ROW);
+    mainFilter = new PageRowFilter(ROW_LIMIT);
   }
   
   /**
-   * Tests identification of the stop row
+   * test page size filter
    * @throws Exception
    */
-  public void testStopRowIdentification() throws Exception {
-    stopRowTests(mainFilter);
+  public void testPageSize() throws Exception {
+    pageSizeTests(mainFilter);
   }
   
   /**
-   * Tests serialization
+   * Test filter serialization
    * @throws Exception
    */
   public void testSerialization() throws Exception {
@@ -66,27 +65,34 @@ public class TestInclusiveStopRowFilter extends TestCase {
     
     // Recompose mainFilter.
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    RowFilterInterface newFilter = new InclusiveStopRowFilter();
+    RowFilterInterface newFilter = new PageRowFilter();
     newFilter.readFields(in);
     
     // Ensure the serialization preserved the filter by running a full test.
-    stopRowTests(newFilter);
+    pageSizeTests(newFilter);
   }
   
-  private void stopRowTests(RowFilterInterface filter) throws Exception {
-    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW), filter.filterRowKey(GOOD_ROW));
-    assertFalse("Filtering on " + Bytes.toString(STOP_ROW), filter.filterRowKey(STOP_ROW));
-    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW), filter.filterRowKey(PAST_STOP_ROW));
-    
-    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW), filter.filterColumn(GOOD_ROW, null, 
-      null));
-    assertFalse("Filtering on " + Bytes.toString(STOP_ROW), filter.filterColumn(STOP_ROW, null, null));
-    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW), filter.filterColumn(PAST_STOP_ROW, 
-      null, null));
-
-    assertFalse("FilterAllRemaining", filter.filterAllRemaining());
-    assertFalse("FilterNotNull", filter.filterRow(null));
-    
-    assertFalse("Filter a null", filter.filterRowKey(null));
+  private void pageSizeTests(RowFilterInterface filter) throws Exception {
+    testFiltersBeyondPageSize(filter, ROW_LIMIT);
+    // Test reset works by going in again.
+    filter.reset();
+    testFiltersBeyondPageSize(filter, ROW_LIMIT);
+  }
+  
+  private void testFiltersBeyondPageSize(final RowFilterInterface filter,
+    final int pageSize) {
+    for (int i = 0; i < (pageSize * 2); i++) {
+      byte [] row = Bytes.toBytes(Integer.toString(i));
+      boolean filterOut = filter.filterRowKey(row);
+      if (!filterOut) {
+        assertFalse("Disagrees with 'filter'", filter.filterAllRemaining());
+      } else {
+        // Once we have all for a page, calls to filterAllRemaining should
+        // stay true.
+        assertTrue("Disagrees with 'filter'", filter.filterAllRemaining());
+        assertTrue(i >= pageSize);
+      }
+      filter.rowProcessed(filterOut, row);
+    }
   }
 }

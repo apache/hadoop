@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -331,12 +330,10 @@ class HMerge implements HConstants {
         HConstants.LATEST_TIMESTAMP, null);
       
       try {
-        HStoreKey key = new HStoreKey();
-        TreeMap<byte [], Cell> results =
-          new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-        while(rootScanner.next(key, results)) {
-          for(Cell c: results.values()) {
-            HRegionInfo info = Writables.getHRegionInfoOrNull(c.getValue());
+        List<KeyValue> results = new ArrayList<KeyValue>();
+        while(rootScanner.next(results)) {
+          for(KeyValue kv: results) {
+            HRegionInfo info = Writables.getHRegionInfoOrNull(kv.getValue());
             if (info != null) {
               metaRegions.add(info);
             }

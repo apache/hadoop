@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 import java.util.SortedMap;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -32,7 +34,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * equal to a specified rowKey.
  */
 public class StopRowFilter implements RowFilterInterface {
-
   private byte [] stopRowKey;
   
   /**
@@ -73,6 +74,10 @@ public class StopRowFilter implements RowFilterInterface {
     // Doesn't care
   }
 
+  public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
+    // Doesn't care
+  }
+
   public boolean processAlways() {
     return false;
   }
@@ -82,6 +87,10 @@ public class StopRowFilter implements RowFilterInterface {
   }
 
   public boolean filterRowKey(final byte [] rowKey) {
+    return filterRowKey(rowKey, 0, rowKey.length);
+  }
+
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     if (rowKey == null) {
       if (this.stopRowKey == null) {
         return true;
@@ -104,6 +113,12 @@ public class StopRowFilter implements RowFilterInterface {
     return filterRowKey(rowKey);
   }
 
+  public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
+      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      int voffset, int vlength) {
+    return filterRowKey(rowKey, roffset, rlength);
+  }
+
   /**
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling filterAllRemaining().
@@ -111,6 +126,10 @@ public class StopRowFilter implements RowFilterInterface {
    * @return boolean
    */
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
+    return filterAllRemaining();
+  }
+
+  public boolean filterRow(List<KeyValue> results) {
     return filterAllRemaining();
   }
 

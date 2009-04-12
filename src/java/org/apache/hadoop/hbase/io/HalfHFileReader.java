@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -46,11 +47,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>This file is not splitable.  Calls to {@link #midkey()} return null.
  */
 public class HalfHFileReader extends HFile.Reader {
-  static final Log LOG = LogFactory.getLog(HalfHFileReader.class);
-  protected final boolean top;
+  final Log LOG = LogFactory.getLog(HalfHFileReader.class);
+  final boolean top;
   // This is the key we split around.  Its the first possible entry on a row:
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
-  protected final byte [] splitkey;
+  final byte [] splitkey;
 
   /**
    * @param fs
@@ -99,6 +100,10 @@ public class HalfHFileReader extends HFile.Reader {
         return delegate.getValueString();
       }
 
+      public KeyValue getKeyValue() {
+        return delegate.getKeyValue();
+      }
+
       public boolean next() throws IOException {
         boolean b = delegate.next();
         if (!b) {
@@ -115,16 +120,23 @@ public class HalfHFileReader extends HFile.Reader {
       }
 
       public boolean seekBefore(byte[] key) throws IOException {
+        return seekBefore(key, 0, key.length);
+      }
+
+      public boolean seekBefore(byte [] key, int offset, int length)
+      throws IOException {
         if (top) {
-          if (getComparator().compare(key, splitkey) < 0) {
+          if (getComparator().compare(key, offset, length, splitkey, 0,
+              splitkey.length) < 0) {
             return false;
           }
         } else {
-          if (getComparator().compare(key, splitkey) >= 0) {
-            return seekBefore(splitkey);
+          if (getComparator().compare(key, offset, length, splitkey, 0,
+              splitkey.length) >= 0) {
+            return seekBefore(splitkey, 0, splitkey.length);
           }
         }
-        return this.delegate.seekBefore(key);
+        return this.delegate.seekBefore(key, offset, length);
       }
 
       public boolean seekTo() throws IOException {
@@ -152,22 +164,28 @@ public class HalfHFileReader extends HFile.Reader {
       }
 
       public int seekTo(byte[] key) throws IOException {
+        return seekTo(key, 0, key.length);
+      }
+
+      public int seekTo(byte[] key, int offset, int length) throws IOException {
         if (top) {
-          if (getComparator().compare(key, splitkey) < 0) {
+          if (getComparator().compare(key, offset, length, splitkey, 0,
+              splitkey.length) < 0) {
             return -1;
           }
         } else {
-          if (getComparator().compare(key, splitkey) >= 0) {
+          if (getComparator().compare(key, offset, length, splitkey, 0,
+              splitkey.length) >= 0) {
             // we would place the scanner in the second half.
             // it might be an error to return false here ever...
-            boolean res = delegate.seekBefore(splitkey);
+            boolean res = delegate.seekBefore(splitkey, 0, splitkey.length);
             if (!res) {
               throw new IOException("Seeking for a key in bottom of file, but key exists in top of file, failed on seekBefore(midkey)");
             }
             return 1;
           }
         }
-        return delegate.seekTo(key);
+        return delegate.seekTo(key, offset, length);
       }
 
       public Reader getReader() {

@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestAtomicIncrement extends HBaseClusterTestCase {
-  static final Log LOG = LogFactory.getLog(TestAtomicIncrement.class);
+public class DisabledTestAtomicIncrement extends HBaseClusterTestCase {
+  static final Log LOG = LogFactory.getLog(DisabledTestAtomicIncrement.class);
 
   private static final byte [] CONTENTS = Bytes.toBytes("contents:");
 

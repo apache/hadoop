@@ -56,7 +56,7 @@ class MetaScanner implements HConstants {
       try {
         RowResult r = null;
         do {
-          RowResult[] rrs = connection.getRegionServerWithRetries(callable);
+          RowResult [] rrs = connection.getRegionServerWithRetries(callable);
           if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
             break;
           }

@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
+import java.util.NavigableSet;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -232,7 +232,7 @@ public class TransactionalRegionServer extends HRegionServer implements
     super.getRequestCount().incrementAndGet();
     try {
       // convert the columns array into a set so it's easy to check later.
-      Set<byte[]> columnSet = null;
+      NavigableSet<byte[]> columnSet = null;
       if (columns != null) {
         columnSet = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
         columnSet.addAll(Arrays.asList(columns));

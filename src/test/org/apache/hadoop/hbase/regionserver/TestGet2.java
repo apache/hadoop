@@ -20,22 +20,23 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.NavigableSet;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
  * {@link TestGet} is a medley of tests of get all done up as a single test.
@@ -62,6 +63,56 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
   }
 
 
+  /**
+   * Test for HBASE-808 and HBASE-809.
+   * @throws Exception
+   */
+  public void testMaxVersionsAndDeleting() throws Exception {
+    HRegion region = null;
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      region = createNewHRegion(htd, null, null);
+      
+      byte [] column = COLUMNS[0];
+      for (int i = 0; i < 100; i++) {
+        addToRow(region, T00, column, i, T00.getBytes());
+      }
+      checkVersions(region, T00, column);
+      // Flush and retry.
+      region.flushcache();
+      checkVersions(region, T00, column);
+      
+      // Now delete all then retry
+      region.deleteAll(Bytes.toBytes(T00), System.currentTimeMillis(), null);
+      Cell [] cells = Cell.createSingleCellArray(region.get(Bytes.toBytes(T00), column, -1,
+        HColumnDescriptor.DEFAULT_VERSIONS));
+      assertTrue(cells == null);
+      region.flushcache();
+      cells = Cell.createSingleCellArray(region.get(Bytes.toBytes(T00), column, -1,
+          HColumnDescriptor.DEFAULT_VERSIONS));
+      assertTrue(cells == null);
+      
+      // Now add back the rows
+      for (int i = 0; i < 100; i++) {
+        addToRow(region, T00, column, i, T00.getBytes());
+      }
+      // Run same verifications.
+      checkVersions(region, T00, column);
+      // Flush and retry.
+      region.flushcache();
+      checkVersions(region, T00, column);
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }
+  }
+
   public void testGetFullMultiMapfile() throws IOException {
     HRegion region = null;
     BatchUpdate batchUpdate = null;
@@ -84,7 +135,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache();
 
       // assert that getFull gives us the older value
-      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
+      results = region.getFull(row, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("olderValue", new String(results.get(COLUMNS[0]).getValue()));
       
       // write a new value for the cell
@@ -96,7 +147,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache();
       
       // assert that getFull gives us the later value
-      results = region.getFull(row, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
+      results = region.getFull(row, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("newerValue", new String(results.get(COLUMNS[0]).getValue()));
      
       //
@@ -117,7 +168,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache();
       
       // assert i get both columns
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
+      results = region.getFull(row2, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("Should have two columns in the results map", 2, results.size());
       assertEquals("column0 value", new String(results.get(cell1).getValue()));
       assertEquals("column1 value", new String(results.get(cell2).getValue()));
@@ -132,7 +183,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.flushcache(); 
       
       // assert i get the second column only
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
+      results = region.getFull(row2, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
       System.out.println(Bytes.toString(results.keySet().iterator().next()));
       assertEquals("Should have one column in the results map", 1, results.size());
       assertNull("column0 value", results.get(cell1));
@@ -147,7 +198,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       region.batchUpdate(batchUpdate, null);
       
       // assert i get the third column only
-      results = region.getFull(row2, (Set<byte []>)null, LATEST_TIMESTAMP, 1, null);
+      results = region.getFull(row2, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
       assertEquals("Should have one column in the results map", 1, results.size());
       assertNull("column0 value", results.get(cell1));
       assertNull("column1 value", results.get(cell2));
@@ -232,56 +283,6 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
     }
   }
 
-  /**
-   * Test for HBASE-808 and HBASE-809.
-   * @throws Exception
-   */
-  public void testMaxVersionsAndDeleting() throws Exception {
-    HRegion region = null;
-    try {
-      HTableDescriptor htd = createTableDescriptor(getName());
-      region = createNewHRegion(htd, null, null);
-      
-      byte [] column = COLUMNS[0];
-      for (int i = 0; i < 100; i++) {
-        addToRow(region, T00, column, i, T00.getBytes());
-      }
-      checkVersions(region, T00, column);
-      // Flush and retry.
-      region.flushcache();
-      checkVersions(region, T00, column);
-      
-      // Now delete all then retry
-      region.deleteAll(Bytes.toBytes(T00), System.currentTimeMillis(), null);
-      Cell [] cells = region.get(Bytes.toBytes(T00), column, -1,
-        HColumnDescriptor.DEFAULT_VERSIONS);
-      assertTrue(cells == null);
-      region.flushcache();
-      cells = region.get(Bytes.toBytes(T00), column, -1,
-          HColumnDescriptor.DEFAULT_VERSIONS);
-      assertTrue(cells == null);
-      
-      // Now add back the rows
-      for (int i = 0; i < 100; i++) {
-        addToRow(region, T00, column, i, T00.getBytes());
-      }
-      // Run same verifications.
-      checkVersions(region, T00, column);
-      // Flush and retry.
-      region.flushcache();
-      checkVersions(region, T00, column);
-    } finally {
-      if (region != null) {
-        try {
-          region.close();
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-        region.getLog().closeAndDelete();
-      }
-    }
-  }
-  
   private void addToRow(final HRegion r, final String row, final byte [] column,
       final long ts, final byte [] bytes)
   throws IOException {
@@ -294,11 +295,11 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       final byte [] column)
   throws IOException {
     byte [] r = Bytes.toBytes(row);
-    Cell [] cells = region.get(r, column, -1, 100);
+    Cell [] cells = Cell.createSingleCellArray(region.get(r, column, -1, 100));
     assertTrue(cells.length == HColumnDescriptor.DEFAULT_VERSIONS);
-    cells = region.get(r, column, -1, 1);
+    cells = Cell.createSingleCellArray(region.get(r, column, -1, 1));
     assertTrue(cells.length == 1);
-    cells = region.get(r, column, -1, HConstants.ALL_VERSIONS);
+    cells = Cell.createSingleCellArray(region.get(r, column, -1, 10000));
     assertTrue(cells.length == HColumnDescriptor.DEFAULT_VERSIONS);
   }
   
@@ -435,14 +436,12 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       scanner = region.getScanner(columns,
           arbitraryStartRow, HConstants.LATEST_TIMESTAMP,
           new WhileMatchRowFilter(new StopRowFilter(arbitraryStopRow)));
-      HStoreKey key = new HStoreKey();
-      TreeMap<byte [], Cell> value =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-      while (scanner.next(key, value)) { 
+      List<KeyValue> value = new ArrayList<KeyValue>();
+      while (scanner.next(value)) { 
         if (actualStartRow == null) {
-          actualStartRow = key.getRow();
+          actualStartRow = value.get(0).getRow();
         } else {
-          actualStopRow = key.getRow();
+          actualStopRow = value.get(0).getRow();
         }
       }
       // Assert I got all out.

@@ -23,11 +23,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.ObjectWritable;
 
@@ -117,8 +119,12 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   public void rowProcessed(boolean filtered, byte [] rowKey) {
+    rowProcessed(filtered, rowKey, 0, rowKey.length);
+  }
+
+  public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
     for (RowFilterInterface filter : filters) {
-      filter.rowProcessed(filtered, rowKey);
+      filter.rowProcessed(filtered, key, offset, length);
     }
   }
 
@@ -148,23 +154,30 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   public boolean filterRowKey(final byte [] rowKey) {
+    return filterRowKey(rowKey, 0, rowKey.length);
+  }
+
+
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
-          if (filter.filterAllRemaining() || filter.filterRowKey(rowKey)) {
+          if (filter.filterAllRemaining() ||
+              filter.filterRowKey(rowKey, offset, length)) {
             result = true;
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
-          if (!filter.filterAllRemaining() && !filter.filterRowKey(rowKey)) {
+          if (!filter.filterAllRemaining() &&
+              !filter.filterRowKey(rowKey, offset, length)) {
             result = false;
             resultFound = true;
           }
         }
       } else if (filter.processAlways()) {
-        filter.filterRowKey(rowKey);
+        filter.filterRowKey(rowKey, offset, length);
       }
     }
     return result;
@@ -172,25 +185,35 @@ public class RowFilterSet implements RowFilterInterface {
 
   public boolean filterColumn(final byte [] rowKey, final byte [] colKey, 
     final byte[] data) {
+    return filterColumn(rowKey, 0, rowKey.length, colKey, 0, colKey.length,
+        data, 0, data.length);
+  }
+
+  public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
+      byte[] columnName, int coffset, int clength, byte[] columnValue,
+      int voffset, int vlength) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
           if (filter.filterAllRemaining() || 
-            filter.filterColumn(rowKey, colKey, data)) {
+            filter.filterColumn(rowKey, roffset, rlength, columnName, coffset,
+                clength, columnValue, voffset, vlength)) {
             result = true;
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
           if (!filter.filterAllRemaining() && 
-            !filter.filterColumn(rowKey, colKey, data)) {
+            !filter.filterColumn(rowKey, roffset, rlength, columnName, coffset,
+                clength, columnValue, voffset, vlength)) {
             result = false;
             resultFound = true;
           }
         }
       } else if (filter.processAlways()) {
-        filter.filterColumn(rowKey, colKey, data);
+        filter.filterColumn(rowKey, roffset, rlength, columnName, coffset,
+            clength, columnValue, voffset, vlength);
       }
     }
     return result;
@@ -219,6 +242,11 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
+  public boolean filterRow(List<KeyValue> results) {
+    if (true) throw new RuntimeException("Not Yet Implemented");
+    return false;
+  }
+
   public void readFields(final DataInput in) throws IOException {
     Configuration conf = new HBaseConfiguration();
     byte opByte = in.readByte();
@@ -242,5 +270,4 @@ public class RowFilterSet implements RowFilterInterface {
       ObjectWritable.writeObject(out, filter, RowFilterInterface.class, conf);
     }
   }
-  
 }

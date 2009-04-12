@@ -21,12 +21,14 @@ package org.apache.hadoop.hbase.regionserver.transactional;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -39,7 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LeaseException;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
@@ -270,7 +272,8 @@ public class TransactionalRegion extends HRegion {
       }
 
       if (numVersions > 1) {
-        Cell[] globalCells = get(row, column, timestamp, numVersions - 1);
+        // FIX THIS PROFLIGACY CONVERTING RESULT OF get.
+        Cell[] globalCells = Cell.createSingleCellArray(get(row, column, timestamp, numVersions - 1));
         Cell[] result = new Cell[globalCells.length + localCells.length];
         System.arraycopy(localCells, 0, result, 0, localCells.length);
         System.arraycopy(globalCells, 0, result, localCells.length,
@@ -280,7 +283,7 @@ public class TransactionalRegion extends HRegion {
       return localCells;
     }
 
-    return get(row, column, timestamp, numVersions);
+    return Cell.createSingleCellArray(get(row, column, timestamp, numVersions));
   }
 
   /**
@@ -295,7 +298,7 @@ public class TransactionalRegion extends HRegion {
    * @throws IOException
    */
   public Map<byte[], Cell> getFull(final long transactionId, final byte[] row,
-      final Set<byte[]> columns, final long ts) throws IOException {
+      final NavigableSet<byte[]> columns, final long ts) throws IOException {
     TransactionState state = getTransactionState(transactionId);
 
     state.addRead(row);
@@ -375,11 +378,12 @@ public class TransactionalRegion extends HRegion {
     long now = System.currentTimeMillis();
 
     for (Store store : super.stores.values()) {
-      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp),
-          ALL_VERSIONS, now, null);
+      List<KeyValue> keyvalues = new ArrayList<KeyValue>();
+      store.getFull(new KeyValue(row, timestamp),
+        null, null, ALL_VERSIONS, null, keyvalues, now);
       BatchUpdate deleteUpdate = new BatchUpdate(row, timestamp);
 
-      for (HStoreKey key : keys) {
+      for (KeyValue key : keyvalues) {
         deleteUpdate.delete(key.getColumn());
       }
       
@@ -689,20 +693,21 @@ public class TransactionalRegion extends HRegion {
       return scanner.isWildcardScanner();
     }
 
-    public boolean next(final HStoreKey key,
-        final SortedMap<byte[], Cell> results) throws IOException {
-      boolean result = scanner.next(key, results);
+    public boolean next(List<KeyValue> results) throws IOException {
+      boolean result = scanner.next(results);
       TransactionState state = getTransactionState(transactionId);
 
       if (result) {
-        Map<byte[], Cell> localWrites = state.localGetFull(key.getRow(), null,
+        // TODO: Is this right???? St.Ack
+        byte [] row = results.get(0).getRow();
+        Map<byte[], Cell> localWrites = state.localGetFull(row, null,
             Integer.MAX_VALUE);
         if (localWrites != null) {
-          LOG
-              .info("Scanning over row that has been writen to "
-                  + transactionId);
+          LOG.info("Scanning over row that has been writen to " + transactionId);
           for (Entry<byte[], Cell> entry : localWrites.entrySet()) {
-            results.put(entry.getKey(), entry.getValue());
+            // TODO: Is this right???
+            results.add(new KeyValue(row, entry.getKey(),
+              entry.getValue().getTimestamp(), entry.getValue().getValue()));
           }
         }
       }

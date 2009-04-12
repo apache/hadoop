@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 import java.util.SortedMap;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Cell;
 
 /**
@@ -71,6 +73,10 @@ public class PageRowFilter implements RowFilterInterface {
 
   public void rowProcessed(boolean filtered,
       byte [] rowKey) {
+    rowProcessed(filtered, rowKey, 0, rowKey.length);
+  }
+
+  public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
     if (!filtered) {
       this.rowsAccepted++;
     }
@@ -85,16 +91,32 @@ public class PageRowFilter implements RowFilterInterface {
   }
 
   public boolean filterRowKey(final byte [] r) {
+    return filterRowKey(r, 0, r.length);
+  }
+
+
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     return filterAllRemaining();
   }
 
   public boolean filterColumn(final byte [] rowKey,
     final byte [] colKey,
     final byte[] data) {
+    return filterColumn(rowKey, 0, rowKey.length, colKey, 0, colKey.length,
+      data, 0, data.length);
+  }
+
+  public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
+      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      int voffset, int vlength) {
     return filterAllRemaining();
   }
 
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
+    return filterAllRemaining();
+  }
+
+  public boolean filterRow(List<KeyValue> results) {
     return filterAllRemaining();
   }
 

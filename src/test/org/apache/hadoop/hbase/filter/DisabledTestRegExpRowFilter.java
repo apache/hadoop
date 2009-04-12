@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Tests for regular expression row filter
  */
-public class TestRegExpRowFilter extends TestCase {
+public class DisabledTestRegExpRowFilter extends TestCase {
   TreeMap<byte [], Cell> colvalues;
   RowFilterInterface mainFilter;
   static final char FIRST_CHAR = 'a';

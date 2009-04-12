@@ -23,21 +23,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -47,28 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestHRegion extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHRegion.class);
-  
-  /**
-   * Since all the "tests" depend on the results of the previous test, they are
-   * not Junit tests that can stand alone. Consequently we have a single Junit
-   * test that runs the "sub-tests" as private methods.
-   * @throws IOException 
-   */
-  public void testHRegion() throws IOException {
-    try {
-      init();
-      locks();
-      badPuts();
-      basic();
-      scan();
-      splitAndMerge();
-      read();
-    } finally {
-      shutdownDfs(cluster);
-    }
-  }
-  
-  
+
   private static final int FIRST_ROW = 1;
   private static final int NUM_VALS = 1000;
   private static final String CONTENTS_BASIC_STR = "contents:basic";
@@ -105,6 +82,26 @@ public class TestHRegion extends HBaseTestCase {
     super.setUp();
   }
 
+  /**
+   * Since all the "tests" depend on the results of the previous test, they are
+   * not Junit tests that can stand alone. Consequently we have a single Junit
+   * test that runs the "sub-tests" as private methods.
+   * @throws IOException 
+   */
+  public void testHRegion() throws IOException {
+    try {
+      init();
+      locks();
+      badPuts();
+      basic();
+      scan();
+      splitAndMerge();
+      read();
+    } finally {
+      shutdownDfs(cluster);
+    }
+  }
+
   // Create directories, start mini cluster, etc.
   
   private void init() throws IOException {
@@ -122,7 +119,6 @@ public class TestHRegion extends HBaseTestCase {
     long startTime = System.currentTimeMillis();
 
     // Write out a bunch of values
-
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       BatchUpdate batchUpdate = 
         new BatchUpdate(Bytes.toBytes("row_" + k), System.currentTimeMillis());
@@ -153,7 +149,9 @@ public class TestHRegion extends HBaseTestCase {
       String rowlabelStr = "row_" + k;
       byte [] rowlabel = Bytes.toBytes(rowlabelStr);
       if (k % 100 == 0) LOG.info(Bytes.toString(rowlabel));
-      byte [] bodydata = region.get(rowlabel, CONTENTS_BASIC).getValue();
+      Cell c = region.get(rowlabel, CONTENTS_BASIC);
+      assertNotNull("K is " + k, c);
+      byte [] bodydata = c.getValue();
       assertNotNull(bodydata);
       String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       String teststr = CONTENTSTR + k;
@@ -253,7 +251,7 @@ public class TestHRegion extends HBaseTestCase {
   // Test scanners. Writes contents:firstcol and anchor:secondcol
   
   private void scan() throws IOException {
-    byte [] cols[] = {
+    byte [] cols [] = {
         CONTENTS_FIRSTCOL,
         ANCHOR_SECONDCOL
     };
@@ -265,9 +263,7 @@ public class TestHRegion extends HBaseTestCase {
     }
 
     // 1.  Insert a bunch of values
-    
     long startTime = System.currentTimeMillis();
-
     for(int k = 0; k < vals1.length / 2; k++) {
       String kLabel = String.format("%1$03d", k);
 
@@ -279,35 +275,28 @@ public class TestHRegion extends HBaseTestCase {
       region.commit(batchUpdate);
       numInserted += 2;
     }
-
     LOG.info("Write " + (vals1.length / 2) + " elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 2.  Scan from cache
-    
     startTime = System.currentTimeMillis();
-
-    InternalScanner s =
-      r.getScanner(cols, HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
+    ScannerIncommon s = this.region.getScanner(cols, HConstants.EMPTY_START_ROW,
+      System.currentTimeMillis());
     int numFetched = 0;
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       int k = 0;
-      while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] col = entry.getKey();
-          byte [] val = entry.getValue().getValue();
+      while(s.next(curVals)) {
+        for (KeyValue kv: curVals) {
+          byte [] val = kv.getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
-            if (Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Error at:" + Bytes.toString(curKey.getRow()) + "/"
-                  + curKey.getTimestamp()
-                  + ", Value for " + Bytes.toString(col) + " should be: " + k
-                  + ", but was fetched as: " + curval, k, curval);
+            if (!kv.matchingColumn(cols[j])) {
+              assertEquals("Error at: " + kv  + " " + Bytes.toString(cols[j]),
+                k, curval);
               numFetched++;
+              break;
             }
           }
         }
@@ -317,44 +306,38 @@ public class TestHRegion extends HBaseTestCase {
     } finally {
       s.close();
     }
-    assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
+    assertEquals(numInserted, numFetched);
 
     LOG.info("Scanned " + (vals1.length / 2)
         + " rows from cache. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 3.  Flush to disk
-    
     startTime = System.currentTimeMillis();
-    
     region.flushcache();
-
     LOG.info("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 4.  Scan from disk
-    
     startTime = System.currentTimeMillis();
-    
-    s = r.getScanner(cols, HConstants.EMPTY_START_ROW,
-      System.currentTimeMillis(), null);
+    s = this.region.getScanner(cols, HConstants.EMPTY_START_ROW,
+      System.currentTimeMillis());
     numFetched = 0;
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       int k = 0;
-      while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] col = entry.getKey();
-          byte [] val = entry.getValue().getValue();
+      while(s.next(curVals)) {
+        for(Iterator<KeyValue> it = curVals.iterator(); it.hasNext(); ) {
+          KeyValue kv = it.next();
+          byte [] col = kv.getColumn();
+          byte [] val = kv.getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if (Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Error at:" + Bytes.toString(curKey.getRow()) + "/"
-                  + curKey.getTimestamp()
-                  + ", Value for " + Bytes.toString(col) + " should be: " + k
+              assertEquals("Error at:" + kv.getRow() + "/"
+                  + kv.getTimestamp()
+                  + ", Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
@@ -373,12 +356,9 @@ public class TestHRegion extends HBaseTestCase {
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 5.  Insert more values
-    
     startTime = System.currentTimeMillis();
-
     for(int k = vals1.length/2; k < vals1.length; k++) {
       String kLabel = String.format("%1$03d", k);
-      
       BatchUpdate batchUpdate = 
         new BatchUpdate(Bytes.toBytes("row_vals1_" + kLabel), 
           System.currentTimeMillis());
@@ -392,28 +372,25 @@ public class TestHRegion extends HBaseTestCase {
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 6.  Scan from cache and disk
-    
     startTime = System.currentTimeMillis();
-
-    s = r.getScanner(cols, HConstants.EMPTY_START_ROW,
-        System.currentTimeMillis(), null);
+    s = this.region.getScanner(cols, HConstants.EMPTY_START_ROW,
+        System.currentTimeMillis());
     numFetched = 0;
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       int k = 0;
-      while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] col = entry.getKey();
-          byte [] val = entry.getValue().getValue();
+      while(s.next(curVals)) {
+        for(Iterator<KeyValue> it = curVals.iterator(); it.hasNext(); ) {
+          KeyValue kv = it.next();
+          byte [] col = kv.getColumn();
+          byte [] val = kv.getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if(Bytes.compareTo(col, cols[j]) == 0) {
-              assertEquals("Error at:" + Bytes.toString(curKey.getRow()) + "/"
-                  + curKey.getTimestamp()
-                  + ", Value for " + Bytes.toString(col) + " should be: " + k
+              assertEquals("Error at:" + kv.getRow() + "/"
+                  + kv.getTimestamp()
+                  + ", Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
@@ -425,36 +402,32 @@ public class TestHRegion extends HBaseTestCase {
     } finally {
       s.close();
     }
-    assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
+    assertEquals("Inserted " + numInserted + " values, but fetched " +
+      numFetched, numInserted, numFetched);
 
     LOG.info("Scanned " + vals1.length
         + " rows from cache and disk. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
     
     // 7.  Flush to disk
-    
     startTime = System.currentTimeMillis();
-    
     region.flushcache();
-
     LOG.info("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
     
     // 8.  Scan from disk
-    
     startTime = System.currentTimeMillis();
-    
-    s = r.getScanner(cols, HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
+    s = this.region.getScanner(cols, HConstants.EMPTY_START_ROW,
+      System.currentTimeMillis());
     numFetched = 0;
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       int k = 0;
-      while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] col = entry.getKey();
-          byte [] val = entry.getValue().getValue();
+      while(s.next(curVals)) {
+        for(Iterator<KeyValue> it = curVals.iterator(); it.hasNext(); ) {
+          KeyValue kv = it.next();
+          byte [] col = kv.getColumn();
+          byte [] val = kv.getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
@@ -479,18 +452,17 @@ public class TestHRegion extends HBaseTestCase {
 
     // 9. Scan with a starting point
     startTime = System.currentTimeMillis();
-    s = r.getScanner(cols, Bytes.toBytes("row_vals1_500"),
-        System.currentTimeMillis(), null);
+    s = this.region.getScanner(cols, Bytes.toBytes("row_vals1_500"),
+        System.currentTimeMillis());
     numFetched = 0;
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       int k = 500;
-      while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] col = entry.getKey();
-          byte [] val = entry.getValue().getValue();
+      while(s.next(curVals)) {
+        for(Iterator<KeyValue> it = curVals.iterator(); it.hasNext(); ) {
+          KeyValue kv = it.next();
+          byte [] col = kv.getColumn();
+          byte [] val = kv.getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
@@ -523,7 +495,7 @@ public class TestHRegion extends HBaseTestCase {
     byte [] splitRow = r.compactStores();
     assertNotNull(splitRow);
     long startTime = System.currentTimeMillis();
-    HRegion subregions[] = r.splitRegion(splitRow);
+    HRegion subregions [] = r.splitRegion(splitRow);
     if (subregions != null) {
       LOG.info("Split region elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -551,42 +523,35 @@ public class TestHRegion extends HBaseTestCase {
   // This test verifies that everything is still there after splitting and merging
   
   private void read() throws IOException {
-
     // First verify the data written by testBasic()
-
     byte [][] cols = {
         Bytes.toBytes(ANCHORNUM + "[0-9]+"),
         CONTENTS_BASIC
     };
-    
     long startTime = System.currentTimeMillis();
-    
     InternalScanner s =
       r.getScanner(cols, HConstants.EMPTY_START_ROW,
           System.currentTimeMillis(), null);
-
     try {
-
       int contentsFetched = 0;
       int anchorFetched = 0;
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       int k = 0;
-      while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] col = entry.getKey();
-          byte [] val = entry.getValue().getValue();
+      while(s.next(curVals)) {
+        for(Iterator<KeyValue> it = curVals.iterator(); it.hasNext(); ) {
+          KeyValue kv = it.next();
+          byte [] col = kv.getColumn();
+          byte [] val = kv.getValue();
           String curval = Bytes.toString(val);
-          if(Bytes.compareTo(col, CONTENTS_BASIC) == 0) {
-            assertTrue("Error at:" + Bytes.toString(curKey.getRow()) + "/" + curKey.getTimestamp()
-                + ", Value for " + Bytes.toString(col) + " should start with: " + CONTENTSTR
+          if (Bytes.compareTo(col, CONTENTS_BASIC) == 0) {
+            assertTrue("Error at:" + kv
+                + ", Value for " + col + " should start with: " + CONTENTSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
           } else if (Bytes.toString(col).startsWith(ANCHORNUM)) {
-            assertTrue("Error at:" + Bytes.toString(curKey.getRow()) + "/" + curKey.getTimestamp()
+            assertTrue("Error at:" + kv
                 + ", Value for " + Bytes.toString(col) +
                 " should start with: " + ANCHORSTR
                 + ", but was fetched as: " + curval,
@@ -623,14 +588,13 @@ public class TestHRegion extends HBaseTestCase {
       System.currentTimeMillis(), null);
     try {
       int numFetched = 0;
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
       int k = 0;
-      while(s.next(curKey, curVals)) {
-        for (Map.Entry<byte[], Cell> entry : curVals.entrySet()) {
-          byte [] col = entry.getKey();
-          byte [] val = entry.getValue().getValue();
+      while(s.next(curVals)) {
+        for(Iterator<KeyValue> it = curVals.iterator(); it.hasNext(); ) {
+          KeyValue kv = it.next();
+          byte [] col = kv.getColumn();
+          byte [] val = kv.getValue();
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
 
@@ -645,7 +609,8 @@ public class TestHRegion extends HBaseTestCase {
         curVals.clear();
         k++;
       }
-      assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
+      assertEquals("Inserted " + numInserted + " values, but fetched " +
+        numFetched, numInserted, numFetched);
 
       LOG.info("Scanned " + (numFetched / 2)
           + " rows from disk. Elapsed time: "
@@ -667,11 +632,9 @@ public class TestHRegion extends HBaseTestCase {
 
     try {
       int fetched = 0;
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<byte [], Cell> curVals =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-      while(s.next(curKey, curVals)) {
-        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+      List<KeyValue> curVals = new ArrayList<KeyValue>();
+      while(s.next(curVals)) {
+        for(Iterator<KeyValue> it = curVals.iterator(); it.hasNext(); ) {
           it.next();
           fetched++;
         }

@@ -25,11 +25,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
 import org.apache.hadoop.hbase.rest.serializer.ISerializable;
@@ -220,6 +223,50 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
   }
 
   /**
+   * @param results
+   * @return
+   * TODO: This is the glue between old way of doing things and the new.
+   * Herein we are converting our clean KeyValues to Map of Cells.
+   */
+  public static HbaseMapWritable<byte [], Cell> createCells(final List<KeyValue> results) {
+    HbaseMapWritable<byte [], Cell> cells =
+      new HbaseMapWritable<byte [], Cell>();
+    // Walking backward through the list of results though it has no effect
+    // because we're inserting into a sorted map.
+    for (ListIterator<KeyValue> i = results.listIterator(results.size());
+        i.hasPrevious();) {
+      KeyValue kv = i.previous();
+      byte [] column = kv.getColumn();
+      Cell c = cells.get(column);
+      if (c == null) {
+        c = new Cell(kv.getValue(), kv.getTimestamp());
+        cells.put(column, c);
+      } else {
+        c.add(kv.getValue(), kv.getTimestamp());
+      }
+    }
+    return cells;
+  }
+
+  /**
+   * @param results
+   * @return Array of Cells.
+   * TODO: This is the glue between old way of doing things and the new.
+   * Herein we are converting our clean KeyValues to Map of Cells.
+   */
+  public static Cell [] createSingleCellArray(final List<KeyValue> results) {
+    if (results == null) return null;
+    int index = 0;
+    Cell [] cells = new Cell[results.size()];
+    for (KeyValue kv: results) {
+      cells[index++] = new Cell(kv.getValue(), kv.getTimestamp());
+    }
+    return cells;
+  }
+
+  /*
+   * (non-Javadoc)
+   * 
    * @see
    * org.apache.hadoop.hbase.rest.serializer.ISerializable#restSerialize(org
    * .apache.hadoop.hbase.rest.serializer.IRestSerializer)

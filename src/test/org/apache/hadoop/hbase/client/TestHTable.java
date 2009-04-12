@@ -49,65 +49,54 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
   private static final byte [] attrName = Bytes.toBytes("TESTATTR");
   private static final byte [] attrValue = Bytes.toBytes("somevalue");
 
-  public void testCheckAndSave() throws IOException {
+
+  public void testGetRow() {
     HTable table = null;
-    HColumnDescriptor column2 =
-      new HColumnDescriptor(Bytes.toBytes("info2:"));
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    HTableDescriptor testTableADesc =
-      new HTableDescriptor(tableAname);
-    testTableADesc.addFamily(column);
-    testTableADesc.addFamily(column2);
-    admin.createTable(testTableADesc);
-    
-    table = new HTable(conf, tableAname);
-    BatchUpdate batchUpdate = new BatchUpdate(row);
-    BatchUpdate batchUpdate2 = new BatchUpdate(row);
-    BatchUpdate batchUpdate3 = new BatchUpdate(row);
-    
-    HbaseMapWritable<byte[],byte[]> expectedValues =
-      new HbaseMapWritable<byte[],byte[]>();
-    HbaseMapWritable<byte[],byte[]> badExpectedValues =
-      new HbaseMapWritable<byte[],byte[]>();
-    
-    for(int i = 0; i < 5; i++) {
-      // This batchupdate is our initial batch update,
-      // As such we also set our expected values to the same values
-      // since we will be comparing the two
-      batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
-      expectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i), Bytes.toBytes(i));
+    try {
+      HColumnDescriptor column2 =
+        new HColumnDescriptor(Bytes.toBytes("info2:"));
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTableDescriptor testTableADesc =
+        new HTableDescriptor(tableAname);
+      testTableADesc.addFamily(column);
+      testTableADesc.addFamily(column2);
+      admin.createTable(testTableADesc);
       
-      badExpectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i),
-        Bytes.toBytes(500));
+      table = new HTable(conf, tableAname);
+      BatchUpdate batchUpdate = new BatchUpdate(row);
       
-      // This is our second batchupdate that we will use to update the initial
-      // batchupdate
-      batchUpdate2.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+1));
+      for(int i = 0; i < 5; i++)
+        batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
       
-      // This final batch update is to check that our expected values (which
-      // are now wrong)
-      batchUpdate3.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+2));
+      table.commit(batchUpdate);
+
+      assertTrue(table.exists(row));
+      for(int i = 0; i < 5; i++)
+        assertTrue(table.exists(row, Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+
+      RowResult result = null;
+      result = table.getRow(row,  new byte[][] {COLUMN_FAMILY});
+      for(int i = 0; i < 5; i++)
+        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+      
+      result = table.getRow(row);
+      for(int i = 0; i < 5; i++)
+        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+
+      batchUpdate = new BatchUpdate(row);
+      batchUpdate.put("info2:a", Bytes.toBytes("a"));
+      table.commit(batchUpdate);
+      
+      result = table.getRow(row, new byte[][] { COLUMN_FAMILY,
+          Bytes.toBytes("info2:a") });
+      for(int i = 0; i < 5; i++)
+        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+      assertTrue(result.containsKey(Bytes.toBytes("info2:a")));
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Should not have any exception " +
+        e.getClass());
     }
-    
-    // Initialize rows
-    table.commit(batchUpdate);
-    
-    // check if incorrect values are returned false
-    assertFalse(table.checkAndSave(batchUpdate2,badExpectedValues,null));
-    
-    // make sure first expected values are correct
-    assertTrue(table.checkAndSave(batchUpdate2, expectedValues,null));
-        
-    // make sure check and save truly saves the data after checking the expected
-    // values
-    RowResult r = table.getRow(row);
-    byte[][] columns = batchUpdate2.getColumns();
-    for(int i = 0;i < columns.length;i++) {
-      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate2.get(columns[i])));
-    }
-    
-    // make sure that the old expected values fail
-    assertFalse(table.checkAndSave(batchUpdate3, expectedValues,null));
   }
 
   /**
@@ -230,10 +219,71 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       fail();
     }
   }
-  
+
+  public void testCheckAndSave() throws IOException {
+    HTable table = null;
+    HColumnDescriptor column2 =
+      new HColumnDescriptor(Bytes.toBytes("info2:"));
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTableDescriptor testTableADesc =
+      new HTableDescriptor(tableAname);
+    testTableADesc.addFamily(column);
+    testTableADesc.addFamily(column2);
+    admin.createTable(testTableADesc);
+    
+    table = new HTable(conf, tableAname);
+    BatchUpdate batchUpdate = new BatchUpdate(row);
+    BatchUpdate batchUpdate2 = new BatchUpdate(row);
+    BatchUpdate batchUpdate3 = new BatchUpdate(row);
+    
+    HbaseMapWritable<byte[],byte[]> expectedValues =
+      new HbaseMapWritable<byte[],byte[]>();
+    HbaseMapWritable<byte[],byte[]> badExpectedValues =
+      new HbaseMapWritable<byte[],byte[]>();
+    
+    for(int i = 0; i < 5; i++) {
+      // This batchupdate is our initial batch update,
+      // As such we also set our expected values to the same values
+      // since we will be comparing the two
+      batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
+      expectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i), Bytes.toBytes(i));
+      
+      badExpectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i),
+        Bytes.toBytes(500));
+      
+      // This is our second batchupdate that we will use to update the initial
+      // batchupdate
+      batchUpdate2.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+1));
+      
+      // This final batch update is to check that our expected values (which
+      // are now wrong)
+      batchUpdate3.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+2));
+    }
+    
+    // Initialize rows
+    table.commit(batchUpdate);
+    
+    // check if incorrect values are returned false
+    assertFalse(table.checkAndSave(batchUpdate2,badExpectedValues,null));
+    
+    // make sure first expected values are correct
+    assertTrue(table.checkAndSave(batchUpdate2, expectedValues,null));
+        
+    // make sure check and save truly saves the data after checking the expected
+    // values
+    RowResult r = table.getRow(row);
+    byte[][] columns = batchUpdate2.getColumns();
+    for(int i = 0;i < columns.length;i++) {
+      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate2.get(columns[i])));
+    }
+    
+    // make sure that the old expected values fail
+    assertFalse(table.checkAndSave(batchUpdate3, expectedValues,null));
+  }
+
   /**
-    * For HADOOP-2579
-    */
+   * For HADOOP-2579
+   */
   public void testTableNotFoundExceptionWithoutAnyTables() {
     try {
       new HTable(conf, "notATable");
@@ -246,81 +296,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
         e.getClass());
     }
   }
-  
-  /**
-    * For HADOOP-2579
-    */
-  public void testTableNotFoundExceptionWithATable() {
-    try {
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      HTableDescriptor testTableADesc =
-        new HTableDescriptor("table");
-      testTableADesc.addFamily(column);
-      admin.createTable(testTableADesc);
 
-      // This should throw a TableNotFoundException, it has not been created
-      new HTable(conf, "notATable");
-      
-      fail("Should have thrown a TableNotFoundException");
-    } catch (TableNotFoundException e) {
-      // expected
-    } catch (IOException e) {
-      e.printStackTrace();
-      fail("Should have thrown a TableNotFoundException instead of a " +
-        e.getClass());
-    }
-  }
-  
-  public void testGetRow() {
-    HTable table = null;
-    try {
-      HColumnDescriptor column2 =
-        new HColumnDescriptor(Bytes.toBytes("info2:"));
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      HTableDescriptor testTableADesc =
-        new HTableDescriptor(tableAname);
-      testTableADesc.addFamily(column);
-      testTableADesc.addFamily(column2);
-      admin.createTable(testTableADesc);
-      
-      table = new HTable(conf, tableAname);
-      BatchUpdate batchUpdate = new BatchUpdate(row);
-      
-      for(int i = 0; i < 5; i++)
-        batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
-      
-      table.commit(batchUpdate);
-
-      assertTrue(table.exists(row));
-      for(int i = 0; i < 5; i++)
-        assertTrue(table.exists(row, Bytes.toBytes(COLUMN_FAMILY_STR+i)));
-
-      RowResult result = null;
-      result = table.getRow(row,  new byte[][] {COLUMN_FAMILY});
-      for(int i = 0; i < 5; i++)
-        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
-      
-      result = table.getRow(row);
-      for(int i = 0; i < 5; i++)
-        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
-
-      batchUpdate = new BatchUpdate(row);
-      batchUpdate.put("info2:a", Bytes.toBytes("a"));
-      table.commit(batchUpdate);
-      
-      result = table.getRow(row, new byte[][] { COLUMN_FAMILY,
-          Bytes.toBytes("info2:a") });
-      for(int i = 0; i < 5; i++)
-        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
-      assertTrue(result.containsKey(Bytes.toBytes("info2:a")));
-   
-    } catch (IOException e) {
-      e.printStackTrace();
-      fail("Should not have any exception " +
-        e.getClass());
-    }
-  }
-  
   public void testGetClosestRowBefore() throws IOException {
     HColumnDescriptor column2 =
       new HColumnDescriptor(Bytes.toBytes("info2:"));
@@ -373,5 +349,29 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     result = table.getClosestRowBefore(Bytes.add(row,one), columnFamilyBytes);
     assertTrue(result.containsKey(COLUMN_FAMILY_STR));
     assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), one));
+  }
+
+  /**
+   * For HADOOP-2579
+   */
+  public void testTableNotFoundExceptionWithATable() {
+   try {
+     HBaseAdmin admin = new HBaseAdmin(conf);
+     HTableDescriptor testTableADesc =
+       new HTableDescriptor("table");
+     testTableADesc.addFamily(column);
+     admin.createTable(testTableADesc);
+
+     // This should throw a TableNotFoundException, it has not been created
+     new HTable(conf, "notATable");
+     
+     fail("Should have thrown a TableNotFoundException");
+   } catch (TableNotFoundException e) {
+     // expected
+   } catch (IOException e) {
+     e.printStackTrace();
+     fail("Should have thrown a TableNotFoundException instead of a " +
+       e.getClass());
+   }
   }
 }

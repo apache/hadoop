@@ -38,7 +38,7 @@ import junit.framework.TestCase;
 /**
  * Tests filter sets
  */
-public class TestRowFilterSet extends TestCase {
+public class DisabledTestRowFilterSet extends TestCase {
 
   RowFilterInterface filterMPALL;
   RowFilterInterface filterMPONE;

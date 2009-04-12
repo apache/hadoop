@@ -73,7 +73,6 @@ public class TestDeleteAll extends HBaseTestCase {
       makeSureRegexWorks(region, region_incommon, false);
       // regex test hstore
       makeSureRegexWorks(region, region_incommon, true);
-      
     } finally {
       if (region != null) {
         try {
@@ -91,30 +90,32 @@ public class TestDeleteAll extends HBaseTestCase {
   throws Exception{
     // insert a few versions worth of data for a row
     byte [] row = Bytes.toBytes("test_row");
-    long t0 = System.currentTimeMillis();
-    long t1 = t0 - 15000;
-    long t2 = t1 - 15000;
+    long now = System.currentTimeMillis();
+    long past = now - 100;
+    long future = now + 100;
+    Thread.sleep(100);
+    LOG.info("now=" + now + ", past=" + past + ", future=" + future);
 
     byte [] colA = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "a");
     byte [] colB = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "b");
     byte [] colC = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "c");
     byte [] colD = Bytes.toBytes(Bytes.toString(COLUMNS[0]));
 
-    BatchUpdate batchUpdate = new BatchUpdate(row, t0);
+    BatchUpdate batchUpdate = new BatchUpdate(row, now);
     batchUpdate.put(colA, cellData(0, flush).getBytes());
     batchUpdate.put(colB, cellData(0, flush).getBytes());
     batchUpdate.put(colC, cellData(0, flush).getBytes());      
     batchUpdate.put(colD, cellData(0, flush).getBytes());      
     region_incommon.commit(batchUpdate);
 
-    batchUpdate = new BatchUpdate(row, t1);
+    batchUpdate = new BatchUpdate(row, past);
     batchUpdate.put(colA, cellData(1, flush).getBytes());
     batchUpdate.put(colB, cellData(1, flush).getBytes());
     batchUpdate.put(colC, cellData(1, flush).getBytes());      
     batchUpdate.put(colD, cellData(1, flush).getBytes());      
     region_incommon.commit(batchUpdate);
     
-    batchUpdate = new BatchUpdate(row, t2);
+    batchUpdate = new BatchUpdate(row, future);
     batchUpdate.put(colA, cellData(2, flush).getBytes());
     batchUpdate.put(colB, cellData(2, flush).getBytes());
     batchUpdate.put(colC, cellData(2, flush).getBytes());      
@@ -124,27 +125,27 @@ public class TestDeleteAll extends HBaseTestCase {
     if (flush) {region_incommon.flushcache();}
 
     // call delete all at a timestamp, make sure only the most recent stuff is left behind
-    region.deleteAll(row, t1, null);
+    region.deleteAll(row, now, null);
     if (flush) {region_incommon.flushcache();}    
-    assertCellEquals(region, row, colA, t0, cellData(0, flush));
-    assertCellEquals(region, row, colA, t1, null);
-    assertCellEquals(region, row, colA, t2, null);
-    assertCellEquals(region, row, colD, t0, cellData(0, flush));
-    assertCellEquals(region, row, colD, t1, null);
-    assertCellEquals(region, row, colD, t2, null);
+    assertCellEquals(region, row, colA, future, cellData(2, flush));
+    assertCellEquals(region, row, colA, past, null);
+    assertCellEquals(region, row, colA, now, null);
+    assertCellEquals(region, row, colD, future, cellData(2, flush));
+    assertCellEquals(region, row, colD, past, null);
+    assertCellEquals(region, row, colD, now, null);
 
     // call delete all w/o a timestamp, make sure nothing is left.
     region.deleteAll(row, HConstants.LATEST_TIMESTAMP, null);
     if (flush) {region_incommon.flushcache();}    
-    assertCellEquals(region, row, colA, t0, null);
-    assertCellEquals(region, row, colA, t1, null);
-    assertCellEquals(region, row, colA, t2, null);
-    assertCellEquals(region, row, colD, t0, null);
-    assertCellEquals(region, row, colD, t1, null);
-    assertCellEquals(region, row, colD, t2, null);
+    assertCellEquals(region, row, colA, now, null);
+    assertCellEquals(region, row, colA, past, null);
+    assertCellEquals(region, row, colA, future, null);
+    assertCellEquals(region, row, colD, now, null);
+    assertCellEquals(region, row, colD, past, null);
+    assertCellEquals(region, row, colD, future, null);
     
   }
-  
+
   private void makeSureRegexWorks(HRegion region, HRegionIncommon region_incommon, 
       boolean flush)
     throws Exception{

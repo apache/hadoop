@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -187,7 +188,9 @@ public class HFile {
     private byte [] firstKey = null;
 
     // Key previously appended.  Becomes the last key in the file.
-    private byte [] lastKey = null;
+    private byte [] lastKeyBuffer = null;
+    private int lastKeyOffset = -1;
+    private int lastKeyLength = -1;
 
     // See {@link BlockIndex}. Below four fields are used to write the block
     // index.
@@ -267,6 +270,7 @@ public class HFile {
      * @param ostream Stream to use.
      * @param blocksize
      * @param compress
+     * @param c RawComparator to use.
      * @param c
      * @throws IOException
      */
@@ -319,7 +323,6 @@ public class HFile {
       if (this.out == null) return;
       long size = releaseCompressingStream(this.out);
       this.out = null;
-      
       blockKeys.add(firstKey);
       int written = longToInt(size);
       blockOffsets.add(Long.valueOf(blockBegin));
@@ -437,27 +440,58 @@ public class HFile {
      * Add key/value to file.
      * Keys must be added in an order that agrees with the Comparator passed
      * on construction.
+     * @param kv KeyValue to add.  Cannot be empty nor null.
+     * @throws IOException
+     */
+    public void append(final KeyValue kv)
+    throws IOException {
+      append(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
+        kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+    }
+
+    /**
+     * Add key/value to file.
+     * Keys must be added in an order that agrees with the Comparator passed
+     * on construction.
      * @param key Key to add.  Cannot be empty nor null.
      * @param value Value to add.  Cannot be empty nor null.
      * @throws IOException
      */
     public void append(final byte [] key, final byte [] value)
     throws IOException {
-      checkKey(key);
-      checkValue(value);
+      append(key, 0, key.length, value, 0, value.length);
+    }
+
+    /**
+     * Add key/value to file.
+     * Keys must be added in an order that agrees with the Comparator passed
+     * on construction.
+     * @param key Key to add.  Cannot be empty nor null.
+     * @param value Value to add.  Cannot be empty nor null.
+     * @throws IOException
+     */
+    public void append(final byte [] key, final int koffset, final int klength,
+        final byte [] value, final int voffset, final int vlength)
+    throws IOException {
+      checkKey(key, koffset, klength);
+      checkValue(value, voffset, vlength);
       checkBlockBoundary();
       // Write length of key and value and then actual key and value bytes.
-      this.out.writeInt(key.length);
-      this.keylength += key.length;
-      this.out.writeInt(value.length);
-      this.valuelength += valuelength;
-      this.out.write(key);
-      if (value.length > 0) {
-        this.out.write(value);
-      }
+      this.out.writeInt(klength);
+      this.keylength += klength;
+      this.out.writeInt(vlength);
+      this.valuelength += vlength;
+      this.out.write(key, koffset, klength);
+      this.out.write(value, voffset, vlength);
       // Are we the first key in this block?
-      if (this.firstKey == null) this.firstKey = key;
-      this.lastKey = key;
+      if (this.firstKey == null) {
+        // Copy the key.
+        this.firstKey = new byte [klength];
+        System.arraycopy(key, koffset, this.firstKey, 0, klength);
+      }
+      this.lastKeyBuffer = key;
+      this.lastKeyOffset = koffset;
+      this.lastKeyLength = klength;
       this.entryCount ++;
     }
 
@@ -465,24 +499,29 @@ public class HFile {
      * @param key Key to check.
      * @throws IOException
      */
-    private void checkKey(final byte [] key) throws IOException {
-      if (key == null || key.length <= 0) {
+    private void checkKey(final byte [] key, final int offset, final int length)
+    throws IOException {
+      if (key == null || length <= 0) {
         throw new IOException("Key cannot be null or empty");
       }
-      if (key.length > MAXIMUM_KEY_LENGTH) {
-        throw new IOException("Key length " + key.length + " > " +
+      if (length > MAXIMUM_KEY_LENGTH) {
+        throw new IOException("Key length " + length + " > " +
           MAXIMUM_KEY_LENGTH);
       }
-      if (this.lastKey != null) {
-        if (this.comparator.compare(this.lastKey, key) > 0) {
+      if (this.lastKeyBuffer != null) {
+        if (this.comparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
+            this.lastKeyLength, key, offset, length) > 0) {
           throw new IOException("Added a key not lexically larger than" +
-            " previous key=" + Bytes.toString(key) + ", lastkey=" +
-            Bytes.toString(lastKey));
+            " previous key=" + Bytes.toString(key, offset, length) +
+            ", lastkey=" + Bytes.toString(this.lastKeyBuffer, this.lastKeyOffset,
+                this.lastKeyLength));
         }
       }
     }
 
-    private void checkValue(final byte [] value) throws IOException {
+    private void checkValue(final byte [] value,
+        @SuppressWarnings("unused") final int offset,
+        final int length) throws IOException {
       if (value == null) {
         throw new IOException("Value cannot be null");
       }
@@ -562,8 +601,13 @@ public class HFile {
      * @throws IOException
      */
     private long writeFileInfo(FSDataOutputStream o) throws IOException {
-      if (this.lastKey != null) {
-        appendFileInfo(this.fileinfo, FileInfo.LASTKEY, this.lastKey, false);
+      if (this.lastKeyBuffer != null) {
+        // Make a copy.  The copy is stuffed into HMapWritable.  Needs a clean
+        // byte buffer.  Won't take a tuple.
+        byte [] b = new byte[this.lastKeyLength];
+        System.arraycopy(this.lastKeyBuffer, this.lastKeyOffset, b, 0,
+          this.lastKeyLength);
+        appendFileInfo(this.fileinfo, FileInfo.LASTKEY, b, false);
       }
       int avgKeyLen = this.entryCount == 0? 0:
         (int)(this.keylength/this.entryCount);
@@ -734,7 +778,7 @@ public class HFile {
         return null;
       }
       try {
-        return (RawComparator<byte[]>) Class.forName(clazzName).newInstance();
+        return (RawComparator<byte []>)Class.forName(clazzName).newInstance();
       } catch (InstantiationException e) {
         throw new IOException(e);
       } catch (IllegalAccessException e) {
@@ -775,11 +819,11 @@ public class HFile {
      * @return Block number of the block containing the key or -1 if not in this
      * file.
      */
-    protected int blockContainingKey(final byte [] key) {
+    protected int blockContainingKey(final byte [] key, int offset, int length) {
       if (blockIndex == null) {
         throw new RuntimeException("Block index not loaded");
       }
-      return blockIndex.blockContainingKey(key);
+      return blockIndex.blockContainingKey(key, offset, length);
     }
     /**
      * @param metaBlockName
@@ -793,7 +837,8 @@ public class HFile {
       if (metaIndex == null) {
         throw new IOException("Meta index not loaded");
       }
-      int block = metaIndex.blockContainingKey(Bytes.toBytes(metaBlockName));
+      byte [] mbname = Bytes.toBytes(metaBlockName);
+      int block = metaIndex.blockContainingKey(mbname, 0, mbname.length);
       if (block == -1)
         return null;
       long blockSize;
@@ -842,7 +887,6 @@ public class HFile {
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + block);
           if (cachedBuf != null) {
-            // LOG.debug("Reusing block for: " + block);
             // Return a distinct 'copy' of the block, so pos doesnt get messed by
             // the scanner
             cacheHits++;
@@ -868,16 +912,13 @@ public class HFile {
 
         byte [] magic = new byte[DATABLOCKMAGIC.length];
         buf.get(magic, 0, magic.length);
-        // LOG.debug("read block:"+buf.position() + " lim:" + buf.limit());
         if (!Arrays.equals(magic, DATABLOCKMAGIC)) {
           throw new IOException("Data magic is bad in block " + block);
         }
         // Toss the header. May have to remove later due to performance.
         buf.compact();
         buf.limit(buf.limit() - DATABLOCKMAGIC.length);
-        // LOG.debug("read block:"+buf.position() + " lim:" + buf.limit());
         buf.rewind();
-        // LOG.debug("read block:"+buf.position() + " lim:" + buf.limit());
 
         // Cache a copy, not the one we are sending back, so the position doesnt
         // get messed.
@@ -993,6 +1034,11 @@ public class HFile {
       public Scanner(Reader r) {
         this.reader = r;
       }
+      
+      public KeyValue getKeyValue() {
+        return new KeyValue(this.block.array(),
+            this.block.arrayOffset() + this.block.position() - 8);
+      }
 
       public ByteBuffer getKey() {
         if (this.block == null || this.currKeyLen == 0) {
@@ -1047,14 +1093,19 @@ public class HFile {
         currValueLen = block.getInt();
         return true;
       }
+      
+      public int seekTo(byte [] key) throws IOException {
+        return seekTo(key, 0, key.length);
+      }
+      
 
-      public int seekTo(byte[] key) throws IOException {
-        int b = reader.blockContainingKey(key);
+      public int seekTo(byte[] key, int offset, int length) throws IOException {
+        int b = reader.blockContainingKey(key, offset, length);
         if (b < 0) return -1; // falls before the beginning of the file! :-(
         // Avoid re-reading the same block (that'd be dumb).
         loadBlock(b);
         
-        return blockSeek(key, false);
+        return blockSeek(key, offset, length, false);
       }
 
       /**
@@ -1067,13 +1118,13 @@ public class HFile {
        * @param seekBefore find the key before the exact match.
        * @return
        */
-      private int blockSeek(byte[] key, boolean seekBefore) {
+      private int blockSeek(byte[] key, int offset, int length, boolean seekBefore) {
         int klen, vlen;
         int lastLen = 0;
         do {
           klen = block.getInt();
           vlen = block.getInt();
-          int comp = this.reader.comparator.compare(key, 0, key.length,
+          int comp = this.reader.comparator.compare(key, offset, length,
             block.array(), block.arrayOffset() + block.position(), klen);
           if (comp == 0) {
             if (seekBefore) {
@@ -1105,8 +1156,13 @@ public class HFile {
         return 1; // didn't exactly find it.
       }
 
-      public boolean seekBefore(byte[] key) throws IOException {
-        int b = reader.blockContainingKey(key);
+      public boolean seekBefore(byte [] key) throws IOException {
+        return seekBefore(key, 0, key.length);
+      }
+      
+      public boolean seekBefore(byte[] key, int offset, int length)
+      throws IOException {
+        int b = reader.blockContainingKey(key, offset, length);
         if (b < 0)
           return false; // key is before the start of the file.
 
@@ -1121,7 +1177,7 @@ public class HFile {
           // TODO shortcut: seek forward in this block to the last key of the block.
         }
         loadBlock(b);
-        blockSeek(key, true);
+        blockSeek(key, offset, length, true);
         return true;
       }
 
@@ -1323,8 +1379,8 @@ public class HFile {
      * @return Offset of block containing <code>key</code> or -1 if this file
      * does not contain the request.
      */
-    int blockContainingKey(final byte[] key) {
-      int pos = Arrays.binarySearch(blockKeys, key, this.comparator);
+    int blockContainingKey(final byte[] key, int offset, int length) {
+      int pos = Bytes.binarySearch(blockKeys, key, offset, length, this.comparator);
       if (pos < 0) {
         pos ++;
         pos *= -1;

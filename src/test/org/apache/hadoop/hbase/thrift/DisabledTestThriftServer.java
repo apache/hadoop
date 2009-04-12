@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Unit testing for ThriftServer.HBaseHandler, a part of the 
  * org.apache.hadoop.hbase.thrift package.  
  */
-public class TestThriftServer extends HBaseClusterTestCase {
+public class DisabledTestThriftServer extends HBaseClusterTestCase {
 
   // Static names for tables, columns, rows, and values
   private static byte[] tableAname = Bytes.toBytes("tableA");
@@ -209,6 +209,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     assertTrue(Bytes.equals(rowResult1.columns.get(columnAname).value, valueAname));
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertTrue(Bytes.equals(rowResult2.columns.get(columnBname).value, valueCname));
+    
     assertFalse(rowResult2.columns.containsKey(columnAname));
     
     List<byte[]> columns = new ArrayList<byte[]>();

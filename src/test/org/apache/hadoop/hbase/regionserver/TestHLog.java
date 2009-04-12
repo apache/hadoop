@@ -20,17 +20,17 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.TreeMap;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.SequenceFile.Reader;
-
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.SequenceFile.Reader;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -73,10 +73,10 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       for (int ii = 0; ii < 3; ii++) {
         for (int i = 0; i < 3; i++) {
           for (int j = 0; j < 3; j++) {
-            TreeMap<HStoreKey, byte[]> edit = new TreeMap<HStoreKey, byte[]>();
-            byte [] column = Bytes.toBytes(Integer.toString(j));
-            edit.put(new HStoreKey(rowName, column, System.currentTimeMillis()),
-              column);
+            List<KeyValue> edit = new ArrayList<KeyValue>();
+            byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
+            edit.add(new KeyValue(rowName, column, System.currentTimeMillis(),
+              column));
             log.append(Bytes.toBytes(Integer.toString(i)), tableName, edit, false);
           }
         }
@@ -105,10 +105,10 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
       long timestamp = System.currentTimeMillis();
-      TreeMap<HStoreKey, byte []> cols = new TreeMap<HStoreKey, byte []>();
+      List<KeyValue> cols = new ArrayList<KeyValue>();
       for (int i = 0; i < COL_COUNT; i++) {
-        cols.put(new HStoreKey(row, Bytes.toBytes(Integer.toString(i)), timestamp),
-            new byte[] { (byte)(i + '0') });
+        cols.add(new KeyValue(row, Bytes.toBytes("column:" + Integer.toString(i)),
+          timestamp, new byte[] { (byte)(i + '0') }));
       }
       log.append(regionName, tableName, cols, false);
       long logSeqId = log.startCacheFlush();
@@ -124,18 +124,18 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         reader.next(key, val);
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
-        assertTrue(Bytes.equals(row, key.getRow()));
-        assertEquals((byte)(i + '0'), val.getVal()[0]);
+        assertTrue(Bytes.equals(row, val.getKeyValue().getRow()));
+        assertEquals((byte)(i + '0'), val.getKeyValue().getValue()[0]);
         System.out.println(key + " " + val);
       }
       while (reader.next(key, val)) {
         // Assert only one more row... the meta flushed row.
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
-        assertTrue(Bytes.equals(HLog.METAROW, key.getRow()));
-        assertTrue(Bytes.equals(HLog.METACOLUMN, val.getColumn()));
+        assertTrue(Bytes.equals(HLog.METAROW, val.getKeyValue().getRow()));
+        assertTrue(Bytes.equals(HLog.METACOLUMN, val.getKeyValue().getColumn()));
         assertEquals(0, Bytes.compareTo(HLogEdit.COMPLETE_CACHE_FLUSH,
-          val.getVal()));
+          val.getKeyValue().getValue()));
         System.out.println(key + " " + val);
       }
     } finally {

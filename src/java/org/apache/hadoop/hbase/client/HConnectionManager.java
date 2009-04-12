@@ -548,12 +548,12 @@ public class HConnectionManager implements HConstants {
         }
 
         try {
-          // locate the root region
+          // locate the root or meta region
           HRegionLocation metaLocation = locateRegion(parentTable, metaKey);
           HRegionInterface server =
             getHRegionConnection(metaLocation.getServerAddress());
 
-          // Query the root region for the location of the meta region
+          // Query the root or meta region for the location of the meta region
           RowResult regionInfoRow = server.getClosestRowBefore(
             metaLocation.getRegionInfo().getRegionName(), metaKey,
             HConstants.COLUMN_FAMILY);

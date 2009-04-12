@@ -36,6 +36,7 @@ import org.apache.hadoop.io.WritableUtils;
 
 /**
  * A Key for a stored row.
+ * @deprecated Replaced by {@link KeyValue}.
  */
 public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
   /**
@@ -242,7 +243,7 @@ public class HStoreKey implements WritableComparable<HStoreKey>, HeapSize {
     return equalsTwoRowKeys(getRow(), other.getRow()) &&
       getTimestamp() >= other.getTimestamp();
   }
-  
+
   /**
    * Compares the row and column family of two keys
    * 

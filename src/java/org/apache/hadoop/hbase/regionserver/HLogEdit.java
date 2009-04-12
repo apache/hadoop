@@ -19,57 +19,36 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.io.BatchOperation;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.*;
-
-import java.io.*;
-import java.nio.ByteBuffer;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.BatchOperation;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
 /**
  * A log value.
  *
  * These aren't sortable; you need to sort by the matching HLogKey.
- * The table and row are already identified in HLogKey.
- * This just indicates the column and value.
+ * TODO: Remove.  Just output KVs.
  */
 public class HLogEdit implements Writable, HConstants {
-
   /** Value stored for a deleted item */
-  public static final byte [] DELETED_BYTES = Bytes.toBytes("HBASE::DELETEVAL");
-
+  public static byte [] DELETED_BYTES;
   /** Value written to HLog on a complete cache flush */
-  public static final byte [] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
+  public static byte [] COMPLETE_CACHE_FLUSH;
 
-  /**
-   * @param value
-   * @return True if an entry and its content is {@link #DELETED_BYTES}.
-   */
-  public static boolean isDeleted(final byte [] value) {
-    return isDeleted(value, 0, value.length);
-  }
-
-  /**
-   * @param value
-   * @return True if an entry and its content is {@link #DELETED_BYTES}.
-   */
-  public static boolean isDeleted(final ByteBuffer value) {
-    return isDeleted(value.array(), value.arrayOffset(), value.limit());
-  }
-
-  /**
-   * @param value
-   * @param offset 
-   * @param length 
-   * @return True if an entry and its content is {@link #DELETED_BYTES}.
-   */
-  public static boolean isDeleted(final byte [] value, final int offset,
-      final int length) {
-    return (value == null)? false:
-      Bytes.BYTES_RAWCOMPARATOR.compare(DELETED_BYTES, 0, DELETED_BYTES.length,
-        value, offset, length) == 0;
+  static {
+    try {
+      DELETED_BYTES = "HBASE::DELETEVAL".getBytes(UTF8_ENCODING);
+      COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING);
+    } catch (UnsupportedEncodingException e) {
+      assert(false);
+    }
   }
 
   /** If transactional log entry, these are the op codes */
@@ -84,9 +63,7 @@ public class HLogEdit implements Writable, HConstants {
     ABORT
   }
 
-  private byte [] column;
-  private byte [] val;
-  private long timestamp;
+  private KeyValue kv;
   private static final int MAX_VALUE_LEN = 128;
   
   private boolean isTransactionEntry;
@@ -98,30 +75,28 @@ public class HLogEdit implements Writable, HConstants {
    * Default constructor used by Writable
    */
   public HLogEdit() {
-    super();
+    this(null);
   }
 
   /**
    * Construct a fully initialized HLogEdit
-   * @param c column name
-   * @param bval value
-   * @param timestamp timestamp for modification
+   * @param kv
    */
-  public HLogEdit(byte [] c, byte [] bval, long timestamp) {
-    this.column = c;
-    this.val = bval;
-    this.timestamp = timestamp;
+  public HLogEdit(final KeyValue kv) {
+    this.kv = kv;
     this.isTransactionEntry = false;
   }
-  
-  /** Construct a WRITE transaction. 
-   * 
+
+  /** 
+   * Construct a WRITE transaction. 
    * @param transactionId
    * @param op
    * @param timestamp
    */
-  public HLogEdit(long transactionId, BatchOperation op, long timestamp) {
-    this(op.getColumn(), op.getValue(), timestamp);
+  public HLogEdit(long transactionId, final byte [] row, BatchOperation op,
+      long timestamp) {
+    this(new KeyValue(row, op.getColumn(), timestamp,
+      op.isPut()? KeyValue.Type.Put: KeyValue.Type.Delete, op.getValue()));
     // This covers delete ops too...
     this.transactionId = transactionId;
     this.operation = TransactionalOperation.WRITE;
@@ -134,26 +109,15 @@ public class HLogEdit implements Writable, HConstants {
    * @param op
    */
   public HLogEdit(long transactionId, TransactionalOperation op) {
-    this.column = new byte[0];
-    this.val = new byte[0];
+    this.kv = KeyValue.LOWESTKEY;
     this.transactionId = transactionId;
     this.operation = op;
     this.isTransactionEntry = true;
   }
 
-  /** @return the column */
-  public byte [] getColumn() {
-    return this.column;
-  }
-
-  /** @return the value */
-  public byte [] getVal() {
-    return this.val;
-  }
-
-  /** @return the timestamp */
-  public long getTimestamp() {
-    return this.timestamp;
+  /** @return the KeyValue */
+  public KeyValue getKeyValue() {
+    return this.kv;
   }
 
   /** @return true if entry is a transactional entry */
@@ -187,33 +151,22 @@ public class HLogEdit implements Writable, HConstants {
   public String toString() {
     String value = "";
     try {
-      value = (this.val.length > MAX_VALUE_LEN)?
-        new String(this.val, 0, MAX_VALUE_LEN, HConstants.UTF8_ENCODING) +
-          "...":
-        new String(getVal(), HConstants.UTF8_ENCODING);
+      value = (this.kv.getValueLength() > MAX_VALUE_LEN)?
+        new String(this.kv.getValue(), 0, MAX_VALUE_LEN,
+          HConstants.UTF8_ENCODING) + "...":
+        new String(this.kv.getValue(), HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException("UTF8 encoding not present?", e);
     }
-    return "("
-        + Bytes.toString(getColumn())
-        + "/"
-        + getTimestamp()
-        + "/"
-        + (isTransactionEntry ? "tran: " + transactionId + " op "
-            + operation.toString() +"/": "") + value + ")";
+    return this.kv.toString() +
+      (isTransactionEntry ? "/tran=" + transactionId + "/op=" +
+        operation.toString(): "") + "/value=" + value;
   }
   
   // Writable
 
   public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.column);
-    if (this.val == null) {
-      out.writeInt(0);
-    } else {
-      out.writeInt(this.val.length);
-      out.write(this.val);
-    }
-    out.writeLong(timestamp);
+    Bytes.writeByteArray(out, kv.getBuffer(), kv.getOffset(), kv.getLength());
     out.writeBoolean(isTransactionEntry);
     if (isTransactionEntry) {
       out.writeLong(transactionId);
@@ -222,14 +175,31 @@ public class HLogEdit implements Writable, HConstants {
   }
   
   public void readFields(DataInput in) throws IOException {
-    this.column = Bytes.readByteArray(in);
-    this.val = new byte[in.readInt()];
-    in.readFully(this.val);
-    this.timestamp = in.readLong();
+    byte [] kvbytes = Bytes.readByteArray(in);
+    this.kv = new KeyValue(kvbytes, 0, kvbytes.length);
     isTransactionEntry = in.readBoolean();
     if (isTransactionEntry) {
       transactionId = in.readLong();
       operation = TransactionalOperation.valueOf(in.readUTF());
     }
+  }
+
+  /**
+   * @param value
+   * @return True if an entry and its content is {@link #DELETED_BYTES}.
+   */
+  public static boolean isDeleted(final byte [] value) {
+    return isDeleted(value, 0, value.length);
+  }
+
+  /**
+   * @param value
+   * @return True if an entry and its content is {@link #DELETED_BYTES}.
+   */
+  public static boolean isDeleted(final byte [] value, final int offset,
+      final int length) {
+    return (value == null)? false:
+      Bytes.BYTES_RAWCOMPARATOR.compare(DELETED_BYTES, 0, DELETED_BYTES.length,
+        value, offset, length) == 0;
   }
 }

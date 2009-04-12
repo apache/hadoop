@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -31,6 +32,7 @@ import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.HLogEdit;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -87,6 +89,11 @@ public class RegExpRowFilter implements RowFilterInterface {
   }
   
   public void rowProcessed(boolean filtered, byte [] rowKey) {
+    rowProcessed(filtered, rowKey, 0, rowKey.length);
+  }
+
+
+  public void rowProcessed(boolean filtered, byte[] key, int offset, int length) {
     //doesn't care
   }
 
@@ -140,8 +147,12 @@ public class RegExpRowFilter implements RowFilterInterface {
   }
 
   public boolean filterRowKey(final byte [] rowKey) {
+    return filterRowKey(rowKey, 0, rowKey.length);
+  }
+
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     return (filtersByRowKey() && rowKey != null)?
-      !getRowKeyPattern().matcher(Bytes.toString(rowKey)).matches():
+      !getRowKeyPattern().matcher(Bytes.toString(rowKey, offset, length)).matches():
       false;
   }
 
@@ -164,6 +175,14 @@ public class RegExpRowFilter implements RowFilterInterface {
     return false;
   }
 
+
+  public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
+      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      int voffset, int vlength) {
+    if (true) throw new RuntimeException("Not implemented yet");
+    return false;
+  }
+
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     for (Entry<byte [], Cell> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
@@ -176,6 +195,11 @@ public class RegExpRowFilter implements RowFilterInterface {
         return true;
       }
     }
+    return false;
+  }
+
+  public boolean filterRow(List<KeyValue> results) {
+    if (true) throw new RuntimeException("NOT YET IMPLEMENTED");
     return false;
   }
 

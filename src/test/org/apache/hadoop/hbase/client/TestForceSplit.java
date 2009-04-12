@@ -48,7 +48,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
    * @throws Exception 
    * @throws IOException
    */
-  public void testHTable() throws Exception {
+  public void testForceSplit() throws Exception {
     // create the test table
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(columnName));
@@ -80,8 +80,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
     // give some time for the split to happen
     Thread.sleep(15 * 1000);
 
-    // check again
-    table = new HTable(conf, tableName);
+    // check again    table = new HTable(conf, tableName);
     m = table.getRegionsInfo();
     System.out.println("Regions after split (" + m.size() + "): " + m);
     // should have two regions now

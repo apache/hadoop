@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -174,8 +175,8 @@ public class TestMergeTool extends HBaseTestCase {
   throws IOException {
     for (int i = 0; i < upperbound; i++) {
       for (int j = 0; j < rows[i].length; j++) {
-        byte[] bytes = merged.get(rows[i][j], COLUMN_NAME, -1, -1)[0].getValue();
-        assertNotNull(Bytes.toString(rows[i][j]), bytes);
+        byte [] bytes = Cell.createSingleCellArray(merged.get(rows[i][j], COLUMN_NAME, -1, -1))[0].getValue();
+        assertNotNull(rows[i][j].toString(), bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }
     }
@@ -190,7 +191,7 @@ public class TestMergeTool extends HBaseTestCase {
     // contain the right data.
     for (int i = 0; i < regions.length; i++) {
       for (int j = 0; j < rows[i].length; j++) {
-        byte[] bytes = regions[i].get(rows[i][j], COLUMN_NAME, -1, -1)[0].getValue();
+        byte[] bytes = Cell.createSingleCellArray(regions[i].get(rows[i][j], COLUMN_NAME, -1, -1))[0].getValue();
         assertNotNull(bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }

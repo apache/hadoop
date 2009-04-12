@@ -11,6 +11,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
@@ -48,13 +49,12 @@ public class Reference implements Writable {
 
   /**
    * Constructor
-   * @param s This is a serialized storekey with the row we are to split on,
-   * an empty column and a timestamp of the LATEST_TIMESTAMP.  This is the first
-   * possible entry in a row.  This is what we are splitting around.
+   * @param splitRow This is row we are splitting around.
    * @param fr
    */
-  public Reference(final byte [] s, final Range fr) {
-    this.splitkey = s;
+  public Reference(final byte [] splitRow, final Range fr) {
+    this.splitkey = splitRow == null?
+      null: KeyValue.createFirstOnRow(splitRow).getKey();
     this.region = fr;
   }
 

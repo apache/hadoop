@@ -179,7 +179,6 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
   public void write(DataOutput out) throws IOException {
     // Write out the number of entries in the map
     out.writeInt(this.instance.size());
-
     // Then write out each key/value pair
     for (Map.Entry<byte [], V> e: instance.entrySet()) {
       Bytes.writeByteArray(out, e.getKey());
@@ -199,14 +198,13 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
     // First clear the map.  Otherwise we will just accumulate
     // entries every time this method is called.
     this.instance.clear();
-    
     // Read the number of entries in the map
     int entries = in.readInt();
-    
     // Then read each key/value pair
     for (int i = 0; i < entries; i++) {
       byte [] key = Bytes.readByteArray(in);
-      Class clazz = getClass(in.readByte());
+      byte id = in.readByte();
+      Class clazz = getClass(id);
       V value = null;
       if (clazz.equals(byte [].class)) {
         byte [] bytes = Bytes.readByteArray(in);

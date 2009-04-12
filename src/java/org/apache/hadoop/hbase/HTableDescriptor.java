@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
@@ -99,8 +100,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
   private volatile Boolean root = null;
 
   // Key is hash of the family name.
-  private final Map<Integer, HColumnDescriptor> families =
-    new HashMap<Integer, HColumnDescriptor>();
+  private final Map<byte [], HColumnDescriptor> families =
+    new TreeMap<byte [], HColumnDescriptor>(KeyValue.FAMILY_COMPARATOR);
 
   // Key is indexId
   private final Map<String, IndexSpecification> indexes =
@@ -115,7 +116,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
-      this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
+      this.families.put(descriptor.getName(), descriptor);
     }
   }
 
@@ -130,7 +131,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
-      this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
+      this.families.put(descriptor.getName(), descriptor);
     }
     for(IndexSpecification index : indexes) {
       this.indexes.put(index.getIndexId(), index);
@@ -190,7 +191,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(this.name);
     for (HColumnDescriptor c: desc.families.values()) {
-      this.families.put(Bytes.mapKey(c.getName()), new HColumnDescriptor(c));
+      this.families.put(c.getName(), new HColumnDescriptor(c));
     }
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         desc.values.entrySet()) {
@@ -455,7 +456,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     if (family.getName() == null || family.getName().length <= 0) {
       throw new NullPointerException("Family name cannot be null or empty");
     }
-    this.families.put(Bytes.mapKey(family.getName()), family);
+    this.families.put(family.getName(), family);
   }
 
   /**
@@ -464,19 +465,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
    * @return true if the table contains the specified family name
    */
   public boolean hasFamily(final byte [] c) {
-    return hasFamily(c, HStoreKey.getFamilyDelimiterIndex(c));
-  }
-
-  /**
-   * Checks to see if this table contains the given column family
-   * @param c Family name or column name.
-   * @param index Index to column family delimiter
-   * @return true if the table contains the specified family name
-   */
-  public boolean hasFamily(final byte [] c, final int index) {
     // If index is -1, then presume we were passed a column family name minus
     // the colon delimiter.
-    return families.containsKey(Bytes.mapKey(c, index == -1? c.length: index));
+    return families.containsKey(c);
   }
 
   /**
@@ -571,7 +562,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     for (int i = 0; i < numFamilies; i++) {
       HColumnDescriptor c = new HColumnDescriptor();
       c.readFields(in);
-      families.put(Bytes.mapKey(c.getName()), c);
+      families.put(c.getName(), c);
     }
     indexes.clear();
     if (version < 4) {
@@ -657,7 +648,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
    * passed in column.
    */
   public HColumnDescriptor getFamily(final byte [] column) {
-    return this.families.get(HStoreKey.getFamilyMapKey(column));
+    return this.families.get(column);
   }
 
   /**
@@ -666,7 +657,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
    * passed in column.
    */
   public HColumnDescriptor removeFamily(final byte [] column) {
-    return this.families.remove(HStoreKey.getFamilyMapKey(column));
+    return this.families.remove(column);
   }
 
   /**

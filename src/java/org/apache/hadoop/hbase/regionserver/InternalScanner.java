@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.SortedMap;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.Cell;
+import java.util.List;
+
+import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * Internal scanners differ from client-side scanners in that they operate on
@@ -44,13 +44,11 @@ public interface InternalScanner extends Closeable {
    * Grab the next row's worth of values. The scanner will return the most
    * recent data value for each row that is not newer than the target time
    * passed when the scanner was created.
-   * @param key will contain the row and timestamp upon return
-   * @param results will contain an entry for each column family member and its
-   * value
+   * @param results
    * @return true if data was returned
    * @throws IOException
    */
-  public boolean next(HStoreKey key, SortedMap<byte [], Cell> results)
+  public boolean next(List<KeyValue> results)
   throws IOException;
   
   /**

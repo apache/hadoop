@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -83,13 +84,14 @@ public class TestStoreFile extends HBaseTestCase {
    */
   private void writeStoreFile(final HFile.Writer writer)
   throws IOException {
+    long now = System.currentTimeMillis();
+    byte [] column =
+      Bytes.toBytes(getName() + KeyValue.COLUMN_FAMILY_DELIMITER + getName());
     try {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
           byte[] b = new byte[] { (byte) d, (byte) e };
-          byte [] t = Bytes.toBytes(new String(b, HConstants.UTF8_ENCODING));
-          HStoreKey hsk = new HStoreKey(t, t, System.currentTimeMillis());
-          writer.append(hsk.getBytes(), t);
+          writer.append(new KeyValue(b, column, now, b));
         }
       }
     } finally {

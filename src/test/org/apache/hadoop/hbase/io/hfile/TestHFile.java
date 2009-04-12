@@ -35,10 +35,10 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.RawComparator;
 
 /**
  * test hfile features.
@@ -243,7 +243,7 @@ public class TestHFile extends TestCase {
     Path mFile = new Path(ROOT_DIR, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);
     Writer writer = new Writer(fout, minBlockSize, null,
-      new HStoreKey.StoreKeyComparator() {
+      new RawComparator<byte []>() {
         @Override
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2,
             int l2) {

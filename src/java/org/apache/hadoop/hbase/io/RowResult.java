@@ -26,12 +26,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.rest.descriptors.RestCell;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
@@ -78,8 +80,8 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   // 
   // Map interface
   // 
-  
-  public Cell put(byte [] key, Cell value) {
+  public Cell put(byte [] key,
+    Cell value) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
@@ -264,7 +266,37 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
     serializer.serializeRowResult(this);
   }  
-  
+
+  /**
+   * @param r
+   * @return
+   * TODO: This is the glue between old way of doing things and the new.
+   * Herein we are converting our clean KeyValues to old RowResult.
+   */
+  public static RowResult [] createRowResultArray(final List<List<KeyValue>> l) {
+    RowResult [] results = new RowResult[l.size()];
+    int i = 0;
+    for (List<KeyValue> kvl: l) {
+      results[i++] = createRowResult(kvl);
+    }
+    return results;
+  }
+
+  /**
+   * @param results
+   * @return
+   * TODO: This is the glue between old way of doing things and the new.
+   * Herein we are converting our clean KeyValues to old RowResult.
+   */
+  public static RowResult createRowResult(final List<KeyValue> results) {
+    if (results.isEmpty()) {
+      return null;
+    }
+    HbaseMapWritable<byte [], Cell> cells = Cell.createCells(results);
+    byte [] row = results.get(0).getRow();
+    return new RowResult(row, cells);
+  }
+
   //
   // Writable
   //

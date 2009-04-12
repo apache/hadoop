@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.io.VersionedWritable;
@@ -464,5 +465,13 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     boolean old = this.splitRequest;
     this.splitRequest = b;
     return old;
+  }
+
+  /**
+   * @return Comparator to use comparing {@link KeyValue}s.
+   */
+  public KVComparator getComparator() {
+    return isRootRegion()? KeyValue.ROOT_COMPARATOR: isMetaRegion()?
+      KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
   }
 }

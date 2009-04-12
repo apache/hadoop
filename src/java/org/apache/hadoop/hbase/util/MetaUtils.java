@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -36,7 +35,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
@@ -194,23 +193,23 @@ public class MetaUtils {
         HConstants.LATEST_TIMESTAMP, null);
 
     try {
-      HStoreKey key = new HStoreKey();
-      SortedMap<byte [], Cell> results =
-        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
-      while (rootScanner.next(key, results)) {
-        HRegionInfo info = Writables.getHRegionInfoOrNull(
-            results.get(HConstants.COL_REGIONINFO).getValue());
-        if (info == null) {
-          LOG.warn("region info is null for row " +
-              Bytes.toString(key.getRow()) + " in table " +
-              Bytes.toString(HConstants.ROOT_TABLE_NAME));
-          continue;
-        }
-        if (!listener.processRow(info)) {
-          break;
-        }
-        results.clear();
-      }
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      while (rootScanner.next(results)) {
+        HRegionInfo info = null;
+        for (KeyValue kv: results) {
+          info = Writables.getHRegionInfoOrNull(kv.getValue());
+          if (info == null) {
+            LOG.warn("region info is null for row " +
+              Bytes.toString(kv.getRow()) + " in table " +
+                HConstants.ROOT_TABLE_NAME);
+            }
+            continue;
+          }
+          if (!listener.processRow(info)) {
+            break;
+          }
+          results.clear();
+       }
     } finally {
       rootScanner.close();
     }
@@ -247,16 +246,20 @@ public class MetaUtils {
     InternalScanner metaScanner = m.getScanner(HConstants.COL_REGIONINFO_ARRAY,
       HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
     try {
-      HStoreKey key = new HStoreKey();
-      SortedMap<byte[], Cell> results =
-        new TreeMap<byte[], Cell>(Bytes.BYTES_COMPARATOR);
-      while (metaScanner.next(key, results)) {
-        HRegionInfo info = Writables.getHRegionInfoOrNull(
-            results.get(HConstants.COL_REGIONINFO).getValue());
-        if (info == null) {
-          LOG.warn("regioninfo null for row " + Bytes.toString(key.getRow()) +
-            " in table " + Bytes.toString(m.getTableDesc().getName()));
-          continue;
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      while (metaScanner.next(results)) {
+        HRegionInfo info = null;
+        for (KeyValue kv: results) {
+          if (KeyValue.META_COMPARATOR.compareColumns(kv,
+            HConstants.COL_REGIONINFO, 0, HConstants.COL_REGIONINFO.length) == 0) {
+            info = Writables.getHRegionInfoOrNull(kv.getValue());
+            if (info == null) {
+              LOG.warn("region info is null for row " +
+                Bytes.toString(kv.getRow()) +
+                " in table " + HConstants.META_TABLE_NAME);
+            }
+            break;
+          }
         }
         if (!listener.processRow(info)) {
           break;
@@ -399,7 +402,7 @@ public class MetaUtils {
   throws IOException {
     if (LOG.isDebugEnabled()) {
       HRegionInfo h = Writables.getHRegionInfoOrNull(
-        r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1)[0].getValue());
+        r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1).get(0).getValue());
       LOG.debug("Old " + Bytes.toString(HConstants.COL_REGIONINFO) +
         " for " + hri.toString() + " in " + r.toString() + " is: " +
         h.toString());
@@ -409,7 +412,7 @@ public class MetaUtils {
     r.batchUpdate(b, null);
     if (LOG.isDebugEnabled()) {
       HRegionInfo h = Writables.getHRegionInfoOrNull(
-          r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1)[0].getValue());
+          r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1).get(0).getValue());
         LOG.debug("New " + Bytes.toString(HConstants.COL_REGIONINFO) +
           " for " + hri.toString() + " in " + r.toString() + " is: " +
           h.toString());

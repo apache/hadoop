@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HalfHFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -254,29 +254,17 @@ public class StoreFile implements HConstants {
 
     @Override
     protected String toStringFirstKey() {
-      String result = "";
-      try {
-        result = HStoreKey.create(getFirstKey()).toString();
-      } catch (IOException e) {
-        LOG.warn("Failed toString first key", e);
-      }
-      return result;
+      return KeyValue.keyToString(getFirstKey());
     }
 
     @Override
     protected String toStringLastKey() {
-      String result = "";
-      try {
-        result = HStoreKey.create(getLastKey()).toString();
-      } catch (IOException e) {
-        LOG.warn("Failed toString last key", e);
-      }
-      return result;
+      return KeyValue.keyToString(getLastKey());
     }
   }
 
   /**
-   * Override to add some customization on HalfHFileReader
+   * Override to add some customization on HalfHFileReader.
    */
   static class HalfStoreFileReader extends HalfHFileReader {
     public HalfStoreFileReader(FileSystem fs, Path p, BlockCache c, Reference r)
@@ -291,24 +279,12 @@ public class StoreFile implements HConstants {
 
     @Override
     protected String toStringFirstKey() {
-      String result = "";
-      try {
-        result = HStoreKey.create(getFirstKey()).toString();
-      } catch (IOException e) {
-        LOG.warn("Failed toString first key", e);
-      }
-      return result;
+      return KeyValue.keyToString(getFirstKey());
     }
 
     @Override
     protected String toStringLastKey() {
-      String result = "";
-      try {
-        result = HStoreKey.create(getLastKey()).toString();
-      } catch (IOException e) {
-        LOG.warn("Failed toString last key", e);
-      }
-      return result;
+      return KeyValue.keyToString(getLastKey());
     }
   }
 
@@ -398,7 +374,7 @@ public class StoreFile implements HConstants {
    */
   public static HFile.Writer getWriter(final FileSystem fs, final Path dir,
     final int blocksize, final Compression.Algorithm algorithm,
-    final HStoreKey.StoreKeyComparator c, final boolean bloomfilter)
+    final KeyValue.KeyComparator c, final boolean bloomfilter)
   throws IOException {
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
@@ -406,7 +382,7 @@ public class StoreFile implements HConstants {
     Path path = getUniqueFile(fs, dir);
     return new HFile.Writer(fs, path, blocksize,
       algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-      c == null? new HStoreKey.StoreKeyComparator(): c, bloomfilter);
+      c == null? KeyValue.KEY_COMPARATOR: c, bloomfilter);
   }
 
   /**
@@ -501,7 +477,7 @@ public class StoreFile implements HConstants {
     final StoreFile f, final byte [] splitRow, final Reference.Range range)
   throws IOException {
     // A reference to the bottom half of the hsf store file.
-    Reference r = new Reference(new HStoreKey(splitRow).getBytes(), range);
+    Reference r = new Reference(splitRow, range);
     // Add the referred-to regions name as a dot separated suffix. 
     // See REF_NAME_PARSER regex above.  The referred-to regions name is
     // up in the path of the passed in <code>f</code> -- parentdir is family,
