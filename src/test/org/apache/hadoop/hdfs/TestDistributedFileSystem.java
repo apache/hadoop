@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Random;
@@ -97,6 +98,27 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
         out.close();
         assertTrue(dfs.dfs.isLeaseCheckerStarted());
         dfs.close();
+      }
+
+      {
+        // Check to see if opening a non-existent file triggers a FNF
+        FileSystem fs = cluster.getFileSystem();
+        Path dir = new Path("/wrwelkj");
+        assertFalse("File should not exist for test.", fs.exists(dir));
+
+        try {
+          FSDataInputStream in = fs.open(dir);
+          try {
+            in.close();
+            fs.close();
+          } finally {
+            assertTrue("Did not get a FileNotFoundException for non-existing" +
+                " file.", false);
+          }
+        } catch (FileNotFoundException fnf) {
+          // This is the proper exception to catch; move on.
+        }
+
       }
 
       {
