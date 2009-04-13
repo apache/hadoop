@@ -882,7 +882,7 @@ public class Store implements HConstants {
           if (timesSeen <= maxVersions && !(expired = isExpired(kv, ttl, now))) {
             // If this value key is same as a deleted key, skip
             if (lastDelete != null &&
-                this.comparator.compare(kv, lastDelete) == 0) {
+                this.comparatorIgnoringType.compare(kv, lastDelete) == 0) {
               deleted = true;
             } else if (kv.isDeleteType()) {
               // If a deleted value, skip

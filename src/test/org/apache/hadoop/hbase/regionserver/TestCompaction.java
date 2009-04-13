@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -35,20 +34,18 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 /**
  * Test compactions
  */
-public class DisableTestCompaction extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(DisableTestCompaction.class.getName());
+public class TestCompaction extends HBaseTestCase {
+  static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private HRegion r = null;
   private static final byte [] COLUMN_FAMILY = COLFAMILY_NAME1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
-  private static final byte [] COLUMN_FAMILY_TEXT_MINUS_COLON =
-    Bytes.toBytes(Bytes.toString(COLUMN_FAMILY).substring(0, COLUMN_FAMILY.length - 1));
   private static final int COMPACTION_THRESHOLD = MAXVERSIONS;
 
   private MiniDFSCluster cluster;
   
   /** constructor */
-  public DisableTestCompaction() {
+  public TestCompaction() {
     super();
     
     // Set cache flush size to 1MB
@@ -124,8 +121,8 @@ public class DisableTestCompaction extends HBaseTestCase {
     createSmallerStoreFile(this.r);
     r.flushcache();
     // Assert that the second row is still deleted.
-    // FIX
-    cellValues = Cell.createSingleCellArray(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
+    cellValues = Cell.createSingleCellArray(r.get(secondRowBytes,
+      COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     assertNull(r.get(secondRowBytes, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
     // Force major compaction.
     r.compactStores(true);
@@ -136,19 +133,19 @@ public class DisableTestCompaction extends HBaseTestCase {
     // they were deleted.
     int count = 0;
     boolean containsStartRow = false;
-    for (StoreFile f: this.r.stores.
-        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getStorefiles().values()) {
+    for (StoreFile f: this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles().
+        values()) {
       HFileScanner scanner = f.getReader().getScanner();
       scanner.seekTo();
       do {
-        HStoreKey key = HStoreKey.create(scanner.getKey());
-        if (Bytes.equals(key.getRow(), STARTROW)) {
+        byte [] row = scanner.getKeyValue().getRow();
+        if (Bytes.equals(row, STARTROW)) {
           containsStartRow = true;
           count++;
         } else {
           // After major compaction, should be none of these rows in compacted
           // file.
-          assertFalse(Bytes.equals(key.getRow(), secondRowBytes));
+          assertFalse(Bytes.equals(row, secondRowBytes));
         }
       } while(scanner.next());
     }
@@ -168,7 +165,7 @@ public class DisableTestCompaction extends HBaseTestCase {
   private int count() throws IOException {
     int count = 0;
     for (StoreFile f: this.r.stores.
-        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getStorefiles().values()) {
+        get(COLUMN_FAMILY_TEXT).getStorefiles().values()) {
       HFileScanner scanner = f.getReader().getScanner();
       if (!scanner.seekTo()) {
         continue;
