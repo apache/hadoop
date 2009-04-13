@@ -63,6 +63,116 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
   }
 
 
+  public void testGetFullMultiMapfile() throws IOException {
+    HRegion region = null;
+    BatchUpdate batchUpdate = null;
+    Map<byte [], Cell> results = null;
+    
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      region = createNewHRegion(htd, null, null);
+
+      // Test ordering issue
+      //
+      byte [] row = Bytes.toBytes("row1");
+     
+      // write some data
+      batchUpdate = new BatchUpdate(row);
+      batchUpdate.put(COLUMNS[0], "olderValue".getBytes());
+      region.batchUpdate(batchUpdate, null);
+
+      // flush
+      region.flushcache();
+
+      // assert that getFull gives us the older value
+      results = region.getFull(row, (NavigableSet<byte []>)null,
+        LATEST_TIMESTAMP, 1, null);
+      assertEquals("olderValue",
+        new String(results.get(COLUMNS[0]).getValue()));
+      
+      // write a new value for the cell
+      batchUpdate = new BatchUpdate(row);
+      batchUpdate.put(COLUMNS[0], "newerValue".getBytes());
+      region.batchUpdate(batchUpdate, null);
+
+      // flush
+      region.flushcache();
+      
+      // assert that getFull gives us the later value
+      results = region.getFull(row, (NavigableSet<byte []>)null,
+        LATEST_TIMESTAMP, 1, null);
+      assertEquals("newerValue", new String(results.get(COLUMNS[0]).getValue()));
+     
+      //
+      // Test the delete masking issue
+      //
+      byte [] row2 = Bytes.toBytes("row2");
+      byte [] cell1 = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "a");
+      byte [] cell2 = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "b");
+      byte [] cell3 = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "c");
+
+      long now = System.currentTimeMillis();
+      
+      // write some data at two columns
+      batchUpdate = new BatchUpdate(row2, now);
+      batchUpdate.put(cell1, "column0 value".getBytes());
+      batchUpdate.put(cell2, "column1 value".getBytes());
+      region.batchUpdate(batchUpdate, null);
+      
+      // flush
+      region.flushcache();
+      
+      // assert i get both columns
+      results = region.getFull(row2,
+        (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
+      assertEquals("Should have two columns in the results map", 2, results.size());
+      assertEquals("column0 value", new String(results.get(cell1).getValue()));
+      assertEquals("column1 value", new String(results.get(cell2).getValue()));
+      
+      // write a delete for the first column
+      batchUpdate = new BatchUpdate(row2, now);
+      batchUpdate.delete(cell1);
+      batchUpdate.put(cell2, "column1 new value".getBytes());
+      region.batchUpdate(batchUpdate, null);
+            
+      // flush
+      region.flushcache(); 
+      
+      // assert i get the second column only
+      results = region.getFull(row2, (NavigableSet<byte []>)null,
+        LATEST_TIMESTAMP, 1, null);
+      System.out.println(Bytes.toString(results.keySet().iterator().next()));
+      assertEquals("Should have one column in the results map", 1, results.size());
+      assertNull("column0 value", results.get(cell1));
+      assertEquals("column1 new value", new String(results.get(cell2).getValue()));
+      
+      //
+      // Include a delete and value from the memcache in the mix
+      //
+      batchUpdate = new BatchUpdate(row2, now);
+      batchUpdate.delete(cell2);
+      batchUpdate.put(cell3, "column3 value!".getBytes());
+      region.batchUpdate(batchUpdate, null);
+
+      // assert i get the third column only
+      results = region.getFull(row2, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
+      assertEquals("Should have one column in the results map", 1, results.size());
+      assertNull("column0 value", results.get(cell1));
+      assertNull("column1 value", results.get(cell2));
+      assertEquals("column3 value!", new String(results.get(cell3).getValue()));
+      
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }  
+  }
+
   /**
    * Test for HBASE-808 and HBASE-809.
    * @throws Exception
@@ -111,109 +221,6 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
         region.getLog().closeAndDelete();
       }
     }
-  }
-
-  public void testGetFullMultiMapfile() throws IOException {
-    HRegion region = null;
-    BatchUpdate batchUpdate = null;
-    Map<byte [], Cell> results = null;
-    
-    try {
-      HTableDescriptor htd = createTableDescriptor(getName());
-      region = createNewHRegion(htd, null, null);
-
-      // Test ordering issue
-      //
-      byte [] row = Bytes.toBytes("row1");
-     
-      // write some data
-      batchUpdate = new BatchUpdate(row);
-      batchUpdate.put(COLUMNS[0], "olderValue".getBytes());
-      region.batchUpdate(batchUpdate, null);
-
-      // flush
-      region.flushcache();
-
-      // assert that getFull gives us the older value
-      results = region.getFull(row, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
-      assertEquals("olderValue", new String(results.get(COLUMNS[0]).getValue()));
-      
-      // write a new value for the cell
-      batchUpdate = new BatchUpdate(row);
-      batchUpdate.put(COLUMNS[0], "newerValue".getBytes());
-      region.batchUpdate(batchUpdate, null);
-
-      // flush
-      region.flushcache();
-      
-      // assert that getFull gives us the later value
-      results = region.getFull(row, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
-      assertEquals("newerValue", new String(results.get(COLUMNS[0]).getValue()));
-     
-      //
-      // Test the delete masking issue
-      //
-      byte [] row2 = Bytes.toBytes("row2");
-      byte [] cell1 = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "a");
-      byte [] cell2 = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "b");
-      byte [] cell3 = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "c");
-      
-      // write some data at two columns
-      batchUpdate = new BatchUpdate(row2);
-      batchUpdate.put(cell1, "column0 value".getBytes());
-      batchUpdate.put(cell2, "column1 value".getBytes());
-      region.batchUpdate(batchUpdate, null);
-      
-      // flush
-      region.flushcache();
-      
-      // assert i get both columns
-      results = region.getFull(row2, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
-      assertEquals("Should have two columns in the results map", 2, results.size());
-      assertEquals("column0 value", new String(results.get(cell1).getValue()));
-      assertEquals("column1 value", new String(results.get(cell2).getValue()));
-      
-      // write a delete for the first column
-      batchUpdate = new BatchUpdate(row2);
-      batchUpdate.delete(cell1);
-      batchUpdate.put(cell2, "column1 new value".getBytes());      
-      region.batchUpdate(batchUpdate, null);
-            
-      // flush
-      region.flushcache(); 
-      
-      // assert i get the second column only
-      results = region.getFull(row2, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
-      System.out.println(Bytes.toString(results.keySet().iterator().next()));
-      assertEquals("Should have one column in the results map", 1, results.size());
-      assertNull("column0 value", results.get(cell1));
-      assertEquals("column1 new value", new String(results.get(cell2).getValue()));
-      
-      //
-      // Include a delete and value from the memcache in the mix
-      //
-      batchUpdate = new BatchUpdate(row2);
-      batchUpdate.delete(cell2);
-      batchUpdate.put(cell3, "column3 value!".getBytes());
-      region.batchUpdate(batchUpdate, null);
-      
-      // assert i get the third column only
-      results = region.getFull(row2, (NavigableSet<byte []>)null, LATEST_TIMESTAMP, 1, null);
-      assertEquals("Should have one column in the results map", 1, results.size());
-      assertNull("column0 value", results.get(cell1));
-      assertNull("column1 value", results.get(cell2));
-      assertEquals("column3 value!", new String(results.get(cell3).getValue()));
-      
-    } finally {
-      if (region != null) {
-        try {
-          region.close();
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-        region.getLog().closeAndDelete();
-      }
-    }  
   }
 
   /** For HBASE-694 
