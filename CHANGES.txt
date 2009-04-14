@@ -1233,6 +1233,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5645. After HADOOP-4920 we need a place to checkin
     releasenotes.html. (nigel)
 
+    HADOOP-5654. TestReplicationPolicy.<init> fails on java.net.BindException.
+    (hairong)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES

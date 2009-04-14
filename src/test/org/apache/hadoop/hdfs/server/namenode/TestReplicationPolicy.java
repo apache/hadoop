@@ -36,9 +36,9 @@ public class TestReplicationPolicy extends TestCase {
   private static final int NUM_OF_DATANODES = 6;
   private static final Configuration CONF = new Configuration();
   private static final NetworkTopology cluster;
-  private static NameNode namenode;
-  private static ReplicationTargetChooser replicator;
-  private static DatanodeDescriptor dataNodes[] = 
+  private static final NameNode namenode;
+  private static final ReplicationTargetChooser replicator;
+  private static final DatanodeDescriptor dataNodes[] = 
     new DatanodeDescriptor[] {
       new DatanodeDescriptor(new DatanodeID("h1:5020"), "/d1/r1"),
       new DatanodeDescriptor(new DatanodeID("h2:5020"), "/d1/r1"),
@@ -54,11 +54,12 @@ public class TestReplicationPolicy extends TestCase {
   static {
     try {
       FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
+      CONF.set("dfs.http.address", "0.0.0.0:0");
       NameNode.format(CONF);
       namenode = new NameNode(CONF);
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
+      throw (RuntimeException)new RuntimeException().initCause(e);
     }
     FSNamesystem fsNamesystem = namenode.getNamesystem();
     replicator = fsNamesystem.replicator;
