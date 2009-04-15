@@ -2403,6 +2403,8 @@ Release 0.18.4 - Unreleased
     HADOOP-5557. Fixes some minor problems in TestOverReplicatedBlocks.
     (szetszwo)
 
+    HADOOP-5644. Namenode is stuck in safe mode. (suresh Srinivas via hairong)
+
 Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS
