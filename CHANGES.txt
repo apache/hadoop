@@ -391,6 +391,9 @@ Trunk (unreleased changes)
     HADOOP-5462. Fixed a double free bug in the task-controller
     executable. (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-5652. Fix a bug where in-memory segments are incorrectly retained in
+    memory. (cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
