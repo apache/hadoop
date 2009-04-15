@@ -394,6 +394,9 @@ Trunk (unreleased changes)
     HADOOP-5652. Fix a bug where in-memory segments are incorrectly retained in
     memory. (cdouglas)
 
+    HADOOP-5671. Fix FNF exceptions when copying from old versions of
+    HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
