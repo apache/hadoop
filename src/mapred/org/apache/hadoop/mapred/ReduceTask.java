@@ -2334,24 +2334,24 @@ class ReduceTask extends Task {
         super(null, null, size, null, spilledRecordsCounter);
         this.kvIter = kvIter;
       }
-
-      public boolean next(DataInputBuffer key, DataInputBuffer value)
-          throws IOException {
+      public boolean nextRawKey(DataInputBuffer key) throws IOException {
         if (kvIter.next()) {
           final DataInputBuffer kb = kvIter.getKey();
-          final DataInputBuffer vb = kvIter.getValue();
           final int kp = kb.getPosition();
           final int klen = kb.getLength() - kp;
           key.reset(kb.getData(), kp, klen);
-          final int vp = vb.getPosition();
-          final int vlen = vb.getLength() - vp;
-          value.reset(vb.getData(), vp, vlen);
-          bytesRead += klen + vlen;
+          bytesRead += klen;
           return true;
         }
         return false;
       }
-
+      public void nextRawValue(DataInputBuffer value) throws IOException {
+        final DataInputBuffer vb = kvIter.getValue();
+        final int vp = vb.getPosition();
+        final int vlen = vb.getLength() - vp;
+        value.reset(vb.getData(), vp, vlen);
+        bytesRead += vlen;
+      }
       public long getPosition() throws IOException {
         return bytesRead;
       }

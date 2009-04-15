@@ -128,8 +128,7 @@ class Merger {
 
   public static class Segment<K extends Object, V extends Object> {
     Reader<K, V> reader = null;
-    DataInputBuffer key = new DataInputBuffer();
-    DataInputBuffer value = new DataInputBuffer();
+    final DataInputBuffer key = new DataInputBuffer();
     
     Configuration conf = null;
     FileSystem fs = null;
@@ -172,18 +171,30 @@ class Merger {
       }
     }
     
+    boolean inMemory() {
+      return fs == null;
+    }
+    
     DataInputBuffer getKey() { return key; }
-    DataInputBuffer getValue() { return value; }
+
+    DataInputBuffer getValue(DataInputBuffer value) throws IOException {
+      nextRawValue(value);
+      return value;
+    }
 
     long getLength() { 
       return (reader == null) ?
         segmentLength : reader.getLength();
     }
     
-    boolean next() throws IOException {
-      return reader.next(key, value);
+    boolean nextRawKey() throws IOException {
+      return reader.nextRawKey(key);
     }
-    
+
+    void nextRawValue(DataInputBuffer value) throws IOException {
+      reader.nextRawValue(value);
+    }
+
     void close() throws IOException {
       reader.close();
       
@@ -214,7 +225,8 @@ class Merger {
     Progressable reporter;
     
     DataInputBuffer key;
-    DataInputBuffer value;
+    final DataInputBuffer value = new DataInputBuffer();
+    final DataInputBuffer diskIFileValue = new DataInputBuffer();
     
     Segment<K, V> minSegment;
     Comparator<Segment<K, V>> segmentComparator =   
@@ -284,7 +296,7 @@ class Merger {
 
     private void adjustPriorityQueue(Segment<K, V> reader) throws IOException{
       long startPos = reader.getPosition();
-      boolean hasNext = reader.next();
+      boolean hasNext = reader.nextRawKey();
       long endPos = reader.getPosition();
       totalBytesProcessed += endPos - startPos;
       mergeProgress.set(totalBytesProcessed * progPerByte);
@@ -311,10 +323,24 @@ class Merger {
         }
       }
       minSegment = top();
-      
+      if (!minSegment.inMemory()) {
+        //When we load the value from an inmemory segment, we reset
+        //the "value" DIB in this class to the inmem segment's byte[].
+        //When we load the value bytes from disk, we shouldn't use
+        //the same byte[] since it would corrupt the data in the inmem
+        //segment. So we maintain an explicit DIB for value bytes
+        //obtained from disk, and if the current segment is a disk
+        //segment, we reset the "value" DIB to the byte[] in that (so 
+        //we reuse the disk segment DIB whenever we consider
+        //a disk segment).
+        value.reset(diskIFileValue.getData(), diskIFileValue.getLength());
+      }
+      long startPos = minSegment.getPosition();
       key = minSegment.getKey();
-      value = minSegment.getValue();
-
+      minSegment.getValue(value);
+      long endPos = minSegment.getPosition();
+      totalBytesProcessed += endPos - startPos;
+      mergeProgress.set(totalBytesProcessed * progPerByte);
       return true;
     }
 
@@ -374,7 +400,7 @@ class Merger {
             // this helps in ensuring we don't use buffers until we need them
             segment.init(readsCounter);
             long startPos = segment.getPosition();
-            boolean hasNext = segment.next();
+            boolean hasNext = segment.nextRawKey();
             long endPos = segment.getPosition();
             startBytes += endPos - startPos;
             
