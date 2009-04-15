@@ -1957,12 +1957,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
 
-    // If this commit does not want to close the file, just persist
-    // blocks and return
+    // Return if this commit does not want to close the file
     String src = leaseManager.findPath(pendingFile);
     if (!closeFile) {
-      dir.persistBlocks(src, pendingFile);
-      getEditLog().logSync();
       LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
       return;
     }
