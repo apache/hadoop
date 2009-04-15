@@ -320,6 +320,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   void activate(Configuration conf) throws IOException {
     setBlockTotal();
+    pendingReplications.start();
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(leaseManager.new Monitor());
     this.replthread = new Daemon(new ReplicationMonitor());

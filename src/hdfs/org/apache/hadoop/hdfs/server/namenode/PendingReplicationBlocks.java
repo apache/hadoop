@@ -51,17 +51,12 @@ class PendingReplicationBlocks {
     if ( timeoutPeriod > 0 ) {
       this.timeout = timeoutPeriod;
     }
-    init();
-  }
-
-  PendingReplicationBlocks() {
-    init();
-  }
-
-  void init() {
     pendingReplications = new HashMap<Block, PendingBlockInfo>();
     timedOutItems = new ArrayList<Block>();
-    this.timerThread = new Daemon(new PendingReplicationMonitor());
+  }
+
+  void start() {
+    timerThread = new Daemon(new PendingReplicationMonitor());
     timerThread.start();
   }
 
@@ -196,14 +191,15 @@ class PendingReplicationBlocks {
      */
     void pendingReplicationCheck() {
       synchronized (pendingReplications) {
-        Iterator iter = pendingReplications.entrySet().iterator();
+        Iterator<Map.Entry<Block, PendingBlockInfo>> iter =
+                                    pendingReplications.entrySet().iterator();
         long now = FSNamesystem.now();
         FSNamesystem.LOG.debug("PendingReplicationMonitor checking Q");
         while (iter.hasNext()) {
-          Map.Entry entry = (Map.Entry) iter.next();
-          PendingBlockInfo pendingBlock = (PendingBlockInfo) entry.getValue();
+          Map.Entry<Block, PendingBlockInfo> entry = iter.next();
+          PendingBlockInfo pendingBlock = entry.getValue();
           if (now > pendingBlock.getTimeStamp() + timeout) {
-            Block block = (Block) entry.getKey();
+            Block block = entry.getKey();
             synchronized (timedOutItems) {
               timedOutItems.add(block);
             }
@@ -222,6 +218,7 @@ class PendingReplicationBlocks {
    */
   void stop() {
     fsRunning = false;
+    if(timerThread == null) return;
     timerThread.interrupt();
     try {
       timerThread.join(3000);
@@ -236,11 +233,12 @@ class PendingReplicationBlocks {
     synchronized (pendingReplications) {
       out.println("Metasave: Blocks being replicated: " +
                   pendingReplications.size());
-      Iterator iter = pendingReplications.entrySet().iterator();
+      Iterator<Map.Entry<Block, PendingBlockInfo>> iter =
+                                  pendingReplications.entrySet().iterator();
       while (iter.hasNext()) {
-        Map.Entry entry = (Map.Entry) iter.next();
-        PendingBlockInfo pendingBlock = (PendingBlockInfo) entry.getValue();
-        Block block = (Block) entry.getKey();
+        Map.Entry<Block, PendingBlockInfo> entry = iter.next();
+        PendingBlockInfo pendingBlock = entry.getValue();
+        Block block = entry.getKey();
         out.println(block + 
                     " StartTime: " + new Time(pendingBlock.timeStamp) +
                     " NumReplicaInProgress: " + 

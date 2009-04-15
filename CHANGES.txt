@@ -226,6 +226,9 @@ Trunk (unreleased changes)
     HADOOP-5581. HDFS should throw FileNotFoundException when while opening
     a file that does not exist. (Brian Bockelman via rangadi)
 
+    HADOOP-5509. PendingReplicationBlocks does not start monitor in the
+    constructor. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

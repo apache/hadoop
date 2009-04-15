@@ -26,10 +26,12 @@ import org.apache.hadoop.hdfs.protocol.Block;
  * This class tests the internals of PendingReplicationBlocks.java
  */
 public class TestPendingReplication extends TestCase {
+  final static int TIMEOUT = 3;     // 3 seconds
+
   public void testPendingReplication() {
-    int timeout = 10;		// 10 seconds
     PendingReplicationBlocks pendingReplications;
-    pendingReplications = new PendingReplicationBlocks(timeout * 1000);
+    pendingReplications = new PendingReplicationBlocks(TIMEOUT * 1000);
+    pendingReplications.start();
 
     //
     // Add 10 blocks to pendingReplications.
@@ -110,5 +112,6 @@ public class TestPendingReplication extends TestCase {
     for (int i = 0; i < timedOut.length; i++) {
       assertTrue(timedOut[i].getBlockId() < 15);
     }
+    pendingReplications.stop();
   }
 }

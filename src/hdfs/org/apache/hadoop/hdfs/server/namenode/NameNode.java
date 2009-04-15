@@ -261,12 +261,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.rpcAddress = this.server.getListenerAddress(); 
     setRpcServerAddress(conf);
-    LOG.info(getRole() + " up at: " + rpcAddress);
 
     myMetrics = new NameNodeMetrics(conf, role);
 
     loadNamesystem(conf);
     activate(conf);
+    LOG.info(getRole() + " up at: " + rpcAddress);
   }
 
   /**
