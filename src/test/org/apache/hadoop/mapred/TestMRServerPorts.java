@@ -22,6 +22,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.TestHDFSServerPorts;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 /**
@@ -72,6 +73,15 @@ public class TestMRServerPorts extends TestCase {
     }
     return jt;
   }
+  
+  private void setDataNodePorts(Configuration conf) {
+    conf.set("dfs.datanode.address", 
+        TestHDFSServerPorts.NAME_NODE_HOST + "0");
+    conf.set("dfs.datanode.http.address", 
+        TestHDFSServerPorts.NAME_NODE_HTTP_HOST + "0");
+    conf.set("dfs.datanode.ipc.address", 
+        TestHDFSServerPorts.NAME_NODE_HOST + "0");
+  }
 
   /**
    * Check whether the JobTracker can be started.
@@ -116,6 +126,7 @@ public class TestMRServerPorts extends TestCase {
     DataNode dn = null;
     try {
       nn = hdfs.startNameNode();
+      setDataNodePorts(hdfs.getConfig());
       dn = hdfs.startDataNode(1, hdfs.getConfig());
 
       // start job tracker on the same port as name-node
@@ -157,6 +168,7 @@ public class TestMRServerPorts extends TestCase {
     JTRunner runner = null;
     try {
       nn = hdfs.startNameNode();
+      setDataNodePorts(hdfs.getConfig());
       dn = hdfs.startDataNode(2, hdfs.getConfig());
 
       JobConf conf2 = new JobConf(hdfs.getConfig());

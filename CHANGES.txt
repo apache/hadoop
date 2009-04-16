@@ -1256,6 +1256,9 @@ Release 0.20.0 - Unreleased
     HADOOP-5654. TestReplicationPolicy.<init> fails on java.net.BindException.
     (hairong)
 
+    HADOOP-5655. TestMRServerPorts fails on java.net.BindException. (Devaraj
+    Das via hairong)
+
 Release 0.19.2 - Unreleased
 
   BUG FIXES
