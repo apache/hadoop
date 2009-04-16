@@ -303,6 +303,16 @@
             <em>mapred.queue.queue-name.acl-name</em>, defined below.
           </td>
         </tr>
+		  </table>
+      
+      <p><br/><code> conf/mapred-queue-acls.xml</code></p>
+      
+      <table>
+       <tr>
+          <th>Parameter</th>
+          <th>Value</th> 
+          <th>Notes</th>
+       </tr>
         <tr>
           <td>mapred.queue.<em>queue-name</em>.acl-submit-job</td>
           <td>List of users and groups that can submit jobs to the
@@ -330,7 +340,8 @@
             his/her own job, irrespective of the ACLs.
           </td>
         </tr>
-		  </table>
+      </table>
+      
 
           <p>Typically all the above parameters are marked as 
           <a href="ext:api/org/apache/hadoop/conf/configuration/final_parameters">

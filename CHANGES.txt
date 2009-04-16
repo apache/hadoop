@@ -233,6 +233,10 @@ Trunk (unreleased changes)
     rather than buffering at least one record for each segment. (Devaraj Das
     via cdouglas)
 
+    HADOOP-5396. Provide ability to refresh queue ACLs in the JobTracker
+    without having to restart the daemon.
+    (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

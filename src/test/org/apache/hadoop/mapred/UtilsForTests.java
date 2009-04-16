@@ -21,12 +21,16 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.DataOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.Properties;
 
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.RandomWriter;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,7 +42,6 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -46,11 +49,15 @@ import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSeq
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 
+import org.apache.commons.logging.Log;
+
 /** 
  * Utilities used in unit test.
  *  
  */
 public class UtilsForTests {
+
+  static final Log LOG = LogFactory.getLog(UtilsForTests.class);
 
   final static long KB = 1024L * 1;
   final static long MB = 1024L * KB;
@@ -658,5 +665,19 @@ public class UtilsForTests {
         // Do nothing
       }
     }
+  }
+
+  static void setUpConfigFile(Properties confProps, File configFile)
+      throws IOException {
+    Configuration config = new Configuration(false);
+    FileOutputStream fos = new FileOutputStream(configFile);
+
+    for (Enumeration<?> e = confProps.propertyNames(); e.hasMoreElements();) {
+      String key = (String) e.nextElement();
+      config.set(key, confProps.getProperty(key));
+    }
+
+    config.writeXml(fos);
+    fos.close();
   }
 }
