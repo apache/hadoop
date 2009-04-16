@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -54,9 +55,9 @@ class JvmManager {
   
   public JvmManager(TaskTracker tracker) {
     mapJvmManager = new JvmManagerForType(tracker.getMaxCurrentMapTasks(), 
-        true);
+        true, tracker);
     reduceJvmManager = new JvmManagerForType(tracker.getMaxCurrentReduceTasks(),
-        false);
+        false, tracker);
   }
   
   public void stop() {
@@ -124,11 +125,15 @@ class JvmManager {
     int maxJvms;
     boolean isMap;
     
+    TaskTracker tracker;
+    
     Random rand = new Random(System.currentTimeMillis());
 
-    public JvmManagerForType(int maxJvms, boolean isMap) {
+    public JvmManagerForType(int maxJvms, boolean isMap, 
+        TaskTracker tracker) {
       this.maxJvms = maxJvms;
       this.isMap = isMap;
+      this.tracker = tracker;
     }
 
     synchronized public void setRunningTaskForJvm(JVMId jvmId, 
@@ -140,7 +145,23 @@ class JvmManager {
     
     synchronized public TaskInProgress getTaskForJvm(JVMId jvmId) {
       if (jvmToRunningTask.containsKey(jvmId)) {
-        return jvmToRunningTask.get(jvmId).getTaskInProgress();
+        //Incase of JVM reuse, tasks are returned to previously launched
+        //JVM via this method. However when a new task is launched
+        //the task being returned has to be initialized.
+        TaskRunner taskRunner = jvmToRunningTask.get(jvmId);
+        JvmRunner jvmRunner = jvmIdToRunner.get(jvmId);
+        Task task = taskRunner.getTaskInProgress().getTask();
+        TaskControllerContext context = 
+          new TaskController.TaskControllerContext();
+        context.env = jvmRunner.env;
+        context.task = task;
+        //If we are returning the same task as which the JVM was launched
+        //we don't initialize task once again.
+        if(!jvmRunner.env.conf.get("mapred.task.id").
+            equals(task.getTaskID().toString())) {
+          tracker.getTaskController().initializeTask(context);
+        }
+        return taskRunner.getTaskInProgress();
       }
       return null;
     }
@@ -254,7 +275,7 @@ class JvmManager {
       }
       //*MUST* never reach this
       throw new RuntimeException("Inconsistent state!!! " +
-      		"JVM Manager reached an unstable state " +
+          "JVM Manager reached an unstable state " +
             "while reaping a JVM for task: " + t.getTask().getTaskID()+
             " " + getDetails());
     }
@@ -317,6 +338,9 @@ class JvmManager {
       JVMId jvmId;
       volatile boolean busy = true;
       private ShellCommandExecutor shexec; // shell terminal for running the task
+      //context used for starting JVM
+      private TaskControllerContext initalContext;
+      
       public JvmRunner(JvmEnv env, JobID jobId) {
         this.env = env;
         this.jvmId = new JVMId(jobId, isMap, rand.nextInt());
@@ -328,18 +352,19 @@ class JvmManager {
       }
 
       public void runChild(JvmEnv env) {
+        initalContext = new TaskControllerContext();
         try {
           env.vargs.add(Integer.toString(jvmId.getId()));
-          List<String> wrappedCommand = 
-            TaskLog.captureOutAndError(env.setup, env.vargs, env.stdout, env.stderr,
-                env.logSize, true, env.pidFile);
-          shexec = new ShellCommandExecutor(wrappedCommand.toArray(new String[0]), 
-              env.workDir, env.env);
-          shexec.execute();
+          //Launch the task controller to run task JVM
+          initalContext.task = jvmToRunningTask.get(jvmId).getTask();
+          initalContext.env = env;
+          tracker.getTaskController().initializeTask(initalContext);
+          tracker.getTaskController().launchTaskJVM(initalContext);
         } catch (IOException ioe) {
           // do nothing
           // error and output are appropriately redirected
         } finally { // handle the exit code
+          shexec = initalContext.shExec;
           if (shexec == null) {
             return;
           }
@@ -364,29 +389,14 @@ class JvmManager {
        * of processes) is created using setsid.
        */
       public void kill() {
-        if (shexec != null) {
-          Process process = shexec.getProcess();
-          if (process != null) {
-            if (Shell.WINDOWS) {
-              process.destroy();
-            }
-            else {
-              Path pidFilePath = new Path(env.pidFile);
-              String pid = ProcessTree.getPidFromPidFile(
-                                                    pidFilePath.toString());
-              if (pid != null) {
-                long sleeptimeBeforeSigkill = env.conf.getLong(
-                     "mapred.tasktracker.tasks.sleeptime-before-sigkill",
-                     ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
-
-                ProcessTree.destroy(pid, sleeptimeBeforeSigkill,
-                         ProcessTree.isSetsidAvailable, false);
-                try {
-                  LOG.info("Process exited with exit code:" + process.waitFor());
-                } catch (InterruptedException ie) {}
-              }
-            }
-          }
+        TaskController controller = tracker.getTaskController();
+        //Check inital context before issuing a kill to prevent situations
+        //where kill is issued before task is launched.
+        if(initalContext != null && initalContext.env != null) {
+          controller.killTaskJVM(initalContext);
+        } else {
+          LOG.info(String.format("JVM Not killed %s but just removed", 
+              jvmId.toString()));
         }
         removeJvm(jvmId);
       }

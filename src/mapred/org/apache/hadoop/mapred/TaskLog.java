@@ -476,11 +476,36 @@ public class TaskLog {
                                                 boolean useSetsid,
                                                 String pidFileName
                                                ) throws IOException {
-    String stdout = FileUtil.makeShellPath(stdoutFilename);
-    String stderr = FileUtil.makeShellPath(stderrFilename);
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
     result.add("-c");
+    String mergedCmd = buildCommandLine(setup, cmd, stdoutFilename,
+                                                    stderrFilename, tailLength, 
+                                                    useSetsid, pidFileName);
+    result.add(mergedCmd);
+    return result;
+  }
+  
+  /**
+   * Construct the command line for running the task JVM
+   * @param setup The setup commands for the execed process.
+   * @param cmd The command and the arguments that should be run
+   * @param stdoutFilename The filename that stdout should be saved to
+   * @param stderrFilename The filename that stderr should be saved to
+   * @param tailLength The length of the tail to be saved.
+   * @param pidFileName The name of the pid-file
+   * @return the command line as a String
+   * @throws IOException
+   */
+  static String buildCommandLine(List<String> setup, List<String> cmd, 
+                                      File stdoutFilename,
+                                      File stderrFilename,
+                                      long tailLength, 
+                                      boolean useSetsid, String pidFileName)
+                                throws IOException {
+    
+    String stdout = FileUtil.makeShellPath(stdoutFilename);
+    String stderr = FileUtil.makeShellPath(stderrFilename);    
     StringBuffer mergedCmd = new StringBuffer();
     
     // Spit out the pid to pidFileName
@@ -524,10 +549,9 @@ public class TaskLog {
       mergedCmd.append(" 2>> ");
       mergedCmd.append(stderr);
     }
-    result.add(mergedCmd.toString());
-    return result;
+    return mergedCmd.toString();
   }
-
+  
   /**
    * Add quotes to each of the command strings and
    * return as a single string 
@@ -592,6 +616,15 @@ public class TaskLog {
     mergedCmd.append(" 2>&1 ");
     result.add(mergedCmd.toString());
     return result;
+  }
+  
+  /**
+   * Method to return the location of user log directory.
+   * 
+   * @return base log directory
+   */
+  static File getUserLogDir() {
+    return LOG_DIR;
   }
   
 } // TaskLog
