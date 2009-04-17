@@ -247,6 +247,8 @@ Trunk (unreleased changes)
 
     HADOOP-5603. Improve NameNode's block placement performance. (hairong)
 
+    HADOOP-5638. More improvement on block placement performance. (hairong)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.

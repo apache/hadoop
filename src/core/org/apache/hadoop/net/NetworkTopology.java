@@ -19,7 +19,6 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -304,7 +303,7 @@ public class NetworkTopology {
   }
     
   /** Add a leaf node
-   * Update node counter & rack counter if neccessary
+   * Update node counter & rack counter if necessary
    * @param node
    *          node to be added
    * @exception IllegalArgumentException if add a node to a leave 
@@ -337,7 +336,7 @@ public class NetworkTopology {
   }
     
   /** Remove a node
-   * Update node counter & rack counter if neccessary
+   * Update node counter & rack counter if necessary
    * @param node
    *          node to be removed
    */ 
@@ -472,7 +471,7 @@ public class NetworkTopology {
   /** Check if two nodes are on the same rack
    * @param node1 one node
    * @param node2 another node
-   * @return true if node1 and node2 are pm the same rack; false otherwise
+   * @return true if node1 and node2 are on the same rack; false otherwise
    * @exception IllegalArgumentException when either node1 or node2 is null, or
    * node1 or node2 do not belong to the cluster
    */
@@ -493,8 +492,8 @@ public class NetworkTopology {
   /** randomly choose one node from <i>scope</i>
    * if scope starts with ~, choose one from the all nodes except for the
    * ones in <i>scope</i>; otherwise, choose one from <i>scope</i>
-   * @param scope range of nodes from which a node will be choosen
-   * @return the choosen node
+   * @param scope range of nodes from which a node will be chosen
+   * @return the chosen node
    */
   public Node chooseRandom(String scope) {
     netlock.readLock().lock();
@@ -546,7 +545,7 @@ public class NetworkTopology {
    * @return number of available nodes
    */
   public int countNumOfAvailableNodes(String scope,
-                                      List<Node> excludedNodes) {
+                                      Collection<Node> excludedNodes) {
     boolean isExcluded=false;
     if (scope.startsWith("~")) {
       isExcluded=true;
@@ -613,7 +612,7 @@ public class NetworkTopology {
    * If a local rack node is found, swap it with the first element following
    * the local node.
    * If neither local node or local rack node is found, put a random replica
-   * location at postion 0.
+   * location at position 0.
    * It leaves the rest nodes untouched.
    */
   public void pseudoSortByDistance( Node reader, Node[] nodes ) {

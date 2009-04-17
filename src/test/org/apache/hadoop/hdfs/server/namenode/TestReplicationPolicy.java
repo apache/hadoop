@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -134,24 +135,24 @@ public class TestReplicationPolicy extends TestCase {
    * @throws Exception
    */
   public void testChooseTarget2() throws Exception { 
-    List<Node> excludedNodes;
+    HashMap<Node, Node> excludedNodes;
     DatanodeDescriptor[] targets;
     
-    excludedNodes = new ArrayList<Node>();
-    excludedNodes.add(dataNodes[1]); 
+    excludedNodes = new HashMap<Node, Node>();
+    excludedNodes.put(dataNodes[1], dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       0, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     excludedNodes.clear();
-    excludedNodes.add(dataNodes[1]); 
+    excludedNodes.put(dataNodes[1], dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       1, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[0]);
     
     excludedNodes.clear();
-    excludedNodes.add(dataNodes[1]); 
+    excludedNodes.put(dataNodes[1], dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       2, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 2);
@@ -159,7 +160,7 @@ public class TestReplicationPolicy extends TestCase {
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
     excludedNodes.clear();
-    excludedNodes.add(dataNodes[1]); 
+    excludedNodes.put(dataNodes[1], dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       3, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 3);
@@ -168,7 +169,7 @@ public class TestReplicationPolicy extends TestCase {
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
     
     excludedNodes.clear();
-    excludedNodes.add(dataNodes[1]); 
+    excludedNodes.put(dataNodes[1], dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       4, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 4);

@@ -32,7 +32,7 @@ import java.util.*;
  * the 1st replica is placed on the local machine, 
  * otherwise a random datanode. The 2nd replica is placed on a datanode
  * that is on a different rack. The 3rd replica is placed on a datanode
- * which is on the same rack as the first replca.
+ * which is on the same rack as the first replica.
  */
 class ReplicationTargetChooser {
   private final boolean considerLoad; 
@@ -59,17 +59,17 @@ class ReplicationTargetChooser {
    * 
    * @param numOfReplicas: number of replicas wanted.
    * @param writer: the writer's machine, null if not in the cluster.
-   * @param excludedNodes: datanodesthat should not be considered targets.
+   * @param excludedNodes: datanodes that should not be considered targets.
    * @param blocksize: size of the data to be written.
    * @return array of DatanodeDescriptor instances chosen as targets
    * and sorted as a pipeline.
    */
   DatanodeDescriptor[] chooseTarget(int numOfReplicas,
                                     DatanodeDescriptor writer,
-                                    List<Node> excludedNodes,
+                                    HashMap<Node, Node> excludedNodes,
                                     long blocksize) {
     if (excludedNodes == null) {
-      excludedNodes = new ArrayList<Node>();
+      excludedNodes = new HashMap<Node, Node>();
     }
       
     return chooseTarget(numOfReplicas, writer, 
@@ -83,8 +83,8 @@ class ReplicationTargetChooser {
    * 
    * @param numOfReplicas: additional number of replicas wanted.
    * @param writer: the writer's machine, null if not in the cluster.
-   * @param choosenNodes: datanodes that have been choosen as targets.
-   * @param excludedNodes: datanodesthat should not be considered targets.
+   * @param choosenNodes: datanodes that have been chosen as targets.
+   * @param excludedNodes: datanodes that should not be considered targets.
    * @param blocksize: size of the data to be written.
    * @return array of DatanodeDescriptor instances chosen as target 
    * and sorted as a pipeline.
@@ -92,14 +92,14 @@ class ReplicationTargetChooser {
   DatanodeDescriptor[] chooseTarget(int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     List<DatanodeDescriptor> choosenNodes,
-                                    List<Node> excludedNodes,
+                                    HashMap<Node, Node> excludedNodes,
                                     long blocksize) {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return new DatanodeDescriptor[0];
     }
       
     if (excludedNodes == null) {
-      excludedNodes = new ArrayList<Node>();
+      excludedNodes = new HashMap<Node, Node>();
     }
       
     int clusterSize = clusterMap.getNumOfLeaves();
@@ -114,7 +114,9 @@ class ReplicationTargetChooser {
       
     List<DatanodeDescriptor> results = 
       new ArrayList<DatanodeDescriptor>(choosenNodes);
-    excludedNodes.addAll(choosenNodes);
+    for (Node node:choosenNodes) {
+      excludedNodes.put(node, node);
+    }
       
     if (!clusterMap.contains(writer)) {
       writer=null;
@@ -133,7 +135,7 @@ class ReplicationTargetChooser {
   /* choose <i>numOfReplicas</i> from all data nodes */
   private DatanodeDescriptor chooseTarget(int numOfReplicas,
                                           DatanodeDescriptor writer,
-                                          List<Node> excludedNodes,
+                                          HashMap<Node, Node> excludedNodes,
                                           long blocksize,
                                           int maxNodesPerRack,
                                           List<DatanodeDescriptor> results) {
@@ -188,13 +190,13 @@ class ReplicationTargetChooser {
   }
     
   /* choose <i>localMachine</i> as the target.
-   * if <i>localMachine</i> is not availabe, 
+   * if <i>localMachine</i> is not available, 
    * choose a node on the same rack
-   * @return the choosen node
+   * @return the chosen node
    */
   private DatanodeDescriptor chooseLocalNode(
                                              DatanodeDescriptor localMachine,
-                                             List<Node> excludedNodes,
+                                             HashMap<Node, Node> excludedNodes,
                                              long blocksize,
                                              int maxNodesPerRack,
                                              List<DatanodeDescriptor> results)
@@ -205,8 +207,8 @@ class ReplicationTargetChooser {
                           blocksize, maxNodesPerRack, results);
       
     // otherwise try local machine first
-    if (!excludedNodes.contains(localMachine)) {
-      excludedNodes.add(localMachine);
+    Node oldNode = excludedNodes.put(localMachine, localMachine);
+    if (oldNode == null) { // was not in the excluded list
       if (isGoodTarget(localMachine, blocksize,
                        maxNodesPerRack, false, results)) {
         results.add(localMachine);
@@ -220,15 +222,15 @@ class ReplicationTargetChooser {
   }
     
   /* choose one node from the rack that <i>localMachine</i> is on.
-   * if no such node is availabe, choose one node from the rack where
+   * if no such node is available, choose one node from the rack where
    * a second replica is on.
    * if still no such node is available, choose a random node 
    * in the cluster.
-   * @return the choosen node
+   * @return the chosen node
    */
   private DatanodeDescriptor chooseLocalRack(
                                              DatanodeDescriptor localMachine,
-                                             List<Node> excludedNodes,
+                                             HashMap<Node, Node> excludedNodes,
                                              long blocksize,
                                              int maxNodesPerRack,
                                              List<DatanodeDescriptor> results)
@@ -275,13 +277,13 @@ class ReplicationTargetChooser {
     
   /* choose <i>numOfReplicas</i> nodes from the racks 
    * that <i>localMachine</i> is NOT on.
-   * if not enough nodes are availabe, choose the remaining ones 
+   * if not enough nodes are available, choose the remaining ones 
    * from the local rack
    */
     
   private void chooseRemoteRack(int numOfReplicas,
                                 DatanodeDescriptor localMachine,
-                                List<Node> excludedNodes,
+                                HashMap<Node, Node> excludedNodes,
                                 long blocksize,
                                 int maxReplicasPerRack,
                                 List<DatanodeDescriptor> results)
@@ -299,24 +301,24 @@ class ReplicationTargetChooser {
   }
 
   /* Randomly choose one target from <i>nodes</i>.
-   * @return the choosen node
+   * @return the chosen node
    */
   private DatanodeDescriptor chooseRandom(
                                           String nodes,
-                                          List<Node> excludedNodes,
+                                          HashMap<Node, Node> excludedNodes,
                                           long blocksize,
                                           int maxNodesPerRack,
                                           List<DatanodeDescriptor> results) 
     throws NotEnoughReplicasException {
     int numOfAvailableNodes =
-      clusterMap.countNumOfAvailableNodes(nodes, excludedNodes);
+      clusterMap.countNumOfAvailableNodes(nodes, excludedNodes.keySet());
     while(numOfAvailableNodes > 0) {
       DatanodeDescriptor choosenNode = 
         (DatanodeDescriptor)(clusterMap.chooseRandom(nodes));
-      if (!excludedNodes.contains(choosenNode)) {
-        excludedNodes.add(choosenNode);
-        numOfAvailableNodes--;
 
+      Node oldNode = excludedNodes.put(choosenNode, choosenNode);
+      if (oldNode == null) { // choosendNode was not in the excluded list
+        numOfAvailableNodes--;
         if (isGoodTarget(choosenNode, blocksize, maxNodesPerRack, results)) {
           results.add(choosenNode);
           return choosenNode;
@@ -332,19 +334,19 @@ class ReplicationTargetChooser {
    */
   private void chooseRandom(int numOfReplicas,
                             String nodes,
-                            List<Node> excludedNodes,
+                            HashMap<Node, Node> excludedNodes,
                             long blocksize,
                             int maxNodesPerRack,
                             List<DatanodeDescriptor> results)
     throws NotEnoughReplicasException {
       
     int numOfAvailableNodes =
-      clusterMap.countNumOfAvailableNodes(nodes, excludedNodes);
+      clusterMap.countNumOfAvailableNodes(nodes, excludedNodes.keySet());
     while(numOfReplicas > 0 && numOfAvailableNodes > 0) {
       DatanodeDescriptor choosenNode = 
         (DatanodeDescriptor)(clusterMap.chooseRandom(nodes));
-      if (!excludedNodes.contains(choosenNode)) {
-        excludedNodes.add(choosenNode);
+      Node oldNode = excludedNodes.put(choosenNode, choosenNode);
+      if (oldNode == null) {
         numOfAvailableNodes--;
 
         if (isGoodTarget(choosenNode, blocksize, maxNodesPerRack, results)) {
@@ -426,7 +428,7 @@ class ReplicationTargetChooser {
     
   /* Return a pipeline of nodes.
    * The pipeline is formed finding a shortest path that 
-   * starts from the writer and tranverses all <i>nodes</i>
+   * starts from the writer and traverses all <i>nodes</i>
    * This is basically a traveling salesman problem.
    */
   private DatanodeDescriptor[] getPipeline(
@@ -469,7 +471,7 @@ class ReplicationTargetChooser {
    * 
    * @param lBlk block with locations
    * @param cluster 
-   * @return 1 if the block must be relicated on additional rack,
+   * @return 1 if the block must be replicated on additional rack,
    * or 0 if the number of racks is sufficient.
    */
   public static int verifyBlockPlacement(LocatedBlock lBlk,
