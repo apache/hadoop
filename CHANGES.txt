@@ -409,6 +409,9 @@ Trunk (unreleased changes)
     HADOOP-5533. Recovery duration shown on the jobtracker webpage is 
     inaccurate. (Amar Kamat via sharad)
 
+    HADOOP-5647. Fix TestJobHistory to not depend on /tmp. (Ravi Gummadi 
+    via sharad)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
