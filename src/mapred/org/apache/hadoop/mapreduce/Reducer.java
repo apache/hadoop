@@ -115,7 +115,7 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
  * @see Mapper
  * @see Partitioner
  */
-public abstract class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
+public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 
   public class Context 
     extends ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
