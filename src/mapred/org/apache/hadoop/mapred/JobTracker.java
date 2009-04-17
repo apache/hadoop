@@ -1194,15 +1194,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     public void recover() {
-      long recoveryProcessStartTime = System.currentTimeMillis();
       if (!shouldRecover()) {
         // clean up jobs structure
         jobsToRecover.clear();
         return;
       }
 
-      LOG.info("Starting the recovery process with restart count : " 
-               + restartCount);
+      LOG.info("Restart count of the jobtracker : " + restartCount);
 
       // I. Init the jobs and cache the recovered job history filenames
       Map<JobID, Path> jobHistoryFilenameMap = new HashMap<JobID, Path>();
@@ -1257,11 +1255,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           continue;
         }
       }
-
-      LOG.info("Took a total of " 
-               + StringUtils.formatTime(System.currentTimeMillis() 
-                                        - recoveryProcessStartTime) 
-               + " for recovering filenames of all the jobs from history.");
 
       long recoveryStartTime = System.currentTimeMillis();
 
@@ -1320,21 +1313,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
 
-      long recoveryProcessEndTime = System.currentTimeMillis();
-      LOG.info("Took a total of " 
-               + StringUtils.formatTime(recoveryProcessEndTime
-                                        - recoveryStartTime) 
-               + " for parsing and recovering all the jobs from history.");
-
-      recoveryDuration = recoveryProcessEndTime - recoveryProcessStartTime;
-      LOG.info("Took a total of " + StringUtils.formatTime(recoveryDuration) 
-               + " for the whole recovery process.");
+      recoveryDuration = System.currentTimeMillis() - recoveryStartTime;
       hasRecovered = true;
 
       // III. Finalize the recovery
       synchronized (trackerExpiryQueue) {
         // Make sure that the tracker statuses in the expiry-tracker queue
         // are updated
+        long now = System.currentTimeMillis();
         int size = trackerExpiryQueue.size();
         for (int i = 0; i < size ; ++i) {
           // Get the first status
@@ -1344,14 +1330,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           trackerExpiryQueue.remove(status);
 
           // Set the new time
-          status.setLastSeen(recoveryProcessEndTime);
+          status.setLastSeen(now);
 
           // Add back to get the sorted list
           trackerExpiryQueue.add(status);
         }
       }
 
-      LOG.info("Restoration done. Recovery complete!");
+      LOG.info("Restoration complete");
     }
     
     int totalEventsRecovered() {
