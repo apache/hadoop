@@ -51,7 +51,7 @@ public class TestQueueCapacities extends ClusterWithCapacityScheduler {
     clusterProps.put("mapred.tasktracker.reduce.tasks.maximum", String
         .valueOf(3));
     // cluster capacity 12 maps, 12 reduces
-    startCluster(4, 2, clusterProps, schedulerProps);
+    startCluster(4, clusterProps, schedulerProps);
 
     ControlledMapReduceJobRunner jobRunner =
         ControlledMapReduceJobRunner.getControlledMapReduceJobRunner(
@@ -126,7 +126,7 @@ public class TestQueueCapacities extends ClusterWithCapacityScheduler {
     clusterProps.put("mapred.tasktracker.reduce.tasks.maximum", String
         .valueOf(0));
     // cluster capacity 12 maps, 0 reduces
-    startCluster(4, 2, clusterProps, schedulerProps);
+    startCluster(4, clusterProps, schedulerProps);
 
     singleQMultipleJobs1();
     singleQMultipleJobs2();
@@ -166,7 +166,7 @@ public class TestQueueCapacities extends ClusterWithCapacityScheduler {
 
     // cluster capacity 10 maps, 10 reduces and 4 queues with capacities 1, 2,
     // 3, 4 respectively.
-    startCluster(5, 2, clusterProps, schedulerProps);
+    startCluster(5, clusterProps, schedulerProps);
 
     multipleQsWithOneQBeyondCapacity(queues);
     multipleQueuesWithinCapacities(queues);
