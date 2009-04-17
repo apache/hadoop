@@ -66,7 +66,10 @@ public class TaskLog {
       LOG.warn("Getting local file system failed.");
     }
     if (!LOG_DIR.exists()) {
-      LOG_DIR.mkdirs();
+      boolean b = LOG_DIR.mkdirs();
+      if (!b) {
+        LOG.warn("mkdirs failed. Ignoring.");
+      }
     }
   }
 

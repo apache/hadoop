@@ -181,19 +181,19 @@ public class Job {
   /**
    * @return the mapred job conf of this job
    */
-  public JobConf getJobConf() {
+  public synchronized JobConf getJobConf() {
     return this.theJobConf;
   }
-	
+
 
   /**
    * Set the mapred job conf for this job.
    * @param jobConf the mapred job conf for this job.
    */
-  public void setJobConf(JobConf jobConf) {
+  public synchronized void setJobConf(JobConf jobConf) {
     this.theJobConf = jobConf;
   }
-	
+
   /**
    * @return the state of this job
    */
@@ -212,18 +212,18 @@ public class Job {
   /**
    * @return the message of this job
    */
-  public String getMessage() {
+  public synchronized String getMessage() {
     return this.message;
   }
-	
+
   /**
    * Set the message for this job.
    * @param message the message for this job.
    */
-  public void setMessage(String message) {
+  public synchronized void setMessage(String message) {
     this.message = message;
   }
-	
+
 
   /**
    * @return the job client of this job
@@ -260,7 +260,7 @@ public class Job {
   /**
    * @return true if this job is in a complete state
    */
-  public boolean isCompleted() {
+  public synchronized boolean isCompleted() {
     return this.state == Job.FAILED || 
       this.state == Job.DEPENDENT_FAILED ||
       this.state == Job.SUCCESS;
@@ -269,7 +269,7 @@ public class Job {
   /**
    * @return true if this job is in READY state
    */
-  public boolean isReady() {
+  public synchronized boolean isReady() {
     return this.state == Job.READY;
   }
 	

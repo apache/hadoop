@@ -171,7 +171,10 @@ class Child {
           TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
           if (!taskid.equals(firstTaskid) && !Shell.WINDOWS) {
             // delete the pid-file's symlink
-            new File(dstPidPath.toUri().getPath()).delete();
+            boolean b = new File(dstPidPath.toUri().getPath()).delete();
+            if (!b) {
+              LOG.warn("File delete failed. Ignoring");
+            }
           }
         }
         if (numTasksToExecute > 0 && ++numTasksExecuted == numTasksToExecute) {

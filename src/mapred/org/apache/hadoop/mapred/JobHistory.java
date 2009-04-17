@@ -282,7 +282,8 @@ public class JobHistory {
         buf = new StringBuffer(); 
       } while ((line = reader.readLine())!= null);
     } finally {
-      try { reader.close(); } catch (IOException ex) {}
+      try { reader.close(); } catch (IOException ex) {
+        LOG.warn("Ignoring exception in reader.close");}
     }
   }
 

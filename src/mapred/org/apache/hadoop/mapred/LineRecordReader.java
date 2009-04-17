@@ -154,7 +154,7 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
   /**
    * Get the progress within the split
    */
-  public float getProgress() {
+  public synchronized float getProgress() {
     if (start == end) {
       return 0.0f;
     } else {

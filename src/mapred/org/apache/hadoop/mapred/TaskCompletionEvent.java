@@ -184,7 +184,7 @@ public class TaskCompletionEvent implements Writable{
   public boolean equals(Object o) {
     if(o == null)
       return false;
-    if(o.getClass().equals(TaskCompletionEvent.class)) {
+    if(o.getClass().equals(this.getClass())) {
       TaskCompletionEvent event = (TaskCompletionEvent) o;
       return this.isMap == event.isMapTask() 
              && this.eventId == event.getEventId()

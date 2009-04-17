@@ -156,9 +156,7 @@ public class JobEndNotifier {
           LOG.error("Notification error [" + notification.getUri() + "]", ex);
         }
         try {
-          synchronized (Thread.currentThread()) {
-            Thread.currentThread().sleep(notification.getRetryInterval());
-          }
+          Thread.sleep(notification.getRetryInterval());
         }
         catch (InterruptedException iex) {
           LOG.error("Notification retry error [" + notification + "]", iex);

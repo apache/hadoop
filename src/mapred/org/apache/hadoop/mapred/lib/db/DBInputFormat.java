@@ -293,10 +293,12 @@ public class DBInputFormat<T  extends DBWritable>
   /** {@inheritDoc} */
   public InputSplit[] getSplits(JobConf job, int chunks) throws IOException {
 
+	ResultSet results = null;  
+	Statement statement = null;
     try {
-      Statement statement = connection.createStatement();
+      statement = connection.createStatement();
 
-      ResultSet results = statement.executeQuery(getCountQuery());
+      results = statement.executeQuery(getCountQuery());
       results.next();
 
       long count = results.getLong(1);
@@ -323,6 +325,12 @@ public class DBInputFormat<T  extends DBWritable>
 
       return splits;
     } catch (SQLException e) {
+      try {
+        if (results != null) { results.close(); }
+      } catch (SQLException e1) {}
+      try {
+        if (statement != null) { statement.close(); }
+      } catch (SQLException e1) {}
       throw new IOException(e.getMessage());
     }
   }

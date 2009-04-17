@@ -412,6 +412,9 @@ Trunk (unreleased changes)
     HADOOP-5647. Fix TestJobHistory to not depend on /tmp. (Ravi Gummadi 
     via sharad)
 
+    HADOOP-5661. Fixes some findbugs warnings in o.a.h.mapred* packages and supresses
+    a bunch of them. (Jothi Padmanabhan via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

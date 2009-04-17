@@ -936,65 +936,67 @@ class MapTask extends Task {
           throws IOException {
         boolean buffull = false;
         boolean wrap = false;
-        spillLock.lock();
-        try {
-          do {
-            if (sortSpillException != null) {
-              throw (IOException)new IOException("Spill failed"
-                  ).initCause(sortSpillException);
-            }
-
-            // sufficient buffer space?
-            if (bufstart <= bufend && bufend <= bufindex) {
-              buffull = bufindex + len > bufvoid;
-              wrap = (bufvoid - bufindex) + bufstart > len;
-            } else {
-              // bufindex <= bufstart <= bufend
-              // bufend <= bufindex <= bufstart
-              wrap = false;
-              buffull = bufindex + len > bufstart;
-            }
-
-            if (kvstart == kvend) {
-              // spill thread not running
-              if (kvend != kvindex) {
-                // we have records we can spill
-                final boolean bufsoftlimit = (bufindex > bufend)
-                  ? bufindex - bufend > softBufferLimit
-                  : bufend - bufindex < bufvoid - softBufferLimit;
-                if (bufsoftlimit || (buffull && !wrap)) {
-                  LOG.info("Spilling map output: buffer full= " + bufsoftlimit);
-                  startSpill();
-                }
-              } else if (buffull && !wrap) {
-                // We have no buffered records, and this record is too large
-                // to write into kvbuffer. We must spill it directly from
-                // collect
-                final int size = ((bufend <= bufindex)
-                  ? bufindex - bufend
-                  : (bufvoid - bufend) + bufindex) + len;
-                bufstart = bufend = bufindex = bufmark = 0;
-                kvstart = kvend = kvindex = 0;
-                bufvoid = kvbuffer.length;
-                throw new MapBufferTooSmallException(size + " bytes");
-              }
-            }
-
-            if (buffull && !wrap) {
-              try {
-                while (kvstart != kvend) {
-                  reporter.progress();
-                  spillDone.await();
-                }
-              } catch (InterruptedException e) {
-                  throw (IOException)new IOException(
-                      "Buffer interrupted while waiting for the writer"
-                      ).initCause(e);
-              }
-            }
-          } while (buffull && !wrap);
-        } finally {
-          spillLock.unlock();
+        synchronized(MapOutputBuffer.this) { 
+	        spillLock.lock();
+	        try {
+	          do {
+	            if (sortSpillException != null) {
+	              throw (IOException)new IOException("Spill failed"
+	                  ).initCause(sortSpillException);
+	            }
+	
+	            // sufficient buffer space?
+	            if (bufstart <= bufend && bufend <= bufindex) {
+	              buffull = bufindex + len > bufvoid;
+	              wrap = (bufvoid - bufindex) + bufstart > len;
+	            } else {
+	              // bufindex <= bufstart <= bufend
+	              // bufend <= bufindex <= bufstart
+	              wrap = false;
+	              buffull = bufindex + len > bufstart;
+	            }
+	
+	            if (kvstart == kvend) {
+	              // spill thread not running
+	              if (kvend != kvindex) {
+	                // we have records we can spill
+	                final boolean bufsoftlimit = (bufindex > bufend)
+	                  ? bufindex - bufend > softBufferLimit
+	                  : bufend - bufindex < bufvoid - softBufferLimit;
+	                if (bufsoftlimit || (buffull && !wrap)) {
+	                  LOG.info("Spilling map output: buffer full= " + bufsoftlimit);
+	                  startSpill();
+	                }
+	              } else if (buffull && !wrap) {
+	                // We have no buffered records, and this record is too large
+	                // to write into kvbuffer. We must spill it directly from
+	                // collect
+	                final int size = ((bufend <= bufindex)
+	                  ? bufindex - bufend
+	                  : (bufvoid - bufend) + bufindex) + len;
+	                bufstart = bufend = bufindex = bufmark = 0;
+	                kvstart = kvend = kvindex = 0;
+	                bufvoid = kvbuffer.length;
+	                throw new MapBufferTooSmallException(size + " bytes");
+	              }
+	            }
+	
+	            if (buffull && !wrap) {
+	              try {
+	                while (kvstart != kvend) {
+	                  reporter.progress();
+	                  spillDone.await();
+	                }
+	              } catch (InterruptedException e) {
+	                  throw (IOException)new IOException(
+	                      "Buffer interrupted while waiting for the writer"
+	                      ).initCause(e);
+	              }
+	            }
+	          } while (buffull && !wrap);
+	        } finally {
+	          spillLock.unlock();
+	        }
         }
         // here, we know that we have sufficient space to write
         if (buffull) {

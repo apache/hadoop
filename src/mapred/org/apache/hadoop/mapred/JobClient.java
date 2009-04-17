@@ -769,11 +769,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         ReflectionUtils.newInstance(context.getOutputFormatClass(), job);
       output.checkOutputSpecs(context);
     } else {
-      job.getOutputFormat().checkOutputSpecs(fs, job);
+      job.getOutputFormat().checkOutputSpecs(getFs(), job);
     }
 
     // Create the splits for the job
-    LOG.debug("Creating splits at " + fs.makeQualified(submitSplitFile));
+    LOG.debug("Creating splits at " + getFs().makeQualified(submitSplitFile));
     int maps;
     if (job.getUseNewMapper()) {
       maps = writeNewSplits(context, submitSplitFile);
@@ -785,7 +785,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         
     // Write job file to JobTracker's fs        
     FSDataOutputStream out = 
-      FileSystem.create(fs, submitJobFile,
+      FileSystem.create(getFs(), submitJobFile,
                         new FsPermission(JOB_FILE_PERMISSION));
 
     try {

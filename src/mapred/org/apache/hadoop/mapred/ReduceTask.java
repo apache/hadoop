@@ -1039,6 +1039,10 @@ class ReduceTask extends Task {
         notifyAll();
       }
       
+      private synchronized int getNumPendingRequests() {
+        return numPendingRequests;
+      }
+      
       public boolean waitForDataToMerge() throws InterruptedException {
         boolean done = false;
         synchronized (dataAvailable) {
@@ -1060,10 +1064,10 @@ class ReduceTask extends Task {
                  // have been fetched, so there is nothing to merge) or the
                  // last map outputs being transferred without
                  // contention, so a merge would be premature.
-                 (numPendingRequests < 
+                 (getNumPendingRequests() < 
                       numCopiers*MAX_STALLED_SHUFFLE_THREADS_FRACTION && 
                   (0 == numRequiredMapOutputs ||
-                   numPendingRequests < numRequiredMapOutputs))) {
+                   getNumPendingRequests() < numRequiredMapOutputs))) {
             dataAvailable.wait();
           }
           done = closed;
@@ -1303,7 +1307,6 @@ class ReduceTask extends Task {
             filename = new Path(tmpMapOutput.getParent(), filename.getName());
             if (!localFileSys.rename(tmpMapOutput, filename)) {
               localFileSys.delete(tmpMapOutput, true);
-              bytes = -1;
               throw new IOException("Failed to rename map output " + 
                   tmpMapOutput + " to " + filename);
             }

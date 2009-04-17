@@ -170,7 +170,7 @@ public class TaskReport implements Writable {
   public boolean equals(Object o) {
     if(o == null)
       return false;
-    if(o.getClass().equals(TaskReport.class)) {
+    if(o.getClass().equals(this.getClass())) {
       TaskReport report = (TaskReport) o;
       return counters.equals(report.getCounters())
              && Arrays.toString(this.diagnostics)

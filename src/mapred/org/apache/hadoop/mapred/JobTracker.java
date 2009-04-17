@@ -94,11 +94,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     Configuration.addDefaultResource("mapred-site.xml");
   }
 
-  static long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
-  static long RETIRE_JOB_INTERVAL;
-  static long RETIRE_JOB_CHECK_INTERVAL;
+  private final long tasktrackerExpiryInterval;
+  private final long retireJobInterval;
+  private final long retireJobCheckInterval;
 
-  
   // The interval after which one fault of a tracker will be discarded,
   // if there are no faults during this. 
   private static long UPDATE_FAULTY_TRACKER_INTERVAL = 24 * 60 * 60 * 1000;
@@ -234,7 +233,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       while (true) {
         try {
           // Every 3 minutes check for any tasks that are overdue
-          Thread.sleep(TASKTRACKER_EXPIRY_INTERVAL/3);
+          Thread.sleep(tasktrackerExpiryInterval/3);
           long now = System.currentTimeMillis();
           LOG.debug("Starting launching task sweep");
           synchronized (JobTracker.this) {
@@ -246,7 +245,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                 TaskAttemptID taskId = pair.getKey();
                 long age = now - (pair.getValue()).longValue();
                 LOG.info(taskId + " is " + age + " ms debug.");
-                if (age > TASKTRACKER_EXPIRY_INTERVAL) {
+                if (age > tasktrackerExpiryInterval) {
                   LOG.info("Launching task " + taskId + " timed out.");
                   TaskInProgress tip = null;
                   tip = taskidToTIPMap.get(taskId);
@@ -317,7 +316,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           // The sleep interval must be no more than half the maximum expiry time
           // for a task tracker.
           //
-          Thread.sleep(TASKTRACKER_EXPIRY_INTERVAL / 3);
+          Thread.sleep(tasktrackerExpiryInterval / 3);
 
           //
           // Loop through all expired items in the queue
@@ -336,7 +335,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                 TaskTrackerStatus leastRecent = null;
                 while ((trackerExpiryQueue.size() > 0) &&
                        ((leastRecent = trackerExpiryQueue.first()) != null) &&
-                       (now - leastRecent.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL)) {
+                       (now - leastRecent.getLastSeen() > tasktrackerExpiryInterval)) {
                         
                   // Remove profile from head of queue
                   trackerExpiryQueue.remove(leastRecent);
@@ -348,7 +347,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                   // status stored in 'taskTrackers' might be null, which means the
                   // tracker has already been destroyed.
                   if (newProfile != null) {
-                    if (now - newProfile.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL) {
+                    if (now - newProfile.getLastSeen() > tasktrackerExpiryInterval) {
                       // Remove completely after marking the tasks as 'KILLED'
                       lostTaskTracker(leastRecent.getTrackerName());
                       // tracker is lost, and if it is blacklisted, remove 
@@ -392,10 +391,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     public void run() {
       while (true) {
         try {
-          Thread.sleep(RETIRE_JOB_CHECK_INTERVAL);
+          Thread.sleep(retireJobCheckInterval);
           List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
           long now = System.currentTimeMillis();
-          long retireBefore = now - RETIRE_JOB_INTERVAL;
+          long retireBefore = now - retireJobInterval;
 
           synchronized (jobs) {
             for(JobInProgress job: jobs.values()) {
@@ -1505,10 +1504,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     //
     // Grab some static constants
     //
-    TASKTRACKER_EXPIRY_INTERVAL = 
+    tasktrackerExpiryInterval = 
       conf.getLong("mapred.tasktracker.expiry.interval", 10 * 60 * 1000);
-    RETIRE_JOB_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
-    RETIRE_JOB_CHECK_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);
+    retireJobInterval = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
+    retireJobCheckInterval = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
     MAX_BLACKLISTS_PER_TRACKER = 
         conf.getInt("mapred.max.tracker.blacklists", 4);
@@ -2000,7 +1999,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Call {@link #removeTaskEntry(String)} for each of the
    * job's tasks.
    * When the JobTracker is retiring the long-completed
-   * job, either because it has outlived {@link #RETIRE_JOB_INTERVAL}
+   * job, either because it has outlived {@link #retireJobInterval}
    * or the limit of {@link #MAX_COMPLETE_USER_JOBS_IN_MEMORY} jobs 
    * has been reached, we can afford to nuke all it's tasks; a little
    * unsafe, but practically feasible. 
@@ -3013,7 +3012,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         List<List<String>> trackerNames = taskTrackerNames();
         return new ClusterStatus(trackerNames.get(0),
             trackerNames.get(1),
-            TASKTRACKER_EXPIRY_INTERVAL,
+            tasktrackerExpiryInterval,
             totalMaps,
             totalReduces,
             totalMapTaskCapacity,
@@ -3023,7 +3022,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         return new ClusterStatus(taskTrackers.size() - 
             getBlacklistedTrackerCount(),
             getBlacklistedTrackerCount(),
-            TASKTRACKER_EXPIRY_INTERVAL,
+            tasktrackerExpiryInterval,
             totalMaps,
             totalReduces,
             totalMapTaskCapacity,

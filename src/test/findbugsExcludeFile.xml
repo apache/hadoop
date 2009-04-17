@@ -28,4 +28,104 @@
        <Field name="out" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+     <!-- 
+       Ignore Cross Scripting Vulnerabilities
+     -->
+     <Match>
+       <Package name="~org.apache.hadoop.mapred.*" />
+       <Bug code="XSS" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.taskdetails_jsp" />
+       <Bug code="HRS" />
+     </Match>
+     <!--
+       Ignore warnings where child class has the same name as
+       super class. Classes based on Old API shadow names from
+       new API. Should go off after HADOOP-1.0
+     -->
+     <Match>
+       <Class name="~org.apache.hadoop.mapred.*" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
+     </Match>
+     <!--
+       Ignore warnings for usage of System.exit. This is
+       required and have been well thought out
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Child$2" />
+       <Method name="run" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.JobTracker" />
+       <Method name="addHostToNodeMapping" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Task" />
+       <Or>
+       <Method name="done" />
+       <Method name="commit" />
+       <Method name="statusUpdate" />
+       </Or>
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Task$TaskReporter" />
+       <Method name="run" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <!--
+       We need to cast objects between old and new api objects
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.OutputCommitter" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     <!--
+       We intentionally do the get name from the inner class
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.TaskTracker$MapEventsFetcherThread" />
+       <Method name="run" />
+       <Bug pattern="IA_AMBIGUOUS_INVOCATION_OF_INHERITED_OR_OUTER_METHOD" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
+       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
+     <!--
+       Ignoring this warning as resolving this would need a non-trivial change in code 
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorBaseDescriptor" />
+       <Method name="configure" />
+       <Field name="maxNumItems" />
+       <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD" />
+     </Match>
+     <!--
+       Comes from org.apache.jasper.runtime.ResourceInjector. Cannot do much.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.jobqueue_005fdetails_jsp" />
+       <Field name="_jspx_resourceInjector" />
+       <Bug pattern="SE_BAD_FIELD" />
+     </Match>
+     <!--
+       Storing textInputFormat and then passing it as a parameter. Safe to ignore.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorJob" />
+       <Method name="createValueAggregatorJob" />
+       <Bug pattern="DLS_DEAD_STORE_OF_CLASS_LITERAL" />
+     </Match>
+     <!--
+       Can remove this after the upgrade to findbugs1.3.8
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.db.DBInputFormat" />
+       <Method name="getSplits" />
+       <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+     </Match>
 </FindBugsFilter>
