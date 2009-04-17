@@ -305,6 +305,7 @@ public class TestCapacityScheduler extends TestCase {
     int reduces = 0;
     int maxMapTasksPerTracker = 2;
     int maxReduceTasksPerTracker = 1;
+    long ttExpiryInterval = 10 * 60 * 1000L; // default interval
     List<JobInProgressListener> listeners =
       new ArrayList<JobInProgressListener>();
     FakeQueueManager qm = new FakeQueueManager();
@@ -340,7 +341,8 @@ public class TestCapacityScheduler extends TestCase {
     
     public ClusterStatus getClusterStatus() {
       int numTrackers = trackers.size();
-      return new ClusterStatus(numTrackers, maps, reduces,
+      return new ClusterStatus(numTrackers, 0,
+          ttExpiryInterval, maps, reduces,
           numTrackers * maxMapTasksPerTracker,
           numTrackers * maxReduceTasksPerTracker,
           JobTracker.State.RUNNING);

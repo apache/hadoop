@@ -415,6 +415,9 @@ Trunk (unreleased changes)
     HADOOP-5661. Fixes some findbugs warnings in o.a.h.mapred* packages and supresses
     a bunch of them. (Jothi Padmanabhan via ddas)
 
+    HADOOP-5704. Fix compilation problems in TestFairScheduler and
+    TestCapacityScheduler.  (Chris Douglas via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
