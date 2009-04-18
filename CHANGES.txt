@@ -1282,6 +1282,7 @@ Release 0.20.0 - Unreleased
     HADOOP-5691. Makes org.apache.hadoop.mapreduce.Reducer concrete class 
     instead of abstract. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5658. Fix Eclipse templates. (Philip Zeyliger via shv)
 
 Release 0.19.2 - Unreleased
 
