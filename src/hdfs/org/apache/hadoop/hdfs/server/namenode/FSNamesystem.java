@@ -4053,6 +4053,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     int blockTotal; 
     /** Number of safe blocks. */
     private int blockSafe;
+    /** Number of blocks needed to satisfy safe mode threshold condition */
+    private int blockThreshold;
     /** time of the last status printout */
     private long lastStatusReport = 0;
       
@@ -4172,15 +4174,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * if DFS is empty or {@link #threshold} == 0
      */
     boolean needEnter() {
-      return getSafeBlockRatio() < threshold;
-    }
-      
-    /**
-     * Ratio of the number of safe blocks to the total number of blocks 
-     * to be compared with the threshold.
-     */
-    private float getSafeBlockRatio() {
-      return (blockTotal == 0 ? 1 : (float)blockSafe/blockTotal);
+      return threshold != 0 && blockSafe < blockThreshold;
     }
       
     /**
@@ -4213,7 +4207,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * Set total number of blocks.
      */
     synchronized void setBlockTotal(int total) {
-      this.blockTotal = total; 
+      this.blockTotal = total;
+      this.blockThreshold = (int) (blockTotal * threshold);
       checkMode();
     }
       
@@ -4257,9 +4252,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * A tip on how safe mode is to be turned off: manually or automatically.
      */
     String getTurnOffTip() {
-      String leaveMsg = "Safe mode will be turned off automatically";
       if(reached < 0)
         return "Safe mode is OFF.";
+      String leaveMsg = "Safe mode will be turned off automatically";
       if(isManual()) {
         if(getDistributedUpgradeState())
           return leaveMsg + " upon completion of " + 
@@ -4269,15 +4264,24 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       if(blockTotal < 0)
         return leaveMsg + ".";
-      String safeBlockRatioMsg = 
-        String.format("The ratio of reported blocks %.4f has " +
-          (reached == 0 ? "not " : "") + "reached the threshold %.4f. ",
-          getSafeBlockRatio(), threshold) + leaveMsg;
-      if(reached == 0 || isManual())  // threshold is not reached or manual
-        return safeBlockRatioMsg + ".";
+      
+      String msg = null;
+      if (reached == 0) {
+        msg = String.format("The reported blocks %d needs additional %d"
+            + " blocks to reach the threshold %.4f of total blocks %d. %s",
+            blockSafe, (blockThreshold - blockSafe), threshold, blockTotal,
+            leaveMsg);
+      } else {
+        msg = String.format("The reported blocks %d has reached the threshold"
+            + " %.4f of total blocks %d. %s", blockSafe, threshold, 
+            blockTotal, leaveMsg);
+      }
+      if(reached == 0 || isManual()) {  // threshold is not reached or manual       
+        return msg + ".";
+      }
       // extension period is in progress
-      return safeBlockRatioMsg + " in " 
-            + Math.abs(reached + extension - now())/1000 + " seconds.";
+      return msg + " in " + Math.abs(reached + extension - now()) / 1000
+          + " seconds.";
     }
 
     /**
@@ -4295,9 +4299,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * Returns printable state of the class.
      */
     public String toString() {
-      String resText = "Current safe block ratio = " 
-        + getSafeBlockRatio() 
-        + ". Target threshold = " + threshold
+      String resText = "Current safe blocks = " 
+        + blockSafe 
+        + ". Target blocks = " + blockThreshold + " for threshold = %" + threshold
         + ". Minimal replication = " + safeReplication + ".";
       if (reached > 0) 
         resText += " Threshold was reached " + new Date(reached) + ".";

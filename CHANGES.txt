@@ -418,6 +418,9 @@ Trunk (unreleased changes)
     HADOOP-5704. Fix compilation problems in TestFairScheduler and
     TestCapacityScheduler.  (Chris Douglas via szetszwo)
 
+    HADOOP-5650. Fix safemode messages in the Namenode log.  (Suresh Srinivas
+    via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
