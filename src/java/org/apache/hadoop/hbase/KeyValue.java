@@ -612,8 +612,12 @@ public class KeyValue {
   public byte [] getKey() {
     int keylength = getKeyLength();
     byte [] key = new byte[keylength];
-    System.arraycopy(getBuffer(), ROW_OFFSET, key, 0, keylength);
+    System.arraycopy(getBuffer(), getKeyOffset(), key, 0, keylength);
     return key;
+  }
+
+  public String getKeyString() {
+    return Bytes.toString(getBuffer(), getKeyOffset(), getKeyLength());
   }
 
   /**
@@ -943,6 +947,11 @@ public class KeyValue {
     public KeyComparator getRawComparator() {
       return this.rawcomparator;
     }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+      return new RootComparator();
+    }
   }
 
   /**
@@ -954,6 +963,11 @@ public class KeyValue {
 
     public KeyComparator getRawComparator() {
       return this.rawcomparator;
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+      return new MetaComparator();
     }
   }
 
