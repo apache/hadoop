@@ -29,15 +29,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.ClusterStatus;
-import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -86,7 +81,7 @@ public class RandomTextWriter extends Configured implements Tool {
                        "[-outFormat <output format class>] " + 
                        "<output>");
     ToolRunner.printGenericCommandUsage(System.out);
-    return -1;
+    return 2;
   }
   
   /**
@@ -94,8 +89,7 @@ public class RandomTextWriter extends Configured implements Tool {
    */
   static enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
 
-  static class Map extends MapReduceBase 
-    implements Mapper<Text, Text, Text, Text> {
+  static class RandomTextMapper extends Mapper<Text, Text, Text, Text> {
     
     private long numBytesToWrite;
     private int minWordsInKey;
@@ -107,18 +101,19 @@ public class RandomTextWriter extends Configured implements Tool {
     /**
      * Save the configuration value that we need to write the data.
      */
-    public void configure(JobConf job) {
-      numBytesToWrite = job.getLong("test.randomtextwrite.bytes_per_map",
+    public void setup(Context context) {
+      Configuration conf = context.getConfiguration();
+      numBytesToWrite = conf.getLong("test.randomtextwrite.bytes_per_map",
                                     1*1024*1024*1024);
       minWordsInKey = 
-        job.getInt("test.randomtextwrite.min_words_key", 5);
+        conf.getInt("test.randomtextwrite.min_words_key", 5);
       wordsInKeyRange = 
-        (job.getInt("test.randomtextwrite.max_words_key", 10) - 
+        (conf.getInt("test.randomtextwrite.max_words_key", 10) - 
          minWordsInKey);
       minWordsInValue = 
-        job.getInt("test.randomtextwrite.min_words_value", 10);
+        conf.getInt("test.randomtextwrite.min_words_value", 10);
       wordsInValueRange = 
-        (job.getInt("test.randomtextwrite.max_words_value", 100) - 
+        (conf.getInt("test.randomtextwrite.max_words_value", 100) - 
          minWordsInValue);
     }
     
@@ -126,8 +121,7 @@ public class RandomTextWriter extends Configured implements Tool {
      * Given an output filename, write a bunch of random records to it.
      */
     public void map(Text key, Text value,
-                    OutputCollector<Text, Text> output, 
-                    Reporter reporter) throws IOException {
+                    Context context) throws IOException,InterruptedException {
       int itemCount = 0;
       while (numBytesToWrite > 0) {
         // Generate the key/value 
@@ -139,20 +133,20 @@ public class RandomTextWriter extends Configured implements Tool {
         Text valueWords = generateSentence(noWordsValue);
         
         // Write the sentence 
-        output.collect(keyWords, valueWords);
+        context.write(keyWords, valueWords);
         
         numBytesToWrite -= (keyWords.getLength() + valueWords.getLength());
         
         // Update counters, progress etc.
-        reporter.incrCounter(Counters.BYTES_WRITTEN, 
-                             (keyWords.getLength()+valueWords.getLength()));
-        reporter.incrCounter(Counters.RECORDS_WRITTEN, 1);
+        context.getCounter(Counters.BYTES_WRITTEN).increment(
+                  keyWords.getLength() + valueWords.getLength());
+        context.getCounter(Counters.RECORDS_WRITTEN).increment(1);
         if (++itemCount % 200 == 0) {
-          reporter.setStatus("wrote record " + itemCount + ". " + 
+          context.setStatus("wrote record " + itemCount + ". " + 
                              numBytesToWrite + " bytes left.");
         }
       }
-      reporter.setStatus("done with " + itemCount + " records.");
+      context.setStatus("done with " + itemCount + " records.");
     }
     
     private Text generateSentence(int noWords) {
@@ -178,7 +172,26 @@ public class RandomTextWriter extends Configured implements Tool {
       return printUsage();    
     }
     
-    JobConf job = new JobConf(getConf());
+    Configuration conf = getConf();
+    JobClient client = new JobClient(conf);
+    ClusterStatus cluster = client.getClusterStatus();
+    int numMapsPerHost = conf.getInt("test.randomtextwrite.maps_per_host", 10);
+    long numBytesToWritePerMap = conf.getLong("test.randomtextwrite.bytes_per_map",
+                                             1*1024*1024*1024);
+    if (numBytesToWritePerMap == 0) {
+      System.err.println("Cannot have test.randomtextwrite.bytes_per_map set to 0");
+      return -2;
+    }
+    long totalBytesToWrite = conf.getLong("test.randomtextwrite.total_bytes", 
+         numMapsPerHost*numBytesToWritePerMap*cluster.getTaskTrackers());
+    int numMaps = (int) (totalBytesToWrite / numBytesToWritePerMap);
+    if (numMaps == 0 && totalBytesToWrite > 0) {
+      numMaps = 1;
+      conf.setLong("test.randomtextwrite.bytes_per_map", totalBytesToWrite);
+    }
+    conf.setInt("mapred.map.tasks", numMaps);
+    
+    Job job = new Job(conf);
     
     job.setJarByClass(RandomTextWriter.class);
     job.setJobName("random-text-writer");
@@ -186,25 +199,8 @@ public class RandomTextWriter extends Configured implements Tool {
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     
-    job.setInputFormat(RandomWriter.RandomInputFormat.class);
-    job.setMapperClass(Map.class);        
-    
-    JobClient client = new JobClient(job);
-    ClusterStatus cluster = client.getClusterStatus();
-    int numMapsPerHost = job.getInt("test.randomtextwrite.maps_per_host", 10);
-    long numBytesToWritePerMap = job.getLong("test.randomtextwrite.bytes_per_map",
-                                             1*1024*1024*1024);
-    if (numBytesToWritePerMap == 0) {
-      System.err.println("Cannot have test.randomtextwrite.bytes_per_map set to 0");
-      return -2;
-    }
-    long totalBytesToWrite = job.getLong("test.randomtextwrite.total_bytes", 
-         numMapsPerHost*numBytesToWritePerMap*cluster.getTaskTrackers());
-    int numMaps = (int) (totalBytesToWrite / numBytesToWritePerMap);
-    if (numMaps == 0 && totalBytesToWrite > 0) {
-      numMaps = 1;
-      job.setLong("test.randomtextwrite.bytes_per_map", totalBytesToWrite);
-    }
+    job.setInputFormatClass(RandomWriter.RandomInputFormat.class);
+    job.setMapperClass(RandomTextMapper.class);        
     
     Class<? extends OutputFormat> outputFormatClass = 
       SequenceFileOutputFormat.class;
@@ -224,10 +220,9 @@ public class RandomTextWriter extends Configured implements Tool {
       }
     }
 
-    job.setOutputFormat(outputFormatClass);
+    job.setOutputFormatClass(outputFormatClass);
     FileOutputFormat.setOutputPath(job, new Path(otherArgs.get(0)));
     
-    job.setNumMapTasks(numMaps);
     System.out.println("Running " + numMaps + " maps.");
     
     // reducer NONE
@@ -235,14 +230,14 @@ public class RandomTextWriter extends Configured implements Tool {
     
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
-    JobClient.runJob(job);
+    int ret = job.waitForCompletion(true) ? 0 : 1;
     Date endTime = new Date();
     System.out.println("Job ended: " + endTime);
     System.out.println("The job took " + 
                        (endTime.getTime() - startTime.getTime()) /1000 + 
                        " seconds.");
     
-    return 0;
+    return ret;
   }
   
   public static void main(String[] args) throws Exception {

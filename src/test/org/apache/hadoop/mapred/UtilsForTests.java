@@ -491,7 +491,7 @@ public class UtilsForTests {
   // Input formats
   /**
    * A custom input format that creates virtual inputs of a single string
-   * for each map. Using {@link RandomWriter} code. 
+   * for each map. 
    */
   public static class RandomInputFormat implements InputFormat<Text, Text> {
     

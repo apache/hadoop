@@ -19,7 +19,9 @@
 package org.apache.hadoop.examples;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,19 +32,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.ClusterStatus;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -93,19 +87,20 @@ public class RandomWriter extends Configured implements Tool {
    * A custom input format that creates virtual inputs of a single string
    * for each map.
    */
-  static class RandomInputFormat implements InputFormat<Text, Text> {
+  static class RandomInputFormat extends InputFormat<Text, Text> {
 
     /** 
      * Generate the requested number of file splits, with the filename
      * set to the filename of the output file.
      */
-    public InputSplit[] getSplits(JobConf job, 
-                                  int numSplits) throws IOException {
-      InputSplit[] result = new InputSplit[numSplits];
+    public List<InputSplit> getSplits(JobContext job) throws IOException {
+      List<InputSplit> result = new ArrayList<InputSplit>();
       Path outDir = FileOutputFormat.getOutputPath(job);
-      for(int i=0; i < result.length; ++i) {
-        result[i] = new FileSplit(new Path(outDir, "dummy-split-" + i), 0, 1, 
-                                  (String[])null);
+      int numSplits = 
+            job.getConfiguration().getInt("mapred.map.tasks", 1);
+      for(int i=0; i < numSplits; ++i) {
+        result.add(new FileSplit(new Path(outDir, "dummy-split-" + i), 0, 1, 
+                                  (String[])null));
       }
       return result;
     }
@@ -114,43 +109,52 @@ public class RandomWriter extends Configured implements Tool {
      * Return a single record (filename, "") where the filename is taken from
      * the file split.
      */
-    static class RandomRecordReader implements RecordReader<Text, Text> {
+    static class RandomRecordReader extends RecordReader<Text, Text> {
       Path name;
+      Text key = null;
+      Text value = new Text();
       public RandomRecordReader(Path p) {
         name = p;
       }
-      public boolean next(Text key, Text value) {
+      
+      public void initialize(InputSplit split,
+                             TaskAttemptContext context)
+      throws IOException, InterruptedException {
+    	  
+      }
+      
+      public boolean nextKeyValue() {
         if (name != null) {
+          key = new Text();
           key.set(name.getName());
           name = null;
           return true;
         }
         return false;
       }
-      public Text createKey() {
-        return new Text();
+      
+      public Text getCurrentKey() {
+        return key;
       }
-      public Text createValue() {
-        return new Text();
+      
+      public Text getCurrentValue() {
+        return value;
       }
-      public long getPos() {
-        return 0;
-      }
+      
       public void close() {}
+
       public float getProgress() {
         return 0.0f;
       }
     }
 
-    public RecordReader<Text, Text> getRecordReader(InputSplit split,
-                                        JobConf job, 
-                                        Reporter reporter) throws IOException {
+    public RecordReader<Text, Text> createRecordReader(InputSplit split,
+        TaskAttemptContext context) throws IOException, InterruptedException {
       return new RandomRecordReader(((FileSplit) split).getPath());
     }
   }
 
-  static class Map extends MapReduceBase
-    implements Mapper<WritableComparable, Writable,
+  static class RandomMapper extends Mapper<WritableComparable, Writable,
                       BytesWritable, BytesWritable> {
     
     private long numBytesToWrite;
@@ -173,8 +177,7 @@ public class RandomWriter extends Configured implements Tool {
      */
     public void map(WritableComparable key, 
                     Writable value,
-                    OutputCollector<BytesWritable, BytesWritable> output, 
-                    Reporter reporter) throws IOException {
+                    Context context) throws IOException,InterruptedException {
       int itemCount = 0;
       while (numBytesToWrite > 0) {
         int keyLength = minKeySize + 
@@ -185,16 +188,16 @@ public class RandomWriter extends Configured implements Tool {
           (valueSizeRange != 0 ? random.nextInt(valueSizeRange) : 0);
         randomValue.setSize(valueLength);
         randomizeBytes(randomValue.getBytes(), 0, randomValue.getLength());
-        output.collect(randomKey, randomValue);
+        context.write(randomKey, randomValue);
         numBytesToWrite -= keyLength + valueLength;
-        reporter.incrCounter(Counters.BYTES_WRITTEN, keyLength + valueLength);
-        reporter.incrCounter(Counters.RECORDS_WRITTEN, 1);
+        context.getCounter(Counters.BYTES_WRITTEN).increment(keyLength + valueLength);
+        context.getCounter(Counters.RECORDS_WRITTEN).increment(1);
         if (++itemCount % 200 == 0) {
-          reporter.setStatus("wrote record " + itemCount + ". " + 
+          context.setStatus("wrote record " + itemCount + ". " + 
                              numBytesToWrite + " bytes left.");
         }
       }
-      reporter.setStatus("done with " + itemCount + " records.");
+      context.setStatus("done with " + itemCount + " records.");
     }
     
     /**
@@ -202,17 +205,17 @@ public class RandomWriter extends Configured implements Tool {
      * the data.
      */
     @Override
-    public void configure(JobConf job) {
-      numBytesToWrite = job.getLong("test.randomwrite.bytes_per_map",
+    public void setup(Context context) {
+      Configuration conf = context.getConfiguration();
+      numBytesToWrite = conf.getLong("test.randomwrite.bytes_per_map",
                                     1*1024*1024*1024);
-      minKeySize = job.getInt("test.randomwrite.min_key", 10);
+      minKeySize = conf.getInt("test.randomwrite.min_key", 10);
       keySizeRange = 
-        job.getInt("test.randomwrite.max_key", 1000) - minKeySize;
-      minValueSize = job.getInt("test.randomwrite.min_value", 0);
+        conf.getInt("test.randomwrite.max_key", 1000) - minKeySize;
+      minValueSize = conf.getInt("test.randomwrite.min_value", 0);
       valueSizeRange = 
-        job.getInt("test.randomwrite.max_value", 20000) - minValueSize;
+        conf.getInt("test.randomwrite.max_value", 20000) - minValueSize;
     }
-    
   }
   
   /**
@@ -226,42 +229,41 @@ public class RandomWriter extends Configured implements Tool {
     if (args.length == 0) {
       System.out.println("Usage: writer <out-dir>");
       ToolRunner.printGenericCommandUsage(System.out);
-      return -1;
+      return 2;
     }
     
     Path outDir = new Path(args[0]);
-    JobConf job = new JobConf(getConf());
-    
-    job.setJarByClass(RandomWriter.class);
-    job.setJobName("random-writer");
-    FileOutputFormat.setOutputPath(job, outDir);
-    
-    job.setOutputKeyClass(BytesWritable.class);
-    job.setOutputValueClass(BytesWritable.class);
-    
-    job.setInputFormat(RandomInputFormat.class);
-    job.setMapperClass(Map.class);        
-    job.setReducerClass(IdentityReducer.class);
-    job.setOutputFormat(SequenceFileOutputFormat.class);
-    
-    JobClient client = new JobClient(job);
+    Configuration conf = getConf();
+    JobClient client = new JobClient(conf);
     ClusterStatus cluster = client.getClusterStatus();
-    int numMapsPerHost = job.getInt("test.randomwriter.maps_per_host", 10);
-    long numBytesToWritePerMap = job.getLong("test.randomwrite.bytes_per_map",
+    int numMapsPerHost = conf.getInt("test.randomwriter.maps_per_host", 10);
+    long numBytesToWritePerMap = conf.getLong("test.randomwrite.bytes_per_map",
                                              1*1024*1024*1024);
     if (numBytesToWritePerMap == 0) {
       System.err.println("Cannot have test.randomwrite.bytes_per_map set to 0");
       return -2;
     }
-    long totalBytesToWrite = job.getLong("test.randomwrite.total_bytes", 
+    long totalBytesToWrite = conf.getLong("test.randomwrite.total_bytes", 
          numMapsPerHost*numBytesToWritePerMap*cluster.getTaskTrackers());
     int numMaps = (int) (totalBytesToWrite / numBytesToWritePerMap);
     if (numMaps == 0 && totalBytesToWrite > 0) {
       numMaps = 1;
-      job.setLong("test.randomwrite.bytes_per_map", totalBytesToWrite);
+      conf.setLong("test.randomwrite.bytes_per_map", totalBytesToWrite);
     }
+    conf.setInt("mapred.map.tasks", numMaps);
+
+    Job job = new Job(conf);
     
-    job.setNumMapTasks(numMaps);
+    job.setJarByClass(RandomWriter.class);
+    job.setJobName("random-writer");
+    FileOutputFormat.setOutputPath(job, outDir);
+    job.setOutputKeyClass(BytesWritable.class);
+    job.setOutputValueClass(BytesWritable.class);
+    job.setInputFormatClass(RandomInputFormat.class);
+    job.setMapperClass(RandomMapper.class);        
+    job.setReducerClass(Reducer.class);
+    job.setOutputFormatClass(SequenceFileOutputFormat.class);
+    
     System.out.println("Running " + numMaps + " maps.");
     
     // reducer NONE
@@ -269,14 +271,14 @@ public class RandomWriter extends Configured implements Tool {
     
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
-    JobClient.runJob(job);
+    int ret = job.waitForCompletion(true) ? 0 : 1;
     Date endTime = new Date();
     System.out.println("Job ended: " + endTime);
     System.out.println("The job took " + 
                        (endTime.getTime() - startTime.getTime()) /1000 + 
                        " seconds.");
     
-    return 0;
+    return ret;
   }
   
   public static void main(String[] args) throws Exception {

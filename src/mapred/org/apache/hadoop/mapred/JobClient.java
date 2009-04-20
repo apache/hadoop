@@ -411,6 +411,18 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
 
   /**
+   * Build a job client with the given {@link Configuration}, 
+   * and connect to the default {@link JobTracker}.
+   * 
+   * @param conf the configuration.
+   * @throws IOException
+   */
+  public JobClient(Configuration conf) throws IOException {
+    setConf(conf);
+    init(new JobConf(conf));
+  }
+
+  /**
    * Connect to the default {@link JobTracker}.
    * @param conf the job configuration.
    * @throws IOException
