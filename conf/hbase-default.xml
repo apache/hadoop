@@ -137,7 +137,7 @@
   </property>
   <property>
     <name>hbase.client.scanner.caching</name>
-    <value>30</value>
+    <value>1</value>
     <description>Number of rows that will be fetched when calling next
     on a scanner if it is not served from memory. Higher caching values
     will enable faster scanners but will eat up more memory and some

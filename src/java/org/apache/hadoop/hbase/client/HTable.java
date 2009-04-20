@@ -117,7 +117,7 @@ public class HTable {
       this.configuration.getLong("hbase.client.write.buffer", 2097152);
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
-    this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 30);
+    this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 1);
   }
 
   /**
