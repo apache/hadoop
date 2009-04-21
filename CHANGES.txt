@@ -31,6 +31,9 @@ Trunk (unreleased changes)
 
     HADOOP-2827. Remove deprecated NetUtils::getServerAddress. (cdouglas)
 
+    HADOOP-5681. Change examples RandomWriter and RandomTextWriter to 
+    use new mapreduce API. (Amareshwari Sriramadasu via sharad)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
@@ -239,9 +242,6 @@ Trunk (unreleased changes)
 
     HADOOP-4490. Provide ability to run tasks as job owners.
     (Sreekanth Ramakrishnan via yhemanth)
-
-    HADOOP-5681. Change examples RandomWriter and RandomTextWriter to 
-    use new mapreduce API. (Amareshwari Sriramadasu via sharad)
 
     HADOOP-5697. Change org.apache.hadoop.examples.Grep to use new 
     mapreduce api. (Amareshwari Sriramadasu via sharad)
