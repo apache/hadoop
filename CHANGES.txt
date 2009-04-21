@@ -78,6 +78,8 @@ Release 0.20.0 - Unreleased
    HBASE-1324  hbase-1234 broke testget2 unit test (and broke the build)
    HBASE-1321  hbase-1234 broke TestCompaction; fix and reenable
    HBASE-1330  binary keys broken on trunk (Ryan Rawson via Stack)
+   HBASE-1332  regionserver carrying .META. starts sucking all cpu, drives load
+               up - infinite loop? (Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

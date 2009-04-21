@@ -1436,7 +1436,7 @@ public class Store implements HConstants {
         search.getKeyLength());
       if (result < 0) {
         // Not in file.
-        continue;
+        break;
       }
       KeyValue deletedOrExpiredRow = null;
       KeyValue kv = null;
