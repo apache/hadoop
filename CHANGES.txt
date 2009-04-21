@@ -246,6 +246,8 @@ Trunk (unreleased changes)
     HADOOP-5697. Change org.apache.hadoop.examples.Grep to use new 
     mapreduce api. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5625. Add operation duration to clienttrace. (Lei Xu via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
