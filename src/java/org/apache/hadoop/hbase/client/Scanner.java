@@ -45,7 +45,7 @@ public interface Scanner extends Closeable, Iterable<RowResult> {
    * @return Between zero and <param>nbRows</param> RowResults
    * @throws IOException
    */
-  public RowResult[] next(int nbRows) throws IOException;
+  public RowResult [] next(int nbRows) throws IOException;
   
   /**
    * Closes the scanner and releases any resources it has allocated
