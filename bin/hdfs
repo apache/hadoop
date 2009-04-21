@@ -31,6 +31,7 @@ function print_usage(){
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  balancer             run a cluster balancing utility"
   echo "  jmxget               get JMX exported values from NameNode or DataNode."
+  echo "  oiv                  apply the offline fsimage viewer to an fsimage"
   echo "						Use -help to see options"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
@@ -67,6 +68,8 @@ elif [ "$COMMAND" = "balancer" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_BALANCER_OPTS"
 elif [ "$COMMAND" = "jmxget" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.JMXGet
+elif [ "$COMMAND" = "oiv" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
 else
   echo $COMMAND - invalid command
   print_usage

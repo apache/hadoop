@@ -86,6 +86,8 @@ Trunk (unreleased changes)
     HADOOP-5469.  Add /metrics servlet to daemons, providing metrics
     over HTTP as either text or JSON.  (Philip Zeyliger via cutting)
 
+    HADOOP-5467. Introduce offline fsimage image viewer. (Jakob Homan via shv)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

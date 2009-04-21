@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+
+  <header>
+    <title>Offline Image Viewer Guide</title>
+  </header>
+
+  <body>
+
+    <section>
+      <title>Overview</title>
+
+      <p>The Offline Image Viewer is a tool to dump the contents of hdfs
+      fsimage files to human-readable formats in order to allow offline analysis
+      and examination of an Hadoop cluster's namespace. The tool is able to
+      process very large image files relatively quickly, converting them to
+      one of several output formats. The tool handles the layout formats that
+      were included with Hadoop versions 16 and up. If the tool is not able to
+      process an image file, it will exit cleanly. The Offline Image Viewer does not require
+      an Hadoop cluster to be running; it is entirely offline in its operation.</p>
+
+      <p>The Offline Image Viewer provides several output processors:</p>
+        <ol>
+        <li><strong>Ls</strong> is the default output processor. It closely mimics the format of
+          the <code>lsr </code> command. It includes the same fields, in the same order, as
+          <code>lsr </code>: directory or file flag, permissions, replication, owner, group,
+          file size, modification date, and full path. Unlike the <code>lsr </code> command,
+          the root path is included. One important difference between the output
+          of the <code>lsr </code> command this processor, is that this output is not sorted
+          by directory name and contents. Rather, the files are listed in the
+          order in which they are stored in the fsimage file. Therefore, it is
+          not possible to directly compare the output of the <code>lsr </code> command this
+          this tool. The Ls processor uses information contained within the Inode blocks to
+          calculate file sizes and ignores the <code>-skipBlocks</code> option.</li>
+        <li><strong>Indented</strong> provides a more complete view of the fsimage's contents,
+          including all of the information included in the image, such as image
+          version, generation stamp and inode- and block-specific listings. This
+          processor uses indentation to organize the output into a hierarchal manner.
+          The <code>lsr </code> format is suitable for easy human comprehension.</li>
+        <li><strong>XML</strong> creates an XML document of the fsimage and includes all of the
+          information within the fsimage, similar to the <code>lsr </code> processor. The output
+          of this processor is amenable to automated processing and analysis with XML tools.
+          Due to the verbosity of the XML syntax, this processor will also generate
+          the largest amount of output.</li>
+        </ol>
+
+    </section> <!-- overview -->
+
+    <section>
+      <title>Usage</title>
+
+      <section>
+        <title>Basic</title>
+        <p>The simplest usage of the Offline Image Viewer is to provide just an input and output
+          file, via the <code>-i</code> and <code>-o</code> command-line switches:</p>
+
+        <p><code>bash$ bin/hdfs oiv -i fsimage -o fsimage.txt</code><br/></p>
+
+        <p>This will create a file named fsimage.txt in the current directory using
+        the Ls output processor.  For very large image files, this process may take
+        several minutes.</p>
+
+        <p>One can specify which output processor via the command-line switch <code>-p</code>.
+        For instance:</p>
+        <p><code>bash$ bin/hdfs oiv -i fsimage -o fsimage.xml -p XML</code><br/></p>
+
+        <p>or</p>
+
+        <p><code>bash$ bin/hdfs oiv -i fsimage -o fsimage.txt -p Indented</code><br/></p>
+
+        <p>This will run the tool using either the XML or Indented output processor,
+        respectively.</p>
+
+        <p>One command-line option worth considering is <code>-skipBlocks</code>, which
+        prevents the tool from explicitly enumerating all of the blocks that make up
+        a file in the namespace. This is useful for file systems that have very large
+        files. Enabling this option can significantly decrease the size of the resulting
+        output, as individual blocks are not included. Note, however, that the Ls processor
+        needs to enumerate the blocks and so overrides this option.</p>
+
+      </section> <!-- Basic -->
+      <section id="Example">
+        <title>Example</title>
+
+          <p>Consider the following contrived namespace:</p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:17&nbsp;/anotherDir</code></p>
+          <p><code>-rw-r--r--&nbsp;&nbsp;&nbsp;3&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;286631664&nbsp;2009-03-16&nbsp;21:15&nbsp;/anotherDir/biggerfile</code></p>
+          <p><code>-rw-r--r--&nbsp;&nbsp;&nbsp;3&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8754&nbsp;2009-03-16&nbsp;21:17&nbsp;/anotherDir/smallFile</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem/theuser</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem/theuser/mapredsystem</code></p>
+          <p><code>drwx-wx-wx&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem/theuser/mapredsystem/ip.redacted.com</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:12&nbsp;/one</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:12&nbsp;/one/two</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:16&nbsp;/user</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:19&nbsp;/user/theuser</code></p>
+          <p>Applying the Offline Image Processor against this file with default options would result in the following output:</p>
+          <p><code>machine:hadoop-0.21.0-dev&nbsp;theuser$&nbsp;bin/hdfs&nbsp;oiv&nbsp;-i&nbsp;fsimagedemo&nbsp;-o&nbsp;fsimage.txt</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:16&nbsp;/</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:17&nbsp;/anotherDir</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:12&nbsp;/one</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:16&nbsp;/user</code></p>
+          <p><code>-rw-r--r--&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;286631664&nbsp;2009-03-16&nbsp;14:15&nbsp;/anotherDir/biggerfile</code></p>
+          <p><code>-rw-r--r--&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8754&nbsp;2009-03-16&nbsp;14:17&nbsp;/anotherDir/smallFile</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem/theuser</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem/theuser/mapredsystem</code></p>
+          <p><code>drwx-wx-wx&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem/theuser/mapredsystem/ip.redacted.com</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:12&nbsp;/one/two</code></p>
+          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:19&nbsp;/user/theuser</code></p>
+          <p>Similarly, applying the Indented processor would generate output that begins with:</p>
+          <p><code>machine:hadoop-0.21.0-dev&nbsp;theuser$&nbsp;bin/hdfs&nbsp;oiv&nbsp;-i&nbsp;fsimagedemo&nbsp;-p&nbsp;Indented&nbsp;-o&nbsp;fsimage.txt</code></p>
+          <p><code>FSImage</code></p>
+          <p><code>&nbsp;&nbsp;ImageVersion&nbsp;=&nbsp;-19</code></p>
+          <p><code>&nbsp;&nbsp;NamespaceID&nbsp;=&nbsp;2109123098</code></p>
+          <p><code>&nbsp;&nbsp;GenerationStamp&nbsp;=&nbsp;1003</code></p>
+          <p><code>&nbsp;&nbsp;INodes&nbsp;[NumInodes&nbsp;=&nbsp;12]</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;Inode</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;INodePath&nbsp;=&nbsp;</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Replication&nbsp;=&nbsp;0</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModificationTime&nbsp;=&nbsp;2009-03-16&nbsp;14:16</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AccessTime&nbsp;=&nbsp;1969-12-31&nbsp;16:00</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BlockSize&nbsp;=&nbsp;0</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Blocks&nbsp;[NumBlocks&nbsp;=&nbsp;-1]</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NSQuota&nbsp;=&nbsp;2147483647</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DSQuota&nbsp;=&nbsp;-1</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Permissions</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Username&nbsp;=&nbsp;theuser</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GroupName&nbsp;=&nbsp;supergroup</code></p>
+          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PermString&nbsp;=&nbsp;rwxr-xr-x</code></p>
+          <p><code>&hellip;remaining output omitted&hellip;</code></p>
+      </section> <!-- example-->
+
+    </section>
+
+      <section id="options">
+        <title>Options</title>
+
+        <section>
+        <title>Option Index</title>
+        <table>
+          <tr><th> Flag </th><th> Description </th></tr>
+          <tr><td><code>[-i|--inputFile] &lt;input file&gt;</code></td>
+              <td>Specify the input fsimage file to process. Required.</td></tr>
+          <tr><td><code>[-o|--outputFile] &lt;output file&gt;</code></td>
+              <td>Specify the output filename, if the specified output processor
+              generates one. If the specified file already exists, it is silently overwritten. Required.
+              </td></tr>
+          <tr><td><code>[-p|--processor] &lt;processor&gt;</code></td>
+                  <td>Specify the image processor to apply against the image file. Currently
+                    valid options are Ls (default), XML and Indented..
+                  </td></tr>
+          <tr><td><code>-skipBlocks</code></td>
+              <td>Do not enumerate individual blocks within files. This may save processing time
+              and outfile file space on namespaces with very large files. The <code>Ls</code> processor reads
+              the blocks to correctly determine file sizes and ignores this option.</td></tr>
+          <tr><td><code>-printToScreen</code></td>
+              <td>Pipe output of processor to console as well as specified file. On extremely 
+              large namespaces, this may increase processing time by an order of magnitude.</td></tr>
+          <tr><td><code>[-h|--help]</code></td>
+              <td>Display the tool usage and help information and exit.</td></tr>
+            </table>
+          </section> <!-- options -->
+    </section>
+
+  </body>
+
+</document>

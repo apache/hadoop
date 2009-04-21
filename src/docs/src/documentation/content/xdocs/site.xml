@@ -58,6 +58,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 		<hdfs_perm      				label="Permissions Guide"    					href="hdfs_permissions_guide.html" />
 		<hdfs_quotas     			label="Quotas Guide" 							href="hdfs_quota_admin_guide.html" />
 		<hdfs_SLG        			label="Synthetic Load Generator Guide"  href="SLG_user_guide.html" />
+		<hdfs_imageviewer						label="Offline Image Viewer Guide"	href="hdfs_imageviewer.html" />
 		<hdfs_libhdfs   				label="C API libhdfs"         						href="libhdfs.html" /> 
    </docs> 
    
