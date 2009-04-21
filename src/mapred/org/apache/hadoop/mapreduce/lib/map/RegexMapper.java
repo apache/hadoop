@@ -16,45 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.mapreduce.lib.map;
 
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.Mapper;
 
 
-/** A {@link Mapper} that extracts text matching a regular expression.
- * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.map.RegexMapper}
- */
-@Deprecated
-public class RegexMapper<K> extends MapReduceBase
-    implements Mapper<K, Text, Text, LongWritable> {
+/** A {@link Mapper} that extracts text matching a regular expression. */
+public class RegexMapper<K> extends Mapper<K, Text, Text, LongWritable> {
 
   private Pattern pattern;
   private int group;
 
-  public void configure(JobConf job) {
-    pattern = Pattern.compile(job.get("mapred.mapper.regex"));
-    group = job.getInt("mapred.mapper.regex.group", 0);
+  public void setup(Context context) {
+    Configuration conf = context.getConfiguration();
+    pattern = Pattern.compile(conf.get("mapred.mapper.regex"));
+    group = conf.getInt("mapred.mapper.regex.group", 0);
   }
 
   public void map(K key, Text value,
-                  OutputCollector<Text, LongWritable> output,
-                  Reporter reporter)
-    throws IOException {
+                  Context context)
+    throws IOException, InterruptedException {
     String text = value.toString();
     Matcher matcher = pattern.matcher(text);
     while (matcher.find()) {
-      output.collect(new Text(matcher.group(group)), new LongWritable(1));
+      context.write(new Text(matcher.group(group)), new LongWritable(1));
     }
   }
-
 }
