@@ -273,7 +273,7 @@ public class HftpFileSystem extends FileSystem {
       filechecksum = MD5MD5CRC32FileChecksum.valueOf(attrs);
     }
 
-    private FileChecksum getFileChecksum(Path f) throws IOException {
+    private FileChecksum getFileChecksum(String f) throws IOException {
       final HttpURLConnection connection = openConnection(
           "/fileChecksum" + f, "ugi=" + ugi);
       try {
@@ -299,7 +299,8 @@ public class HftpFileSystem extends FileSystem {
 
   /** {@inheritDoc} */
   public FileChecksum getFileChecksum(Path f) throws IOException {
-    return new ChecksumParser().getFileChecksum(f);
+    final String s = makeQualified(f).toUri().getPath();
+    return new ChecksumParser().getFileChecksum(s);
   }
 
   @Override

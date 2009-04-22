@@ -1,5 +1,12 @@
 Hadoop Change Log
 
+Release 0.20.1 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-5688. Fix HftpFileSystem checksum path construction. (Tsz Wo
+    (Nicholas) Sze via cdouglas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

@@ -162,6 +162,10 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
       final FileChecksum hftpfoocs = hftp.getFileChecksum(foo);
       System.out.println("hftpfoocs=" + hftpfoocs);
 
+      final Path qualified = new Path(hftpuri + dir, "foo" + n);
+      final FileChecksum qfoocs = hftp.getFileChecksum(qualified);
+      System.out.println("qfoocs=" + qfoocs);
+
       //write another file
       final Path bar = new Path(dir, "bar" + n);
       {
@@ -179,6 +183,9 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
 
         assertEquals(hftpfoocs.hashCode(), barhashcode);
         assertEquals(hftpfoocs, barcs);
+
+        assertEquals(qfoocs.hashCode(), barhashcode);
+        assertEquals(qfoocs, barcs);
       }
     }
   }
