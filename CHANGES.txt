@@ -888,7 +888,6 @@ Release 0.20.0 - 2009-04-15
     HADOOP-5691. Makes org.apache.hadoop.mapreduce.Reducer concrete class 
     instead of abstract. (Amareshwari Sriramadasu via sharad)
 
-
 Release 0.19.2 - Unreleased
 
   BUG FIXES
@@ -964,6 +963,9 @@ Release 0.19.2 - Unreleased
 
     HADOOP-5551. Prevent directory destruction on file create.
     (Brian Bockelman via shv)
+
+    HADOOP-5671. Fix FNF exceptions when copying from old versions of
+    HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
 
 Release 0.19.1 - 2009-02-23 
 

@@ -1171,9 +1171,25 @@ public class DistCp implements Tool {
       return false;
     }
 
+    //get src checksum
+    final FileChecksum srccs;
+    try {
+      srccs = srcfs.getFileChecksum(srcstatus.getPath());
+    } catch(FileNotFoundException fnfe) {
+      /*
+       * Two possible cases:
+       * (1) src existed once but was deleted between the time period that
+       *     srcstatus was obtained and the try block above.
+       * (2) srcfs does not support file checksum and (incorrectly) throws
+       *     FNFE, e.g. some previous versions of HftpFileSystem.
+       * For case (1), it is okay to return true since src was already deleted.
+       * For case (2), true should be returned.  
+       */
+      return true;
+    }
+
     //compare checksums
     try {
-      final FileChecksum srccs = srcfs.getFileChecksum(srcstatus.getPath());
       final FileChecksum dstcs = dstfs.getFileChecksum(dststatus.getPath());
       //return true if checksum is not supported
       //(i.e. some of the checksums is null)
