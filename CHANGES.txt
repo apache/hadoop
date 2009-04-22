@@ -101,6 +101,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5551. Prevent directory destruction on file create.
     (Brian Bockelman via shv)
 
+    HADOOP-5671. Fix FNF exceptions when copying from old versions of
+    HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 
