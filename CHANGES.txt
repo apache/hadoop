@@ -419,8 +419,8 @@ Trunk (unreleased changes)
     HADOOP-5647. Fix TestJobHistory to not depend on /tmp. (Ravi Gummadi 
     via sharad)
 
-    HADOOP-5661. Fixes some findbugs warnings in o.a.h.mapred* packages and supresses
-    a bunch of them. (Jothi Padmanabhan via ddas)
+    HADOOP-5661. Fixes some findbugs warnings in o.a.h.mapred* packages and
+    supresses a bunch of them. (Jothi Padmanabhan via ddas)
 
     HADOOP-5704. Fix compilation problems in TestFairScheduler and
     TestCapacityScheduler.  (Chris Douglas via szetszwo)
@@ -428,13 +428,27 @@ Trunk (unreleased changes)
     HADOOP-5650. Fix safemode messages in the Namenode log.  (Suresh Srinivas
     via szetszwo)
 
-    HADOOP-5488. Removes the pidfile management for the Task JVM from the framework 
-    and instead passes the PID back and forth between the TaskTracker and the Task 
-    processes. (Ravi Gummadi via ddas)
+    HADOOP-5488. Removes the pidfile management for the Task JVM from the
+    framework and instead passes the PID back and forth between the
+    TaskTracker and the Task processes. (Ravi Gummadi via ddas)
+
+    HADOOP-5658. Fix Eclipse templates. (Philip Zeyliger via shv)
 
 Release 0.20.1 - Unreleased
 
   BUG FIXES
+
+    HADOOP-5654. TestReplicationPolicy.<init> fails on java.net.BindException.
+    (hairong)
+
+    HADOOP-5655. TestMRServerPorts fails on java.net.BindException. (Devaraj
+    Das via hairong)
+
+    HADOOP-5646. Fixes a problem in TestQueueCapacities.
+    (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-5691. Makes org.apache.hadoop.mapreduce.Reducer concrete class
+    instead of abstract. (Amareshwari Sriramadasu via sharad)
 
     HADOOP-5688. Fix HftpFileSystem checksum path construction. (Tsz Wo
     (Nicholas) Sze via cdouglas)
@@ -1287,20 +1301,6 @@ Release 0.20.0 - Unreleased
 
     HADOOP-5645. After HADOOP-4920 we need a place to checkin
     releasenotes.html. (nigel)
-
-    HADOOP-5654. TestReplicationPolicy.<init> fails on java.net.BindException.
-    (hairong)
-
-    HADOOP-5655. TestMRServerPorts fails on java.net.BindException. (Devaraj
-    Das via hairong)
-
-    HADOOP-5646. Fixes a problem in TestQueueCapacities. 
-    (Vinod Kumar Vavilapalli via ddas)
-
-    HADOOP-5691. Makes org.apache.hadoop.mapreduce.Reducer concrete class 
-    instead of abstract. (Amareshwari Sriramadasu via sharad)
-
-    HADOOP-5658. Fix Eclipse templates. (Philip Zeyliger via shv)
 
 Release 0.19.2 - Unreleased
 
