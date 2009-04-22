@@ -413,9 +413,6 @@ Trunk (unreleased changes)
     HADOOP-5652. Fix a bug where in-memory segments are incorrectly retained in
     memory. (cdouglas)
 
-    HADOOP-5671. Fix FNF exceptions when copying from old versions of
-    HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
-
     HADOOP-5533. Recovery duration shown on the jobtracker webpage is 
     inaccurate. (Amar Kamat via sharad)
 
@@ -1380,6 +1377,9 @@ Release 0.19.2 - Unreleased
 
     HADOOP-5551. Prevent directory destruction on file create.
     (Brian Bockelman via shv)
+
+    HADOOP-5671. Fix FNF exceptions when copying from old versions of
+    HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
 
 Release 0.19.1 - 2009-02-23 
 
