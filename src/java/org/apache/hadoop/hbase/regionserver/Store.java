@@ -511,7 +511,16 @@ public class Store implements HConstants {
    * @throws IOException
    */
   HFile.Writer getWriter() throws IOException {
-    return StoreFile.getWriter(this.fs, this.homedir, this.blocksize,
+    return getWriter(this.homedir);
+  }
+
+  /*
+   * @return Writer for this store.
+   * @param basedir Directory to put writer in.
+   * @throws IOException
+   */
+  private HFile.Writer getWriter(final Path basedir) throws IOException {
+    return StoreFile.getWriter(this.fs, basedir, this.blocksize,
         this.compression, this.comparator.getRawComparator(), this.bloomfilter);
   }
 
@@ -617,8 +626,8 @@ public class Store implements HConstants {
           (forceSplit || (filesToCompact.size() < compactionThreshold))) {
         return checkSplit(forceSplit);
       }
-      if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
-        LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
+      if (!fs.exists(this.compactionDir) && !fs.mkdirs(this.compactionDir)) {
+        LOG.warn("Mkdir on " + this.compactionDir.toString() + " failed");
         return checkSplit(forceSplit);
       }
 
@@ -671,7 +680,7 @@ public class Store implements HConstants {
       }
  
       // Step through them, writing to the brand-new file
-      HFile.Writer writer = getWriter();
+      HFile.Writer writer = getWriter(this.compactionDir);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started compaction of " + filesToCompact.size() + " file(s)" +
           (references? ", hasReferences=true,": " ") + " into " +

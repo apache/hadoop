@@ -81,6 +81,8 @@ Release 0.20.0 - Unreleased
    HBASE-1332  regionserver carrying .META. starts sucking all cpu, drives load
                up - infinite loop? (Ryan Rawson via Stack)
    HBASE-1334  .META. region running into hfile errors (Ryan Rawson via Stack)
+   HBASE-1338  lost use of compaction.dir; we were compacting into live store
+               subdirectory
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
