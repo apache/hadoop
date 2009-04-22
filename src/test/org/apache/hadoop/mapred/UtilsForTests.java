@@ -24,6 +24,9 @@ import java.io.DataOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileNotFoundException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -547,7 +550,9 @@ public class UtilsForTests {
                     throws IOException {
 
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(outDir, true);
+    if (fs.exists(outDir)) {
+      fs.delete(outDir, true);
+    }
     if (!fs.exists(inDir)) {
       fs.mkdirs(inDir);
     }
@@ -563,8 +568,8 @@ public class UtilsForTests {
 
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
-    conf.setNumMapTasks(1);
-    conf.setNumReduceTasks(1);
+    conf.setNumMapTasks(conf.getNumMapTasks());
+    conf.setNumReduceTasks(conf.getNumReduceTasks());
 
     JobClient jobClient = new JobClient(conf);
     RunningJob job = jobClient.submitJob(conf);
@@ -679,5 +684,50 @@ public class UtilsForTests {
 
     config.writeXml(fos);
     fos.close();
+  }
+
+  /**
+   * Get PID from a pid-file.
+   * 
+   * @param pidFileName
+   *          Name of the pid-file.
+   * @return the PID string read from the pid-file. Returns null if the
+   *         pidFileName points to a non-existing file or if read fails from the
+   *         file.
+   */
+  public static String getPidFromPidFile(String pidFileName) {
+    BufferedReader pidFile = null;
+    FileReader fReader = null;
+    String pid = null;
+
+    try {
+      fReader = new FileReader(pidFileName);
+      pidFile = new BufferedReader(fReader);
+    } catch (FileNotFoundException f) {
+      LOG.debug("PidFile doesn't exist : " + pidFileName);
+      return pid;
+    }
+
+    try {
+      pid = pidFile.readLine();
+    } catch (IOException i) {
+      LOG.error("Failed to read from " + pidFileName);
+    } finally {
+      try {
+        if (fReader != null) {
+          fReader.close();
+        }
+        try {
+          if (pidFile != null) {
+            pidFile.close();
+          }
+        } catch (IOException i) {
+          LOG.warn("Error closing the stream " + pidFile);
+        }
+      } catch (IOException i) {
+        LOG.warn("Error closing the stream " + fReader);
+      }
+    }
+    return pid;
   }
 }

@@ -22,9 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
@@ -99,6 +97,10 @@ abstract class TaskController implements Configurable {
     JvmEnv env;
     // the Shell executor executing the JVM for this task
     ShellCommandExecutor shExec; 
+    // process handle of task JVM
+    String pid;
+    // waiting time before sending SIGKILL to task JVM after sending SIGTERM
+    long sleeptimeBeforeSigkill;
   }
 
   /**

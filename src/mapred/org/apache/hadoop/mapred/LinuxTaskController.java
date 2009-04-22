@@ -124,7 +124,7 @@ class LinuxTaskController extends TaskController {
     // get the JVM command line.
     String cmdLine = 
       TaskLog.buildCommandLine(env.setup, env.vargs, env.stdout, env.stderr,
-          env.logSize, true, env.pidFile);
+          env.logSize, true);
 
     // write the command to a file in the
     // task specific cache directory
@@ -195,6 +195,8 @@ class LinuxTaskController extends TaskController {
    * 
    * This method will launch the task controller setuid executable
    * that in turn will kill the task JVM by sending a kill signal.
+   * @param context the context storing the task running within the JVM
+   * that needs to be killed.
    */
   void killTaskJVM(TaskControllerContext context) {
    

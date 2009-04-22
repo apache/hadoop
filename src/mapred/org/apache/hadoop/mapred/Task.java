@@ -44,19 +44,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Shell;
 
 /** Base class for tasks. */
 abstract class Task implements Writable, Configurable {
   private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
+    LogFactory.getLog(Task.class);
 
   // Counters used by Task subclasses
   protected static enum Counter { 
@@ -138,7 +136,6 @@ abstract class Task implements Writable, Configurable {
   protected org.apache.hadoop.mapreduce.OutputFormat<?,?> outputFormat;
   protected org.apache.hadoop.mapreduce.OutputCommitter committer;
   protected final Counters.Counter spilledRecordsCounter;
-  private String pidFile = "";
 
   ////////////////////////////////////////////
   // Constructors
@@ -174,12 +171,6 @@ abstract class Task implements Writable, Configurable {
   public String getJobFile() { return jobFile; }
   public TaskAttemptID getTaskID() { return taskId; }
   Counters getCounters() { return counters; }
-  public void setPidFile(String pidFile) { 
-    this.pidFile = pidFile; 
-  }
-  public String getPidFile() { 
-    return pidFile; 
-  }
   
   /**
    * Get the job name for this task.
@@ -315,9 +306,6 @@ abstract class Task implements Writable, Configurable {
     out.writeBoolean(jobSetup);
     out.writeBoolean(writeSkipRecs);
     out.writeBoolean(taskCleanup);  
-    if(!Shell.WINDOWS) {
-      Text.writeString(out, pidFile);
-    }
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -336,9 +324,6 @@ abstract class Task implements Writable, Configurable {
     taskCleanup = in.readBoolean();
     if (taskCleanup) {
       setPhase(TaskStatus.Phase.CLEANUP);
-    }
-    if(!Shell.WINDOWS) {
-      pidFile = Text.readString(in);
     }
   }
 

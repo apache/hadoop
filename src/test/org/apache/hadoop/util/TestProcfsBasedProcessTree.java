@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.mapred.UtilsForTests;
 
 import junit.framework.TestCase;
 
@@ -83,7 +84,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     }
 
     // read from pidFile
-    return ProcessTree.getPidFromPidFile(pidFile);
+    return UtilsForTests.getPidFromPidFile(pidFile);
   }
 
   public void testProcessTree() {

@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
@@ -52,7 +51,7 @@ class DefaultTaskController extends TaskController {
     JvmEnv env = context.env;
     List<String> wrappedCommand = 
       TaskLog.captureOutAndError(env.setup, env.vargs, env.stdout, env.stderr,
-          env.logSize, true, env.pidFile);
+          env.logSize, true);
     ShellCommandExecutor shexec = 
         new ShellCommandExecutor(wrappedCommand.toArray(new String[0]), 
                                   env.workDir, env.env);
@@ -69,28 +68,29 @@ class DefaultTaskController extends TaskController {
    */
   void killTaskJVM(TaskController.TaskControllerContext context) {
     ShellCommandExecutor shexec = context.shExec;
-    JvmEnv env = context.env;
+
     if (shexec != null) {
       Process process = shexec.getProcess();
-      if (process != null) {
-        if (Shell.WINDOWS) {
+      if (Shell.WINDOWS) {
+        // Currently we don't use setsid on WINDOWS. So kill the process alone.
+        if (process != null) {
           process.destroy();
         }
-        else {
-          Path pidFilePath = new Path(env.pidFile);
-          String pid = ProcessTree.getPidFromPidFile(
-                                                pidFilePath.toString());
-          if (pid != null) {
-            long sleeptimeBeforeSigkill = env.conf.getLong(
-                 "mapred.tasktracker.tasks.sleeptime-before-sigkill",
-                 ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
-
-            ProcessTree.destroy(pid, sleeptimeBeforeSigkill,
-                     ProcessTree.isSetsidAvailable, false);
-            try {
+      }
+      else { // In addition to the task JVM, kill its subprocesses also.
+        String pid = context.pid;
+        if (pid != null) {
+          ProcessTree.destroy(pid, context.sleeptimeBeforeSigkill,
+              ProcessTree.isSetsidAvailable, false);
+          try {
+            if (process != null) {
               LOG.info("Process exited with exit code:" + process.waitFor());
-            } catch (InterruptedException ie) {}
-          }
+            }
+          } catch (InterruptedException ie) {}
+        }
+        else if (process != null) {
+          // kill the task JVM alone, if we don't have the process group id
+          process.destroy();
         }
       }
     }

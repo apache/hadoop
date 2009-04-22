@@ -81,7 +81,6 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
-import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
@@ -187,7 +186,6 @@ public class TaskTracker
   private static final String SUBDIR = "taskTracker";
   private static final String CACHEDIR = "archive";
   private static final String JOBCACHE = "jobcache";
-  private static final String PID = "pid";
   private static final String OUTPUT = "output";
   private JobConf fConf;
   private int maxCurrentMapTasks;
@@ -448,39 +446,13 @@ public class TaskTracker
 	}
 	return taskDir;
   }
-
-  static String getPidFile(String jobid, 
-                           String taskid, 
-                           boolean isCleanup) {
-    return  getLocalTaskDir(jobid, taskid, isCleanup)
-            + Path.SEPARATOR + PID;
-  }
-
-  /**
-   * Get the pidFile path of a Task
-   * 
-   * @param tid the TaskAttemptID of the task for which pidFile's path is needed
-   * @param conf Configuration for local dir allocator
-   * @param isCleanup true if the task is cleanup attempt
-   *  
-   * @return pidFile's Path
-   */
-  static Path getPidFilePath(TaskAttemptID tid, 
-                             JobConf conf, 
-                             boolean isCleanup) {
-    Path pidFileName = null;
-    try {
-      //this actually need not use a localdirAllocator since the PID
-      //files are really small..
-      pidFileName = lDirAlloc.getLocalPathToRead(
-        getPidFile(tid.getJobID().toString(), tid.toString(), isCleanup),
-        conf);
-    } catch (IOException i) {
-      // PID file is not there
-      LOG.warn("Failed to get pidFile name for " + tid + " " + 
-                StringUtils.stringifyException(i));
+  
+  String getPid(TaskAttemptID tid) {
+    TaskInProgress tip = tasks.get(tid);
+    if (tip != null) {
+      return jvmManager.getPid(tip.getTaskRunner());  
     }
-    return pidFileName;
+    return null;
   }
   
   public long getProtocolVersion(String protocol, 
@@ -1787,11 +1759,9 @@ public class TaskTracker
   }
   
   void addToMemoryManager(TaskAttemptID attemptId, 
-                          JobConf conf, 
-                          String pidFile) {
+                          JobConf conf) {
     if (isTaskMemoryManagerEnabled()) {
-      taskMemoryManager.addTask(attemptId, 
-        getVirtualMemoryForTask(conf), pidFile);
+      taskMemoryManager.addTask(attemptId, getVirtualMemoryForTask(conf));
     }
   }
 
@@ -2574,8 +2544,13 @@ public class TaskTracker
   /**
    * Called upon startup by the child process, to fetch Task data.
    */
-  public synchronized JvmTask getTask(JVMId jvmId) 
+  public synchronized JvmTask getTask(JvmContext context) 
   throws IOException {
+    JVMId jvmId = context.jvmId;
+    
+    // save pid of task JVM sent by child
+    jvmManager.setPidToJvm(jvmId, context.pid);
+    
     LOG.debug("JVM with ID : " + jvmId + " asked for a task");
     if (!jvmManager.isJvmKnown(jvmId)) {
       LOG.info("Killing unknown JVM " + jvmId);

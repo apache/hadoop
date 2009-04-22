@@ -368,16 +368,7 @@ abstract class TaskRunner extends Thread {
       vargs.add(Integer.toString(address.getPort())); 
       vargs.add(taskid.toString());                      // pass task identifier
 
-      String pidFile = "";
-      if (!Shell.WINDOWS) {
-        pidFile = lDirAlloc.getLocalPathForWrite(
-            (TaskTracker.getPidFile(t.getJobID().toString(),
-               t.getTaskID().toString(), t.isTaskCleanupTask())),
-            this.conf).toString();
-        t.setPidFile(pidFile);
-      }
-      
-      tracker.addToMemoryManager(t.getTaskID(), conf, pidFile);
+      tracker.addToMemoryManager(t.getTaskID(), conf);
 
       // set memory limit using ulimit if feasible and necessary ...
       String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);
@@ -410,7 +401,7 @@ abstract class TaskRunner extends Thread {
       env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
       jvmManager.launchJvm(this, 
           jvmManager.constructJvmEnv(setup,vargs,stdout,stderr,logSize, 
-              workDir, env, pidFile, conf));
+              workDir, env, conf));
       synchronized (lock) {
         while (!done) {
           lock.wait();

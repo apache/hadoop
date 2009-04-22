@@ -431,6 +431,10 @@ Trunk (unreleased changes)
     HADOOP-5650. Fix safemode messages in the Namenode log.  (Suresh Srinivas
     via szetszwo)
 
+    HADOOP-5488. Removes the pidfile management for the Task JVM from the framework 
+    and instead passes the PID back and forth between the TaskTracker and the Task 
+    processes. (Ravi Gummadi via ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

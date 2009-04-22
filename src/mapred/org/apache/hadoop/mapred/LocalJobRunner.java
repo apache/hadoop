@@ -268,8 +268,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     // TaskUmbilicalProtocol methods
 
-    public JvmTask getTask(JVMId jvmId) { return null; }
-
+    public JvmTask getTask(JvmContext context) { return null; }
+    
     public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
     throws IOException, InterruptedException {
       LOG.info(taskStatus.getStateString());

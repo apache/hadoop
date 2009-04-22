@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.util;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -61,10 +58,21 @@ public class ProcessTree {
    * in the current thread
    * @param pid Process id(OR process group id) of to-be-deleted-process
    * @param isProcessGroup Is pid a process group id of to-be-deleted-processes
+   * @param sleepTimeBeforeSigKill wait time before sending SIGKILL after
+   *  sending SIGTERM
    */
-  private static void sigKillInCurrentThread(String pid, boolean isProcessGroup) {
-    // Kill the process tree with SIGKILL if it is still alive
-    if (ProcessTree.isAlive(pid)) {
+  private static void sigKillInCurrentThread(String pid, boolean isProcessGroup,
+      long sleepTimeBeforeSigKill) {
+    // Kill the subprocesses of root process(even if the root process is not
+    // alive) if process group is to be killed.
+    if (isProcessGroup || ProcessTree.isAlive(pid)) {
+      try {
+        // Sleep for some time before sending SIGKILL
+        Thread.sleep(sleepTimeBeforeSigKill);
+      } catch (InterruptedException i) {
+        LOG.warn("Thread sleep is interrupted.");
+      }
+
       ShellCommandExecutor shexec = null;
 
       try {
@@ -112,7 +120,7 @@ public class ProcessTree {
       sigKillThread.start();
     }
     else {
-      sigKillInCurrentThread(pid, isProcessGroup);
+      sigKillInCurrentThread(pid, isProcessGroup, sleeptimeBeforeSigkill);
     }
   }
 
@@ -186,50 +194,6 @@ public class ProcessTree {
     }
   }
 
-  /**
-   * Get PID from a pid-file.
-   *
-   * @param pidFileName
-   *          Name of the pid-file.
-   * @return the PID string read from the pid-file. Returns null if the
-   *         pidFileName points to a non-existing file or if read fails from
-   *         the file.
-   */
-  public static String getPidFromPidFile(String pidFileName) {
-    BufferedReader pidFile = null;
-    FileReader fReader = null;
-    String pid = null;
-
-    try {
-      fReader = new FileReader(pidFileName);
-      pidFile = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
-      LOG.debug("PidFile doesn't exist : " + pidFileName);
-      return pid;
-    }
-
-    try {
-      pid = pidFile.readLine();
-    } catch (IOException i) {
-      LOG.error("Failed to read from " + pidFileName);
-    } finally {
-      try {
-        if (fReader != null) {
-          fReader.close();
-        }
-        try {
-          if (pidFile != null) {
-            pidFile.close();
-          }
-        } catch (IOException i) {
-          LOG.warn("Error closing the stream " + pidFile);
-        }
-      } catch (IOException i) {
-        LOG.warn("Error closing the stream " + fReader);
-      }
-    }
-    return pid;
-  }
 
   /**
    * Is the process with PID pid still alive?
@@ -256,9 +220,6 @@ public class ProcessTree {
    * Helper thread class that kills process-tree with SIGKILL in background
    */
   static class SigKillThread extends Thread {
-    private static final Log LOG = LogFactory
-               .getLog("SigKillThread.class");
-
     private String pid = null;
     private boolean isProcessGroup = false;
 
@@ -272,14 +233,7 @@ public class ProcessTree {
     }
 
     public void run() {
-      try {
-        // Sleep for some time before sending SIGKILL
-        Thread.sleep(sleepTimeBeforeSigKill);
-      } catch (InterruptedException i) {
-        LOG.warn("Thread sleep is interrupted.");
-      }
-
-      sigKillInCurrentThread(pid, isProcessGroup);
+      sigKillInCurrentThread(pid, isProcessGroup, sleepTimeBeforeSigKill);
     }
   }
 }
