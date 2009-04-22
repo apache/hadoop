@@ -13,14 +13,14 @@ module Formatter
 
     attr_reader :rowCount
 
-    def header(args = [])
-      row(args, false) if args.length > 0
+    def header(args = [], widths = [])
+      row(args, false, widths) if args.length > 0
       @rowCount = 0
     end
     
     # Output a row.
     # Inset is whether or not to offset row by a space.
-    def row(args = [], inset = true)
+    def row(args = [], inset = true, widths = [])
       if not args or args.length == 0
         # Print out nothing
         return
@@ -38,8 +38,8 @@ module Formatter
           puts
         end
       elsif args.length == 2
-        col1width = @maxWidth / 4
-        col2width = @maxWidth - col1width - 2
+        col1width = (not widths or widths.length == 0) ? @maxWidth / 4 : @maxWidth * widths[0] / 100
+        col2width = (not widths or widths.length < 2) ? @maxWidth - col1width - 2 : @maxWidth * widths[1] / 100 - 2
         splits1 = split(col1width, dump(args[0]))
         splits2 = split(col2width, dump(args[1]))
         biggest = (splits2.length > splits1.length)? splits2.length: splits1.length

@@ -147,6 +147,8 @@ Release 0.20.0 - Unreleased
                (Nitay Joffe via Andrew Purtell)
    HBASE-1309  HFile rejects key in Memcache with empty value
    HBASE-1331  Lower the default scanner caching value
+   HBASE-1235  Add table enabled status to shell and UI
+               (Lars George via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

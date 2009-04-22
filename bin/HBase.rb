@@ -57,13 +57,13 @@ module HBase
 
     def describe(tableName)
       now = Time.now 
-      @formatter.header(["FAMILIES", "ENABLED"])
+      @formatter.header(["DESCRIPTION", "ENABLED"], [64])
       found = false
       tables = @admin.listTables().to_a
       tables.push(HTableDescriptor::META_TABLEDESC, HTableDescriptor::ROOT_TABLEDESC)
       for t in tables
         if t.getNameAsString() == tableName
-          @formatter.row([t.to_s, "%s" % [@admin.isTableEnabled(tableName)]])
+          @formatter.row([t.to_s, "%s" % [@admin.isTableEnabled(tableName)]], true, [64])
           found = true
         end
       end
