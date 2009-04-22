@@ -435,6 +435,13 @@ Trunk (unreleased changes)
     and instead passes the PID back and forth between the TaskTracker and the Task 
     processes. (Ravi Gummadi via ddas)
 
+Release 0.20.1 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-5688. Fix HftpFileSystem checksum path construction. (Tsz Wo
+    (Nicholas) Sze via cdouglas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
