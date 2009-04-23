@@ -20,8 +20,9 @@ package org.apache.hadoop.mapred.join;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
-
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 public class TestTupleWritable extends TestCase {
 
@@ -58,7 +60,35 @@ public class TestTupleWritable extends TestCase {
     }
     return ret;
   }
-
+  
+  private Writable[] makeRandomWritables() {
+    Random r = new Random();
+    Writable[] writs = {
+      new BooleanWritable(r.nextBoolean()),
+      new FloatWritable(r.nextFloat()),
+      new FloatWritable(r.nextFloat()),
+      new IntWritable(r.nextInt()),
+      new LongWritable(r.nextLong()),
+      new BytesWritable("dingo".getBytes()),
+      new LongWritable(r.nextLong()),
+      new IntWritable(r.nextInt()),
+      new BytesWritable("yak".getBytes()),
+      new IntWritable(r.nextInt())
+    };
+    return writs;
+  }
+  
+  private Writable[] makeRandomWritables(int numWrits)
+  {
+    Writable[] writs = makeRandomWritables();
+    Writable[] manyWrits = new Writable[numWrits];
+    for (int i =0; i<manyWrits.length; i++)
+    {
+      manyWrits[i] = writs[i%writs.length];
+    }
+    return manyWrits;
+  }
+  
   private int verifIter(Writable[] writs, TupleWritable t, int i) {
     for (Writable w : t) {
       if (w instanceof TupleWritable) {
@@ -132,6 +162,65 @@ public class TestTupleWritable extends TestCase {
     assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
   }
 
+  public void testWideWritable() throws Exception {
+    Writable[] manyWrits = makeRandomWritables(131);
+    
+    TupleWritable sTuple = new TupleWritable(manyWrits);
+    for (int i =0; i<manyWrits.length; i++)
+    {
+      if (i % 3 == 0) {
+        sTuple.setWritten(i);
+      }
+    }
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    sTuple.write(new DataOutputStream(out));
+    ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+    TupleWritable dTuple = new TupleWritable();
+    dTuple.readFields(new DataInputStream(in));
+    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertEquals("All tuple data has not been read from the stream",-1,in.read());
+  }
+  
+  public void testWideWritable2() throws Exception {
+    Writable[] manyWrits = makeRandomWritables(71);
+    
+    TupleWritable sTuple = new TupleWritable(manyWrits);
+    for (int i =0; i<manyWrits.length; i++)
+    {
+      sTuple.setWritten(i);
+    }
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    sTuple.write(new DataOutputStream(out));
+    ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+    TupleWritable dTuple = new TupleWritable();
+    dTuple.readFields(new DataInputStream(in));
+    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertEquals("All tuple data has not been read from the stream",-1,in.read());
+  }
+  
+  /**
+   * Tests a tuple writable with more than 64 values and the values set written
+   * spread far apart.
+   */
+  public void testSparseWideWritable() throws Exception {
+    Writable[] manyWrits = makeRandomWritables(131);
+    
+    TupleWritable sTuple = new TupleWritable(manyWrits);
+    for (int i =0; i<manyWrits.length; i++)
+    {
+      if (i % 65 == 0) {
+        sTuple.setWritten(i);
+      }
+    }
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    sTuple.write(new DataOutputStream(out));
+    ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+    TupleWritable dTuple = new TupleWritable();
+    dTuple.readFields(new DataInputStream(in));
+    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertEquals("All tuple data has not been read from the stream",-1,in.read());
+  }
+  
   public void testWideTuple() throws Exception {
     Text emptyText = new Text("Should be empty");
     Writable[] values = new Writable[64];
@@ -169,6 +258,118 @@ public class TestTupleWritable extends TestCase {
       else {
         assertFalse("Tuple position is incorrectly labelled as set: " + pos, has);
       }
+    }
+  }
+  
+  /**
+   * Tests that we can write more than 64 values.
+   */
+  public void testWideTupleBoundary() throws Exception {
+    Text emptyText = new Text("Should not be set written");
+    Writable[] values = new Writable[65];
+    Arrays.fill(values,emptyText);
+    values[64] = new Text("Should be the only value set written");
+                                     
+    TupleWritable tuple = new TupleWritable(values);
+    tuple.setWritten(64);
+    
+    for (int pos=0; pos<tuple.size();pos++) {
+      boolean has = tuple.has(pos);
+      if (pos == 64) {
+        assertTrue(has);
+      }
+      else {
+        assertFalse("Tuple position is incorrectly labelled as set: " + pos, has);
+      }
+    }
+  }
+  
+  /**
+   * Tests compatibility with pre-0.21 versions of TupleWritable
+   */
+  public void testPreVersion21Compatibility() throws Exception {
+    Writable[] manyWrits = makeRandomWritables(64);
+    PreVersion21TupleWritable oldTuple = new PreVersion21TupleWritable(manyWrits);
+    
+    for (int i =0; i<manyWrits.length; i++) {
+      if (i % 3 == 0) {
+        oldTuple.setWritten(i);
+      }
+    }
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    oldTuple.write(new DataOutputStream(out));
+    ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+    TupleWritable dTuple = new TupleWritable();
+    dTuple.readFields(new DataInputStream(in));
+    assertTrue("Tuple writable is unable to read pre-0.21 versions of TupleWritable", oldTuple.isCompatible(dTuple));
+    assertEquals("All tuple data has not been read from the stream",-1,in.read());
+  }
+  
+  public void testPreVersion21CompatibilityEmptyTuple() throws Exception {
+    Writable[] manyWrits = new Writable[0];
+    PreVersion21TupleWritable oldTuple = new PreVersion21TupleWritable(manyWrits);
+    // don't set any values written
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    oldTuple.write(new DataOutputStream(out));
+    ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+    TupleWritable dTuple = new TupleWritable();
+    dTuple.readFields(new DataInputStream(in));
+    assertTrue("Tuple writable is unable to read pre-0.21 versions of TupleWritable", oldTuple.isCompatible(dTuple));
+    assertEquals("All tuple data has not been read from the stream",-1,in.read());
+  }
+  
+  /**
+   * Writes to the DataOutput stream in the same way as pre-0.21 versions of
+   * {@link TupleWritable#write(DataOutput)}
+   */
+  private static class PreVersion21TupleWritable {
+    
+    private Writable[] values;
+    private long written = 0L;
+
+    private PreVersion21TupleWritable(Writable[] vals) {
+      written = 0L;
+      values = vals;
+    }
+        
+    private void setWritten(int i) {
+      written |= 1L << i;
+    }
+
+    private boolean has(int i) {
+      return 0 != ((1L << i) & written);
+    }
+    
+    private void write(DataOutput out) throws IOException {
+      WritableUtils.writeVInt(out, values.length);
+      WritableUtils.writeVLong(out, written);
+      for (int i = 0; i < values.length; ++i) {
+        Text.writeString(out, values[i].getClass().getName());
+      }
+      for (int i = 0; i < values.length; ++i) {
+        if (has(i)) {
+          values[i].write(out);
+        }
+      }
+    }
+    
+    public int size() {
+      return values.length;
+    }
+    
+    public boolean isCompatible(TupleWritable that) {
+      if (this.size() != that.size()) {
+        return false;
+      }      
+      for (int i = 0; i < values.length; ++i) {
+        if (has(i)!=that.has(i)) {
+          return false;
+        }
+        if (has(i) && !values[i].equals(that.get(i))) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 }

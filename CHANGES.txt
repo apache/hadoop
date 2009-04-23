@@ -253,6 +253,9 @@ Trunk (unreleased changes)
     HADOOP-5705. Improve TotalOrderPartitioner efficiency by updating the trie
     construction. (Dick King via cdouglas)
 
+    HADOOP-5589. Eliminate source limit of 64 for map-side joins imposed by
+    TupleWritable encoding. (Jingkei Ly via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

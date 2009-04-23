@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred.join;
 import java.io.DataOutput;
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.BitSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -42,20 +43,22 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class TupleWritable implements Writable, Iterable<Writable> {
 
-  private long written;
+  private BitSet written;
   private Writable[] values;
 
   /**
    * Create an empty tuple with no allocated storage for writables.
    */
-  public TupleWritable() { }
+  public TupleWritable() {
+    written = new BitSet(0);
+  }
 
   /**
    * Initialize tuple with storage; unknown whether any of them contain
    * &quot;written&quot; values.
    */
   public TupleWritable(Writable[] vals) {
-    written = 0L;
+    written = new BitSet(vals.length);
     values = vals;
   }
 
@@ -63,7 +66,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    * Return true if tuple has an element at the position provided.
    */
   public boolean has(int i) {
-    return 0 != ((1L << i) & written);
+    return written.get(i);
   }
 
   /**
@@ -86,7 +89,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
   public boolean equals(Object other) {
     if (other instanceof TupleWritable) {
       TupleWritable that = (TupleWritable)other;
-      if (this.size() != that.size() || this.written != that.written) {
+      if (!this.written.equals(that.written)) {
         return false;
       }
       for (int i = 0; i < values.length; ++i) {
@@ -102,7 +105,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
 
   public int hashCode() {
     assert false : "hashCode not designed";
-    return (int)written;
+    return written.hashCode();
   }
 
   /**
@@ -113,24 +116,22 @@ public class TupleWritable implements Writable, Iterable<Writable> {
   public Iterator<Writable> iterator() {
     final TupleWritable t = this;
     return new Iterator<Writable>() {
-      long i = written;
-      long last = 0L;
+      int bitIndex = written.nextSetBit(0);
       public boolean hasNext() {
-        return 0L != i;
+        return bitIndex >= 0;
       }
       public Writable next() {
-        last = Long.lowestOneBit(i);
-        if (0 == last)
+        int returnIndex = bitIndex;
+        if (returnIndex < 0)
           throw new NoSuchElementException();
-        i ^= last;
-        // numberOfTrailingZeros rtn 64 if lsb set
-        return t.get(Long.numberOfTrailingZeros(last) % 64);
+        bitIndex = written.nextSetBit(bitIndex+1);
+        return t.get(returnIndex);
       }
       public void remove() {
-        t.written ^= last;
-        if (t.has(Long.numberOfTrailingZeros(last))) {
+        if (!written.get(bitIndex)) {
           throw new IllegalStateException("Attempt to remove non-existent val");
         }
+        written.clear(bitIndex);
       }
     };
   }
@@ -162,7 +163,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    */
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, values.length);
-    WritableUtils.writeVLong(out, written);
+    writeBitSet(out, values.length, written);
     for (int i = 0; i < values.length; ++i) {
       Text.writeString(out, values[i].getClass().getName());
     }
@@ -180,7 +181,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
   public void readFields(DataInput in) throws IOException {
     int card = WritableUtils.readVInt(in);
     values = new Writable[card];
-    written = WritableUtils.readVLong(in);
+    readBitSet(in, card, written);
     Class<? extends Writable>[] cls = new Class[card];
     try {
       for (int i = 0; i < card; ++i) {
@@ -205,7 +206,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    * Record that the tuple contains an element at the position provided.
    */
   void setWritten(int i) {
-    written |= 1L << i;
+    written.set(i);
   }
 
   /**
@@ -213,7 +214,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    * provided.
    */
   void clearWritten(int i) {
-    written &= -1 ^ (1L << i);
+    written.clear(i);
   }
 
   /**
@@ -221,7 +222,67 @@ public class TupleWritable implements Writable, Iterable<Writable> {
    * releasing storage.
    */
   void clearWritten() {
-    written = 0L;
+    written.clear();
   }
 
+  /**
+   * Writes the bit set to the stream. The first 64 bit-positions of the bit set
+   * are written as a VLong for backwards-compatibility with older versions of
+   * TupleWritable. All bit-positions >= 64 are encoded as a byte for every 8
+   * bit-positions.
+   */
+  private static final void writeBitSet(DataOutput stream, int nbits, BitSet bitSet)
+      throws IOException {
+    long bits = 0L;
+        
+    int bitSetIndex = bitSet.nextSetBit(0);
+    for (;bitSetIndex >= 0 && bitSetIndex < Long.SIZE;
+            bitSetIndex=bitSet.nextSetBit(bitSetIndex+1)) {
+      bits |= 1L << bitSetIndex;
+    }
+    WritableUtils.writeVLong(stream,bits);
+    
+    if (nbits > Long.SIZE) {
+      bits = 0L;
+      for (int lastWordWritten = 0; bitSetIndex >= 0 && bitSetIndex < nbits; 
+              bitSetIndex = bitSet.nextSetBit(bitSetIndex+1)) {
+        int bitsIndex = bitSetIndex % Byte.SIZE;
+        int word = (bitSetIndex-Long.SIZE) / Byte.SIZE;
+        if (word > lastWordWritten) {
+          stream.writeByte((byte)bits);
+          bits = 0L;
+          for (lastWordWritten++;lastWordWritten<word;lastWordWritten++) {
+            stream.writeByte((byte)bits);
+          }
+        }
+        bits |= 1L << bitsIndex;
+      }
+      stream.writeByte((byte)bits);
+    }
+  }
+
+  /**
+   * Reads a bitset from the stream that has been written with
+   * {@link #writeBitSet(DataOutput, int, BitSet)}.
+   */
+  private static final void readBitSet(DataInput stream, int nbits, 
+      BitSet bitSet) throws IOException {
+    bitSet.clear();
+    long initialBits = WritableUtils.readVLong(stream);
+    long last = 0L;
+    while (0L != initialBits) {
+      last = Long.lowestOneBit(initialBits);
+      initialBits ^= last;
+      bitSet.set(Long.numberOfTrailingZeros(last));
+    }
+    
+    for (int offset=Long.SIZE; offset < nbits; offset+=Byte.SIZE) {
+      byte bits = stream.readByte();
+      while (0 != bits) {
+        last = Long.lowestOneBit(bits);
+        bits ^= last;
+        bitSet.set(Long.numberOfTrailingZeros(last) + offset);
+      }
+    }
+  }
 }
