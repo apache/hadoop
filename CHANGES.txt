@@ -84,6 +84,8 @@ Release 0.20.0 - Unreleased
    HBASE-1338  lost use of compaction.dir; we were compacting into live store
                subdirectory
    HBASE-1058  Prevent runaway compactions
+   HBASE-1292  php thrift's getRow() would throw an exception if the row does
+               not exist (Rong-en Fan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
