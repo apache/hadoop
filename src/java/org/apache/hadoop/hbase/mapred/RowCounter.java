@@ -22,18 +22,15 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
@@ -45,36 +42,41 @@ import org.apache.hadoop.util.ToolRunner;
  * Map outputs table rows IF the input row has columns that have content.  
  * Uses an {@link IdentityReducer}
  */
-public class RowCounter
-extends MapReduceBase
-implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
-  /* Name of this 'program'
-   */
+public class RowCounter extends Configured implements Tool {
+  // Name of this 'program'
   static final String NAME = "rowcounter";
-  
-  private Configuration conf;
-  private final RowResult EMPTY_RESULT_VALUE = 
-        new RowResult(Bytes.toBytes("dummy"),new HbaseMapWritable<byte [], Cell>());
-  private static enum Counters {ROWS}
-  
-  public void map(ImmutableBytesWritable row, RowResult value,
-    OutputCollector<ImmutableBytesWritable, RowResult> output,
-    Reporter reporter)
-  throws IOException {
-    boolean content = false;
-    for (Map.Entry<byte [], Cell> e: value.entrySet()) {
-      Cell cell = e.getValue();
-      if (cell != null && cell.getValue().length > 0) {
-        content = true;
-        break;
+
+  static class RowCounterMapper
+  implements TableMap<ImmutableBytesWritable, RowResult> {
+    private static enum Counters {ROWS}
+
+    public void map(ImmutableBytesWritable row, RowResult value,
+        OutputCollector<ImmutableBytesWritable, RowResult> output,
+        Reporter reporter)
+    throws IOException {
+      boolean content = false;
+      for (Map.Entry<byte [], Cell> e: value.entrySet()) {
+        Cell cell = e.getValue();
+        if (cell != null && cell.getValue().length > 0) {
+          content = true;
+          break;
+        }
       }
+      if (!content) {
+        // Don't count rows that are all empty values.
+        return;
+      }
+      // Give out same value every time.  We're only interested in the row/key
+      reporter.incrCounter(Counters.ROWS, 1);
     }
-    if (!content) {
-      return;
+
+    public void configure(JobConf jc) {
+      // Nothing to do.
     }
-    // Give out same value every time.  We're only interested in the row/key
-    reporter.incrCounter(Counters.ROWS, 1);
-    output.collect(row, EMPTY_RESULT_VALUE);
+
+    public void close() throws IOException {
+      // Nothing to do.
+    }
   }
 
   /**
@@ -83,7 +85,7 @@ implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
    * @throws IOException
    */
   public JobConf createSubmittableJob(String[] args) throws IOException {
-    JobConf c = new JobConf(getConf(), RowCounter.class);
+    JobConf c = new JobConf(getConf(), getClass());
     c.setJobName(NAME);
     // Columns are space delimited
     StringBuilder sb = new StringBuilder();
@@ -95,9 +97,9 @@ implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
       sb.append(args[i]);
     }
     // Second argument is the table name.
-    TableMapReduceUtil.initTableMapJob(args[1], sb.toString(), this.getClass(),
-      ImmutableBytesWritable.class, RowResult.class, c);
-    c.setReducerClass(IdentityReducer.class);
+    TableMapReduceUtil.initTableMapJob(args[1], sb.toString(),
+      RowCounterMapper.class, ImmutableBytesWritable.class, RowResult.class, c);
+    c.setNumReduceTasks(0);
     // First arg is the output directory.
     FileOutputFormat.setOutputPath(c, new Path(args[0]));
     return c;
@@ -117,14 +119,6 @@ implements TableMap<ImmutableBytesWritable, RowResult>, Tool {
     }
     JobClient.runJob(createSubmittableJob(args));
     return 0;
-  }
-
-  public Configuration getConf() {
-    return this.conf;
-  }
-
-  public void setConf(final Configuration c) {
-    this.conf = c;
   }
 
   /**
