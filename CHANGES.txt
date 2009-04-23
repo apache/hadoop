@@ -2,7 +2,27 @@ Hadoop Change Log
 
 Release 0.20.1 - Unreleased
 
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
   BUG FIXES
+
+    HADOOP-5691. Makes org.apache.hadoop.mapreduce.Reducer concrete class 
+    instead of abstract. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5646. Fixes a problem in TestQueueCapacities. 
+    (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-5655. TestMRServerPorts fails on java.net.BindException. (Devaraj
+    Das via hairong)
+
+    HADOOP-5654. TestReplicationPolicy.<init> fails on java.net.BindException.
+    (hairong)
 
     HADOOP-5688. Fix HftpFileSystem checksum path construction. (Tsz Wo
     (Nicholas) Sze via cdouglas)
@@ -875,18 +895,6 @@ Release 0.20.0 - 2009-04-15
 
     HADOOP-5645. After HADOOP-4920 we need a place to checkin
     releasenotes.html. (nigel)
-
-    HADOOP-5654. TestReplicationPolicy.<init> fails on java.net.BindException.
-    (hairong)
-
-    HADOOP-5655. TestMRServerPorts fails on java.net.BindException. (Devaraj
-    Das via hairong)
-
-    HADOOP-5646. Fixes a problem in TestQueueCapacities. 
-    (Vinod Kumar Vavilapalli via ddas)
-
-    HADOOP-5691. Makes org.apache.hadoop.mapreduce.Reducer concrete class 
-    instead of abstract. (Amareshwari Sriramadasu via sharad)
 
 Release 0.19.2 - Unreleased
 
