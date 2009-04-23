@@ -434,6 +434,9 @@ Trunk (unreleased changes)
 
     HADOOP-5658. Fix Eclipse templates. (Philip Zeyliger via shv)
 
+    HADOOP-5709. Remove redundant synchronization added in HADOOP-5661. (Jothi
+    Padmanabhan via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

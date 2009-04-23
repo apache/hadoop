@@ -128,4 +128,12 @@
        <Method name="getSplits" />
        <Bug pattern="DLS_DEAD_LOCAL_STORE" />
      </Match>
+    <!--
+      This is a spurious warning. Just ignore
+    -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.MapTask$MapOutputBuffer" />
+       <Field name="kvindex" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
 </FindBugsFilter>
