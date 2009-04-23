@@ -46,7 +46,7 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * A Base for {@link TableInputFormat}s. Receives a {@link HTable}, a
- * {@link Text}[] of input columns and optionally a {@link RowFilterInterface}.
+ * byte[] of input columns and optionally a {@link RowFilterInterface}.
  * Subclasses may use other TableRecordReader implementations.
  * <p>
  * An example of a subclass:

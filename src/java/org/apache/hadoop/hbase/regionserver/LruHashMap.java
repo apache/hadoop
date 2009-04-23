@@ -341,7 +341,7 @@ implements HeapSize, Map<K,V> {
   /**
    * Deletes the mapping for the specified key if it exists.
    *
-   * @param o the key of the entry to be removed from the map
+   * @param key the key of the entry to be removed from the map
    * @return the value associated with the specified key, or null
    * if no mapping exists.
    */

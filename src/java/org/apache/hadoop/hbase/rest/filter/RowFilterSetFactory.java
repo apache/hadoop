@@ -85,7 +85,7 @@ public class RowFilterSetFactory implements FilterFactory {
    * }
    * 
    * @param filter
-   * @return
+   * @return RowFilter
    * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
    */
   protected RowFilterInterface getRowFilter(JSONObject filter)

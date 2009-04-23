@@ -271,7 +271,6 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param c RawComparator to use.
-     * @param c
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,

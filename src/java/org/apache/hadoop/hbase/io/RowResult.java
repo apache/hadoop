@@ -268,7 +268,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   }  
 
   /**
-   * @param r
+   * @param l
    * @return
    * TODO: This is the glue between old way of doing things and the new.
    * Herein we are converting our clean KeyValues to old RowResult.

@@ -1008,13 +1008,14 @@ public class Store implements HConstants {
    * row and timestamp, but not a column name.
    *
    * The returned object should map column names to Cells.
-   * @param origin Where to start searching.  Specifies a row and timestamp.
+   * @param key -  Where to start searching.  Specifies a row.
    * Columns are specified in following arguments.
    * @param columns Can be null which means get all
    * @param columnPattern Can be null.
    * @param numVersions
    * @param versionsCounter Can be null.
    * @param keyvalues
+   * @param now -  Where to start searching.  Specifies a timestamp.
    * @throws IOException
    */
   public void getFull(KeyValue key, final NavigableSet<byte []> columns,

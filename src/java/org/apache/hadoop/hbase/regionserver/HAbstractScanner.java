@@ -80,7 +80,6 @@ public abstract class HAbstractScanner implements InternalScanner {
    * Compare the column family and column key using the matchers. The first one
    * that matches returns true. If no matchers are successful, return false.
    * 
-   * @param family/store key
    * @param kv KeyValue to test
    * @return true if any of the matchers for the column match the column family
    * and the column key.

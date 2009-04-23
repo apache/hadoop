@@ -1787,18 +1787,16 @@ public class SequenceFile {
       return valClass;
     }
 
-    /** Returns true if values are compressed. 
-     * @return
-     */
+    /** @return true if values are compressed. */
     public boolean isCompressed() { return decompress; }
     
-    /** Returns true if records are block-compressed. */
+    /** @return true if records are block-compressed. */
     public boolean isBlockCompressed() { return blockCompressed; }
     
-    /** Returns the compression codec of data in this file. */
+    /** @return the compression codec of data in this file. */
     public CompressionCodec getCompressionCodec() { return codec; }
 
-    /** Returns the metadata object of the file */
+    /** @return the metadata object of the file */
     public Metadata getMetadata() {
       return this.metadata;
     }

@@ -115,12 +115,13 @@ public interface RowFilterInterface extends Writable {
    * but the rest of the row will still get through.
    * 
    * @param rowKey row key to filter on.
-   * @param colunmName column name to filter on
+   * @param columnName column name to filter on
    * @param columnValue column value to filter on
    * @return true if row filtered and should not be processed.
    * @deprecated Use {@link #filterColumn(byte[], int, int, byte[], int, int, byte[], int, int)}
    * instead.
    */
+  @Deprecated
   boolean filterColumn(final byte [] rowKey, final byte [] columnName,
       final byte [] columnValue);
 

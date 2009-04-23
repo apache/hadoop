@@ -161,9 +161,9 @@ public class Bytes {
 
   /**
    * Write a long value out to the specified byte array position.
-   * @param bytes the byte array
-   * @param offset position in the array
-   * @param b byte to write out
+   * @param tgtBytes the byte array
+   * @param tgtOffset position in the array
+   * @param srcBytes byte to write out
    * @return incremented offset
    */
   public static int putBytes(byte[] tgtBytes, int tgtOffset, byte[] srcBytes,
@@ -687,7 +687,7 @@ public class Bytes {
    * @param offset the offset in the key you want to find
    * @param length the length of the key
    * @param comparator a comparator to compare.
-   * @return
+   * @return index of key
    */
   public static int binarySearch(byte [][]arr, byte []key, int offset, int length,
       RawComparator<byte []> comparator) {
