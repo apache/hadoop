@@ -201,12 +201,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
-    Path rootRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO);
-    LOG.info("Root region dir: " + rootRegionDir.toString());
 
     try {
-      // Make sure the root directory exists!
+      // Make sure the hbase root directory exists!
       if (!fs.exists(rootdir)) {
         fs.mkdirs(rootdir); 
         FSUtils.setVersion(fs, rootdir);
@@ -214,7 +211,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         FSUtils.checkVersion(fs, rootdir, true);
       }
 
-      if (!fs.exists(rootRegionDir)) {
+      // Make sure the root region directory exists!
+      if (!FSUtils.rootRegionExists(fs, rootdir)) {
         bootstrap();
       }
     } catch (IOException e) {

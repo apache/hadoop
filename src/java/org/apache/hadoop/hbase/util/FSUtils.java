@@ -33,7 +33,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 /**
@@ -137,7 +139,7 @@ public class FSUtils {
     String version = null;
     if (fs.exists(versionFile)) {
       FSDataInputStream s =
-        fs.open(new Path(rootdir, HConstants.VERSION_FILE_NAME));
+        fs.open(versionFile);
       try {
         version = DataInputStream.readUTF(s);
       } finally {
@@ -156,19 +158,28 @@ public class FSUtils {
    * 
    * @throws IOException
    */
-  public static void checkVersion(FileSystem fs, Path rootdir, boolean message)
-  throws IOException {
+  public static void checkVersion(FileSystem fs, Path rootdir, 
+      boolean message) throws IOException {
     String version = getVersion(fs, rootdir);
-    if (version == null || 
-        version.compareTo(HConstants.FILE_SYSTEM_VERSION) != 0) {
-      // Output on stdout so user sees it in terminal.
-      String msg = "File system needs to be upgraded. Run " +
-        "the '${HBASE_HOME}/bin/hbase migrate' script.";
-      if (message) {
-        System.out.println("WARNING! " + msg);
+    
+    if (version == null) {
+      if (!rootRegionExists(fs, rootdir)) {
+        // rootDir is empty (no version file and no root region)
+        // just create new version file (HBASE-1195)
+        FSUtils.setVersion(fs, rootdir);
+        return;
       }
-      throw new FileSystemVersionException(msg);
+    } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0)
+        return;
+    
+    // version is deprecated require migration
+    // Output on stdout so user sees it in terminal.
+    String msg = "File system needs to be upgraded. Run " +
+      "the '${HBASE_HOME}/bin/hbase migrate' script.";
+    if (message) {
+      System.out.println("WARNING! " + msg);
     }
+    throw new FileSystemVersionException(msg);
   }
   
   /**
@@ -178,11 +189,13 @@ public class FSUtils {
    * @param rootdir
    * @throws IOException
    */
-  public static void setVersion(FileSystem fs, Path rootdir) throws IOException {
+  public static void setVersion(FileSystem fs, Path rootdir) 
+  throws IOException {
     FSDataOutputStream s =
       fs.create(new Path(rootdir, HConstants.VERSION_FILE_NAME));
     s.writeUTF(HConstants.FILE_SYSTEM_VERSION);
     s.close();
+    LOG.debug("Created version file to: " + rootdir.toString());
   }
 
   /**
@@ -236,5 +249,20 @@ public class FSUtils {
       throw new FileNotFoundException(message);
     }
     return rootdir;
+  }
+  
+  /**
+   * Checks if root region exists
+   * 
+   * @param fs file system
+   * @param rootdir root directory of HBase installation
+   * @return true if exists
+   * @throws IOException
+   */
+  public static boolean rootRegionExists(FileSystem fs, Path rootdir)
+  throws IOException {
+    Path rootRegionDir =
+      HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO);
+    return fs.exists(rootRegionDir);
   }
 }
