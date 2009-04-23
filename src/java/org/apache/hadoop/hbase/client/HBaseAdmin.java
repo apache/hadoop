@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -139,7 +138,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Creates a new table
+   * Creates a new table.
+   * Synchronous operation.
    * 
    * @param desc table descriptor for table
    * 
@@ -176,6 +176,7 @@ public class HBaseAdmin {
   
   /**
    * Creates a new table but does not block and wait for it to come online.
+   * Asynchronous operation.
    * 
    * @param desc table descriptor for table
    * 
@@ -200,7 +201,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Deletes a table
+   * Deletes a table.
+   * Synchronous operation.
    * 
    * @param tableName name of table to delete
    * @throws IOException
@@ -210,7 +212,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Deletes a table
+   * Deletes a table.
+   * Synchronous operation.
    * 
    * @param tableName name of table to delete
    * @throws IOException
@@ -287,7 +290,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Brings a table on-line (enables it)
+   * Brings a table on-line (enables it).
+   * Synchronous operation.
    * 
    * @param tableName name of the table
    * @throws IOException
@@ -297,7 +301,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Brings a table on-line (enables it)
+   * Brings a table on-line (enables it).
+   * Synchronous operation.
    * 
    * @param tableName name of the table
    * @throws IOException
@@ -340,6 +345,7 @@ public class HBaseAdmin {
   /**
    * Disables a table (takes it off-line) If it is being served, the master
    * will tell the servers to stop serving it.
+   * Synchronous operation.
    * 
    * @param tableName name of table
    * @throws IOException
@@ -351,6 +357,7 @@ public class HBaseAdmin {
   /**
    * Disables a table (takes it off-line) If it is being served, the master
    * will tell the servers to stop serving it.
+   * Synchronous operation.
    * 
    * @param tableName name of table
    * @throws IOException
@@ -417,7 +424,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Add a column to an existing table
+   * Add a column to an existing table.
+   * Asynchronous operation.
    * 
    * @param tableName name of the table to add column to
    * @param column column descriptor of column to be added
@@ -429,7 +437,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Add a column to an existing table
+   * Add a column to an existing table.
+   * Asynchronous operation.
    * 
    * @param tableName name of the table to add column to
    * @param column column descriptor of column to be added
@@ -449,7 +458,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Delete a column from a table
+   * Delete a column from a table.
+   * Asynchronous operation.
    * 
    * @param tableName name of table
    * @param columnName name of column to be deleted
@@ -461,7 +471,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Delete a column from a table
+   * Delete a column from a table.
+   * Asynchronous operation.
    * 
    * @param tableName name of table
    * @param columnName name of column to be deleted
@@ -481,7 +492,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Modify an existing column family on a table
+   * Modify an existing column family on a table.
+   * Asynchronous operation.
    * 
    * @param tableName name of table
    * @param columnName name of column to be modified
@@ -496,7 +508,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Modify an existing column family on a table
+   * Modify an existing column family on a table.
+   * Asynchronous operation.
    * 
    * @param tableName name of table
    * @param columnName name of column to be modified
@@ -519,6 +532,8 @@ public class HBaseAdmin {
 
   /**
    * Close a region. For expert-admins.
+   * Asynchronous operation.
+   * 
    * @param regionname
    * @param args Optional server name.  Otherwise, we'll send close to the
    * server registered in .META.
@@ -531,6 +546,8 @@ public class HBaseAdmin {
 
   /**
    * Close a region.  For expert-admins.
+   * Asynchronous operation.
+   * 
    * @param regionname
    * @param args Optional server name.  Otherwise, we'll send close to the
    * server registered in .META.
@@ -553,7 +570,9 @@ public class HBaseAdmin {
   }
   
   /**
-   * Flush a table or an individual region
+   * Flush a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -562,7 +581,9 @@ public class HBaseAdmin {
   }
 
   /**
-   * Flush a table or an individual region
+   * Flush a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -571,7 +592,9 @@ public class HBaseAdmin {
   }
 
   /**
-   * Compact a table or an individual region
+   * Compact a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -580,7 +603,9 @@ public class HBaseAdmin {
   }
 
   /**
-   * Compact a table or an individual region
+   * Compact a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -589,7 +614,9 @@ public class HBaseAdmin {
   }
   
   /**
-   * Major compact a table or an individual region
+   * Major compact a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -599,7 +626,9 @@ public class HBaseAdmin {
   }
 
   /**
-   * Major compact a table or an individual region
+   * Major compact a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -609,7 +638,9 @@ public class HBaseAdmin {
   }
 
   /**
-   * Split a table or an individual region
+   * Split a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -618,7 +649,9 @@ public class HBaseAdmin {
   }
 
   /**
-   * Split a table or an individual region
+   * Split a table or an individual region.
+   * Asynchronous operation.
+   * 
    * @param tableNameOrRegionName
    * @throws IOException
    */
@@ -647,6 +680,8 @@ public class HBaseAdmin {
   
   /**
    * Modify an existing table, more IRB friendly version.
+   * Asynchronous operation.
+   * 
    * @param tableName name of table.
    * @param htd modified description of the table
    * @throws IOException
@@ -657,7 +692,8 @@ public class HBaseAdmin {
   }
 
   /**
-   * Modify an existing table
+   * Modify an existing table.
+   * Asynchronous operation.
    * 
    * @param tableName name of table.  May be null if we are operating on a
    * region.
