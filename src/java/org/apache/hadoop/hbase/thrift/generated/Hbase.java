@@ -145,9 +145,10 @@ public class Hbase {
      * 
      * @param tableName name of table
      * @param row row key
-     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+     * @return TRowResult containing the row and map of columns to TCells
+     * @throws NotFound if the row does not exist
      */
-    public TRowResult getRow(byte[] tableName, byte[] row) throws IOError, TException;
+    public TRowResult getRow(byte[] tableName, byte[] row) throws IOError, NotFound, TException;
 
     /**
      * Get the specified columns for the specified table and row at the latest
@@ -156,9 +157,10 @@ public class Hbase {
      * @param tableName name of table
      * @param row row key
      * @param columns List of columns to return, null for all columns
-     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+     * @return TRowResult containing the row and map of columns to TCells
+     * @throws NotFound if the row does not exist
      */
-    public TRowResult getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, TException;
+    public TRowResult getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, NotFound, TException;
 
     /**
      * Get all the data for the specified table and row at the specified
@@ -167,9 +169,10 @@ public class Hbase {
      * @param tableName of table
      * @param row row key
      * @param timestamp timestamp
-     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+     * @return TRowResult containing the row and map of columns to TCells
+     * @throws NotFound if the row does not exist
      */
-    public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
+    public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, NotFound, TException;
 
     /**
      * Get the specified columns for the specified table and row at the specified
@@ -178,9 +181,10 @@ public class Hbase {
      * @param tableName name of table
      * @param row row key
      * @param columns List of columns to return, null for all columns
-     * @return TRowResult containing the row and map of columns to TCells. Map is empty if row does not exist.
+     * @return TRowResult containing the row and map of columns to TCells
+     * @throws NotFound if the row does not exist
      */
-    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException;
+    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, NotFound, TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -865,7 +869,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getVerTs failed: unknown result");
     }
 
-    public TRowResult getRow(byte[] tableName, byte[] row) throws IOError, TException
+    public TRowResult getRow(byte[] tableName, byte[] row) throws IOError, NotFound, TException
     {
       send_getRow(tableName, row);
       return recv_getRow();
@@ -882,7 +886,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public TRowResult recv_getRow() throws IOError, TException
+    public TRowResult recv_getRow() throws IOError, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -899,10 +903,13 @@ public class Hbase {
       if (result.__isset.io) {
         throw result.io;
       }
+      if (result.__isset.nf) {
+        throw result.nf;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRow failed: unknown result");
     }
 
-    public TRowResult getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, TException
+    public TRowResult getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, NotFound, TException
     {
       send_getRowWithColumns(tableName, row, columns);
       return recv_getRowWithColumns();
@@ -920,7 +927,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public TRowResult recv_getRowWithColumns() throws IOError, TException
+    public TRowResult recv_getRowWithColumns() throws IOError, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -937,10 +944,13 @@ public class Hbase {
       if (result.__isset.io) {
         throw result.io;
       }
+      if (result.__isset.nf) {
+        throw result.nf;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowWithColumns failed: unknown result");
     }
 
-    public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException
+    public TRowResult getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, NotFound, TException
     {
       send_getRowTs(tableName, row, timestamp);
       return recv_getRowTs();
@@ -958,7 +968,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public TRowResult recv_getRowTs() throws IOError, TException
+    public TRowResult recv_getRowTs() throws IOError, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -975,10 +985,13 @@ public class Hbase {
       if (result.__isset.io) {
         throw result.io;
       }
+      if (result.__isset.nf) {
+        throw result.nf;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowTs failed: unknown result");
     }
 
-    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException
+    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, NotFound, TException
     {
       send_getRowWithColumnsTs(tableName, row, columns, timestamp);
       return recv_getRowWithColumnsTs();
@@ -997,7 +1010,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public TRowResult recv_getRowWithColumnsTs() throws IOError, TException
+    public TRowResult recv_getRowWithColumnsTs() throws IOError, NotFound, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -1013,6 +1026,9 @@ public class Hbase {
       }
       if (result.__isset.io) {
         throw result.io;
+      }
+      if (result.__isset.nf) {
+        throw result.nf;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowWithColumnsTs failed: unknown result");
     }
@@ -1917,6 +1933,9 @@ public class Hbase {
         } catch (IOError io) {
           result.io = io;
           result.__isset.io = true;
+        } catch (NotFound nf) {
+          result.nf = nf;
+          result.__isset.nf = true;
         }
         oprot.writeMessageBegin(new TMessage("getRow", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1939,6 +1958,9 @@ public class Hbase {
         } catch (IOError io) {
           result.io = io;
           result.__isset.io = true;
+        } catch (NotFound nf) {
+          result.nf = nf;
+          result.__isset.nf = true;
         }
         oprot.writeMessageBegin(new TMessage("getRowWithColumns", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1961,6 +1983,9 @@ public class Hbase {
         } catch (IOError io) {
           result.io = io;
           result.__isset.io = true;
+        } catch (NotFound nf) {
+          result.nf = nf;
+          result.__isset.nf = true;
         }
         oprot.writeMessageBegin(new TMessage("getRowTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1983,6 +2008,9 @@ public class Hbase {
         } catch (IOError io) {
           result.io = io;
           result.__isset.io = true;
+        } catch (NotFound nf) {
+          result.nf = nf;
+          result.__isset.nf = true;
         }
         oprot.writeMessageBegin(new TMessage("getRowWithColumnsTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -5937,11 +5965,13 @@ public class Hbase {
   public final static class getRow_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
+    public NotFound nf;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
+      public boolean nf = false;
     }
 
     public getRow_result() {
@@ -5949,13 +5979,16 @@ public class Hbase {
 
     public getRow_result(
       TRowResult success,
-      IOError io)
+      IOError io,
+      NotFound nf)
     {
       this();
       this.success = success;
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+      this.nf = nf;
+      this.__isset.nf = true;
     }
 
     public boolean equals(Object that) {
@@ -5985,6 +6018,15 @@ public class Hbase {
         if (!(this_present_io && that_present_io))
           return false;
         if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
           return false;
       }
 
@@ -6024,6 +6066,15 @@ public class Hbase {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 2:
+            if (field.type == TType.STRUCT) {
+              this.nf = new NotFound();
+              this.nf.read(iprot);
+              this.__isset.nf = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -6056,6 +6107,15 @@ public class Hbase {
           this.io.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.nf) {
+        if (this.nf != null) {
+          field.name = "nf";
+          field.type = TType.STRUCT;
+          field.id = 2;
+          oprot.writeFieldBegin(field);
+          this.nf.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -6067,6 +6127,8 @@ public class Hbase {
       sb.append(this.success.toString());
       sb.append(",io:");
       sb.append(this.io.toString());
+      sb.append(",nf:");
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -6257,11 +6319,13 @@ public class Hbase {
   public final static class getRowWithColumns_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
+    public NotFound nf;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
+      public boolean nf = false;
     }
 
     public getRowWithColumns_result() {
@@ -6269,13 +6333,16 @@ public class Hbase {
 
     public getRowWithColumns_result(
       TRowResult success,
-      IOError io)
+      IOError io,
+      NotFound nf)
     {
       this();
       this.success = success;
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+      this.nf = nf;
+      this.__isset.nf = true;
     }
 
     public boolean equals(Object that) {
@@ -6305,6 +6372,15 @@ public class Hbase {
         if (!(this_present_io && that_present_io))
           return false;
         if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
           return false;
       }
 
@@ -6344,6 +6420,15 @@ public class Hbase {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 2:
+            if (field.type == TType.STRUCT) {
+              this.nf = new NotFound();
+              this.nf.read(iprot);
+              this.__isset.nf = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -6376,6 +6461,15 @@ public class Hbase {
           this.io.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.nf) {
+        if (this.nf != null) {
+          field.name = "nf";
+          field.type = TType.STRUCT;
+          field.id = 2;
+          oprot.writeFieldBegin(field);
+          this.nf.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -6387,6 +6481,8 @@ public class Hbase {
       sb.append(this.success.toString());
       sb.append(",io:");
       sb.append(this.io.toString());
+      sb.append(",nf:");
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -6559,11 +6655,13 @@ public class Hbase {
   public final static class getRowTs_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
+    public NotFound nf;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
+      public boolean nf = false;
     }
 
     public getRowTs_result() {
@@ -6571,13 +6669,16 @@ public class Hbase {
 
     public getRowTs_result(
       TRowResult success,
-      IOError io)
+      IOError io,
+      NotFound nf)
     {
       this();
       this.success = success;
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+      this.nf = nf;
+      this.__isset.nf = true;
     }
 
     public boolean equals(Object that) {
@@ -6607,6 +6708,15 @@ public class Hbase {
         if (!(this_present_io && that_present_io))
           return false;
         if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
           return false;
       }
 
@@ -6646,6 +6756,15 @@ public class Hbase {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 2:
+            if (field.type == TType.STRUCT) {
+              this.nf = new NotFound();
+              this.nf.read(iprot);
+              this.__isset.nf = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -6678,6 +6797,15 @@ public class Hbase {
           this.io.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.nf) {
+        if (this.nf != null) {
+          field.name = "nf";
+          field.type = TType.STRUCT;
+          field.id = 2;
+          oprot.writeFieldBegin(field);
+          this.nf.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -6689,6 +6817,8 @@ public class Hbase {
       sb.append(this.success.toString());
       sb.append(",io:");
       sb.append(this.io.toString());
+      sb.append(",nf:");
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -6909,11 +7039,13 @@ public class Hbase {
   public final static class getRowWithColumnsTs_result implements TBase, java.io.Serializable   {
     public TRowResult success;
     public IOError io;
+    public NotFound nf;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean io = false;
+      public boolean nf = false;
     }
 
     public getRowWithColumnsTs_result() {
@@ -6921,13 +7053,16 @@ public class Hbase {
 
     public getRowWithColumnsTs_result(
       TRowResult success,
-      IOError io)
+      IOError io,
+      NotFound nf)
     {
       this();
       this.success = success;
       this.__isset.success = true;
       this.io = io;
       this.__isset.io = true;
+      this.nf = nf;
+      this.__isset.nf = true;
     }
 
     public boolean equals(Object that) {
@@ -6957,6 +7092,15 @@ public class Hbase {
         if (!(this_present_io && that_present_io))
           return false;
         if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_nf = true && (this.nf != null);
+      boolean that_present_nf = true && (that.nf != null);
+      if (this_present_nf || that_present_nf) {
+        if (!(this_present_nf && that_present_nf))
+          return false;
+        if (!this.nf.equals(that.nf))
           return false;
       }
 
@@ -6996,6 +7140,15 @@ public class Hbase {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 2:
+            if (field.type == TType.STRUCT) {
+              this.nf = new NotFound();
+              this.nf.read(iprot);
+              this.__isset.nf = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -7028,6 +7181,15 @@ public class Hbase {
           this.io.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.nf) {
+        if (this.nf != null) {
+          field.name = "nf";
+          field.type = TType.STRUCT;
+          field.id = 2;
+          oprot.writeFieldBegin(field);
+          this.nf.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -7039,6 +7201,8 @@ public class Hbase {
       sb.append(this.success.toString());
       sb.append(",io:");
       sb.append(this.io.toString());
+      sb.append(",nf:");
+      sb.append(this.nf.toString());
       sb.append(")");
       return sb.toString();
     }

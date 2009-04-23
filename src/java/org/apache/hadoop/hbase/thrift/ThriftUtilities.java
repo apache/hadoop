@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
+import org.apache.hadoop.hbase.thrift.generated.NotFound;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -99,12 +100,14 @@ public class ThriftUtilities {
    * @param in
    *          Hbase RowResult object
    * @return Thrift TRowResult
+   * @throws NotFound
    */
-  static public TRowResult rowResultFromHBase(RowResult in) {
-    TRowResult result = new TRowResult();
+  static public TRowResult rowResultFromHBase(RowResult in)
+      throws NotFound {
     if(in == null) {
-    	return null;
+      throw new NotFound();
     }
+    TRowResult result = new TRowResult();
     result.row = in.getRow();
     result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], Cell> entry : in.entrySet()){

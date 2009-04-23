@@ -267,25 +267,25 @@ public class ThriftServer {
     }
     
     public TRowResult getRow(byte[] tableName, byte[] row)
-        throws IOError {
+        throws IOError, NotFound {
       return getRowWithColumnsTs(tableName, row, null,
                                  HConstants.LATEST_TIMESTAMP);
     }
     
     public TRowResult getRowWithColumns(byte[] tableName, byte[] row,
-        List<byte[]> columns) throws IOError {
+        List<byte[]> columns) throws IOError, NotFound {
       return getRowWithColumnsTs(tableName, row, columns,
                                  HConstants.LATEST_TIMESTAMP);
     }
     
     public TRowResult getRowTs(byte[] tableName, byte[] row,
-        long timestamp) throws IOError {
+        long timestamp) throws IOError, NotFound {
       return getRowWithColumnsTs(tableName, row, null,
                                  timestamp);
     }
     
     public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row,
-        List<byte[]> columns, long timestamp) throws IOError {
+        List<byte[]> columns, long timestamp) throws IOError, NotFound {
       try {
         HTable table = getTable(tableName);
         if (columns == null) {

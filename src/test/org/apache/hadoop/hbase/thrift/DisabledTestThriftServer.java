@@ -166,7 +166,13 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
       failed2 = true;
     }
     assertTrue(failed2);
-    assertNull(handler.getRow(tableAname, rowBname));
+    boolean failed3 = false;
+    try {
+      handler.getRow(tableAname, rowBname);
+    } catch (NotFound nf) {
+      failed3 = true;
+    }
+    assertTrue(failed3);
 
     // Teardown
     handler.disableTable(tableAname);
@@ -236,7 +242,13 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     }
     assertTrue(failed);
     assertTrue(Bytes.equals(handler.get(tableAname, rowAname, columnBname).value, valueCname));
-    assertNull(handler.getRow(tableAname, rowBname));
+    boolean failed2 = false;
+    try {
+      handler.getRow(tableAname, rowBname);
+    } catch (NotFound nf) {
+      failed2 = true;
+    }
+    assertTrue(failed2);
 
     // Teardown
     handler.disableTable(tableAname);
