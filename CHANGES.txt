@@ -83,6 +83,7 @@ Release 0.20.0 - Unreleased
    HBASE-1334  .META. region running into hfile errors (Ryan Rawson via Stack)
    HBASE-1338  lost use of compaction.dir; we were compacting into live store
                subdirectory
+   HBASE-1058  Prevent runaway compactions
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
