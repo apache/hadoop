@@ -405,7 +405,7 @@ public class HTable {
    * Get all the data for the specified row at the latest timestamp
    * 
    * @param row row key
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final String row) throws IOException {
@@ -416,7 +416,7 @@ public class HTable {
    * Get all the data for the specified row at the latest timestamp
    * 
    * @param row row key
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte [] row) throws IOException {
@@ -428,7 +428,7 @@ public class HTable {
    * 
    * @param row row key
    * @param numVersions number of versions to return
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final String row, final int numVersions)
@@ -442,7 +442,7 @@ public class HTable {
    * 
    * @param row row key
    * @param numVersions number of versions to return
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte[] row, final int numVersions)
@@ -455,7 +455,7 @@ public class HTable {
    * 
    * @param row row key
    * @param ts timestamp
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final String row, final long ts) 
@@ -468,7 +468,7 @@ public class HTable {
    * 
    * @param row row key
    * @param ts timestamp
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte [] row, final long ts) 
@@ -488,7 +488,7 @@ public class HTable {
    * @param row row key
    * @param timestamp timestamp
    * @param numVersions number of versions to return
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte[] row, final long timestamp,
@@ -501,7 +501,7 @@ public class HTable {
    * 
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final String row, final String [] columns) 
@@ -514,7 +514,7 @@ public class HTable {
    * 
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte [] row, final byte [][] columns) 
@@ -528,7 +528,7 @@ public class HTable {
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param numVersions number of versions to return
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final String row, final String[] columns,
@@ -543,7 +543,7 @@ public class HTable {
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param numVersions number of versions to return
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte[] row, final byte[][] columns,
@@ -557,7 +557,7 @@ public class HTable {
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final String row, final String [] columns, 
@@ -572,7 +572,7 @@ public class HTable {
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte [] row, final byte [][] columns, 
@@ -598,7 +598,7 @@ public class HTable {
    * @param ts timestamp
    * @param numVersions 
    * @param rl row lock
-   * @return RowResult is empty if row does not exist.
+   * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    */
   public RowResult getRow(final byte [] row, final byte [][] columns, 

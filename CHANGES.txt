@@ -154,6 +154,8 @@ Release 0.20.0 - Unreleased
    HBASE-1333  RowCounter updates
    HBASE-1195  If HBase directory exists but version file is inexistent, still
                proceed with bootstrapping (Evgeny Ryabitskiy via Stack)
+   HBASE-1301  HTable.getRow() returns null if the row does no exist
+               (Rong-en Fan via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
