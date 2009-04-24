@@ -31,7 +31,23 @@ public class TestBytes extends TestCase {
       assertEquals(longs[i], Bytes.toLong(b));
     }
   }
-  
+
+  public void testToFloat() throws Exception {
+    float [] floats = {-1f, 123.123f, Float.MAX_VALUE};
+    for (int i = 0; i < floats.length; i++) {
+      byte [] b = Bytes.toBytes(floats[i]);
+      assertEquals(floats[i], Bytes.toFloat(b));
+    }
+  }
+
+  public void testToDouble() throws Exception {
+    double [] doubles = {Double.MIN_VALUE, Double.MAX_VALUE};
+    for (int i = 0; i < doubles.length; i++) {
+      byte [] b = Bytes.toBytes(doubles[i]);
+      assertEquals(doubles[i], Bytes.toDouble(b));
+    }
+  }
+
   public void testBinarySearch() throws Exception {
     byte [][] arr = {
         {1},
@@ -48,12 +64,19 @@ public class TestBytes extends TestCase {
     byte [] key2_2 = {4};
     byte [] key3 = {5,11};
     
-    assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1, Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(0, Bytes.binarySearch(arr, key1, 1, 1, Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(-(2+1), Arrays.binarySearch(arr, key2_2, Bytes.BYTES_COMPARATOR));
-    assertEquals(-(2+1), Bytes.binarySearch(arr, key2, 0, 1, Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(4, Bytes.binarySearch(arr, key2, 1, 1, Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(2, Bytes.binarySearch(arr, key3, 0, 1, Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1, Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1,
+      Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(0, Bytes.binarySearch(arr, key1, 1, 1,
+      Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(-(2+1), Arrays.binarySearch(arr, key2_2,
+      Bytes.BYTES_COMPARATOR));
+    assertEquals(-(2+1), Bytes.binarySearch(arr, key2, 0, 1,
+      Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(4, Bytes.binarySearch(arr, key2, 1, 1,
+      Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(2, Bytes.binarySearch(arr, key3, 0, 1,
+      Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1,
+      Bytes.BYTES_RAWCOMPARATOR));
   }
 }

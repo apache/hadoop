@@ -49,14 +49,19 @@ public class Bytes {
   public static final int SIZEOF_INT = Integer.SIZE/Byte.SIZE;
   
   /**
-   * Size of int in bytes
+   * Size of short in bytes
    */
   public static final int SIZEOF_SHORT = Short.SIZE/Byte.SIZE;
 
   /**
-   * Size of int in bytes
+   * Size of float in bytes
    */
   public static final int SIZEOF_FLOAT = Float.SIZE/Byte.SIZE;
+
+  /**
+   * Size of double in bytes
+   */
+  public static final int SIZEOF_DOUBLE = Double.SIZE/Byte.SIZE;
 
   /**
    * Size of byte in bytes
@@ -78,11 +83,9 @@ public class Bytes {
     public ByteArrayComparator() {
       super();
     }
-    @Override
     public int compare(byte [] left, byte [] right) {
       return compareTo(left, right);
     }
-    @Override
     public int compare(byte [] b1, int s1, int l1, byte [] b2, int s2, int l2) {
       return compareTo(b1, s1, l1, b2, s2, l2);
     }
@@ -95,12 +98,13 @@ public class Bytes {
     new ByteArrayComparator();
 
   /**
-   * Pass this to TreeMaps where byte [] are keys.
+   * Use comparing byte arrays, byte-by-byte
    */
   public static RawComparator<byte []> BYTES_RAWCOMPARATOR =
     new ByteArrayComparator();
   
   /**
+   * Read byte-array written with a WritableableUtils.vint prefix.
    * @param in Input to read from.
    * @return byte array read off <code>in</code>
    * @throws IOException 
@@ -117,6 +121,8 @@ public class Bytes {
   }
   
   /**
+   * Read byte-array written with a WritableableUtils.vint prefix.
+   * IOException is converted to a RuntimeException.
    * @param in Input to read from.
    * @return byte array read off <code>in</code>
    */
@@ -129,6 +135,7 @@ public class Bytes {
   }
 
   /**
+   * Write byte-array with a WritableableUtils.vint prefix.
    * @param out
    * @param b
    * @throws IOException
@@ -139,6 +146,7 @@ public class Bytes {
   }
 
   /**
+   * Write byte-array to out with a vint length prefix.
    * @param out
    * @param b
    * @throws IOException
@@ -150,6 +158,15 @@ public class Bytes {
     out.write(b, offset, length);
   }
 
+  /**
+   * Write byte-array from src to tgt with a vint length prefix.
+   * @param tgt
+   * @param tgtOffset
+   * @param src
+   * @param srcOffset
+   * @param srcLength
+   * @return New offset in src array.
+   */
   public static int writeByteArray(final byte [] tgt, final int tgtOffset,
       final byte [] src, final int srcOffset, final int srcLength) {
     byte [] vint = vintToBytes(srcLength);
@@ -160,7 +177,7 @@ public class Bytes {
   }
 
   /**
-   * Write a long value out to the specified byte array position.
+   * Put bytes at the specified byte array position.
    * @param tgtBytes the byte array
    * @param tgtOffset position in the array
    * @param srcBytes byte to write out
@@ -185,7 +202,7 @@ public class Bytes {
   }
 
   /**
-   * Returns a new byte array, copied from the specified ByteBuffer.
+   * Returns a new byte array, copied from the passed ByteBuffer.
    * @param bb A ByteBuffer
    * @return the byte array
    */
@@ -203,7 +220,13 @@ public class Bytes {
   public static String toString(final byte [] b) {
     return toString(b, 0, b.length);
   }
-  
+
+  /**
+   * @param b Presumed UTF-8 encoded byte array.
+   * @param off
+   * @param len
+   * @return String made from <code>b</code>
+   */
   public static String toString(final byte [] b, int off, int len) {
     String result = null;
     try {
@@ -233,6 +256,7 @@ public class Bytes {
   }
   
   /**
+   * Convert a boolean to a byte array.
    * @param b
    * @return <code>b</code> encoded in a byte array.
    */
@@ -280,6 +304,7 @@ public class Bytes {
   /**
    * Converts a byte array to a long value
    * @param bytes
+   * @param offset
    * @return the long value
    */
   public static long toLong(byte[] bytes, int offset) {
@@ -289,6 +314,8 @@ public class Bytes {
   /**
    * Converts a byte array to a long value
    * @param bytes
+   * @param offset
+   * @param length
    * @return the long value
    */
   public static long toLong(byte[] bytes, int offset, final int length) {
@@ -305,7 +332,7 @@ public class Bytes {
   }
   
   /**
-   * Write a long value out to the specified byte array position.
+   * Put a long value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array
    * @param val long to write out
@@ -322,7 +349,79 @@ public class Bytes {
     bytes[offset] = (byte)(val);
     return offset + SIZEOF_LONG;
   }
-  
+
+  /**
+   * Presumes float encoded as IEEE 754 floating-point "single format"
+   * @param bytes
+   * @return Float made from passed byte array.
+   */
+  public static float toFloat(byte [] bytes) {
+    return toFloat(bytes, 0);
+  }
+
+  /**
+   * Presumes float encoded as IEEE 754 floating-point "single format"
+   * @param bytes
+   * @param offset
+   * @return Float made from passed byte array.
+   */
+  private static float toFloat(byte [] bytes, int offset) {
+    int i = toInt(bytes, offset);
+    return Float.intBitsToFloat(i);
+  }
+
+  /**
+   * @param bytes
+   * @param offset
+   * @param f
+   * @return New offset in <code>bytes</bytes>
+   */
+  public static int putFloat(byte [] bytes, int offset, float f) {
+    int i = Float.floatToRawIntBits(f);
+    return putInt(bytes, offset, i);
+  }
+
+  public static byte [] toBytes(final float f) {
+    // Encode it as int
+    int i = Float.floatToRawIntBits(f);
+    return Bytes.toBytes(i);
+  }
+
+  /**
+   * @param bytes
+   * @return Return double made from passed bytes.
+   */
+  public static double toDouble(final byte [] bytes) {
+    return toDouble(bytes, 0);
+  }
+
+  /**
+   * @param bytes
+   * @param offset
+   * @return Return double made from passed bytes.
+   */
+  public static double toDouble(final byte [] bytes, final int offset) {
+    long l = toLong(bytes, offset);
+    return Double.longBitsToDouble(l);
+  }
+
+  /**
+   * @param bytes
+   * @param offset
+   * @param d
+   * @return New offset into array <code>bytes</code>
+   */
+  public static int putDouble(byte [] bytes, int offset, double d) {
+    long l = Double.doubleToLongBits(d);
+    return putLong(bytes, offset, l);
+  }
+
+  public static byte [] toBytes(final double d) {
+    // Encode it as a long
+    long l = Double.doubleToRawLongBits(d);
+    return Bytes.toBytes(l);
+  }
+
   /**
    * Convert an int value to a byte array
    * @param val
@@ -330,7 +429,7 @@ public class Bytes {
    */
   public static byte[] toBytes(int val) {
     byte [] b = new byte[4];
-    for(int i=3;i>0;i--) {
+    for(int i = 3; i > 0; i--) {
       b[i] = (byte)(val);
       val >>>= 8;
     }
@@ -350,6 +449,7 @@ public class Bytes {
   /**
    * Converts a byte array to an int value
    * @param bytes
+   * @param offset
    * @return the int value
    */
   public static int toInt(byte[] bytes, int offset) {
@@ -359,6 +459,8 @@ public class Bytes {
   /**
    * Converts a byte array to an int value
    * @param bytes
+   * @param offset
+   * @param length
    * @return the int value
    */
   public static int toInt(byte[] bytes, int offset, final int length) {
@@ -375,7 +477,7 @@ public class Bytes {
   }
   
   /**
-   * Write an int value out to the specified byte array position.
+   * Put an int value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array
    * @param val int to write out
@@ -385,7 +487,7 @@ public class Bytes {
     if (bytes == null || (bytes.length - offset < SIZEOF_INT)) {
       return offset;
     }
-    for(int i=offset+3;i>offset;i--) {
+    for(int i= offset+3; i > offset; i--) {
       bytes[i] = (byte)(val);
       val >>>= 8;
     }
@@ -399,7 +501,7 @@ public class Bytes {
    * @return the byte array
    */
   public static byte[] toBytes(short val) {
-    byte[] b = new byte[2];
+    byte[] b = new byte[SIZEOF_SHORT];
     b[1] = (byte)(val);
     val >>>= 8;
     b[0] = (byte)(val);
@@ -442,7 +544,7 @@ public class Bytes {
   }
   
   /**
-   * Write a short value out to the specified byte array position.
+   * Put a short value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array
    * @param val short to write out
@@ -689,14 +791,15 @@ public class Bytes {
    * @param comparator a comparator to compare.
    * @return index of key
    */
-  public static int binarySearch(byte [][]arr, byte []key, int offset, int length,
-      RawComparator<byte []> comparator) {
+  public static int binarySearch(byte [][]arr, byte []key, int offset,
+      int length, RawComparator<byte []> comparator) {
     int low = 0;
     int high = arr.length - 1;
     
     while (low <= high) {
       int mid = (low+high) >>> 1;
-      int cmp = comparator.compare(arr[mid], 0, arr[mid].length, key, offset, length);
+      int cmp = comparator.compare(arr[mid], 0, arr[mid].length, key, offset,
+        length);
       if (cmp < 0) 
         low = mid + 1;
       else if (cmp > 0)

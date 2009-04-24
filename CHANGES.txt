@@ -163,6 +163,8 @@ Release 0.20.0 - Unreleased
    HBASE-1176  Javadocs in HBA should be clear about which functions are
                asynchronous and which are synchronous
                (Evgeny Ryabitskiy via Stack)
+   HBASE-1260  Bytes utility class changes: remove usage of ByteBuffer and
+               provide additional ByteBuffer primitives (Jon Gray via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
