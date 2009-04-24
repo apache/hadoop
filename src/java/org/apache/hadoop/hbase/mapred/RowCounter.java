@@ -46,6 +46,9 @@ public class RowCounter extends Configured implements Tool {
   // Name of this 'program'
   static final String NAME = "rowcounter";
 
+  /**
+   * Mapper that runs the count.
+   */
   static class RowCounterMapper
   implements TableMap<ImmutableBytesWritable, RowResult> {
     private static enum Counters {ROWS}
