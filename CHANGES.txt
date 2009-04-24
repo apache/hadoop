@@ -470,6 +470,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5688. Fix HftpFileSystem checksum path construction. (Tsz Wo
     (Nicholas) Sze via cdouglas)
 
+    HADOOP-4674. Fix fs help messages for -test, -text, -tail, -stat 
+    and -touchz options.  (Ravi Phulari via szetszwo)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
