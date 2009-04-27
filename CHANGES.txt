@@ -167,6 +167,8 @@ Release 0.20.0 - Unreleased
                (Evgeny Ryabitskiy via Stack)
    HBASE-1260  Bytes utility class changes: remove usage of ByteBuffer and
                provide additional ByteBuffer primitives (Jon Gray via Stack)
+   HBASE-1183  New MR splitting algorithm and other new features need a way to
+               split a key range in N chunks (Jon Gray via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

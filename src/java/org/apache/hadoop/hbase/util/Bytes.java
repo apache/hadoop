@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.math.BigInteger;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -749,7 +750,107 @@ public class Bytes {
     return result;
   }
   
+  /**
+   * @param a
+   * @param length
+   * @return First <code>length</code> bytes from <code>a</code>
+   */
+  public static byte [] head(final byte [] a, final int length) {
+    if(a.length < length) return null;
+    byte [] result = new byte[length];
+    System.arraycopy(a, 0, result, 0, length);
+    return result;
+  }
 
+  /**
+   * @param a
+   * @param length
+   * @return Last <code>length</code> bytes from <code>a</code>
+   */
+  public static byte [] tail(final byte [] a, final int length) {
+    if(a.length < length) return null;
+    byte [] result = new byte[length];
+    System.arraycopy(a, a.length - length, result, 0, length);
+    return result;
+  }
+
+  /**
+   * @param a
+   * @param length
+   * @return Value in <code>a</code> plus <code>length</code> prepended 0 bytes
+   */
+  public static byte [] padHead(final byte [] a, final int length) {
+    byte [] padding = new byte[length];
+    for(int i=0;i<length;i++) padding[i] = 0;
+    return add(padding,a);
+  }
+  
+  /**
+   * @param a
+   * @param length
+   * @return Value in <code>a</code> plus <code>length</code> appended 0 bytes
+   */
+  public static byte [] padTail(final byte [] a, final int length) {
+    byte [] padding = new byte[length];
+    for(int i=0;i<length;i++) padding[i] = 0;
+    return add(a,padding);
+  }
+  
+  /**
+   * Split passed range.  Expensive operation relatively.  Uses BigInteger math.
+   * Useful splitting ranges for MapReduce jobs.
+   * @param a Beginning of range
+   * @param b End of range
+   * @param num Number of times to split range.  Pass 1 if you want to split
+   * the range in two; i.e. one split.
+   * @return Array of dividing values
+   */
+  public static byte [][] split(final byte [] a, final byte [] b, final int num) {
+    byte [] aPadded = null;
+    byte [] bPadded = null;
+    if (a.length < b.length) {
+      aPadded = padTail(a,b.length-a.length);
+      bPadded = b;
+    } else if (b.length < a.length) {
+      aPadded = a;
+      bPadded = padTail(b,a.length-b.length);
+    } else {
+      aPadded = a;
+      bPadded = b;
+    }
+    if (compareTo(aPadded,bPadded) > 1) {
+      throw new IllegalArgumentException("b > a");
+    }
+    if (num <= 0) throw new IllegalArgumentException("num cannot be < 0");
+    byte [] prependHeader = {1, 0};
+    BigInteger startBI = new BigInteger(add(prependHeader, aPadded));
+    BigInteger stopBI = new BigInteger(add(prependHeader, bPadded));
+    BigInteger diffBI = stopBI.subtract(startBI);
+    BigInteger splitsBI = BigInteger.valueOf(num + 1);
+    if(diffBI.compareTo(splitsBI) <= 0) return null;
+    BigInteger intervalBI = null;
+    try {
+      intervalBI = diffBI.divide(splitsBI);
+    } catch(Exception e) {
+      return null;
+    }
+
+    byte [][] result = new byte[num+2][];
+    result[0] = a;
+
+    for (int i = 1; i <= num; i++) {
+      BigInteger curBI = startBI.add(intervalBI.multiply(BigInteger.valueOf(i)));
+      byte [] padded = curBI.toByteArray();
+      if (padded[1] == 0)
+        padded = tail(padded,padded.length-2);
+      else
+        padded = tail(padded,padded.length-1);
+      result[i] = padded;
+    }
+    result[num+1] = b;
+    return result;
+  }
+  
   /**
    * @param t
    * @return Array of byte arrays made from passed array of Text

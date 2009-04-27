@@ -24,6 +24,40 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 public class TestBytes extends TestCase {
+  public void testSplit() throws Exception {
+    byte [] lowest = Bytes.toBytes("AAA");
+    byte [] middle = Bytes.toBytes("CCC");
+    byte [] highest = Bytes.toBytes("EEE");
+    byte [][] parts = Bytes.split(lowest, highest, 1);
+    for (int i = 0; i < parts.length; i++) {
+      System.out.println(Bytes.toString(parts[i]));
+    }
+    assertEquals(3, parts.length);
+    assertTrue(Bytes.equals(parts[1], middle));
+    // Now divide into three parts.  Change highest so split is even.
+    highest = Bytes.toBytes("DDD");
+    parts = Bytes.split(lowest, highest, 2);
+    for (int i = 0; i < parts.length; i++) {
+      System.out.println(Bytes.toString(parts[i]));
+    }
+    assertEquals(4, parts.length);
+    // Assert that 3rd part is 'CCC'.
+    assertTrue(Bytes.equals(parts[2], middle));
+  }
+
+  public void testSplit2() throws Exception {
+    // More split tests.
+    byte [] lowest = Bytes.toBytes("http://A");
+    byte [] highest = Bytes.toBytes("http://z");
+    byte [] middle = Bytes.toBytes("http://[");
+    byte [][] parts = Bytes.split(lowest, highest, 1);
+    for (int i = 0; i < parts.length; i++) {
+      System.out.println(Bytes.toString(parts[i]));
+    }
+    assertEquals(2, parts.length);
+    assertTrue(Bytes.equals(parts[1], middle));
+  }
+
   public void testToLong() throws Exception {
     long [] longs = {-1l, 123l, 122232323232l};
     for (int i = 0; i < longs.length; i++) {
