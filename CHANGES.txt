@@ -443,6 +443,9 @@ Trunk (unreleased changes)
     HADOOP-5709. Remove redundant synchronization added in HADOOP-5661. (Jothi
     Padmanabhan via cdouglas)
 
+    HADOOP-5715. Add conf/mapred-queue-acls.xml to the ignore lists.
+    (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
