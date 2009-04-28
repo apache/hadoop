@@ -243,8 +243,26 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   public boolean filterRow(List<KeyValue> results) {
-    if (true) throw new RuntimeException("Not Yet Implemented");
-    return false;
+    boolean resultFound = false;
+    boolean result = operator == Operator.MUST_PASS_ONE;
+    for (RowFilterInterface filter : filters) {
+      if (!resultFound) {
+        if (operator == Operator.MUST_PASS_ALL) {
+          if (filter.filterAllRemaining() || filter.filterRow(results)) {
+            result = true;
+            resultFound = true;
+          }
+        } else if (operator == Operator.MUST_PASS_ONE) {
+          if (!filter.filterAllRemaining() && !filter.filterRow(results)) {
+            result = false;
+            resultFound = true;
+          }
+        }
+      } else if (filter.processAlways()) {
+        filter.filterRow(results);
+      }
+    }
+    return result;
   }
 
   public void readFields(final DataInput in) throws IOException {

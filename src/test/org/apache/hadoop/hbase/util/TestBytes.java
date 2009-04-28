@@ -54,7 +54,7 @@ public class TestBytes extends TestCase {
     for (int i = 0; i < parts.length; i++) {
       System.out.println(Bytes.toString(parts[i]));
     }
-    assertEquals(2, parts.length);
+    assertEquals(3, parts.length);
     assertTrue(Bytes.equals(parts[1], middle));
   }
 

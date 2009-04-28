@@ -36,7 +36,6 @@ import org.apache.hadoop.mapred.JobConfigurable;
  */
 public class TableInputFormat extends TableInputFormatBase implements
     JobConfigurable {
-  @SuppressWarnings("hiding")
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /**

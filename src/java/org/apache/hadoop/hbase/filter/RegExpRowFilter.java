@@ -44,16 +44,16 @@ import org.apache.hadoop.hbase.util.Bytes;
  * 
  * Note that column value filtering in this interface has been replaced by
  * {@link ColumnValueFilter}.
+ * @deprecated This interface doesn't really work well in new KeyValue world.
+ * Needs to be refactored/removed.  Marking it as deprecated till it gets
+ * cleaned up.  Its also inefficient as written.
  */
 public class RegExpRowFilter implements RowFilterInterface {
 
   private Pattern rowKeyPattern = null;
   private String rowKeyRegExp = null;
-
-  @Deprecated
   private Map<byte [], byte[]> equalsMap =
     new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
-  @Deprecated
   private Set<byte []> nullColumns =
     new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
 
@@ -177,10 +177,40 @@ public class RegExpRowFilter implements RowFilterInterface {
 
 
   public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
-      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      byte [] colunmName, int coffset, int clength, byte[] columnValue,
       int voffset, int vlength) {
-    if (true) throw new RuntimeException("Not implemented yet");
+    if (filterRowKey(rowKey, roffset, rlength)) {
+      return true;
+    }
+    byte [] colkey = null;
+    if (filtersByColumnValue()) {
+      colkey = getColKey(colunmName, coffset, clength);
+      byte [] filterValue = equalsMap.get(colkey);
+      if (null != filterValue) {
+        return Bytes.compareTo(filterValue, 0, filterValue.length, columnValue,
+          voffset, vlength) != 0;
+      }
+    }
+    if (colkey == null) {
+      colkey = getColKey(colunmName, coffset, clength);
+    }
+    if (nullColumns.contains(colkey)) {
+      if (columnValue != null /* TODO: FIX!!! && !HLogEdit.isDeleted(data)*/) {
+        return true;
+      }
+    }
     return false;
+  }
+
+  private byte [] getColKey(final byte [] c, final int offset, final int length) {
+    byte [] colkey = null;
+    if (offset == 0) {
+      colkey = c;
+    } else {
+      colkey = new byte [length];
+      System.arraycopy(c, offset, colkey, 0, length);
+    }
+    return colkey;
   }
 
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
@@ -198,12 +228,20 @@ public class RegExpRowFilter implements RowFilterInterface {
     return false;
   }
 
-  public boolean filterRow(List<KeyValue> results) {
-    if (true) throw new RuntimeException("NOT YET IMPLEMENTED");
+  // THIS METHOD IS HORRIDLY EXPENSIVE TO RUN.  NEEDS FIXUP.
+  public boolean filterRow(List<KeyValue> kvs) {
+    for (KeyValue kv: kvs) {
+      byte [] column = kv.getColumn();
+      if (nullColumns.contains(column) && !kv.isDeleteType()) {
+        return true;
+      }
+      if (!equalsMap.containsKey(column)) {
+        return true;
+      }
+    }
     return false;
   }
 
-  @Deprecated
   private boolean filtersByColumnValue() {
     return equalsMap != null && equalsMap.size() > 0;
   }

@@ -90,6 +90,53 @@ public class TestScanner extends HBaseTestCase {
     
   }
 
+  /**
+   * Test basic stop row filter works.
+   * @throws Exception 
+   */
+  public void testStopRow() throws Exception {
+    byte [] startrow = Bytes.toBytes("bbb");
+    byte [] stoprow = Bytes.toBytes("ccc");
+    try {
+      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
+      addContent(this.r, HConstants.COLUMN_FAMILY);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      // Do simple test of getting one row only first.
+      InternalScanner s = r.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
+          Bytes.toBytes("abc"), HConstants.LATEST_TIMESTAMP,
+          new WhileMatchRowFilter(new StopRowFilter(Bytes.toBytes("abd"))));
+      int count = 0;
+      while (s.next(results)) {
+        count++;
+      }
+      s.close();
+      assertEquals(1, count);
+      // Now do something a bit more imvolved.
+      s = r.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
+        startrow, HConstants.LATEST_TIMESTAMP,
+        new WhileMatchRowFilter(new StopRowFilter(stoprow)));
+      count = 0;
+      KeyValue kv = null;
+      results = new ArrayList<KeyValue>();
+      for (boolean first = true; s.next(results);) {
+        kv = results.get(0);
+        if (first) {
+          assertTrue(Bytes.BYTES_COMPARATOR.compare(startrow, kv.getRow()) == 0);
+          first = false;
+        }
+        count++;
+      }
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(stoprow, kv.getRow()) > 0);
+      // We got something back.
+      assertTrue(count > 10);
+      s.close();
+    } finally {
+      this.r.close();
+      this.r.getLog().closeAndDelete();
+      shutdownDfs(this.cluster);
+    }
+  }
+
   /** The test!
    * @throws IOException
    */
@@ -227,7 +274,6 @@ public class TestScanner extends HBaseTestCase {
   throws IOException {  
     InternalScanner scanner = null;
     List<KeyValue> results = new ArrayList<KeyValue>();
-
     byte [][][] scanColumns = {
         COLS,
         EXPLICIT_COLS
@@ -238,27 +284,26 @@ public class TestScanner extends HBaseTestCase {
         scanner = r.getScanner(scanColumns[i], FIRST_ROW,
             System.currentTimeMillis(), null);
         while (scanner.next(results)) {
-          // FIX!!!
-//          assertTrue(results.containsKey(HConstants.COL_REGIONINFO));
-//          byte [] val = results.get(HConstants.COL_REGIONINFO).getValue(); 
-//          validateRegionInfo(val);
-//          if(validateStartcode) {
-//            assertTrue(results.containsKey(HConstants.COL_STARTCODE));
-//            val = results.get(HConstants.COL_STARTCODE).getValue();
-//            assertNotNull(val);
-//            assertFalse(val.length == 0);
-//            long startCode = Bytes.toLong(val);
-//            assertEquals(START_CODE, startCode);
-//          }
-//          
-//          if(serverName != null) {
-//            assertTrue(results.containsKey(HConstants.COL_SERVER));
-//            val = results.get(HConstants.COL_SERVER).getValue();
-//            assertNotNull(val);
-//            assertFalse(val.length == 0);
-//            String server = Bytes.toString(val);
-//            assertEquals(0, server.compareTo(serverName));
-//          }
+          assertTrue(hasColumn(results, HConstants.COL_REGIONINFO));
+          byte [] val = getColumn(results, HConstants.COL_REGIONINFO).getValue(); 
+          validateRegionInfo(val);
+          if(validateStartcode) {
+            assertTrue(hasColumn(results, HConstants.COL_STARTCODE));
+            val = getColumn(results, HConstants.COL_STARTCODE).getValue();
+            assertNotNull(val);
+            assertFalse(val.length == 0);
+            long startCode = Bytes.toLong(val);
+            assertEquals(START_CODE, startCode);
+          }
+          
+          if(serverName != null) {
+            assertTrue(hasColumn(results, HConstants.COL_SERVER));
+            val = getColumn(results, HConstants.COL_SERVER).getValue();
+            assertNotNull(val);
+            assertFalse(val.length == 0);
+            String server = Bytes.toString(val);
+            assertEquals(0, server.compareTo(serverName));
+          }
           results.clear();
         }
 
@@ -272,45 +317,28 @@ public class TestScanner extends HBaseTestCase {
     }
   }
 
+  private boolean hasColumn(final List<KeyValue> kvs, final byte [] column) {
+    for (KeyValue kv: kvs) {
+      if (kv.matchingColumn(column)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private KeyValue getColumn(final List<KeyValue> kvs, final byte [] column) {
+    for (KeyValue kv: kvs) {
+      if (kv.matchingColumn(column)) {
+        return kv;
+      }
+    }
+    return null;
+  }
+
   /** Use get to retrieve the HRegionInfo and validate it */
   private void getRegionInfo() throws IOException {
     byte [] bytes = region.get(ROW_KEY, HConstants.COL_REGIONINFO).getValue();
     validateRegionInfo(bytes);  
-  }
-
-  /**
-   * Test basic stop row filter works.
-   * @throws Exception 
-   */
-  public void testStopRow() throws Exception {
-    byte [] startrow = Bytes.toBytes("bbb");
-    byte [] stoprow = Bytes.toBytes("ccc");
-    try {
-      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
-      addContent(this.r, HConstants.COLUMN_FAMILY);
-      InternalScanner s = r.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
-        startrow, HConstants.LATEST_TIMESTAMP,
-        new WhileMatchRowFilter(new StopRowFilter(stoprow)));
-      List<KeyValue> results = new ArrayList<KeyValue>();
-      int count = 0;
-      KeyValue kv = null;
-      for (boolean first = true; s.next(results);) {
-        kv = results.get(0);
-        if (first) {
-          assertTrue(Bytes.BYTES_COMPARATOR.compare(startrow, kv.getRow()) == 0);
-          first = false;
-        }
-        count++;
-      }
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(stoprow, kv.getRow()) > 0);
-      // We got something back.
-      assertTrue(count > 10);
-      s.close();
-    } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
-      shutdownDfs(this.cluster);
-    }
   }
 
   /**

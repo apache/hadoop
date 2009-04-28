@@ -33,7 +33,7 @@ import junit.framework.TestCase;
 /**
  * Tests the stop row filter
  */
-public class DisabledTestColumnValueFilter extends TestCase {
+public class TestColumnValueFilter extends TestCase {
 
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN = Bytes.toBytes("test:foo");
@@ -65,26 +65,34 @@ public class DisabledTestColumnValueFilter extends TestCase {
 
   private void basicFilterTests(RowFilterInterface filter)
       throws Exception {
-    assertTrue("basicFilter1", filter.filterColumn(ROW, COLUMN, VAL_1));
-    assertFalse("basicFilter2", filter.filterColumn(ROW, COLUMN, VAL_2));
-    assertFalse("basicFilter3", filter.filterColumn(ROW, COLUMN, VAL_3));
-    assertFalse("basicFilter4", filter.filterColumn(ROW, COLUMN, VAL_4));
+    assertTrue("basicFilter1", filter.filterColumn(ROW, 0, ROW.length,
+      COLUMN, 0, COLUMN.length, VAL_1, 0, VAL_1.length));
+    assertFalse("basicFilter2", filter.filterColumn(ROW, 0, ROW.length,
+      COLUMN, 0, COLUMN.length, VAL_2, 0, VAL_2.length));
+    assertFalse("basicFilter3", filter.filterColumn(ROW, 0, ROW.length,
+      COLUMN, 0, COLUMN.length, VAL_3, 0, VAL_3.length));
+    assertFalse("basicFilter4", filter.filterColumn(ROW, 0, ROW.length,
+      COLUMN, 0, COLUMN.length, VAL_4, 0, VAL_4.length));
     assertFalse("basicFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("basicFilterNotNull", filter.filterRow((List<KeyValue>)null));
   }
 
   private void substrFilterTests(RowFilterInterface filter) 
       throws Exception {
-    assertTrue("substrTrue", filter.filterColumn(ROW, COLUMN, FULLSTRING_1));
-    assertFalse("substrFalse", filter.filterColumn(ROW, COLUMN, FULLSTRING_2));
+    assertTrue("substrTrue", filter.filterColumn(ROW, 0, ROW.length,
+        COLUMN, 0, COLUMN.length, FULLSTRING_1, 0, FULLSTRING_1.length));
+    assertFalse("substrFalse", filter.filterColumn(ROW, 0, ROW.length,
+        COLUMN, 0, COLUMN.length, FULLSTRING_2, 0, FULLSTRING_2.length));
     assertFalse("substrFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("substrFilterNotNull", filter.filterRow((List<KeyValue>)null));
   }
 
   private void regexFilterTests(RowFilterInterface filter) 
       throws Exception {
-    assertTrue("regexTrue", filter.filterColumn(ROW, COLUMN, FULLSTRING_1));
-    assertFalse("regexFalse", filter.filterColumn(ROW, COLUMN, FULLSTRING_2));
+    assertTrue("regexTrue", filter.filterColumn(ROW, 0, ROW.length,
+        COLUMN, 0, COLUMN.length, FULLSTRING_1, 0, FULLSTRING_1.length));
+    assertFalse("regexFalse", filter.filterColumn(ROW, 0, ROW.length,
+        COLUMN, 0, COLUMN.length, FULLSTRING_2, 0, FULLSTRING_2.length));
     assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("regexFilterNotNull", filter.filterRow((List<KeyValue>)null));
   }

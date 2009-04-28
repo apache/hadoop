@@ -89,6 +89,7 @@ Release 0.20.0 - Unreleased
    HBASE-1340  Fix new javadoc warnings (Evgeny Ryabitskiy via Stack)
    HBASE-1287  Partitioner class not used in TableMapReduceUtil.initTableReduceJob()
                (Lars George and Billy Pearson via Stack)
+   HBASE-1320  hbase-1234 broke filter tests
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

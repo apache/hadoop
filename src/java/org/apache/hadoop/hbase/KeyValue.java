@@ -512,7 +512,7 @@ public class KeyValue {
    * @return Clone of this key with type set to <code>newtype</code>
    */
   private KeyValue createKey(final Type newtype) {
-    int keylength= getKeyLength();
+    int keylength = getKeyLength();
     int l = keylength + ROW_OFFSET;
     byte [] other = new byte[l];
     System.arraycopy(getBuffer(), getOffset(), other, 0, l);

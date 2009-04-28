@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
  * Use fabricating row names or column qualifiers.
  * <p>TODO: Add createSchemeless key, a key that doesn't care if scheme is
  * http or https.
+ * @see Bytes#split(byte[], byte[], int)
  */
 public class Keying {
   private static final String SCHEME = "r:";

@@ -37,11 +37,10 @@ import org.apache.hadoop.io.ObjectWritable;
  * an operator (equal, greater, not equal, etc) and either a byte [] value or a
  * byte [] comparator. If we have a byte [] value then we just do a
  * lexicographic compare. If this is not sufficient (eg you want to deserialize
- * a long and then compare it to a fixed long value, then you can pass in your
+ * a long and then compare it to a fixed long value), then you can pass in your
  * own comparator instead.
  */
 public class ColumnValueFilter implements RowFilterInterface {
-
   /** Comparison operators. */
   public enum CompareOp {
     /** less than */
@@ -132,6 +131,7 @@ public class ColumnValueFilter implements RowFilterInterface {
     return false;
   }
 
+  
   public boolean filterColumn(final byte[] rowKey,
       final byte[] colKey, final byte[] data) {
     if (!filterIfColumnMissing) {
@@ -140,18 +140,25 @@ public class ColumnValueFilter implements RowFilterInterface {
     if (!Arrays.equals(colKey, columnName)) {
       return false;
     }
-    return filterColumnValue(data); 
+    return filterColumnValue(data, 0, data.length); 
   }
 
 
   public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
-      byte[] colunmName, int coffset, int clength, byte[] columnValue,
+      byte[] cn, int coffset, int clength, byte[] columnValue,
       int voffset, int vlength) {
-    if (true) throw new RuntimeException("Not yet implemented");
-    return false;
+    if (!filterIfColumnMissing) {
+      return false; // Must filter on the whole row
+    }
+    if (Bytes.compareTo(cn, coffset, clength,
+        this.columnName, 0, this.columnName.length) != 0) {
+      return false;
+    }
+    return filterColumnValue(columnValue, voffset, vlength);
   }
 
-  private boolean filterColumnValue(final byte [] data) {
+  private boolean filterColumnValue(final byte [] data, final int offset,
+      final int length) {
     int compareResult;
     if (comparator != null) {
       compareResult = comparator.compareTo(data);
@@ -192,13 +199,37 @@ public class ColumnValueFilter implements RowFilterInterface {
       if (colCell == null) {
         return false;
       }
-      return this.filterColumnValue(colCell.getValue());
+      byte [] v = colCell.getValue();
+      return this.filterColumnValue(v, 0, v.length);
   }
 
-
   public boolean filterRow(List<KeyValue> results) {
-    if (true) throw new RuntimeException("Not yet implemented");
-    return false;
+    if (results == null) return false;
+    KeyValue found = null;
+    if (filterIfColumnMissing) {
+      boolean doesntHaveIt = true;
+      for (KeyValue kv: results) {
+        if (kv.matchingColumn(columnName)) {
+          doesntHaveIt = false;
+          found = kv;
+          break;
+        }
+      }
+      if (doesntHaveIt) return doesntHaveIt;
+    }
+    if (found == null) {
+      for (KeyValue kv: results) {
+        if (kv.matchingColumn(columnName)) {
+          found = kv;
+          break;
+        }
+      }
+    }
+    if (found == null) {
+      return false;
+    }
+    return this.filterColumnValue(found.getValue(), found.getValueOffset(),
+      found.getValueLength());
   }
 
   private int compare(final byte[] b1, final byte[] b2) {

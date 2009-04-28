@@ -97,7 +97,8 @@ public class StopRowFilter implements RowFilterInterface {
       }
       return false;
     }
-    return Bytes.compareTo(stopRowKey, rowKey) <= 0;
+    return Bytes.compareTo(stopRowKey, 0, stopRowKey.length, rowKey, offset,
+      length) <= 0;
   }
 
   /**
