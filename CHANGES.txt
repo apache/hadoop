@@ -34,6 +34,12 @@ Trunk (unreleased changes)
     HADOOP-5681. Change examples RandomWriter and RandomTextWriter to 
     use new mapreduce API. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5680. Change org.apache.hadoop.examples.SleepJob to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5699. Change org.apache.hadoop.examples.PiEstimator to use 
+    new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
@@ -255,9 +261,6 @@ Trunk (unreleased changes)
 
     HADOOP-5589. Eliminate source limit of 64 for map-side joins imposed by
     TupleWritable encoding. (Jingkei Ly via cdouglas)
-
-    HADOOP-5680. Change org.apache.hadoop.examples.SleepJob to use new 
-    mapreduce api. (Amareshwari Sriramadasu via sharad)
 
   OPTIMIZATIONS
 

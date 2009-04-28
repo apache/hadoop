@@ -169,7 +169,8 @@ public class TestMiniMRWithDFS extends TestCase {
     }
   }
 
-  public static void runPI(MiniMRCluster mr, JobConf jobconf) throws IOException {
+  public static void runPI(MiniMRCluster mr, JobConf jobconf) 
+      throws IOException, InterruptedException, ClassNotFoundException {
     LOG.info("runPI");
     double estimate = org.apache.hadoop.examples.PiEstimator.estimate(
         NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
@@ -232,7 +233,8 @@ public class TestMiniMRWithDFS extends TestCase {
     }
   }
 
-  public void testWithDFS() throws IOException {
+  public void testWithDFS() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fileSys = null;

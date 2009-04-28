@@ -55,7 +55,8 @@ public class TestTaskLimits extends TestCase {
     }
   }
   
-  static void runPI(MiniMRCluster mr, JobConf jobconf) throws IOException {
+  static void runPI(MiniMRCluster mr, JobConf jobconf) 
+      throws IOException, InterruptedException, ClassNotFoundException  {
     LOG.info("runPI");
     double estimate = PiEstimator.estimate(NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
     double error = Math.abs(Math.PI - estimate);
@@ -66,7 +67,8 @@ public class TestTaskLimits extends TestCase {
    * Run the pi test with a specifix value of 
    * mapred.jobtracker.maxtasks.per.job. Returns true if the job succeeded.
    */
-  private boolean runOneTest(int maxTasks) throws IOException {
+  private boolean runOneTest(int maxTasks) 
+      throws IOException, InterruptedException, ClassNotFoundException {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
@@ -96,7 +98,8 @@ public class TestTaskLimits extends TestCase {
     return success;
   }
 
-  public void testTaskLimits() throws IOException {
+  public void testTaskLimits() 
+      throws IOException, InterruptedException, ClassNotFoundException {
 
     System.out.println("Job 1 running with max set to 2");
     boolean status = runOneTest(2);

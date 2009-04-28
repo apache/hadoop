@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.io.BooleanWritable.Comparator;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
@@ -237,7 +236,8 @@ public class TestComparators extends TestCase
       return -super.compare(b1, s1, l1, b2, s2, l2);
     }
     static {                    // register this comparator
-      WritableComparator.define(DecreasingIntComparator.class, new Comparator());
+      WritableComparator.define(DecreasingIntComparator.class,
+                                new IntWritable.Comparator());
     }
   }
 
@@ -268,7 +268,8 @@ public class TestComparators extends TestCase
     }
     
     static {
-      WritableComparator.define(CompositeIntGroupFn.class, new Comparator());
+      WritableComparator.define(CompositeIntGroupFn.class, 
+                                new IntWritable.Comparator());
     }
   }
 
@@ -284,7 +285,8 @@ public class TestComparators extends TestCase
     }
     
     static {
-      WritableComparator.define(CompositeIntReverseGroupFn.class, new Comparator());
+      WritableComparator.define(CompositeIntReverseGroupFn.class, 
+                                new IntWritable.Comparator());
     }
   }
 

@@ -45,7 +45,8 @@ public class TestMiniMRLocalFS extends TestCase {
     new File(System.getProperty("test.build.data","/tmp"))
     .toURI().toString().replace(' ', '+');
     
-  public void testWithLocal() throws IOException {
+  public void testWithLocal() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     MiniMRCluster mr = null;
     try {
       mr = new MiniMRCluster(2, "file:///", 3);

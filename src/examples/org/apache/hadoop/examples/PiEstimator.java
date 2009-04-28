@@ -20,8 +20,8 @@ package org.apache.hadoop.examples;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Iterator;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,17 +31,11 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -137,19 +131,18 @@ public class PiEstimator extends Configured implements Tool {
    * Generate points in a unit square
    * and then count points inside/outside of the inscribed circle of the square.
    */
-  public static class PiMapper extends MapReduceBase
-    implements Mapper<LongWritable, LongWritable, BooleanWritable, LongWritable> {
+  public static class PiMapper extends 
+      Mapper<LongWritable, LongWritable, BooleanWritable, LongWritable> {
 
     /** Map method.
      * @param offset samples starting from the (offset+1)th sample.
      * @param size the number of samples for this map
-     * @param out output {ture->numInside, false->numOutside}
-     * @param reporter
+     * @param context output {ture->numInside, false->numOutside}
      */
     public void map(LongWritable offset,
                     LongWritable size,
-                    OutputCollector<BooleanWritable, LongWritable> out,
-                    Reporter reporter) throws IOException {
+                    Context context) 
+        throws IOException, InterruptedException {
 
       final HaltonSequence haltonsequence = new HaltonSequence(offset.get());
       long numInside = 0L;
@@ -171,13 +164,13 @@ public class PiEstimator extends Configured implements Tool {
         //report status
         i++;
         if (i % 1000 == 0) {
-          reporter.setStatus("Generated " + i + " samples.");
+          context.setStatus("Generated " + i + " samples.");
         }
       }
 
       //output map results
-      out.collect(new BooleanWritable(true), new LongWritable(numInside));
-      out.collect(new BooleanWritable(false), new LongWritable(numOutside));
+      context.write(new BooleanWritable(true), new LongWritable(numInside));
+      context.write(new BooleanWritable(false), new LongWritable(numOutside));
     }
   }
 
@@ -185,34 +178,29 @@ public class PiEstimator extends Configured implements Tool {
    * Reducer class for Pi estimation.
    * Accumulate points inside/outside results from the mappers.
    */
-  public static class PiReducer extends MapReduceBase
-    implements Reducer<BooleanWritable, LongWritable, WritableComparable<?>, Writable> {
+  public static class PiReducer extends 
+      Reducer<BooleanWritable, LongWritable, WritableComparable<?>, Writable> {
     
     private long numInside = 0;
     private long numOutside = 0;
-    private JobConf conf; //configuration for accessing the file system
       
-    /** Store job configuration. */
-    @Override
-    public void configure(JobConf job) {
-      conf = job;
-    }
-
     /**
      * Accumulate number of points inside/outside results from the mappers.
      * @param isInside Is the points inside? 
      * @param values An iterator to a list of point counts
-     * @param output dummy, not used here.
-     * @param reporter
+     * @param context dummy, not used here.
      */
     public void reduce(BooleanWritable isInside,
-                       Iterator<LongWritable> values,
-                       OutputCollector<WritableComparable<?>, Writable> output,
-                       Reporter reporter) throws IOException {
+        Iterable<LongWritable> values, Context context)
+        throws IOException, InterruptedException {
       if (isInside.get()) {
-        for(; values.hasNext(); numInside += values.next().get());
+        for (LongWritable val : values) {
+          numInside += val.get();
+        }
       } else {
-        for(; values.hasNext(); numOutside += values.next().get());
+        for (LongWritable val : values) {
+          numOutside += val.get();
+        }
       }
     }
 
@@ -220,10 +208,11 @@ public class PiEstimator extends Configured implements Tool {
      * Reduce task done, write output to a file.
      */
     @Override
-    public void close() throws IOException {
+    public void cleanup(Context context) throws IOException {
       //write output to a file
       Path outDir = new Path(TMP_DIR, "out");
       Path outFile = new Path(outDir, "reduce-out");
+      Configuration conf = context.getConfiguration();
       FileSystem fileSys = FileSystem.get(conf);
       SequenceFile.Writer writer = SequenceFile.createWriter(fileSys, conf,
           outFile, LongWritable.class, LongWritable.class, 
@@ -238,34 +227,35 @@ public class PiEstimator extends Configured implements Tool {
    *
    * @return the estimated value of Pi
    */
-  public static BigDecimal estimate(int numMaps, long numPoints, JobConf jobConf
-      ) throws IOException {
+  public static BigDecimal estimate(int numMaps, long numPoints, Configuration conf
+      ) throws IOException, ClassNotFoundException, InterruptedException {
+    Job job = new Job(conf);
     //setup job conf
-    jobConf.setJobName(PiEstimator.class.getSimpleName());
+    job.setJobName(PiEstimator.class.getSimpleName());
+    job.setJarByClass(PiEstimator.class);
 
-    jobConf.setInputFormat(SequenceFileInputFormat.class);
+    job.setInputFormatClass(SequenceFileInputFormat.class);
 
-    jobConf.setOutputKeyClass(BooleanWritable.class);
-    jobConf.setOutputValueClass(LongWritable.class);
-    jobConf.setOutputFormat(SequenceFileOutputFormat.class);
+    job.setOutputKeyClass(BooleanWritable.class);
+    job.setOutputValueClass(LongWritable.class);
+    job.setOutputFormatClass(SequenceFileOutputFormat.class);
 
-    jobConf.setMapperClass(PiMapper.class);
-    jobConf.setNumMapTasks(numMaps);
+    job.setMapperClass(PiMapper.class);
 
-    jobConf.setReducerClass(PiReducer.class);
-    jobConf.setNumReduceTasks(1);
+    job.setReducerClass(PiReducer.class);
+    job.setNumReduceTasks(1);
 
     // turn off speculative execution, because DFS doesn't handle
     // multiple writers to the same file.
-    jobConf.setSpeculativeExecution(false);
+    job.setSpeculativeExecution(false);
 
     //setup input/output directories
     final Path inDir = new Path(TMP_DIR, "in");
     final Path outDir = new Path(TMP_DIR, "out");
-    FileInputFormat.setInputPaths(jobConf, inDir);
-    FileOutputFormat.setOutputPath(jobConf, outDir);
+    FileInputFormat.setInputPaths(job, inDir);
+    FileOutputFormat.setOutputPath(job, outDir);
 
-    final FileSystem fs = FileSystem.get(jobConf);
+    final FileSystem fs = FileSystem.get(conf);
     if (fs.exists(TMP_DIR)) {
       throw new IOException("Tmp directory " + fs.makeQualified(TMP_DIR)
           + " already exists.  Please remove it first.");
@@ -281,7 +271,7 @@ public class PiEstimator extends Configured implements Tool {
         final LongWritable offset = new LongWritable(i * numPoints);
         final LongWritable size = new LongWritable(numPoints);
         final SequenceFile.Writer writer = SequenceFile.createWriter(
-            fs, jobConf, file,
+            fs, conf, file,
             LongWritable.class, LongWritable.class, CompressionType.NONE);
         try {
           writer.append(offset, size);
@@ -294,7 +284,7 @@ public class PiEstimator extends Configured implements Tool {
       //start a map/reduce job
       System.out.println("Starting Job");
       final long startTime = System.currentTimeMillis();
-      JobClient.runJob(jobConf);
+      job.waitForCompletion(true);
       final double duration = (System.currentTimeMillis() - startTime)/1000.0;
       System.out.println("Job Finished in " + duration + " seconds");
 
@@ -302,7 +292,7 @@ public class PiEstimator extends Configured implements Tool {
       Path inFile = new Path(outDir, "reduce-out");
       LongWritable numInside = new LongWritable();
       LongWritable numOutside = new LongWritable();
-      SequenceFile.Reader reader = new SequenceFile.Reader(fs, inFile, jobConf);
+      SequenceFile.Reader reader = new SequenceFile.Reader(fs, inFile, conf);
       try {
         reader.next(numInside, numOutside);
       } finally {
@@ -329,7 +319,7 @@ public class PiEstimator extends Configured implements Tool {
     if (args.length != 2) {
       System.err.println("Usage: "+getClass().getName()+" <nMaps> <nSamples>");
       ToolRunner.printGenericCommandUsage(System.err);
-      return -1;
+      return 2;
     }
     
     final int nMaps = Integer.parseInt(args[0]);
@@ -338,9 +328,8 @@ public class PiEstimator extends Configured implements Tool {
     System.out.println("Number of Maps  = " + nMaps);
     System.out.println("Samples per Map = " + nSamples);
         
-    final JobConf jobConf = new JobConf(getConf(), getClass());
     System.out.println("Estimated value of Pi is "
-        + estimate(nMaps, nSamples, jobConf));
+        + estimate(nMaps, nSamples, getConf()));
     return 0;
   }
 
