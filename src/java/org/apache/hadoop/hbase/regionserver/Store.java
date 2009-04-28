@@ -1139,9 +1139,9 @@ public class Store implements HConstants {
       throw new IllegalArgumentException("Number of versions must be > 0");
     }
     // Make sure we do not return more than maximum versions for this store.
-    return wantedVersions > this.family.getMaxVersions() &&
-        wantedVersions != HConstants.ALL_VERSIONS?
-      this.family.getMaxVersions(): wantedVersions;
+    int maxVersions = this.family.getMaxVersions();
+    return wantedVersions > maxVersions &&
+      wantedVersions != HConstants.ALL_VERSIONS? maxVersions: wantedVersions;
   }
   
   /**

@@ -632,11 +632,13 @@ public class HBaseRPC {
         Object value = method.invoke(instance, call.getParameters());
         int processingTime = (int) (System.currentTimeMillis() - startTime);
         int qTime = (int) (startTime-receivedTime);
-        LOG.debug("Served: " + call.getMethodName() +
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Served: " + call.getMethodName() +
             " queueTime= " + qTime +
             " procesingTime= " + processingTime);
-        rpcMetrics.rpcQueueTime.inc(qTime);
-        rpcMetrics.rpcProcessingTime.inc(processingTime);
+          rpcMetrics.rpcQueueTime.inc(qTime);
+          rpcMetrics.rpcProcessingTime.inc(processingTime);
+        }
 
 	MetricsTimeVaryingRate m = rpcMetrics.metricsList.get(call.getMethodName());
 

@@ -145,6 +145,11 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   protected Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
 
+  /*
+   * Cache the max versions rather than calculate it every time.
+   */
+  private int cachedMaxVersions = -1;
+
   /**
    * Default constructor. Must be present for Writable.
    */
@@ -370,11 +375,13 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   
   /** @return maximum number of versions */
   @TOJSON
-  public int getMaxVersions() {
-    String value = getValue(HConstants.VERSIONS);
-    if (value != null)
-      return Integer.valueOf(value).intValue();
-    return DEFAULT_VERSIONS;
+  public synchronized int getMaxVersions() {
+    if (this.cachedMaxVersions == -1) {
+      String value = getValue(HConstants.VERSIONS);
+      this.cachedMaxVersions = (value != null)?
+        Integer.valueOf(value).intValue(): DEFAULT_VERSIONS;
+    }
+    return this.cachedMaxVersions;
   }
 
   /**
