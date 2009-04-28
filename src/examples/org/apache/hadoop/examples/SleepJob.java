@@ -20,18 +20,18 @@ package org.apache.hadoop.examples;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.util.Iterator;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapred.lib.NullOutputFormat;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -42,64 +42,69 @@ import org.apache.hadoop.util.ToolRunner;
  * of <code>numMappers * mapSleepTime / 100</code>, so the job uses
  * some disk space.
  */
-public class SleepJob extends Configured implements Tool,  
-             Mapper<IntWritable, IntWritable, IntWritable, NullWritable>,
-             Reducer<IntWritable, NullWritable, NullWritable, NullWritable>,
-             Partitioner<IntWritable,NullWritable> {
+public class SleepJob extends Configured implements Tool {
 
-  private long mapSleepDuration = 100;
-  private long reduceSleepDuration = 100;
-  private int mapSleepCount = 1;
-  private int reduceSleepCount = 1;
-  private int count = 0;
-
-  public int getPartition(IntWritable k, NullWritable v, int numPartitions) {
-    return k.get() % numPartitions;
+  public static class SleepJobPartitioner extends 
+      Partitioner<IntWritable, NullWritable> {
+    public int getPartition(IntWritable k, NullWritable v, int numPartitions) {
+      return k.get() % numPartitions;
+    }
   }
   
-  public static class EmptySplit implements InputSplit {
+  public static class EmptySplit extends InputSplit implements Writable {
     public void write(DataOutput out) throws IOException { }
     public void readFields(DataInput in) throws IOException { }
     public long getLength() { return 0L; }
     public String[] getLocations() { return new String[0]; }
   }
 
-  public static class SleepInputFormat extends Configured
-      implements InputFormat<IntWritable,IntWritable> {
-    public InputSplit[] getSplits(JobConf conf, int numSplits) {
-      InputSplit[] ret = new InputSplit[numSplits];
+  public static class SleepInputFormat 
+      extends InputFormat<IntWritable,IntWritable> {
+    
+    public List<InputSplit> getSplits(JobContext jobContext) {
+      List<InputSplit> ret = new ArrayList<InputSplit>();
+      int numSplits = jobContext.getConfiguration().
+                        getInt("mapred.map.tasks", 1);
       for (int i = 0; i < numSplits; ++i) {
-        ret[i] = new EmptySplit();
+        ret.add(new EmptySplit());
       }
       return ret;
     }
-    public RecordReader<IntWritable,IntWritable> getRecordReader(
-        InputSplit ignored, JobConf conf, Reporter reporter)
+    
+    public RecordReader<IntWritable,IntWritable> createRecordReader(
+        InputSplit ignored, TaskAttemptContext taskContext)
         throws IOException {
+      Configuration conf = taskContext.getConfiguration();
       final int count = conf.getInt("sleep.job.map.sleep.count", 1);
       if (count < 0) throw new IOException("Invalid map count: " + count);
       final int redcount = conf.getInt("sleep.job.reduce.sleep.count", 1);
       if (redcount < 0)
         throw new IOException("Invalid reduce count: " + redcount);
-      final int emitPerMapTask = (redcount * conf.getNumReduceTasks());
-    return new RecordReader<IntWritable,IntWritable>() {
+      final int emitPerMapTask = (redcount * taskContext.getNumReduceTasks());
+      
+      return new RecordReader<IntWritable,IntWritable>() {
         private int records = 0;
         private int emitCount = 0;
+        private IntWritable key = null;
+        private IntWritable value = null;
+        public void initialize(InputSplit split, TaskAttemptContext context) {
+        }
 
-        public boolean next(IntWritable key, IntWritable value)
+        public boolean nextKeyValue()
             throws IOException {
+          key = new IntWritable();
           key.set(emitCount);
           int emit = emitPerMapTask / count;
           if ((emitPerMapTask) % count > records) {
             ++emit;
           }
           emitCount += emit;
+          value = new IntWritable();
           value.set(emit);
           return records++ < count;
         }
-        public IntWritable createKey() { return new IntWritable(); }
-        public IntWritable createValue() { return new IntWritable(); }
-        public long getPos() throws IOException { return records; }
+        public IntWritable getCurrentKey() { return key; }
+        public IntWritable getCurrentValue() { return value; }
         public void close() throws IOException { }
         public float getProgress() throws IOException {
           return records / ((float)count);
@@ -108,93 +113,104 @@ public class SleepJob extends Configured implements Tool,
     }
   }
 
-  public void map(IntWritable key, IntWritable value,
-      OutputCollector<IntWritable, NullWritable> output, Reporter reporter)
-      throws IOException {
+  public static class SleepMapper 
+      extends Mapper<IntWritable, IntWritable, IntWritable, NullWritable> {
+    private long mapSleepDuration = 100;
+    private int mapSleepCount = 1;
+    private int count = 0;
 
-    //it is expected that every map processes mapSleepCount number of records. 
-    try {
-      reporter.setStatus("Sleeping... (" +
+    protected void setup(Context context) 
+      throws IOException, InterruptedException {
+      Configuration conf = context.getConfiguration();
+      this.mapSleepCount =
+        conf.getInt("sleep.job.map.sleep.count", mapSleepCount);
+      this.mapSleepDuration =
+        conf.getLong("sleep.job.map.sleep.time" , 100) / mapSleepCount;
+    }
+
+    public void map(IntWritable key, IntWritable value, Context context
+               ) throws IOException, InterruptedException {
+      //it is expected that every map processes mapSleepCount number of records. 
+      try {
+        context.setStatus("Sleeping... (" +
           (mapSleepDuration * (mapSleepCount - count)) + ") ms left");
-      Thread.sleep(mapSleepDuration);
-    }
-    catch (InterruptedException ex) {
-      throw (IOException)new IOException(
-          "Interrupted while sleeping").initCause(ex);
-    }
-    ++count;
-    // output reduceSleepCount * numReduce number of random values, so that
-    // each reducer will get reduceSleepCount number of keys.
-    int k = key.get();
-    for (int i = 0; i < value.get(); ++i) {
-      output.collect(new IntWritable(k + i), NullWritable.get());
+        Thread.sleep(mapSleepDuration);
+      }
+      catch (InterruptedException ex) {
+        throw (IOException)new IOException(
+            "Interrupted while sleeping").initCause(ex);
+      }
+      ++count;
+      // output reduceSleepCount * numReduce number of random values, so that
+      // each reducer will get reduceSleepCount number of keys.
+      int k = key.get();
+      for (int i = 0; i < value.get(); ++i) {
+        context.write(new IntWritable(k + i), NullWritable.get());
+      }
     }
   }
+  
+  public static class SleepReducer  
+      extends Reducer<IntWritable, NullWritable, NullWritable, NullWritable> {
+    private long reduceSleepDuration = 100;
+    private int reduceSleepCount = 1;
+    private int count = 0;
 
-  public void reduce(IntWritable key, Iterator<NullWritable> values,
-      OutputCollector<NullWritable, NullWritable> output, Reporter reporter)
+    protected void setup(Context context) 
+      throws IOException, InterruptedException {
+      Configuration conf = context.getConfiguration();
+      this.reduceSleepCount =
+        conf.getInt("sleep.job.reduce.sleep.count", reduceSleepCount);
+      this.reduceSleepDuration =
+        conf.getLong("sleep.job.reduce.sleep.time" , 100) / reduceSleepCount;
+    }
+
+    public void reduce(IntWritable key, Iterable<NullWritable> values,
+                       Context context)
       throws IOException {
-    try {
-      reporter.setStatus("Sleeping... (" +
-          (reduceSleepDuration * (reduceSleepCount - count)) + ") ms left");
+      try {
+        context.setStatus("Sleeping... (" +
+            (reduceSleepDuration * (reduceSleepCount - count)) + ") ms left");
         Thread.sleep(reduceSleepDuration);
       
-    }
-    catch (InterruptedException ex) {
-      throw (IOException)new IOException(
+      }
+      catch (InterruptedException ex) {
+        throw (IOException)new IOException(
           "Interrupted while sleeping").initCause(ex);
+      }
+      count++;
     }
-    count++;
   }
 
-  public void configure(JobConf job) {
-    this.mapSleepCount =
-      job.getInt("sleep.job.map.sleep.count", mapSleepCount);
-    this.reduceSleepCount =
-      job.getInt("sleep.job.reduce.sleep.count", reduceSleepCount);
-    this.mapSleepDuration =
-      job.getLong("sleep.job.map.sleep.time" , 100) / mapSleepCount;
-    this.reduceSleepDuration =
-      job.getLong("sleep.job.reduce.sleep.time" , 100) / reduceSleepCount;
-  }
-
-  public void close() throws IOException {
-  }
-
-  public static void main(String[] args) throws Exception{
+  public static void main(String[] args) throws Exception {
     int res = ToolRunner.run(new Configuration(), new SleepJob(), args);
     System.exit(res);
   }
 
-  public int run(int numMapper, int numReducer, long mapSleepTime,
-      int mapSleepCount, long reduceSleepTime,
-      int reduceSleepCount) throws IOException {
-    JobConf job = setupJobConf(numMapper, numReducer, mapSleepTime, 
-                  mapSleepCount, reduceSleepTime, reduceSleepCount);
-    JobClient.runJob(job);
-    return 0;
-  }
-
-  public JobConf setupJobConf(int numMapper, int numReducer, 
-                                long mapSleepTime, int mapSleepCount, 
-                                long reduceSleepTime, int reduceSleepCount) {
-    JobConf job = new JobConf(getConf(), SleepJob.class);
-    job.setNumMapTasks(numMapper);
+  public Job createJob(int numMapper, int numReducer, 
+                       long mapSleepTime, int mapSleepCount, 
+                       long reduceSleepTime, int reduceSleepCount) 
+      throws IOException {
+    Configuration conf = getConf();
+    conf.setLong("sleep.job.map.sleep.time", mapSleepTime);
+    conf.setLong("sleep.job.reduce.sleep.time", reduceSleepTime);
+    conf.setInt("sleep.job.map.sleep.count", mapSleepCount);
+    conf.setInt("sleep.job.reduce.sleep.count", reduceSleepCount);
+    conf.setInt("mapred.map.tasks", numMapper);
+    Job job = new Job(conf, "sleep");
     job.setNumReduceTasks(numReducer);
-    job.setMapperClass(SleepJob.class);
+    job.setJarByClass(SleepJob.class);
+    job.setNumReduceTasks(numReducer);
+    job.setMapperClass(SleepMapper.class);
     job.setMapOutputKeyClass(IntWritable.class);
     job.setMapOutputValueClass(NullWritable.class);
-    job.setReducerClass(SleepJob.class);
-    job.setOutputFormat(NullOutputFormat.class);
-    job.setInputFormat(SleepInputFormat.class);
-    job.setPartitionerClass(SleepJob.class);
+    job.setReducerClass(SleepReducer.class);
+    job.setOutputFormatClass(NullOutputFormat.class);
+    job.setInputFormatClass(SleepInputFormat.class);
+    job.setPartitionerClass(SleepJobPartitioner.class);
     job.setSpeculativeExecution(false);
     job.setJobName("Sleep job");
     FileInputFormat.addInputPath(job, new Path("ignored"));
-    job.setLong("sleep.job.map.sleep.time", mapSleepTime);
-    job.setLong("sleep.job.reduce.sleep.time", reduceSleepTime);
-    job.setInt("sleep.job.map.sleep.count", mapSleepCount);
-    job.setInt("sleep.job.reduce.sleep.count", reduceSleepCount);
     return job;
   }
 
@@ -205,7 +221,7 @@ public class SleepJob extends Configured implements Tool,
           " [-mt mapSleepTime (msec)] [-rt reduceSleepTime (msec)]" +
           " [-recordt recordSleepTime (msec)]");
       ToolRunner.printGenericCommandUsage(System.err);
-      return -1;
+      return 2;
     }
 
     int numMapper = 1, numReducer = 1;
@@ -233,9 +249,9 @@ public class SleepJob extends Configured implements Tool,
     // sleep for *SleepTime duration in Task by recSleepTime per record
     mapSleepCount = (int)Math.ceil(mapSleepTime / ((double)recSleepTime));
     reduceSleepCount = (int)Math.ceil(reduceSleepTime / ((double)recSleepTime));
-    
-    return run(numMapper, numReducer, mapSleepTime, mapSleepCount,
-        reduceSleepTime, reduceSleepCount);
+    Job job = createJob(numMapper, numReducer, mapSleepTime,
+                mapSleepCount, reduceSleepTime, reduceSleepCount);
+    return job.waitForCompletion(true) ? 0 : 1;
   }
 
 }

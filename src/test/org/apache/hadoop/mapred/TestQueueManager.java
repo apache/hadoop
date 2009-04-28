@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.SleepJob;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -78,23 +79,27 @@ public class TestQueueManager extends TestCase {
     assertEquals(qMgr.getSchedulerInfo("qq1"), "queueInfoForqq1");
   }
   
-  public void testAllEnabledACLForJobSubmission() throws IOException {
+  public void testAllEnabledACLForJobSubmission() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = setupConf("mapred.queue.default.acl-submit-job", "*");
     verifyJobSubmission(conf, true);
   }
   
-  public void testAllDisabledACLForJobSubmission() throws IOException {
+  public void testAllDisabledACLForJobSubmission() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = setupConf("mapred.queue.default.acl-submit-job", "");
     verifyJobSubmission(conf, false);
   }
   
-  public void testUserDisabledACLForJobSubmission() throws IOException {
+  public void testUserDisabledACLForJobSubmission() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = setupConf("mapred.queue.default.acl-submit-job", 
                                 "3698-non-existent-user");
     verifyJobSubmission(conf, false);
   }
   
-  public void testDisabledACLForNonDefaultQueue() throws IOException {
+  public void testDisabledACLForNonDefaultQueue() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     // allow everyone in default queue
     JobConf conf = setupConf("mapred.queue.default.acl-submit-job", "*");
     // setup a different queue
@@ -105,13 +110,14 @@ public class TestQueueManager extends TestCase {
     verifyJobSubmission(conf, false, "q1");
   }
   
-  public void testSubmissionToInvalidQueue() throws IOException{
+  public void testSubmissionToInvalidQueue() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = new JobConf();
     conf.set("mapred.queue.names","default");
     setUpCluster(conf);
     String queueName = "q1";
     try {
-      RunningJob rjob = submitSleepJob(1, 1, 100, 100, true, null, queueName);
+      Job rjob = submitSleepJob(1, 1, 100, 100, true, null, queueName);
     } catch (IOException ioe) {      
        assertTrue(ioe.getMessage().contains("Queue \"" + queueName + "\" does not exist"));
        return;
@@ -122,7 +128,7 @@ public class TestQueueManager extends TestCase {
   }
   
   public void testEnabledACLForNonDefaultQueue() throws IOException,
-                                                          LoginException {
+      LoginException, InterruptedException, ClassNotFoundException {
     // login as self...
     UserGroupInformation ugi = UnixUserGroupInformation.login();
     String userName = ugi.getUserName();
@@ -137,7 +143,8 @@ public class TestQueueManager extends TestCase {
   }
   
   public void testUserEnabledACLForJobSubmission() 
-                                    throws IOException, LoginException {
+      throws IOException, LoginException, 
+             InterruptedException, ClassNotFoundException {
     // login as self...
     UserGroupInformation ugi = UnixUserGroupInformation.login();
     String userName = ugi.getUserName();
@@ -148,7 +155,8 @@ public class TestQueueManager extends TestCase {
   }
   
   public void testGroupsEnabledACLForJobSubmission() 
-                                    throws IOException, LoginException {
+      throws IOException, LoginException, 
+             InterruptedException, ClassNotFoundException {
     // login as self, get one group, and add in allowed list.
     UserGroupInformation ugi = UnixUserGroupInformation.login();
     String[] groups = ugi.getGroupNames();
@@ -160,23 +168,27 @@ public class TestQueueManager extends TestCase {
     verifyJobSubmission(conf, true);
   }
   
-  public void testAllEnabledACLForJobKill() throws IOException {
+  public void testAllEnabledACLForJobKill() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", "*");
     verifyJobKill(conf, true);
   }
 
-  public void testAllDisabledACLForJobKill() throws IOException {
+  public void testAllDisabledACLForJobKill() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", "");
     verifyJobKillAsOtherUser(conf, false, "dummy-user,dummy-user-group");
   }
   
-  public void testOwnerAllowedForJobKill() throws IOException {
+  public void testOwnerAllowedForJobKill() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", 
                                               "junk-user");
     verifyJobKill(conf, true);
   }
   
-  public void testUserDisabledACLForJobKill() throws IOException {
+  public void testUserDisabledACLForJobKill() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     //setup a cluster allowing a user to submit
     JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", 
                                               "dummy-user");
@@ -184,7 +196,7 @@ public class TestQueueManager extends TestCase {
   }
   
   public void testUserEnabledACLForJobKill() throws IOException, 
-                                                    LoginException {
+      LoginException, InterruptedException, ClassNotFoundException {
     // login as self...
     UserGroupInformation ugi = UnixUserGroupInformation.login();
     String userName = ugi.getUserName();
@@ -193,7 +205,8 @@ public class TestQueueManager extends TestCase {
     verifyJobKillAsOtherUser(conf, true, "dummy-user,dummy-user-group");
   }
   
-  public void testUserDisabledForJobPriorityChange() throws IOException {
+  public void testUserDisabledForJobPriorityChange() 
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs",
                               "junk-user");
     verifyJobPriorityChangeAsOtherUser(conf, false, 
@@ -379,12 +392,13 @@ public class TestQueueManager extends TestCase {
   }
   
   private void verifyJobSubmission(JobConf conf, boolean shouldSucceed) 
-                                              throws IOException {
+      throws IOException, InterruptedException, ClassNotFoundException {
     verifyJobSubmission(conf, shouldSucceed, "default");
   }
 
   private void verifyJobSubmission(JobConf conf, boolean shouldSucceed, 
-      String queue) throws IOException {
+                                   String queue) 
+      throws IOException, InterruptedException, ClassNotFoundException {
     setUpCluster(conf);
     try {
       runAndVerifySubmission(conf, shouldSucceed, queue, null);
@@ -395,9 +409,9 @@ public class TestQueueManager extends TestCase {
 
   private void runAndVerifySubmission(JobConf conf, boolean shouldSucceed,
       String queue, String userInfo)
-      throws IOException {
+      throws IOException, InterruptedException, ClassNotFoundException {
     try {
-      RunningJob rjob = submitSleepJob(1, 1, 100, 100, true, userInfo, queue);
+      Job rjob = submitSleepJob(1, 1, 100, 100, true, null, queue);
       if (shouldSucceed) {
         assertTrue(rjob.isSuccessful());
       } else {
@@ -428,10 +442,10 @@ public class TestQueueManager extends TestCase {
 }
 
   private void verifyJobKill(JobConf conf, boolean shouldSucceed) 
-                                      throws IOException {
+      throws IOException, InterruptedException, ClassNotFoundException {
     setUpCluster(conf);
     try {
-      RunningJob rjob = submitSleepJob(1, 1, 1000, 1000, false);
+      Job rjob = submitSleepJob(1, 1, 1000, 1000, false);
       assertFalse(rjob.isComplete());
       while(rjob.mapProgress() == 0.0f) {
         try {
@@ -441,7 +455,7 @@ public class TestQueueManager extends TestCase {
         }
       }
       rjob.killJob();
-      while(rjob.cleanupProgress() == 0.0f) {
+      while (!rjob.isComplete()) {
         try {
           Thread.sleep(10);  
         } catch (InterruptedException ie) {
@@ -449,7 +463,7 @@ public class TestQueueManager extends TestCase {
         }
       }
       if (shouldSucceed) {
-        assertTrue(rjob.isComplete());
+        assertTrue(!rjob.isSuccessful());
       } else {
         fail("Job kill should have failed.");
       }
@@ -470,16 +484,18 @@ public class TestQueueManager extends TestCase {
   
   private void verifyJobKillAsOtherUser(JobConf conf, boolean shouldSucceed,
                                         String otherUserInfo) 
-                        throws IOException {
+  throws IOException, InterruptedException, ClassNotFoundException {
     setUpCluster(conf);
     try {
       // submit a job as another user.
       String userInfo = otherUserInfo;
-      RunningJob rjob = submitSleepJob(1, 1, 1000, 1000, false, userInfo);
-      assertFalse(rjob.isComplete());
+      Job job = submitSleepJob(1, 1, 1000, 1000, false, userInfo);
+      assertFalse(job.isComplete());
 
       //try to kill as self
       try {
+        JobClient jc = new JobClient(miniMRCluster.createJobConf());
+        RunningJob rjob = jc.getJob((JobID)job.getID());
         rjob.killJob();
         if (!shouldSucceed) {
           fail("should fail kill operation");  
@@ -495,7 +511,7 @@ public class TestQueueManager extends TestCase {
                                     "ADMINISTER_JOBS on queue default"));
       }
       //wait for job to complete on its own
-      while (!rjob.isComplete()) {
+      while (!job.isComplete()) {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException ie) {
@@ -509,16 +525,18 @@ public class TestQueueManager extends TestCase {
   
   private void verifyJobPriorityChangeAsOtherUser(JobConf conf, 
                           boolean shouldSucceed, String otherUserInfo)
-                            throws IOException {
+  throws IOException, InterruptedException, ClassNotFoundException {
     setUpCluster(conf);
     try {
       // submit job as another user.
       String userInfo = otherUserInfo;
-      RunningJob rjob = submitSleepJob(1, 1, 1000, 1000, false, userInfo);
-      assertFalse(rjob.isComplete());
+      Job job = submitSleepJob(1, 1, 1000, 1000, false, userInfo);
+      assertFalse(job.isComplete());
       
       // try to change priority as self
       try {
+        JobClient jc = new JobClient(miniMRCluster.createJobConf());
+        RunningJob rjob = jc.getJob((JobID)job.getID());
         rjob.setJobPriority("VERY_LOW");
         if (!shouldSucceed) {
           fail("changing priority should fail.");
@@ -531,7 +549,7 @@ public class TestQueueManager extends TestCase {
                                     "ADMINISTER_JOBS on queue default"));
       }
       //wait for job to complete on its own
-      while (!rjob.isComplete()) {
+      while (!job.isComplete()) {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException ie) {
@@ -556,49 +574,47 @@ public class TestQueueManager extends TestCase {
     if (miniDFSCluster != null) { miniDFSCluster.shutdown(); }
   }
   
-  private RunningJob submitSleepJob(int numMappers, int numReducers, 
-                            long mapSleepTime, long reduceSleepTime,
-                            boolean shouldComplete) 
-                              throws IOException {
+  private Job submitSleepJob(int numMappers, int numReducers, 
+                             long mapSleepTime, long reduceSleepTime,
+                             boolean shouldComplete) 
+      throws IOException, InterruptedException, ClassNotFoundException {
     return submitSleepJob(numMappers, numReducers, mapSleepTime,
                           reduceSleepTime, shouldComplete, null);
   }
   
-  private RunningJob submitSleepJob(int numMappers, int numReducers, 
-                                      long mapSleepTime, long reduceSleepTime,
-                                      boolean shouldComplete, String userInfo) 
-                                            throws IOException {
+  private Job submitSleepJob(int numMappers, int numReducers, 
+                             long mapSleepTime, long reduceSleepTime,
+                             boolean shouldComplete, String userInfo) 
+  throws IOException, InterruptedException, ClassNotFoundException {
     return submitSleepJob(numMappers, numReducers, mapSleepTime, 
                           reduceSleepTime, shouldComplete, userInfo, null);
   }
 
-  private RunningJob submitSleepJob(int numMappers, int numReducers, 
-                                    long mapSleepTime, long reduceSleepTime,
-                                    boolean shouldComplete, String userInfo,
-                                    String queueName) 
-                                      throws IOException {
-    JobConf clientConf = new JobConf();
+  private Job submitSleepJob(int numMappers, int numReducers, 
+                             long mapSleepTime, long reduceSleepTime,
+                             boolean shouldComplete, String userInfo,
+                             String queueName) 
+  throws IOException, InterruptedException, ClassNotFoundException {
+    Configuration clientConf = new Configuration();
     clientConf.set("mapred.job.tracker", "localhost:"
         + miniMRCluster.getJobTrackerPort());
-    SleepJob job = new SleepJob();
-    job.setConf(clientConf);
-    clientConf = job.setupJobConf(numMappers, numReducers, 
+    if (userInfo != null) {
+      clientConf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, userInfo);
+    }
+    if (queueName != null) {
+      clientConf.set("mapred.job.queue.name", queueName);
+    }
+    SleepJob sleep = new SleepJob();
+    sleep.setConf(clientConf);
+    Job job = sleep.createJob(numMappers, numReducers, 
         mapSleepTime, (int)mapSleepTime/100,
         reduceSleepTime, (int)reduceSleepTime/100);
-    if (queueName != null) {
-      clientConf.setQueueName(queueName);
-    }
-    JobConf jc = new JobConf(clientConf);
-    if (userInfo != null) {
-      jc.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, userInfo);
-    }
-    RunningJob rJob = null;
     if (shouldComplete) {
-      rJob = JobClient.runJob(jc);  
+      job.waitForCompletion(false);  
     } else {
-      rJob = new JobClient(clientConf).submitJob(jc);
+      job.submit();
     }
-    return rJob;
+    return job;
   }
 
 }

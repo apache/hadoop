@@ -20,12 +20,11 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.SleepJob.SleepInputFormat;
+import org.apache.hadoop.mapred.UtilsForTests.RandomInputFormat;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 
 import junit.framework.TestCase;
@@ -37,16 +36,16 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
   final Path inDir = new Path("/testing");
   final Path outDir = new Path("/output");
 
-  public static class SleepJobFailOnHost extends MapReduceBase
-    implements Mapper<IntWritable, IntWritable, IntWritable, NullWritable> {
+  public static class FailOnHostMapper extends MapReduceBase
+    implements Mapper<Text, Text, Text, Text> {
     String hostname = "";
     
     public void configure(JobConf job) {
       this.hostname = job.get("slave.host.name");
     }
     
-    public void map(IntWritable key, IntWritable value,
-                    OutputCollector<IntWritable, NullWritable> output,
+    public void map(Text key, Text value,
+                    OutputCollector<Text, Text> output,
                     Reporter reporter)
     throws IOException {
       if (this.hostname.equals(hosts[0])) {
@@ -81,11 +80,11 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     job.setInt("mapred.max.tracker.failures", 1);
     job.setNumMapTasks(30);
     job.setNumReduceTasks(0);
-    job.setMapperClass(SleepJobFailOnHost.class);
-    job.setMapOutputKeyClass(IntWritable.class);
-    job.setMapOutputValueClass(NullWritable.class);
+    job.setMapperClass(FailOnHostMapper.class);
+    job.setMapOutputKeyClass(Text.class);
+    job.setMapOutputValueClass(Text.class);
     job.setOutputFormat(NullOutputFormat.class);
-    job.setInputFormat(SleepInputFormat.class);
+    job.setInputFormat(RandomInputFormat.class);
     FileInputFormat.setInputPaths(job, inDir);
     FileOutputFormat.setOutputPath(job, outDir);
     

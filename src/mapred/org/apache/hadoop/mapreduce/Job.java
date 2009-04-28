@@ -255,6 +255,41 @@ public class Job extends JobContext {
   }
 
   /**
+   * Turn speculative execution on or off for this job. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on, else <code>false</code>.
+   */
+  public void setSpeculativeExecution(boolean speculativeExecution) {
+    ensureState(JobState.DEFINE);
+    conf.setSpeculativeExecution(speculativeExecution);
+  }
+
+  /**
+   * Turn speculative execution on or off for this job for map tasks. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on for map tasks,
+   *                             else <code>false</code>.
+   */
+  public void setMapSpeculativeExecution(boolean speculativeExecution) {
+    ensureState(JobState.DEFINE);
+    conf.setMapSpeculativeExecution(speculativeExecution);
+  }
+
+  /**
+   * Turn speculative execution on or off for this job for reduce tasks. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on for reduce tasks,
+   *                             else <code>false</code>.
+   */
+  public void setReduceSpeculativeExecution(boolean speculativeExecution) {
+    ensureState(JobState.DEFINE);
+    conf.setReduceSpeculativeExecution(speculativeExecution);
+  }
+
+  /**
    * Get the URL where some job progress information will be displayed.
    * 
    * @return the URL where some job progress information will be displayed.
@@ -264,6 +299,16 @@ public class Job extends JobContext {
     return info.getTrackingURL();
   }
 
+  /**
+   * Get the job identifier.
+   * 
+   * @return the job identifier.
+   */
+  public JobID getID() {
+    ensureState(JobState.RUNNING);
+    return info.getID();
+  }
+  
   /**
    * Get the <i>progress</i> of the job's map-tasks, as a float between 0.0 
    * and 1.0.  When all map tasks have completed, the function returns 1.0.

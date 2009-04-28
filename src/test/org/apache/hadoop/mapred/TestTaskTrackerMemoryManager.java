@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.examples.SleepJob;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.util.StringUtils;
@@ -66,9 +67,9 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     }
   }
 
-  private void runSleepJob(JobConf conf) throws Exception {
+  private int runSleepJob(JobConf conf) throws Exception {
     String[] args = { "-m", "3", "-r", "1", "-mt", "3000", "-rt", "1000" };
-    ToolRunner.run(conf, new SleepJob(), args);
+    return ToolRunner.run(conf, new SleepJob(), args);
   }
 
   private void runAndCheckSuccessfulJob(JobConf conf)
@@ -87,16 +88,15 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     Matcher mat = null;
 
     // Start the job.
-    boolean success = true;
+    int ret;
     try {
-      runSleepJob(conf);
-      success = true;
+      ret = runSleepJob(conf);
     } catch (Exception e) {
-      success = false;
+      ret = 1;
     }
 
     // Job has to succeed
-    assertTrue(success);
+    assertTrue(ret == 0);
 
     JobClient jClient = new JobClient(conf);
     JobStatus[] jStatus = jClient.getAllJobs();
@@ -279,16 +279,15 @@ public class TestTaskTrackerMemoryManager extends TestCase {
         + nn.getNameNodeAddress().getPort());
 
     // Start the job.
-    boolean success = true;
+    int ret = 0;
     try {
-      runSleepJob(conf);
-      success = true;
+      ret = runSleepJob(conf);
     } catch (Exception e) {
-      success = false;
+      ret = 1;
     }
 
     // Job has to fail
-    assertFalse(success);
+    assertTrue(ret != 0);
 
     JobClient jClient = new JobClient(conf);
     JobStatus[] jStatus = jClient.getAllJobs();
@@ -382,12 +381,13 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     SleepJob sleepJob = new SleepJob();
     sleepJob.setConf(conf);
     // Start the job
-    RunningJob job =
-        jClient.submitJob(sleepJob.setupJobConf(1, 1, 5000, 1, 1000, 1));
+    Job job = sleepJob.createJob(1, 1, 5000, 1, 1000, 1);
+    job.submit();
     boolean TTOverFlowMsgPresent = false;
     while (true) {
       // Set-up tasks are the first to be launched.
-      TaskReport[] setUpReports = jt.getSetupTaskReports(job.getID());
+      TaskReport[] setUpReports = jClient.getSetupTaskReports(
+                                    (org.apache.hadoop.mapred.JobID)job.getID());
       for (TaskReport tr : setUpReports) {
         String[] diag = tr.getDiagnostics();
         for (String str : diag) {
