@@ -18,6 +18,8 @@
 package org.apache.hadoop.security.authorize;
 
 import java.security.Permission;
+import java.security.CodeSource;
+import java.util.PropertyPermission;
 
 import javax.security.auth.Subject;
 
@@ -79,4 +81,11 @@ public class TestConfiguredPolicy extends TestCase {
     }
     assertTrue(failed);
   }
+
+    public void testPolicySupportsAddCodebase() throws Throwable {
+        Configuration conf = new Configuration();
+        ConfiguredPolicy policy = new ConfiguredPolicy(conf, new TestPolicyProvider());
+        policy.getPermissions((CodeSource) null).add(new PropertyPermission("org.apache.hadoop", "read"));
+    }
+
 }
