@@ -49,7 +49,7 @@ public class TestBytes extends TestCase {
     // More split tests.
     byte [] lowest = Bytes.toBytes("http://A");
     byte [] highest = Bytes.toBytes("http://z");
-    byte [] middle = Bytes.toBytes("http://[");
+    byte [] middle = Bytes.toBytes("http://]");
     byte [][] parts = Bytes.split(lowest, highest, 1);
     for (int i = 0; i < parts.length; i++) {
       System.out.println(Bytes.toString(parts[i]));
