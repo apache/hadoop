@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -227,21 +228,45 @@ public class HTable {
    * @throws IOException
    */
   public byte [][] getStartKeys() throws IOException {
-    final List<byte[]> keyList = new ArrayList<byte[]>();
+    return getStartEndKeys().getFirst();
+  }
+
+  /**
+   * Gets the ending row key for every region in the currently open table
+   * 
+   * @return Array of region ending row keys
+   * @throws IOException
+   */
+  public byte[][] getEndKeys() throws IOException {
+    return getStartEndKeys().getSecond();
+  }
+
+  /**
+   * Gets the starting and ending row keys for every region in the currently open table
+   * 
+   * @return Pair of arrays of region starting and ending row keys
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
+    final List<byte[]> startKeyList = new ArrayList<byte[]>();
+    final List<byte[]> endKeyList = new ArrayList<byte[]>();
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(RowResult rowResult) throws IOException {
         HRegionInfo info = Writables.getHRegionInfo(
             rowResult.get(HConstants.COL_REGIONINFO));
         if (Bytes.equals(info.getTableDesc().getName(), getTableName())) {
           if (!(info.isOffline() || info.isSplit())) {
-            keyList.add(info.getStartKey());
+            startKeyList.add(info.getStartKey());
+            endKeyList.add(info.getEndKey());
           }
         }
         return true;
       }
     };
     MetaScanner.metaScan(configuration, visitor, this.tableName);
-    return keyList.toArray(new byte[keyList.size()][]);
+    return new Pair(startKeyList.toArray(new byte[startKeyList.size()][]),
+                endKeyList.toArray(new byte[endKeyList.size()][]));
   }
 
   /**
