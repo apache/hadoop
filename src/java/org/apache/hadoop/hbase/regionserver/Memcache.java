@@ -578,6 +578,7 @@ class Memcache {
       if (this.comparator.matchingRowColumn(kv, key)) {
         if (Store.doKeyValue(kv, versions, deletes, now, this.ttl, keyvalues,
             tailset)) {
+          enoughVersions = true;
           break;
         }
       } else {

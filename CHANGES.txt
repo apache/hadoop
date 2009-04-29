@@ -92,6 +92,8 @@ Release 0.20.0 - Unreleased
    HBASE-1320  hbase-1234 broke filter tests
    HBASE-1355  [performance] Cache family maxversions; we were calculating on
                each access
+   HBASE-1358  Bug in reading from Memcache method (read only from snapshot)
+               (Evgeny Ryabitskiy via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
