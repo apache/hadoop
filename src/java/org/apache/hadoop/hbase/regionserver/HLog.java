@@ -870,7 +870,7 @@ public class HLog implements HConstants, Syncable {
    */
   public static String getHLogDirectoryName(String serverName) {
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);
-    dirName.append("_");
+    dirName.append("/");
     dirName.append(serverName);
     return dirName.toString();
   }

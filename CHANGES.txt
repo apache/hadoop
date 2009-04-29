@@ -180,6 +180,8 @@ Release 0.20.0 - Unreleased
                regions in a table (Vimal Mathew via Stack)
    HBASE-1271  Allow multiple tests to run on one machine
                (Evgeny Ryabitskiy via Stack)
+   HBASE-1112  we will lose data if the table name happens to be the logs' dir
+               name (Samuel Guo via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
