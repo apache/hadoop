@@ -1644,7 +1644,7 @@ public class HTable {
         return false;
       }
       // Let the filter see current row.
-      this.filter.filterRowKey(endKey);
+      this.filter.filterRowKey(endKey, 0, endKey.length);
       return this.filter.filterAllRemaining();
     }
 

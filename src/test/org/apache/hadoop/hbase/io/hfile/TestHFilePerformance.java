@@ -34,7 +34,6 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.io.compress.LzoCodec;
 
 /**
  *  Set of long-running tests to measure performance of HFile.
@@ -171,9 +170,7 @@ public class TestHFilePerformance extends TestCase {
         writer.close();
     } else if ("SequenceFile".equals(fileType)){
         CompressionCodec codec = null;
-        if ("lzo".equals(codecName))
-          codec = new LzoCodec();
-        else if ("gz".equals(codecName))
+        if ("gz".equals(codecName))
           codec = new GzipCodec();
         else if (!"none".equals(codecName))
           throw new IOException("Codec not supported.");

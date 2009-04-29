@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 /**
  * 
@@ -65,14 +66,29 @@ public class HBaseRpcMetrics implements Updater {
    *  - they can be set directly by calling their set/inc methods
    *  -they can also be read directly - e.g. JMX does this.
    */
-  
-  public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime");
-  public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime");
+  public MetricsRegistry registry = new MetricsRegistry();
 
-  public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
+  public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime", registry);
+  public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime", registry);
 
-  
-  
+  //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
+
+  private MetricsTimeVaryingRate get(String key) {
+    return (MetricsTimeVaryingRate) registry.get(key);
+  }
+  private MetricsTimeVaryingRate create(String key) {
+    MetricsTimeVaryingRate newMetric = new MetricsTimeVaryingRate(key, this.registry);
+    return newMetric;
+  }
+
+  public synchronized void inc(String name, int amt) {
+    MetricsTimeVaryingRate m = get(name);
+    if (m == null) {
+      m = create(name);
+    }
+    m.inc(amt);
+  }
+
   /**
    * Push the metrics to the monitoring subsystem on doUpdate() call.
    * @param context
@@ -81,18 +97,14 @@ public class HBaseRpcMetrics implements Updater {
     rpcQueueTime.pushMetric(metricsRecord);
     rpcProcessingTime.pushMetric(metricsRecord);
 
-    synchronized (metricsList) {
-	// Iterate through the rpcMetrics hashmap to propogate the different rpc metrics.
-	Set<String> keys = metricsList.keySet();
+    synchronized (registry) {
+      // Iterate through the registry to propogate the different rpc metrics.
 
-	Iterator<String> keyIter = keys.iterator();
+      for (String metricName : registry.getKeyList() ) {
+        MetricsTimeVaryingRate value = (MetricsTimeVaryingRate) registry.get(metricName);
 
-	while (keyIter.hasNext()) {
-		Object key = keyIter.next();
-		MetricsTimeVaryingRate value = metricsList.get(key);
-
-		value.pushMetric(metricsRecord);
-	}
+        value.pushMetric(metricsRecord);
+      }
     }
     metricsRecord.update();
   }

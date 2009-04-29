@@ -30,6 +30,9 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.metrics.util.MetricsLongValue;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 /** 
  * This class is for maintaining the various regionserver statistics
@@ -43,38 +46,43 @@ public class RegionServerMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private long lastUpdate = System.currentTimeMillis();
   private static final int MB = 1024*1024;
+  private MetricsRegistry registry = new MetricsRegistry();
+    
+  public final MetricsTimeVaryingRate atomicIncrementTime =
+    new MetricsTimeVaryingRate("atomicIncrementTime", registry);
   
   /**
    * Count of regions carried by this regionserver
    */
-  public final MetricsIntValue regions = new MetricsIntValue("hbase_regions");
-  
+  public final MetricsIntValue regions =
+    new MetricsIntValue("regions", registry);
+
   /*
    * Count of requests to the regionservers since last call to metrics update
    */
-  private final MetricsRate requests = new MetricsRate("hbase_requests");
+  private final MetricsRate requests = new MetricsRate("requests");
 
   /**
    * Count of stores open on the regionserver.
    */
-  public final MetricsIntValue stores = new MetricsIntValue("hbase_stores");
+  public final MetricsIntValue stores = new MetricsIntValue("stores", registry);
 
   /**
    * Count of storefiles open on the regionserver.
    */
-  public final MetricsIntValue storefiles = new MetricsIntValue("hbase_storefiles");
+  public final MetricsIntValue storefiles = new MetricsIntValue("storefiles", registry);
 
   /**
    * Sum of all the storefile index sizes in this regionserver in MB
    */
   public final MetricsIntValue storefileIndexSizeMB =
-    new MetricsIntValue("hbase_storefileIndexSizeMB");
+    new MetricsIntValue("storefileIndexSizeMB", registry);
 
   /**
    * Sum of all the memcache sizes in this regionserver in MB
    */
   public final MetricsIntValue memcacheSizeMB =
-    new MetricsIntValue("hbase_memcacheSizeMB");
+    new MetricsIntValue("memcacheSizeMB", registry);
 
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -134,8 +142,7 @@ public class RegionServerMetrics implements Updater {
     if (seconds == 0) {
       seconds = 1;
     }
-    sb = Strings.appendKeyValue(sb, "request",
-      Float.valueOf(this.requests.getPreviousIntervalValue()));
+    sb = Strings.appendKeyValue(sb, "request", Float.valueOf(getRequests()));
     sb = Strings.appendKeyValue(sb, "regions",
       Integer.valueOf(this.regions.get()));
     sb = Strings.appendKeyValue(sb, "stores",

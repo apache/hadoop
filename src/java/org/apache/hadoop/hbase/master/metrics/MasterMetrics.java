@@ -25,6 +25,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 
 /** 
@@ -37,12 +38,12 @@ import org.apache.hadoop.metrics.util.MetricsIntValue;
 public class MasterMetrics implements Updater {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final MetricsRecord metricsRecord;
-  
+  private final MetricsRegistry registry = new MetricsRegistry();
   /*
    * Count of requests to the cluster since last call to metrics update
    */
   private final MetricsIntValue cluster_requests =
-    new MetricsIntValue("cluster_requests");
+    new MetricsIntValue("cluster_requests", registry);
 
   public MasterMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -90,7 +91,7 @@ public class MasterMetrics implements Updater {
    */
   public void incrementRequests(final int inc) {
     synchronized(this.cluster_requests) {
-      this.cluster_requests.inc(inc);
+      this.cluster_requests.set(this.cluster_requests.get() + inc);
     }
   }
 }

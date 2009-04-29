@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -399,15 +398,19 @@ public class HBaseRPC {
                                                long clientVersion,
                                                InetSocketAddress addr,
                                                Configuration conf,
-                                               int maxAttempts
+                                               int maxAttempts,
+                                               long timeout
                                                ) throws IOException {
     // HBase does limited number of reconnects which is different from hadoop.
+    long startTime = System.currentTimeMillis();
+    IOException ioe;
     int reconnectAttempts = 0;
     while (true) {
       try {
         return getProxy(protocol, clientVersion, addr, conf);
       } catch(ConnectException se) {  // namenode has not been started
         LOG.info("Server at " + addr + " not available yet, Zzzzz...");
+        ioe = se;
         if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
           LOG.info("Server at " + addr + " could not be reached after " +
                   reconnectAttempts + " tries, giving up.");
@@ -417,7 +420,14 @@ public class HBaseRPC {
       }
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
+        ioe = te;
       }
+      // check if timed out
+      if (System.currentTimeMillis()-timeout >= startTime) {
+        throw ioe;
+      }
+
+      // wait for retry
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ie) {
@@ -639,18 +649,9 @@ public class HBaseRPC {
           rpcMetrics.rpcQueueTime.inc(qTime);
           rpcMetrics.rpcProcessingTime.inc(processingTime);
         }
-
-	MetricsTimeVaryingRate m = rpcMetrics.metricsList.get(call.getMethodName());
-
-	if (m != null) {
-		m.inc(processingTime);
-	}
-	else {
-		rpcMetrics.metricsList.put(call.getMethodName(), new MetricsTimeVaryingRate(call.getMethodName()));
-		m = rpcMetrics.metricsList.get(call.getMethodName());
-		m.inc(processingTime);
-	}
-
+        rpcMetrics.rpcQueueTime.inc(qTime);
+        rpcMetrics.rpcProcessingTime.inc(processingTime);
+        rpcMetrics.inc(call.getMethodName(), processingTime);
         if (verbose) log("Return: "+value);
 
         return new HbaseObjectWritable(method.getReturnType(), value);

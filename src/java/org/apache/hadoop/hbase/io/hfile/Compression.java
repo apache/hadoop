@@ -33,7 +33,6 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.io.compress.LzoCodec;
 
 /**
  * Compression related stuff.
@@ -73,61 +72,20 @@ public final class Compression {
    */
   public static enum Algorithm {
     LZO("lzo") {
-      private LzoCodec codec;
 
       @Override
       CompressionCodec getCodec() {
-        if (codec == null) {
-          Configuration conf = new Configuration();
-          conf.setBoolean("hadoop.native.lib", true);
-          codec = new LzoCodec();
-          codec.setConf(conf);
-        }
-
-        return codec;
+        throw new UnsupportedOperationException("LZO compression is disabled for now");
       }
-
       @Override
-      public synchronized InputStream createDecompressionStream(
-          InputStream downStream, Decompressor decompressor,
-          int downStreamBufferSize) throws IOException {
-        InputStream bis1 = null;
-        if (downStreamBufferSize > 0) {
-          bis1 = new BufferedInputStream(downStream, downStreamBufferSize);
-        }
-        else {
-          bis1 = downStream;
-        }
-        codec.getConf()
-            .setInt("io.compression.codec.lzo.buffersize", 64 * 1024);
-        CompressionInputStream cis =
-            codec.createInputStream(bis1, decompressor);
-        BufferedInputStream bis2 = new BufferedInputStream(cis, DATA_IBUF_SIZE);
-        return bis2;
+      public InputStream createDecompressionStream(InputStream downStream, Decompressor decompressor, int downStreamBufferSize) throws IOException {
+        throw new UnsupportedOperationException("LZO compression is disabled for now");
       }
-
       @Override
-      public synchronized OutputStream createCompressionStream(
-          OutputStream downStream, Compressor compressor,
-          int downStreamBufferSize) throws IOException {
-        OutputStream bos1 = null;
-        if (downStreamBufferSize > 0) {
-          bos1 = new BufferedOutputStream(downStream, downStreamBufferSize);
-        }
-        else {
-          bos1 = downStream;
-        }
-        codec.getConf()
-            .setInt("io.compression.codec.lzo.buffersize", 64 * 1024);
-        CompressionOutputStream cos =
-            codec.createOutputStream(bos1, compressor);
-        BufferedOutputStream bos2 =
-            new BufferedOutputStream(new FinishOnFlushCompressionStream(cos),
-                DATA_OBUF_SIZE);
-        return bos2;
+      public OutputStream createCompressionStream(OutputStream downStream, Compressor compressor, int downStreamBufferSize) throws IOException {
+        throw new UnsupportedOperationException("LZO compression is disabled for now");
       }
     },
-
     GZ("gz") {
       private GzipCodec codec;
 

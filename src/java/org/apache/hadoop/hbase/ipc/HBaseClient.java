@@ -302,7 +302,7 @@ public class HBaseClient {
             this.socket = socketFactory.createSocket();
             this.socket.setTcpNoDelay(tcpNoDelay);
             // connection time out is 20s
-            this.socket.connect(remoteId.getAddress(), 20000);
+            NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
             this.socket.setSoTimeout(pingInterval);
             break;
           } catch (SocketTimeoutException toe) {

@@ -19,15 +19,6 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -38,8 +29,20 @@ import org.apache.hadoop.hbase.rest.parser.IHBaseRestParser;
 import org.apache.hadoop.hbase.rest.serializer.RestSerializerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
-import org.mortbay.http.NCSARequestLog;
-import org.mortbay.http.SocketListener;
+import org.mortbay.jetty.Connector;
+import org.mortbay.jetty.NCSARequestLog;
+import org.mortbay.jetty.bio.SocketConnector;
+import org.mortbay.jetty.handler.RequestLogHandler;
+import org.mortbay.jetty.webapp.WebAppContext;
+import org.mortbay.thread.QueuedThreadPool;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * Servlet implementation class for hbase REST interface. Presumes container
@@ -466,15 +469,30 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
       printUsageAndExit();
     }
     org.mortbay.jetty.Server webServer = new org.mortbay.jetty.Server();
-    SocketListener listener = new SocketListener();
-    listener.setPort(port);
-    listener.setHost(bindAddress);
-    listener.setMaxThreads(numThreads);
-    webServer.addListener(listener);
+
+    Connector connector = new SocketConnector();
+    connector.setPort(port);
+    connector.setHost(bindAddress);
+
+    QueuedThreadPool pool = new QueuedThreadPool();
+    pool.setMaxThreads(numThreads);
+
+    webServer.addConnector(connector);
+    webServer.setThreadPool(pool);
+
+    WebAppContext wac = new WebAppContext();
+    wac.setContextPath("/");
+    wac.setWar(InfoServer.getWebAppDir("rest"));
+
     NCSARequestLog ncsa = new NCSARequestLog();
     ncsa.setLogLatency(true);
-    webServer.setRequestLog(ncsa);
-    webServer.addWebApplication("/", InfoServer.getWebAppDir("rest"));
+
+    RequestLogHandler rlh = new RequestLogHandler();
+    rlh.setRequestLog(ncsa);
+    rlh.setHandler(wac);
+
+    webServer.addHandler(rlh);
+
     webServer.start();
   }
 

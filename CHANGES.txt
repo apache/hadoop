@@ -12,6 +12,8 @@ Release 0.20.0 - Unreleased
    HBASE-1289  Remove "hbase.fully.distributed" option and update docs
                (Nitay Joffe via Stack)
    HBASE-1234  Change HBase StoreKey format
+   HBASE-1348  Move 0.20.0 targeted TRUNK to 0.20.0 hadoop
+               (Ryan Rawson and Stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)

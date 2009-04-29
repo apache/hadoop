@@ -410,7 +410,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.info("Stopping infoServer");
       try {
         this.infoServer.stop();
-      } catch (InterruptedException ex) {
+      } catch (Exception ex) {
         ex.printStackTrace();
       }
     }

@@ -1342,10 +1342,10 @@ public class HFile {
     private BlockIndex() {
       this(null);
     }
-  
+
+
     /**
-     * Constructor
-     * @param trailer File tail structure with index stats.
+     * @param c comparator used to compare keys.
      */
     BlockIndex(final RawComparator<byte []>c) {
       this.comparator = c;

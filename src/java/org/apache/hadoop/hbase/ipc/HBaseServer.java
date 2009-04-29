@@ -297,6 +297,8 @@ public abstract class HBaseServer {
     public void run() {
       LOG.info(getName() + ": starting");
       SERVER.set(HBaseServer.this);
+      long lastPurgeTime = 0;   // last check for old calls.
+
       while (running) {
         SelectionKey key = null;
         try {

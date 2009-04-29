@@ -220,6 +220,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
+  private final long rpcTimeout;
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -316,6 +318,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
+    this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
   }
 
   /**
@@ -523,8 +526,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
       LOG.info("Stopping infoServer");
       try {
         this.infoServer.stop();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
+      } catch (Exception e) {
+        e.printStackTrace();
       }
     }
 
@@ -1181,7 +1184,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
             masterAddress.getInetSocketAddress(),
-            this.conf, -1);
+            this.conf, -1, this.rpcTimeout);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();

@@ -125,6 +125,9 @@ class ServerManager implements HConstants {
     String serverName = HServerInfo.getServerName(info);
     if (serversToServerInfo.containsKey(serverName) ||
         deadServers.contains(serverName)) {
+      LOG.debug("Server start was rejected: " + serverInfo);
+      LOG.debug("serversToServerInfo.containsKey: " + serversToServerInfo.containsKey(serverName));
+      LOG.debug("deadServers.contains: " + deadServers.contains(serverName));
       throw new Leases.LeaseStillHeldException(serverName);
     }
     Watcher watcher = new ServerExpirer(serverName, info.getServerAddress());
