@@ -26,6 +26,7 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1056,11 +1057,30 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.leases.start();
     // Put up info server.
     int port = this.conf.getInt("hbase.regionserver.info.port", 60030);
+    // -1 is for disabling info server
     if (port >= 0) {
-      String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
-      this.infoServer = new InfoServer("regionserver", a, port, false);
-      this.infoServer.setAttribute("regionserver", this);
-      this.infoServer.start();
+      String addr = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+      // check if auto port bind enabled
+      boolean auto = this.conf.getBoolean("hbase.regionserver.info.port.auto",
+          false);
+      while (true) {
+        try {
+          this.infoServer = new InfoServer("regionserver", addr, port, false);
+          this.infoServer.setAttribute("regionserver", this);
+          this.infoServer.start();
+          break;
+        } catch (BindException e) {
+          if (!auto){
+            // auto bind disabled throw BindException
+            throw e;
+          }
+          // auto bind enabled, try to use another port
+          LOG.info("Failed binding http info server to port: " + port);
+          port++;
+          // update HRS server info
+          serverInfo.setInfoPort(port);
+        }
+      } 
     }
 
     // Set up the safe mode handler if safe mode has been configured.

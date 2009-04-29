@@ -82,6 +82,14 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.info.port.auto</name>
+    <value>true</value>
+    <description>Info server auto port bind. Enables automatic port
+    search if hbase.regionserver.info.port is already in use.
+    Enabled for testing to run multiple tests on one machine.
+    </description>
+  </property>
+  <property>
     <name>hbase.master.lease.thread.wakefrequency</name>
     <value>3000</value>
     <description>The interval between checks for expired region server leases.

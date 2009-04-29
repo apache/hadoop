@@ -111,6 +111,13 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
   
   /**
+   * @param infoPort - new port of info server
+   */
+  public void setInfoPort(int infoPort) {
+    this.infoPort = infoPort;
+  }
+  
+  /**
    * @param startCode the startCode to set
    */
   public synchronized void setStartCode(long startCode) {

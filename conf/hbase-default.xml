@@ -108,6 +108,14 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.info.port.auto</name>
+    <value>false</value>
+    <description>Info server auto port bind. Enables automatic port
+    search if hbase.regionserver.info.port is already in use.
+    Useful for testing, turned off by default.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.info.bindAddress</name>
     <value>0.0.0.0</value>
     <description>The address for the hbase regionserver web UI

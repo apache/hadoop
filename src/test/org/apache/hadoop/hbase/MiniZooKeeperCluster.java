@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.HashMap;
@@ -48,7 +49,6 @@ public class MiniZooKeeperCluster {
   private static final Log LOG = LogFactory.getLog(MiniZooKeeperCluster.class);
 
   // TODO: make this more configurable?
-  private static final int CLIENT_PORT_START = 21810; // use non-standard port
   private static final int LEADER_PORT_START = 31810; // use non-standard port
   private static final int TICK_TIME = 2000;
   private static final int INIT_LIMIT = 3;
@@ -56,6 +56,7 @@ public class MiniZooKeeperCluster {
   private static final int CONNECTION_TIMEOUT = 30000;
 
   private boolean started;
+  private int clientPortStart = 21810; // use non-standard port
   private int numPeers;
   private File baseDir;
   private String quorumServers;
@@ -119,13 +120,23 @@ public class MiniZooKeeperCluster {
     recreateDir(dir);
 
     ZooKeeperServer server = new ZooKeeperServer(dir, dir, TICK_TIME);
-    standaloneServerFactory = new NIOServerCnxn.Factory(CLIENT_PORT_START);
+    while (true) {
+      try {
+        standaloneServerFactory = new NIOServerCnxn.Factory(clientPortStart);
+      } catch (BindException e) {
+        LOG.info("Faild binding ZK Server to client port: " + clientPortStart);
+        //this port is already in use. try to use another
+        clientPortStart++;
+        continue;
+      }
+      break;
+    }
     standaloneServerFactory.startup(server);
 
-    quorumServers = "localhost:" + CLIENT_PORT_START;
+    quorumServers = "localhost:" + clientPortStart;
     ZooKeeperWrapper.setQuorumServers(quorumServers);
 
-    if (!waitForServerUp(CLIENT_PORT_START, CONNECTION_TIMEOUT)) {
+    if (!waitForServerUp(clientPortStart, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for startup of standalone server");
     }
   }
@@ -149,7 +160,7 @@ public class MiniZooKeeperCluster {
       File dir = new File(baseDir, "zookeeper-peer-" + id);
       recreateDir(dir);
 
-      int port = CLIENT_PORT_START + id;
+      int port = clientPortStart + id;
       quorumPeers[id - 1] = new QuorumPeer(peers, dir, dir, port, 0, id,
           TICK_TIME, INIT_LIMIT, SYNC_LIMIT);
 
@@ -169,7 +180,7 @@ public class MiniZooKeeperCluster {
 
     // Wait for quorum peers to be up before going on.
     for (int id = 1; id <= numPeers; ++id) {
-      int port = CLIENT_PORT_START + id;
+      int port = clientPortStart + id;
       if (!waitForServerUp(port, CONNECTION_TIMEOUT)) {
         throw new IOException("Waiting for startup of peer " + id);
       }
@@ -220,7 +231,7 @@ public class MiniZooKeeperCluster {
     }
 
     for (int id = 1; id <= quorumPeers.length; ++id) {
-      int port = CLIENT_PORT_START + id;
+      int port = clientPortStart + id;
       if (!waitForServerDown(port, CONNECTION_TIMEOUT)) {
         throw new IOException("Waiting for shutdown of peer " + id);
       }
@@ -229,7 +240,7 @@ public class MiniZooKeeperCluster {
 
   private void shutdownStandalone() throws IOException {
     standaloneServerFactory.shutdown();
-    if (!waitForServerDown(CLIENT_PORT_START, CONNECTION_TIMEOUT)) {
+    if (!waitForServerDown(clientPortStart, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for shutdown of standalone server");
     }
   }

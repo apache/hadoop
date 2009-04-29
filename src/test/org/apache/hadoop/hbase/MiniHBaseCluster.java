@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -54,8 +55,20 @@ public class MiniHBaseCluster implements HConstants {
   private void init(final int nRegionNodes) throws IOException {
     try {
       // start up a LocalHBaseCluster
-      hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes);
-      hbaseCluster.startup();
+      while (true) {
+        try {
+          hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes);
+          hbaseCluster.startup();
+        } catch (BindException e) {
+          //this port is already in use. try to use another (for multiple testing)
+          int port = conf.getInt("hbase.master.port", DEFAULT_MASTER_PORT);
+          LOG.info("MiniHBaseCluster: Failed binding Master to port: " + port);
+          port++;
+          conf.setInt("hbase.master.port", port);
+          continue;
+        }
+        break;
+      }
     } catch(IOException e) {
       shutdown();
       throw e;

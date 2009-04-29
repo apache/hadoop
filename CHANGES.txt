@@ -178,6 +178,8 @@ Release 0.20.0 - Unreleased
                split a key range in N chunks (Jon Gray via Stack)
    HBASE-1350  New method in HTable.java to return start and end keys for
                regions in a table (Vimal Mathew via Stack)
+   HBASE-1271  Allow multiple tests to run on one machine
+               (Evgeny Ryabitskiy via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
