@@ -142,7 +142,8 @@ public class RegionServerMetrics implements Updater {
     if (seconds == 0) {
       seconds = 1;
     }
-    sb = Strings.appendKeyValue(sb, "request", Float.valueOf(getRequests()));
+    sb = Strings.appendKeyValue(sb, "request",
+      Float.valueOf(this.requests.getPreviousIntervalValue()));
     sb = Strings.appendKeyValue(sb, "regions",
       Integer.valueOf(this.regions.get()));
     sb = Strings.appendKeyValue(sb, "stores",
