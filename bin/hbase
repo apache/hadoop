@@ -133,7 +133,7 @@ for f in $HBASE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-for f in $HBASE_HOME/lib/jetty-ext/*.jar; do
+for f in $HBASE_HOME/lib/jsp-2.1/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
