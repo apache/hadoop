@@ -8,6 +8,8 @@ Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-5711. Change Namenode file close log to info. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -1382,10 +1382,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     finalizeINodeFileUnderConstruction(src, pendingFile);
 
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src
-                                  + " blocklist persisted");
-    }
+    NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
+                                  + " is closed by " + holder);
     return CompleteFileStatus.COMPLETE_SUCCESS;
   }
 
