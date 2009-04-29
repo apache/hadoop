@@ -53,8 +53,7 @@ if [ "$HBASE_MANAGES_ZK" = "" ]; then
 fi
 
 if [ "$HBASE_MANAGES_ZK" = "true" ]; then
- ssh $HBASE_SSH_OPTS 127.0.0.1 $"${@// /\\ }" \
-   2>&1 | sed "s/^/$zookeeper: /" &
+ ssh $HBASE_SSH_OPTS 127.0.0.1 $"${@// /\\ }" 2>&1 | sed "s/^/localhost: /" &
  if [ "$HBASE_SLAVE_SLEEP" != "" ]; then
    sleep $HBASE_SLAVE_SLEEP
  fi
