@@ -465,6 +465,9 @@ Trunk (unreleased changes)
     HADOOP-5715. Add conf/mapred-queue-acls.xml to the ignore lists.
     (szetszwo)
 
+    HADOOP-5612. Some c++ scripts are not chmodded before ant execution.
+    (Todd Lipcon via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
