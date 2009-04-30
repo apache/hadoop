@@ -24,7 +24,7 @@ import java.io.IOException;
 
 public class TestThrowableWritable extends TestCase {
 
-  ThrowableWritable simple, messageOnly, chained, empty;
+  private ThrowableWritable simple, messageOnly, chained, empty;
   private static final String SIMPLE = "simple";
   private static final String MESSAGE_ONLY = "messageOnly";
   private static final String OUTER = "outer";
