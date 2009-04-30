@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 
     HADOOP-5467. Introduce offline fsimage image viewer. (Jakob Homan via shv)
 
+    HADOOP-5752. Add a new hdfs image processor, Delimited, to oiv. (Jakob
+    Homan via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

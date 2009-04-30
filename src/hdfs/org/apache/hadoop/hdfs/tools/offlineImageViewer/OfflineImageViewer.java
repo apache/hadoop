@@ -59,6 +59,11 @@ public class OfflineImageViewer {
     "  * Indented: This processor enumerates over all of the elements in\n" +
     "    the fsimage file, using levels of indentation to delineate\n" +
     "    sections within the file.\n" +
+    "  * Delimited: Generate a text file with all of the elements common\n" +
+    "    to both inodes and inodes-under-construction, separated by a\n" +
+    "    delimiter. The default delimiter is \u0001, though this may be\n" +
+    "    changed via the -delimiter argument. This processor also overrides\n" +
+    "    the -skipBlocks option for the same reason as the Ls processor\n" +
     "  * XML: This processor creates an XML document with all elements of\n" +
     "    the fsimage enumerated, suitable for further analysis by XML\n" +
     "    tools.\n" +
@@ -70,14 +75,15 @@ public class OfflineImageViewer {
     "\n" + 
     "Optional command line arguments:\n" +
     "-p,--processor <arg>   Select which type of processor to apply\n" +
-    "                       against image file. (Ls|XML|Indented).\n" +
+    "                       against image file. (Ls|XML|Delimited|Indented).\n" +
     "-h,--help              Display usage information and exit\n" +
     "-printToScreen         For processors that write to a file, also\n" +
     "                       output to screen. On large image files this\n" +
     "                       will dramatically increase processing time.\n" +
     "-skipBlocks            Skip inodes' blocks information. May\n" +
     "                       significantly decrease output.\n" +
-    "                       (default = false).\n";
+    "                       (default = false).\n" +
+    "-delimiter <arg>       Delimiting string to use with Delimited processor\n";
 
   private final boolean skipBlocks;
   private final String inputFile;
@@ -157,6 +163,7 @@ public class OfflineImageViewer {
     options.addOption("h", "help", false, "");
     options.addOption("skipBlocks", false, "");
     options.addOption("printToScreen", false, "");
+    options.addOption("delimiter", true, "");
 
     return options;
   }
@@ -197,17 +204,26 @@ public class OfflineImageViewer {
     boolean printToScreen = cmd.hasOption("printToScreen");
     String inputFile = cmd.getOptionValue("i");
     String processor = cmd.getOptionValue("p", "Ls");
-    String outputFile;
+    String outputFile = cmd.getOptionValue("o");
+    String delimiter = cmd.getOptionValue("delimiter");
+    
+    if( !(delimiter == null || processor.equals("Delimited")) ) {
+      System.out.println("Can only specify -delimiter with Delimited processor");
+      printUsage();
+      return;
+    }
     
     ImageVisitor v;
     if(processor.equals("Indented")) {
-      outputFile = cmd.getOptionValue("o");
       v = new IndentedImageVisitor(outputFile, printToScreen);
     } else if (processor.equals("XML")) {
-      outputFile = cmd.getOptionValue("o");
       v = new XmlImageVisitor(outputFile, printToScreen);
+    } else if (processor.equals("Delimited")) {
+      v = delimiter == null ?  
+                 new DelimitedImageVisitor(outputFile, printToScreen) :
+                 new DelimitedImageVisitor(outputFile, printToScreen, delimiter);
+      skipBlocks = false;
     } else {
-      outputFile = cmd.getOptionValue("o");
       v = new LsImageVisitor(outputFile, printToScreen);
       skipBlocks = false;
     }
