@@ -466,7 +466,8 @@ public class KeyValue {
     return bytes;
   }
 
-  // Needed doing 'contains' on List.
+  // Needed doing 'contains' on List.  Only compares the key portion, not the
+  // value.
   public boolean equals(Object other) {
     KeyValue kv = (KeyValue)other;
     // Comparing bytes should be fine doing equals test.  Shouldn't have to
@@ -960,7 +961,9 @@ public class KeyValue {
   }
 
   /**
-   * Compare KeyValues.
+   * Compare KeyValues.  When we compare KeyValues, we only compare the Key
+   * portion.  This means two KeyValues with same Key but different Values are
+   * considered the same as far as this Comparator is concerned.
    * Hosts a {@link KeyComparator}.
    */
   public static class KVComparator implements java.util.Comparator<KeyValue> {
@@ -1316,7 +1319,7 @@ public class KeyValue {
   }
 
   /**
-   * Compare key portion of a {@link KeyValue}
+   * Compare key portion of a {@link KeyValue}.
    */
   public static class KeyComparator implements RawComparator<byte []> {
     volatile boolean ignoreTimestamp = false;
