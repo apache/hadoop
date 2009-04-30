@@ -191,6 +191,11 @@ class Memcache {
     this.lock.readLock().lock();
     try {
       boolean notpresent = this.memcache.add(kv);
+      // if false then memcache is not changed (look memcache.add(kv) docs)
+      // need to remove kv and add again to replace it
+      if (!notpresent && this.memcache.remove(kv)) {
+        this.memcache.add(kv);
+      }
       size = heapSize(kv, notpresent);
     } finally {
       this.lock.readLock().unlock();

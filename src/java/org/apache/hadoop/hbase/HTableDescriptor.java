@@ -465,8 +465,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
    * @return true if the table contains the specified family name
    */
   public boolean hasFamily(final byte [] c) {
-    // If index is -1, then presume we were passed a column family name minus
-    // the colon delimiter.
     return families.containsKey(c);
   }
 

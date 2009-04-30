@@ -96,6 +96,8 @@ Release 0.20.0 - Unreleased
                each access
    HBASE-1358  Bug in reading from Memcache method (read only from snapshot)
                (Evgeny Ryabitskiy via Stack)
+   HBASE-1322  hbase-1234 broke TestAtomicIncrement; fix and reenable
+               (Evgeny Ryabitskiy and Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

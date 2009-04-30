@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class DisabledTestAtomicIncrement extends HBaseClusterTestCase {
-  static final Log LOG = LogFactory.getLog(DisabledTestAtomicIncrement.class);
+public class TestAtomicIncrement extends HBaseClusterTestCase {
+  static final Log LOG = LogFactory.getLog(TestAtomicIncrement.class);
 
   private static final byte [] CONTENTS = Bytes.toBytes("contents:");
 
@@ -80,14 +80,14 @@ public class DisabledTestAtomicIncrement extends HBaseClusterTestCase {
       
       // set a weird value, then increment:
       row = Bytes.toBytes("foo2");
-      byte [] value = {0,0,1};
+      byte [] value = {0,0,2};
       BatchUpdate bu = new BatchUpdate(row);
       bu.put(column, value);
       table.commit(bu);
       
-      assertEquals(2L, table.incrementColumnValue(row, column, 1));
+      assertEquals(3L, table.incrementColumnValue(row, column, 1));
 
-      assertEquals(-2L, table.incrementColumnValue(row, column, -4));
+      assertEquals(-2L, table.incrementColumnValue(row, column, -5));
 
       row = Bytes.toBytes("foo3");
       byte[] value2 = {1,2,3,4,5,6,7,8,9};
