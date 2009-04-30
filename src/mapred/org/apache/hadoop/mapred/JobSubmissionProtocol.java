@@ -57,9 +57,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             method getClusterStatus() to take a boolean argument
    *             for HADOOP-4807
    * Version 20: Modified ClusterStatus to have the tasktracker expiry
-   *             interval for HADOOP-4939                     
+   *             interval for HADOOP-4939
+   * Version 21: Modified TaskID to be aware of the new TaskTypes                                 
    */
-  public static final long versionID = 20L;
+  public static final long versionID = 21L;
 
   /**
    * Allocate a name for the job.

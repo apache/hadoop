@@ -40,6 +40,10 @@ Trunk (unreleased changes)
     HADOOP-5699. Change org.apache.hadoop.examples.PiEstimator to use 
     new mapreduce api. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5720. Introduces new task types - JOB_SETUP, JOB_CLEANUP
+    and TASK_CLEANUP. Removes the isMap methods from TaskID/TaskAttemptID
+    classes. (ddas)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

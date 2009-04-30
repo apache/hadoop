@@ -34,6 +34,7 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.JobTrackerMetricsInst;
 import org.apache.hadoop.mapred.JvmTask;
 import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
@@ -161,7 +162,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
         
         for (int i = 0; i < rawSplits.length; i++) {
           if (!this.isInterrupted()) {
-            TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i),0);  
+            TaskAttemptID mapId = new TaskAttemptID(
+                new TaskID(jobId, TaskType.MAP, i),0);  
             mapIds.add(mapId);
             MapTask map = new MapTask(file.toString(),  
                                       mapId, i,
@@ -182,7 +184,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           }
         }
         TaskAttemptID reduceId = 
-          new TaskAttemptID(new TaskID(jobId, false, 0), 0);
+          new TaskAttemptID(new TaskID(jobId, TaskType.REDUCE, 0), 0);
         try {
           if (numReduceTasks > 0) {
             // move map output to reduce input  

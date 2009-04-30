@@ -63,13 +63,13 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
    * Constructs a TaskId object from given parts.
    * @param jtIdentifier jobTracker identifier
    * @param jobId job number 
-   * @param isMap whether the tip is a map 
+   * @param type the TaskType 
    * @param taskId taskId number
    * @param id the task attempt number
    */
-  public TaskAttemptID(String jtIdentifier, int jobId, boolean isMap, 
+  public TaskAttemptID(String jtIdentifier, int jobId, TaskType type, 
                        int taskId, int id) {
-    this(new TaskID(jtIdentifier, jobId, isMap, taskId), id);
+    this(new TaskID(jtIdentifier, jobId, type, taskId), id);
   }
   
   public TaskAttemptID() { 
@@ -85,12 +85,11 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
   public TaskID getTaskID() {
     return taskId;
   }
-  
-  /**Returns whether this TaskAttemptID is a map ID */
-  public boolean isMap() {
-    return taskId.isMap();
+    
+  /**Returns the TaskType of the TaskAttemptID */
+  public TaskType getTaskType() {
+    return taskId.getTaskType();
   }
-  
   @Override
   public boolean equals(Object o) {
     if (!super.equals(o))
@@ -153,15 +152,15 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
       String[] parts = str.split(Character.toString(SEPARATOR));
       if(parts.length == 6) {
         if(parts[0].equals(ATTEMPT)) {
-          boolean isMap = false;
-          if(parts[3].equals("m")) isMap = true;
-          else if(parts[3].equals("r")) isMap = false;
-          else throw new Exception();
-          return new org.apache.hadoop.mapred.TaskAttemptID
-                       (parts[1],
-                        Integer.parseInt(parts[2]),
-                        isMap, Integer.parseInt(parts[4]), 
-                        Integer.parseInt(parts[5]));
+          String type = parts[3];
+          TaskType t = TaskID.getTaskType(type.charAt(0));
+          if(t != null) {
+            return new org.apache.hadoop.mapred.TaskAttemptID
+            (parts[1],
+             Integer.parseInt(parts[2]),
+             t, Integer.parseInt(parts[4]), 
+             Integer.parseInt(parts[5]));  
+          } else throw new Exception();
         }
       }
     } catch (Exception ex) {

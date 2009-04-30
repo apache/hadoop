@@ -22,6 +22,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.text.NumberFormat;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.hadoop.io.WritableUtils;
+
 
 /**
  * TaskID represents the immutable and unique identifier for 
@@ -54,32 +60,32 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   }
   
   private JobID jobId;
-  private boolean isMap;
-
+  private TaskType type;
+  
   /**
    * Constructs a TaskID object from given {@link JobID}.  
    * @param jobId JobID that this tip belongs to 
-   * @param isMap whether the tip is a map 
+   * @param type the {@link TaskType} of the task 
    * @param id the tip number
    */
-  public TaskID(JobID jobId, boolean isMap, int id) {
+  public TaskID(JobID jobId, TaskType type, int id) {
     super(id);
     if(jobId == null) {
       throw new IllegalArgumentException("jobId cannot be null");
     }
     this.jobId = jobId;
-    this.isMap = isMap;
+    this.type = type;
   }
   
   /**
    * Constructs a TaskInProgressId object from given parts.
    * @param jtIdentifier jobTracker identifier
    * @param jobId job number 
-   * @param isMap whether the tip is a map 
+   * @param type the TaskType 
    * @param id the tip number
    */
-  public TaskID(String jtIdentifier, int jobId, boolean isMap, int id) {
-    this(new JobID(jtIdentifier, jobId), isMap, id);
+  public TaskID(String jtIdentifier, int jobId, TaskType type, int id) {
+    this(new JobID(jtIdentifier, jobId), type, id);
   }
   
   public TaskID() { 
@@ -90,10 +96,12 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   public JobID getJobID() {
     return jobId;
   }
-  
-  /**Returns whether this TaskID is a map ID */
-  public boolean isMap() {
-    return isMap;
+    
+  /**
+   * Get the type of the task
+   */
+  public TaskType getTaskType() {
+    return type;
   }
   
   @Override
@@ -102,7 +110,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
       return false;
 
     TaskID that = (TaskID)o;
-    return this.isMap == that.isMap && this.jobId.equals(that.jobId);
+    return this.type == that.type && this.jobId.equals(that.jobId);
   }
 
   /**Compare TaskInProgressIds by first jobIds, then by tip numbers. Reduces are 
@@ -112,10 +120,12 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     TaskID that = (TaskID)o;
     int jobComp = this.jobId.compareTo(that.jobId);
     if(jobComp == 0) {
-      if(this.isMap == that.isMap) {
+      if(this.type == that.type) {
         return this.id - that.id;
       }
-      else return this.isMap ? -1 : 1;
+      else {
+        return this.type.compareTo(that.type);
+      }
     }
     else return jobComp;
   }
@@ -132,7 +142,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   protected StringBuilder appendTo(StringBuilder builder) {
     return jobId.appendTo(builder).
                  append(SEPARATOR).
-                 append(isMap ? 'm' : 'r').
+                 append(CharTaskTypeMaps.getRepresentingCharacter(type)).
                  append(SEPARATOR).
                  append(idFormat.format(id));
   }
@@ -146,14 +156,14 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     jobId.readFields(in);
-    isMap = in.readBoolean();
+    type = WritableUtils.readEnum(in, TaskType.class);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
     jobId.write(out);
-    out.writeBoolean(isMap);
+    WritableUtils.writeEnum(out, type);
   }
   
   /** Construct a TaskID object from given string 
@@ -168,14 +178,15 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
       String[] parts = str.split("_");
       if(parts.length == 5) {
         if(parts[0].equals(TASK)) {
-          boolean isMap = false;
-          if(parts[3].equals("m")) isMap = true;
-          else if(parts[3].equals("r")) isMap = false;
-          else throw new Exception();
-          return new org.apache.hadoop.mapred.TaskID(parts[1], 
+          String type = parts[3];
+          TaskType t = CharTaskTypeMaps.getTaskType(type.charAt(0));
+          if(t != null) {
+          
+            return new org.apache.hadoop.mapred.TaskID(parts[1], 
                                                      Integer.parseInt(parts[2]),
-                                                     isMap, 
+                                                     t, 
                                                      Integer.parseInt(parts[4]));
+          } else throw new Exception();
         }
       }
     }catch (Exception ex) {//fall below
@@ -183,5 +194,64 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     throw new IllegalArgumentException("TaskId string : " + str 
         + " is not properly formed");
   }
+  /**
+   * Gets the character representing the {@link TaskType}
+   * @param type the TaskType
+   * @return the character
+   */
+  public static char getRepresentingCharacter(TaskType type) {
+    return CharTaskTypeMaps.getRepresentingCharacter(type);
+  }
+  /**
+   * Gets the {@link TaskType} corresponding to the character
+   * @param c the character
+   * @return the TaskType
+   */
+  public static TaskType getTaskType(char c) {
+    return CharTaskTypeMaps.getTaskType(c);
+  }
   
+  public static String getAllTaskTypes() {
+    return CharTaskTypeMaps.allTaskTypes;
+  }
+
+  /**
+   * Maintains the mapping from the character representation of a task type to 
+   * the enum class TaskType constants
+   */
+  static class CharTaskTypeMaps {
+    private static EnumMap<TaskType, Character> typeToCharMap = 
+      new EnumMap<TaskType,Character>(TaskType.class);
+    private static Map<Character, TaskType> charToTypeMap = 
+      new HashMap<Character, TaskType>();
+    static String allTaskTypes = "(m|r|s|c|t)";
+    static {
+      setupTaskTypeToCharMapping();
+      setupCharToTaskTypeMapping();
+    }
+    
+    private static void setupTaskTypeToCharMapping() {
+      typeToCharMap.put(TaskType.MAP, 'm');
+      typeToCharMap.put(TaskType.REDUCE, 'r');
+      typeToCharMap.put(TaskType.JOB_SETUP, 's');
+      typeToCharMap.put(TaskType.JOB_CLEANUP, 'c');
+      typeToCharMap.put(TaskType.TASK_CLEANUP, 't');
+    }
+
+    private static void setupCharToTaskTypeMapping() {
+      charToTypeMap.put('m', TaskType.MAP);
+      charToTypeMap.put('r', TaskType.REDUCE);
+      charToTypeMap.put('s', TaskType.JOB_SETUP);
+      charToTypeMap.put('c', TaskType.JOB_CLEANUP);
+      charToTypeMap.put('t', TaskType.TASK_CLEANUP);
+    }
+
+    static char getRepresentingCharacter(TaskType type) {
+      return typeToCharMap.get(type);
+    }
+    static TaskType getTaskType(char c) {
+      return charToTypeMap.get(c);
+    }
+  }
+
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobHistory.*;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -575,8 +576,8 @@ public class TestJobHistory extends TestCase {
 
     // Get the 1st map, 1st reduce, cleanup & setup taskIDs and
     // validate their history info
-    TaskID mapTaskId = new TaskID(job.getID(), true, 0);
-    TaskID reduceTaskId = new TaskID(job.getID(), false, 0);
+    TaskID mapTaskId = new TaskID(job.getID(), TaskType.MAP, 0);
+    TaskID reduceTaskId = new TaskID(job.getID(), TaskType.REDUCE, 0);
 
     TaskInProgress cleanups[] = jip.getCleanupTasks();
     TaskID cleanupTaskId;

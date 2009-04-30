@@ -35,6 +35,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.TaskType;
 
 /**
  * Class to test mapred debug Script
@@ -166,7 +167,8 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
 
     JobID jobId = job.getID();
     // construct the task id of first map task of failmap
-    TaskAttemptID taskId = new TaskAttemptID(new TaskID(jobId,true, 0), 0);
+    TaskAttemptID taskId = new TaskAttemptID(
+        new TaskID(jobId,TaskType.MAP, 0), 0);
     // wait for the job to finish.
     while (!job.isComplete()) ;
     

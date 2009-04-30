@@ -224,7 +224,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * @param context the task that is calling this
    * @param name the base filename
    * @param extension the filename extension
-   * @return a string like $name-[mr]-$id$extension
+   * @return a string like $name-[mrsct]-$id$extension
    */
   public synchronized static String getUniqueFile(TaskAttemptContext context,
                                                   String name,
@@ -234,7 +234,8 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
     StringBuilder result = new StringBuilder();
     result.append(name);
     result.append('-');
-    result.append(taskId.isMap() ? 'm' : 'r');
+    result.append(
+        TaskID.getRepresentingCharacter(taskId.getTaskType()));
     result.append('-');
     result.append(NUMBER_FORMAT.format(partition));
     result.append(extension);

@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -2518,7 +2519,7 @@ class JobInProgress {
    * Return the TaskInProgress that matches the tipid.
    */
   public synchronized TaskInProgress getTaskInProgress(TaskID tipid) {
-    if (tipid.isMap()) {
+    if (tipid.getTaskType() == TaskType.MAP) {
       if (tipid.equals(cleanup[0].getTIPId())) { // cleanup map tip
         return cleanup[0]; 
       }

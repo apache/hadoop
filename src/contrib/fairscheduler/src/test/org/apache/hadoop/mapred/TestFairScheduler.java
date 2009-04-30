@@ -33,6 +33,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.FairScheduler.JobInfo;
+import org.apache.hadoop.mapreduce.TaskType;
 
 public class TestFairScheduler extends TestCase {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -95,8 +96,12 @@ public class TestFairScheduler extends TestCase {
     
     private TaskAttemptID getTaskAttemptID(boolean isMap) {
       JobID jobId = getJobID();
+      TaskType t = TaskType.REDUCE;
+      if (isMap) {
+        t = TaskType.MAP;
+      }
       return new TaskAttemptID(jobId.getJtIdentifier(),
-          jobId.getId(), isMap, ++taskCounter, 0);
+          jobId.getId(), t, ++taskCounter, 0);
     }
   }
   

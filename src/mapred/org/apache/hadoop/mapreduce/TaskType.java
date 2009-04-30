@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapreduce;
 
 /**
- * Utility enum for map and reduce task types.
+ * Enum for map, reduce, job-setup, job-cleanup, task-cleanup task types.
  */
 public enum TaskType {
-  MAP, REDUCE
+  MAP, REDUCE, JOB_SETUP, JOB_CLEANUP, TASK_CLEANUP
 }

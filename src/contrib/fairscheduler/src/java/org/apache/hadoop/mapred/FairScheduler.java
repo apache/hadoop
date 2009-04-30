@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.mapred.JobStatus;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -525,6 +526,9 @@ public class FairScheduler extends TaskScheduler {
     PoolManager poolMgr = getPoolManager();
     for (Pool pool: poolMgr.getPools()) {
       for (final TaskType type: TaskType.values()) {
+        if (type != TaskType.MAP && type != TaskType.REDUCE) {
+          continue;
+        }
         Set<JobInProgress> jobs = new HashSet<JobInProgress>(pool.getJobs());
         int slotsLeft = poolMgr.getAllocation(pool.getName(), type);
         // Keep assigning slots until none are left
@@ -615,6 +619,9 @@ public class FairScheduler extends TaskScheduler {
     // fair allocation, and at this point we know that we've met everyone's
     // guarantee and we've split the excess capacity fairly among jobs left.
     for (TaskType type: TaskType.values()) {
+      if (type != TaskType.MAP && type != TaskType.REDUCE) {
+        continue;
+      }
       // Select only jobs that still need this type of task
       HashSet<JobInfo> jobsLeft = new HashSet<JobInfo>();
       for (Entry<JobInProgress, JobInfo> entry: infos.entrySet()) {

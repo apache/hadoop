@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.JobClient.RawSplit;
 import org.apache.hadoop.mapred.SortedRanges.Range;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.net.Node;
 
 
@@ -219,7 +220,8 @@ class TaskInProgress {
    */
   void init(JobID jobId) {
     this.startTime = System.currentTimeMillis();
-    this.id = new TaskID(jobId, isMapTask(), partition);
+    this.id = new TaskID(jobId, isMapTask() ? TaskType.MAP : TaskType.REDUCE,
+        partition);
     this.skipping = startSkipping();
   }
 

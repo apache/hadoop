@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.apache.hadoop.mapreduce.TaskType;
+
 /**
  * TaskID represents the immutable and unique identifier for 
  * a Map or Reduce Task. Each TaskID encompasses multiple attempts made to
@@ -49,26 +51,26 @@ public class TaskID extends org.apache.hadoop.mapreduce.TaskID {
   /**
    * Constructs a TaskID object from given {@link JobID}.  
    * @param jobId JobID that this tip belongs to 
-   * @param isMap whether the tip is a map 
+   * @param type the {@link TaskType} 
    * @param id the tip number
    */
-  public TaskID(org.apache.hadoop.mapreduce.JobID jobId, boolean isMap,int id) {
-    super(jobId, isMap, id);
+  public TaskID(org.apache.hadoop.mapreduce.JobID jobId, TaskType type,int id) {
+    super(jobId, type, id);
   }
   
   /**
    * Constructs a TaskInProgressId object from given parts.
    * @param jtIdentifier jobTracker identifier
    * @param jobId job number 
-   * @param isMap whether the tip is a map 
+   * @param type the {@link TaskType} 
    * @param id the tip number
    */
-  public TaskID(String jtIdentifier, int jobId, boolean isMap, int id) {
-    this(new JobID(jtIdentifier, jobId), isMap, id);
+  public TaskID(String jtIdentifier, int jobId, TaskType type, int id) {
+    this(new JobID(jtIdentifier, jobId), type, id);
   }
   
   public TaskID() {
-    super(new JobID(), false, 0);
+    super(new JobID(), TaskType.REDUCE, 0);
   }
   
   /**
@@ -80,7 +82,7 @@ public class TaskID extends org.apache.hadoop.mapreduce.TaskID {
     if (old instanceof TaskID) {
       return (TaskID) old;
     } else {
-      return new TaskID(JobID.downgrade(old.getJobID()), old.isMap(), 
+      return new TaskID(JobID.downgrade(old.getJobID()), old.getTaskType(), 
                         old.getId());
     }
   }
@@ -108,25 +110,28 @@ public class TaskID extends org.apache.hadoop.mapreduce.TaskID {
    * <pre> "task_[^_]*_[0-9]*_m_000001*" </pre> 
    * @param jtIdentifier jobTracker identifier, or null
    * @param jobId job number, or null
-   * @param isMap whether the tip is a map, or null 
+   * @param type the {@link TaskType}, or null 
    * @param taskId taskId number, or null
    * @return a regex pattern matching TaskIDs
    */
   @Deprecated
   public static String getTaskIDsPattern(String jtIdentifier, Integer jobId
-      , Boolean isMap, Integer taskId) {
+      , TaskType type, Integer taskId) {
     StringBuilder builder = new StringBuilder(TASK).append(SEPARATOR)
-      .append(getTaskIDsPatternWOPrefix(jtIdentifier, jobId, isMap, taskId));
+      .append(getTaskIDsPatternWOPrefix(jtIdentifier, jobId, type, taskId));
     return builder.toString();
   }
   
   @Deprecated
   static StringBuilder getTaskIDsPatternWOPrefix(String jtIdentifier
-      , Integer jobId, Boolean isMap, Integer taskId) {
+      , Integer jobId, TaskType type, Integer taskId) {
     StringBuilder builder = new StringBuilder();
     builder.append(JobID.getJobIDsPatternWOPrefix(jtIdentifier, jobId))
       .append(SEPARATOR)
-      .append(isMap != null ? (isMap ? "m" : "r") : "(m|r)").append(SEPARATOR)
+      .append(type != null ? 
+          (org.apache.hadoop.mapreduce.TaskID.getRepresentingCharacter(type)) : 
+            org.apache.hadoop.mapreduce.TaskID.getAllTaskTypes()).
+            append(SEPARATOR)
       .append(taskId != null ? idFormat.format(taskId) : "[0-9]*");
     return builder;
   }

@@ -30,6 +30,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.TaskType;
 
 public class TestTaskFail extends TestCase {
   private static String taskLog = "Task attempt log";
@@ -112,7 +113,7 @@ public class TestTaskFail extends TestCase {
     JobID jobId = job.getID();
     // construct the task id of first map task
     TaskAttemptID attemptId = 
-      new TaskAttemptID(new TaskID(jobId, true, 0), 0);
+      new TaskAttemptID(new TaskID(jobId, TaskType.MAP, 0), 0);
     TaskInProgress tip = mr.getJobTrackerRunner().getJobTracker().
                             getTip(attemptId.getTaskID());
     // this should not be cleanup attempt since the first attempt 
@@ -129,7 +130,7 @@ public class TestTaskFail extends TestCase {
     assertTrue(log.contains(taskLog));
     assertTrue(log.contains(cleanupLog));
     
-    attemptId =  new TaskAttemptID(new TaskID(jobId, true, 0), 1);
+    attemptId =  new TaskAttemptID(new TaskID(jobId, TaskType.MAP, 0), 1);
     // this should be cleanup attempt since the second attempt fails
     // with System.exit
     assertTrue(tip.isCleanupAttempt(attemptId));

@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.TaskType;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
@@ -185,7 +186,7 @@ public class TestMiniMRWithDFS extends TestCase {
     // Run a word count example
     // Keeping tasks that match this pattern
     String pattern = 
-      TaskAttemptID.getTaskAttemptIDsPattern(null, null, true, 1, null);
+      TaskAttemptID.getTaskAttemptIDsPattern(null, null, TaskType.MAP, 1, null);
     jobConf.setKeepTaskFilesPattern(pattern);
     TestResult result;
     final Path inDir = new Path("./wc/input");
@@ -195,7 +196,8 @@ public class TestMiniMRWithDFS extends TestCase {
     assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                  "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
     JobID jobid = result.job.getID();
-    TaskAttemptID taskid = new TaskAttemptID(new TaskID(jobid, true, 1),0);
+    TaskAttemptID taskid = new TaskAttemptID(
+        new TaskID(jobid, TaskType.MAP, 1),0);
     checkTaskDirectories(mr, new String[]{jobid.toString()}, 
                          new String[]{taskid.toString()});
     // test with maps=0

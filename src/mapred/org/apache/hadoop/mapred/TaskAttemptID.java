@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.apache.hadoop.mapreduce.TaskType;
+
 /**
  * TaskAttemptID represents the immutable and unique identifier for 
  * a task attempt. Each task attempt is one particular instance of a Map or
@@ -57,13 +59,13 @@ public class TaskAttemptID extends org.apache.hadoop.mapreduce.TaskAttemptID {
    * Constructs a TaskId object from given parts.
    * @param jtIdentifier jobTracker identifier
    * @param jobId job number 
-   * @param isMap whether the tip is a map 
+   * @param type the TaskType 
    * @param taskId taskId number
    * @param id the task attempt number
    */
-  public TaskAttemptID(String jtIdentifier, int jobId, boolean isMap, 
+  public TaskAttemptID(String jtIdentifier, int jobId, TaskType type, 
                        int taskId, int id) {
-    this(new TaskID(jtIdentifier, jobId, isMap, taskId), id);
+    this(new TaskID(jtIdentifier, jobId, type, taskId), id);
   }
   
   public TaskAttemptID() { 
@@ -116,32 +118,32 @@ public class TaskAttemptID extends org.apache.hadoop.mapreduce.TaskAttemptID {
    * of <i>any jobtracker</i>, in <i>any job</i>, of the <i>first 
    * map task</i>, we would use :
    * <pre> 
-   * TaskAttemptID.getTaskAttemptIDsPattern(null, null, true, 1, null);
+   * TaskAttemptID.getTaskAttemptIDsPattern(null, null, TaskType.MAP, 1, null);
    * </pre>
    * which will return :
    * <pre> "attempt_[^_]*_[0-9]*_m_000001_[0-9]*" </pre> 
    * @param jtIdentifier jobTracker identifier, or null
    * @param jobId job number, or null
-   * @param isMap whether the tip is a map, or null 
+   * @param type the {@link TaskType} 
    * @param taskId taskId number, or null
    * @param attemptId the task attempt number, or null
    * @return a regex pattern matching TaskAttemptIDs
    */
   @Deprecated
   public static String getTaskAttemptIDsPattern(String jtIdentifier,
-      Integer jobId, Boolean isMap, Integer taskId, Integer attemptId) {
+      Integer jobId, TaskType type, Integer taskId, Integer attemptId) {
     StringBuilder builder = new StringBuilder(ATTEMPT).append(SEPARATOR);
     builder.append(getTaskAttemptIDsPatternWOPrefix(jtIdentifier, jobId,
-        isMap, taskId, attemptId));
+        type, taskId, attemptId));
     return builder.toString();
   }
   
   @Deprecated
   static StringBuilder getTaskAttemptIDsPatternWOPrefix(String jtIdentifier
-      , Integer jobId, Boolean isMap, Integer taskId, Integer attemptId) {
+      , Integer jobId, TaskType type, Integer taskId, Integer attemptId) {
     StringBuilder builder = new StringBuilder();
     builder.append(TaskID.getTaskIDsPatternWOPrefix(jtIdentifier
-        , jobId, isMap, taskId))
+        , jobId, type, taskId))
         .append(SEPARATOR)
         .append(attemptId != null ? attemptId : "[0-9]*");
     return builder;

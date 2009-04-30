@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
@@ -233,8 +234,12 @@ public class TestCapacityScheduler extends TestCase {
     
     private TaskAttemptID getTaskAttemptID(boolean isMap) {
       JobID jobId = getJobID();
+      TaskType t = TaskType.REDUCE;
+      if (isMap) {
+        t = TaskType.MAP;
+      }
       return new TaskAttemptID(jobId.getJtIdentifier(),
-          jobId.getId(), isMap, (isMap)?++mapTaskCtr: ++redTaskCtr, 0);
+          jobId.getId(), t, (isMap)?++mapTaskCtr: ++redTaskCtr, 0);
     }
     
     @Override

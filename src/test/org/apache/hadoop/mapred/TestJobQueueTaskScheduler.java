@@ -27,6 +27,7 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapreduce.TaskType;
 
 public class TestJobQueueTaskScheduler extends TestCase {
   
@@ -74,7 +75,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     @Override
     public Task obtainNewMapTask(final TaskTrackerStatus tts, int clusterSize,
         int ignored) throws IOException {
-      TaskAttemptID attemptId = getTaskAttemptID(true);
+      TaskAttemptID attemptId = getTaskAttemptID(TaskType.MAP);
       Task task = new MapTask("", attemptId, 0, "", new BytesWritable()) {
         @Override
         public String toString() {
@@ -89,7 +90,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     @Override
     public Task obtainNewReduceTask(final TaskTrackerStatus tts,
         int clusterSize, int ignored) throws IOException {
-      TaskAttemptID attemptId = getTaskAttemptID(false);
+      TaskAttemptID attemptId = getTaskAttemptID(TaskType.REDUCE);
       Task task = new ReduceTask("", attemptId, 0, 10) {
         @Override
         public String toString() {
@@ -101,10 +102,10 @@ public class TestJobQueueTaskScheduler extends TestCase {
       return task;
     }
     
-    private TaskAttemptID getTaskAttemptID(boolean isMap) {
+    private TaskAttemptID getTaskAttemptID(TaskType type) {
       JobID jobId = getJobID();
       return new TaskAttemptID(jobId.getJtIdentifier(),
-          jobId.getId(), isMap, ++taskCounter, 0);
+          jobId.getId(), type, ++taskCounter, 0);
     }
   }
   

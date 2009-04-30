@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -510,7 +511,7 @@ public class MiniMRCluster {
   throws IOException {
     String jtId = jobTracker.getJobTracker().getTrackerIdentifier();
     TaskAttemptID dummy = 
-      new TaskAttemptID(jtId, jobId.getId(), false, 0, 0);
+      new TaskAttemptID(jtId, jobId.getId(), TaskType.REDUCE, 0, 0);
     return taskTrackerList.get(index).getTaskTracker()
                                      .getMapCompletionEvents(jobId, 0, max, 
                                                              dummy);
