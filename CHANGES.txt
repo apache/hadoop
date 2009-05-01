@@ -471,6 +471,9 @@ Trunk (unreleased changes)
     HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
     via tomwhite)
 
+    HADOOP-5592. Fix typo in Streaming doc in reference to GzipCodec.
+    (Corinne Chandel via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
