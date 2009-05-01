@@ -104,6 +104,10 @@ Release 0.19.2 - Unreleased
     HADOOP-5671. Fix FNF exceptions when copying from old versions of
     HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-5213. Fix Null pointer exception caused when bzip2compression 
+    was used and user closed a output stream without writing any data.
+    (Zheng Shao via dhruba)
+
 Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 

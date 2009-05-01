@@ -169,6 +169,12 @@ public class BZip2Codec implements
     }
 
     public void finish() throws IOException {
+      if (needsReset) {
+        // In the case that nothing is written to this stream, we still need to
+        // write out the header before closing, otherwise the stream won't be
+        // recognized by BZip2CompressionInputStream.
+        internalReset();
+      }
       this.output.finish();
       needsReset = true;
     }
@@ -202,6 +208,12 @@ public class BZip2Codec implements
     }
 
     public void close() throws IOException {
+      if (needsReset) {
+        // In the case that nothing is written to this stream, we still need to
+        // write out the header before closing, otherwise the stream won't be
+        // recognized by BZip2CompressionInputStream.
+        internalReset();
+      }
       this.output.flush();
       this.output.close();
       needsReset = true;
