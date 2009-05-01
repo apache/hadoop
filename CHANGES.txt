@@ -275,6 +275,9 @@ Trunk (unreleased changes)
     HADOOP-5657. Validate data in TestReduceFetch to improve merge test
     coverage. (cdouglas)
 
+    HADOOP-5613. Change S3Exception to checked exception.
+    (Andrew Hitchcock via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

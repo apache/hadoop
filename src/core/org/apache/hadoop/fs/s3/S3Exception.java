@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.fs.s3;
 
+import java.io.IOException;
+
 /**
  * Thrown if there is a problem communicating with Amazon S3.
  */
-public class S3Exception extends RuntimeException {
+public class S3Exception extends IOException {
 
   public S3Exception(Throwable t) {
     super(t);
