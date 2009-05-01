@@ -53,15 +53,18 @@ public class TestCodec extends TestCase {
   private int seed = new Random().nextInt();
   
   public void testDefaultCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.DefaultCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.DefaultCodec");
   }
   
   public void testGzipCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.GzipCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
   
-  public void testBZip2Codec() throws IOException {    
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");    
+  public void testBZip2Codec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");
   }
 
   private static void codecTest(Configuration conf, int seed, int count, 
@@ -154,8 +157,9 @@ public class TestCodec extends TestCase {
   
   public void testSequenceFileBZip2Codec() throws IOException, ClassNotFoundException, 
       InstantiationException, IllegalAccessException {
-    sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.BZip2Codec", 100);    
-    sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.BZip2Codec", 1000000);    
+    sequenceFileCodecTest(conf, 0, "org.apache.hadoop.io.compress.BZip2Codec", 100);
+    sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.BZip2Codec", 100);
+    sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.BZip2Codec", 1000000);
   }
   
   private static void sequenceFileCodecTest(Configuration conf, int lines, 
