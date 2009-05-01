@@ -96,7 +96,7 @@
   <fileset id="lib.jars" dir="${basedir}" includes="lib/*.jar"/>
   <path id="classpath">
     <fileset refid="lib.jars"/>
-    <fileset dir="${lib.dir}/jetty-ext/">
+    <fileset dir="${lib.dir}/jsp-2.1/">
       <include name="*jar" />
     </fileset>
     <pathelement location="${build.classes}"/>
@@ -177,12 +177,14 @@
      -->
   <target name="jspc" depends="init" unless="jspc.not.required">
     <path id="jspc.classpath">
-      <fileset dir="${basedir}/lib/jetty-ext/">
+      <fileset dir="${basedir}/lib/jsp-2.1/">
         <include name="*jar" />
       </fileset>
       <fileset dir="${basedir}/lib/">
         <include name="servlet-api*jar" />
         <include name="commons-logging*jar" />
+        <include name="jasper-*jar" />
+        <include name="jetty-*jar" />
       </fileset>
     </path>
     <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" >
