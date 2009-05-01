@@ -40,6 +40,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -196,6 +197,17 @@ public class HRegion implements HConstants {
   private final Object splitLock = new Object();
   private long minSequenceId;
   final AtomicInteger activeScannerCount = new AtomicInteger(0);
+  
+  /**
+   * Name of the region info file that resides just under the region directory.
+   */
+  public final static String REGIONINFO_FILE = ".regioninfo";
+
+  /**
+   * REGIONINFO_FILE as byte array.
+   */
+  public final static byte [] REGIONINFO_FILE_BYTES =
+    Bytes.toBytes(REGIONINFO_FILE);
 
   /**
    * HRegion constructor.
@@ -261,6 +273,9 @@ public class HRegion implements HConstants {
   public void initialize( Path initialFiles, final Progressable reporter)
   throws IOException {
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
+    
+    // Write HRI to a file in case we need to recover .META.
+    checkRegioninfoOnFilesystem();
 
     // Move prefab HStore files into place (if any).  This picks up split files
     // and any merges from splits and merges dirs.
@@ -314,6 +329,32 @@ public class HRegion implements HConstants {
     this.lastFlushTime = System.currentTimeMillis();
     LOG.info("region " + this + "/" + this.regionInfo.getEncodedName() +
       " available");
+  }
+
+  /*
+   * Write out an info file under the region directory.  Useful recovering
+   * mangled regions.
+   * @throws IOException
+   */
+  private void checkRegioninfoOnFilesystem() throws IOException {
+    // Name of this file has two leading and trailing underscores so it doesn't
+    // clash w/ a store/family name.  There is possibility, but assumption is
+    // that its slim (don't want to use control character in filename because
+    // 
+    Path regioninfo = new Path(this.regiondir, REGIONINFO_FILE);
+    if (this.fs.exists(regioninfo) &&
+        this.fs.getFileStatus(regioninfo).getLen() > 0) {
+      return;
+    }
+    FSDataOutputStream out = this.fs.create(regioninfo, true);
+    try {
+      this.regionInfo.write(out);
+      out.write('\n');
+      out.write('\n');
+      out.write(Bytes.toBytes(this.regionInfo.toString()));
+    } finally {
+      out.close();
+    }
   }
 
   /**

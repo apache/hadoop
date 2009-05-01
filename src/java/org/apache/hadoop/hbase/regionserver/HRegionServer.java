@@ -1280,7 +1280,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
       HRegionInfo newRegionB) {
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_SPLIT, oldRegion,
-      (oldRegion.getRegionNameAsString() + " split; daughters: " +
+      ("Daughters; " +
         newRegionA.getRegionNameAsString() + ", " +
         newRegionB.getRegionNameAsString()).getBytes()));
     outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, newRegionA));

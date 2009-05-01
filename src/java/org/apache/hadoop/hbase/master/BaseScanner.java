@@ -259,7 +259,8 @@ abstract class BaseScanner extends Chore implements HConstants {
         parent.getRegionName(), rowContent, COL_SPLITB);
     if (!hasReferencesA && !hasReferencesB) {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
-        " because daughter splits no longer hold references");
+        " (encoded=" + parent.getEncodedName() +
+        ") because daughter splits no longer hold references");
       HRegion.deleteRegion(this.master.fs, this.master.rootdir, parent);
       HRegion.removeRegionFromMETA(srvr, metaRegionName,
         parent.getRegionName());

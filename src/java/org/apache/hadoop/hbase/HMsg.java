@@ -191,7 +191,7 @@ public class HMsg implements Writable {
     // If null or empty region, don't bother printing it out.
     if (this.info != null && this.info.getRegionName().length > 0) {
       sb.append(": ");
-      sb.append(this.info.getRegionNameAsString());
+      sb.append(this.info.toString());
     }
     if (this.message != null && this.message.length > 0) {
       sb.append(": " + Bytes.toString(this.message));

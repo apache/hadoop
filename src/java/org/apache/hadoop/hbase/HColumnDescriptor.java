@@ -279,7 +279,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @return <code>b</code>
    * @throws IllegalArgumentException If not null and not a legitimate family
    * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
-   * <code>b</code> can be null when deserializing).
+   * <code>b</code> can be null when deserializing).  Cannot start with a '.'
+   * either.
    */
   public static byte [] isLegalFamilyName(final byte [] b) {
     if (b == null) {
@@ -288,6 +289,10 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     if (b[b.length - 1] != ':') {
       throw new IllegalArgumentException("Family names must end in a colon: " +
         Bytes.toString(b));
+    }
+    if (b[0] == '.') {
+      throw new IllegalArgumentException("Family names cannot start with a " +
+        "period: " + Bytes.toString(b));
     }
     for (int i = 0; i < (b.length - 1); i++) {
       if (Character.isISOControl(b[i])) {
