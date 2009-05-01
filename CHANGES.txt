@@ -474,6 +474,9 @@ Trunk (unreleased changes)
     HADOOP-5592. Fix typo in Streaming doc in reference to GzipCodec.
     (Corinne Chandel via tomwhite)
 
+    HADOOP-5656. Counter for S3N Read Bytes does not work. (Ian Nowland
+    via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

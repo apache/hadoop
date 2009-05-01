@@ -90,6 +90,9 @@ public class NativeS3FileSystem extends FileSystem {
       if (result != -1) {
         pos++;
       }
+      if (statistics != null && result != -1) {
+        statistics.incrementBytesRead(1);
+      }
       return result;
     }
     public synchronized int read(byte[] b, int off, int len)
@@ -98,6 +101,9 @@ public class NativeS3FileSystem extends FileSystem {
       int result = in.read(b, off, len);
       if (result > 0) {
         pos += result;
+      }
+      if (statistics != null && result > 0) {
+        statistics.incrementBytesRead(result);
       }
       return result;
     }
