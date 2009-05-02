@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.math.BigInteger;
 
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
@@ -937,7 +936,7 @@ public class Bytes {
         val.length);
       val = newvalue;
     } else if (val.length > SIZEOF_LONG) {
-      throw new DoNotRetryIOException("Increment Bytes - value too big: " +
+      throw new IllegalArgumentException("Increment Bytes - value too big: " +
         val.length);
     }
     if(amount == 0) return val;
