@@ -2701,7 +2701,8 @@ public class HRegion implements HConstants {
           "/"+ Bytes.toString(column));
         value = Bytes.toBytes(amount);
       } else {
-        value = incrementBytes(value, amount);
+        if (amount == 0) return Bytes.toLong(value);
+        value = Bytes.incrementBytes(value, amount);
       }
 
       BatchUpdate b = new BatchUpdate(row, ts);
@@ -2712,35 +2713,5 @@ public class HRegion implements HConstants {
       splitsAndClosesLock.readLock().unlock();
       releaseRowLock(lid);
     }
-  }
-
-  private byte [] incrementBytes(byte[] value, long amount) throws IOException {
-    // Hopefully this doesn't happen too often.
-    if (value.length < Bytes.SIZEOF_LONG) {
-      byte [] newvalue = new byte[Bytes.SIZEOF_LONG];
-      System.arraycopy(value, 0, newvalue, newvalue.length - value.length,
-        value.length);
-      value = newvalue;
-    } else if (value.length > Bytes.SIZEOF_LONG) {
-      throw new DoNotRetryIOException("Increment Bytes - value too big: " +
-        value.length);
-    }
-    return binaryIncrement(value, amount);
-  }
-  
-  private byte [] binaryIncrement(byte [] value, long amount) {
-    for(int i=0;i<value.length;i++) {
-      int cur = (int)(amount >> (8 * i)) % 256;
-      int val = value[value.length-i-1] & 0xff;
-      int total = cur + val;
-      if(total > 255) {
-        amount += ((long)256 << (8 * i));
-        total %= 256;
-      }
-      value[value.length-i-1] = (byte)total;
-      amount = (amount >> (8 * (i + 1))) << (8 * (i + 1));
-      if(amount == 0) return value;
-    }
-    return value;
   }
 }

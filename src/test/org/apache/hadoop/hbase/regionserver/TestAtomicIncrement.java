@@ -88,6 +88,9 @@ public class TestAtomicIncrement extends HBaseClusterTestCase {
       assertEquals(3L, table.incrementColumnValue(row, column, 1));
 
       assertEquals(-2L, table.incrementColumnValue(row, column, -5));
+      assertEquals(-502L, table.incrementColumnValue(row, column, -500));
+      assertEquals(1500L, table.incrementColumnValue(row, column, 2002));
+      assertEquals(1501L, table.incrementColumnValue(row, column, 1));
 
       row = Bytes.toBytes("foo3");
       byte[] value2 = {1,2,3,4,5,6,7,8,9};

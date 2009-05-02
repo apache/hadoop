@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.math.BigInteger;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
@@ -909,5 +910,90 @@ public class Bytes {
         return mid;
     }
     return - (low+1);
-  }      
+  }
+
+  /**
+   * Bytewise binary increment/deincrement of long contained in byte array
+   * on given amount.
+   * 
+   * @param value - array of bytes containing long (length <= SIZEOF_LONG)
+   * @param amount value will be incremented on (deincremented if negative)
+   * @return array of bytes containing incremented long (length == SIZEOF_LONG)
+   * @throws IOException - if value.length > SIZEOF_LONG
+   */
+  public static byte [] incrementBytes(byte[] value, long amount) 
+  throws IOException {
+    byte[] val = value;
+    if (val.length < SIZEOF_LONG) {
+      // Hopefully this doesn't happen too often.
+      byte [] newvalue;
+      if (val[0] < 0) {
+        byte [] negativeValue = {-1, -1, -1, -1, -1, -1, -1, -1};
+        newvalue = negativeValue;
+      } else {
+        newvalue = new byte[SIZEOF_LONG];
+      }
+      System.arraycopy(val, 0, newvalue, newvalue.length - val.length,
+        val.length);
+      val = newvalue;
+    } else if (val.length > SIZEOF_LONG) {
+      throw new DoNotRetryIOException("Increment Bytes - value too big: " +
+        val.length);
+    }
+    if(amount == 0) return val;
+    if(val[0] < 0){
+      return binaryIncrementNeg(val, amount);
+    }
+    return binaryIncrementPos(val, amount);
+  }
+
+  /* increment/deincrement for positive value */
+  private static byte [] binaryIncrementPos(byte [] value, long amount) {
+    long amo = amount;
+    int sign = 1;
+    if (amount < 0) {
+      amo = -amount;
+      sign = -1;
+    } 
+    for(int i=0;i<value.length;i++) {
+      int cur = ((int)amo % 256) * sign;
+      amo = (amo >> 8);
+      int val = value[value.length-i-1] & 0x0ff;
+      int total = val + cur;
+      if(total > 255) {
+        amo += sign;
+        total %= 256;
+      } else if (total < 0) {
+        amo -= sign;
+      }
+      value[value.length-i-1] = (byte)total;
+      if (amo == 0) return value;
+    }
+    return value;
+  }
+
+  /* increment/deincrement for negative value */
+  private static byte [] binaryIncrementNeg(byte [] value, long amount) {
+    long amo = amount;
+    int sign = 1;
+    if (amount < 0) {
+      amo = -amount;
+      sign = -1;
+    }
+    for(int i=0;i<value.length;i++) {
+      int cur = ((int)amo % 256) * sign;
+      amo = (amo >> 8);
+      int val = ((~value[value.length-i-1]) & 0x0ff) + 1;
+      int total = cur - val;
+      if(total >= 0) {
+        amo += sign;
+      } else if (total < -256) {
+        amo -= sign;
+        total %= 256;
+      }
+      value[value.length-i-1] = (byte)total;
+      if (amo == 0) return value;
+    }
+    return value;
+  }
 }

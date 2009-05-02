@@ -99,6 +99,8 @@ Release 0.20.0 - Unreleased
                (Evgeny Ryabitskiy via Stack)
    HBASE-1322  hbase-1234 broke TestAtomicIncrement; fix and reenable
                (Evgeny Ryabitskiy and Ryan Rawson via Stack)
+   HBASE-1347  HTable.incrementColumnValue does not take negative 'amount'
+               (Evgeny Ryabitskiy via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

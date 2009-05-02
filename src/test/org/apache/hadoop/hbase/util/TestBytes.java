@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
@@ -112,5 +113,41 @@ public class TestBytes extends TestCase {
       Bytes.BYTES_RAWCOMPARATOR));
     assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1,
       Bytes.BYTES_RAWCOMPARATOR));
+  }
+  
+  public void testIncrementBytes() throws IOException {
+
+    assertTrue(checkTestIncrementBytes(10, 1));
+    assertTrue(checkTestIncrementBytes(12, 123435445));
+    assertTrue(checkTestIncrementBytes(124634654, 1));
+    assertTrue(checkTestIncrementBytes(10005460, 5005645));
+    assertTrue(checkTestIncrementBytes(1, -1));
+    assertTrue(checkTestIncrementBytes(10, -1));
+    assertTrue(checkTestIncrementBytes(10, -5));
+    assertTrue(checkTestIncrementBytes(1005435000, -5));
+    assertTrue(checkTestIncrementBytes(10, -43657655));
+    assertTrue(checkTestIncrementBytes(-1, 1));
+    assertTrue(checkTestIncrementBytes(-26, 5034520));
+    assertTrue(checkTestIncrementBytes(-10657200, 5));
+    assertTrue(checkTestIncrementBytes(-12343250, 45376475));
+    assertTrue(checkTestIncrementBytes(-10, -5));
+    assertTrue(checkTestIncrementBytes(-12343250, -5));
+    assertTrue(checkTestIncrementBytes(-12, -34565445));
+    assertTrue(checkTestIncrementBytes(-1546543452, -34565445));
+  }
+  
+  private static boolean checkTestIncrementBytes(long val, long amount) 
+  throws IOException {
+    byte[] value = Bytes.toBytes(val);
+    byte [] testValue = {-1, -1, -1, -1, -1, -1, -1, -1};
+    if (value[0] > 0) {
+      testValue = new byte[Bytes.SIZEOF_LONG];
+    }
+    System.arraycopy(value, 0, testValue, testValue.length - value.length,
+        value.length);
+
+    long incrementResult = Bytes.toLong(Bytes.incrementBytes(value, amount));
+
+    return (Bytes.toLong(testValue) + amount) == incrementResult;
   }
 }
