@@ -54,7 +54,7 @@ public class TableInputFormat extends TableInputFormatBase implements
     for (int i = 0; i < m_cols.length; i++) {
       m_cols[i] = Bytes.toBytes(colNames[i]);
     }
-    setInputColums(m_cols);
+    setInputColumns(m_cols);
     try {
       setHTable(new HTable(new HBaseConfiguration(job), tableNames[0].getName()));
     } catch (Exception e) {
