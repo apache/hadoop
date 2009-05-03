@@ -126,7 +126,6 @@ public abstract class HAbstractScanner implements InternalScanner {
     private Pattern columnMatcher;
     // Column without delimiter so easy compare to KeyValue column
     private byte [] col;
-    private int familylength = 0;
   
     ColumnMatcher(final byte [] col) throws IOException {
       byte [][] parse = parseColumn(col);
@@ -151,7 +150,6 @@ public abstract class HAbstractScanner implements InternalScanner {
         } else {
           this.matchType = MATCH_TYPE.SIMPLE;
           this.col = columnWithoutDelimiter;
-          this.familylength = parse[0].length;
           this.wildCardmatch = false;
         }
       } catch(Exception e) {
@@ -167,7 +165,7 @@ public abstract class HAbstractScanner implements InternalScanner {
      */
     boolean matches(final KeyValue kv) throws IOException {
       if (this.matchType == MATCH_TYPE.SIMPLE) {
-        return kv.matchingColumnNoDelimiter(this.col, this.familylength);
+        return kv.matchingColumnNoDelimiter(this.col);
       } else if(this.matchType == MATCH_TYPE.FAMILY_ONLY) {
         return kv.matchingFamily(this.family);
       } else if (this.matchType == MATCH_TYPE.REGEX) {

@@ -309,9 +309,7 @@ public class Store implements HConstants {
         // Check this edit is for me. Also, guard against writing the speical
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         KeyValue kv = val.getKeyValue();
-        if (val.isTransactionEntry() ||
-            kv.matchingColumnNoDelimiter(HLog.METACOLUMN,
-              HLog.METACOLUMN.length - 1) ||
+        if (val.isTransactionEntry() || kv.matchingColumnNoDelimiter(HLog.METACOLUMN) ||
           !Bytes.equals(key.getRegionName(), regioninfo.getRegionName()) ||
           !kv.matchingFamily(family.getName())) {
           continue;

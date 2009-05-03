@@ -102,7 +102,6 @@ Release 0.20.0 - Unreleased
    HBASE-1347  HTable.incrementColumnValue does not take negative 'amount'
                (Evgeny Ryabitskiy via Stack)
    HBASE-1365  Typo in TableInputFormatBase.setInputColums (Jon Gray via Stack)
-   HBASE-1318  Thrift server doesnt know about atomicIncrement
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
@@ -189,10 +188,6 @@ Release 0.20.0 - Unreleased
                (Evgeny Ryabitskiy via Stack)
    HBASE-1112  we will lose data if the table name happens to be the logs' dir
                name (Samuel Guo via Stack)
-
-  NEW FEATURES
-
-  OPTIMIZATIONS
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

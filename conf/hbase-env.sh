@@ -23,6 +23,7 @@
 
 # The java implementation to use.  Java 1.6 required.
 # export JAVA_HOME=/usr/java/jdk1.6.0/
+export JAVA_HOME=/usr/lib/jvm/java-6-sun-1.6.0.07/
 
 # Extra Java CLASSPATH elements.  Optional.
 # export HBASE_CLASSPATH=
