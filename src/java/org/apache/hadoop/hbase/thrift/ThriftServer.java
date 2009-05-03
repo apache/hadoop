@@ -422,7 +422,17 @@ public class ThriftServer {
         throw new IllegalArgument(e.getMessage());
       }
     }
- 
+
+    public long atomicIncrement(byte[] tableName, byte[] row, byte[] column, long amount) throws IOError, IllegalArgument, TException {
+      HTable table;
+      try {
+        table = getTable(tableName);
+        return table.incrementColumnValue(row, column, amount);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
     public void scannerClose(int id) throws IOError, IllegalArgument {
       LOG.debug("scannerClose: id=" + id);
       Scanner scanner = getScanner(id);

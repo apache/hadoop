@@ -376,7 +376,17 @@ service Hbase {
    * @param timestamp timestamp
    */
   void mutateRowsTs(1:Text tableName, 2:list<BatchMutation> rowBatches, 3:i64 timestamp)
-    throws (1:IOError io, 2:IllegalArgument ia)  
+    throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Atomically increment the column value specified.  Returns the next value post increment.
+   * @param tableName name of table
+   * @param row row to increment
+   * @param column name of column
+   * @param value amount to increment by
+   */
+  i64 atomicIncrement(1:Text tableName, 2:Text row, 3:Text column, 4:i64 value)
+    throws (1:IOError io, 2:IllegalArgument ia)
     
   /** 
    * Delete all cells that match the passed row and column.
