@@ -772,13 +772,17 @@ public class KeyValue {
 
   /**
    * @param column Column minus its delimiter
+   * @param familylength Length of family in passed <code>column</code>
    * @return True if column matches.
    * @see #matchingColumn(byte[])
    */
-  public boolean matchingColumnNoDelimiter(final byte [] column) {
+  public boolean matchingColumnNoDelimiter(final byte [] column,
+      final int familylength) {
     int o = getColumnOffset();
     int l = getColumnLength(o);
-    return compareColumns(getBuffer(), o, l, column, 0, column.length) == 0;
+    int f = getFamilyLength(o);
+    return compareColumns(getBuffer(), o, l, f,
+      column, 0, column.length, familylength) == 0;
   }
 
   /**
@@ -801,15 +805,26 @@ public class KeyValue {
    * @param left
    * @param loffset
    * @param llength
+   * @param lfamilylength Offset of family delimiter in left column.
    * @param right
    * @param roffset
    * @param rlength
+   * @param rfamilylength Offset of family delimiter in right column.
    * @return
    */
   static int compareColumns(final byte [] left, final int loffset,
-      final int llength, final byte [] right, final int roffset,
-      final int rlength) {
-    return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
+      final int lfamilylength, final int llength,
+      final byte [] right, final int roffset, final int rlength,
+      final int rfamilylength) {
+    // Compare family portion first.
+    int diff = Bytes.compareTo(left, loffset, lfamilylength,
+      right, roffset, rfamilylength);
+    if (diff != 0) {
+      return diff;
+    }
+    // Compare qualifier portion
+    return Bytes.compareTo(left, loffset + lfamilylength,
+      llength, right, roffset + rfamilylength, rlength);
   }
 
   /**
@@ -1037,11 +1052,12 @@ public class KeyValue {
     }
 
     public int compareColumns(final KeyValue left, final byte [] right,
-        final int roffset, final int rlength) {
+        final int roffset, final int rlength, final int rfamilyoffset) {
       int offset = left.getColumnOffset();
       int length = left.getColumnLength(offset);
       return getRawComparator().compareColumns(left.getBuffer(), offset, length,
-        right, roffset, rlength);
+        left.getFamilyLength(offset),
+        right, roffset, rlength, rfamilyoffset);
     }
 
     int compareColumns(final KeyValue left, final short lrowlength,
@@ -1051,9 +1067,11 @@ public class KeyValue {
       int roffset = right.getColumnOffset(rrowlength);
       int llength = left.getColumnLength(loffset, lkeylength);
       int rlength = right.getColumnLength(roffset, rkeylength);
+      int lfamilyoffset = left.getFamilyLength(loffset);
+      int rfamilyoffset = right.getFamilyLength(roffset);
       return getRawComparator().compareColumns(left.getBuffer(), loffset,
-          llength,
-        right.getBuffer(), roffset, rlength);
+          llength, lfamilyoffset,
+        right.getBuffer(), roffset, rlength, rfamilyoffset);
     }
 
     /**
@@ -1381,9 +1399,11 @@ public class KeyValue {
       return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
     }
 
-    protected int compareColumns(byte [] left, int loffset, int llength,
-        byte [] right, int roffset, int rlength) {
-      return KeyValue.compareColumns(left, loffset, llength, right, roffset, rlength);
+    protected int compareColumns(
+        byte [] left, int loffset, int llength, final int lfamilylength,
+        byte [] right, int roffset, int rlength, final int rfamilylength) {
+      return KeyValue.compareColumns(left, loffset, llength, lfamilylength,
+        right, roffset, rlength, rfamilylength);
     }
 
     int compareTimestamps(final long ltimestamp, final long rtimestamp) {

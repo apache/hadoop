@@ -251,7 +251,8 @@ public class MetaUtils {
         HRegionInfo info = null;
         for (KeyValue kv: results) {
           if (KeyValue.META_COMPARATOR.compareColumns(kv,
-            HConstants.COL_REGIONINFO, 0, HConstants.COL_REGIONINFO.length) == 0) {
+            HConstants.COL_REGIONINFO, 0, HConstants.COL_REGIONINFO.length,
+              HConstants.COLUMN_FAMILY_STR.length()) == 0) {
             info = Writables.getHRegionInfoOrNull(kv.getValue());
             if (info == null) {
               LOG.warn("region info is null for row " +
