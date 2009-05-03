@@ -247,7 +247,7 @@ public class HRegion implements HConstants {
     this.historian = RegionHistorian.getInstance();
     if (LOG.isDebugEnabled()) {
       // Write out region name as string and its encoded name.
-      LOG.debug("Opening region " + this + "/" +
+      LOG.debug("Opening region " + this + ", encoded=" +
         this.regionInfo.getEncodedName());
     }
     this.regionCompactionDir =
@@ -270,18 +270,18 @@ public class HRegion implements HConstants {
    * @param reporter
    * @throws IOException
    */
-  public void initialize( Path initialFiles, final Progressable reporter)
+  public void initialize(Path initialFiles, final Progressable reporter)
   throws IOException {
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
-    
-    // Write HRI to a file in case we need to recover .META.
-    checkRegioninfoOnFilesystem();
 
     // Move prefab HStore files into place (if any).  This picks up split files
     // and any merges from splits and merges dirs.
     if (initialFiles != null && fs.exists(initialFiles)) {
       fs.rename(initialFiles, this.regiondir);
     }
+
+    // Write HRI to a file in case we need to recover .META.
+    checkRegioninfoOnFilesystem();
 
     // Load in all the HStores.
     long maxSeqId = -1;
@@ -2079,7 +2079,6 @@ public class HRegion implements HConstants {
       activeScannerCount.incrementAndGet();
     }
 
-    @SuppressWarnings("null")
     public boolean next(List<KeyValue> results)
     throws IOException {
       boolean moreToFollow = false;
@@ -2538,7 +2537,6 @@ public class HRegion implements HConstants {
         Bytes.toString(endKey) + ">");
 
     // Move HStoreFiles under new region directory
-    
     Map<byte [], List<StoreFile>> byFamily =
       new TreeMap<byte [], List<StoreFile>>(Bytes.BYTES_COMPARATOR);
     byFamily = filesByFamily(byFamily, a.close());
@@ -2546,7 +2544,6 @@ public class HRegion implements HConstants {
     for (Map.Entry<byte [], List<StoreFile>> es : byFamily.entrySet()) {
       byte [] colFamily = es.getKey();
       makeColumnFamilyDirs(fs, basedir, newRegionInfo, colFamily);
-      
       // Because we compacted the source regions we should have no more than two
       // HStoreFiles per family and there will be no reference store
       List<StoreFile> srcFiles = es.getValue();
@@ -2606,13 +2603,6 @@ public class HRegion implements HConstants {
     return byFamily;
   }
 
-  /*
-   * Method to list files in use by region
-   */
-  static void listFiles(FileSystem fs, HRegion r) throws IOException {
-    listPaths(fs, r.getRegionDir());
-  }
-
   /**
    * @return True if needs a mojor compaction.
    * @throws IOException 
@@ -2625,7 +2615,7 @@ public class HRegion implements HConstants {
     }
     return false;
   }
-  
+
   /*
    * List the files under the specified directory
    * 

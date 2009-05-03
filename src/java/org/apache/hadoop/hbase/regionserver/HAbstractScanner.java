@@ -144,7 +144,8 @@ public abstract class HAbstractScanner implements InternalScanner {
           this.wildCardmatch = true;
         } else if (isRegexPattern.matcher(Bytes.toString(qualifier)).matches()) {
           this.matchType = MATCH_TYPE.REGEX;
-          this.columnMatcher = Pattern.compile(Bytes.toString(columnWithoutDelimiter));
+          this.columnMatcher =
+            Pattern.compile(Bytes.toString(columnWithoutDelimiter));
           this.wildCardmatch = true;
         } else {
           this.matchType = MATCH_TYPE.SIMPLE;
