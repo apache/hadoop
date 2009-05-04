@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestBadRecords extends ClusterMapReduceTestCase {
@@ -113,25 +114,25 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     
     //validate counters
     Counters counters = runningJob.getCounters();
-    assertEquals(counters.findCounter(Task.Counter.MAP_SKIPPED_RECORDS).
+    assertEquals(counters.findCounter(TaskCounter.MAP_SKIPPED_RECORDS).
         getCounter(),mapperBadRecords.size());
     
     int mapRecs = input.size() - mapperBadRecords.size();
-    assertEquals(counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).
+    assertEquals(counters.findCounter(TaskCounter.MAP_INPUT_RECORDS).
         getCounter(),mapRecs);
-    assertEquals(counters.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).
+    assertEquals(counters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).
         getCounter(),mapRecs);
     
     int redRecs = mapRecs - redBadRecords.size();
-    assertEquals(counters.findCounter(Task.Counter.REDUCE_SKIPPED_RECORDS).
+    assertEquals(counters.findCounter(TaskCounter.REDUCE_SKIPPED_RECORDS).
         getCounter(),redBadRecords.size());
-    assertEquals(counters.findCounter(Task.Counter.REDUCE_SKIPPED_GROUPS).
+    assertEquals(counters.findCounter(TaskCounter.REDUCE_SKIPPED_GROUPS).
         getCounter(),redBadRecords.size());
-    assertEquals(counters.findCounter(Task.Counter.REDUCE_INPUT_GROUPS).
+    assertEquals(counters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).
         getCounter(),redRecs);
-    assertEquals(counters.findCounter(Task.Counter.REDUCE_INPUT_RECORDS).
+    assertEquals(counters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).
         getCounter(),redRecs);
-    assertEquals(counters.findCounter(Task.Counter.REDUCE_OUTPUT_RECORDS).
+    assertEquals(counters.findCounter(TaskCounter.REDUCE_OUTPUT_RECORDS).
         getCounter(),redRecs);
     
     //validate skipped records

@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -179,16 +180,6 @@ class JobInProgress {
   private long maxVirtualMemoryForTask;
   private long maxPhysicalMemoryForTask;
   
-  // Per-job counters
-  public static enum Counter { 
-    NUM_FAILED_MAPS, 
-    NUM_FAILED_REDUCES,
-    TOTAL_LAUNCHED_MAPS,
-    TOTAL_LAUNCHED_REDUCES,
-    OTHER_LOCAL_MAPS,
-    DATA_LOCAL_MAPS,
-    RACK_LOCAL_MAPS
-  }
   private Counters jobCounters = new Counters();
   
   private MetricsRecord jobMetrics;
@@ -1300,7 +1291,7 @@ class JobInProgress {
     } else if (tip.isMapTask()) {
       ++runningMapTasks;
       name = Values.MAP.name();
-      counter = Counter.TOTAL_LAUNCHED_MAPS;
+      counter = JobCounter.TOTAL_LAUNCHED_MAPS;
       splits = tip.getSplitNodes();
       if (tip.getActiveTasks().size() > 1)
         speculativeMapTasks++;
@@ -1308,7 +1299,7 @@ class JobInProgress {
     } else {
       ++runningReduceTasks;
       name = Values.REDUCE.name();
-      counter = Counter.TOTAL_LAUNCHED_REDUCES;
+      counter = JobCounter.TOTAL_LAUNCHED_REDUCES;
       if (tip.getActiveTasks().size() > 1)
         speculativeReduceTasks++;
       metrics.launchReduce(id);
@@ -1356,17 +1347,17 @@ class JobInProgress {
       switch (level) {
       case 0 :
         LOG.info("Choosing data-local task " + tip.getTIPId());
-        jobCounters.incrCounter(Counter.DATA_LOCAL_MAPS, 1);
+        jobCounters.incrCounter(JobCounter.DATA_LOCAL_MAPS, 1);
         break;
       case 1:
         LOG.info("Choosing rack-local task " + tip.getTIPId());
-        jobCounters.incrCounter(Counter.RACK_LOCAL_MAPS, 1);
+        jobCounters.incrCounter(JobCounter.RACK_LOCAL_MAPS, 1);
         break;
       default :
         // check if there is any locality
         if (level != this.maxLevel) {
           LOG.info("Choosing cached task at level " + level + tip.getTIPId());
-          jobCounters.incrCounter(Counter.OTHER_LOCAL_MAPS, 1);
+          jobCounters.incrCounter(JobCounter.OTHER_LOCAL_MAPS, 1);
         }
         break;
       }
@@ -2413,9 +2404,9 @@ class JobInProgress {
       //
       if (!tip.isJobCleanupTask() && !tip.isJobSetupTask()) {
         if (tip.isMapTask()) {
-          jobCounters.incrCounter(Counter.NUM_FAILED_MAPS, 1);
+          jobCounters.incrCounter(JobCounter.NUM_FAILED_MAPS, 1);
         } else {
-          jobCounters.incrCounter(Counter.NUM_FAILED_REDUCES, 1);
+          jobCounters.incrCounter(JobCounter.NUM_FAILED_REDUCES, 1);
         }
       }
     }

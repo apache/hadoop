@@ -18,13 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.apache.hadoop.mapred.Task.Counter.COMBINE_INPUT_RECORDS;
-import static org.apache.hadoop.mapred.Task.Counter.COMBINE_OUTPUT_RECORDS;
-import static org.apache.hadoop.mapred.Task.Counter.MAP_INPUT_BYTES;
-import static org.apache.hadoop.mapred.Task.Counter.MAP_INPUT_RECORDS;
-import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_BYTES;
-import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_RECORDS;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -59,6 +52,7 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
@@ -157,8 +151,8 @@ class MapTask extends Task {
     TrackedRecordReader(RecordReader<K,V> raw, TaskReporter reporter) 
       throws IOException{
       rawIn = raw;
-      inputRecordCounter = reporter.getCounter(MAP_INPUT_RECORDS);
-      inputByteCounter = reporter.getCounter(MAP_INPUT_BYTES);
+      inputRecordCounter = reporter.getCounter(TaskCounter.MAP_INPUT_RECORDS);
+      inputByteCounter = reporter.getCounter(TaskCounter.MAP_INPUT_BYTES);
       this.reporter = reporter;
     }
 
@@ -219,7 +213,7 @@ class MapTask extends Task {
                          TaskReporter reporter) throws IOException{
       super(raw, reporter);
       this.umbilical = umbilical;
-      this.skipRecCounter = reporter.getCounter(Counter.MAP_SKIPPED_RECORDS);
+      this.skipRecCounter = reporter.getCounter(TaskCounter.MAP_SKIPPED_RECORDS);
       this.toWriteSkipRecs = toWriteSkipRecs() &&  
         SkipBadRecords.getSkipOutputPath(conf)!=null;
       skipIt = getSkipRanges().skipRangeIterator();
@@ -384,7 +378,7 @@ class MapTask extends Task {
     NewTrackingRecordReader(org.apache.hadoop.mapreduce.RecordReader<K,V> real,
                             TaskReporter reporter) {
       this.real = real;
-      this.inputRecordCounter = reporter.getCounter(MAP_INPUT_RECORDS);
+      this.inputRecordCounter = reporter.getCounter(TaskCounter.MAP_INPUT_RECORDS);
     }
 
     @Override
@@ -557,7 +551,7 @@ class MapTask extends Task {
 
       out = job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);
 
-      mapOutputRecordCounter = reporter.getCounter(MAP_OUTPUT_RECORDS);
+      mapOutputRecordCounter = reporter.getCounter(TaskCounter.MAP_OUTPUT_RECORDS);
     }
 
     public void close() throws IOException {
@@ -695,11 +689,11 @@ class MapTask extends Task {
       valSerializer = serializationFactory.getSerializer(valClass);
       valSerializer.open(bb);
       // counters
-      mapOutputByteCounter = reporter.getCounter(MAP_OUTPUT_BYTES);
-      mapOutputRecordCounter = reporter.getCounter(MAP_OUTPUT_RECORDS);
+      mapOutputByteCounter = reporter.getCounter(TaskCounter.MAP_OUTPUT_BYTES);
+      mapOutputRecordCounter = reporter.getCounter(TaskCounter.MAP_OUTPUT_RECORDS);
       Counters.Counter combineInputCounter = 
-        reporter.getCounter(COMBINE_INPUT_RECORDS);
-      combineOutputCounter = reporter.getCounter(COMBINE_OUTPUT_RECORDS);
+        reporter.getCounter(TaskCounter.COMBINE_INPUT_RECORDS);
+      combineOutputCounter = reporter.getCounter(TaskCounter.COMBINE_OUTPUT_RECORDS);
       // compression
       if (job.getCompressMapOutput()) {
         Class<? extends CompressionCodec> codecClass =

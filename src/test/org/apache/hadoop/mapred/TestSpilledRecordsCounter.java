@@ -26,11 +26,11 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.TaskCounter;
 
 /**
  * This is an wordcount application that tests the count of records
@@ -46,7 +46,7 @@ public class TestSpilledRecordsCounter extends TestCase {
 
   private void validateCounters(Counters counter, long spillRecCnt) {
       // Check if the numer of Spilled Records is same as expected
-      assertEquals(counter.findCounter(Task.Counter.SPILLED_RECORDS).
+      assertEquals(counter.findCounter(TaskCounter.SPILLED_RECORDS).
                      getCounter(), spillRecCnt);
   }
 

@@ -45,6 +45,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.mapred.IFile.Writer;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
@@ -56,24 +57,6 @@ abstract class Task implements Writable, Configurable {
   private static final Log LOG =
     LogFactory.getLog(Task.class);
 
-  // Counters used by Task subclasses
-  protected static enum Counter { 
-    MAP_INPUT_RECORDS, 
-    MAP_OUTPUT_RECORDS,
-    MAP_SKIPPED_RECORDS,
-    MAP_INPUT_BYTES, 
-    MAP_OUTPUT_BYTES,
-    COMBINE_INPUT_RECORDS,
-    COMBINE_OUTPUT_RECORDS,
-    REDUCE_INPUT_GROUPS,
-    REDUCE_SHUFFLE_BYTES,
-    REDUCE_INPUT_RECORDS,
-    REDUCE_OUTPUT_RECORDS,
-    REDUCE_SKIPPED_GROUPS,
-    REDUCE_SKIPPED_RECORDS,
-    SPILLED_RECORDS
-  }
-  
   /**
    * Counters to measure the usage of the different file systems.
    * Always return the String array with two elements. First one is the name of  
@@ -144,7 +127,7 @@ abstract class Task implements Writable, Configurable {
   public Task() {
     taskStatus = TaskStatus.createTaskStatus(isMapTask());
     taskId = new TaskAttemptID();
-    spilledRecordsCounter = counters.findCounter(Counter.SPILLED_RECORDS);
+    spilledRecordsCounter = counters.findCounter(TaskCounter.SPILLED_RECORDS);
   }
 
   public Task(String jobFile, TaskAttemptID taskId, int partition) {
@@ -161,7 +144,7 @@ abstract class Task implements Writable, Configurable {
                                                     TaskStatus.Phase.SHUFFLE, 
                                                   counters);
     this.mapOutputFile.setJobId(taskId.getJobID());
-    spilledRecordsCounter = counters.findCounter(Counter.SPILLED_RECORDS);
+    spilledRecordsCounter = counters.findCounter(TaskCounter.SPILLED_RECORDS);
   }
 
   ////////////////////////////////////////////

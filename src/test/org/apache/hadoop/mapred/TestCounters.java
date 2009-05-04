@@ -21,6 +21,8 @@ import junit.framework.TestCase;
 import java.io.IOException;
 import java.text.ParseException;
 
+import org.apache.hadoop.mapreduce.TaskCounter;
+
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
  */
@@ -68,8 +70,8 @@ public class TestCounters extends TestCase {
   }
   
   public void testCounters() throws IOException {
-    Enum[] keysWithResource = {Task.Counter.MAP_INPUT_BYTES, 
-                               Task.Counter.MAP_OUTPUT_BYTES};
+    Enum[] keysWithResource = {TaskCounter.MAP_INPUT_BYTES, 
+                               TaskCounter.MAP_OUTPUT_BYTES};
     
     Enum[] keysWithoutResource = {myCounters.TEST1, myCounters.TEST2};
     

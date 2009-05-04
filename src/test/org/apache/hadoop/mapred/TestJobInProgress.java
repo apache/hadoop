@@ -38,6 +38,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.UtilsForTests;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.net.Node;
 
 import junit.framework.TestCase;
@@ -263,8 +264,8 @@ public class TestJobInProgress extends TestCase {
       JobInProgress jip = jt.getJob(js.getJobID());
       Counters counter = jip.getJobCounters();
       long totalTaskCount = counter
-          .getCounter(JobInProgress.Counter.TOTAL_LAUNCHED_MAPS)
-          + counter.getCounter(JobInProgress.Counter.TOTAL_LAUNCHED_REDUCES);
+          .getCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+          + counter.getCounter(JobCounter.TOTAL_LAUNCHED_REDUCES);
       while (jip.getNumTaskCompletionEvents() < totalTaskCount) {
         assertEquals(true, (jip.runningMaps() >= 0));
         assertEquals(true, (jip.pendingMaps() >= 0));

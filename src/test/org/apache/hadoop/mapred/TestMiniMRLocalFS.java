@@ -35,6 +35,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.MRCaching.TestResult;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -77,9 +78,9 @@ public class TestMiniMRLocalFS extends TestCase {
       assertEquals("number of cleanups", 2, reports.length);
       Counters counters = ret.job.getCounters();
       assertEquals("number of map inputs", 3, 
-                   counters.getCounter(Task.Counter.MAP_INPUT_RECORDS));
+                   counters.getCounter(TaskCounter.MAP_INPUT_RECORDS));
       assertEquals("number of reduce outputs", 9, 
-                   counters.getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS));
+                   counters.getCounter(TaskCounter.REDUCE_OUTPUT_RECORDS));
       runCustomFormats(mr);
     } finally {
       if (mr != null) { mr.shutdown(); }

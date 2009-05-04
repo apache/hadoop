@@ -97,7 +97,7 @@ public class TestMapReduceLocal extends TestCase {
                             ) throws IOException,
                                      InterruptedException,
                                      ClassNotFoundException {
-    final String COUNTER_GROUP = "org.apache.hadoop.mapred.Task$Counter";
+    final String COUNTER_GROUP = "org.apache.hadoop.mapreduce.TaskCounter";
     localFs.delete(new Path(TEST_ROOT_DIR + "/in"), true);
     localFs.delete(new Path(TEST_ROOT_DIR + "/out"), true);    
     writeFile("in/part1", "this is a test\nof word count test\ntest\n");

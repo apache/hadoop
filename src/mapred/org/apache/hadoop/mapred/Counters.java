@@ -355,6 +355,18 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * with the specified name.
    */
   public synchronized Group getGroup(String groupName) {
+    // To provide support for deprecated group names  
+    if (groupName.equals("org.apache.hadoop.mapred.Task$Counter")) {
+      groupName = "org.apache.hadoop.mapreduce.TaskCounter";
+      LOG.warn("Group org.apache.hadoop.mapred.Task$Counter is deprecated." +
+               " Use org.apache.hadoop.mapreduce.TaskCounter instead");
+    } else if (groupName.equals(
+                 "org.apache.hadoop.mapred.JobInProgress$Counter")) {
+      groupName = "org.apache.hadoop.mapreduce.JobCounter";
+      LOG.warn("Group org.apache.hadoop.mapred.JobInProgress$Counter " +
+               "is deprecated. Use " +
+               "org.apache.hadoop.mapreduce.JobCounter instead");
+    }
     Group result = counters.get(groupName);
     if (result == null) {
       result = new Group(groupName);

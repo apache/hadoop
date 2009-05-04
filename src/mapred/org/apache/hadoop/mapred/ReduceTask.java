@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.Math;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -76,6 +74,7 @@ import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -112,15 +111,15 @@ class ReduceTask extends Task {
   private Progress sortPhase;
   private Progress reducePhase;
   private Counters.Counter reduceShuffleBytes = 
-    getCounters().findCounter(Counter.REDUCE_SHUFFLE_BYTES);
+    getCounters().findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES);
   private Counters.Counter reduceInputKeyCounter = 
-    getCounters().findCounter(Counter.REDUCE_INPUT_GROUPS);
+    getCounters().findCounter(TaskCounter.REDUCE_INPUT_GROUPS);
   private Counters.Counter reduceInputValueCounter = 
-    getCounters().findCounter(Counter.REDUCE_INPUT_RECORDS);
+    getCounters().findCounter(TaskCounter.REDUCE_INPUT_RECORDS);
   private Counters.Counter reduceOutputCounter = 
-    getCounters().findCounter(Counter.REDUCE_OUTPUT_RECORDS);
+    getCounters().findCounter(TaskCounter.REDUCE_OUTPUT_RECORDS);
   private Counters.Counter reduceCombineOutputCounter =
-    getCounters().findCounter(Counter.COMBINE_OUTPUT_RECORDS);
+    getCounters().findCounter(TaskCounter.COMBINE_OUTPUT_RECORDS);
 
   // A custom comparator for map output files. Here the ordering is determined
   // by the file's size and path. In case of files with same size and different
@@ -268,9 +267,9 @@ class ReduceTask extends Task {
        super(in, comparator, keyClass, valClass, conf, reporter);
        this.umbilical = umbilical;
        this.skipGroupCounter = 
-         reporter.getCounter(Counter.REDUCE_SKIPPED_GROUPS);
+         reporter.getCounter(TaskCounter.REDUCE_SKIPPED_GROUPS);
        this.skipRecCounter = 
-         reporter.getCounter(Counter.REDUCE_SKIPPED_RECORDS);
+         reporter.getCounter(TaskCounter.REDUCE_SKIPPED_RECORDS);
        this.toWriteSkipRecs = toWriteSkipRecs() &&  
          SkipBadRecords.getSkipOutputPath(conf)!=null;
        this.keyClass = keyClass;
@@ -1714,7 +1713,7 @@ class ReduceTask extends Task {
       this.maxInFlight = 4 * numCopiers;
       this.maxBackoff = conf.getInt("mapred.reduce.copy.backoff", 300);
       Counters.Counter combineInputCounter = 
-        reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS);
+        reporter.getCounter(TaskCounter.COMBINE_INPUT_RECORDS);
       this.combinerRunner = CombinerRunner.create(conf, getTaskID(),
                                                   combineInputCounter,
                                                   reporter, null);

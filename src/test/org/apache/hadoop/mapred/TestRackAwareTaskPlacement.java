@@ -29,6 +29,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.JobCounter;
 
 public class TestRackAwareTaskPlacement extends TestCase {
   private static final String rack1[] = new String[] {
@@ -76,12 +77,12 @@ public class TestRackAwareTaskPlacement extends TestCase {
     RunningJob job = launchJob(jobConf, in, out, numMaps, jobName);
     Counters counters = job.getCounters();
     assertEquals("Number of local maps", 
-            counters.getCounter(JobInProgress.Counter.OTHER_LOCAL_MAPS), otherLocalMaps);
+            counters.getCounter(JobCounter.OTHER_LOCAL_MAPS), otherLocalMaps);
     assertEquals("Number of Data-local maps", 
-            counters.getCounter(JobInProgress.Counter.DATA_LOCAL_MAPS), 
+            counters.getCounter(JobCounter.DATA_LOCAL_MAPS), 
                                 dataLocalMaps);
     assertEquals("Number of Rack-local maps", 
-            counters.getCounter(JobInProgress.Counter.RACK_LOCAL_MAPS), 
+            counters.getCounter(JobCounter.RACK_LOCAL_MAPS), 
                                 rackLocalMaps);
     mr.waitUntilIdle();
     mr.shutdown();
