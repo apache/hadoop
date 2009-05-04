@@ -38,7 +38,13 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   private int numJobsCompleted = 0;
   private int numWaitingMaps = 0;
   private int numWaitingReduces = 0;
-  
+
+  //Cluster status fields.
+  private volatile int numMapSlots = 0;
+  private volatile int numReduceSlots = 0;
+  private int numBlackListedMapSlots = 0;
+  private int numBlackListedReduceSlots = 0;
+
   public JobTrackerMetricsInst(JobTracker tracker, JobConf conf) {
     super(tracker, conf);
     String sessionId = conf.getSessionId();
@@ -57,6 +63,11 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
+      metricsRecord.setMetric("map_slots", numMapSlots);
+      metricsRecord.setMetric("reduce_slots", numReduceSlots);
+      metricsRecord.incrMetric("blacklisted_maps", numBlackListedMapSlots);
+      metricsRecord.incrMetric("blacklisted_reduces",
+          numBlackListedReduceSlots);
       metricsRecord.incrMetric("maps_launched", numMapTasksLaunched);
       metricsRecord.incrMetric("maps_completed", numMapTasksCompleted);
       metricsRecord.incrMetric("maps_failed", numMapTasksFailed);
@@ -78,6 +89,8 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
       numJobsCompleted = 0;
       numWaitingMaps = 0;
       numWaitingReduces = 0;
+      numBlackListedMapSlots = 0;
+      numBlackListedReduceSlots = 0;
     }
     metricsRecord.update();
 
@@ -150,5 +163,35 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   @Override
   public synchronized void decWaitingReduces(JobID id, int task){
     numWaitingReduces -= task;
+  }
+
+  @Override
+  public void setMapSlots(int slots) {
+    numMapSlots = slots;
+  }
+
+  @Override
+  public void setReduceSlots(int slots) {
+    numReduceSlots = slots;
+  }
+
+  @Override
+  public synchronized void addBlackListedMapSlots(int slots){
+    numBlackListedMapSlots += slots;
+  }
+
+  @Override
+  public synchronized void decBlackListedMapSlots(int slots){
+    numBlackListedMapSlots -= slots;
+  }
+
+  @Override
+  public synchronized void addBlackListedReduceSlots(int slots){
+    numBlackListedReduceSlots += slots;
+  }
+
+  @Override
+  public synchronized void decBlackListedReduceSlots(int slots){
+    numBlackListedReduceSlots -= slots;
   }
 }
