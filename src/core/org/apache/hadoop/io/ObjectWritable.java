@@ -179,13 +179,9 @@ public class ObjectWritable implements Writable, Configurable {
     String className = UTF8.readString(in);
     Class<?> declaredClass = PRIMITIVE_NAMES.get(className);
     if (declaredClass == null) {
-      try {
-        declaredClass = conf.getClassByName(className);
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException("readObject can't find class " + className, e);
-      }
-    }    
-
+      declaredClass = loadClass(conf, className);
+    }
+    
     Object instance;
     
     if (declaredClass.isPrimitive()) {            // primitive types
@@ -225,13 +221,8 @@ public class ObjectWritable implements Writable, Configurable {
       instance = Enum.valueOf((Class<? extends Enum>) declaredClass, UTF8.readString(in));
     } else {                                      // Writable
       Class instanceClass = null;
-      String str = "";
-      try {
-        str = UTF8.readString(in);
-        instanceClass = conf.getClassByName(str);
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException("readObject can't find class " + str, e);
-      }
+      String str = UTF8.readString(in);
+      instanceClass = loadClass(conf, str);
       
       Writable writable = WritableFactories.newInstance(instanceClass, conf);
       writable.readFields(in);
@@ -250,6 +241,25 @@ public class ObjectWritable implements Writable, Configurable {
 
     return instance;
       
+  }
+
+  /**
+   * Find and load the class with given name <tt>className</tt> by first finding
+   * it in the specified <tt>conf</tt>. If the specified <tt>conf</tt> is null,
+   * try load it directly.
+   */
+  public static Class<?> loadClass(Configuration conf, String className) {
+    Class<?> declaredClass = null;
+    try {
+      if (conf != null)
+        declaredClass = conf.getClassByName(className);
+      else
+        declaredClass = Class.forName(className);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("readObject can't find class " + className,
+          e);
+    }
+    return declaredClass;
   }
 
   public void setConf(Configuration conf) {
