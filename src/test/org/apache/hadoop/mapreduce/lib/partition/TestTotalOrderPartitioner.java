@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.mapreduce.lib.partition;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,6 +24,7 @@ import java.util.Arrays;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
@@ -33,7 +34,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.mapred.JobConf;
 
 public class TestTotalOrderPartitioner extends TestCase {
 
@@ -75,17 +75,16 @@ public class TestTotalOrderPartitioner extends TestCase {
     testStrings.add(new Check<Text>(new Text("hi"), 6));
   };
 
-  private static <T extends WritableComparable> Path writePartitionFile(
-      String testname, JobConf conf, T[] splits) throws IOException {
+  private static <T extends WritableComparable<?>> Path writePartitionFile(
+      String testname, Configuration conf, T[] splits) throws IOException {
     final FileSystem fs = FileSystem.getLocal(conf);
     final Path testdir = new Path(System.getProperty("test.build.data", "/tmp")
                                  ).makeQualified(fs);
     Path p = new Path(testdir, testname + "/_partition.lst");
     TotalOrderPartitioner.setPartitionFile(conf, p);
-    conf.setNumReduceTasks(splits.length + 1);
+    conf.setInt("mapred.reduce.tasks", splits.length + 1);
     SequenceFile.Writer w = null;
     try {
-      NullWritable nw = NullWritable.get();
       w = SequenceFile.createWriter(fs, conf, p,
           splits[0].getClass(), NullWritable.class,
           SequenceFile.CompressionType.NONE);
@@ -102,39 +101,39 @@ public class TestTotalOrderPartitioner extends TestCase {
   public void testTotalOrderMemCmp() throws Exception {
     TotalOrderPartitioner<Text,NullWritable> partitioner =
       new TotalOrderPartitioner<Text,NullWritable>();
-    JobConf job = new JobConf();
+    Configuration conf = new Configuration();
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
-        "totalordermemcmp", job, splitStrings);
-    job.setMapOutputKeyClass(Text.class);
+        "totalordermemcmp", conf, splitStrings);
+    conf.setClass("mapred.mapoutput.key.class", Text.class, Object.class);
     try {
-      partitioner.configure(job);
+      partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
         assertEquals(chk.data.toString(), chk.part,
             partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
       }
     } finally {
-      p.getFileSystem(job).delete(p, true);
+      p.getFileSystem(conf).delete(p, true);
     }
   }
 
   public void testTotalOrderBinarySearch() throws Exception {
     TotalOrderPartitioner<Text,NullWritable> partitioner =
       new TotalOrderPartitioner<Text,NullWritable>();
-    JobConf job = new JobConf();
+    Configuration conf = new Configuration();
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
-        "totalorderbinarysearch", job, splitStrings);
-    job.setBoolean("total.order.partitioner.natural.order", false);
-    job.setMapOutputKeyClass(Text.class);
+        "totalorderbinarysearch", conf, splitStrings);
+    conf.setBoolean("total.order.partitioner.natural.order", false);
+    conf.setClass("mapred.mapoutput.key.class", Text.class, Object.class);
     try {
-      partitioner.configure(job);
+      partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
         assertEquals(chk.data.toString(), chk.part,
             partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
       }
     } finally {
-      p.getFileSystem(job).delete(p, true);
+      p.getFileSystem(conf).delete(p, true);
     }
   }
 
@@ -153,14 +152,15 @@ public class TestTotalOrderPartitioner extends TestCase {
   public void testTotalOrderCustomComparator() throws Exception {
     TotalOrderPartitioner<Text,NullWritable> partitioner =
       new TotalOrderPartitioner<Text,NullWritable>();
-    JobConf job = new JobConf();
+    Configuration conf = new Configuration();
     Text[] revSplitStrings = Arrays.copyOf(splitStrings, splitStrings.length);
     Arrays.sort(revSplitStrings, new ReverseStringComparator());
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
-        "totalordercustomcomparator", job, revSplitStrings);
-    job.setBoolean("total.order.partitioner.natural.order", false);
-    job.setMapOutputKeyClass(Text.class);
-    job.setOutputKeyComparatorClass(ReverseStringComparator.class);
+        "totalordercustomcomparator", conf, revSplitStrings);
+    conf.setBoolean("total.order.partitioner.natural.order", false);
+    conf.setClass("mapred.mapoutput.key.class", Text.class, Object.class);
+    conf.setClass("mapred.output.key.comparator.class",
+      ReverseStringComparator.class, RawComparator.class);
     ArrayList<Check<Text>> revCheck = new ArrayList<Check<Text>>();
     revCheck.add(new Check<Text>(new Text("aaaaa"), 9));
     revCheck.add(new Check<Text>(new Text("aaabb"), 9));
@@ -174,15 +174,14 @@ public class TestTotalOrderPartitioner extends TestCase {
     revCheck.add(new Check<Text>(new Text("ddngo"), 4));
     revCheck.add(new Check<Text>(new Text("hi"), 3));
     try {
-      partitioner.configure(job);
+      partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : revCheck) {
         assertEquals(chk.data.toString(), chk.part,
             partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
       }
     } finally {
-      p.getFileSystem(job).delete(p, true);
+      p.getFileSystem(conf).delete(p, true);
     }
   }
-
 }

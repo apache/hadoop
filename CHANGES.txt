@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     and TASK_CLEANUP. Removes the isMap methods from TaskID/TaskAttemptID
     classes. (ddas)
 
+    HADOOP-5668. Change TotalOrderPartitioner to use new API. (Amareshwari
+    Sriramadasu via cdouglas)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
