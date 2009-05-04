@@ -500,6 +500,9 @@ Trunk (unreleased changes)
     HADOOP-5656. Counter for S3N Read Bytes does not work. (Ian Nowland
     via tomwhite)
 
+    HADOOP-5406. Fix JNI binding for ZlibCompressor::setDictionary. (Lars
+    Francke via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

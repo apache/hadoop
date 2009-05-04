@@ -147,7 +147,7 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_init(
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_hadoop_io_compress_ZlibCompressor_setDictionary(
+Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_setDictionary(
 	JNIEnv *env, jclass class, jlong stream, 
 	jarray b, jint off, jint len
 	) {
