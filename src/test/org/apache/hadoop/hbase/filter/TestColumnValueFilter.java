@@ -46,7 +46,7 @@ public class TestColumnValueFilter extends TestCase {
   private static final byte[] FULLSTRING_2 = 
     Bytes.toBytes("The slow grey fox trips over the lazy dog.");
   private static final String QUICK_SUBSTR = "quick";
-  private static final String QUICK_REGEX = "[q][u][i][c][k]";
+  private static final String QUICK_REGEX = ".+quick.+";
 
   private RowFilterInterface basicFilterNew() {
     return new ColumnValueFilter(COLUMN,

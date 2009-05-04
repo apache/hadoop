@@ -25,8 +25,8 @@ Release 0.20.0 - Unreleased
                sync (temporary until HADOOP-4379 is resolved)
    HBASE-1121  Cluster confused about where -ROOT- is
    HBASE-1148  Always flush HLog on root or meta region updates
-   HBASE-1181  src/saveVersion.sh bails on non-standard Bourne shells (e.g. dash)
-               (K M via Jean-Daniel Cryans)
+   HBASE-1181  src/saveVersion.sh bails on non-standard Bourne shells
+               (e.g. dash) (K M via Jean-Daniel Cryans)
    HBASE-1175  HBA administrative tools do not work when specifying region
                name (Jonathan Gray via Andrew Purtell)
    HBASE-1190  TableInputFormatBase with row filters scan too far (Dave
@@ -47,9 +47,10 @@ Release 0.20.0 - Unreleased
                to compact when loaded with hundreds of regions
    HBASE-1247  checkAndSave doesn't Write Ahead Log
    HBASE-1243  oldlogfile.dat is screwed, so is it's region
-   HBASE-1169  When a shutdown is requested, stop scanning META regions immediately
-   HBASE-1251  HConnectionManager.getConnection(HBaseConfiguration) returns same
-               HConnection for different HBaseConfigurations 
+   HBASE-1169  When a shutdown is requested, stop scanning META regions
+               immediately
+   HBASE-1251  HConnectionManager.getConnection(HBaseConfiguration) returns 
+               same HConnection for different HBaseConfigurations 
    HBASE-1157, HBASE-1156 If we do not take start code as a part of region
                server recovery, we could inadvertantly try to reassign regions
                assigned to a restarted server with a different start code;
@@ -104,6 +105,8 @@ Release 0.20.0 - Unreleased
    HBASE-1365  Typo in TableInputFormatBase.setInputColums (Jon Gray via Stack)
    HBASE-1279  Fix the way hostnames and IPs are handled
    HBASE-1368  HBASE-1279 broke the build
+   HBASE-1264  Wrong return values of comparators for ColumnValueFilter
+               (Thomas Schneider via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

@@ -68,7 +68,7 @@ public class RegexStringComparator implements WritableByteArrayComparable {
   public int compareTo(byte[] value) {
     // Use find() for subsequence match instead of matches() (full sequence
     // match) to adhere to the principle of least surprise.
-    return pattern.matcher(Bytes.toString(value)).find() ? 1 : 0;
+    return pattern.matcher(Bytes.toString(value)).find() ? 0 : 1;
   }
 
   public void readFields(DataInput in) throws IOException {

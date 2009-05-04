@@ -57,7 +57,7 @@ public class SubstringComparator implements WritableByteArrayComparable {
   }
 
   public int compareTo(byte[] value) {
-    return Bytes.toString(value).toLowerCase().contains(substr) ? 1 : 0;
+    return Bytes.toString(value).toLowerCase().contains(substr) ? 0 : 1;
   }
 
   public void readFields(DataInput in) throws IOException {

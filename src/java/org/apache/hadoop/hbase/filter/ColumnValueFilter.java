@@ -172,9 +172,9 @@ public class ColumnValueFilter implements RowFilterInterface {
     case LESS_OR_EQUAL:
       return compareResult < 0;
     case EQUAL:
-      return compareResult != 0;
-    case NOT_EQUAL:
       return compareResult == 0;
+    case NOT_EQUAL:
+      return compareResult != 0;
     case GREATER_OR_EQUAL:
       return compareResult > 0;
     case GREATER:
