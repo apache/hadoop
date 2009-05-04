@@ -116,7 +116,10 @@ public class HftpFileSystem extends FileSystem {
       if (LOG.isTraceEnabled()) {
         LOG.trace("url=" + url);
       }
-      return (HttpURLConnection)url.openConnection();
+      HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+      connection.setRequestMethod("GET");
+      connection.connect();
+      return connection;
     } catch (URISyntaxException e) {
       throw (IOException)new IOException().initCause(e);
     }
@@ -126,8 +129,6 @@ public class HftpFileSystem extends FileSystem {
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
     HttpURLConnection connection = null;
     connection = openConnection("/data" + f.toUri().getPath(), "ugi=" + ugi);
-    connection.setRequestMethod("GET");
-    connection.connect();
     final InputStream in = connection.getInputStream();
     return new FSDataInputStream(new FSInputStream() {
         public int read() throws IOException {
@@ -199,8 +200,6 @@ public class HftpFileSystem extends FileSystem {
         xr.setContentHandler(this);
         HttpURLConnection connection = openConnection("/listPaths" + path,
             "ugi=" + ugi + (recur? "&recursive=yes" : ""));
-        connection.setRequestMethod("GET");
-        connection.connect();
 
         InputStream resp = connection.getInputStream();
         xr.parse(new InputSource(resp));
@@ -268,10 +267,6 @@ public class HftpFileSystem extends FileSystem {
       try {
         final XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
-
-        connection.setRequestMethod("GET");
-        connection.connect();
-
         xr.parse(new InputSource(connection.getInputStream()));
       } catch(SAXException e) {
         final Exception embedded = e.getException();

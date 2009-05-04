@@ -26,12 +26,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
@@ -39,7 +39,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
@@ -50,9 +49,11 @@ import org.apache.hadoop.util.HostsFileReader;
  */
 public class ProxyUtil {
   public static final Log LOG = LogFactory.getLog(ProxyUtil.class);
+  private static final long MM_SECONDS_PER_DAY = 1000 * 60 * 60 * 24;
+  private static final int CERT_EXPIRATION_WARNING_THRESHOLD = 30; // 30 days warning
   
   private static enum UtilityOption {
-    RELOAD("-reloadPermFiles"), CLEAR("-clearUgiCache"), GET("-get");
+    RELOAD("-reloadPermFiles"), CLEAR("-clearUgiCache"), GET("-get"), CHECKCERTS("-checkcerts");
 
     private String name = null;
 
@@ -136,7 +137,7 @@ public class ProxyUtil {
               sb.append("\n Client certificate Subject Name is "
                   + cert.getSubjectX500Principal().getName());
           } else {
-            sb.append("\n No Client certs was found");  
+            sb.append("\n No client certificates were found");  
           }
           X509Certificate[] serverCerts = (X509Certificate[]) connection.getServerCertificates();
           if (serverCerts != null) {
@@ -144,7 +145,7 @@ public class ProxyUtil {
               sb.append("\n Server certificate Subject Name is "
                   + cert.getSubjectX500Principal().getName());
           } else {
-            sb.append("\n No Server certs was found");  
+            sb.append("\n No server certificates were found");  
           }
           LOG.debug(sb.toString());
         }
@@ -200,17 +201,48 @@ public class ProxyUtil {
         }
       });
   }
+  
+  static void checkServerCertsExpirationDays(Configuration conf, String hostname, int port) throws IOException {
+    setupSslProps(conf);
+    HttpsURLConnection connection = null;
+    connection = openConnection(hostname, port, null);
+    connection.connect();
+    X509Certificate[] serverCerts = (X509Certificate[]) connection.getServerCertificates();
+    Date curDate = new Date();
+    long curTime = curDate.getTime();
+    if (serverCerts != null) {
+      for (X509Certificate cert : serverCerts) {
+        StringBuffer sb = new StringBuffer();
+        sb.append("\n Server certificate Subject Name: " + cert.getSubjectX500Principal().getName());
+        Date expDate = cert.getNotAfter();
+        long expTime = expDate.getTime();
+        int dayOffSet = (int) ((expTime - curTime)/MM_SECONDS_PER_DAY);
+        sb.append(" have " + dayOffSet + " days to expire");
+        if (dayOffSet < CERT_EXPIRATION_WARNING_THRESHOLD) LOG.warn(sb.toString());
+        else LOG.info(sb.toString());
+      }
+    } else {
+      LOG.info("\n No Server certs was found");  
+    }
+
+    if (connection != null) {
+      connection.disconnect();
+    }
+  }
 
   public static void main(String[] args) throws Exception {
     if(args.length < 1 || 
         (!UtilityOption.RELOAD.getName().equalsIgnoreCase(args[0]) 
             && !UtilityOption.CLEAR.getName().equalsIgnoreCase(args[0])
-            && !UtilityOption.GET.getName().equalsIgnoreCase(args[0])) ||
-            (UtilityOption.GET.getName().equalsIgnoreCase(args[0]) && args.length != 4)) {
+            && !UtilityOption.GET.getName().equalsIgnoreCase(args[0])
+            && !UtilityOption.CHECKCERTS.getName().equalsIgnoreCase(args[0])) ||
+            (UtilityOption.GET.getName().equalsIgnoreCase(args[0]) && args.length != 4) ||
+            (UtilityOption.CHECKCERTS.getName().equalsIgnoreCase(args[0]) && args.length != 3)) {
       System.err.println("Usage: ProxyUtil ["
           + UtilityOption.RELOAD.getName() + "] | ["
           + UtilityOption.CLEAR.getName() + "] | ["
-          + UtilityOption.GET.getName() + " <hostname> <#port> <path> ]");
+          + UtilityOption.GET.getName() + " <hostname> <#port> <path> ] | ["
+          + UtilityOption.CHECKCERTS.getName() + " <hostname> <#port> ]");
       System.exit(0);      
     }
     Configuration conf = new Configuration(false);   
@@ -223,6 +255,8 @@ public class ProxyUtil {
     } else if (UtilityOption.CLEAR.getName().equalsIgnoreCase(args[0])) {
       // clear UGI caches
       sendCommand(conf, "/clearUgiCache");
+    } else if (UtilityOption.CHECKCERTS.getName().equalsIgnoreCase(args[0])) {
+      checkServerCertsExpirationDays(conf, args[1], Integer.parseInt(args[2]));
     } else {
       String hostname = args[1];
       int port = Integer.parseInt(args[2]);
