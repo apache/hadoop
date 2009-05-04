@@ -88,7 +88,7 @@
      Arrays.sort(serverNames);
      for (String serverName: serverNames) {
        HServerInfo hsi = serverToServerInfos.get(serverName);
-       String hostname = hsi.getServerAddress().getHostname() + ":" + hsi.getInfoPort();
+       String hostname = hsi.getName() + ":" + hsi.getInfoPort();
        String url = "http://" + hostname + "/";
        totalRegions += hsi.getLoad().getNumberOfRegions();
        totalRequests += hsi.getLoad().getNumberOfRequests() / interval;

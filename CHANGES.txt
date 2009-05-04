@@ -102,6 +102,7 @@ Release 0.20.0 - Unreleased
    HBASE-1347  HTable.incrementColumnValue does not take negative 'amount'
                (Evgeny Ryabitskiy via Stack)
    HBASE-1365  Typo in TableInputFormatBase.setInputColums (Jon Gray via Stack)
+   HBASE-1279  Fix the way hostnames and IPs are handled
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

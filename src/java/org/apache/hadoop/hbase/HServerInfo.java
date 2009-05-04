@@ -39,6 +39,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private HServerLoad load;
   private int infoPort;
   private transient volatile String serverName = null;
+  private String name;
 
   /** default constructor - used by Writable */
   public HServerInfo() {
@@ -134,6 +135,22 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     }
     return this.serverName;
   }
+  
+  /**
+   * Get the hostname of the server
+   * @return hostname
+   */
+  public String getName() {
+    return name;
+  }
+ 
+  /**
+   * Set the hostname of the server
+   * @param name hostname
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
 
   /**
    * @see java.lang.Object#toString()
@@ -177,6 +194,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = in.readLong();
     this.load.readFields(in);
     this.infoPort = in.readInt();
+    this.name = in.readUTF();
   }
 
   public void write(DataOutput out) throws IOException {
@@ -184,6 +202,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     out.writeLong(this.startCode);
     this.load.write(out);
     out.writeInt(this.infoPort);
+    out.writeUTF(name);
   }
 
   public int compareTo(HServerInfo o) {

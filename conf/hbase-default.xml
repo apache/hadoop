@@ -219,6 +219,21 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.dns.interface</name>
+    <value>default</value>
+    <description>The name of the Network Interface from which a region server 
+      should report its IP address.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.dns.nameserver</name>
+    <value>default</value>
+    <description>The host name or IP address of the name server (DNS)
+      which a region server should use to determine the host name used by the
+      master for communication and display purposes.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.globalMemcache.upperLimit</name>
     <value>0.4</value>
     <description>Maximum size of all memcaches in a region server before new 
