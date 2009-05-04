@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -50,7 +51,7 @@ import org.apache.hadoop.io.serializer.Serializer;
  */
 class IFile {
 
-  private static final int EOF_MARKER = -1;
+  static final int EOF_MARKER = -1;
   
   /**
    * <code>IFile.Writer</code> to write out intermediate map-outputs. 
@@ -111,18 +112,31 @@ class IFile {
       
       this.keyClass = keyClass;
       this.valueClass = valueClass;
-      SerializationFactory serializationFactory = new SerializationFactory(conf);
-      this.keySerializer = serializationFactory.getSerializer(keyClass);
-      this.keySerializer.open(buffer);
-      this.valueSerializer = serializationFactory.getSerializer(valueClass);
-      this.valueSerializer.open(buffer);
+
+      if (keyClass != null) {
+        SerializationFactory serializationFactory = 
+          new SerializationFactory(conf);
+        this.keySerializer = serializationFactory.getSerializer(keyClass);
+        this.keySerializer.open(buffer);
+        this.valueSerializer = serializationFactory.getSerializer(valueClass);
+        this.valueSerializer.open(buffer);
+      }
+    }
+
+    public Writer(Configuration conf, FileSystem fs, Path file) 
+    throws IOException {
+      this(conf, fs, file, null, null, null, null);
     }
 
     public void close() throws IOException {
 
-      // Close the serializers
-      keySerializer.close();
-      valueSerializer.close();
+      // When IFile writer is created by BackupStore, we do not have
+      // Key and Value classes set. So, check before closing the
+      // serializers
+      if (keyClass != null) {
+        keySerializer.close();
+        valueSerializer.close();
+      }
 
       // Write EOF_MARKER for key/value length
       WritableUtils.writeVInt(out, EOF_MARKER);
@@ -224,6 +238,17 @@ class IFile {
                       WritableUtils.getVIntSize(keyLength) + 
                       WritableUtils.getVIntSize(valueLength);
       ++numRecordsWritten;
+    }
+    
+    // Required for mark/reset
+    public DataOutputStream getOutputStream () {
+      return out;
+    }
+    
+    // Required for mark/reset
+    public void updateCountersForExternalAppend(long length) {
+      ++numRecordsWritten;
+      decompressedBytesWritten += length;
     }
     
     public long getRawLength() {
@@ -423,6 +448,15 @@ class IFile {
         readRecordsCounter.increment(numRecordsRead);
       }
     }
+    
+    public void reset(int offset) {
+      return;
+    }
+
+    public void disableChecksumValidation() {
+      checksumIn.disableChecksumValidation();
+    }
+
   }    
   
   /**
@@ -432,6 +466,8 @@ class IFile {
     RamManager ramManager;
     TaskAttemptID taskAttemptId;
     DataInputBuffer memDataIn = new DataInputBuffer();
+    private int start;
+    private int length;
     public InMemoryReader(RamManager ramManager, TaskAttemptID taskAttemptId,
                           byte[] data, int start, int length)
                           throws IOException {
@@ -442,6 +478,15 @@ class IFile {
       buffer = data;
       bufferSize = (int)fileLength;
       memDataIn.reset(buffer, start, length);
+      this.start = start;
+      this.length = length;
+    }
+
+    @Override
+    public void reset(int offset) {
+      memDataIn.reset(buffer, start + offset, length);
+      bytesRead = offset;
+      eof = false;
     }
     
     @Override

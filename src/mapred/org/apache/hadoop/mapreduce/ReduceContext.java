@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -26,8 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
+import org.apache.hadoop.mapred.BackupStore;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.util.Progressable;
 
@@ -54,7 +58,16 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   private DataInputBuffer buffer = new DataInputBuffer();
   private BytesWritable currentRawKey = new BytesWritable();
   private ValueIterable iterable = new ValueIterable();
-
+  private boolean isMarked = false;
+  private BackupStore<KEYIN,VALUEIN> backupStore;
+  private final SerializationFactory serializationFactory;
+  private final Class<KEYIN> keyClass;
+  private final Class<VALUEIN> valueClass;
+  private final Configuration conf;
+  private final TaskAttemptID taskid;
+  private int currentKeyLength = -1;
+  private int currentValueLength = -1;
+  
   public ReduceContext(Configuration conf, TaskAttemptID taskid,
                        RawKeyValueIterator input, 
                        Counter inputCounter,
@@ -69,12 +82,16 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     this.input = input;
     this.inputCounter = inputCounter;
     this.comparator = comparator;
-    SerializationFactory serializationFactory = new SerializationFactory(conf);
+    this.serializationFactory = new SerializationFactory(conf);
     this.keyDeserializer = serializationFactory.getDeserializer(keyClass);
     this.keyDeserializer.open(buffer);
     this.valueDeserializer = serializationFactory.getDeserializer(valueClass);
     this.valueDeserializer.open(buffer);
     hasMore = input.next();
+    this.keyClass = keyClass;
+    this.valueClass = valueClass;
+    this.conf = conf;
+    this.taskid = taskid;
   }
 
   /** Start processing next unique key. */
@@ -100,23 +117,31 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
       return false;
     }
     firstValue = !nextKeyIsSame;
-    DataInputBuffer next = input.getKey();
-    currentRawKey.set(next.getData(), next.getPosition(), 
-                      next.getLength() - next.getPosition());
+    DataInputBuffer nextKey = input.getKey();
+    currentRawKey.set(nextKey.getData(), nextKey.getPosition(), 
+                      nextKey.getLength() - nextKey.getPosition());
     buffer.reset(currentRawKey.getBytes(), 0, currentRawKey.getLength());
     key = keyDeserializer.deserialize(key);
-    next = input.getValue();
-    buffer.reset(next.getData(), next.getPosition(), next.getLength());
+    DataInputBuffer nextVal = input.getValue();
+    buffer.reset(nextVal.getData(), nextVal.getPosition(), nextVal.getLength());
     value = valueDeserializer.deserialize(value);
+
+    currentKeyLength = nextKey.getLength() - nextKey.getPosition();
+    currentValueLength = nextVal.getLength() - nextVal.getPosition();
+
+    if (isMarked) {
+      backupStore.write(nextKey, nextVal);
+    }
+
     hasMore = input.next();
     inputCounter.increment(1);
     if (hasMore) {
-      next = input.getKey();
+      nextKey = input.getKey();
       nextKeyIsSame = comparator.compare(currentRawKey.getBytes(), 0, 
-                                         currentRawKey.getLength(),
-                                         next.getData(),
-                                         next.getPosition(),
-                                         next.getLength() - next.getPosition()
+                                     currentRawKey.getLength(),
+                                     nextKey.getData(),
+                                     nextKey.getPosition(),
+                                     nextKey.getLength() - nextKey.getPosition()
                                          ) == 0;
     } else {
       nextKeyIsSame = false;
@@ -132,16 +157,51 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
   public VALUEIN getCurrentValue() {
     return value;
   }
+  
 
-  protected class ValueIterator implements Iterator<VALUEIN> {
+  
+  protected class ValueIterator implements MarkableIteratorInterface<VALUEIN> {
 
+    private boolean inReset = false;
+    private boolean clearMarkFlag = false;
+    
     @Override
     public boolean hasNext() {
+      try {
+        if (inReset && backupStore.hasNext()) {
+          return true;
+        } 
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("hasNext failed", e);
+      }
       return firstValue || nextKeyIsSame;
     }
 
     @Override
     public VALUEIN next() {
+      if (inReset) {
+        try {
+          if (backupStore.hasNext()) {
+            backupStore.next();
+            DataInputBuffer next = backupStore.nextValue();
+            buffer.reset(next.getData(), next.getPosition(), next.getLength());
+            value = valueDeserializer.deserialize(value);
+            return value;
+          } else {
+            inReset = false;
+            backupStore.exitResetMode();
+            if (clearMarkFlag) {
+              clearMarkFlag = false;
+              isMarked = false;
+            }
+          }
+        } catch (IOException e) {
+          e.printStackTrace();
+          throw new RuntimeException("next value iterator failed", e);
+        }
+      } 
+
       // if this is the first record, we don't need to advance
       if (firstValue) {
         firstValue = false;
@@ -168,7 +228,101 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     public void remove() {
       throw new UnsupportedOperationException("remove not implemented");
     }
-    
+
+    @Override
+    public void mark() throws IOException {
+      if (backupStore == null) {
+        backupStore = new BackupStore<KEYIN,VALUEIN>(conf, taskid);
+      }
+      isMarked = true;
+      if (!inReset) {
+        backupStore.reinitialize();
+        if (currentKeyLength == -1) {
+          // The user has not called next() for this iterator yet, so
+          // there is no current record to mark and copy to backup store.
+          return;
+        }
+        assert (currentValueLength != -1);
+        int requestedSize = currentKeyLength + currentValueLength + 
+          WritableUtils.getVIntSize(currentKeyLength) +
+          WritableUtils.getVIntSize(currentValueLength);
+        DataOutputStream out = backupStore.getOutputStream(requestedSize);
+        writeFirstKeyValueBytes(out);
+        backupStore.updateCounters(requestedSize);
+      } else {
+        backupStore.mark();
+      }
+    }
+
+    @Override
+    public void reset() throws IOException {
+      // We reached the end of an iteration and user calls a 
+      // reset, but a clearMark was called before, just throw
+      // an exception
+      if (clearMarkFlag) {
+        clearMarkFlag = false;
+        backupStore.clearMark();
+        throw new IOException("Reset called without a previous mark");
+      }
+      
+      if (!isMarked) {
+        throw new IOException("Reset called without a previous mark");
+      }
+      inReset = true;
+      backupStore.reset();
+    }
+
+    @Override
+    public void clearMark() throws IOException {
+      if (backupStore == null) {
+        return;
+      }
+      if (inReset) {
+        clearMarkFlag = true;
+        backupStore.clearMark();
+      } else {
+        inReset = isMarked = false;
+        backupStore.reinitialize();
+      }
+    }
+	  
+    /**
+     * This method is called when the reducer moves from one key to 
+     * another.
+     * @throws IOException
+     */
+    void resetBackupStore() throws IOException {
+      if (backupStore == null) {
+        return;
+      }
+      inReset = isMarked = false;
+      backupStore.reinitialize();
+      currentKeyLength = -1;
+    }
+
+    /**
+     * This method is called to write the record that was most recently
+     * served (before a call to the mark). Since the framework reads one
+     * record in advance, to get this record, we serialize the current key
+     * and value
+     * @param out
+     * @throws IOException
+     */
+    private void writeFirstKeyValueBytes(DataOutputStream out) 
+    throws IOException {
+      assert (getCurrentKey() != null && getCurrentValue() != null);
+      WritableUtils.writeVInt(out, currentKeyLength);
+      WritableUtils.writeVInt(out, currentValueLength);
+      Serializer<KEYIN> keySerializer = 
+        serializationFactory.getSerializer(keyClass);
+      keySerializer.open(out);
+      keySerializer.serialize(getCurrentKey());
+
+      Serializer<VALUEIN> valueSerializer = 
+        serializationFactory.getSerializer(valueClass);
+      valueSerializer.open(out);
+      valueSerializer.serialize(getCurrentValue());
+    }
   }
 
   protected class ValueIterable implements Iterable<VALUEIN> {

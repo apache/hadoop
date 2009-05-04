@@ -104,6 +104,9 @@ Trunk (unreleased changes)
     HADOOP-5752. Add a new hdfs image processor, Delimited, to oiv. (Jakob
     Homan via szetszwo)
 
+    HADOOP-5266. Adds the capability to do mark/reset of the reduce values 
+    iterator in the Context object API. (Jothi Padmanabhan via ddas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

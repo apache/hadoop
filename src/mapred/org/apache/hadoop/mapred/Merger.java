@@ -163,7 +163,7 @@ class Merger {
       this.segmentLength = reader.getLength();
     }
 
-    private void init(Counters.Counter readsCounter) throws IOException {
+    void init(Counters.Counter readsCounter) throws IOException {
       if (reader == null) {
         FSDataInputStream in = fs.open(file);
         in.seek(segmentOffset);
@@ -195,9 +195,15 @@ class Merger {
       reader.nextRawValue(value);
     }
 
+    void closeReader() throws IOException {
+      if (reader != null) {
+        reader.close();
+        reader = null;
+      }
+    }
+    
     void close() throws IOException {
-      reader.close();
-      
+      closeReader();
       if (!preserve && fs != null) {
         fs.delete(file, false);
       }
@@ -205,6 +211,27 @@ class Merger {
 
     public long getPosition() throws IOException {
       return reader.getPosition();
+    }
+
+    // This method is used by BackupStore to extract the 
+    // absolute position after a reset
+    long getActualPosition() throws IOException {
+      return segmentOffset + reader.getPosition();
+    }
+
+    Reader<K,V> getReader() {
+      return reader;
+    }
+    
+    // This method is used by BackupStore to reinitialize the
+    // reader to start reading from a different segment offset
+    void reinitReader(int offset) throws IOException {
+      if (!inMemory()) {
+        closeReader();
+        segmentOffset = offset;
+        segmentLength = fs.getFileStatus(file).getLen() - segmentOffset;
+        init(null);
+      }
     }
   }
   

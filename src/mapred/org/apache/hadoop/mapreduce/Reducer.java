@@ -168,10 +168,14 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
    * {@link #run(org.apache.hadoop.mapreduce.Reducer.Context)} method to
    * control how the reduce task works.
    */
+  @SuppressWarnings("unchecked")
   public void run(Context context) throws IOException, InterruptedException {
     setup(context);
     while (context.nextKey()) {
       reduce(context.getCurrentKey(), context.getValues(), context);
+      // If a back up store is used, reset it
+      ((ReduceContext.ValueIterator)
+          (context.getValues().iterator())).resetBackupStore();
     }
     cleanup(context);
   }

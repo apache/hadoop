@@ -524,6 +524,14 @@
 </property>
 
 <property>
+  <name>mapred.job.reduce.markreset.buffer.percent</name>
+  <value>0.0</value>
+  <description>The percentage of memory -relative to the maximum heap size- to
+  be used for caching values when using the mark-reset functionality.
+  </description>
+</property>
+
+<property>
   <name>mapred.map.tasks.speculative.execution</name>
   <value>true</value>
   <description>If true, then multiple instances of some map tasks 

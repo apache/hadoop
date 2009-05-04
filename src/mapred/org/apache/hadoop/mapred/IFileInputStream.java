@@ -41,6 +41,8 @@ class IFileInputStream extends InputStream {
   private byte csum[] = null;
   private int checksumSize;
   
+  private boolean disableChecksumValidation = false;
+  
   /**
    * Create a checksum input stream that reads
    * @param in The input stream to be verified for checksum.
@@ -155,6 +157,10 @@ class IFileInputStream extends InputStream {
     sum.update(b,off,bytesRead);
 
     currentOffset += bytesRead;
+
+    if (disableChecksumValidation) {
+      return bytesRead;
+    }
     
     if (currentOffset == dataLength) {
       // The last four bytes are checksum. Strip them and verify
@@ -182,5 +188,9 @@ class IFileInputStream extends InputStream {
 
   public byte[] getChecksum() {
     return csum;
+  }
+
+  void disableChecksumValidation() {
+    disableChecksumValidation = true;
   }
 }
