@@ -18,29 +18,39 @@
 
 package org.apache.hadoop.test;
 
+import org.apache.hadoop.hdfs.BenchmarkThroughput;
 import org.apache.hadoop.util.ProgramDriver;
 
+/**
+ * Driver for HDFS tests. The tests should NOT depend on map-reduce APIs.
+ */
+public class HdfsTestDriver {
 
-@Deprecated
-//Class to be removed after the project split
-public class AllTestDriver {
+  private ProgramDriver pgd;
+
+  public HdfsTestDriver() {
+    this(new ProgramDriver());
+  }
   
-  /**
-   * A description of the test program for running all the tests using jar file
-   */
-  public static void main(String argv[]){
-    ProgramDriver pd = new ProgramDriver();
-    new CoreTestDriver(pd);
-    new HdfsTestDriver(pd);
-    new HdfsWithMRTestDriver(pd);
-    new MapredTestDriver(pd);
-    
+  public HdfsTestDriver(ProgramDriver pgd) {
+    this.pgd = pgd;
     try {
-      pd.driver(argv);
-    } catch (Throwable e) {
+      pgd.addClass("dfsthroughput", BenchmarkThroughput.class, 
+      "measure hdfs throughput");
+    } catch(Throwable e) {
       e.printStackTrace();
     }
   }
 
-}
+  public void run(String argv[]) {
+    try {
+      pgd.driver(argv);
+    } catch(Throwable e) {
+      e.printStackTrace();
+    }
+  }
 
+  public static void main(String argv[]){
+    new HdfsTestDriver().run(argv);
+  }
+}
