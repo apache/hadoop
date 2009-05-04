@@ -43,7 +43,8 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   /** default constructor - used by Writable */
   public HServerInfo() {
-    this(new HServerAddress(), 0, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    this(new HServerAddress(), 0, 
+        HConstants.DEFAULT_REGIONSERVER_INFOPORT, "default name");
   }
   
   /**
@@ -53,11 +54,12 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * @param infoPort Port the info server is listening on.
    */
   public HServerInfo(HServerAddress serverAddress, long startCode,
-      final int infoPort) {
+      final int infoPort, String name) {
     this.serverAddress = serverAddress;
     this.startCode = startCode;
     this.load = new HServerLoad();
     this.infoPort = infoPort;
+    this.name = name;
   }
   
   /**

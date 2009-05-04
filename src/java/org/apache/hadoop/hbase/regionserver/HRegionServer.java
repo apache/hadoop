@@ -287,16 +287,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
     this.server.setErrorHandler(this);
+    String machineName = DNS.getDefaultHost(
+        conf.get("hbase.regionserver.dns.interface","default"),
+        conf.get("hbase.regionserver.dns.nameserver","default"));
     // Address is givin a default IP for the moment. Will be changed after
     // calling the master.
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(address.getBindAddress(),
       this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
-      this.conf.getInt("hbase.regionserver.info.port", 60030));
-    String machineName = DNS.getDefaultHost(
-      conf.get("hbase.regionserver.dns.interface","default"),
-      conf.get("hbase.regionserver.dns.nameserver","default"));
-    this.serverInfo.setName(machineName);
+      this.conf.getInt("hbase.regionserver.info.port", 60030), machineName);
+    
     if (this.serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");

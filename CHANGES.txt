@@ -103,6 +103,7 @@ Release 0.20.0 - Unreleased
                (Evgeny Ryabitskiy via Stack)
    HBASE-1365  Typo in TableInputFormatBase.setInputColums (Jon Gray via Stack)
    HBASE-1279  Fix the way hostnames and IPs are handled
+   HBASE-1368  HBASE-1279 broke the build
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
