@@ -592,9 +592,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   private int prevMapClusterCapacity = 0;
   private int prevReduceClusterCapacity = 0;
   
-  /** name of the default queue. */ 
-  static final String DEFAULT_QUEUE_NAME = "default";
-  
+    
   static final Log LOG = LogFactory.getLog(CapacityTaskScheduler.class);
   protected JobQueuesManager jobQueuesManager;
   protected CapacitySchedulerConf schedConf;
@@ -717,10 +715,6 @@ class CapacityTaskScheduler extends TaskScheduler {
       schedConf.setCapacity(queue, quantityToAllocate);
     }    
     
-    // check if there's a queue with the default name. If not, we quit.
-    if (!queueInfoMap.containsKey(DEFAULT_QUEUE_NAME)) {
-      throw new IllegalStateException("System has no default queue configured");
-    }
     if (totalCapacity > 100.0) {
       throw new IllegalArgumentException("Sum of queue capacities over 100% at "
                                          + totalCapacity);
