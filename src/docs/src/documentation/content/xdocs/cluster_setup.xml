@@ -473,7 +473,147 @@
               </li>
             </ul>
           </section>
-          
+                  <section>
+        <title> Memory management</title>
+        <p>Users/admins can also specify the maximum virtual memory 
+        of the launched child-task, and any sub-process it launches 
+        recursively, using <code>mapred.child.ulimit</code>. Note that
+        the value set here is a per process limit.
+        The value for <code>mapred.child.ulimit</code> should be specified 
+        in kilo bytes (KB). And also the value must be greater than
+        or equal to the -Xmx passed to JavaVM, else the VM might not start. 
+        </p>
+        
+        <p>Note: <code>mapred.child.java.opts</code> are used only for 
+        configuring the launched child tasks from task tracker. Configuring 
+        the memory options for daemons is documented in 
+        <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
+        cluster_setup.html </a></p>
+        
+        <p>The memory available to some parts of the framework is also
+        configurable. In map and reduce tasks, performance may be influenced
+        by adjusting parameters influencing the concurrency of operations and
+        the frequency with which data will hit disk. Monitoring the filesystem
+        counters for a job- particularly relative to byte counts from the map
+        and into the reduce- is invaluable to the tuning of these
+        parameters.</p>
+        </section>
+
+        <section>
+        <title> Memory monitoring</title>
+        <p>A <code>TaskTracker</code>(TT) can be configured to monitor memory 
+        usage of tasks it spawns, so that badly-behaved jobs do not bring 
+        down a machine due to excess memory consumption. With monitoring 
+        enabled, every task is assigned a task-limit for virtual memory (VMEM). 
+        In addition, every node is assigned a node-limit for VMEM usage. 
+        A TT ensures that a task is killed if it, and 
+        its descendants, use VMEM over the task's per-task limit. It also 
+        ensures that one or more tasks are killed if the sum total of VMEM 
+        usage by all tasks, and their descendents, cross the node-limit.</p>
+        
+        <p>Users can, optionally, specify the VMEM task-limit per job. If no
+        such limit is provided, a default limit is used. A node-limit can be 
+        set per node.</p>   
+        <p>Currently the memory monitoring and management is only supported
+        in Linux platform.</p>
+        <p>To enable monitoring for a TT, the 
+        following parameters all need to be set:</p> 
+
+        <table>
+          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+          <tr><td>mapred.tasktracker.vmem.reserved</td><td>long</td>
+            <td>A number, in bytes, that represents an offset. The total VMEM on 
+            the machine, minus this offset, is the VMEM node-limit for all 
+            tasks, and their descendants, spawned by the TT. 
+          </td></tr>
+          <tr><td>mapred.task.default.maxvmem</td><td>long</td>
+            <td>A number, in bytes, that represents the default VMEM task-limit 
+            associated with a task. Unless overridden by a job's setting, 
+            this number defines the VMEM task-limit.   
+          </td></tr>
+          <tr><td>mapred.task.limit.maxvmem</td><td>long</td>
+            <td>A number, in bytes, that represents the upper VMEM task-limit 
+            associated with a task. Users, when specifying a VMEM task-limit 
+            for their tasks, should not specify a limit which exceeds this amount. 
+          </td></tr>
+        </table>
+        
+        <p>In addition, the following parameters can also be configured.</p>
+
+    <table>
+          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+          <tr><td>mapred.tasktracker.taskmemorymanager.monitoring-interval</td>
+            <td>long</td>
+            <td>The time interval, in milliseconds, between which the TT 
+            checks for any memory violation. The default value is 5000 msec
+            (5 seconds). 
+          </td></tr>
+        </table>
+        
+        <p>Here's how the memory monitoring works for a TT.</p>
+        <ol>
+          <li>If one or more of the configuration parameters described 
+          above are missing or -1 is specified , memory monitoring is 
+          disabled for the TT.
+          </li>
+          <li>In addition, monitoring is disabled if 
+          <code>mapred.task.default.maxvmem</code> is greater than 
+          <code>mapred.task.limit.maxvmem</code>. 
+          </li>
+          <li>If a TT receives a task whose task-limit is set by the user
+          to a value larger than <code>mapred.task.limit.maxvmem</code>, it 
+          logs a warning but executes the task.
+          </li> 
+          <li>Periodically, the TT checks the following: 
+          <ul>
+            <li>If any task's current VMEM usage is greater than that task's
+            VMEM task-limit, the task is killed and reason for killing 
+            the task is logged in task diagonistics . Such a task is considered 
+            failed, i.e., the killing counts towards the task's failure count.
+            </li> 
+            <li>If the sum total of VMEM used by all tasks and descendants is 
+            greater than the node-limit, the TT kills enough tasks, in the
+            order of least progress made, till the overall VMEM usage falls
+            below the node-limt. Such killed tasks are not considered failed
+            and their killing does not count towards the tasks' failure counts.
+            </li>
+          </ul>
+          </li>
+        </ol>
+        
+        <p>Schedulers can choose to ease the monitoring pressure on the TT by 
+        preventing too many tasks from running on a node and by scheduling 
+        tasks only if the TT has enough VMEM free. In addition, Schedulers may 
+        choose to consider the physical memory (RAM) available on the node
+        as well. To enable Scheduler support, TTs report their memory settings 
+        to the JobTracker in every heartbeat. Before getting into details, 
+        consider the following additional memory-related parameters than can be 
+        configured to enable better scheduling:</p> 
+
+        <table>
+          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+          <tr><td>mapred.tasktracker.pmem.reserved</td><td>int</td>
+            <td>A number, in bytes, that represents an offset. The total 
+            physical memory (RAM) on the machine, minus this offset, is the 
+            recommended RAM node-limit. The RAM node-limit is a hint to a
+            Scheduler to scheduler only so many tasks such that the sum 
+            total of their RAM requirements does not exceed this limit. 
+            RAM usage is not monitored by a TT.   
+          </td></tr>
+        </table>
+        
+        <p>A TT reports the following memory-related numbers in every 
+        heartbeat:</p>
+        <ul>
+          <li>The total VMEM available on the node.</li>
+          <li>The value of <code>mapred.tasktracker.vmem.reserved</code>,
+           if set.</li>
+          <li>The total RAM available on the node.</li> 
+          <li>The value of <code>mapred.tasktracker.pmem.reserved</code>,
+           if set.</li>
+         </ul>
+        </section>
+        
           <section>
             <title>Task Controllers</title>
             <p>Task controllers are classes in the Hadoop Map/Reduce 
