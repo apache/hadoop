@@ -51,14 +51,13 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TServer;
-import org.apache.thrift.transport.TNonblockingServerSocket;
-import org.apache.thrift.transport.TNonblockingServerTransport;
+import org.apache.thrift.server.TThreadPoolServer;
+import org.apache.thrift.transport.TServerSocket;
+import org.apache.thrift.transport.TServerTransport;
 
 /**
  * ThriftServer - this class starts up a Thrift server which implements the
@@ -613,10 +612,9 @@ public class ThriftServer {
       Integer.toString(port));
     HBaseHandler handler = new HBaseHandler();
     Hbase.Processor processor = new Hbase.Processor(handler);
-    TNonblockingServerTransport serverTransport = 
-      new TNonblockingServerSocket(port);
-    TProtocolFactory protFactory = new TCompactProtocol.Factory();
-    TServer server = new THsHaServer(processor, serverTransport,
+    TServerTransport serverTransport = new TServerSocket(port);
+    TProtocolFactory protFactory = new TBinaryProtocol.Factory(true, true);
+    TServer server = new TThreadPoolServer(processor, serverTransport,
       protFactory);
     server.serve();
   }
