@@ -40,6 +40,9 @@ Release 0.20.1 - Unreleased
     was used and user closed a output stream without writing any data.
     (Zheng Shao via dhruba)
 
+    HADOOP-5718. Remove the check for the default queue in capacity scheduler.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
