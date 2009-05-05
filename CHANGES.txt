@@ -15,6 +15,7 @@ Release 0.20.0 - Unreleased
    HBASE-1348  Move 0.20.0 targeted TRUNK to 0.20.0 hadoop
                (Ryan Rawson and Stack)
    HBASE-1342  Add to filesystem info needed to rebuild .META.
+   HBASE-1361  Disable bloom filters
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
