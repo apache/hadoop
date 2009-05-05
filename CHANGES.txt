@@ -193,6 +193,9 @@ Release 0.20.0 - Unreleased
                (Evgeny Ryabitskiy via Stack)
    HBASE-1112  we will lose data if the table name happens to be the logs' dir
                name (Samuel Guo via Stack)
+   HBASE-889   The current Thrift API does not allow a new scanner to be
+               created without supplying a column list unlike the other APIs.
+               (Tim Sell via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

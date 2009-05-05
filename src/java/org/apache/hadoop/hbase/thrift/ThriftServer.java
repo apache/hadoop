@@ -81,6 +81,22 @@ public class ThriftServer {
     protected HashMap<Integer, Scanner> scannerMap = null;
     
     /**
+     * Returns a list of all the column families for a given htable.
+     * 
+     * @param table
+     * @return
+     * @throws IOException
+     */
+    byte[][] getAllColumns(HTable table) throws IOException {
+      HColumnDescriptor[] cds = table.getTableDescriptor().getColumnFamilies();
+      byte[][] columns = new byte[cds.length][];
+      for (int i = 0; i < cds.length; i++) {
+        columns[i] = cds[i].getNameWithColon();
+      }
+      return columns;
+    }
+          
+    /**
      * Creates and returns an HTable instance from a given table name.
      * 
      * @param tableName
@@ -468,9 +484,13 @@ public class ThriftServer {
         List<byte[]> columns) throws IOError {
       try {
         HTable table = getTable(tableName);
-        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
-            startRow);
-        return addScanner(scanner);
+        byte[][] columnsArray = null;
+        if ((columns == null) || (columns.size() == 0)) {
+          columnsArray = getAllColumns(table);
+        } else {
+          columnsArray = columns.toArray(new byte[0][]);
+        }
+        return addScanner(table.getScanner(columnsArray, startRow));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -480,9 +500,13 @@ public class ThriftServer {
         byte[] stopRow, List<byte[]> columns) throws IOError, TException {
       try {
         HTable table = getTable(tableName);
-        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
-            startRow, stopRow);
-        return addScanner(scanner);
+        byte[][] columnsArray = null;
+        if ((columns == null) || (columns.size() == 0)) {
+          columnsArray = getAllColumns(table);
+        } else {
+          columnsArray = columns.toArray(new byte[0][]);
+        }
+        return addScanner(table.getScanner(columnsArray, startRow, stopRow));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -492,9 +516,13 @@ public class ThriftServer {
         List<byte[]> columns, long timestamp) throws IOError, TException {
       try {
         HTable table = getTable(tableName);
-        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
-            startRow, timestamp);
-        return addScanner(scanner);
+        byte[][] columnsArray = null;
+        if ((columns == null) || (columns.size() == 0)) {
+          columnsArray = getAllColumns(table);
+        } else {
+          columnsArray = columns.toArray(new byte[0][]);
+        }
+        return addScanner(table.getScanner(columnsArray, startRow, timestamp));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -505,9 +533,14 @@ public class ThriftServer {
         throws IOError, TException {
       try {
         HTable table = getTable(tableName);
-        Scanner scanner = table.getScanner(columns.toArray(new byte[0][]),
-            startRow, stopRow, timestamp);
-        return addScanner(scanner);
+        byte[][] columnsArray = null;
+        if ((columns == null) || (columns.size() == 0)) {
+          columnsArray = getAllColumns(table);
+        } else {
+          columnsArray = columns.toArray(new byte[0][]);
+        }
+        return addScanner(table.getScanner(columnsArray, startRow, stopRow,
+            timestamp));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
