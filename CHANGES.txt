@@ -520,6 +520,9 @@ Trunk (unreleased changes)
     HADOOP-3426. Fix/provide handling when DNS lookup fails on the loopback
     address. Also cache the result of the lookup. (Steve Loughran via cdouglas)
 
+    HADOOP-5579. Set errno correctly in libhdfs for permission, quota, and FNF
+    conditions. (Brian Bockelman via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
