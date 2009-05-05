@@ -110,6 +110,9 @@ Trunk (unreleased changes)
     HADOOP-5266. Adds the capability to do mark/reset of the reduce values 
     iterator in the Context object API. (Jothi Padmanabhan via ddas)
 
+    HADOOP-5745. Allow setting the default value of maxRunningJobs for all
+    pools. (dhruba via matei)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

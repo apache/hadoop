@@ -316,6 +316,8 @@ public class TestFairScheduler extends TestCase {
     out.println("<pool name=\"poolD\">");
     out.println("<maxRunningJobs>3</maxRunningJobs>");
     out.println("</pool>");
+    // Set default limit of jobs per pool to 15
+    out.println("<poolMaxJobsDefault>15</poolMaxJobsDefault>");
     // Set default limit of jobs per user to 5
     out.println("<userMaxJobsDefault>5</userMaxJobsDefault>");
     // Give user1 a limit of 10 jobs
@@ -341,7 +343,9 @@ public class TestFairScheduler extends TestCase {
     assertEquals(0, poolManager.getAllocation("poolC", TaskType.REDUCE));
     assertEquals(0, poolManager.getAllocation("poolD", TaskType.MAP));
     assertEquals(0, poolManager.getAllocation("poolD", TaskType.REDUCE));
-    assertEquals(Integer.MAX_VALUE, poolManager.getPoolMaxJobs("poolA"));
+    assertEquals(15, poolManager.getPoolMaxJobs("poolA"));
+    assertEquals(15, poolManager.getPoolMaxJobs("poolB"));
+    assertEquals(15, poolManager.getPoolMaxJobs("poolC"));
     assertEquals(3, poolManager.getPoolMaxJobs("poolD"));
     assertEquals(10, poolManager.getUserMaxJobs("user1"));
     assertEquals(5, poolManager.getUserMaxJobs("user2"));

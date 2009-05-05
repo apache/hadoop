@@ -70,6 +70,7 @@ public class PoolManager {
   private Map<String, Integer> poolMaxJobs = new HashMap<String, Integer>();
   private Map<String, Integer> userMaxJobs = new HashMap<String, Integer>();
   private int userMaxJobsDefault = Integer.MAX_VALUE;
+  private int poolMaxJobsDefault = Integer.MAX_VALUE;
 
   private String allocFile; // Path to XML file containing allocations
   private String poolNameProperty; // Jobconf property to use for determining a
@@ -168,6 +169,7 @@ public class PoolManager {
     Map<String, Integer> userMaxJobs = new HashMap<String, Integer>();
     Map<String, Double> poolWeights = new HashMap<String, Double>();
     int userMaxJobsDefault = Integer.MAX_VALUE;
+    int poolMaxJobsDefault = Integer.MAX_VALUE;
     
     // Remember all pool names so we can display them on web UI, etc.
     List<String> poolNamesInAllocFile = new ArrayList<String>();
@@ -233,6 +235,10 @@ public class PoolManager {
         String text = ((Text)element.getFirstChild()).getData().trim();
         int val = Integer.parseInt(text);
         userMaxJobsDefault = val;
+      } else if ("poolMaxJobsDefault".equals(element.getTagName())) {
+        String text = ((Text)element.getFirstChild()).getData().trim();
+        int val = Integer.parseInt(text);
+        poolMaxJobsDefault = val;
       } else {
         LOG.warn("Bad element in allocations file: " + element.getTagName());
       }
@@ -246,6 +252,7 @@ public class PoolManager {
       this.poolMaxJobs = poolMaxJobs;
       this.userMaxJobs = userMaxJobs;
       this.userMaxJobsDefault = userMaxJobsDefault;
+      this.poolMaxJobsDefault = poolMaxJobsDefault;
       this.poolWeights = poolWeights;
       for (String name: poolNamesInAllocFile) {
         getPool(name);
@@ -328,7 +335,7 @@ public class PoolManager {
     if (poolMaxJobs.containsKey(pool)) {
       return poolMaxJobs.get(pool);
     } else {
-      return Integer.MAX_VALUE;
+      return poolMaxJobsDefault;
     }
   }
 
