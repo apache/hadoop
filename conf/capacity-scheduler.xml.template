@@ -60,16 +60,13 @@
   <property>
     <name>mapred.capacity-scheduler.task.default-pmem-percentage-in-vmem</name>
     <value>-1</value>
-    <description>If mapred.task.maxpmem is set to -1, this configuration will
-      be used to calculate job's physical memory requirements as a percentage of
-      the job's virtual memory requirements set via mapred.task.maxvmem. This
-      property thus provides default value of physical memory for job's that
-      don't explicitly specify physical memory requirements.
+    <description>A percentage (float) of the default VM limit for jobs
+   	  (mapred.task.default.maxvm). This is the default RAM task-limit 
+   	  associated with a task. Unless overridden by a job's setting, this 
+   	  number defines the RAM task-limit.
 
-      If not explicitly set to a valid value, scheduler will not consider
-      physical memory for scheduling even if virtual memory based scheduling is
-      enabled(by setting valid values for both mapred.task.default.maxvmem and
-      mapred.task.limit.maxvmem).
+      If this property is missing, or set to an invalid value, scheduling 
+      based on physical memory, RAM, is disabled.  
     </description>
   </property>
 

@@ -1104,8 +1104,26 @@
         counters for a job- particularly relative to byte counts from the map
         and into the reduce- is invaluable to the tuning of these
         parameters.</p>
+        
+        <p>Users can choose to override default limits of Virtual Memory and RAM 
+          enforced by the task tracker, if memory management is enabled. 
+          Users can set the following parameter per job:</p>
+           
+          <table>
+          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+          <tr><td><code>mapred.task.maxvmem</code></td><td>int</td>
+            <td>A number, in bytes, that represents the maximum Virtual Memory
+            task-limit for each task of the job. A task will be killed if 
+            it consumes more Virtual Memory than this number. 
+          </td></tr>
+          <tr><td>mapred.task.maxpmem</td><td>int</td>
+            <td>A number, in bytes, that represents the maximum RAM task-limit
+            for each task of the job. This number can be optionally used by
+            Schedulers to prevent over-scheduling of tasks on a node based 
+            on RAM needs.  
+          </td></tr>
+        </table>       
         </section>
-
         <section>
           <title>Map Parameters</title>
 

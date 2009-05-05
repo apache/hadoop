@@ -13,6 +13,10 @@ Release 0.20.1 - Unreleased
 
     HADOOP-5711. Change Namenode file close log to info. (szetszwo)
 
+    HADOOP-5736. Update the capacity scheduler documentation for features
+    like memory based scheduling, job initialization and removal of pre-emption.
+    (Sreekanth Ramakrishnan via yhemanth)
+
   OPTIMIZATIONS
 
   BUG FIXES
