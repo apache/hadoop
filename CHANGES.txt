@@ -109,6 +109,7 @@ Release 0.20.0 - Unreleased
    HBASE-1368  HBASE-1279 broke the build
    HBASE-1264  Wrong return values of comparators for ColumnValueFilter
                (Thomas Schneider via Andrew Purtell)
+   HBASE-1374  NPE out of ZooKeeperWrapper.loadZooKeeperConfig
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

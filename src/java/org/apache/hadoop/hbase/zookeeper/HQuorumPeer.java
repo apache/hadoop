@@ -76,6 +76,9 @@ public class HQuorumPeer implements HConstants {
   public static Properties parseZooKeeperConfig() throws IOException {
     ClassLoader cl = HQuorumPeer.class.getClassLoader();
     InputStream inputStream = cl.getResourceAsStream(ZOOKEEPER_CONFIG_NAME);
+    if (inputStream == null) {
+      throw new IOException(ZOOKEEPER_CONFIG_NAME + " not found");
+    }
     return parseConfig(inputStream);
   }
 
