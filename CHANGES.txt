@@ -16,6 +16,7 @@ Release 0.20.0 - Unreleased
                (Ryan Rawson and Stack)
    HBASE-1342  Add to filesystem info needed to rebuild .META.
    HBASE-1361  Disable bloom filters
+   HBASE-1367  Get rid of Thrift exception 'NotFound'
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)

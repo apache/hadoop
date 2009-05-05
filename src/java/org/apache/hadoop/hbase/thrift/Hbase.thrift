@@ -141,14 +141,6 @@ exception IllegalArgument {
 }
 
 /**
- * A NotFound exception is used to indicate that no value was found
- * for a query, or that a scanner has reached it's end.
- */
-exception NotFound {
-  1:string message
-}
-
-/**
  * An AlreadyExists exceptions signals that a table with the specified
  * name already exists
  */
@@ -230,22 +222,23 @@ service Hbase {
   /**
    * Deletes a table
    * @param tableName name of table to delete
-   * @throws NotFound if table doesn't exist on server
+   * @throws IOError if table doesn't exist on server or there was some other
+   * problem
    */
   void deleteTable(1:Text tableName)
-    throws (1:IOError io, 2:NotFound nf)
+    throws (1:IOError io)
 
   /** 
    * Get a single TCell for the specified table, row, and column at the
-   * latest timestamp.
+   * latest timestamp. Returns an empty list if no such value exists.
    *
    * @param tableName name of table
    * @param row row key
    * @param column column name
    * @return value for specified row/column
    */
-  TCell get(1:Text tableName, 2:Text row, 3:Text column) 
-    throws (1:IOError io, 2:NotFound nf)
+  list<TCell> get(1:Text tableName, 2:Text row, 3:Text column) 
+    throws (1:IOError io)
 
   /** 
    * Get the specified number of versions for the specified table,
@@ -257,8 +250,9 @@ service Hbase {
    * @param numVersions number of versions to retrieve
    * @return list of cells for specified row/column
    */
-  list<TCell> getVer(1:Text tableName, 2:Text row, 3:Text column, 4:i32 numVersions) 
-    throws (1:IOError io, 2:NotFound nf)
+  list<TCell> getVer(1:Text tableName, 2:Text row, 3:Text column,
+      4:i32 numVersions) 
+    throws (1:IOError io)
 
   /** 
    * Get the specified number of versions for the specified table,
@@ -272,59 +266,58 @@ service Hbase {
    * @param numVersions number of versions to retrieve
    * @return list of cells for specified row/column
    */
-  list<TCell> getVerTs(1:Text tableName, 2:Text row, 3:Text column, 4:i64 timestamp,  5:i32 numVersions)
-    throws (1:IOError io, 2:NotFound nf)
+  list<TCell> getVerTs(1:Text tableName, 2:Text row, 3:Text column, 
+      4:i64 timestamp,  5:i32 numVersions)
+    throws (1:IOError io)
 
   /** 
    * Get all the data for the specified table and row at the latest
-   * timestamp.
+   * timestamp. Returns an empty list if the row does not exist.
    * 
    * @param tableName name of table
    * @param row row key
    * @return TRowResult containing the row and map of columns to TCells
-   * @throws NotFound if the row does not exist
    */
-  TRowResult getRow(1:Text tableName, 2:Text row)
-    throws (1:IOError io, 2:NotFound nf)
+  list<TRowResult> getRow(1:Text tableName, 2:Text row)
+    throws (1:IOError io)
 
   /** 
    * Get the specified columns for the specified table and row at the latest
-   * timestamp.
+   * timestamp. Returns an empty list if the row does not exist.
    * 
    * @param tableName name of table
    * @param row row key
    * @param columns List of columns to return, null for all columns
    * @return TRowResult containing the row and map of columns to TCells
-   * @throws NotFound if the row does not exist
    */
-  TRowResult getRowWithColumns(1:Text tableName, 2:Text row, 3:list<Text> columns)
-    throws (1:IOError io, 2:NotFound nf)
+  list<TRowResult> getRowWithColumns(1:Text tableName, 2:Text row,
+      3:list<Text> columns)
+    throws (1:IOError io)
 
   /** 
    * Get all the data for the specified table and row at the specified
-   * timestamp.
+   * timestamp. Returns an empty list if the row does not exist.
    * 
    * @param tableName of table
    * @param row row key
    * @param timestamp timestamp
    * @return TRowResult containing the row and map of columns to TCells
-   * @throws NotFound if the row does not exist
    */
-  TRowResult getRowTs(1:Text tableName, 2:Text row, 3:i64 timestamp)
-    throws (1:IOError io, 2:NotFound nf)
+  list<TRowResult> getRowTs(1:Text tableName, 2:Text row, 3:i64 timestamp)
+    throws (1:IOError io)
     
   /** 
    * Get the specified columns for the specified table and row at the specified
-   * timestamp.
+   * timestamp. Returns an empty list if the row does not exist.
    * 
    * @param tableName name of table
    * @param row row key
    * @param columns List of columns to return, null for all columns
    * @return TRowResult containing the row and map of columns to TCells
-   * @throws NotFound if the row does not exist
    */
-  TRowResult getRowWithColumnsTs(1:Text tableName, 2:Text row, 3:list<Text> columns, 4:i64 timestamp)
-    throws (1:IOError io, 2:NotFound nf)
+  list<TRowResult> getRowWithColumnsTs(1:Text tableName, 2:Text row,
+      3:list<Text> columns, 4:i64 timestamp)
+    throws (1:IOError io)
 
   /** 
    * Apply a series of mutations (updates/deletes) to a row in a
@@ -520,15 +513,15 @@ service Hbase {
    * Returns the scanner's current row value and advances to the next
    * row in the table.  When there are no more rows in the table, or a key
    * greater-than-or-equal-to the scanner's specified stopRow is reached,
-   * a NotFound exception is returned.
+   * an empty list is returned.
    *
    * @param id id of a scanner returned by scannerOpen
    * @return a TRowResult containing the current row and a map of the columns to TCells.
    * @throws IllegalArgument if ScannerID is invalid
    * @throws NotFound when the scanner reaches the end
    */
-  TRowResult scannerGet(1:ScannerID id)
-    throws (1:IOError io, 2:IllegalArgument ia, 3:NotFound nf)
+  list<TRowResult> scannerGet(1:ScannerID id)
+    throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
    * Closes the server-state associated with an open scanner.

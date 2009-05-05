@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -27,7 +29,6 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
-import org.apache.hadoop.hbase.thrift.generated.NotFound;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -82,38 +83,61 @@ public class ThriftUtilities {
   }
   
   /**
-   * This utility method creates a new Thrift TCell "struct" based on
-   * an Hbase Cell object.
+   * This utility method creates a list of Thrift TCell "struct" based on
+   * an Hbase Cell object. The empty list is returned if the input is null.
    * 
    * @param in
    *          Hbase Cell object
-   * @return Thrift TCell
+   * @return Thrift TCell array
    */
-  static public TCell cellFromHBase(Cell in) {
-    return new TCell(in.getValue(), in.getTimestamp());
+  static public List<TCell> cellFromHBase(Cell in) {
+    List<TCell> list = new ArrayList<TCell>(1);
+    if (in != null) {
+      list.add(new TCell(in.getValue(), in.getTimestamp()));
+    }
+    return list;
   }
-  
+
   /**
-   * This utility method creates a new Thrift TRowResult "struct" based on
-   * an Hbase RowResult object.
+   * This utility method creates a list of Thrift TCell "struct" based on
+   * an Hbase Cell array. The empty list is returned if the input is null.
+   * @param in Hbase Cell array
+   * @return Thrift TCell array
+   */
+  static public List<TCell> cellFromHBase(Cell[] in) {
+    List<TCell> list = new ArrayList<TCell>(in.length);
+    if (in != null) {
+      for (int i = 0; i < in.length; i++) {
+        list.add(new TCell(in[i].getValue(), in[i].getTimestamp()));
+      }
+    }
+    return list;
+  }
+
+  /**
+   * This utility method creates a list of Thrift TRowResult "struct" based on
+   * an Hbase RowResult object. The empty list is returned if the input is
+   * null.
    * 
    * @param in
    *          Hbase RowResult object
-   * @return Thrift TRowResult
-   * @throws NotFound
+   * @return Thrift TRowResult array
    */
-  static public TRowResult rowResultFromHBase(RowResult in)
-      throws NotFound {
+  static public List<TRowResult> rowResultFromHBase(RowResult in) {
+    List<TRowResult> list = new ArrayList<TRowResult>();
     if(in == null) {
-      throw new NotFound();
+      return list;
     }
     TRowResult result = new TRowResult();
     result.row = in.getRow();
     result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], Cell> entry : in.entrySet()){
-      result.columns.put(entry.getKey(), ThriftUtilities.cellFromHBase(entry.getValue()));
+      Cell cell = entry.getValue();
+      result.columns.put(entry.getKey(), 
+          new TCell(cell.getValue(), cell.getTimestamp()));
     }
-    return result;
+    list.add(result);
+    return list;
   }
 }
 

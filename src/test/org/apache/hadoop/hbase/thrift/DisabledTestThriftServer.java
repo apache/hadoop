@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2008-2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
-import org.apache.hadoop.hbase.thrift.generated.NotFound;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -127,8 +126,8 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     handler.mutateRow(tableAname, rowAname, getMutations());
 
     // Assert that the changes were made
-    assertTrue(Bytes.equals(valueAname, handler.get(tableAname, rowAname, columnAname).value));
-    TRowResult rowResult1 = handler.getRow(tableAname, rowAname);
+    assertTrue(Bytes.equals(valueAname, handler.get(tableAname, rowAname, columnAname).get(0).value));
+    TRowResult rowResult1 = handler.getRow(tableAname, rowAname).get(0);
     assertTrue(Bytes.equals(rowAname, rowResult1.row));
     assertTrue(Bytes.equals(valueBname, rowResult1.columns.get(columnBname).value));
 
@@ -136,20 +135,14 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     handler.mutateRows(tableAname, getBatchMutations());
 
     // Assert that changes were made to rowA
-    boolean failed1 = false;
-    try {
-      handler.get(tableAname, rowAname, columnAname);
-    } catch (NotFound nf) {
-      failed1 = true;
-    }
-    assertTrue(failed1);
-    assertTrue(Bytes.equals(valueCname, handler.get(tableAname, rowAname, columnBname).value));
+    assertFalse(handler.get(tableAname, rowAname, columnAname).size() > 0);
+    assertTrue(Bytes.equals(valueCname, handler.get(tableAname, rowAname, columnBname).get(0).value));
     List<TCell> versions = handler.getVer(tableAname, rowAname, columnBname, MAXVERSIONS);
     assertTrue(Bytes.equals(valueCname, versions.get(0).value));
     assertTrue(Bytes.equals(valueBname, versions.get(1).value));
 
     // Assert that changes were made to rowB
-    TRowResult rowResult2 = handler.getRow(tableAname, rowBname);
+    TRowResult rowResult2 = handler.getRow(tableAname, rowBname).get(0);
     assertTrue(Bytes.equals(rowBname, rowResult2.row));
     assertTrue(Bytes.equals(valueCname, rowResult2.columns.get(columnAname).value));
 	  assertTrue(Bytes.equals(valueDname, rowResult2.columns.get(columnBname).value));
@@ -159,20 +152,8 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     handler.deleteAllRow(tableAname, rowBname);
 
     // Assert that the deletes were applied
-    boolean failed2 = false;
-    try {
-      handler.get(tableAname, rowAname, columnBname);
-    } catch (NotFound nf) {
-      failed2 = true;
-    }
-    assertTrue(failed2);
-    boolean failed3 = false;
-    try {
-      handler.getRow(tableAname, rowBname);
-    } catch (NotFound nf) {
-      failed3 = true;
-    }
-    assertTrue(failed3);
+    assertFalse(handler.get(tableAname, rowAname, columnBname).size() == 0);
+    assertFalse(handler.getRow(tableAname, rowBname).size() == 0);
 
     // Teardown
     handler.disableTable(tableAname);
@@ -210,8 +191,8 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     assertEquals(handler.getVerTs(tableAname, rowAname, columnBname, time2, MAXVERSIONS).size(), 2);
     assertEquals(handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS).size(), 1);
 
-    TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1);
-    TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2);
+    TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1).get(0);
+    TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2).get(0);
     assertTrue(Bytes.equals(rowResult1.columns.get(columnAname).value, valueAname));
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertTrue(Bytes.equals(rowResult2.columns.get(columnBname).value, valueCname));
@@ -221,11 +202,11 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     List<byte[]> columns = new ArrayList<byte[]>();
     columns.add(columnBname);
 
-    rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns);
+    rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns).get(0);
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueCname));
     assertFalse(rowResult1.columns.containsKey(columnAname));
 
-    rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1);
+    rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1).get(0);
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertFalse(rowResult1.columns.containsKey(columnAname));
     
@@ -234,21 +215,9 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     handler.deleteAllRowTs(tableAname, rowBname, time2);
 
     // Assert that the timestamp-related methods retrieve the correct data
-    boolean failed = false;
-    try {
-      handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS);
-    } catch (NotFound nf) {
-      failed = true;
-    }
-    assertTrue(failed);
-    assertTrue(Bytes.equals(handler.get(tableAname, rowAname, columnBname).value, valueCname));
-    boolean failed2 = false;
-    try {
-      handler.getRow(tableAname, rowBname);
-    } catch (NotFound nf) {
-      failed2 = true;
-    }
-    assertTrue(failed2);
+    assertFalse(handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS).size() > 0);
+    assertTrue(Bytes.equals(handler.get(tableAname, rowAname, columnBname).get(0).value, valueCname));
+    assertFalse(handler.getRow(tableAname, rowBname).size() > 0);
 
     // Teardown
     handler.disableTable(tableAname);
@@ -280,11 +249,11 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
 
     // Test a scanner on all rows and all columns, no timestamp
     int scanner1 = handler.scannerOpen(tableAname, rowAname, getColumnList(true, true));
-    TRowResult rowResult1a = handler.scannerGet(scanner1);
+    TRowResult rowResult1a = handler.scannerGet(scanner1).get(0);
     assertTrue(Bytes.equals(rowResult1a.row, rowAname));
     assertEquals(rowResult1a.columns.size(), 1);
     assertTrue(Bytes.equals(rowResult1a.columns.get(columnBname).value, valueCname));
-    TRowResult rowResult1b = handler.scannerGet(scanner1);
+    TRowResult rowResult1b = handler.scannerGet(scanner1).get(0);
     assertTrue(Bytes.equals(rowResult1b.row, rowBname));
     assertEquals(rowResult1b.columns.size(), 2);
     assertTrue(Bytes.equals(rowResult1b.columns.get(columnAname).value, valueCname));
@@ -293,7 +262,7 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
 
     // Test a scanner on all rows and all columns, with timestamp
     int scanner2 = handler.scannerOpenTs(tableAname, rowAname, getColumnList(true, true), time1);
-    TRowResult rowResult2a = handler.scannerGet(scanner2);
+    TRowResult rowResult2a = handler.scannerGet(scanner2).get(0);
     assertEquals(rowResult2a.columns.size(), 2);
     assertTrue(Bytes.equals(rowResult2a.columns.get(columnAname).value, valueAname));
     assertTrue(Bytes.equals(rowResult2a.columns.get(columnBname).value, valueBname));
@@ -307,7 +276,7 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     // Test a scanner on the first row and second column only, with timestamp
     int scanner4 = handler.scannerOpenWithStopTs(tableAname, rowAname, rowBname, 
         getColumnList(false, true), time1);
-    TRowResult rowResult4a = handler.scannerGet(scanner4);
+    TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
     assertEquals(rowResult4a.columns.size(), 1);
     assertTrue(Bytes.equals(rowResult4a.columns.get(columnBname).value, valueBname));
 
@@ -394,13 +363,7 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
    * @throws Exception
    */
   private void closeScanner(int scannerId, ThriftServer.HBaseHandler handler) throws Exception {
-    boolean failed = false;
-    try {
-      handler.scannerGet(scannerId);
-    } catch (NotFound nf) {
-      failed = true;
-    }
-    assertTrue(failed);
+    handler.scannerGet(scannerId);
     handler.scannerClose(scannerId);
   }
 }

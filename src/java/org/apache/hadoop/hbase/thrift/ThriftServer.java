@@ -47,19 +47,18 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
-import org.apache.hadoop.hbase.thrift.generated.NotFound;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.facebook.thrift.TException;
-import com.facebook.thrift.protocol.TBinaryProtocol;
-import com.facebook.thrift.protocol.TProtocolFactory;
-import com.facebook.thrift.server.TServer;
-import com.facebook.thrift.server.TThreadPoolServer;
-import com.facebook.thrift.transport.TServerSocket;
-import com.facebook.thrift.transport.TServerTransport;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TProtocolFactory;
+import org.apache.thrift.server.THsHaServer;
+import org.apache.thrift.server.TServer;
+import org.apache.thrift.transport.TNonblockingServerSocket;
+import org.apache.thrift.transport.TNonblockingServerTransport;
 
 /**
  * ThriftServer - this class starts up a Thrift server which implements the
@@ -179,7 +178,7 @@ public class ThriftServer {
       }
     }
     
-    public void compact(byte[] tableNameOrRegionName) throws IOError, TException {
+    public void compact(byte[] tableNameOrRegionName) throws IOError {
       try{
         admin.compact(tableNameOrRegionName);
       } catch (IOException e) {
@@ -187,7 +186,7 @@ public class ThriftServer {
       }
     }
 
-    public void majorCompact(byte[] tableNameOrRegionName) throws IOError, TException {
+    public void majorCompact(byte[] tableNameOrRegionName) throws IOError {
       try{
         admin.majorCompact(tableNameOrRegionName);
       } catch (IOException e) {
@@ -230,14 +229,11 @@ public class ThriftServer {
       }
     }
     
-    public TCell get(byte[] tableName, byte[] row, byte[] column)
-        throws NotFound, IOError {
+    public List<TCell> get(byte[] tableName, byte[] row, byte[] column)
+        throws IOError {
       try {
         HTable table = getTable(tableName);
         Cell cell = table.get(row, column);
-        if (cell == null) {
-          throw new NotFound();
-        }
         return ThriftUtilities.cellFromHBase(cell);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -245,63 +241,48 @@ public class ThriftServer {
     }
     
     public List<TCell> getVer(byte[] tableName, byte[] row,
-        byte[] column, int numVersions) throws IOError, NotFound {
+        byte[] column, int numVersions) throws IOError {
       try {
         HTable table = getTable(tableName);
         Cell[] cells = 
           table.get(row, column, numVersions);
-        if (cells == null) {
-          throw new NotFound();
-        }
-        List<TCell> list = new ArrayList<TCell>();
-        for (int i = 0; i < cells.length; i++) {
-          list.add(ThriftUtilities.cellFromHBase(cells[i]));
-        }
-        return list;
+        return ThriftUtilities.cellFromHBase(cells);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
     
     public List<TCell> getVerTs(byte[] tableName, byte[] row,
-        byte[] column, long timestamp, int numVersions) throws IOError,
-        NotFound {
+        byte[] column, long timestamp, int numVersions) throws IOError {
       try {
         HTable table = getTable(tableName);
         Cell[] cells = table.get(row, column, timestamp, numVersions);
-        if (cells == null) {
-          throw new NotFound();
-        }
-        List<TCell> list = new ArrayList<TCell>();
-        for (int i = 0; i < cells.length; i++) {
-          list.add(ThriftUtilities.cellFromHBase(cells[i]));
-        }
-        return list;
+        return ThriftUtilities.cellFromHBase(cells);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
     
-    public TRowResult getRow(byte[] tableName, byte[] row)
-        throws IOError, NotFound {
+    public List<TRowResult> getRow(byte[] tableName, byte[] row)
+        throws IOError {
       return getRowWithColumnsTs(tableName, row, null,
                                  HConstants.LATEST_TIMESTAMP);
     }
     
-    public TRowResult getRowWithColumns(byte[] tableName, byte[] row,
-        List<byte[]> columns) throws IOError, NotFound {
+    public List<TRowResult> getRowWithColumns(byte[] tableName, byte[] row,
+        List<byte[]> columns) throws IOError {
       return getRowWithColumnsTs(tableName, row, columns,
                                  HConstants.LATEST_TIMESTAMP);
     }
     
-    public TRowResult getRowTs(byte[] tableName, byte[] row,
-        long timestamp) throws IOError, NotFound {
+    public List<TRowResult> getRowTs(byte[] tableName, byte[] row,
+        long timestamp) throws IOError {
       return getRowWithColumnsTs(tableName, row, null,
                                  timestamp);
     }
     
-    public TRowResult getRowWithColumnsTs(byte[] tableName, byte[] row,
-        List<byte[]> columns, long timestamp) throws IOError, NotFound {
+    public List<TRowResult> getRowWithColumnsTs(byte[] tableName, byte[] row,
+        List<byte[]> columns, long timestamp) throws IOError {
       try {
         HTable table = getTable(tableName);
         if (columns == null) {
@@ -365,13 +346,13 @@ public class ThriftServer {
       }
     }
     
-    public void deleteTable(byte[] tableName) throws IOError, NotFound {
+    public void deleteTable(byte[] tableName) throws IOError {
       if (LOG.isDebugEnabled()) {
         LOG.debug("deleteTable: table=" + new String(tableName));
       }
       try {
         if (!admin.tableExists(tableName)) {
-          throw new NotFound();
+          throw new IOError("table does not exist");
         }
         admin.deleteTable(tableName);
       } catch (IOException e) {
@@ -459,7 +440,7 @@ public class ThriftServer {
       removeScanner(id);
     }
     
-    public TRowResult scannerGet(int id) throws IllegalArgument, NotFound,
+    public List<TRowResult> scannerGet(int id) throws IllegalArgument,
         IOError {
       LOG.debug("scannerGet: id=" + id);
       Scanner scanner = getScanner(id);
@@ -472,7 +453,7 @@ public class ThriftServer {
       try {
         results = scanner.next();
         if (results == null) {
-          throw new NotFound("end of scanner reached");
+          return new ArrayList<TRowResult>();
         }
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -632,9 +613,10 @@ public class ThriftServer {
       Integer.toString(port));
     HBaseHandler handler = new HBaseHandler();
     Hbase.Processor processor = new Hbase.Processor(handler);
-    TServerTransport serverTransport = new TServerSocket(port);
-    TProtocolFactory protFactory = new TBinaryProtocol.Factory(true, true);
-    TServer server = new TThreadPoolServer(processor, serverTransport,
+    TNonblockingServerTransport serverTransport = 
+      new TNonblockingServerSocket(port);
+    TProtocolFactory protFactory = new TCompactProtocol.Factory();
+    TServer server = new THsHaServer(processor, serverTransport,
       protFactory);
     server.serve();
   }
