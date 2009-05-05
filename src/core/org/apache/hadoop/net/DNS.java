@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.net;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -39,17 +42,25 @@ import javax.naming.directory.InitialDirContext;
  */
 public class DNS {
 
+  private static final Log LOG = LogFactory.getLog(DNS.class);
+
+  /**
+   * The cached hostname -initially null.
+   */
+
+  private static final String cachedHostname = resolveLocalHostname();
+  private static final String cachedHostAddress = resolveLocalHostIPAddress();
+  private static final String LOCALHOST = "localhost";
+
   /**
    * Returns the hostname associated with the specified IP address by the
    * provided nameserver.
-   * 
-   * @param hostIp
-   *            The address to reverse lookup
-   * @param ns
-   *            The host name of a reachable DNS server
+   *
+   * Loopback addresses 
+   * @param hostIp The address to reverse lookup
+   * @param ns The host name of a reachable DNS server
    * @return The host name associated with the provided IP
-   * @throws NamingException
-   *             If a NamingException is encountered
+   * @throws NamingException If a NamingException is encountered
    */
   public static String reverseDns(InetAddress hostIp, String ns)
     throws NamingException {
@@ -62,13 +73,16 @@ public class DNS {
       + parts[0] + ".in-addr.arpa";
 
     DirContext ictx = new InitialDirContext();
-    Attributes attribute =
-      ictx.getAttributes("dns://"               // Use "dns:///" if the default
-                         + ((ns == null) ? "" : ns) + 
+    Attributes attribute;
+    try {
+      attribute = ictx.getAttributes("dns://"               // Use "dns:///" if the default
+                         + ((ns == null) ? "" : ns) +
                          // nameserver is to be used
                          "/" + reverseIP, new String[] { "PTR" });
-    ictx.close();
-    
+    } finally {
+      ictx.close();
+    }
+
     return attribute.get("PTR").get().toString();
   }
 
@@ -89,25 +103,26 @@ public class DNS {
     throws UnknownHostException {
     try {
       NetworkInterface netIF = NetworkInterface.getByName(strInterface);
-      if (netIF == null)
-        return new String[] { InetAddress.getLocalHost()
-                              .getHostAddress() };
-      else {
+      if (netIF == null) {
+        return new String[] { cachedHostAddress };
+      } else {
         Vector<String> ips = new Vector<String>();
         Enumeration e = netIF.getInetAddresses();
-        while (e.hasMoreElements())
+        while (e.hasMoreElements()) {
           ips.add(((InetAddress) e.nextElement()).getHostAddress());
+        }
         return ips.toArray(new String[] {});
       }
     } catch (SocketException e) {
-      return new String[] { InetAddress.getLocalHost().getHostAddress() };
+      return new String[]  { cachedHostAddress };
     }
   }
 
-  /**
+
+    /**
    * Returns the first available IP address associated with the provided
    * network interface
-   * 
+   *
    * @param strInterface
    *            The name of the network interface to query (e.g. eth0)
    * @return The IP address in text form
@@ -123,14 +138,14 @@ public class DNS {
   /**
    * Returns all the host names associated by the provided nameserver with the
    * address bound to the specified network interface
-   * 
+   *
    * @param strInterface
    *            The name of the network interface to query (e.g. eth0)
    * @param nameserver
    *            The DNS host name
    * @return A string vector of all host names associated with the IPs tied to
    *         the specified interface
-   * @throws UnknownHostException
+   * @throws UnknownHostException if the hostname cannot be determined
    */
   public static String[] getHosts(String strInterface, String nameserver)
     throws UnknownHostException {
@@ -140,16 +155,67 @@ public class DNS {
       try {
         hosts.add(reverseDns(InetAddress.getByName(ips[ctr]),
                              nameserver));
-      } catch (Exception e) {
+      } catch (UnknownHostException ignored) {
+      } catch (NamingException ignored) {
       }
 
-    if (hosts.size() == 0)
-      return new String[] { InetAddress.getLocalHost().getCanonicalHostName() };
-    else
-      return hosts.toArray(new String[] {});
+    if (hosts.isEmpty()) {
+      return new String[] { cachedHostname };
+    } else {
+      return hosts.toArray(new String[hosts.size()]);
+    }
   }
 
+
   /**
+   * Determine the local hostname; retrieving it from cache if it is known
+   * If we cannot determine our host name, return "localhost"
+   * @return the local hostname or "localhost"
+   */
+  private static String resolveLocalHostname() {
+    String localhost;
+    try {
+      localhost = InetAddress.getLocalHost().getCanonicalHostName();
+    } catch (UnknownHostException e) {
+      LOG.info("Unable to determine local hostname "
+              + "-falling back to \"" + LOCALHOST + "\"", e);
+      localhost = LOCALHOST;
+    }
+    return localhost;
+  }
+
+
+  /**
+   * Get the IPAddress of the local host as a string.
+   * This will be a loop back value if the local host address cannot be
+   * determined.
+   * If the loopback address of "localhost" does not resolve, then the system's
+   * network is in such a state that nothing is going to work. A message is
+   * logged at the error level and a null pointer returned, a pointer
+   * which will trigger failures later on the application
+   * @return the IPAddress of the local host or null for a serious problem.
+   */
+  private static String resolveLocalHostIPAddress() {
+    String address;
+      try {
+        address = InetAddress.getLocalHost().getHostAddress();
+      } catch (UnknownHostException e) {
+        LOG.info("Unable to determine address of the host"
+                + "-falling back to \"" + LOCALHOST + "\" address", e);
+        try {
+          address = InetAddress.getByName(LOCALHOST).getHostAddress();
+        } catch (UnknownHostException noLocalHostAddressException) {
+          //at this point, deep trouble
+          LOG.error("Unable to determine local loopback address "
+                  + "of \"" + LOCALHOST + "\" " +
+                  "-this system's network configuration is unsupported", e);
+          address = null;
+        }
+      }
+    return address;
+  }
+
+    /**
    * Returns all the host names associated by the default nameserver with the
    * address bound to the specified network interface
    * 
@@ -158,7 +224,7 @@ public class DNS {
    * @return The list of host names associated with IPs bound to the network
    *         interface
    * @throws UnknownHostException
-   *             If one is encountered while querying the deault interface
+   *             If one is encountered while querying the default interface
    * 
    */
   public static String[] getHosts(String strInterface)
@@ -177,15 +243,17 @@ public class DNS {
    * @return The default host names associated with IPs bound to the network
    *         interface
    * @throws UnknownHostException
-   *             If one is encountered while querying the deault interface
+   *             If one is encountered while querying the default interface
    */
   public static String getDefaultHost(String strInterface, String nameserver)
     throws UnknownHostException {
-    if (strInterface.equals("default")) 
-      return InetAddress.getLocalHost().getCanonicalHostName();
+    if ("default".equals(strInterface)) {
+      return cachedHostname;
+    }
 
-    if (nameserver != null && nameserver.equals("default"))
+    if ("default".equals(nameserver)) {
       return getDefaultHost(strInterface);
+    }
 
     String[] hosts = getHosts(strInterface, nameserver);
     return hosts[0];
@@ -196,11 +264,12 @@ public class DNS {
    * nameserver with the address bound to the specified network interface
    * 
    * @param strInterface
-   *            The name of the network interface to query (e.g. eth0)
+   *            The name of the network interface to query (e.g. eth0).
+   *            Must not be null.
    * @return The default host name associated with IPs bound to the network
    *         interface
    * @throws UnknownHostException
-   *             If one is encountered while querying the deault interface
+   *             If one is encountered while querying the default interface
    */
   public static String getDefaultHost(String strInterface)
     throws UnknownHostException {

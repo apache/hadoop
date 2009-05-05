@@ -508,6 +508,9 @@ Trunk (unreleased changes)
     HADOOP-5406. Fix JNI binding for ZlibCompressor::setDictionary. (Lars
     Francke via cdouglas)
 
+    HADOOP-3426. Fix/provide handling when DNS lookup fails on the loopback
+    address. Also cache the result of the lookup. (Steve Loughran via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
