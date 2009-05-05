@@ -17,6 +17,9 @@ Release 0.20.1 - Unreleased
     like memory based scheduling, job initialization and removal of pre-emption.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4674. Fix fs help messages for -test, -text, -tail, -stat 
+    and -touchz options.  (Ravi Phulari via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

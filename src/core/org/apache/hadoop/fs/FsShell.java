@@ -1335,12 +1335,11 @@ public class FsShell extends Configured implements Tool {
     String cat = "-cat <src>: \tFetch all files that match the file pattern <src> \n" +
       "\t\tand display their content on stdout.\n";
 
-    /*
-    String text = "-text <path>: Attempt to decode contents if the first few bytes\n" +
-      "\t\tmatch a magic number associated with a known format\n" +
-      "\t\t(gzip, SequenceFile)\n";
-    */
-
+    
+    String text = "-text <src>: \tTakes a source file and outputs the file in text format.\n" +
+      "\t\tThe allowed formats are zip and TextRecordInputStream.\n";
+         
+    
     String copyToLocal = COPYTOLOCAL_SHORT_USAGE
                          + ":  Identical to the -get command.\n";
 
@@ -1449,6 +1448,8 @@ public class FsShell extends Configured implements Tool {
       System.out.println(touchz);
     } else if ("test".equals(cmd)) {
       System.out.println(test);
+    } else if ("text".equals(cmd)) {
+      System.out.println(text);
     } else if ("stat".equals(cmd)) {
       System.out.println(stat);
     } else if ("tail".equals(cmd)) {
@@ -1484,6 +1485,11 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveToLocal);
       System.out.println(mkdir);
       System.out.println(setrep);
+      System.out.println(tail);
+      System.out.println(touchz);
+      System.out.println(test);
+      System.out.println(text);
+      System.out.println(stat);
       System.out.println(chmod);
       System.out.println(chown);      
       System.out.println(chgrp);
