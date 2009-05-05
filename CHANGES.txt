@@ -300,6 +300,9 @@ Trunk (unreleased changes)
 
     HADOOP-5596. Add EnumSetWritable. (He Yongqiang via szetszwo)
 
+    HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
+    (Nicholas), SZE via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
