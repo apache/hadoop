@@ -8,21 +8,13 @@
 <configuration>
 
   <property>
-    <name>mapred.capacity-scheduler.queue.default.guaranteed-capacity</name>
+    <name>mapred.capacity-scheduler.queue.default.capacity</name>
     <value>100</value>
     <description>Percentage of the number of slots in the cluster that are
-      guaranteed to be available for jobs in this queue.
+      to be available for jobs in this queue.
     </description>    
   </property>
   
-  <property>
-    <name>mapred.capacity-scheduler.queue.default.reclaim-time-limit</name>
-    <value>300</value>
-    <description>The amount of time, in seconds, before which 
-      resources distributed to other queues will be reclaimed.
-    </description>
-  </property>
-
   <property>
     <name>mapred.capacity-scheduler.queue.default.supports-priority</name>
     <value>false</value>
@@ -54,28 +46,9 @@
     </description>
   </property>
   
-  
-  <property>
-    <name>mapred.capacity-scheduler.reclaimCapacity.interval</name>
-    <value>5</value>
-    <description>The time interval, in seconds, between which the scheduler
-     periodically determines whether capacity needs to be reclaimed for 
-     any queue.
-    </description>
-  </property>
-  
   <!-- The default configuration settings for the capacity task scheduler -->
   <!-- The default values would be applied to all the queues which don't have -->
   <!-- the appropriate property for the particular queue -->
-  <property>
-    <name>mapred.capacity-scheduler.default-reclaim-time-limit</name>
-    <value>300</value>
-    <description>The amount of time, in seconds, before which 
-    resources distributed to other queues will be reclaimed by default
-    in a job queue.
-    </description>
-  </property>
-  
   <property>
     <name>mapred.capacity-scheduler.default-supports-priority</name>
     <value>false</value>

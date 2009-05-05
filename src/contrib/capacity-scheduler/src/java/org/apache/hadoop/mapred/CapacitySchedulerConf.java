@@ -34,8 +34,6 @@ class CapacitySchedulerConf {
   /** Default file name from which the resource manager configuration is read. */ 
   public static final String SCHEDULER_CONF_FILE = "capacity-scheduler.xml";
   
-  private int defaultReclaimTime;
-  
   private int defaultUlimitMinimum;
   
   private boolean defaultSupportPriority;
@@ -117,8 +115,6 @@ class CapacitySchedulerConf {
    * which is used by the Capacity Scheduler.
    */
   private void initializeDefaults() {
-    defaultReclaimTime = rmConf.getInt(
-        "mapred.capacity-scheduler.default-reclaim-time-limit",300);
     defaultUlimitMinimum = rmConf.getInt(
         "mapred.capacity-scheduler.default-minimum-user-limit-percent", 100);
     defaultSupportPriority = rmConf.getBoolean(
@@ -129,33 +125,33 @@ class CapacitySchedulerConf {
   }
   
   /**
-   * Get the guaranteed percentage of the cluster for the specified queue.
+   * Get the percentage of the cluster for the specified queue.
    * 
-   * This method defaults to configured default Guaranteed Capacity if
+   * This method defaults to configured default Capacity if
    * no value is specified in the configuration for this queue. 
    * If the configured capacity is negative value or greater than 100 an
    * {@link IllegalArgumentException} is thrown.
    * 
-   * If default Guaranteed capacity is not configured for a queue, then
+   * If default capacity is not configured for a queue, then
    * system allocates capacity based on what is free at the time of 
    * capacity scheduler start
    * 
    * 
    * @param queue name of the queue
-   * @return guaranteed percent of the cluster for the queue.
+   * @return percent of the cluster for the queue.
    */
-  public float getGuaranteedCapacity(String queue) {
-    //Check done in order to return default GC which can be negative
-    //In case of both GC and default GC not configured.
+  public float getCapacity(String queue) {
+    //Check done in order to return default capacity which can be negative
+    //In case of both capacity and default capacity not configured.
     //Last check is if the configuration is specified and is marked as
     //negative we throw exception
     String raw = rmConf.getRaw(toFullPropertyName(queue, 
-        "guaranteed-capacity"));
+        "capacity"));
     if(raw == null) {
       return -1;
     }
     float result = rmConf.getFloat(toFullPropertyName(queue, 
-                                   "guaranteed-capacity"), 
+                                   "capacity"), 
                                    -1);
     if (result < 0.0 || result > 100.0) {
       throw new IllegalArgumentException("Illegal capacity for queue " + queue +
@@ -165,53 +161,13 @@ class CapacitySchedulerConf {
   }
   
   /**
-   * Sets the Guaranteed capacity of the given queue.
+   * Sets the capacity of the given queue.
    * 
    * @param queue name of the queue
-   * @param gc guaranteed percent of the cluster for the queue.
+   * @param gc percent of the cluster for the queue.
    */
-  public void setGuaranteedCapacity(String queue,float gc) {
-    rmConf.setFloat(toFullPropertyName(queue, "guaranteed-capacity"),gc);
-  }
-  
-  
-  /**
-   * Get the amount of time before which redistributed resources must be
-   * reclaimed for the specified queue.
-   * 
-   * The resource manager distributes spare capacity from a free queue
-   * to ones which are in need for more resources. However, if a job 
-   * submitted to the first queue requires back the resources, they must
-   * be reclaimed within the specified configuration time limit.
-   * 
-   * This method defaults to configured default reclaim time limit if
-   * no value is specified in the configuration for this queue.
-   * 
-   * Throws an {@link IllegalArgumentException} when invalid value is 
-   * configured.
-   * 
-   * @param queue name of the queue
-   * @return reclaim time limit for this queue.
-   */
-  public int getReclaimTimeLimit(String queue) {
-    int reclaimTimeLimit = rmConf.getInt(toFullPropertyName(queue, "reclaim-time-limit"), 
-        defaultReclaimTime);
-    if(reclaimTimeLimit <= 0) {
-      throw new IllegalArgumentException("Invalid reclaim time limit : " 
-          + reclaimTimeLimit + " for queue : " + queue);
-    }
-    return reclaimTimeLimit;
-  }
-  
-  /**
-   * Set the amount of time before which redistributed resources must be
-   * reclaimed for the specified queue.
-   * @param queue Name of the queue
-   * @param value Amount of time before which the redistributed resources
-   * must be retained.
-   */
-  public void setReclaimTimeLimit(String queue, int value) {
-    rmConf.setInt(toFullPropertyName(queue, "reclaim-time-limit"), value);
+  public void setCapacity(String queue,float gc) {
+    rmConf.setFloat(toFullPropertyName(queue, "capacity"),gc);
   }
   
   /**
@@ -434,31 +390,5 @@ class CapacitySchedulerConf {
    */
   public void setDefaultPercentOfPmemInVmem(float value) {
     rmConf.setFloat(DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY, value);
-  }
-  
-  /**
-   * Gets the reclaim capacity thread interval.
-   * 
-   * @return reclaim capacity interval
-   */
-
-  public long getReclaimCapacityInterval() {
-    long reclaimCapacityInterval = 
-      rmConf.getLong("mapred.capacity-scheduler.reclaimCapacity.interval", 5);
-    
-    if(reclaimCapacityInterval <= 0) {
-      throw new IllegalArgumentException("Invalid reclaim capacity " +
-      		"interval, should be greater than zero");
-    }
-    return reclaimCapacityInterval;
-  }
-  /**
-   * Sets the reclaim capacity thread interval.
-   * 
-   * @param value
-   */
-  public void setReclaimCapacityInterval(long value) {
-    rmConf.setLong("mapred.capacity-scheduler.reclaimCapacity.interval", 
-        value);
   }
 }

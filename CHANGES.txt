@@ -4,6 +4,9 @@ Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-5726. Remove pre-emption from capacity scheduler code base.
+    (Rahul Kumar Singh via yhemanth)
+
   NEW FEATURES
 
   IMPROVEMENTS

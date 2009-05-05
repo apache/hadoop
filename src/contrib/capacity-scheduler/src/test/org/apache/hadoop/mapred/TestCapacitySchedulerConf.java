@@ -49,13 +49,11 @@ public class TestCapacitySchedulerConf extends TestCase {
   
   public TestCapacitySchedulerConf() {
     defaultProperties = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent",
                        "maximum-initialized-jobs-per-user"}, 
         new String[] { "100", 
-                        "300",
                         "false", 
                         "100",
                         "2" }
@@ -85,26 +83,22 @@ public class TestCapacitySchedulerConf extends TestCase {
   public void testQueues() {
 
     Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent",
                        "maximum-initialized-jobs-per-user"}, 
         new String[] { "10", 
-                        "600",
                         "true",
                         "25",
                         "4"}
                       );
 
     Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent",
                        "maximum-initialized-jobs-per-user"}, 
         new String[] { "100", 
-                        "6000",
                         "false", 
                         "50",
                         "1"}
@@ -126,7 +120,7 @@ public class TestCapacitySchedulerConf extends TestCase {
   
   public void testQueueWithDefaultProperties() {
     Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
+        new String[] { "capacity", 
                        "minimum-user-limit-percent" }, 
         new String[] { "20", 
                         "75" }
@@ -143,7 +137,6 @@ public class TestCapacitySchedulerConf extends TestCase {
     for (String key : q1Props.keySet()) {
       expProperties.put(key, q1Props.get(key));
     }
-    expProperties.put("reclaim-time-limit", "300");
     expProperties.put("supports-priority", "false");
     expProperties.put("maximum-initialized-jobs-per-user", "2");
     queueDetails.put("default", expProperties);
@@ -156,23 +149,19 @@ public class TestCapacitySchedulerConf extends TestCase {
     
     // write new values to the file...
     Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
         new String[] { "20.5", 
-                        "600",
                         "true", 
                         "40" }
                       );
 
     Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
         new String[] { "100", 
-                        "3000",
                         "false",
                         "50" }
                       );
@@ -198,23 +187,19 @@ public class TestCapacitySchedulerConf extends TestCase {
     endConfig();
 
     Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity",
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
         new String[] { "-1", 
-                        "800",
                         "true", 
                         "50" }
                       );
 
     Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity",
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
         new String[] { "-1", 
-                        "800",
                         "true",
                         "50" }
                       );
@@ -235,18 +220,16 @@ public class TestCapacitySchedulerConf extends TestCase {
     startConfig();
     writeUserDefinedDefaultConfiguration();
     Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity",
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
         new String[] { "-1", 
-                        "800",
                         "true", 
                         "50" }
                       );
 
     Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
         new String[] { "40", 
@@ -254,12 +237,10 @@ public class TestCapacitySchedulerConf extends TestCase {
                         "50" }
                       );
     Map<String, String> q3Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
         new String[] { "40", 
-                       "500",
                         "true",
                         "50" }
                       );
@@ -269,7 +250,6 @@ public class TestCapacitySchedulerConf extends TestCase {
     testConf = new CapacitySchedulerConf(new Path(testConfFile));
     Map<String, Map<String, String>> queueDetails
               = new HashMap<String, Map<String,String>>();
-    q2Props.put("reclaim-time-limit", "800");
     queueDetails.put("default", q1Props);
     queueDetails.put("production", q2Props);
     queueDetails.put("test", q3Props);
@@ -280,12 +260,10 @@ public class TestCapacitySchedulerConf extends TestCase {
     openFile();
     startConfig();
     Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
+        new String[] { "capacity", 
                        "supports-priority",
                        "minimum-user-limit-percent" }, 
-        new String[] { "-1", 
-                        "800",
+        new String[] { "-1",
                         "true", 
                         "-50" }
                       );
@@ -295,29 +273,6 @@ public class TestCapacitySchedulerConf extends TestCase {
       testConf = new CapacitySchedulerConf(new Path(testConfFile));
       testConf.getMinimumUserLimitPercent("default");
       fail("Expect Invalid user limit to raise Exception");
-    }catch(IllegalArgumentException e) {
-      assertTrue(true);
-    }
-  }
-  public void testInvalidReclaimTimeLimit() throws IOException {
-    openFile();
-    startConfig();
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "-1", 
-                        "-800",
-                        "true", 
-                        "50" }
-                      );
-    writeQueueDetails("default", q1Props);
-    endConfig();
-    try {
-      testConf = new CapacitySchedulerConf(new Path(testConfFile));
-      testConf.getReclaimTimeLimit("default");
-      fail("Expect Invalid reclaim time limit to raise Exception");
     }catch(IllegalArgumentException e) {
       assertTrue(true);
     }
@@ -372,42 +327,16 @@ public class TestCapacitySchedulerConf extends TestCase {
     } catch (IllegalArgumentException e) {}
   }
   
-  public void testInvalidReclaimCapacityInterval() throws IOException {
-    openFile();
-    startConfig();
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "guaranteed-capacity", 
-                       "reclaim-time-limit",
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "-1", 
-                        "-800",
-                        "true", 
-                        "50" }
-                      );
-    writeQueueDetails("default", q1Props);
-    writeProperty("mapred.capacity-scheduler.reclaimCapacity.interval", "0");
-    endConfig();
-    try {
-      testConf = new CapacitySchedulerConf(new Path(testConfFile));
-      testConf.getReclaimCapacityInterval();
-      fail("Expect Invalid reclaim capacity interval raise Exception");
-    }catch(IllegalArgumentException e) {
-      assertTrue(true);
-    }
-  }
-  
+
   private void checkQueueProperties(
                         CapacitySchedulerConf testConf,
                         Map<String, Map<String, String>> queueDetails) {
     for (String queueName : queueDetails.keySet()) {
       Map<String, String> map = queueDetails.get(queueName);
-      assertEquals(Float.parseFloat(map.get("guaranteed-capacity")),
-           testConf.getGuaranteedCapacity(queueName));
+      assertEquals(Float.parseFloat(map.get("capacity")),
+           testConf.getCapacity(queueName));
       assertEquals(Integer.parseInt(map.get("minimum-user-limit-percent")),
           testConf.getMinimumUserLimitPercent(queueName));
-      assertEquals(Integer.parseInt(map.get("reclaim-time-limit")),
-          testConf.getReclaimTimeLimit(queueName));
       assertEquals(Boolean.parseBoolean(map.get("supports-priority")),
           testConf.isPrioritySupported(queueName));
     }
@@ -451,25 +380,21 @@ public class TestCapacitySchedulerConf extends TestCase {
   
   
   private void writeDefaultConfiguration() {
-    writeProperty("mapred.capacity-scheduler.default-reclaim-time-limit"
-        , "300");
     writeProperty("mapred.capacity-scheduler.default-supports-priority"
         , "false");
     writeProperty("mapred.capacity-scheduler.default-minimum-user-limit-percent"
-        , "100");  
+        , "100");
   }
-  
-  
+
+
   private void writeUserDefinedDefaultConfiguration() {
-    writeProperty("mapred.capacity-scheduler.default-reclaim-time-limit"
-        , "800");
     writeProperty("mapred.capacity-scheduler.default-supports-priority"
         , "true");
     writeProperty("mapred.capacity-scheduler.default-minimum-user-limit-percent"
-        , "50"); 
+        , "50");
   }
-  
-  
+
+
   private void writeProperty(String name, String value) {
     writer.println("<property>");
     writer.println("<name> " + name + "</name>");
