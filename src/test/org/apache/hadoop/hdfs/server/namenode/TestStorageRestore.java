@@ -33,6 +33,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.cli.TestHDFSCLI;
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -328,7 +329,7 @@ public class TestStorageRestore extends TestCase {
    * Test dfsadmin -restoreFailedStorage command
    * @throws Exception
    */
-  public void testDfsAdminCmd() throws IOException {
+  public void testDfsAdminCmd() throws Exception {
     int numDatanodes = 2;
     
     
@@ -347,25 +348,26 @@ public class TestStorageRestore extends TestCase {
 
       String cmd = "-fs NAMENODE -restoreFailedStorage false";
       String namenode = config.get("fs.default.name", "file:///");
-      CommandExecutor.executeDFSAdminCommand(cmd, namenode);
+      CommandExecutor executor = new TestHDFSCLI.DFSAdminCmdExecutor(namenode);
+      executor.executeCommand(cmd);
       restore = fsi.getRestoreFailedStorage();
       LOG.info("After set true call restore is " + restore);
       assertEquals(restore, false);
 
       // run one more time - to set it to true again
       cmd = "-fs NAMENODE -restoreFailedStorage true";
-      CommandExecutor.executeDFSAdminCommand(cmd, namenode);
+      executor.executeCommand(cmd);
       restore = fsi.getRestoreFailedStorage();
       LOG.info("After set false call restore is " + restore);
       assertEquals(restore, true);
       
    // run one more time - no change in value
       cmd = "-fs NAMENODE -restoreFailedStorage check";
-      CommandExecutor.executeDFSAdminCommand(cmd, namenode);
+      CommandExecutor.Result cmdResult = executor.executeCommand(cmd);
       restore = fsi.getRestoreFailedStorage();
       LOG.info("After check call restore is " + restore);
       assertEquals(restore, true);
-      String commandOutput = CommandExecutor.getLastCommandOutput();
+      String commandOutput = cmdResult.getCommandOutput();
       commandOutput.trim();
       assertTrue(commandOutput.contains("restoreFailedStorage is set to true"));
       

@@ -34,12 +34,8 @@ import org.apache.hadoop.cli.util.ComparatorBase;
 import org.apache.hadoop.cli.util.ComparatorData;
 import org.apache.hadoop.cli.util.CLITestData.TestCmd;
 import org.apache.hadoop.cli.util.CLITestData.TestCmd.CommandType;
+import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.authorize.HadoopPolicyProvider;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -68,29 +64,22 @@ public class TestCLI extends TestCase {
   
   //By default, run the tests. The other mode is to run the commands and not
   // compare the output
-  public static String testMode = TESTMODE_TEST;
+  protected String testMode = TESTMODE_TEST;
   
   // Storage for tests read in from the config file
-  static ArrayList<CLITestData> testsFromConfigFile = null;
-  static ArrayList<ComparatorData> testComparators = null;
-  static String testConfigFile = "testConf.xml";
-  String thisTestCaseName = null;
-  static ComparatorData comparatorData = null;
-  
-  private static Configuration conf = null;
-  private static MiniDFSCluster dfsCluster = null;
-  private static DistributedFileSystem dfs = null;
-  private static MiniMRCluster mrCluster = null;
-  private static String namenode = null;
-  private static String jobtracker = null;
-  private static String clitestDataDir = null;
-  private static String username = null;
+  protected ArrayList<CLITestData> testsFromConfigFile = null;
+  protected ArrayList<ComparatorData> testComparators = null;
+  protected String thisTestCaseName = null;
+  protected ComparatorData comparatorData = null;
+  protected Configuration conf = null;
+  protected String clitestDataDir = null;
+  protected String username = null;
   
   /**
    * Read the test config file - testConfig.xml
    */
-  private void readTestConfigFile() {
-    
+  protected void readTestConfigFile() {
+    String testConfigFile = getTestFile();
     if (testsFromConfigFile == null) {
       boolean success = false;
       testConfigFile = TEST_CACHE_DATA_DIR + File.separator + testConfigFile;
@@ -106,6 +95,10 @@ public class TestCLI extends TestCase {
     }
   }
   
+  protected String getTestFile() {
+    return "testConf.xml";
+  }
+  
   /*
    * Setup
    */
@@ -113,60 +106,20 @@ public class TestCLI extends TestCase {
     // Read the testConfig.xml file
     readTestConfigFile();
     
-    // Start up the mini dfs cluster
-    boolean success = false;
     conf = new Configuration();
     conf.setClass(PolicyProvider.POLICY_PROVIDER_CONFIG,
                   HadoopPolicyProvider.class, PolicyProvider.class);
     conf.setBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
                     true);
 
-    // Many of the tests expect a replication value of 1 in the output
-    conf.setInt("dfs.replication", 1);
-    
-    // Build racks and hosts configuration to test dfsAdmin -printTopology
-    String [] racks =  {"/rack1", "/rack1", "/rack2", "/rack2",
-                        "/rack2", "/rack3", "/rack4", "/rack4" };
-    String [] hosts = {"host1", "host2", "host3", "host4",
-                       "host5", "host6", "host7", "host8" };
-    
-    dfsCluster = new MiniDFSCluster(conf, 8, true, racks, hosts);
-    
-    namenode = conf.get("fs.default.name", "file:///");
     clitestDataDir = new File(TEST_CACHE_DATA_DIR).
-      toURI().toString().replace(' ', '+');
-    username = System.getProperty("user.name");
-
-    FileSystem fs = dfsCluster.getFileSystem();
-    assertTrue("Not a HDFS: "+fs.getUri(),
-               fs instanceof DistributedFileSystem);
-    dfs = (DistributedFileSystem) fs;
-    
-     // Start up mini mr cluster
-    JobConf mrConf = new JobConf(conf);
-    mrCluster = new MiniMRCluster(1, dfsCluster.getFileSystem().getUri().toString(), 1, 
-                           null, null, mrConf);
-    jobtracker = mrCluster.createJobConf().get("mapred.job.tracker", "local");
-
-    success = true;
-
-    assertTrue("Error setting up Mini DFS & MR clusters", success);
+    toURI().toString().replace(' ', '+');
   }
   
   /**
    * Tear down
    */
   public void tearDown() throws Exception {
-    boolean success = false;
-    mrCluster.shutdown();
-    
-    dfs.close();
-    dfsCluster.shutdown();
-    success = true;
-    Thread.sleep(2000);
-
-    assertTrue("Error tearing down Mini DFS & MR clusters", success);
-    
     displayResults();
   }
   
@@ -175,10 +128,8 @@ public class TestCLI extends TestCase {
    * @param cmd
    * @return String expanded command
    */
-  private String expandCommand(final String cmd) {
+  protected String expandCommand(final String cmd) {
     String expCmd = cmd;
-    expCmd = expCmd.replaceAll("NAMENODE", namenode);
-    expCmd = expCmd.replaceAll("JOBTRACKER", jobtracker);
     expCmd = expCmd.replaceAll("CLITEST_DATA", clitestDataDir);
     expCmd = expCmd.replaceAll("USERNAME", username);
     
@@ -259,10 +210,18 @@ public class TestCLI extends TestCase {
     LOG.info("");
     LOG.info("             Overall result: " + 
     		(overallResults ? "+++ PASS +++" : "--- FAIL ---"));
-    LOG.info("               # Tests pass: " + totalPass +
-    		" (" + (100 * totalPass / (totalPass + totalFail)) + "%)");
-    LOG.info("               # Tests fail: " + totalFail + 
-    		" (" + (100 * totalFail / (totalPass + totalFail)) + "%)");
+    if ((totalPass + totalFail) == 0) {
+      LOG.info("               # Tests pass: " + 0);
+      LOG.info("               # Tests fail: " + 0);
+    }
+    else 
+    {
+      LOG.info("               # Tests pass: " + totalPass +
+          " (" + (100 * totalPass / (totalPass + totalFail)) + "%)");
+      LOG.info("               # Tests fail: " + totalFail + 
+          " (" + (100 * totalFail / (totalPass + totalFail)) + "%)");
+    }
+    
     LOG.info("         # Validations done: " + totalComparators + 
     		" (each test may do multiple validations)");
     
@@ -310,7 +269,7 @@ public class TestCLI extends TestCase {
    * @param compdata
    * @return
    */
-  private boolean compareTestOutput(ComparatorData compdata) {
+  private boolean compareTestOutput(ComparatorData compdata, Result cmdResult) {
     // Compare the output based on the comparator
     String comparatorType = compdata.getComparatorType();
     Class<?> comparatorClass = null;
@@ -327,7 +286,7 @@ public class TestCLI extends TestCase {
         comparatorClass = Class.forName("org.apache.hadoop.cli.util." + 
           comparatorType);
         ComparatorBase comp = (ComparatorBase) comparatorClass.newInstance();
-        compareOutput = comp.compare(CommandExecutor.getLastCommandOutput(), 
+        compareOutput = comp.compare(cmdResult.getCommandOutput(), 
           compdata.getExpectedOutput());
       } catch (Exception e) {
         LOG.info("Error in instantiating the comparator" + e);
@@ -351,9 +310,10 @@ public class TestCLI extends TestCase {
    
       // Execute the test commands
       ArrayList<TestCmd> testCommands = testdata.getTestCommands();
+      Result cmdResult = null;
       for (TestCmd cmd : testCommands) {
       try {
-        CommandExecutor.executeCommand(cmd, namenode, jobtracker);
+        cmdResult = execute(cmd);
       } catch (Exception e) {
         fail(StringUtils.stringifyException(e));
       }
@@ -368,12 +328,12 @@ public class TestCLI extends TestCase {
         boolean compareOutput = false;
         
         if (! comptype.equalsIgnoreCase("none")) {
-          compareOutput = compareTestOutput(cd);
+          compareOutput = compareTestOutput(cd, cmdResult);
           overallTCResult &= compareOutput;
         }
         
-        cd.setExitCode(CommandExecutor.getLastExitCode());
-        cd.setActualOutput(CommandExecutor.getLastCommandOutput());
+        cd.setExitCode(cmdResult.getExitCode());
+        cd.setActualOutput(cmdResult.getCommandOutput());
         cd.setTestResult(compareOutput);
       }
       testdata.setTestResult(overallTCResult);
@@ -382,7 +342,7 @@ public class TestCLI extends TestCase {
       ArrayList<TestCmd> cleanupCommands = testdata.getCleanupCommands();
       for (TestCmd cmd : cleanupCommands) {
       try { 
-        CommandExecutor.executeCommand(cmd, namenode, jobtracker);
+        execute(cmd);
       } catch (Exception e) {
         fail(StringUtils.stringifyException(e));
       }
@@ -390,10 +350,14 @@ public class TestCLI extends TestCase {
     }
   }
   
+  protected CommandExecutor.Result execute(TestCmd cmd) throws Exception {
+    throw new Exception("Unknow type of Test command:"+ cmd.getType());
+  }
+  
   /*
    * Parser class for the test config xml file
    */
-  static class TestConfigFileParser extends DefaultHandler {
+  class TestConfigFileParser extends DefaultHandler {
     String charString = null;
     CLITestData td = null;
     ArrayList<TestCmd> testCommands = null;

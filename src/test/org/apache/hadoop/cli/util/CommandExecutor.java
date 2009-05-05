@@ -24,24 +24,13 @@ import java.io.PrintStream;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.cli.TestCLI;
-import org.apache.hadoop.cli.util.CLITestData.TestCmd;
-import org.apache.hadoop.cli.util.CLITestData.TestCmd.CommandType;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.mapred.tools.MRAdmin;
-import org.apache.hadoop.util.ToolRunner;
 
 /**
  *
- * This class executed commands and captures the output
+ * This class execute commands and captures the output
  */
-public class CommandExecutor {
-  private static String commandOutput = null;
-  private static int exitCode = 0;
-  private static Exception lastException = null;
-  private static String cmdExecuted = null;
-  
-  private static String[] getCommandAsArgs(final String cmd, final String masterKey,
+public abstract class CommandExecutor {  
+  protected String[] getCommandAsArgs(final String cmd, final String masterKey,
 		                                       final String master) {
     StringTokenizer tokenizer = new StringTokenizer(cmd, " ");
     String[] args = new String[tokenizer.countTokens()];
@@ -62,125 +51,61 @@ public class CommandExecutor {
     return args;
   }
   
-  public static int executeCommand(final TestCmd cmd, 
-                                   final String namenode, final String jobtracker) 
-  throws Exception {
-    switch(cmd.getType()) {
-    case DFSADMIN:
-      return CommandExecutor.executeDFSAdminCommand(cmd.getCmd(), namenode);
-    case MRADMIN:
-      return CommandExecutor.executeMRAdminCommand(cmd.getCmd(), jobtracker);
-    case FS:
-      return CommandExecutor.executeFSCommand(cmd.getCmd(), namenode);
-    default:
-      throw new Exception("Unknow type of Test command:"+ cmd.getType()); 
+  public Result executeCommand(final String cmd) throws Exception {
+    int exitCode = 0;
+    Exception lastException = null;
+    
+    
+    ByteArrayOutputStream bao = new ByteArrayOutputStream();
+    PrintStream origOut = System.out;
+    PrintStream origErr = System.err;
+    
+    System.setOut(new PrintStream(bao));
+    System.setErr(new PrintStream(bao));
+    
+    try {
+      execute(cmd);
+    } catch (Exception e) {
+      e.printStackTrace();
+      lastException = e;
+      exitCode = -1;
+    } finally {
+      System.setOut(origOut);
+      System.setErr(origErr);
     }
+    return new Result(bao.toString(), exitCode, lastException, cmd);
   }
   
-  public static int executeDFSAdminCommand(final String cmd, final String namenode) {
-      exitCode = 0;
-      
-      ByteArrayOutputStream bao = new ByteArrayOutputStream();
-      PrintStream origOut = System.out;
-      PrintStream origErr = System.err;
-      
-      System.setOut(new PrintStream(bao));
-      System.setErr(new PrintStream(bao));
-      
-      DFSAdmin shell = new DFSAdmin();
-      String[] args = getCommandAsArgs(cmd, "NAMENODE", namenode);
-      cmdExecuted = cmd;
-     
-      try {
-        ToolRunner.run(shell, args);
-      } catch (Exception e) {
-        e.printStackTrace();
-        lastException = e;
-        exitCode = -1;
-      } finally {
-        System.setOut(origOut);
-        System.setErr(origErr);
-      }
-      
-      commandOutput = bao.toString();
-      
+  protected abstract void execute(final String cmd) throws Exception;
+  
+  public static class Result {
+    final String commandOutput;
+    final int exitCode;
+    final Exception exception;
+    final String cmdExecuted;
+    public Result(String commandOutput, int exitCode, Exception exception,
+        String cmdExecuted) {
+      this.commandOutput = commandOutput;
+      this.exitCode = exitCode;
+      this.exception = exception;
+      this.cmdExecuted = cmdExecuted;
+    }
+    
+    public String getCommandOutput() {
+      return commandOutput;
+    }
+
+    public int getExitCode() {
       return exitCode;
-  }
-  
-  public static int executeMRAdminCommand(final String cmd, 
-                                          final String jobtracker) {
-    exitCode = 0;
-    
-    ByteArrayOutputStream bao = new ByteArrayOutputStream();
-    PrintStream origOut = System.out;
-    PrintStream origErr = System.err;
-    
-    System.setOut(new PrintStream(bao));
-    System.setErr(new PrintStream(bao));
-    
-    MRAdmin mradmin = new MRAdmin();
-    String[] args = getCommandAsArgs(cmd, "JOBTRACKER", jobtracker);
-    cmdExecuted = cmd;
-   
-    try {
-      ToolRunner.run(mradmin, args);
-    } catch (Exception e) {
-      e.printStackTrace();
-      lastException = e;
-      exitCode = -1;
-    } finally {
-      System.setOut(origOut);
-      System.setErr(origErr);
     }
-    
-    commandOutput = bao.toString();
-    
-    return exitCode;
-  }
 
-  public static int executeFSCommand(final String cmd, final String namenode) {
-    exitCode = 0;
-    
-    ByteArrayOutputStream bao = new ByteArrayOutputStream();
-    PrintStream origOut = System.out;
-    PrintStream origErr = System.err;
-    
-    System.setOut(new PrintStream(bao));
-    System.setErr(new PrintStream(bao));
-    
-    FsShell shell = new FsShell();
-    String[] args = getCommandAsArgs(cmd, "NAMENODE", namenode);
-    cmdExecuted = cmd;
-    
-    try {
-      ToolRunner.run(shell, args);
-    } catch (Exception e) {
-      e.printStackTrace();
-      lastException = e;
-      exitCode = -1;
-    } finally {
-      System.setOut(origOut);
-      System.setErr(origErr);
+    public Exception getException() {
+      return exception;
     }
-    
-    commandOutput = bao.toString();
-    
-    return exitCode;
-  }
-  
-  public static String getLastCommandOutput() {
-    return commandOutput;
+
+    public String getCommand() {
+      return cmdExecuted;
+    }
   }
 
-  public static int getLastExitCode() {
-    return exitCode;
-  }
-
-  public static Exception getLastException() {
-    return lastException;
-  }
-
-  public static String getLastCommand() {
-    return cmdExecuted;
-  }
 }
