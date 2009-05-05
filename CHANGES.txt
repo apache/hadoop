@@ -306,6 +306,8 @@ Trunk (unreleased changes)
     HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
     (Nicholas), SZE via cdouglas)
 
+    HADOOP-5727. Simplify hashcode for ID types. (Shevek via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

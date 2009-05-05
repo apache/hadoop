@@ -57,7 +57,7 @@ public abstract class ID implements WritableComparable<ID> {
 
   @Override
   public int hashCode() {
-    return Integer.valueOf(id).hashCode();
+    return id;
   }
 
   @Override
