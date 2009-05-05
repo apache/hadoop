@@ -151,6 +151,10 @@ implements OutputFormat<K,V> {
     String tableName = dbConf.getOutputTableName();
     String[] fieldNames = dbConf.getOutputFieldNames();
     
+    if(fieldNames == null) {
+      fieldNames = new String[dbConf.getOutputFieldCount()];
+    }
+    
     try {
       Connection connection = dbConf.getConnection();
       PreparedStatement statement = null;
@@ -166,21 +170,42 @@ implements OutputFormat<K,V> {
   /**
    * Initializes the reduce-part of the job with the appropriate output settings
    * 
-   * @param job
-   *          The job
-   * @param tableName
-   *          The table to insert data into
-   * @param fieldNames
-   *          The field names in the table. If unknown, supply the appropriate
-   *          number of nulls.
+   * @param job The job
+   * @param tableName The table to insert data into
+   * @param fieldNames The field names in the table.
    */
   public static void setOutput(JobConf job, String tableName, String... fieldNames) {
+    if(fieldNames.length > 0 && fieldNames[0] != null) {
+      DBConfiguration dbConf = setOutput(job, tableName);
+      dbConf.setOutputFieldNames(fieldNames);
+    } else {
+      if(fieldNames.length > 0)
+        setOutput(job, tableName, fieldNames.length);
+      else 
+        throw new IllegalArgumentException("Field names must be greater than 0");
+    }
+  }
+  
+  /**
+   * Initializes the reduce-part of the job with the appropriate output settings
+   * 
+   * @param job The job
+   * @param tableName The table to insert data into
+   * @param fieldCount the number of fields in the table.
+   */
+  public static void setOutput(JobConf job, String tableName, int fieldCount) {
+    DBConfiguration dbConf = setOutput(job, tableName);
+    dbConf.setOutputFieldCount(fieldCount);
+  }
+  
+  private static DBConfiguration setOutput(JobConf job, String tableName) {
     job.setOutputFormat(DBOutputFormat.class);
     job.setReduceSpeculativeExecution(false);
 
     DBConfiguration dbConf = new DBConfiguration(job);
     
     dbConf.setOutputTableName(tableName);
-    dbConf.setOutputFieldNames(fieldNames);
+    return dbConf;
   }
+  
 }

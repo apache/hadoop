@@ -80,6 +80,9 @@ public class DBConfiguration {
   /** Field names in the Output table */
   public static final String OUTPUT_FIELD_NAMES_PROPERTY = "mapred.jdbc.output.field.names";  
 
+  /** Number of fields in the Output table */
+  public static final String OUTPUT_FIELD_COUNT_PROPERTY = "mapred.jdbc.output.field.count";  
+  
   /**
    * Sets the DB access related fields in the JobConf.  
    * @param job the job
@@ -212,5 +215,13 @@ public class DBConfiguration {
     job.setStrings(DBConfiguration.OUTPUT_FIELD_NAMES_PROPERTY, fieldNames);
   }
 
+  void setOutputFieldCount(int fieldCount) {
+    job.setInt(DBConfiguration.OUTPUT_FIELD_COUNT_PROPERTY, fieldCount);
+  }
+  
+  int getOutputFieldCount() {
+    return job.getInt(OUTPUT_FIELD_COUNT_PROPERTY, 0);
+  }
+  
 }
 
