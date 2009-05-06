@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeMap;
@@ -149,8 +148,8 @@ public class JobInitializationPoller extends Thread {
           } catch (Throwable t) {
             LOG.info("Job initialization failed:\n"
                 + StringUtils.stringifyException(t));
-            if (job != null)
-              job.fail();
+            jobQueueManager.removeJobFromWaitingQueue(job);
+            job.fail(); 
           }
         }
       }
