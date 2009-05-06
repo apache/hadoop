@@ -567,6 +567,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5718. Remove the check for the default queue in capacity scheduler.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-5719. Remove jobs that failed initialization from the waiting queue
+    in the capacity scheduler. (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES
