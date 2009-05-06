@@ -44,7 +44,7 @@ import org.apache.hadoop.io.WritableComparable;
  * <p>This file is not splitable.  Calls to {@link #midKey()} return null.
  */
 //TODO should be fixed generic warnings from MapFile methods
-public class HalfMapFileReader extends BloomFilterMapFile.Reader {
+public class HalfMapFileReader extends HBaseMapFile.HBaseReader {
   private final boolean top;
   private final HStoreKey midkey;
   private boolean firstNextCall = true;
@@ -63,7 +63,7 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
       final WritableComparable<HStoreKey> mk,
       final HRegionInfo hri)
   throws IOException {
-    this(fs, dirName, conf, r, mk, false, false, hri);
+    this(fs, dirName, conf, r, mk, false, hri);
   }
   
   /**
@@ -72,18 +72,17 @@ public class HalfMapFileReader extends BloomFilterMapFile.Reader {
    * @param conf
    * @param r
    * @param mk
-   * @param filter
    * @param blockCacheEnabled
    * @param hri
    * @throws IOException
    */
   public HalfMapFileReader(final FileSystem fs, final String dirName, 
       final Configuration conf, final Range r,
-      final WritableComparable<HStoreKey> mk, final boolean filter,
+      final WritableComparable<HStoreKey> mk,
       final boolean blockCacheEnabled,
       final HRegionInfo hri)
   throws IOException {
-    super(fs, dirName, conf, filter, blockCacheEnabled, hri);
+    super(fs, dirName, conf, blockCacheEnabled, hri);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

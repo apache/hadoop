@@ -24,9 +24,6 @@ import org.apache.hadoop.conf.Configuration;
  * This class represents a common API for hashing functions.
  */
 public abstract class Hash {
-  // TODO: Fix the design tangle that has classes over in org.onelab.filter
-  // referring to this class.  Would need to also move the Jenkins and Murmur
-  // hashing function too.
   /** Constant to denote invalid hash type. */
   public static final int INVALID_HASH = -1;
   /** Constant to denote {@link JenkinsHash}. */
