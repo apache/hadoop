@@ -62,16 +62,16 @@ public class TestNodeCount extends TestCase {
       NumberReplicas num = null;
       do {
        synchronized (namesystem) {
-         num = namesystem.countNodes(block);
+         num = namesystem.blockManager.countNodes(block);
        }
       } while (num.excessReplicas() == 0);
       
       // find out a non-excess node
-      Iterator<DatanodeDescriptor> iter = namesystem.blocksMap.nodeIterator(block);
+      Iterator<DatanodeDescriptor> iter = namesystem.blockManager.blocksMap.nodeIterator(block);
       DatanodeDescriptor nonExcessDN = null;
       while (iter.hasNext()) {
         DatanodeDescriptor dn = iter.next();
-        Collection<Block> blocks = namesystem.excessReplicateMap.get(dn.getStorageID());
+        Collection<Block> blocks = namesystem.blockManager.excessReplicateMap.get(dn.getStorageID());
         if (blocks == null || !blocks.contains(block) ) {
           nonExcessDN = dn;
           break;
@@ -89,7 +89,7 @@ public class TestNodeCount extends TestCase {
       
       // The block should be replicated
       do {
-        num = namesystem.countNodes(block);
+        num = namesystem.blockManager.countNodes(block);
       } while (num.liveReplicas() != REPLICATION_FACTOR);
       
       // restart the first datanode
@@ -98,7 +98,7 @@ public class TestNodeCount extends TestCase {
       
       // check if excessive replica is detected
       do {
-       num = namesystem.countNodes(block);
+       num = namesystem.blockManager.countNodes(block);
       } while (num.excessReplicas() == 2);
     } finally {
       cluster.shutdown();

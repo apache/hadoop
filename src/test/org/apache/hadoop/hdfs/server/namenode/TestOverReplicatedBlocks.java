@@ -86,7 +86,7 @@ public class TestOverReplicatedBlocks extends TestCase {
 
         // corrupt one won't be chosen to be excess one
         // without 4910 the number of live replicas would be 0: block gets lost
-        assertEquals(1, namesystem.countNodes(block).liveReplicas());
+        assertEquals(1, namesystem.blockManager.countNodes(block).liveReplicas());
       }
     } finally {
       cluster.shutdown();

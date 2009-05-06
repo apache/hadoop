@@ -314,7 +314,7 @@ public class TestDatanodeBlockScanner extends TestCase {
 
     // Loop until all corrupt replicas are reported
     int corruptReplicaSize = cluster.getNamesystem().
-                              corruptReplicas.numCorruptReplicas(blk);
+                              numCorruptReplicas(blk);
     while (corruptReplicaSize != numCorruptReplicas) {
       try {
         IOUtils.copyBytes(fs.open(file1), new IOUtils.NullOutputStream(), 
@@ -328,7 +328,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       } catch (InterruptedException ignore) {
       }
       corruptReplicaSize = cluster.getNamesystem().
-                              corruptReplicas.numCorruptReplicas(blk);
+                              numCorruptReplicas(blk);
     }
     
     // Loop until the block recovers after replication
@@ -349,7 +349,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     // Make sure the corrupt replica is invalidated and removed from
     // corruptReplicasMap
     corruptReplicaSize = cluster.getNamesystem().
-                          corruptReplicas.numCorruptReplicas(blk);
+                          numCorruptReplicas(blk);
     while (corruptReplicaSize != 0 || replicaCount != numReplicas) {
       try {
         LOG.info("Looping until corrupt replica is invalidated");
@@ -357,7 +357,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       } catch (InterruptedException ignore) {
       }
       corruptReplicaSize = cluster.getNamesystem().
-                            corruptReplicas.numCorruptReplicas(blk);
+                            numCorruptReplicas(blk);
       blocks = dfsClient.namenode.
                  getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       replicaCount = blocks.get(0).getLocations().length;

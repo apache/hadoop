@@ -63,7 +63,7 @@ public class TestReplicationPolicy extends TestCase {
       throw (RuntimeException)new RuntimeException().initCause(e);
     }
     FSNamesystem fsNamesystem = namenode.getNamesystem();
-    replicator = fsNamesystem.replicator;
+    replicator = fsNamesystem.blockManager.replicator;
     cluster = fsNamesystem.clusterMap;
     // construct network topology
     for(int i=0; i<NUM_OF_DATANODES; i++) {

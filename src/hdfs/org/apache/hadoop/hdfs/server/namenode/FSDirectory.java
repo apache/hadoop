@@ -75,6 +75,10 @@ class FSDirectory implements Closeable {
     return fsImage.getFSNamesystem();
   }
 
+  private BlockManager getBlockManager() {
+    return getFSNamesystem().blockManager;
+  }
+
   private void initialize(Configuration conf) {
     MetricsContext metricsContext = MetricsUtil.getContext("dfs");
     directoryMetrics = MetricsUtil.createRecord(metricsContext, "FSDirectory");
@@ -202,7 +206,7 @@ class FSDirectory implements Closeable {
           // Add file->block mapping
           INodeFile newF = (INodeFile)newNode;
           for (int i = 0; i < nrBlocks; i++) {
-            newF.setBlock(i, getFSNamesystem().blocksMap.addINode(blocks[i], newF));
+            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
           }
         }
       } catch (IOException e) {
@@ -250,7 +254,7 @@ class FSDirectory implements Closeable {
         // Add file->block mapping
         INodeFile newF = (INodeFile)newNode;
         for (int i = 0; i < nrBlocks; i++) {
-          newF.setBlock(i, getFSNamesystem().blocksMap.addINode(blocks[i], newF));
+          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
         }
       }
     }
@@ -272,8 +276,8 @@ class FSDirectory implements Closeable {
                   fileNode.getPreferredBlockSize()*fileNode.getReplication());
       
       // associate the new list of blocks with this file
-      getFSNamesystem().blocksMap.addINode(block, fileNode);
-      BlockInfo blockInfo = getFSNamesystem().blocksMap.getStoredBlock(block);
+      getBlockManager().addINode(block, fileNode);
+      BlockInfo blockInfo = getBlockManager().getStoredBlock(block);
       fileNode.addBlock(blockInfo);
 
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
@@ -324,9 +328,9 @@ class FSDirectory implements Closeable {
     synchronized (rootDir) {
       // modify file-> block and blocksMap
       fileNode.removeBlock(block);
-      getFSNamesystem().blocksMap.removeINode(block);
+      getBlockManager().removeINode(block);
       // If block is removed from blocksMap remove it from corruptReplicasMap
-      getFSNamesystem().corruptReplicas.removeFromCorruptReplicasMap(block);
+      getBlockManager().removeFromCorruptReplicasMap(block);
 
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
@@ -695,7 +699,7 @@ class FSDirectory implements Closeable {
       
       int index = 0;
       for (Block b : newnode.getBlocks()) {
-        BlockInfo info = getFSNamesystem().blocksMap.addINode(b, newnode);
+        BlockInfo info = getBlockManager().addINode(b, newnode);
         newnode.setBlock(index, info); // inode refers to the block in BlocksMap
         index++;
       }

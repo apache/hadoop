@@ -27,9 +27,9 @@ public class TestUnderReplicatedBlocks extends TestCase {
       // but the block does not get put into the under-replicated blocks queue
       final FSNamesystem namesystem = cluster.getNamesystem();
       Block b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
-      DatanodeDescriptor dn = namesystem.blocksMap.nodeIterator(b).next();
-      namesystem.addToInvalidates(b, dn);
-      namesystem.blocksMap.removeNode(b, dn);
+      DatanodeDescriptor dn = namesystem.blockManager.blocksMap.nodeIterator(b).next();
+      namesystem.blockManager.addToInvalidates(b, dn);
+      namesystem.blockManager.blocksMap.removeNode(b, dn);
       
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);
