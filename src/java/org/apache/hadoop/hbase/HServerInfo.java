@@ -71,6 +71,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = other.getStartCode();
     this.load = other.getLoad();
     this.infoPort = other.getInfoPort();
+    this.name = other.getName();
   }
   
   /**
