@@ -34,7 +34,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestKeyValue extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
-  
+
+  public void testColumnCompare() throws Exception {
+    final byte [] a = Bytes.toBytes("aaa");
+    byte [] column1 = Bytes.toBytes("abc:def");
+    byte [] column2 = Bytes.toBytes("abcd:ef");
+    KeyValue aaa = new KeyValue(a, column1, a);
+    assertFalse(KeyValue.COMPARATOR.
+      compareColumns(aaa, column2, 0, column2.length, 4) == 0);
+    column1 = Bytes.toBytes("abcd:");
+    aaa = new KeyValue(a, column1, a);
+    assertFalse(KeyValue.COMPARATOR.
+      compareColumns(aaa, column1, 0, column1.length, 4) == 0);
+  }
+
   public void testBasics() throws Exception {
     LOG.info("LOWKEY: " + KeyValue.LOWESTKEY.toString());
     check(Bytes.toBytes(getName()),
