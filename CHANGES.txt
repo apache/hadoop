@@ -203,6 +203,8 @@ Release 0.20.0 - Unreleased
                created without supplying a column list unlike the other APIs.
                (Tim Sell via Stack)
    HBASE-1341  HTable pooler
+   HBASE-1379  re-enable LZO using hadoop-gpl-compression library
+               (Ryan Rawson via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

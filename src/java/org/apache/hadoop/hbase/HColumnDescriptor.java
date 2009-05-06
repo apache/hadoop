@@ -59,7 +59,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /** 
    * The type of compression.
    * @see org.apache.hadoop.io.SequenceFile.Writer
-   * @deprecated
+   * @deprecated Compression now means which compression library
+   * rather than 'what' to cmopress.  See {@link Compression.Algorithm}
    */
   @Deprecated
   public static enum CompressionType {
@@ -426,11 +427,16 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   /**
+   * Compression types supported in hbase.
+   * LZO is not bundled as part of the hbase distribution.
+   * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a>
+   * for how to enable it.
    * @param type Compression type setting.
    */
   public void setCompressionType(Compression.Algorithm type) {
     String compressionType;
     switch (type) {
+      case LZO: compressionType = "LZO"; break;
       case GZ: compressionType = "GZ"; break;
       default: compressionType = "NONE"; break;
     }
