@@ -124,9 +124,20 @@ static int errnoFromException(jthrowable exc, JNIEnv *env,
       goto done;
     }
 
-    if (!strcmp(excClass, "org.apache.hadoop.fs.permission."
+    if (!strcmp(excClass, "org.apache.hadoop.security."
                 "AccessControlException")) {
         errnum = EACCES;
+        goto done;
+    }
+
+    if (!strcmp(excClass, "org.apache.hadoop.hdfs.protocol."
+                "QuotaExceededException")) {
+        errnum = EDQUOT;
+        goto done;
+    }
+
+    if (!strcmp(excClass, "java.io.FileNotFoundException")) {
+        errnum = ENOENT;
         goto done;
     }
 

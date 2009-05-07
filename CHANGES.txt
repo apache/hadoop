@@ -997,6 +997,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5671. Fix FNF exceptions when copying from old versions of
     HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-5579. Set errno correctly in libhdfs for permission, quota, and FNF
+    conditions. (Brian Bockelman via cdouglas)
+
 Release 0.19.1 - 2009-02-23 
 
   IMPROVEMENTS
