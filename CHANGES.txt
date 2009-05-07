@@ -108,6 +108,9 @@ Release 0.19.2 - Unreleased
     was used and user closed a output stream without writing any data.
     (Zheng Shao via dhruba)
 
+    HADOOP-5579. Set errno correctly in libhdfs for permission, quota, and FNF
+    conditions. (Brian Bockelman via cdouglas)
+
 Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 
