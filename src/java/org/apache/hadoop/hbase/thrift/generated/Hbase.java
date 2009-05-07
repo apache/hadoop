@@ -467,6 +467,23 @@ public class Hbase {
     public List<TRowResult> scannerGet(int id) throws IOError, IllegalArgument, TException;
 
     /**
+     * Returns, starting at the scanner's current row value nbRows worth of
+     * rows and advances to the next row in the table.  When there are no more
+     * rows in the table, or a key greater-than-or-equal-to the scanner's
+     * specified stopRow is reached,  an empty list is returned.
+     * 
+     * @param id id of a scanner returned by scannerOpen
+     * @param nbRows number of results to regturn
+     * @return a TRowResult containing the current row and a map of the columns to TCells.
+     * @throws IllegalArgument if ScannerID is invalid
+     * @throws NotFound when the scanner reaches the end
+     * 
+     * @param id
+     * @param nbRows
+     */
+    public List<TRowResult> scannerGetList(int id, int nbRows) throws IOError, IllegalArgument, TException;
+
+    /**
      * Closes the server-state associated with an open scanner.
      * 
      * @param id id of a scanner returned by scannerOpen
@@ -1651,6 +1668,46 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "scannerGet failed: unknown result");
     }
 
+    public List<TRowResult> scannerGetList(int id, int nbRows) throws IOError, IllegalArgument, TException
+    {
+      send_scannerGetList(id, nbRows);
+      return recv_scannerGetList();
+    }
+
+    public void send_scannerGetList(int id, int nbRows) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("scannerGetList", TMessageType.CALL, seqid_));
+      scannerGetList_args args = new scannerGetList_args();
+      args.id = id;
+      args.nbRows = nbRows;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<TRowResult> recv_scannerGetList() throws IOError, IllegalArgument, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      scannerGetList_result result = new scannerGetList_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      if (result.io != null) {
+        throw result.io;
+      }
+      if (result.ia != null) {
+        throw result.ia;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "scannerGetList failed: unknown result");
+    }
+
     public void scannerClose(int id) throws IOError, IllegalArgument, TException
     {
       send_scannerClose(id);
@@ -1723,6 +1780,7 @@ public class Hbase {
       processMap_.put("scannerOpenTs", new scannerOpenTs());
       processMap_.put("scannerOpenWithStopTs", new scannerOpenWithStopTs());
       processMap_.put("scannerGet", new scannerGet());
+      processMap_.put("scannerGetList", new scannerGetList());
       processMap_.put("scannerClose", new scannerClose());
     }
 
@@ -2386,6 +2444,28 @@ public class Hbase {
           result.ia = ia;
         }
         oprot.writeMessageBegin(new TMessage("scannerGet", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class scannerGetList implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        scannerGetList_args args = new scannerGetList_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        scannerGetList_result result = new scannerGetList_result();
+        try {
+          result.success = iface_.scannerGetList(args.id, args.nbRows);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (IllegalArgument ia) {
+          result.ia = ia;
+        }
+        oprot.writeMessageBegin(new TMessage("scannerGetList", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -20900,6 +20980,655 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerGet_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      if (this.success == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.success);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ia:");
+      if (this.ia == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ia);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
+  public static class scannerGetList_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("scannerGetList_args");
+    private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
+    private static final TField NB_ROWS_FIELD_DESC = new TField("nbRows", TType.I32, (short)2);
+
+    public int id;
+    public static final int ID = 1;
+    public int nbRows;
+    public static final int NBROWS = 2;
+
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
+      public boolean id = false;
+      public boolean nbRows = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I32)));
+      put(NBROWS, new FieldMetaData("nbRows", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I32)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(scannerGetList_args.class, metaDataMap);
+    }
+
+    public scannerGetList_args() {
+    }
+
+    public scannerGetList_args(
+      int id,
+      int nbRows)
+    {
+      this();
+      this.id = id;
+      this.__isset.id = true;
+      this.nbRows = nbRows;
+      this.__isset.nbRows = true;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public scannerGetList_args(scannerGetList_args other) {
+      __isset.id = other.__isset.id;
+      this.id = other.id;
+      __isset.nbRows = other.__isset.nbRows;
+      this.nbRows = other.nbRows;
+    }
+
+    @Override
+    public scannerGetList_args clone() {
+      return new scannerGetList_args(this);
+    }
+
+    public int getId() {
+      return this.id;
+    }
+
+    public void setId(int id) {
+      this.id = id;
+      this.__isset.id = true;
+    }
+
+    public void unsetId() {
+      this.__isset.id = false;
+    }
+
+    // Returns true if field id is set (has been asigned a value) and false otherwise
+    public boolean isSetId() {
+      return this.__isset.id;
+    }
+
+    public void setIdIsSet(boolean value) {
+      this.__isset.id = value;
+    }
+
+    public int getNbRows() {
+      return this.nbRows;
+    }
+
+    public void setNbRows(int nbRows) {
+      this.nbRows = nbRows;
+      this.__isset.nbRows = true;
+    }
+
+    public void unsetNbRows() {
+      this.__isset.nbRows = false;
+    }
+
+    // Returns true if field nbRows is set (has been asigned a value) and false otherwise
+    public boolean isSetNbRows() {
+      return this.__isset.nbRows;
+    }
+
+    public void setNbRowsIsSet(boolean value) {
+      this.__isset.nbRows = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case ID:
+        if (value == null) {
+          unsetId();
+        } else {
+          setId((Integer)value);
+        }
+        break;
+
+      case NBROWS:
+        if (value == null) {
+          unsetNbRows();
+        } else {
+          setNbRows((Integer)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case ID:
+        return new Integer(getId());
+
+      case NBROWS:
+        return new Integer(getNbRows());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case ID:
+        return isSetId();
+      case NBROWS:
+        return isSetNbRows();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerGetList_args)
+        return this.equals((scannerGetList_args)that);
+      return false;
+    }
+
+    public boolean equals(scannerGetList_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_id = true;
+      boolean that_present_id = true;
+      if (this_present_id || that_present_id) {
+        if (!(this_present_id && that_present_id))
+          return false;
+        if (this.id != that.id)
+          return false;
+      }
+
+      boolean this_present_nbRows = true;
+      boolean that_present_nbRows = true;
+      if (this_present_nbRows || that_present_nbRows) {
+        if (!(this_present_nbRows && that_present_nbRows))
+          return false;
+        if (this.nbRows != that.nbRows)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case ID:
+            if (field.type == TType.I32) {
+              this.id = iprot.readI32();
+              this.__isset.id = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case NBROWS:
+            if (field.type == TType.I32) {
+              this.nbRows = iprot.readI32();
+              this.__isset.nbRows = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      oprot.writeFieldBegin(ID_FIELD_DESC);
+      oprot.writeI32(this.id);
+      oprot.writeFieldEnd();
+      oprot.writeFieldBegin(NB_ROWS_FIELD_DESC);
+      oprot.writeI32(this.nbRows);
+      oprot.writeFieldEnd();
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("scannerGetList_args(");
+      boolean first = true;
+
+      sb.append("id:");
+      sb.append(this.id);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("nbRows:");
+      sb.append(this.nbRows);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
+  public static class scannerGetList_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("scannerGetList_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
+    private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
+
+    public List<TRowResult> success;
+    public static final int SUCCESS = 0;
+    public IOError io;
+    public static final int IO = 1;
+    public IllegalArgument ia;
+    public static final int IA = 2;
+
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new ListMetaData(TType.LIST, 
+              new StructMetaData(TType.STRUCT, TRowResult.class))));
+      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(scannerGetList_result.class, metaDataMap);
+    }
+
+    public scannerGetList_result() {
+    }
+
+    public scannerGetList_result(
+      List<TRowResult> success,
+      IOError io,
+      IllegalArgument ia)
+    {
+      this();
+      this.success = success;
+      this.io = io;
+      this.ia = ia;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public scannerGetList_result(scannerGetList_result other) {
+      if (other.isSetSuccess()) {
+        List<TRowResult> __this__success = new ArrayList<TRowResult>();
+        for (TRowResult other_element : other.success) {
+          __this__success.add(new TRowResult(other_element));
+        }
+        this.success = __this__success;
+      }
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+      if (other.isSetIa()) {
+        this.ia = new IllegalArgument(other.ia);
+      }
+    }
+
+    @Override
+    public scannerGetList_result clone() {
+      return new scannerGetList_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<TRowResult> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(TRowResult elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<TRowResult>();
+      }
+      this.success.add(elem);
+    }
+
+    public List<TRowResult> getSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(List<TRowResult> success) {
+      this.success = success;
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.success != null;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      if (!value) {
+        this.success = null;
+      }
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public void setIo(IOError io) {
+      this.io = io;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    // Returns true if field io is set (has been asigned a value) and false otherwise
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public IllegalArgument getIa() {
+      return this.ia;
+    }
+
+    public void setIa(IllegalArgument ia) {
+      this.ia = ia;
+    }
+
+    public void unsetIa() {
+      this.ia = null;
+    }
+
+    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    public boolean isSetIa() {
+      return this.ia != null;
+    }
+
+    public void setIaIsSet(boolean value) {
+      if (!value) {
+        this.ia = null;
+      }
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((List<TRowResult>)value);
+        }
+        break;
+
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      case IA:
+        if (value == null) {
+          unsetIa();
+        } else {
+          setIa((IllegalArgument)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IO:
+        return getIo();
+
+      case IA:
+        return getIa();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return isSetSuccess();
+      case IO:
+        return isSetIo();
+      case IA:
+        return isSetIa();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof scannerGetList_result)
+        return this.equals((scannerGetList_result)that);
+      return false;
+    }
+
+    public boolean equals(scannerGetList_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && this.isSetSuccess();
+      boolean that_present_success = true && that.isSetSuccess();
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && this.isSetIa();
+      boolean that_present_ia = true && that.isSetIa();
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case SUCCESS:
+            if (field.type == TType.LIST) {
+              {
+                TList _list98 = iprot.readListBegin();
+                this.success = new ArrayList<TRowResult>(_list98.size);
+                for (int _i99 = 0; _i99 < _list98.size; ++_i99)
+                {
+                  TRowResult _elem100;
+                  _elem100 = new TRowResult();
+                  _elem100.read(iprot);
+                  this.success.add(_elem100);
+                }
+                iprot.readListEnd();
+              }
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case IO:
+            if (field.type == TType.STRUCT) {
+              this.io = new IOError();
+              this.io.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case IA:
+            if (field.type == TType.STRUCT) {
+              this.ia = new IllegalArgument();
+              this.ia.read(iprot);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+          for (TRowResult _iter101 : this.success)          {
+            _iter101.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      } else if (this.isSetIo()) {
+        oprot.writeFieldBegin(IO_FIELD_DESC);
+        this.io.write(oprot);
+        oprot.writeFieldEnd();
+      } else if (this.isSetIa()) {
+        oprot.writeFieldBegin(IA_FIELD_DESC);
+        this.ia.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("scannerGetList_result(");
       boolean first = true;
 
       sb.append("success:");

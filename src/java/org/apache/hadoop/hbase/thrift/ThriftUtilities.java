@@ -123,21 +123,29 @@ public class ThriftUtilities {
    *          Hbase RowResult object
    * @return Thrift TRowResult array
    */
-  static public List<TRowResult> rowResultFromHBase(RowResult in) {
-    List<TRowResult> list = new ArrayList<TRowResult>();
-    if(in == null) {
-      return list;
+  static public List<TRowResult> rowResultFromHBase(RowResult[] in) {
+    List<TRowResult> results = new ArrayList<TRowResult>();
+    for ( RowResult result_ : in) {
+        if(null == result_) {
+            continue;
+        }
+        TRowResult result = new TRowResult();
+        result.row = result_.getRow();
+        result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
+        for (Map.Entry<byte[], Cell> entry : result_.entrySet()){
+            Cell cell = entry.getValue();
+            result.columns.put(entry.getKey(),
+                new TCell(cell.getValue(), cell.getTimestamp()));
+
+        }
+        results.add(result);
     }
-    TRowResult result = new TRowResult();
-    result.row = in.getRow();
-    result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte[], Cell> entry : in.entrySet()){
-      Cell cell = entry.getValue();
-      result.columns.put(entry.getKey(), 
-          new TCell(cell.getValue(), cell.getTimestamp()));
-    }
-    list.add(result);
-    return list;
+    return results;
   }
+  static public List<TRowResult> rowResultFromHBase(RowResult in) {
+    RowResult [] result = { in };
+    return rowResultFromHBase(result);
+  }
+
 }
 

@@ -439,34 +439,34 @@ public class ThriftServer {
       removeScanner(id);
     }
     
-    public List<TRowResult> scannerGet(int id) throws IllegalArgument,
-        IOError {
-      LOG.debug("scannerGet: id=" + id);
-      Scanner scanner = getScanner(id);
-      if (scanner == null) {
-        throw new IllegalArgument("scanner ID is invalid");
-      }
-      
-      RowResult results = null;
-      
-      try {
-        results = scanner.next();
-        if (results == null) {
-          return new ArrayList<TRowResult>();
+    public List<TRowResult> scannerGetList(int id,int nbRows) throws IllegalArgument, IOError {
+        LOG.debug("scannerGetList: id=" + id);
+        Scanner scanner = getScanner(id);
+        if (null == scanner) {
+            throw new IllegalArgument("scanner ID is invalid");
         }
-      } catch (IOException e) {
-        throw new IOError(e.getMessage());
-      }
-      return ThriftUtilities.rowResultFromHBase(results);
+
+        RowResult [] results = null;
+        try {
+            results = scanner.next(nbRows);
+            if (null == results) {
+                return new ArrayList<TRowResult>();
+            }
+        } catch (IOException e) {
+            throw new IOError(e.getMessage());
+        }
+        return ThriftUtilities.rowResultFromHBase(results);
     }
-    
+    public List<TRowResult> scannerGet(int id) throws IllegalArgument, IOError {
+        return scannerGetList(id,1);
+    }
     public int scannerOpen(byte[] tableName, byte[] startRow,
-        List<byte[]> columns) throws IOError {
-      try {
-        HTable table = getTable(tableName);
-        byte[][] columnsArray = null;
-        if ((columns == null) || (columns.size() == 0)) {
-          columnsArray = getAllColumns(table);
+            List<byte[]> columns) throws IOError {
+        try {
+            HTable table = getTable(tableName);
+            byte[][] columnsArray = null;
+            if ((columns == null) || (columns.size() == 0)) {
+                columnsArray = getAllColumns(table);
         } else {
           columnsArray = columns.toArray(new byte[0][]);
         }

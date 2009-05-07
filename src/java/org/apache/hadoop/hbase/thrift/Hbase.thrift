@@ -524,6 +524,21 @@ service Hbase {
     throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
+   * Returns, starting at the scanner's current row value nbRows worth of
+   * rows and advances to the next row in the table.  When there are no more 
+   * rows in the table, or a key greater-than-or-equal-to the scanner's 
+   * specified stopRow is reached,  an empty list is returned.
+   *
+   * @param id id of a scanner returned by scannerOpen
+   * @param nbRows number of results to regturn
+   * @return a TRowResult containing the current row and a map of the columns to TCells.
+   * @throws IllegalArgument if ScannerID is invalid
+   * @throws NotFound when the scanner reaches the end
+   */
+  list<TRowResult> scannerGetList(1:ScannerID id,2:i32 nbRows)
+    throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
    * Closes the server-state associated with an open scanner.
    *
    * @param id id of a scanner returned by scannerOpen
