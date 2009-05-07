@@ -1124,6 +1124,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     return true;
   }
+
   /*
    * Run some housekeeping tasks before we go into 'hibernation' sleeping at
    * the end of the main HRegionServer run loop.
@@ -1132,12 +1133,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // If the todo list has > 0 messages, iterate looking for open region
     // messages. Send the master a message that we're working on its
     // processing so it doesn't assign the region elsewhere.
-    if (this.toDo.size() <= 0) {
+    if (this.toDo.isEmpty()) {
       return;
     }
     // This iterator is 'safe'.  We are guaranteed a view on state of the
     // queue at time iterator was taken out.  Apparently goes from oldest.
     for (ToDoEntry e: this.toDo) {
+      HMsg msg = e.msg;
+      if (msg == null) {
+        LOG.warn("Message is empty: " + e);
+      }
       if (e.msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
         addProcessingMessage(e.msg.getRegionInfo());
       }
@@ -1299,15 +1304,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
   /*
    * Data structure to hold a HMsg and retries count.
    */
-  private static class ToDoEntry {
-    protected int tries;
+  private static final class ToDoEntry {
+    protected volatile int tries;
     protected final HMsg msg;
-    ToDoEntry(HMsg msg) {
+
+    ToDoEntry(final HMsg msg) {
       this.tries = 0;
       this.msg = msg;
     }
   }
-  
+
   final BlockingQueue<ToDoEntry> toDo = new LinkedBlockingQueue<ToDoEntry>();
   private Worker worker;
   private Thread workerThread;
