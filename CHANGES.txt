@@ -317,6 +317,9 @@ Trunk (unreleased changes)
     HADOOP-5015. Separate block management code from FSNamesystem.  (Suresh
     Srinivas via szetszwo)
 
+    HADOOP-5080. Add new test cases to TestMRCLI and TestHDFSCLI
+    (V.Karthikeyan via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

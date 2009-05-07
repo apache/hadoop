@@ -406,17 +406,23 @@ public class TestCLI extends TestCase {
           cleanupCommands.add(new TestCmd(charString, CommandType.FS));
         }
       } else if (qName.equals("dfs-admin-command")) {
-          if (testCommands != null) {
-              testCommands.add(new TestCmd(charString,CommandType.DFSADMIN));
-            } else if (cleanupCommands != null) {
-              cleanupCommands.add(new TestCmd(charString, CommandType.DFSADMIN));
-            } 
+        if (testCommands != null) {
+          testCommands.add(new TestCmd(charString, CommandType.DFSADMIN));
+        } else if (cleanupCommands != null) {
+          cleanupCommands.add(new TestCmd(charString, CommandType.DFSADMIN));
+        } 
       } else if (qName.equals("mr-admin-command")) {
         if (testCommands != null) {
-            testCommands.add(new TestCmd(charString,CommandType.MRADMIN));
-          } else if (cleanupCommands != null) {
-            cleanupCommands.add(new TestCmd(charString, CommandType.MRADMIN));
-          } 
+          testCommands.add(new TestCmd(charString, CommandType.MRADMIN));
+        } else if (cleanupCommands != null) {
+          cleanupCommands.add(new TestCmd(charString, CommandType.MRADMIN));
+        } 
+      } else if (qName.equals("archive-command")) {
+        if (testCommands != null) {
+          testCommands.add(new TestCmd(charString, CommandType.ARCHIVE));
+        } else if (cleanupCommands != null) {
+          cleanupCommands.add(new TestCmd(charString, CommandType.ARCHIVE));
+        }
       } else if (qName.equals("comparators")) {
         td.setComparatorData(testComparators);
       } else if (qName.equals("comparator")) {

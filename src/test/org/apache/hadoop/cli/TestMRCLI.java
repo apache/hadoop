@@ -21,6 +21,7 @@ package org.apache.hadoop.cli;
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.cli.util.CLITestData.TestCmd;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
+import org.apache.hadoop.tools.HadoopArchives;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.tools.MRAdmin;
@@ -31,6 +32,7 @@ public class TestMRCLI extends TestHDFSCLI{
   protected MiniMRCluster mrCluster = null;
   protected String jobtracker = null;
   protected MRCmdExecutor cmdExecutor = null;
+  protected ArchiveCmdExecutor archiveCmdExecutor = null;
   
   public void setUp() throws Exception {
     super.setUp();
@@ -39,6 +41,7 @@ public class TestMRCLI extends TestHDFSCLI{
                            null, null, mrConf);
     jobtracker = mrCluster.createJobConf().get("mapred.job.tracker", "local");
     cmdExecutor = new MRCmdExecutor(jobtracker);
+    archiveCmdExecutor = new ArchiveCmdExecutor(namenode, mrConf);
   }
 
   
@@ -61,8 +64,11 @@ public class TestMRCLI extends TestHDFSCLI{
   protected Result execute(TestCmd cmd) throws Exception {
     if(cmd.getType() == TestCmd.CommandType.MRADMIN) {
       return cmdExecutor.executeCommand(cmd.getCmd());
+    } else if(cmd.getType() == TestCmd.CommandType.ARCHIVE) {
+      return archiveCmdExecutor.executeCommand(cmd.getCmd());
+    } else {
+      return super.execute(cmd);
     }
-    else throw new Exception("Unknow type of Test command:"+ cmd.getType());
   }
   
   public static class MRCmdExecutor extends CommandExecutor {
@@ -74,6 +80,21 @@ public class TestMRCLI extends TestHDFSCLI{
       MRAdmin mradmin = new MRAdmin();
       String[] args = getCommandAsArgs(cmd, "JOBTRACKER", jobtracker);
       ToolRunner.run(mradmin, args);
+    }
+  }
+  
+  public static class ArchiveCmdExecutor extends CommandExecutor {
+    private String namenode = null;
+    private JobConf jobConf = null;
+    public ArchiveCmdExecutor(String namenode, JobConf jobConf) {
+      this.namenode = namenode;
+      this.jobConf = jobConf;
+    }
+    protected void execute(final String cmd) throws Exception {
+//      JobConf job=new JobConf(conf);
+      HadoopArchives archive = new HadoopArchives(jobConf);
+      String[] args = getCommandAsArgs(cmd, "NAMENODE", namenode);
+      ToolRunner.run(archive, args);
     }
   }
 }
