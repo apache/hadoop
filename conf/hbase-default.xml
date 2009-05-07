@@ -337,45 +337,11 @@
     </description>
   </property>
   <property>
-    <name>hbase.io.index.interval</name>
-    <value>128</value>
-    <description>The interval at which we record offsets in hbase
-    store files/mapfiles.  Default for stock mapfiles is 128.  Index
-    files are read into memory.  If there are many of them, could prove
-    a burden.  If so play with the hadoop io.map.index.skip property and
-    skip every nth index member when reading back the index into memory.
-    Downside to high index interval is lowered access times.
-    </description>
-  </property>
-  <property>
     <name>hfile.min.blocksize.size</name>
     <value>65536</value>
     <description>Minimum store file block size.  The smaller you make this, the
     bigger your index and the less you fetch on a random-access.  Set size down
     if you have small cells and want faster random-access of individual cells.
-    </description>
-  </property>
-  <property>
-    <name>hfile.min.blocksize.size</name>
-    <value>65536</value>
-    <description>Minimum store file block size.  The smaller you make this, the
-    bigger your index and the less you fetch on a random-access.  Set size down
-    if you have small cells and want faster random-access of individual cells.
-    </description>
-  </property>
-  <property>
-    <name>hfile.min.blocksize.size</name>
-    <value>65536</value>
-    <description>Minimum store file block size.  The smaller you make this, the
-    bigger your index and the less you fetch on a random-access.  Set size down
-    if you have small cells and want faster random-access of individual cells.
-    </description>
-  </property>
-  <property>
-    <name>hbase.io.seqfile.compression.type</name>
-    <value>NONE</value>
-    <description>The compression type for hbase sequencefile.Writers
-    such as hlog.
     </description>
   </property>
   <property>
