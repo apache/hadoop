@@ -556,10 +556,16 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     s.append("'");
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         values.entrySet()) {
+      String key = Bytes.toString(e.getKey().get());
+      String value = Bytes.toString(e.getValue().get());
+      if (key != null && key.toUpperCase().equals(BLOOMFILTER)) {
+        // Don't emit bloomfilter.  Its not working.
+        continue;
+      }
       s.append(", ");
-      s.append(Bytes.toString(e.getKey().get()));
+      s.append(key);
       s.append(" => '");
-      s.append(Bytes.toString(e.getValue().get()));
+      s.append(value);
       s.append("'");
     }
     s.append('}');

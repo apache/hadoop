@@ -113,6 +113,8 @@ Release 0.20.0 - Unreleased
    HBASE-1374  NPE out of ZooKeeperWrapper.loadZooKeeperConfig
    HBASE-1336  Splitting up the compare of family+column into 2 different compare 
    HBASE-1377  RS address is null in master web UI
+   HBASE-1344  WARN IllegalStateException: Cannot set a region as open if it has
+               not been pending
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

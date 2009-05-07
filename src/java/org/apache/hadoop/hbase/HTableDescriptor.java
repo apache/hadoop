@@ -483,6 +483,18 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     s.append("'");
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         values.entrySet()) {
+      String key = Bytes.toString(e.getKey().get());
+      String value = Bytes.toString(e.getValue().get());
+      if (key == null) {
+        continue;
+      }
+      String upperCase = key.toUpperCase();
+      if (upperCase.equals(IS_ROOT) || upperCase.equals(IS_META)) {
+        // Skip. Don't bother printing out read-only values if false.
+        if (value.toLowerCase().equals(Boolean.FALSE.toString())) {
+          continue;
+        }
+      }
       s.append(", ");
       s.append(Bytes.toString(e.getKey().get()));
       s.append(" => '");
@@ -493,11 +505,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor>, I
     s.append(FAMILIES);
     s.append(" => ");
     s.append(families.values());
-
-    s.append(", ");
-    s.append("INDEXES");
-    s.append(" => ");
-    s.append(indexes.values());
+    if (!indexes.isEmpty()) {
+      // Don't emit if empty.  Has to do w/ transactional hbase.
+      s.append(", ");
+      s.append("INDEXES");
+      s.append(" => ");
+      s.append(indexes.values());
+    }
     s.append('}');
     return s.toString();
   }

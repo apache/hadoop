@@ -328,9 +328,8 @@ abstract class BaseScanner extends Chore implements HConstants {
   }
 
   protected void checkAssigned(final HRegionInfo info,
-      final String serverAddress, final long startCode) 
+    final String serverAddress, final long startCode) 
   throws IOException {
-
     String serverName = null;
     if (serverAddress != null && serverAddress.length() > 0) {
       serverName = HServerInfo.getServerName(serverAddress, startCode);
@@ -347,7 +346,6 @@ abstract class BaseScanner extends Chore implements HConstants {
             this.master.regionManager.regionIsInTransition(
                 info.getRegionNameAsString()) ||
             this.master.serverManager.isDead(serverName)) {
-
           return;
         }
         storedInfo = this.master.serverManager.getServerInfo(serverName);
