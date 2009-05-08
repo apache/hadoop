@@ -576,6 +576,10 @@ Release 0.20.1 - Unreleased
     HADOOP-5719. Remove jobs that failed initialization from the waiting queue
     in the capacity scheduler. (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4744. Attaching another fix to the jetty port issue. The TaskTracker
+    kills itself if it ever discovers that the port to which jetty is actually
+    bound is invalid (-1). (ddas)
+
 Release 0.20.0 - Unreleased
 
   INCOMPATIBLE CHANGES

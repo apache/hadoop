@@ -976,9 +976,19 @@ public class TaskTracker
     server.addInternalServlet("taskLog", "/tasklog", TaskLogServlet.class);
     server.start();
     this.httpPort = server.getPort();
+    checkJettyPort(httpPort);
     initialize();
   }
 
+  private void checkJettyPort(int port) throws IOException { 
+    //See HADOOP-4744
+    if (port < 0) {
+      shuttingDown = true;
+      throw new IOException("Jetty problem. Jetty didn't bind to a " +
+      		"valid port");
+    }
+  }
+  
   private void startCleanupThreads() throws IOException {
     taskCleanupThread.setDaemon(true);
     taskCleanupThread.start();
@@ -1146,6 +1156,11 @@ public class TaskTracker
         if (!acceptNewTasks && isIdle()) {
           acceptNewTasks=true;
         }
+        //The check below may not be required every iteration but we are 
+        //erring on the side of caution here. We have seen many cases where
+        //the call to jetty's getLocalPort() returns different values at 
+        //different times. Being a real paranoid here.
+        checkJettyPort(server.getPort());
       } catch (InterruptedException ie) {
         LOG.info("Interrupted. Closing down.");
         return State.INTERRUPTED;
