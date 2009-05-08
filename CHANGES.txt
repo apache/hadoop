@@ -212,6 +212,7 @@ Release 0.20.0 - Unreleased
    HBASE-1383  hbase shell needs to warn on deleting multi-region table
    HBASE-1286  Thrift should support next(nbRow) like functionality
                (Alex Newman via Stack)
+   HBASE-1392  change how we build/configure lzocodec (Ryan Rawson via Stack)
 
   OPTIMIZATIONS
 
