@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3.INode.FileType;
@@ -62,6 +64,10 @@ class S3OutputStream extends OutputStream {
   private List<Block> blocks = new ArrayList<Block>();
 
   private Block nextBlock;
+  
+  private static final Log LOG = 
+    LogFactory.getLog(S3OutputStream.class.getName());
+
 
   public S3OutputStream(Configuration conf, FileSystemStore store,
                         Path path, long blockSize, Progressable progress,
@@ -175,7 +181,10 @@ class S3OutputStream extends OutputStream {
     //
     // Delete local backup, start new one
     //
-    backupFile.delete();
+    boolean b = backupFile.delete();
+    if (!b) {
+      LOG.warn("Ignoring failed delete");
+    }
     backupFile = newBackupFile();
     backupStream = new FileOutputStream(backupFile);
     bytesWrittenToBlock = 0;
@@ -209,7 +218,10 @@ class S3OutputStream extends OutputStream {
     }
 
     backupStream.close();
-    backupFile.delete();
+    boolean b = backupFile.delete();
+    if (!b) {
+      LOG.warn("Ignoring failed delete");
+    }
 
     super.close();
 

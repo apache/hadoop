@@ -97,12 +97,16 @@ public class LocalFileSystem extends ChecksumFileSystem {
       File badFile = new File(badDir, f.getName()+suffix);
       LOG.warn("Moving bad file " + f + " to " + badFile);
       in.close();                               // close it first
-      f.renameTo(badFile);                      // rename it
-
+      boolean b = f.renameTo(badFile);                      // rename it
+      if (!b) {
+        LOG.warn("Ignoring failure of renameTo");
+      }
       // move checksum file too
       File checkFile = ((RawLocalFileSystem)fs).pathToFile(getChecksumFile(p));
-      checkFile.renameTo(new File(badDir, checkFile.getName()+suffix));
-
+      b = checkFile.renameTo(new File(badDir, checkFile.getName()+suffix));
+      if (!b) {
+          LOG.warn("Ignoring failure of renameTo");
+        }
     } catch (IOException e) {
       LOG.warn("Error moving bad file " + p + ": " + e);
     }

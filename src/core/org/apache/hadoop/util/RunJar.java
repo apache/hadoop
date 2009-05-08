@@ -107,15 +107,19 @@ public class RunJar {
     mainClassName = mainClassName.replaceAll("/", ".");
 
     File tmpDir = new File(new Configuration().get("hadoop.tmp.dir"));
-    tmpDir.mkdirs();
-    if (!tmpDir.isDirectory()) { 
+    boolean b = tmpDir.mkdirs();
+    if (!b || !tmpDir.isDirectory()) { 
       System.err.println("Mkdirs failed to create " + tmpDir);
       System.exit(-1);
     }
     final File workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
-    workDir.delete();
-    workDir.mkdirs();
-    if (!workDir.isDirectory()) {
+    b = workDir.delete();
+    if (!b) {
+      System.err.println("Delete failed for " + workDir);
+      System.exit(-1);
+    }
+    b = workDir.mkdirs();
+    if (!b || !workDir.isDirectory()) {
       System.err.println("Mkdirs failed to create " + workDir);
       System.exit(-1);
     }

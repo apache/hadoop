@@ -47,11 +47,14 @@ public class Progress {
   public synchronized Progress addPhase() {
     Progress phase = new Progress();
     phases.add(phase);
-    phase.parent = this;
+    phase.setParent(this);
     progressPerPhase = 1.0f / (float)phases.size();
     return phase;
   }
 
+  synchronized Progress getParent() { return parent; }
+  synchronized void setParent(Progress parent) { this.parent = parent; }
+  
   /** Called during execution to move to the next phase at this level in the
    * tree. */
   public synchronized void startNextPhase() {
@@ -90,7 +93,7 @@ public class Progress {
   // and the node's parent never changes. Still, it doesn't hurt. 
   public synchronized float get() {
     Progress node = this;
-    while (node.parent != null) {                 // find the root
+    while (node.getParent() != null) {                 // find the root
       node = parent;
     }
     return node.getInternal();

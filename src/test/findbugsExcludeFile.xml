@@ -136,4 +136,81 @@
        <Field name="kvindex" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
-</FindBugsFilter>
+
+     <!-- 
+        core changes 
+     -->
+     <Match>
+       <Class name="~org.apache.hadoop.*" />
+       <Bug code="MS" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.fs.FileSystem" />
+       <Method name="checkPath" />
+       <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.fs.kfs.KFSOutputStream" />
+       <Field name="path" />
+       <Bug pattern="URF_UNREAD_FIELD" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.fs.kfs.KosmosFileSystem" />
+       <Method name="initialize" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.io.Closeable" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.security.AccessControlException" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.record.meta.Utils" />
+       <Method name="skip" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+
+     <!--
+        The compareTo method is actually a dummy method that just
+        throws excpetions. So, no need to override equals. Ignore
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.record.meta.RecordTypeInfo" />
+       <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.util.ProcfsBasedProcessTree" />
+       <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
+     </Match>
+
+     <!--
+       Streaming, Examples
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.streaming.StreamUtil$TaskId" />
+       <Bug pattern="URF_UNREAD_FIELD" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.examples.DBCountPageView" />
+       <Method name="verify" />
+       <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.examples.ContextFactory" />
+       <Method name="setAttributes" />
+       <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
+     </Match>
+
+ </FindBugsFilter>

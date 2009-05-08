@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3.INode.FileType;
@@ -73,6 +75,9 @@ class Jets3tFileSystemStore implements FileSystemStore {
   private S3Bucket bucket;
   
   private int bufferSize;
+  
+  private static final Log LOG = 
+    LogFactory.getLog(Jets3tFileSystemStore.class.getName());
   
   public void initialize(URI uri, Configuration conf) throws IOException {
     
@@ -215,7 +220,10 @@ class Jets3tFileSystemStore implements FileSystemStore {
       closeQuietly(out);
       out = null; // to prevent a second close
       if (fileBlock != null) {
-        fileBlock.delete();
+        boolean b = fileBlock.delete();
+        if (!b) {
+          LOG.warn("Ignoring failed delete");
+        }
       }
       throw e;
     } finally {

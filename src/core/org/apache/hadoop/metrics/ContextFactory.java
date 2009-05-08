@@ -197,6 +197,7 @@ public class ContextFactory {
         String propertyValue = properties.getProperty(propertyName);
         setAttribute(propertyName, propertyValue);
       }
+      is.close();
     }
   }
     

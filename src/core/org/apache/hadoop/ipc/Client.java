@@ -168,6 +168,10 @@ public class Client {
       this.value = value;
       callComplete();
     }
+    
+    public synchronized Writable getValue() {
+      return value;
+    }
   }
 
   /** Thread that reads responses and notifies callers.  Each connection owns a
@@ -614,7 +618,7 @@ public class Client {
 
     /** Collect a result. */
     public synchronized void callComplete(ParallelCall call) {
-      values[call.index] = call.value;            // store the value
+      values[call.index] = call.getValue();       // store the value
       count++;                                    // count it
       if (count == size)                          // if all values are in
         notify();                                 // then notify waiting caller

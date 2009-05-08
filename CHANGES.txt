@@ -50,6 +50,9 @@ Trunk (unreleased changes)
     HADOOP-5738. Split "waiting_tasks" JobTracker metric into waiting maps and
     waiting reduces. (Sreekanth Ramakrishnan via cdouglas)
 
+    HADOOP-5679. Resolve findbugs warnings in core/streaming/pipes/examples. 
+    (Jothi Padmanabhan via sharad)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

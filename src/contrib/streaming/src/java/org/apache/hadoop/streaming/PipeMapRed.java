@@ -224,11 +224,15 @@ public abstract class PipeMapRed {
 
       errThread_ = new MRErrorThread();
       errThread_.start();
-    } catch (Exception e) {
+    } catch (IOException e) {
       logStackTrace(e);
       LOG.error("configuration exception", e);
       throw new RuntimeException("configuration exception", e);
-    }
+    } catch (InterruptedException e)  {
+        logStackTrace(e);
+        LOG.error("configuration exception", e);
+        throw new RuntimeException("configuration exception", e);
+      }
   }
   
   void setStreamJobDetails(JobConf job) {

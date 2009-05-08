@@ -147,9 +147,12 @@ public class JarBuilder {
 
   void addFileStream(JarOutputStream dst, String jarBaseName, File file) throws IOException {
     FileInputStream in = new FileInputStream(file);
-    String name = jarBaseName + file.getName();
-    addNamedStream(dst, name, in);
-    in.close();
+    try {
+      String name = jarBaseName + file.getName();
+      addNamedStream(dst, name, in);
+    } finally {
+      in.close();
+    }
   }
 
   void addDirectory(JarOutputStream dst, String jarBaseName, File dir, int depth) throws IOException {

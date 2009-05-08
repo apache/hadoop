@@ -259,7 +259,7 @@ public class ZlibCompressor implements Compressor {
     setDictionary(stream, b, off, len);
   }
 
-  public boolean needsInput() {
+  public synchronized boolean needsInput() {
     // Consume remaining compressed data?
     if (compressedDirectBuf.remaining() > 0) {
       return false;

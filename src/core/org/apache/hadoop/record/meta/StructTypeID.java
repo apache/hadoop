@@ -147,5 +147,10 @@ public class StructTypeID extends TypeID {
       throw new IOException("Unknown type read");
     }
   }
-
+  
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
+  
+  public int hashCode() { return super.hashCode(); }
 }

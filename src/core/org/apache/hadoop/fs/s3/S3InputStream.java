@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,6 +48,10 @@ class S3InputStream extends FSInputStream {
   private long blockEnd = -1;
   
   private FileSystem.Statistics stats;
+  
+  private static final Log LOG = 
+    LogFactory.getLog(S3InputStream.class.getName());
+
 
   @Deprecated
   public S3InputStream(Configuration conf, FileSystemStore store,
@@ -175,7 +181,10 @@ class S3InputStream extends FSInputStream {
       blockStream = null;
     }
     if (blockFile != null) {
-      blockFile.delete();
+      boolean b = blockFile.delete();
+      if (!b) {
+        LOG.warn("Ignoring failed delete");
+      }
     }
     super.close();
     closed = true;

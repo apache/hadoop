@@ -736,6 +736,17 @@ public class SequenceFile {
         this.theMetadata.put(key, val);
       }    
     }
+
+    public boolean equals(Object other) {
+      if (other == null) {
+        return false;
+      }
+      if (other.getClass() != this.getClass()) {
+        return false;
+      } else {
+        return equals((Metadata)other);
+      }
+    }
     
     public boolean equals(Metadata other) {
       if (other == null) return false;
@@ -2025,7 +2036,7 @@ public class SequenceFile {
      * @return Returns the key length or -1 for end of file
      * @throws IOException
      */
-    public int nextRawKey(DataOutputBuffer key) 
+    public synchronized int nextRawKey(DataOutputBuffer key) 
       throws IOException {
       if (!blockCompressed) {
         recordLength = readRecordLength();
@@ -2202,7 +2213,7 @@ public class SequenceFile {
     }
 
     /** Returns true iff the previous call to next passed a sync mark.*/
-    public boolean syncSeen() { return syncSeen; }
+    public synchronized boolean syncSeen() { return syncSeen; }
 
     /** Return the current byte position in the input file. */
     public synchronized long getPosition() throws IOException {
@@ -3172,6 +3183,13 @@ public class SequenceFile {
         super.close();
         if (super.shouldPreserveInput()) return;
         parentContainer.cleanup();
+      }
+      
+      public boolean equals(Object o) {
+        if (!(o instanceof LinkedSegmentsDescriptor)) {
+          return false;
+        }
+        return super.equals(o);
       }
     } //SequenceFile.Sorter.LinkedSegmentsDescriptor
 

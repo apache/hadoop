@@ -315,8 +315,8 @@ public abstract class Server {
       while (running) {
         SelectionKey key = null;
         try {
-          selector.select();
-          Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+          getSelector().select();
+          Iterator<SelectionKey> iter = getSelector().selectedKeys().iterator();
           while (iter.hasNext()) {
             key = iter.next();
             iter.remove();
@@ -393,7 +393,8 @@ public abstract class Server {
 
         channel.configureBlocking(false);
         channel.socket().setTcpNoDelay(tcpNoDelay);
-        SelectionKey readKey = channel.register(selector, SelectionKey.OP_READ);
+        SelectionKey readKey = channel.register(getSelector(), 
+          SelectionKey.OP_READ);
         c = new Connection(readKey, channel, System.currentTimeMillis());
         readKey.attach(c);
         synchronized (connectionList) {
@@ -450,6 +451,8 @@ public abstract class Server {
         }
       }
     }
+    
+    synchronized Selector getSelector() { return selector; }
   }
 
   // Sends responses of RPC back to clients.
@@ -721,7 +724,7 @@ public abstract class Server {
     Subject user = null;
 
     // Fake 'call' for failed authorization response
-    private final int AUTHROIZATION_FAILED_CALLID = -1;
+    private static final int AUTHROIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall = 
       new Call(AUTHROIZATION_FAILED_CALLID, null, null);
     private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
@@ -914,7 +917,9 @@ public abstract class Server {
       dataLengthBuffer = null;
       if (!channel.isOpen())
         return;
-      try {socket.shutdownOutput();} catch(Exception e) {}
+      try {socket.shutdownOutput();} catch(Exception e) {
+        LOG.warn("Ignoring socket shutdown exception");
+      }
       if (channel.isOpen()) {
         try {channel.close();} catch(Exception e) {}
       }

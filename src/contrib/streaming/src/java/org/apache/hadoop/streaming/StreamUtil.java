@@ -28,6 +28,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.jar.*;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +42,9 @@ import org.apache.hadoop.mapred.JobConf;
  */
 public class StreamUtil {
 
+  private static final Log LOG = 
+    LogFactory.getLog(StreamUtil.class.getName());
+  
   /** It may seem strange to silently switch behaviour when a String
    * is not a classname; the reason is simplified Usage:<pre>
    * -mapper [classname | program ]
@@ -112,7 +117,8 @@ public class StreamUtil {
           InputStream in = jar.getInputStream(entry);
           try {
             File file = new File(toDir, entry.getName());
-            file.getParentFile().mkdirs();
+            boolean b = file.getParentFile().mkdirs();
+            if (!b) { LOG.warn("Ignoring failure of mkdirs"); }
             OutputStream out = new FileOutputStream(file);
             try {
               byte[] buffer = new byte[8192];
@@ -195,7 +201,6 @@ public class StreamUtil {
     }
     if (numBytes >= KB) {
       u = numBytes / KB;
-      numBytes -= u * KB;
       buf.append(u).append(" KB ");
     }
     buf.append(u).append(" B"); //even if zero

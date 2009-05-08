@@ -136,15 +136,15 @@ public class DBCountPageView extends Configured implements Tool {
   private void dropTables() {
     String dropAccess = "DROP TABLE Access";
     String dropPageview = "DROP TABLE Pageview";
-    
+    Statement st = null;
     try {
-      Statement st = connection.createStatement();
+      st = connection.createStatement();
       st.executeUpdate(dropAccess);
       st.executeUpdate(dropPageview);
       connection.commit();
       st.close();
     }catch (SQLException ex) {
-      //ignore
+      try { if (st != null) { st.close(); } } catch (Exception e) {}
     }
   }
   

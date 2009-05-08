@@ -106,13 +106,14 @@ public class ProgramDriver {
    * If it is found, it calls the main method in that class with the rest 
    * of the command line arguments.
    * @param args The argument from the user. args[0] is the command to run.
+   * @return -1 on error, 0 on success
    * @throws NoSuchMethodException 
    * @throws SecurityException 
    * @throws IllegalAccessException 
    * @throws IllegalArgumentException 
    * @throws Throwable Anything thrown by the example program's main
    */
-  public void driver(String[] args) 
+  public int driver(String[] args) 
     throws Throwable 
   {
     // Make sure they gave us a program name.
@@ -120,7 +121,7 @@ public class ProgramDriver {
       System.out.println("An example program must be given as the" + 
                          " first argument.");
       printUsage(programs);
-      System.exit(-1);
+      return -1;
     }
 	
     // And that it is good.
@@ -128,7 +129,7 @@ public class ProgramDriver {
     if (pgm == null) {
       System.out.println("Unknown program '" + args[0] + "' chosen.");
       printUsage(programs);
-      System.exit(-1);
+      return -1;
     }
 	
     // Remove the leading argument and call main
@@ -137,6 +138,7 @@ public class ProgramDriver {
       new_args[i-1] = args[i];
     }
     pgm.invoke(new_args);
+    return 0;
   }
     
 }
