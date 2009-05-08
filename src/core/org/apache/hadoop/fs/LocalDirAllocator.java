@@ -306,16 +306,24 @@ public class LocalDirAllocator {
           availableOnDisk[i] = dirDF[i].getAvailable();
           totalAvailable += availableOnDisk[i];
         }
-            // "roll the ball" -- pick a directory
+
+        // Keep rolling the wheel till we get a valid path
         Random r = new java.util.Random();
-        long randomPosition = Math.abs(r.nextLong()) % totalAvailable;
-        int dir=0;
-        while(randomPosition > availableOnDisk[dir]) {
-          randomPosition -= availableOnDisk[dir];
-          dir++;
+        while (numDirsSearched < numDirs && returnPath == null) {
+          long randomPosition = Math.abs(r.nextLong()) % totalAvailable;
+          int dir = 0;
+          while (randomPosition > availableOnDisk[dir]) {
+            randomPosition -= availableOnDisk[dir];
+            dir++;
+          }
+          dirNumLastAccessed = dir;
+          returnPath = createPath(pathStr);
+          if (returnPath == null) {
+            totalAvailable -= availableOnDisk[dir];
+            availableOnDisk[dir] = 0; // skip this disk
+            numDirsSearched++;
+          }
         }
-        dirNumLastAccessed = dir;
-        returnPath = createPath(pathStr);
       } else {
         while (numDirsSearched < numDirs && returnPath == null) {
           long capacity = dirDF[dirNumLastAccessed].getAvailable();
