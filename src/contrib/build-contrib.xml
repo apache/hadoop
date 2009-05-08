@@ -93,6 +93,9 @@
   <path id="test.classpath">
     <pathelement location="${build.test}" />
     <pathelement location="${hadoop.root}/build/test/classes"/>
+    <pathelement location="${hadoop.root}/build/test/core/classes"/>
+    <pathelement location="${hadoop.root}/build/test/hdfs/classes"/>
+    <pathelement location="${hadoop.root}/build/test/mapred/classes"/>
     <pathelement location="${hadoop.root}/src/contrib/test"/>
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
