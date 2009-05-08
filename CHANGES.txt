@@ -53,6 +53,10 @@ Release 0.20.1 - Unreleased
     kills itself if it ever discovers that the port to which jetty is actually
     bound is invalid (-1). (ddas)
 
+    HADOOP-5349. Fixes a problem in LocalDirAllocator to check for the return
+    path value that is returned for the case where the file we want to write
+    is of an unknown size. (Vinod Kumar Vavilapalli via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
