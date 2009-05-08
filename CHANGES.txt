@@ -528,6 +528,9 @@ Trunk (unreleased changes)
     HADOOP-3426. Fix/provide handling when DNS lookup fails on the loopback
     address. Also cache the result of the lookup. (Steve Loughran via cdouglas)
 
+    HADOOP-5476. Close the underlying InputStream in SequenceFile::Reader when
+    the constructor throws an exception. (Michael Tamm via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

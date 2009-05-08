@@ -457,6 +457,50 @@ public class TestSequenceFile extends TestCase {
     assertFalse(reader2.next(text));
   }
 
+  private static class TestFSDataInputStream extends FSDataInputStream {
+    private boolean closed = false;
+
+    private TestFSDataInputStream(InputStream in) throws IOException {
+      super(in);
+    }
+
+    public void close() throws IOException {
+      closed = true;
+      super.close();
+    }
+
+    public boolean isClosed() {
+      return closed;
+    }
+  }
+
+  public void testCloseForErroneousSequenceFile()
+    throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+
+    // create an empty file (which is not a valid sequence file)
+    Path path = new Path(System.getProperty("test.build.data",".")+"/broken.seq");
+    fs.create(path).close();
+
+    // try to create SequenceFile.Reader
+    final TestFSDataInputStream[] openedFile = new TestFSDataInputStream[1];
+    try {
+      new SequenceFile.Reader(fs, path, conf) {
+        // this method is called by the SequenceFile.Reader constructor, overwritten, so we can access the opened file
+        protected FSDataInputStream openFile(FileSystem fs, Path file, int bufferSize, long length) throws IOException {
+          final InputStream in = super.openFile(fs, file, bufferSize, length);
+          openedFile[0] = new TestFSDataInputStream(in);
+          return openedFile[0];
+        }
+      };
+      fail("IOException expected.");
+    } catch (IOException expected) {}
+
+    assertNotNull(path + " should have been opened.", openedFile[0]);
+    assertTrue("InputStream for " + path + " should have been closed.", openedFile[0].isClosed());
+  }
+
   /** For debugging and testing. */
   public static void main(String[] args) throws Exception {
     int count = 1024 * 1024;
