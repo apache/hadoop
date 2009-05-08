@@ -2046,8 +2046,11 @@ class JobInProgress {
       killSetupTip(!tip.isMapTask());
       // Job can start running now.
       this.status.setSetupProgress(1.0f);
-      this.status.setRunState(JobStatus.RUNNING);
-      JobHistory.JobInfo.logStarted(profile.getJobID());
+      // move the job to running state if the job is in prep state
+      if (this.status.getRunState() == JobStatus.PREP) {
+        this.status.setRunState(JobStatus.RUNNING);
+        JobHistory.JobInfo.logStarted(profile.getJobID());
+      }
     } else if (tip.isJobCleanupTask()) {
       // cleanup task has finished. Kill the extra cleanup tip
       if (tip.isMapTask()) {
