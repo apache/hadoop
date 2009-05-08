@@ -417,8 +417,15 @@ public class HttpServer implements FilterContainer {
       int oriPort = listener.getPort(); // The original requested port
       while (true) {
         try {
+          port = webServer.getConnectors()[0].getLocalPort();
+          LOG.info("Port returned by webServer.getConnectors()[0]." +
+          		"getLocalPort() before open() is "+ port + 
+          		". Opening the listener on " + oriPort);
           listener.open();
           port = listener.getLocalPort();
+          LOG.info("listener.getLocalPort() returned " + listener.getLocalPort() + 
+                " webServer.getConnectors()[0].getLocalPort() returned " +
+                webServer.getConnectors()[0].getLocalPort());
           //Workaround to handle the problem reported in HADOOP-4744
           if (port < 0) {
             Thread.sleep(100);
