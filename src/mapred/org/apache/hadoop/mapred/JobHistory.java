@@ -665,12 +665,9 @@ public class JobHistory {
       };
       
       FileStatus[] statuses = fs.listStatus(new Path(LOG_DIR), filter);
-      String filename;
+      String filename = null;
       if (statuses.length == 0) {
-        filename = 
-          encodeJobHistoryFileName(getNewJobHistoryFileName(jobConf, id));
-        LOG.info("Nothing to recover! Generating a new filename " + filename 
-                 + " for job " + id);
+        LOG.info("Nothing to recover for job " + id);
       } else {
         // return filename considering that fact the name can be a 
         // secondary filename like filename.recover
@@ -791,6 +788,9 @@ public class JobHistory {
     throws IOException {
       String masterLogFileName = 
         JobHistory.JobInfo.getJobHistoryFileName(conf, id);
+      if (masterLogFileName == null) {
+        return;
+      }
       Path masterLogPath = 
         JobHistory.JobInfo.getJobHistoryLogLocation(masterLogFileName);
       String tmpLogFileName = getSecondaryJobHistoryFile(masterLogFileName);
@@ -833,9 +833,18 @@ public class JobHistory {
      * @param jobConfPath path to job conf xml file in HDFS.
      * @param submitTime time when job tracker received the job
      * @throws IOException
+     * @deprecated Use 
+     *     {@link #logSubmitted(JobID, JobConf, String, long, boolean)} instead.
      */
     public static void logSubmitted(JobID jobId, JobConf jobConf, 
                                     String jobConfPath, long submitTime) 
+    throws IOException {
+      logSubmitted(jobId, jobConf, jobConfPath, submitTime, true);
+    }
+    
+    public static void logSubmitted(JobID jobId, JobConf jobConf, 
+                                    String jobConfPath, long submitTime, 
+                                    boolean restarted) 
     throws IOException {
       FileSystem fs = null;
       String userLogDir = null;
@@ -849,8 +858,13 @@ public class JobHistory {
         String user = getUserName(jobConf);
         
         // get the history filename
-        String logFileName = 
-          getJobHistoryFileName(jobConf, jobId);
+        String logFileName = null;
+        if (restarted) {
+          logFileName = getJobHistoryFileName(jobConf, jobId);
+        } else {
+          logFileName = 
+            encodeJobHistoryFileName(getNewJobHistoryFileName(jobConf, jobId));
+        }
 
         // setup the history log file for this job
         Path logFile = getJobHistoryLogLocation(logFileName);
@@ -868,8 +882,10 @@ public class JobHistory {
             // create output stream for logging in hadoop.job.history.location
             fs = new Path(LOG_DIR).getFileSystem(jobConf);
             
-            logFile = recoverJobHistoryFile(jobConf, logFile);
-            logFileName = logFile.getName();
+            if (restarted) {
+              logFile = recoverJobHistoryFile(jobConf, logFile);
+              logFileName = logFile.getName();
+            }
             
             int defaultBufferSize = 
               fs.getConf().getInt("io.file.buffer.size", 4096);

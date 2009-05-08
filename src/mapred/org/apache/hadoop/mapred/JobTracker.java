@@ -1249,18 +1249,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           // 3. Get the log file and the file path
           String logFileName = 
             JobHistory.JobInfo.getJobHistoryFileName(job.getJobConf(), id);
-          Path jobHistoryFilePath = 
-            JobHistory.JobInfo.getJobHistoryLogLocation(logFileName);
+          if (logFileName != null) {
+            Path jobHistoryFilePath = 
+              JobHistory.JobInfo.getJobHistoryLogLocation(logFileName);
 
-          // 4. Recover the history file. This involved
-          //     - deleting file.recover if file exists
-          //     - renaming file.recover to file if file doesnt exist
-          // This makes sure that the (master) file exists
-          JobHistory.JobInfo.recoverJobHistoryFile(job.getJobConf(), 
-                                                   jobHistoryFilePath);
+            // 4. Recover the history file. This involved
+            //     - deleting file.recover if file exists
+            //     - renaming file.recover to file if file doesnt exist
+            // This makes sure that the (master) file exists
+            JobHistory.JobInfo.recoverJobHistoryFile(job.getJobConf(), 
+                                                     jobHistoryFilePath);
           
-          // 5. Cache the history file name as it costs one dfs access
-          jobHistoryFilenameMap.put(job.getJobID(), jobHistoryFilePath);
+            // 5. Cache the history file name as it costs one dfs access
+            jobHistoryFilenameMap.put(job.getJobID(), jobHistoryFilePath);
+          } else {
+            LOG.info("No history file found for job " + id);
+            idIter.remove(); // remove from recovery list
+          }
 
           // 6. Sumbit the job to the jobtracker
           addJob(id, job);
@@ -2045,10 +2050,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
     // start the merge of log files
     JobID id = job.getStatus().getJobID();
-    try {
-      JobHistory.JobInfo.finalizeRecovery(id, job.getJobConf());
-    } catch (IOException ioe) {
-      LOG.info("Failed to finalize the log file recovery for job " + id, ioe);
+    if (job.hasRestarted()) {
+      try {
+        JobHistory.JobInfo.finalizeRecovery(id, job.getJobConf());
+      } catch (IOException ioe) {
+        LOG.info("Failed to finalize the log file recovery for job " + id, ioe);
+      }
     }
 
     final JobTrackerInstrumentation metrics = getInstrumentation();
