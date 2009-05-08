@@ -590,6 +590,10 @@ Release 0.20.1 - Unreleased
     path value that is returned for the case where the file we want to write
     is of an unknown size. (Vinod Kumar Vavilapalli via ddas)
 
+    HADOOP-5636. Prevents a job from going to RUNNING state after it has been
+    KILLED (this used to happen when the SetupTask would come back with a 
+    success after the job has been killed). (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
