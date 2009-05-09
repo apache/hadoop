@@ -336,24 +336,23 @@ abstract class BaseScanner extends Chore implements HConstants {
     }
     HServerInfo storedInfo = null;
     synchronized (this.master.regionManager) {
+      /*
+       * We don't assign regions that are offline, in transition or were on
+       * a dead server. Regions that were on a dead server will get reassigned
+       * by ProcessServerShutdown
+       */
+      if (info.isOffline() ||
+        this.master.regionManager.
+            regionIsInTransition(info.getRegionNameAsString()) ||
+          (serverName != null && this.master.serverManager.isDead(serverName))) {
+        return;
+      }
       if (serverName != null) {
-        /*
-         * We don't assign regions that are offline, in transition or were on
-         * a dead server. Regions that were on a dead server will get reassigned
-         * by ProcessServerShutdown
-         */
-        if(info.isOffline() ||
-            this.master.regionManager.regionIsInTransition(
-                info.getRegionNameAsString()) ||
-            this.master.serverManager.isDead(serverName)) {
-          return;
-        }
         storedInfo = this.master.serverManager.getServerInfo(serverName);
       }
 
       // If we can't find the HServerInfo, then add it to the list of
       //  unassigned regions.
-
       if (storedInfo == null) {
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
