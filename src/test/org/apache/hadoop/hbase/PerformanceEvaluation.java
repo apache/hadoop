@@ -314,15 +314,15 @@ public class PerformanceEvaluation implements HConstants {
     fs.mkdirs(subdir);
     Path inputFile = new Path(subdir, "input.txt");
     PrintStream out = new PrintStream(fs.create(inputFile));
+    int perClientRows = (this.R / this.N);
     try {
-      for (int i = 0; i < (this.N * 10); i++) {
-        // Write out start row, total number of rows per client run: 1/10th of
-        // (R/N).
-        int perClientRows = (this.R / this.N);
-        out.println("startRow=" + i * perClientRows +
+      for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < N; j++) {
+          out.println("startRow=" + ((j * perClientRows) + (i * perClientRows)) +
           ", perClientRunRows=" + (perClientRows / 10) +
           ", totalRows=" + this.R +
           ", clients=" + this.N);
+        }
       }
     } finally {
       out.close();
@@ -730,9 +730,8 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     N = Integer.parseInt(args[start]);
-    if (N > 500 || N < 1) {
-      throw new IllegalArgumentException("Number of clients must be between " +
-        "1 and 500.");
+    if (N < 1) {
+      throw new IllegalArgumentException("Number of clients must be > 1");
     }
    
     // Set total number of rows to write.
