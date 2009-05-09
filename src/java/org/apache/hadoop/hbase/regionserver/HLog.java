@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -92,17 +95,16 @@ public class HLog implements HConstants, Syncable {
   private static final String HLOG_DATFILE = "hlog.dat.";
   static final byte [] METACOLUMN = Bytes.toBytes("METACOLUMN:");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
-  final FileSystem fs;
-  final Path dir;
-  final Configuration conf;
-  final LogRollListener listener;
+  private final FileSystem fs;
+  private final Path dir;
+  private final Configuration conf;
+  private final LogRollListener listener;
   private final int maxlogentries;
   private final long optionalFlushInterval;
   private final long blocksize;
   private final int flushlogentries;
-  private volatile int unflushedEntries = 0;
+  private final AtomicInteger unflushedEntries = new AtomicInteger(0);
   private volatile long lastLogFlushTime;
-  final long threadWakeFrequency;
 
   /*
    * Current log file.
@@ -112,24 +114,23 @@ public class HLog implements HConstants, Syncable {
   /*
    * Map of all log files but the current one. 
    */
-  final SortedMap<Long, Path> outputfiles = 
+  final SortedMap<Long, Path> outputfiles =
     Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
 
   /*
    * Map of region to last sequence/edit id. 
    */
-  private final Map<byte [], Long> lastSeqWritten = Collections.
-    synchronizedSortedMap(new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR));
+  private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
+    new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
 
   private volatile boolean closed = false;
 
-  private final Object sequenceLock = new Object();
-  private volatile long logSeqNum = 0;
+  private final AtomicLong logSeqNum = new AtomicLong(0);
 
   private volatile long filenum = 0;
   private volatile long old_filenum = -1;
   
-  private volatile int numEntries = 0;
+  private final AtomicInteger numEntries = new AtomicInteger(0);
 
   // This lock prevents starting a log roll during a cache flush.
   // synchronized is insufficient because a cache flush spans two method calls.
@@ -175,7 +176,6 @@ public class HLog implements HConstants, Syncable {
       conf.getLong("hbase.regionserver.hlog.blocksize", 1024L * 1024L);
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 10 * 1000);
-    this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.lastLogFlushTime = System.currentTimeMillis();
     if (fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
@@ -211,15 +211,12 @@ public class HLog implements HConstants, Syncable {
    * @param newvalue We'll set log edit/sequence number to this value if it
    * is greater than the current value.
    */
-  void setSequenceNumber(long newvalue) {
-    synchronized (sequenceLock) {
-      if (newvalue > logSeqNum) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("changing sequence number from " + logSeqNum + " to " +
-            newvalue);
-        }
-        logSeqNum = newvalue;
-      }
+  void setSequenceNumber(final long newvalue) {
+    for (long id = this.logSeqNum.get(); id < newvalue &&
+        !this.logSeqNum.compareAndSet(id, newvalue); id = this.logSeqNum.get()) {
+      // This could spin on occasion but better the occasional spin than locking
+      // every increment of sequence number.
+      LOG.debug("Change sequence number from " + logSeqNum + " to " + newvalue);
     }
   }
   
@@ -227,7 +224,7 @@ public class HLog implements HConstants, Syncable {
    * @return log sequence number
    */
   public long getSequenceNumber() {
-    return logSeqNum;
+    return logSeqNum.get();
   }
 
   /**
@@ -290,7 +287,7 @@ public class HLog implements HConstants, Syncable {
             regionToFlush = cleanOldLogs();
           }
         }
-        this.numEntries = 0;
+        this.numEntries.set(0);
         updateLock.notifyAll();
       }
     } finally {
@@ -380,9 +377,7 @@ public class HLog implements HConstants, Syncable {
       }
       oldFile = computeFilename(old_filenum);
       if (filenum > 0) {
-        synchronized (this.sequenceLock) {
-          this.outputfiles.put(Long.valueOf(this.logSeqNum - 1), oldFile);
-        }
+        this.outputfiles.put(Long.valueOf(this.logSeqNum.get() - 1), oldFile);
       }
     }
     return oldFile;
@@ -435,6 +430,53 @@ public class HLog implements HConstants, Syncable {
     }
   }
 
+
+  /** Append an entry without a row to the log.
+   * 
+   * @param regionInfo
+   * @param logEdit
+   * @throws IOException
+   */
+  public void append(HRegionInfo regionInfo, HLogEdit logEdit)
+  throws IOException {
+    this.append(regionInfo, new byte[0], logEdit);
+  }
+
+  /** Append an entry to the log.
+   * 
+   * @param regionInfo
+   * @param row
+   * @param logEdit
+   * @throws IOException
+   */
+  public void append(HRegionInfo regionInfo, byte [] row, HLogEdit logEdit)
+  throws IOException {
+    if (this.closed) {
+      throw new IOException("Cannot append; log is closed");
+    }
+    byte [] regionName = regionInfo.getRegionName();
+    byte [] tableName = regionInfo.getTableDesc().getName();
+    synchronized (updateLock) {
+      long seqNum = obtainSeqNum();
+      // The 'lastSeqWritten' map holds the sequence number of the oldest
+      // write for each region. When the cache is flushed, the entry for the
+      // region being flushed is removed if the sequence number of the flush
+      // is greater than or equal to the value in lastSeqWritten.
+      this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
+      HLogKey logKey = new HLogKey(regionName, tableName, seqNum);
+      boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
+      doWrite(logKey, logEdit, sync);
+      this.numEntries.incrementAndGet();
+      updateLock.notifyAll();
+    }
+
+    if (this.numEntries.get() > this.maxlogentries) {
+      if (listener != null) {
+        listener.logRollRequested();
+      }
+    }
+  }
+
   /**
    * Append a set of edits to the log. Log edits are keyed by regionName,
    * rowname, and log-sequence-id.
@@ -461,44 +503,41 @@ public class HLog implements HConstants, Syncable {
   void append(byte [] regionName, byte [] tableName, List<KeyValue> edits,
     boolean sync)
   throws IOException {
-    if (closed) {
+    if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
-    synchronized (updateLock) {
-      long seqNum[] = obtainSeqNum(edits.size());
+    long seqNum [] = obtainSeqNum(edits.size());
+    synchronized (this.updateLock) {
       // The 'lastSeqWritten' map holds the sequence number of the oldest
       // write for each region. When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
-      if (!this.lastSeqWritten.containsKey(regionName)) {
-        this.lastSeqWritten.put(regionName, Long.valueOf(seqNum[0]));
-      }
+      this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum[0]));
       int counter = 0;
       for (KeyValue kv: edits) {
-        HLogKey logKey =
-          new HLogKey(regionName, tableName, seqNum[counter++]);
-       doWrite(logKey, new HLogEdit(kv), sync);
-
-        this.numEntries++;
+        HLogKey logKey = new HLogKey(regionName, tableName, seqNum[counter++]);
+        doWrite(logKey, new HLogEdit(kv), sync);
+        this.numEntries.incrementAndGet();
       }
       updateLock.notifyAll();
     }
-    if (this.numEntries > this.maxlogentries) {
+    if (this.numEntries.get() > this.maxlogentries) {
         requestLogRoll();
     }
   }
-  
+
   public void sync() throws IOException {
     lastLogFlushTime = System.currentTimeMillis();
     this.writer.sync();
-    unflushedEntries = 0;
+    this.unflushedEntries.set(0);
   }
 
   void optionalSync() {
     if (!this.closed) {
+      long now = System.currentTimeMillis();
       synchronized (updateLock) {
-        if (((System.currentTimeMillis() - this.optionalFlushInterval) >
-        this.lastLogFlushTime) && this.unflushedEntries > 0) {
+        if (((now - this.optionalFlushInterval) >
+            this.lastLogFlushTime) && this.unflushedEntries.get() > 0) {
           try {
             sync();
           } catch (IOException e) {
@@ -519,7 +558,7 @@ public class HLog implements HConstants, Syncable {
   throws IOException {
     try {
       this.writer.append(logKey, logEdit);
-      if (sync || ++unflushedEntries >= flushlogentries) {
+      if (sync || this.unflushedEntries.incrementAndGet() >= flushlogentries) {
         sync();
       }
     } catch (IOException e) {
@@ -528,69 +567,17 @@ public class HLog implements HConstants, Syncable {
       throw e;
     }
   }
-  
-  /** Append an entry without a row to the log.
-   * 
-   * @param regionInfo
-   * @param logEdit
-   * @throws IOException
-   */
-  public void append(HRegionInfo regionInfo, HLogEdit logEdit) throws IOException {
-    this.append(regionInfo, new byte[0], logEdit);
-  }
-  
-  /** Append an entry to the log.
-   * 
-   * @param regionInfo
-   * @param row
-   * @param logEdit
-   * @throws IOException
-   */
-  public void append(HRegionInfo regionInfo, byte [] row, HLogEdit logEdit)
-  throws IOException {
-    if (closed) {
-      throw new IOException("Cannot append; log is closed");
-    }
-    byte [] regionName = regionInfo.getRegionName();
-    byte [] tableName = regionInfo.getTableDesc().getName();
-    synchronized (updateLock) {
-      long seqNum = obtainSeqNum();
-      // The 'lastSeqWritten' map holds the sequence number of the oldest
-      // write for each region. When the cache is flushed, the entry for the
-      // region being flushed is removed if the sequence number of the flush
-      // is greater than or equal to the value in lastSeqWritten.
-      if (!this.lastSeqWritten.containsKey(regionName)) {
-        this.lastSeqWritten.put(regionName, Long.valueOf(seqNum));
-      }
-
-      HLogKey logKey = new HLogKey(regionName, tableName, seqNum);
-      boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
-      doWrite(logKey, logEdit, sync);
-      this.numEntries++;
-      updateLock.notifyAll();
-    }
-
-    if (this.numEntries > this.maxlogentries) {
-      if (listener != null) {
-        listener.logRollRequested();
-      }
-    }
-  }
 
   /** @return How many items have been added to the log */
   int getNumEntries() {
-    return numEntries;
+    return numEntries.get();
   }
 
   /**
    * Obtain a log sequence number.
    */
   private long obtainSeqNum() {
-    long value;
-    synchronized (sequenceLock) {
-      value = logSeqNum++;
-    }
-    return value;
+    return this.logSeqNum.incrementAndGet();
   }
 
   /** @return the number of log files in use */
@@ -598,18 +585,16 @@ public class HLog implements HConstants, Syncable {
     return outputfiles.size();
   }
 
-  /**
+  /*
    * Obtain a specified number of sequence numbers
    *
    * @param num number of sequence numbers to obtain
    * @return array of sequence numbers
    */
-  private long[] obtainSeqNum(int num) {
-    long[] results = new long[num];
-    synchronized (this.sequenceLock) {
-      for (int i = 0; i < num; i++) {
-        results[i] = this.logSeqNum++;
-      }
+  private long [] obtainSeqNum(int num) {
+    long [] results = new long[num];
+    for (int i = 0; i < num; i++) {
+      results[i] = this.logSeqNum.incrementAndGet();
     }
     return results;
   }
@@ -651,7 +636,7 @@ public class HLog implements HConstants, Syncable {
       synchronized (updateLock) {
         this.writer.append(new HLogKey(regionName, tableName, logSeqId),
           completeCacheFlushLogEdit());
-        this.numEntries++;
+        this.numEntries.incrementAndGet();
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {
           this.lastSeqWritten.remove(regionName);
@@ -664,7 +649,6 @@ public class HLog implements HConstants, Syncable {
   }
 
   private HLogEdit completeCacheFlushLogEdit() {
-    // TODO Profligacy!!! Fix all this creation.
     return new HLogEdit(new KeyValue(METAROW, METACOLUMN,
       System.currentTimeMillis(), HLogEdit.COMPLETE_CACHE_FLUSH));
   }

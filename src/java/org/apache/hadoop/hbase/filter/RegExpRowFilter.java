@@ -168,7 +168,7 @@ public class RegExpRowFilter implements RowFilterInterface {
       }
     }
     if (nullColumns.contains(colKey)) {
-      if (data != null && !HLogEdit.isDeleted(data)) {
+      if (data != null /* DELETE IS IN KEY NOW && !HLogEdit.isDeleted(data)*/) {
         return true;
       }
     }
@@ -216,7 +216,7 @@ public class RegExpRowFilter implements RowFilterInterface {
   public boolean filterRow(final SortedMap<byte [], Cell> columns) {
     for (Entry<byte [], Cell> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
-          && !HLogEdit.isDeleted(col.getValue().getValue())) {
+          /* DELETE IS IN KEY NOW && !HLogEdit.isDeleted(col.getValue().getValue())*/) {
         return true;
       }
     }

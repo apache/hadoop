@@ -188,10 +188,10 @@ public class DisabledTestRegExpRowFilter extends TestCase {
     // Try a row that has all expected columnKeys and a null-expected columnKey 
     // that maps to a null value.
     // Testing row with columnKeys: a-e, e maps to null
-    colvalues.put(new byte [] {LAST_CHAR}, 
-      new Cell(HLogEdit.DELETED_BYTES, HConstants.LATEST_TIMESTAMP));
-    assertFalse("Failed with last columnKey " + LAST_CHAR + " mapping to null.", 
-      filter.filterRow(colvalues));
+//    colvalues.put(new byte [] {LAST_CHAR}, 
+//      new Cell(HLogEdit.DELETED_BYTES, HConstants.LATEST_TIMESTAMP));
+//    assertFalse("Failed with last columnKey " + LAST_CHAR + " mapping to null.", 
+//      filter.filterRow(colvalues));
   }
 
   private byte [] createRow(final char c) {

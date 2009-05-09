@@ -504,7 +504,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
               tries++;
             } else {
               LOG.error("Exceeded max retries: " + this.numRetries, e);
-              checkFileSystem();
+              if (checkFileSystem()) {
+                // Filesystem is OK.  Something is up w/ ZK or master.  Sleep
+                // a little while if only to stop our logging many times a
+                // millisecond.
+                Thread.sleep(1000);
+              }
             }
             if (this.stopRequested.get()) {
                 LOG.info("Stop was requested, clearing the toDo " +
@@ -1708,7 +1713,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
   }
   
-  public int batchUpdates(final byte[] regionName, final BatchUpdate[] b)
+  public int batchUpdates(final byte[] regionName, final BatchUpdate [] b)
   throws IOException {
     int i = 0;
     checkOpen();

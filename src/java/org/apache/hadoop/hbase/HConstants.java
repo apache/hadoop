@@ -118,8 +118,8 @@ public interface HConstants {
   static final String HBASE_DIR = "hbase.rootdir";
   
   /** Used to construct the name of the log directory for a region server 
-   * Use '@' as a special character to seperate the log files from table data */
-  static final String HREGION_LOGDIR_NAME = "@LOGS@";
+   * Use '.' as a special character to seperate the log files from table data */
+  static final String HREGION_LOGDIR_NAME = ".logs";
 
   /** Name of old log file for reconstruction */
   static final String HREGION_OLDLOGFILE_NAME = "oldlogfile.log";

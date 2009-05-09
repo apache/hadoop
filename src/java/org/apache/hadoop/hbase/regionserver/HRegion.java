@@ -1325,12 +1325,7 @@ public class HRegion implements HConstants {
           checkColumn(column);
           KeyValue kv = null;
           if (op.isPut()) {
-            byte [] val = op.getValue();
-            if (HLogEdit.isDeleted(val)) {
-              throw new IOException("Cannot insert value: " +
-                Bytes.toString(val));
-            }
-            kv = new KeyValue(row, column, commitTime, val);
+            kv = new KeyValue(row, column, commitTime, op.getValue());
           } else {
             // Its a delete.
             if (b.getTimestamp() == LATEST_TIMESTAMP) {
@@ -1420,12 +1415,7 @@ public class HRegion implements HConstants {
             byte [] column = op.getColumn();
             KeyValue kv = null;
             if (op.isPut()) {
-              byte [] val = op.getValue();
-              if (HLogEdit.isDeleted(val)) {
-                throw new IOException("Cannot insert value: " +
-                  Bytes.toString(val));
-              }
-              kv = new KeyValue(row, column, commitTime, val);
+              kv = new KeyValue(row, column, commitTime, op.getValue());
             } else {
               // Its a delete.
               if (b.getTimestamp() == LATEST_TIMESTAMP) {

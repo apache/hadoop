@@ -37,14 +37,11 @@ import org.apache.hadoop.io.Writable;
  * TODO: Remove.  Just output KVs.
  */
 public class HLogEdit implements Writable, HConstants {
-  /** Value stored for a deleted item */
-  public static byte [] DELETED_BYTES;
-  /** Value written to HLog on a complete cache flush */
-  public static byte [] COMPLETE_CACHE_FLUSH;
-
+  /** Value written to HLog on a complete cache flush.  TODO: Remove.  Not used.
+   */
+  static byte [] COMPLETE_CACHE_FLUSH;
   static {
     try {
-      DELETED_BYTES = "HBASE::DELETEVAL".getBytes(UTF8_ENCODING);
       COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       assert(false);
@@ -182,24 +179,5 @@ public class HLogEdit implements Writable, HConstants {
       transactionId = in.readLong();
       operation = TransactionalOperation.valueOf(in.readUTF());
     }
-  }
-
-  /**
-   * @param value
-   * @return True if an entry and its content is {@link #DELETED_BYTES}.
-   */
-  public static boolean isDeleted(final byte [] value) {
-    return isDeleted(value, 0, value.length);
-  }
-
-  /**
-   * @param value
-   * @return True if an entry and its content is {@link #DELETED_BYTES}.
-   */
-  public static boolean isDeleted(final byte [] value, final int offset,
-      final int length) {
-    return (value == null)? false:
-      Bytes.BYTES_RAWCOMPARATOR.compare(DELETED_BYTES, 0, DELETED_BYTES.length,
-        value, offset, length) == 0;
   }
 }

@@ -215,6 +215,7 @@ Release 0.20.0 - Unreleased
    HBASE-1392  change how we build/configure lzocodec (Ryan Rawson via Stack)
    HBASE-1397  Better distribution in the PerformanceEvaluation MapReduce
                when rows run to the Billions
+   HBASE-1393  Narrow synchronization in HLog
 
   OPTIMIZATIONS
 

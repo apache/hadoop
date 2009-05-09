@@ -306,7 +306,7 @@ public class Store implements HConstants {
           skippedEdits++;
           continue;
         }
-        // Check this edit is for me. Also, guard against writing the speical
+        // Check this edit is for me. Also, guard against writing the special
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         KeyValue kv = val.getKeyValue();
         if (val.isTransactionEntry() ||
