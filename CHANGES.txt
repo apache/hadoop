@@ -119,6 +119,8 @@ Release 0.20.0 - Unreleased
    HBASE-1396  Remove unused sequencefile and mapfile config. from hbase-default.xml
    HBASE-1398  TableOperation doesnt format keys for meta scan properly
                (Ryan Rawson via Stack)
+   HBASE-1399  Can't drop tables since HBASE-1398 (Ryan Rawson via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
