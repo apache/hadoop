@@ -116,7 +116,7 @@ Release 0.20.0 - Unreleased
    HBASE-1344  WARN IllegalStateException: Cannot set a region as open if it has
                not been pending
    HBASE-1386  NPE in housekeeping
-   HBASE-????  Remove unused sequencefile and mapfile config. from hbase-default.xml
+   HBASE-1396  Remove unused sequencefile and mapfile config. from hbase-default.xml
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
