@@ -53,7 +53,9 @@ abstract class TableOperation implements HConstants {
     if (!this.master.isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-    this.tableName = tableName;
+    // add the delimiters.
+    // TODO maybe check if this is necessary?
+    this.tableName = Bytes.toBytes(Bytes.toString(tableName) + ",,");
 
     // Don't wait for META table to come on line if we're enabling it
     if (!Bytes.equals(HConstants.META_TABLE_NAME, this.tableName)) {

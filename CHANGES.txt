@@ -117,6 +117,8 @@ Release 0.20.0 - Unreleased
                not been pending
    HBASE-1386  NPE in housekeeping
    HBASE-1396  Remove unused sequencefile and mapfile config. from hbase-default.xml
+   HBASE-1398  TableOperation doesnt format keys for meta scan properly
+               (Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
