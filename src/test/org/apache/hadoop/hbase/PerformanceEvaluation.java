@@ -26,7 +26,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,6 +46,8 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Hash;
+import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -314,15 +318,23 @@ public class PerformanceEvaluation implements HConstants {
     fs.mkdirs(subdir);
     Path inputFile = new Path(subdir, "input.txt");
     PrintStream out = new PrintStream(fs.create(inputFile));
+    // Make input random.
+    Map<Integer, String> m = new TreeMap<Integer, String>();
+    Hash h = MurmurHash.getInstance();
     int perClientRows = (this.R / this.N);
     try {
       for (int i = 0; i < 10; i++) {
         for (int j = 0; j < N; j++) {
-          out.println("startRow=" + ((j * perClientRows) + (i * perClientRows)) +
+          String s = "startRow=" + ((j * perClientRows) + (i * (perClientRows/10))) +
           ", perClientRunRows=" + (perClientRows / 10) +
           ", totalRows=" + this.R +
-          ", clients=" + this.N);
+          ", clients=" + this.N;
+          int hash = h.hash(Bytes.toBytes(s));
+          m.put(hash, s);
         }
+      }
+      for (Map.Entry<Integer, String> e: m.entrySet()) {
+        out.println(e.getValue());
       }
     } finally {
       out.close();
