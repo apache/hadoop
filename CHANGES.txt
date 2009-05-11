@@ -220,6 +220,7 @@ Release 0.20.0 - Unreleased
    HBASE-1397  Better distribution in the PerformanceEvaluation MapReduce
                when rows run to the Billions
    HBASE-1393  Narrow synchronization in HLog
+   HBASE-1404  minor edit of regionserver logging messages
 
   OPTIMIZATIONS
 

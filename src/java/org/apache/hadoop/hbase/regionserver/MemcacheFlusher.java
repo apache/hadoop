@@ -222,16 +222,18 @@ class MemcacheFlusher extends Thread implements FlushRequester {
    * not flushed.
    */
   private boolean flushRegion(HRegion region, boolean removeFromQueue) {
-    // Wait until it is safe to flush
+    // Wait until it is safe to flush.
+    // TODO: Fix.  This block doesn't work if more than one store.
     int count = 0;
     boolean triggered = false;
     while (count++ < (blockingWaitTime / 500)) {
       for (Store hstore: region.stores.values()) {
-        if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
+        int files = hstore.getStorefilesCount();
+        if (files > this.blockingStoreFilesNumber) {
           if (!triggered) {
             server.compactSplitThread.compactionRequested(region, getName());
-            LOG.info("Too many store files for region " + region + ": " +
-              hstore.getStorefilesCount() + ", waiting");
+            LOG.info("Too many store files in store " + hstore + ": " +
+              files + ", pausing");
             triggered = true;
           }
           try {
@@ -243,8 +245,7 @@ class MemcacheFlusher extends Thread implements FlushRequester {
         }
       }
       if (triggered) {
-        LOG.info("Compaction completed on region " + region +
-          ", proceeding");
+        LOG.info("Compaction triggered on region " + region + ", proceeding");
       }
       break;
     }

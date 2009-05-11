@@ -545,6 +545,11 @@ public class HLog implements HConstants, Syncable {
           }
         }
       }
+      long took = System.currentTimeMillis() - now;
+      if (took > 1000) {
+        LOG.warn(Thread.currentThread().getName() + " took " + took +
+          "ms optional sync'ing HLog");
+      }
     }
   }
   
@@ -730,7 +735,7 @@ public class HLog implements HConstants, Syncable {
         // Check for possibly empty file. With appends, currently Hadoop reports
         // a zero length even if the file has been sync'd. Revisit if 
         // HADOOP-4751 is committed.
-        boolean possiblyEmpty = logfiles[i].getLen() <= 0;
+        long length = logfiles[i].getLen();
         HLogKey key = new HLogKey();
         HLogEdit val = new HLogEdit();
         try {
@@ -807,7 +812,8 @@ public class HLog implements HConstants, Syncable {
             fs.delete(logfiles[i].getPath(), true);
           }
         } catch (IOException e) {
-          if (possiblyEmpty) {
+          if (length <= 0) {
+            LOG.warn("Empty log, continuing: " + logfiles[i]);
             continue;
           }
           throw e;

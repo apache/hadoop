@@ -309,11 +309,6 @@ public class HRegion implements HConstants {
     
     // Add one to the current maximum sequence id so new edits are beyond.
     this.minSequenceId = maxSeqId + 1;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Next sequence id for region " +
-        Bytes.toString(regionInfo.getRegionName()) + " is " +
-        this.minSequenceId);
-    }
 
     // Get rid of any splits or merges that were lost in-progress
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, SPLITDIR));
@@ -328,7 +323,7 @@ public class HRegion implements HConstants {
     this.writestate.compacting = false;
     this.lastFlushTime = System.currentTimeMillis();
     LOG.info("region " + this + "/" + this.regionInfo.getEncodedName() +
-      " available");
+      " available; sequence id is " + this.minSequenceId);
   }
 
   /*
@@ -742,8 +737,8 @@ public class HRegion implements HConstants {
               return splitRow;
           }
         }
-        LOG.info("starting " + (majorCompaction? "major" : "") + 
-            " compaction on region " + this);
+        LOG.info("Starting" + (majorCompaction? " major " : " ") + 
+            "compaction on region " + this);
         long startTime = System.currentTimeMillis();
         doRegionCompactionPrep();
         long maxSize = -1;
@@ -1315,8 +1310,9 @@ public class HRegion implements HConstants {
       byte [] row = b.getRow();
       // If we did not pass an existing row lock, obtain a new one
       Integer lid = getLock(lockid, row);
+      long now = System.currentTimeMillis();
       long commitTime = b.getTimestamp() == LATEST_TIMESTAMP?
-        System.currentTimeMillis(): b.getTimestamp();
+        now: b.getTimestamp();
       Set<byte []> latestTimestampDeletes = null;
       List<KeyValue> edits = new ArrayList<KeyValue>();
       try {

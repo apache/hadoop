@@ -204,10 +204,6 @@ public class Store implements HConstants {
 
     // loadStoreFiles calculates this.maxSeqId. as side-effect.
     this.storefiles.putAll(loadStoreFiles());
-    if (LOG.isDebugEnabled() && this.storefiles.size() > 0) {
-      LOG.debug("Loaded " + this.storefiles.size() + " file(s) in Store " +
-        Bytes.toString(this.storeName) + ", max sequence id " + this.maxSeqId);
-    }
 
     // Do reconstruction log.
     runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
@@ -699,9 +695,9 @@ public class Store implements HConstants {
       // Move the compaction into place.
       completeCompaction(filesToCompact, writer);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Completed " + (majorcompaction? "major": "") +
-          " compaction of " + this.storeNameStr +
-          " store size is " + StringUtils.humanReadableInt(storeSize));
+        LOG.debug("Completed" + (majorcompaction? " major ": " ") +
+          "compaction of " + this.storeNameStr +
+          "; store size is " + StringUtils.humanReadableInt(storeSize));
       }
     }
     return checkSplit(forceSplit);
