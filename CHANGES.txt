@@ -116,6 +116,9 @@ Trunk (unreleased changes)
     HADOOP-5745. Allow setting the default value of maxRunningJobs for all
     pools. (dhruba via matei)
 
+    HADOOP-5643. Adds a way to decommission TaskTrackers while the JobTracker
+    is running. (Amar Kamat via ddas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

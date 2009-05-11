@@ -9,5 +9,10 @@
   <name>io.sort.mb</name>
   <value>10</value>
 </property>
+<property>
+  <name>mapred.hosts.exclude</name>
+  <value>hosts.exclude</value>
+  <description></description>
+</property>
 
 </configuration>

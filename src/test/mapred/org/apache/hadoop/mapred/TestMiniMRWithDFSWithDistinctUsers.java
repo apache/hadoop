@@ -32,16 +32,14 @@ import org.apache.hadoop.security.*;
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
  */
 public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
-  static final long now = System.currentTimeMillis();
   static final UnixUserGroupInformation DFS_UGI = createUGI("dfs", true); 
   static final UnixUserGroupInformation PI_UGI = createUGI("pi", false); 
   static final UnixUserGroupInformation WC_UGI = createUGI("wc", false); 
 
   static UnixUserGroupInformation createUGI(String name, boolean issuper) {
-    String username = name + now;
-    String group = issuper? "supergroup": username;
+    String group = issuper? "supergroup": name;
     return UnixUserGroupInformation.createImmutable(
-        new String[]{username, group});
+        new String[]{name, group});
   }
   
   static JobConf createJobConf(MiniMRCluster mr, UnixUserGroupInformation ugi) {
