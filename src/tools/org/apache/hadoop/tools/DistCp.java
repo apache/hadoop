@@ -647,9 +647,8 @@ public class DistCp implements Tool {
     
     //Initialize the mapper
     try {
-      if (setup(conf, job, args)) {
-        JobClient.runJob(job);
-      }
+      setup(conf, job, args);
+      JobClient.runJob(job);
       finalize(conf, job, args.dst, args.preservedAttributes);
     } finally {
       //delete tmp
@@ -969,9 +968,8 @@ public class DistCp implements Tool {
    * @param conf : The dfs/mapred configuration.
    * @param jobConf : The handle to the jobConf object to be initialized.
    * @param args Arguments
-   * @return true if it is necessary to launch a job.
    */
-  private static boolean setup(Configuration conf, JobConf jobConf,
+  private static void setup(Configuration conf, JobConf jobConf,
                             final Arguments args)
       throws IOException {
     jobConf.set(DST_DIR_LABEL, args.dst.toUri().toString());
@@ -1141,12 +1139,10 @@ public class DistCp implements Tool {
         (dstExists && !dstIsDir) || (!dstExists && srcCount == 1)?
         args.dst.getParent(): args.dst, "_distcp_tmp_" + randomId);
     jobConf.set(TMP_DIR_LABEL, tmpDir.toUri().toString());
-    LOG.info("srcCount = " + srcCount);
-    LOG.info("byteCount= " + StringUtils.humanReadableInt(byteCount));
+    LOG.info("srcCount=" + srcCount);
     jobConf.setInt(SRC_COUNT_LABEL, srcCount);
     jobConf.setLong(TOTAL_SIZE_LABEL, byteCount);
     setMapCount(byteCount, jobConf);
-    return byteCount > 0;
   }
 
   /**

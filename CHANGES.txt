@@ -309,9 +309,6 @@ Trunk (unreleased changes)
 
     HADOOP-5596. Add EnumSetWritable. (He Yongqiang via szetszwo)
 
-    HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
-    (Nicholas), SZE via cdouglas)
-
     HADOOP-5727. Simplify hashcode for ID types. (Shevek via cdouglas)
 
     HADOOP-5500. In DBOutputFormat, where field names are absent permit the
