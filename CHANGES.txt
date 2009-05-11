@@ -337,6 +337,10 @@ Trunk (unreleased changes)
     HADOOP-5771. Implements unit tests for LinuxTaskController.
     (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-5419. Provide a facility to query the Queue ACLs for the
+    current user.
+    (Rahul Kumar Singh via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
