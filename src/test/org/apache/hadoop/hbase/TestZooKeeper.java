@@ -21,10 +21,14 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -105,5 +109,44 @@ public class TestZooKeeper extends HBaseClusterTestCase {
 
     System.err.println("ZooKeeper should have timed out");
     connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
+  }
+
+  /**
+   *
+   */
+  public void testRegionServerSessionExpired() {
+    try {
+      new HTable(conf, HConstants.META_TABLE_NAME);
+  
+      String quorumServers = zooKeeperCluster.getQuorumServers();
+      int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
+  
+      Watcher watcher = new EmptyWatcher();
+      HRegionServer rs = cluster.getRegionServer(0);
+      ZooKeeperWrapper rsZK = rs.getZooKeeperWrapper();
+      long sessionID = rsZK.getSessionID();
+      byte[] password = rsZK.getSessionPassword();
+  
+      ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, watcher, sessionID, password);
+      zk.close();
+
+      Thread.sleep(sessionTimeout * 3);
+
+      new HTable(conf, HConstants.META_TABLE_NAME);
+  
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTableDescriptor desc = new HTableDescriptor("test");
+      HColumnDescriptor family = new HColumnDescriptor("fam:");
+      desc.addFamily(family);
+      admin.createTable(desc);
+  
+      HTable table = new HTable("test");
+      BatchUpdate batchUpdate = new BatchUpdate("testrow");
+      batchUpdate.put("fam:col", Bytes.toBytes("testdata"));
+      table.commit(batchUpdate);
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail();
+    }
   }
 }

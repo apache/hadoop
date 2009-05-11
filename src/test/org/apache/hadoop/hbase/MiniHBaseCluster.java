@@ -110,8 +110,7 @@ public class MiniHBaseCluster implements HConstants {
    * @param serverNumber  Used as index into a list.
    */
   public void abortRegionServer(int serverNumber) {
-    HRegionServer server =
-      this.hbaseCluster.getRegionServers().get(serverNumber).getRegionServer();
+    HRegionServer server = getRegionServer(serverNumber);
     LOG.info("Aborting " + server.getServerInfo().toString());
     server.abort();
   }

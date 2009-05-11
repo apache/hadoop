@@ -69,8 +69,9 @@ abstract class RegionServerOperation implements Delayed, HConstants {
 
   protected boolean metaTableAvailable() {
     boolean available = true;
-    if (master.regionManager.numMetaRegions() != 
-      master.regionManager.numOnlineMetaRegions()) {
+    if ((master.regionManager.numMetaRegions() !=
+      master.regionManager.numOnlineMetaRegions()) ||
+      master.regionManager.metaRegionsInTransition()) {
       // We can't proceed because not all of the meta regions are online.
       // We can't block either because that would prevent the meta region
       // online message from being processed. In order to prevent spinning

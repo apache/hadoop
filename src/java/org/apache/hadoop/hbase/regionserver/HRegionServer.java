@@ -107,6 +107,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -136,7 +137,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
   
-  protected final HServerInfo serverInfo;
+  protected HServerInfo serverInfo;
   protected final HBaseConfiguration conf;
 
   private final ServerConnection connection;
@@ -167,10 +168,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
-  final HBaseServer server;
+  HBaseServer server;
   
   // Leases
-  private final Leases leases;
+  private Leases leases;
   
   // Request counter
   private volatile AtomicInteger requestCount = new AtomicInteger();
@@ -193,20 +194,20 @@ public class HRegionServer implements HConstants, HRegionInterface,
   private RegionServerMetrics metrics;
 
   // Compactions
-  final CompactSplitThread compactSplitThread;
+  CompactSplitThread compactSplitThread;
 
   // Cache flushing  
-  final MemcacheFlusher cacheFlusher;
+  MemcacheFlusher cacheFlusher;
   
   /* Check for major compactions.
    */
-  final Chore majorCompactionChecker;
+  Chore majorCompactionChecker;
 
   // HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
   protected volatile HLog log;
-  final LogRoller logRoller;
-  final LogFlusher logFlusher;
+  LogRoller logRoller;
+  LogFlusher logFlusher;
   
   // limit compactions while starting up
   CompactionLimitThread compactionLimitThread;
@@ -217,12 +218,22 @@ public class HRegionServer implements HConstants, HRegionInterface,
   final Map<String, InternalScanner> scanners =
     new ConcurrentHashMap<String, InternalScanner>();
 
-  private final ZooKeeperWrapper zooKeeperWrapper;
+  private ZooKeeperWrapper zooKeeperWrapper;
 
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
   private final long rpcTimeout;
+
+  // Address passed in to constructor.
+  private final HServerAddress address;
+
+  // The main region server thread.
+  private Thread regionServerThread;
+
+  // Run HDFS shutdown thread on exit if this is set. We clear this out when
+  // doing a restart() to prevent closing of HDFS.
+  private final AtomicBoolean shutdownHDFS = new AtomicBoolean(true);
 
   /**
    * Starts a HRegionServer at the default location
@@ -241,7 +252,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * @throws IOException
    */
   public HRegionServer(HServerAddress address, HBaseConfiguration conf)
-  throws IOException {  
+  throws IOException {
+    this.address = address;
     this.abortRequested = false;
     this.fsOk = true;
     this.conf = conf;
@@ -257,6 +269,73 @@ public class HRegionServer implements HConstants, HRegionInterface,
       conf.getInt("hbase.master.lease.period", 120 * 1000);
 
     sleeper = new Sleeper(this.msgInterval, this.stopRequested);
+
+    // Task thread to process requests from Master
+    this.worker = new Worker();
+
+    this.numRegionsToReport =                                        
+      conf.getInt("hbase.regionserver.numregionstoreport", 10);      
+
+    this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
+
+    reinitialize();
+  }
+
+  /**
+   * Creates all of the state that needs to be reconstructed in case we are
+   * doing a restart. This is shared between the constructor and restart().
+   * @throws IOException
+   */
+  private void reinitialize() throws IOException {
+    abortRequested = false;
+    stopRequested.set(false);
+    shutdownHDFS.set(true);
+
+    // Server to handle client requests
+    this.server = HBaseRPC.getServer(this, address.getBindAddress(), 
+      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+      false, conf);
+    this.server.setErrorHandler(this);
+    String machineName = DNS.getDefaultHost(
+        conf.get("hbase.regionserver.dns.interface","default"),
+        conf.get("hbase.regionserver.dns.nameserver","default"));
+    // Address is givin a default IP for the moment. Will be changed after
+    // calling the master.
+    this.serverInfo = new HServerInfo(new HServerAddress(
+      new InetSocketAddress(address.getBindAddress(),
+      this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
+      this.conf.getInt("hbase.regionserver.info.port", 60030), machineName);
+    if (this.serverInfo.getServerAddress() == null) {
+      throw new NullPointerException("Server address cannot be null; " +
+        "hbase-958 debugging");
+    }
+
+    reinitializeThreads();
+
+    reinitializeZooKeeper();
+
+    int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
+    for(int i = 0; i < nbBlocks; i++)  {
+      reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
+    }
+  }
+
+  private void reinitializeZooKeeper() throws IOException {
+    zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    watchMasterAddress();
+
+    boolean startCodeOk = false; 
+    while(!startCodeOk) {
+      serverInfo.setStartCode(System.currentTimeMillis());
+      startCodeOk = zooKeeperWrapper.writeRSLocation(serverInfo);
+      if(!startCodeOk) {
+        LOG.debug("Start code already taken, trying another one");
+      }
+    }
+  }
+
+  private void reinitializeThreads() {
+    this.workerThread = new Thread(worker);
 
     // Cache flushing thread.
     this.cacheFlusher = new MemcacheFlusher(conf, this);
@@ -278,53 +357,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.majorCompactionChecker = new MajorCompactionChecker(this,
       this.threadWakeFrequency * multiplier,  this.stopRequested);
 
-    // Task thread to process requests from Master
-    this.worker = new Worker();
-    this.workerThread = new Thread(worker);
-
-    // Server to handle client requests
-    this.server = HBaseRPC.getServer(this, address.getBindAddress(), 
-      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-      false, conf);
-    this.server.setErrorHandler(this);
-    String machineName = DNS.getDefaultHost(
-        conf.get("hbase.regionserver.dns.interface","default"),
-        conf.get("hbase.regionserver.dns.nameserver","default"));
-    // Address is givin a default IP for the moment. Will be changed after
-    // calling the master.
-    this.serverInfo = new HServerInfo(new HServerAddress(
-      new InetSocketAddress(address.getBindAddress(),
-      this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
-      this.conf.getInt("hbase.regionserver.info.port", 60030), machineName);
-    
-    if (this.serverInfo.getServerAddress() == null) {
-      throw new NullPointerException("Server address cannot be null; " +
-        "hbase-958 debugging");
-    }
-    this.zooKeeperWrapper = new ZooKeeperWrapper(conf);
-    watchMasterAddress();
-
-    boolean startCodeOk = false; 
-    while(!startCodeOk) {
-      serverInfo.setStartCode(System.currentTimeMillis());
-      startCodeOk = zooKeeperWrapper.writeRSLocation(serverInfo);
-      if(!startCodeOk) {
-        LOG.debug("Start code already taken, trying another one");
-      }
-    }
-    
-    this.numRegionsToReport =                                        
-      conf.getInt("hbase.regionserver.numregionstoreport", 10);      
-      
     this.leases = new Leases(
-      conf.getInt("hbase.regionserver.lease.period", 60 * 1000),
-      this.threadWakeFrequency);
-    
-    int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
-    for(int i = 0; i < nbBlocks; i++)  {
-      reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
-    }
-    this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
+        conf.getInt("hbase.regionserver.lease.period", 60 * 1000),
+        this.threadWakeFrequency);
   }
 
   /**
@@ -336,14 +371,25 @@ public class HRegionServer implements HConstants, HRegionInterface,
    */
   public void process(WatchedEvent event) {
     EventType type = event.getType();
-    LOG.info("Got ZooKeeper event, state: " + event.getState() + ", type: " +
+    KeeperState state = event.getState();
+    LOG.info("Got ZooKeeper event, state: " + state + ", type: " +
               type + ", path: " + event.getPath());
-    if (type == EventType.NodeCreated) {
-      getMaster();
+
+    // Ignore events if we're shutting down.
+    if (stopRequested.get()) {
+      LOG.debug("Ignoring ZooKeeper event while shutting down");
+      return;
     }
 
-    // ZooKeeper watches are one time only, so we need to re-register our watch.
-    watchMasterAddress();
+    if (state == KeeperState.Expired) {
+      LOG.error("ZooKeeper session expired");
+      restart();
+    } else if (type == EventType.NodeCreated) {
+      getMaster();
+
+      // ZooKeeper watches are one time only, so we need to re-register our watch.
+      watchMasterAddress();
+    }
   }
 
   private void watchMasterAddress() {
@@ -353,12 +399,41 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
   }
 
+  private void restart() {
+    LOG.info("Restarting Region Server");
+
+    shutdownHDFS.set(false);
+    abort();
+    Threads.shutdown(regionServerThread);
+
+    boolean done = false;
+    while (!done) {
+      try {
+        reinitialize();
+        done = true;
+      } catch (IOException e) {
+        LOG.debug("Error trying to reinitialize ZooKeeper", e);
+      }
+    }
+
+    Thread t = new Thread(this);
+    String name = regionServerThread.getName();
+    t.setName(name);
+    t.start();
+  }
+
+  /** @return ZooKeeperWrapper used by RegionServer. */
+  public ZooKeeperWrapper getZooKeeperWrapper() {
+    return zooKeeperWrapper;
+  }
+
   /**
    * The HRegionServer sticks in this loop until closed. It repeatedly checks
    * in with the HMaster, sending heartbeats & reports, and receiving HRegion 
    * load/unload instructions.
    */
   public void run() {
+    regionServerThread = Thread.currentThread();
     boolean quiesceRequested = false;
     try {
       init(reportForDuty());
@@ -600,8 +675,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     join();
 
-    runThread(this.hdfsShutdownThread,
-      this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
+    if (shutdownHDFS.get()) {
+      runThread(this.hdfsShutdownThread,
+          this.conf.getLong("hbase.dfs.shutdown.wait", 30000));
+    }
+
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 

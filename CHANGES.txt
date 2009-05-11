@@ -121,6 +121,8 @@ Release 0.20.0 - Unreleased
                (Ryan Rawson via Stack)
    HBASE-1399  Can't drop tables since HBASE-1398 (Ryan Rawson via Andrew
                Purtell)
+   HBASE-1311  ZooKeeperWrapper: Failed to set watcher on ZNode /hbase/master
+               (Nitay Joffe via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

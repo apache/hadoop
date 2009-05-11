@@ -521,7 +521,19 @@ class RegionManager implements HConstants {
       return Collections.unmodifiableMap(onlineMetaRegions);
     }
   }
-  
+
+  public boolean metaRegionsInTransition() {
+    synchronized (onlineMetaRegions) {
+      for (MetaRegion metaRegion : onlineMetaRegions.values()) {
+        String regionName = Bytes.toString(metaRegion.getRegionName());
+        if (regionIsInTransition(regionName)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /**
    * Stop the root and meta scanners so that the region servers serving meta
    * regions can shut down.
