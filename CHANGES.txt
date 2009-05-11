@@ -549,6 +549,9 @@ Trunk (unreleased changes)
     HADOOP-5476. Close the underlying InputStream in SequenceFile::Reader when
     the constructor throws an exception. (Michael Tamm via cdouglas)
 
+    HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
+    (Nicholas), SZE via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
