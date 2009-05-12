@@ -58,7 +58,7 @@
 	       <include name="*.jar" />
 	       <exclude name="**/excluded/" />
 	    </fileset>
-	    <fileset dir="${hadoop.dir}/build">
+	    <fileset dir="${hadoop.dir}">
 	       <include name="**.jar" />
            <include name="contrib/streaming/*.jar" />
 	    </fileset>

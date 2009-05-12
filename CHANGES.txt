@@ -557,6 +557,9 @@ Trunk (unreleased changes)
     in the JobTracker to get the FileSystem objects as per the JobTracker's
     configuration. (Amar Kamat via ddas) 
 
+    HADOOP-5648. Not able to generate gridmix.jar on the already compiled version of hadoop.
+    (gkesavan)	
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
