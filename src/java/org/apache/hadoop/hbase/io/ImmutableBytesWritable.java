@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -34,10 +34,15 @@ import org.apache.hadoop.io.WritableComparator;
  * {@link org.apache.hadoop.io.BytesWritable} only this class is NOT resizable
  * and DOES NOT distinguish between the size of the seqeunce and the current
  * capacity as {@link org.apache.hadoop.io.BytesWritable} does. Hence its
- * comparatively 'immutable'.
+ * comparatively 'immutable'. When creating a new instance of this class,
+ * the underlying byte [] is not copied, just referenced.  The backing
+ * buffer is accessed when we go to serialize.
  */
-public class ImmutableBytesWritable implements WritableComparable<ImmutableBytesWritable> {
+public class ImmutableBytesWritable
+implements WritableComparable<ImmutableBytesWritable> {
   private byte[] bytes;
+  private int offset;
+  private int length;
   
   /**
    * Create a zero-size sequence.
@@ -51,11 +56,11 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
    * @param bytes This array becomes the backing storage for the object.
    */
   public ImmutableBytesWritable(byte[] bytes) {
-    this.bytes = bytes;
+    this(bytes, 0, bytes.length);
   }
   
   /**
-   * Set the new ImmutableBytesWritable to a copy of the contents of the passed
+   * Set the new ImmutableBytesWritable to the contents of the passed
    * <code>ibw</code>.
    * @param ibw the value to set this ImmutableBytesWritable to.
    */
@@ -64,15 +69,16 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
   }
   
   /**
-   * Set the value to a copy of the given byte range
-   * @param newData the new values to copy in
+   * Set the value to a given byte range
+   * @param bytes the new byte range to set to
    * @param offset the offset in newData to start at
-   * @param length the number of bytes to copy
+   * @param length the number of bytes in the range
    */
-  public ImmutableBytesWritable(final byte[] newData, final int offset,
+  public ImmutableBytesWritable(final byte[] bytes, final int offset,
       final int length) {
-    this.bytes = new byte[length];
-    System.arraycopy(newData, offset, this.bytes, 0, length);
+    this.bytes = bytes;
+    this.offset = offset;
+    this.length = length;
   }
   
   /**
@@ -102,25 +108,30 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
       throw new IllegalStateException("Uninitialiized. Null constructor " +
         "called w/o accompaying readFields invocation");
     }
-    return this.bytes.length;
+    return this.length;
   }
 
+  public int getOffset(){
+    return this.offset;
+  }
 
   public void readFields(final DataInput in) throws IOException {
-    this.bytes = new byte[in.readInt()];
-    in.readFully(this.bytes, 0, this.bytes.length);
+    this.length = in.readInt();
+    this.bytes = new byte[this.length];
+    in.readFully(this.bytes, 0, this.length);
+    this.offset = 0;
   }
   
   public void write(final DataOutput out) throws IOException {
-    out.writeInt(this.bytes.length);
-    out.write(this.bytes, 0, this.bytes.length);
+    out.writeInt(this.length);
+    out.write(this.bytes, this.offset, this.length);
   }
   
   // Below methods copied from BytesWritable
 
   @Override
   public int hashCode() {
-    return WritableComparator.hashBytes(bytes, this.bytes.length);
+    return WritableComparator.hashBytes(bytes, this.length);
   }
   
   /**
@@ -140,10 +151,10 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
    *         negative if left is smaller than right.
    */
   public int compareTo(final byte [] that) {
-    int diff = this.bytes.length - that.length;
+    int diff = this.length - that.length;
     return (diff != 0)?
       diff:
-      WritableComparator.compareBytes(this.bytes, 0, this.bytes.length, that,
+      WritableComparator.compareBytes(this.bytes, 0, this.length, that,
         0, that.length);
   }
 

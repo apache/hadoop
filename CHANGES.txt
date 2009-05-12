@@ -224,6 +224,8 @@ Release 0.20.0 - Unreleased
    HBASE-1393  Narrow synchronization in HLog
    HBASE-1404  minor edit of regionserver logging messages
    HBASE-1405  Threads.shutdown has unnecessary branch
+   HBASE-1407  Changing internal structure of ImmutableBytesWritable
+               contructor (Erik Holstad via Stack)
 
   OPTIMIZATIONS
 
