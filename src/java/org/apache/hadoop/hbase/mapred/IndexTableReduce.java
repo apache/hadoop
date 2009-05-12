@@ -76,7 +76,7 @@ public class IndexTableReduce extends MapReduceBase implements
 
     // index and store row key, row key already UTF-8 encoded
     Field keyField = new Field(indexConf.getRowkeyName(),
-      Bytes.toString(key.get()),
+      Bytes.toString(key.get(), key.getOffset(), key.getLength()),
       Field.Store.YES, Field.Index.UN_TOKENIZED);
     keyField.setOmitNorms(true);
     doc.add(keyField);

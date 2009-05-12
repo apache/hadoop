@@ -97,7 +97,18 @@ implements WritableComparable<ImmutableBytesWritable> {
    * @param b Use passed bytes as backing array for this instance.
    */
   public void set(final byte [] b) {
+    set(b, 0, b.length);
+  }
+
+  /**
+   * @param b Use passed bytes as backing array for this instance.
+   * @param offset
+   * @param length
+   */
+  public void set(final byte [] b, final int offset, final int length) {
     this.bytes = b;
+    this.offset = offset;
+    this.length = length;
   }
   
   /**
@@ -109,6 +120,10 @@ implements WritableComparable<ImmutableBytesWritable> {
         "called w/o accompaying readFields invocation");
     }
     return this.length;
+  }
+ 
+  public int getLength() {
+    return getSize();
   }
 
   public int getOffset(){
