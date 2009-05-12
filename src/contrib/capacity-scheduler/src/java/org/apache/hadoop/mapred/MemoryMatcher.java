@@ -112,7 +112,8 @@ class MemoryMatcher {
    * residing on the given TaskTracker.
    * 
    * @param taskTracker
-   * @return amount of memory that is used by the residing tasks
+   * @return amount of memory that is used by the residing tasks,
+   *          null if memory cannot be computed for some reason.
    */
   private synchronized Memory getMemReservedForTasks(
       TaskTrackerStatus taskTracker) {
@@ -141,6 +142,26 @@ class MemoryMatcher {
       // accounted in used memory.
       if ((task.getRunState() == TaskStatus.State.RUNNING)
           || (task.getRunState() == TaskStatus.State.COMMIT_PENDING)) {
+        JobInProgress job = scheduler.taskTrackerManager.getJob(
+                                              task.getTaskID().getJobID());
+        if (job == null) {
+          // This scenario can happen if a job was completed/killed
+          // and retired from JT's memory. In this state, we can ignore 
+          // the running task status and compute memory for the rest of 
+          // the tasks. However, any scheduling done with this computation
+          // could result in over-subscribing of memory for tasks on this
+          // TT (as the unaccounted for task is still running).
+          // So, it is safer to not schedule anything for this TT
+          // One of the ways of doing that is to return null from here
+          // and check for null in the calling method.
+          LOG.info("Task tracker: " + taskTracker.getHost() + " is reporting "
+                    + "a running / commit pending task: " + task.getTaskID()
+                    + " but no corresponding job was found. "
+                    + "Maybe job was retired. Not computing "
+                    + "memory values for this TT.");
+          return null;
+        }
+        
         JobConf jConf =
             scheduler.taskTrackerManager.getJob(task.getTaskID().getJobID())
                 .getJobConf();
@@ -194,6 +215,16 @@ class MemoryMatcher {
     }
 
     Memory memReservedForTasks = getMemReservedForTasks(taskTracker);
+    if (memReservedForTasks == null) {
+      // For some reason, maybe because we could not find the job
+      // corresponding to a running task (as can happen if the job
+      // is retired in between), we could not compute the memory state
+      // on this TT. Treat this as an error, and fail memory
+      // requirements.
+      LOG.info("Could not compute memory for taskTracker: " 
+                + taskTracker.getHost() + ". Failing memory requirements.");
+      return false;
+    }
     long vmemUsedOnTT = memReservedForTasks.vmem;
     long pmemUsedOnTT = memReservedForTasks.pmem;
 

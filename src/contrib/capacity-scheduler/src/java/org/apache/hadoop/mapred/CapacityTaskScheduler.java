@@ -413,7 +413,8 @@ class CapacityTaskScheduler extends TaskScheduler {
             }
           }
           else {
-            // mem requirements not met. Rather than look at the next job, 
+            // mem requirements not met or could not be computed for this TT
+            // Rather than look at the next job, 
             // we return nothing to the TT, with the hope that we improve 
             // chances of finding a suitable TT for this job. This lets us
             // avoid starving jobs with high mem requirements.         
