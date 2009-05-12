@@ -102,7 +102,7 @@ public class JobHistory {
     FsPermission.createImmutable((short) 0750); // rwxr-x---
   final static FsPermission HISTORY_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0740); // rwxr-----
-  private static JobConf jtConf;
+  private static FileSystem JT_FS; // jobtracker's filesystem
   /**
    * Record types are identifiers for each line of log in history files. 
    * A record type appears as the first token in a single line of log. 
@@ -141,9 +141,25 @@ public class JobHistory {
    * @param jobTrackerStartTime jobtracker's start time
    * @return true if intialized properly
    *         false otherwise
+   * @deprecated Use {@link #init(JobConf, String, long, FileSystem)} instead.
    */
   public static boolean init(JobConf conf, String hostname, 
                               long jobTrackerStartTime){
+    return init(conf, hostname, jobTrackerStartTime, null);
+  }
+
+  /**
+   * Initialize JobHistory files. 
+   * @param conf Jobconf of the job tracker.
+   * @param hostname jobtracker's hostname
+   * @param jobTrackerStartTime jobtracker's start time
+   * @param fs JobTracker's filesystem
+   * @return true if intialized properly
+   *         false otherwise
+   */
+  public static boolean init(JobConf conf, String hostname,
+                             long jobTrackerStartTime,
+                             FileSystem fs){
     try {
       LOG_DIR = conf.get("hadoop.job.history.location" ,
         "file:///" + new File(
@@ -153,9 +169,13 @@ public class JobHistory {
                                     String.valueOf(jobTrackerStartTime) + "_";
       jobtrackerHostname = hostname;
       Path logDir = new Path(LOG_DIR);
-      FileSystem fs = logDir.getFileSystem(conf);
-      if (!fs.exists(logDir)){
-        if (!fs.mkdirs(logDir, new FsPermission(HISTORY_DIR_PERMISSION))) {
+      if (fs == null) {
+        JT_FS = logDir.getFileSystem(conf);
+      } else {
+        JT_FS = fs;
+      }
+      if (!JT_FS.exists(logDir)){
+        if (!JT_FS.mkdirs(logDir, new FsPermission(HISTORY_DIR_PERMISSION))) {
           throw new IOException("Mkdirs failed to create " + logDir.toString());
         }
       }
@@ -165,7 +185,6 @@ public class JobHistory {
       jobHistoryBlockSize = 
         conf.getLong("mapred.jobtracker.job.history.block.size", 
                      3 * 1024 * 1024);
-      jtConf = conf;
     } catch(IOException e) {
         LOG.error("Failed to initialize JobHistory log file", e); 
         disableHistory = true;
@@ -635,7 +654,6 @@ public class JobHistory {
       String user = getUserName(jobConf);
       String jobName = trimJobName(getJobName(jobConf));
       
-      FileSystem fs = new Path(LOG_DIR).getFileSystem(jobConf);
       if (LOG_DIR == null) {
         return null;
       }
@@ -664,7 +682,7 @@ public class JobHistory {
         }
       };
       
-      FileStatus[] statuses = fs.listStatus(new Path(LOG_DIR), filter);
+      FileStatus[] statuses = JT_FS.listStatus(new Path(LOG_DIR), filter);
       String filename = null;
       if (statuses.length == 0) {
         LOG.info("Nothing to recover for job " + id);
@@ -696,9 +714,8 @@ public class JobHistory {
     throws IOException {
       Path logPath = JobHistory.JobInfo.getJobHistoryLogLocation(fileName);
       if (logPath != null) {
-        FileSystem fs = logPath.getFileSystem(conf);
         LOG.info("Deleting job history file " + logPath.getName());
-        fs.delete(logPath, false);
+        JT_FS.delete(logPath, false);
       }
       // do the same for the user file too
       logPath = JobHistory.JobInfo.getJobHistoryLogLocationForUser(fileName, 
@@ -726,25 +743,24 @@ public class JobHistory {
                                                           Path logFilePath) 
     throws IOException {
       Path ret;
-      FileSystem fs = logFilePath.getFileSystem(conf);
       String logFileName = logFilePath.getName();
       String tmpFilename = getSecondaryJobHistoryFile(logFileName);
       Path logDir = logFilePath.getParent();
       Path tmpFilePath = new Path(logDir, tmpFilename);
-      if (fs.exists(logFilePath)) {
+      if (JT_FS.exists(logFilePath)) {
         LOG.info(logFileName + " exists!");
-        if (fs.exists(tmpFilePath)) {
+        if (JT_FS.exists(tmpFilePath)) {
           LOG.info("Deleting " + tmpFilename 
                    + "  and using " + logFileName + " for recovery.");
-          fs.delete(tmpFilePath, false);
+          JT_FS.delete(tmpFilePath, false);
         }
         ret = tmpFilePath;
       } else {
         LOG.info(logFileName + " doesnt exist! Using " 
                  + tmpFilename + " for recovery.");
-        if (fs.exists(tmpFilePath)) {
+        if (JT_FS.exists(tmpFilePath)) {
           LOG.info("Renaming " + tmpFilename + " to " + logFileName);
-          fs.rename(tmpFilePath, logFilePath);
+          JT_FS.rename(tmpFilePath, logFilePath);
           ret = tmpFilePath;
         } else {
           ret = logFilePath;
@@ -754,7 +770,7 @@ public class JobHistory {
       // do the same for the user files too
       logFilePath = getJobHistoryLogLocationForUser(logFileName, conf);
       if (logFilePath != null) {
-        fs = logFilePath.getFileSystem(conf);
+        FileSystem fs = logFilePath.getFileSystem(conf);
         logDir = logFilePath.getParent();
         tmpFilePath = new Path(logDir, tmpFilename);
         if (fs.exists(logFilePath)) {
@@ -797,13 +813,12 @@ public class JobHistory {
       Path tmpLogPath = 
         JobHistory.JobInfo.getJobHistoryLogLocation(tmpLogFileName);
       if (masterLogPath != null) {
-        FileSystem fs = masterLogPath.getFileSystem(conf);
 
         // rename the tmp file to the master file. Note that this should be 
         // done only when the file is closed and handles are released.
-        if(fs.exists(tmpLogPath)) {
+        if(JT_FS.exists(tmpLogPath)) {
           LOG.info("Renaming " + tmpLogFileName + " to " + masterLogFileName);
-          fs.rename(tmpLogPath, masterLogPath);
+          JT_FS.rename(tmpLogPath, masterLogPath);
         }
       }
       
@@ -878,22 +893,20 @@ public class JobHistory {
           FSDataOutputStream out = null;
           PrintWriter writer = null;
 
-          if (LOG_DIR != null) {
-            // create output stream for logging in hadoop.job.history.location
-            fs = new Path(LOG_DIR).getFileSystem(jobConf);
-            
+          if (LOG_DIR != null) {           
+          // create output stream for logging in hadoop.job.history.location 
             if (restarted) {
               logFile = recoverJobHistoryFile(jobConf, logFile);
               logFileName = logFile.getName();
             }
             
             int defaultBufferSize = 
-              fs.getConf().getInt("io.file.buffer.size", 4096);
-            out = fs.create(logFile, 
+              JT_FS.getConf().getInt("io.file.buffer.size", 4096);
+            out = JT_FS.create(logFile, 
                             new FsPermission(HISTORY_FILE_PERMISSION),
                             true, 
                             defaultBufferSize, 
-                            fs.getDefaultReplication(), 
+                            JT_FS.getDefaultReplication(), 
                             jobHistoryBlockSize, null);
             writer = new PrintWriter(out);
             writers.add(writer);
@@ -968,22 +981,20 @@ public class JobHistory {
       FSDataOutputStream jobFileOut = null;
       try {
         if (LOG_DIR != null) {
-          fs = new Path(LOG_DIR).getFileSystem(jobConf);
           int defaultBufferSize = 
-              fs.getConf().getInt("io.file.buffer.size", 4096);
-          if (!fs.exists(jobFilePath)) {
-            jobFileOut = fs.create(jobFilePath, 
+              JT_FS.getConf().getInt("io.file.buffer.size", 4096);
+          if (!JT_FS.exists(jobFilePath)) {
+            jobFileOut = JT_FS.create(jobFilePath, 
                                    new FsPermission(HISTORY_FILE_PERMISSION),
                                    true, 
                                    defaultBufferSize, 
-                                   fs.getDefaultReplication(), 
-                                   fs.getDefaultBlockSize(), null);
+                                   JT_FS.getDefaultReplication(), 
+                                   JT_FS.getDefaultBlockSize(), null);
             jobConf.writeXml(jobFileOut);
             jobFileOut.close();
           }
         } 
         if (userLogDir != null) {
-          fs = new Path(userLogDir).getFileSystem(jobConf);
           jobFileOut = fs.create(userJobFilePath);
           jobConf.writeXml(jobFileOut);
         }
@@ -1775,13 +1786,12 @@ public class JobHistory {
       isRunning = true; 
       try {
         Path logDir = new Path(LOG_DIR);
-        FileSystem fs = logDir.getFileSystem(jtConf);
-        FileStatus[] historyFiles = fs.listStatus(logDir);
+        FileStatus[] historyFiles = JT_FS.listStatus(logDir);
         // delete if older than 30 days
         if (historyFiles != null) {
           for (FileStatus f : historyFiles) {
             if (now - f.getModificationTime() > THIRTY_DAYS_IN_MS) {
-              fs.delete(f.getPath(), true); 
+              JT_FS.delete(f.getPath(), true); 
               LOG.info("Deleting old history file : " + f.getPath());
             }
           }

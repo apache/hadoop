@@ -188,6 +188,7 @@ public class TaskTracker
   private static final String JOBCACHE = "jobcache";
   private static final String OUTPUT = "output";
   private JobConf fConf;
+  private FileSystem localFs;
   private int maxCurrentMapTasks;
   private int maxCurrentReduceTasks;
   private int failures;
@@ -471,6 +472,7 @@ public class TaskTracker
    * close().
    */
   synchronized void initialize() throws IOException {
+    localFs = FileSystem.getLocal(fConf);
     // use configured nameserver & interface to get local hostname
     if (fConf.get("slave.host.name") != null) {
       this.localHostname = fConf.get("slave.host.name");
@@ -1445,7 +1447,7 @@ public class TaskTracker
         // Delete the job directory for this  
         // task if the job is done/failed
         if (!rjob.keepJobFiles){
-          directoryCleanupThread.addToQueue(fConf, getLocalFiles(fConf, 
+          directoryCleanupThread.addToQueue(localFs, getLocalFiles(fConf, 
             getLocalJobDir(rjob.getJobID().toString())));
         }
         // Remove this job 
@@ -2514,19 +2516,19 @@ public class TaskTracker
             //might be using the dir. The JVM running the tasks would clean
             //the workdir per a task in the task process itself.
             if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              directoryCleanupThread.addToQueue(defaultJobConf,
+              directoryCleanupThread.addToQueue(localFs,
                   getLocalFiles(defaultJobConf,
                   taskDir));
             }  
             
             else {
-              directoryCleanupThread.addToQueue(defaultJobConf,
+              directoryCleanupThread.addToQueue(localFs,
                   getLocalFiles(defaultJobConf,
                 taskDir+"/job.xml"));
             }
           } else {
             if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              directoryCleanupThread.addToQueue(defaultJobConf,
+              directoryCleanupThread.addToQueue(localFs,
                   getLocalFiles(defaultJobConf,
                   taskDir+"/work"));
             }  

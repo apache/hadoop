@@ -552,6 +552,11 @@ Trunk (unreleased changes)
     HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
     (Nicholas), SZE via cdouglas)
 
+    HADOOP-5737. Fixes a problem in the way the JobTracker used to talk to
+    other daemons like the NameNode to get the job's files. Also adds APIs
+    in the JobTracker to get the FileSystem objects as per the JobTracker's
+    configuration. (Amar Kamat via ddas) 
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

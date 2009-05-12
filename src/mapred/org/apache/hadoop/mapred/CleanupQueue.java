@@ -39,7 +39,7 @@ class CleanupQueue {
    * paths(directories/files) in a separate thread. This constructor creates a
    * clean-up thread and also starts it as a daemon. Callers can instantiate one
    * CleanupQueue per JVM and can use it for deleting paths. Use
-   * {@link CleanupQueue#addToQueue(JobConf, Path...)} to add paths for
+   * {@link CleanupQueue#addToQueue(FileSystem, Path...)} to add paths for
    * deletion.
    */
   public CleanupQueue() {
@@ -50,22 +50,22 @@ class CleanupQueue {
     }
   }
   
-  public void addToQueue(JobConf conf, Path...paths) {
-    cleanupThread.addToQueue(conf,paths);
+  public void addToQueue(FileSystem fs, Path...paths) {
+    cleanupThread.addToQueue(fs, paths);
   }
 
   private static class PathCleanupThread extends Thread {
 
-    static class PathAndConf {
-      JobConf conf;
+    static class PathAndFS {
+      FileSystem fs;
       Path path;
-      PathAndConf(JobConf conf, Path path) {
-        this.conf = conf;
+      PathAndFS(FileSystem fs, Path path) {
+        this.fs = fs;
         this.path = path;
       }
     }
     // cleanup queue which deletes files/directories of the paths queued up.
-    private LinkedBlockingQueue<PathAndConf> queue = new LinkedBlockingQueue<PathAndConf>();
+    private LinkedBlockingQueue<PathAndFS> queue = new LinkedBlockingQueue<PathAndFS>();
 
     public PathCleanupThread() {
       setName("Directory/File cleanup thread");
@@ -73,28 +73,27 @@ class CleanupQueue {
       start();
     }
 
-    public void addToQueue(JobConf conf,Path... paths) {
+    public void addToQueue(FileSystem fs, Path... paths) {
       for (Path p : paths) {
         try {
-          queue.put(new PathAndConf(conf,p));
+          queue.put(new PathAndFS(fs, p));
         } catch (InterruptedException ie) {}
       }
     }
 
     public void run() {
       LOG.debug(getName() + " started.");
-      PathAndConf pathAndConf = null;
+      PathAndFS pathAndFS = null;
       while (true) {
         try {
-          pathAndConf = queue.take();
+          pathAndFS = queue.take();
           // delete the path.
-          FileSystem fs = pathAndConf.path.getFileSystem(pathAndConf.conf);
-          fs.delete(pathAndConf.path, true);
-          LOG.debug("DELETED " + pathAndConf.path);
+          pathAndFS.fs.delete(pathAndFS.path, true);
+          LOG.debug("DELETED " + pathAndFS.path);
         } catch (InterruptedException t) {
           return;
         } catch (Exception e) {
-          LOG.warn("Error deleting path" + pathAndConf.path);
+          LOG.warn("Error deleting path" + pathAndFS.path);
         } 
       }
     }
