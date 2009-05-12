@@ -111,7 +111,7 @@ checkout () {
   else   
     cd $BASEDIR
     $SVN revert -R .
-    rm -rf `$SVN status`
+    rm -rf `$SVN status --no-ignore`
     $SVN update
   fi
   return $?
