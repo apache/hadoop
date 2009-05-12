@@ -560,6 +560,8 @@ Trunk (unreleased changes)
     HADOOP-5648. Not able to generate gridmix.jar on the already compiled version of hadoop.
     (gkesavan)	
 
+    HADOOP-5808. Fix import never used javac warnings in hdfs. (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

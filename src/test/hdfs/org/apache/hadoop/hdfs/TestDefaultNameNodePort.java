@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+
 import junit.framework.TestCase;
-import java.io.*;
-import java.net.*;
-import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;

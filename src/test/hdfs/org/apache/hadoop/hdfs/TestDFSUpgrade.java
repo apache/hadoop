@@ -17,22 +17,22 @@
 */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
+
 import java.io.File;
 import java.io.IOException;
+
 import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
-
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 
 /**
 * This test ensures the appropriate response (successful or failure) from

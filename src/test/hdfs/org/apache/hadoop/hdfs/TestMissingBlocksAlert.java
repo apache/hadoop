@@ -18,18 +18,16 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URL;
+
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import junit.framework.TestCase;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have

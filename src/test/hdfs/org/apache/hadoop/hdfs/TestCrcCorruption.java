@@ -18,16 +18,16 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.io.*;
-import java.nio.channels.FileChannel;
+import java.io.File;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Random;
-import junit.framework.*;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.fs.Path;
 
 /**
  * A JUnit test for corrupted file handling.
