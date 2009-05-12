@@ -305,6 +305,13 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
   }
 
   /**
+   * Allows subclasses to get the {@link HTable}.
+   */
+  protected HTable getHTable() {
+    return this.table;
+  }
+
+  /**
    * Allows subclasses to set the {@link HTable}.
    *
    * @param table to get the data from

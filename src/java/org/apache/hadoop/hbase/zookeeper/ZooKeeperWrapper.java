@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
@@ -158,6 +161,7 @@ public class ZooKeeperWrapper implements HConstants {
 
     // The clientPort option may come after the server.X hosts, so we need to
     // grab everything and then create the final host:port comma separated list.
+    boolean anyValid = false;
     for (Entry<Object,Object> property : properties.entrySet()) {
       String key = property.getKey().toString().trim();
       String value = property.getValue().toString().trim();
@@ -167,7 +171,18 @@ public class ZooKeeperWrapper implements HConstants {
       else if (key.startsWith("server.")) {
         String host = value.substring(0, value.indexOf(':'));
         servers.add(host);
+        try {
+          InetAddress.getByName(host);
+          anyValid = true;
+        } catch (UnknownHostException e) {
+          LOG.warn(StringUtils.stringifyException(e));
+        }
       }
+    }
+
+    if (!anyValid) {
+      LOG.error("no valid quorum servers found in " + ZOOKEEPER_CONFIG_NAME);
+      return;
     }
 
     if (clientPort == null) {
