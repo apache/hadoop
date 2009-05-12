@@ -94,7 +94,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
   public void testClientSessionExpired() throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    String quorumServers = zooKeeperCluster.getQuorumServers();
+    String quorumServers = ZooKeeperWrapper.getQuorumServers();
     int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
     Watcher watcher = new EmptyWatcher();
     HConnection connection = HConnectionManager.getConnection(conf);
@@ -118,7 +118,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     try {
       new HTable(conf, HConstants.META_TABLE_NAME);
   
-      String quorumServers = zooKeeperCluster.getQuorumServers();
+      String quorumServers = ZooKeeperWrapper.getQuorumServers();
       int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
   
       Watcher watcher = new EmptyWatcher();

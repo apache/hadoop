@@ -43,7 +43,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   protected MiniDFSCluster dfsCluster;
   protected MiniZooKeeperCluster zooKeeperCluster;
   protected int regionServers;
-  protected int numZooKeeperPeers;
   protected boolean startDfs;
   private boolean openMetaTable = true;
 
@@ -75,7 +74,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     super();
     this.startDfs = startDfs;
     this.regionServers = regionServers;
-    this.numZooKeeperPeers = 1;
   }
 
   protected void setOpenMetaTable(boolean val) {
@@ -98,7 +96,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     // Note that this is done before we create the MiniHBaseCluster because we
     // need to edit the config to add the ZooKeeper servers.
     this.zooKeeperCluster = new MiniZooKeeperCluster();
-    this.zooKeeperCluster.startup(numZooKeeperPeers, testDir);
+    this.zooKeeperCluster.startup(testDir);
 
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);

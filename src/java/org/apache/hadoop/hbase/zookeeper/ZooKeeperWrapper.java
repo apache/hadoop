@@ -139,6 +139,11 @@ public class ZooKeeperWrapper implements HConstants {
     quorumServers = servers;
   }
 
+  /** @return comma separated host:port list of ZooKeeper quorum servers. */
+  public static String getQuorumServers() {
+    return quorumServers;
+  }
+
   private static void loadZooKeeperConfig() {
     Properties properties = null;
     try {
