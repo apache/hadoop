@@ -582,6 +582,9 @@ Release 0.20.1 - Unreleased
     like memory based scheduling, job initialization and removal of pre-emption.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-5714. Add a metric for NameNode getFileInfo operation. (Jakob Homan
+    via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

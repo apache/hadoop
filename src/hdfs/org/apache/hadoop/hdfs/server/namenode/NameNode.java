@@ -719,6 +719,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    *         or null if file not found
    */
   public FileStatus getFileInfo(String src)  throws IOException {
+    myMetrics.numFileInfoOps.inc();
     return namesystem.getFileInfo(src);
   }
 

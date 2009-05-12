@@ -62,6 +62,8 @@ public class NameNodeMetrics implements Updater {
                     new MetricsTimeVaryingInt("CreateFileOps", registry);
     public MetricsTimeVaryingInt numDeleteFileOps = 
                           new MetricsTimeVaryingInt("DeleteFileOps", registry);
+    public MetricsTimeVaryingInt numFileInfoOps =
+                          new MetricsTimeVaryingInt("FileInfoOps", registry);
     public MetricsTimeVaryingInt numAddBlockOps = 
                           new MetricsTimeVaryingInt("AddBlockOps", registry);
 
