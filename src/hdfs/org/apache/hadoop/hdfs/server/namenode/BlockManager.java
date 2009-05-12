@@ -145,23 +145,35 @@ public class BlockManager {
       out.println("Metasave: Blocks waiting for replication: "
           + neededReplications.size());
       for (Block block : neededReplications) {
-        List<DatanodeDescriptor> containingNodes = new ArrayList<DatanodeDescriptor>();
+        List<DatanodeDescriptor> containingNodes =
+                                          new ArrayList<DatanodeDescriptor>();
         NumberReplicas numReplicas = new NumberReplicas();
         // source node returned is not used
         chooseSourceDatanode(block, containingNodes, numReplicas);
-        int usableReplicas = numReplicas.liveReplicas()
-            + numReplicas.decommissionedReplicas();
+        int usableReplicas = numReplicas.liveReplicas() +
+                             numReplicas.decommissionedReplicas();
         // l: == live:, d: == decommissioned c: == corrupt e: == excess
-        out.print(block + " (replicas:" + " l: " + numReplicas.liveReplicas()
-            + " d: " + numReplicas.decommissionedReplicas() + " c: "
-            + numReplicas.corruptReplicas() + " e: "
-            + numReplicas.excessReplicas()
-            + ((usableReplicas > 0) ? "" : " MISSING") + ")");
+        out.print(block + ((usableReplicas > 0)? "" : " MISSING") + 
+                  " (replicas:" +
+                  " l: " + numReplicas.liveReplicas() +
+                  " d: " + numReplicas.decommissionedReplicas() +
+                  " c: " + numReplicas.corruptReplicas() +
+                  " e: " + numReplicas.excessReplicas() + ") "); 
 
-        for (Iterator<DatanodeDescriptor> jt = blocksMap.nodeIterator(block); jt
-            .hasNext();) {
+        Collection<DatanodeDescriptor> corruptNodes = 
+                                      corruptReplicas.getNodes(block);
+        
+        for (Iterator<DatanodeDescriptor> jt = blocksMap.nodeIterator(block);
+             jt.hasNext();) {
           DatanodeDescriptor node = jt.next();
-          out.print(" " + node + " : ");
+          String state = "";
+          if (corruptNodes != null && corruptNodes.contains(node)) {
+            state = "(corrupt)";
+          } else if (node.isDecommissioned() || 
+              node.isDecommissionInProgress()) {
+            state = "(decommissioned)";
+          }          
+          out.print(" " + node + state + " : ");
         }
         out.println("");
       }

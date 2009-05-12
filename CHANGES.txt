@@ -338,6 +338,9 @@ Trunk (unreleased changes)
     current user.
     (Rahul Kumar Singh via yhemanth)
 
+    HADOOP-5780. Improve per block message prited by "-metaSave" in HDFS.
+    (Raghu Angadi)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
