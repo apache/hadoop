@@ -27,12 +27,14 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -93,14 +95,35 @@ class ServerManager implements HConstants {
 
   protected HMaster master;
   
-  // Last time we logged average load.
-  private volatile long lastLogOfAverageLaod = 0;
-  private final long loggingPeriodForAverageLoad;
-  
   /* The regionserver will not be assigned or asked close regions if it
    * is currently opening >= this many regions.
    */
   private final int nobalancingCount;
+
+  class ServerMonitor extends Chore {
+
+    ServerMonitor(final int period, final AtomicBoolean stop) {
+      super(period, stop);
+    }
+
+    protected void chore() {
+      int numServers = serverAddressToServerInfo.size();
+      int numDeadServers = deadServers.size();
+      double averageLoad = getAverageLoad();
+      LOG.info(numServers + " region servers, " + numDeadServers + 
+        " dead, average load " + averageLoad);
+      if (numDeadServers > 0) {
+        LOG.info("DEAD [");
+        for (String server: deadServers) {
+          LOG.info("  " + server);
+        }
+        LOG.info("]");
+      }
+    }
+    
+  }
+
+  ServerMonitor serverMonitorThread;
 
   /**
    * @param master
@@ -108,10 +131,11 @@ class ServerManager implements HConstants {
   public ServerManager(HMaster master) {
     this.master = master;
     zooKeeperWrapper = master.getZooKeeperWrapper();
-    this.loggingPeriodForAverageLoad = master.getConfiguration().
-      getLong("hbase.master.avgload.logging.period", 60000);
     this.nobalancingCount = master.getConfiguration().
       getInt("hbase.regions.nobalancing.count", 4);
+    serverMonitorThread = new ServerMonitor(master.metaRescanInterval,
+      master.shutdownRequested);
+    serverMonitorThread.start();
   }
  
   /**
@@ -621,14 +645,6 @@ class ServerManager implements HConstants {
         totalLoad += load.getNumberOfRegions();
       }
       averageLoad = Math.ceil((double)totalLoad / (double)numServers);
-      // Only log on a period, not on every invocation of this method.
-      long now = System.currentTimeMillis();
-      if (LOG.isDebugEnabled() &&
-          (now > (this.loggingPeriodForAverageLoad + this.lastLogOfAverageLaod))) {
-        LOG.debug("Total Load: " + totalLoad + ", Num Servers: " + numServers 
-          + ", Avg Load: " + averageLoad);
-        this.lastLogOfAverageLaod = now;
-      }
     }
     return averageLoad;
   }

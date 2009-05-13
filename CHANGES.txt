@@ -229,7 +229,9 @@ Release 0.20.0 - Unreleased
    HBASE-1405  Threads.shutdown has unnecessary branch
    HBASE-1407  Changing internal structure of ImmutableBytesWritable
                contructor (Erik Holstad via Stack)
-   HBASE-1345  Remove distributed mode from MiniZooKeeper (Nitay Joffe via Stack)
+   HBASE-1345  Remove distributed mode from MiniZooKeeper (Nitay Joffe via
+               Stack)
+   HBASE-1414  Add server status logging chore to ServerManager
 
   OPTIMIZATIONS
 
