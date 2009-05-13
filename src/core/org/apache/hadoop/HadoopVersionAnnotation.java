@@ -42,7 +42,7 @@ public @interface HadoopVersionAnnotation {
    * @return the date in unix 'date' format
    */
   String date();
-  
+    
   /**
    * Get the url for the subversion repository.
    */
@@ -59,4 +59,11 @@ public @interface HadoopVersionAnnotation {
    * @return The branch name, e.g. "trunk" or "branches/branch-0.20"
    */
   String branch();
+
+  /**
+   * Get a checksum of the source files from which
+   * Hadoop was compiled.
+   * @return a string that uniquely identifies the source
+   **/
+  String srcChecksum();    
 }

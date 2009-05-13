@@ -567,6 +567,8 @@ Trunk (unreleased changes)
 
     HADOOP-5808. Fix import never used javac warnings in hdfs. (szetszwo)
 
+    HADOOP-5203. TT's version build is too restrictive. (Rick Cox via sharad)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
