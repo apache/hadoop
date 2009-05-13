@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -147,6 +148,15 @@ public class HLog implements HConstants, Syncable {
    */
   private final int maxLogs;
 
+  static byte [] COMPLETE_CACHE_FLUSH;
+  static {
+    try {
+      COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING);
+    } catch (UnsupportedEncodingException e) {
+      assert(false);
+    }
+  }
+
   /**
    * Create an edit log at the given <code>dir</code> location.
    *
@@ -199,6 +209,10 @@ public class HLog implements HConstants, Syncable {
 
   /**
    * Get the compression type for the hlog files.
+   * Commit logs SHOULD NOT be compressed.  You'll lose edits if the compression
+   * record is not complete.  In gzip, record is 32k so you could lose up to
+   * 32k of edits (All of this is moot till we have sync/flush in hdfs but
+   * still...).
    * @param c Configuration to use.
    * @return the kind of compression to use
    */
@@ -266,7 +280,7 @@ public class HLog implements HConstants, Syncable {
         Path newPath = computeFilename(this.filenum);
 
         this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
-          HLogKey.class, HLogEdit.class,
+          HLogKey.class, KeyValue.class,
           fs.getConf().getInt("io.file.buffer.size", 4096),
           fs.getDefaultReplication(), this.blocksize,
           SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
@@ -441,7 +455,7 @@ public class HLog implements HConstants, Syncable {
    * @param logEdit
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, HLogEdit logEdit)
+  public void append(HRegionInfo regionInfo, KeyValue logEdit)
   throws IOException {
     this.append(regionInfo, new byte[0], logEdit);
   }
@@ -453,7 +467,7 @@ public class HLog implements HConstants, Syncable {
    * @param logEdit
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, byte [] row, HLogEdit logEdit)
+  public void append(HRegionInfo regionInfo, byte [] row, KeyValue logEdit)
   throws IOException {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
@@ -520,7 +534,7 @@ public class HLog implements HConstants, Syncable {
       int counter = 0;
       for (KeyValue kv: edits) {
         HLogKey logKey = new HLogKey(regionName, tableName, seqNum[counter++]);
-        doWrite(logKey, new HLogEdit(kv), sync);
+        doWrite(logKey, kv, sync);
         this.numEntries.incrementAndGet();
       }
       updateLock.notifyAll();
@@ -563,7 +577,7 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
-  private void doWrite(HLogKey logKey, HLogEdit logEdit, boolean sync)
+  private void doWrite(HLogKey logKey, KeyValue logEdit, boolean sync)
   throws IOException {
     try {
       long now = System.currentTimeMillis();
@@ -663,9 +677,9 @@ public class HLog implements HConstants, Syncable {
     }
   }
 
-  private HLogEdit completeCacheFlushLogEdit() {
-    return new HLogEdit(new KeyValue(METAROW, METACOLUMN,
-      System.currentTimeMillis(), HLogEdit.COMPLETE_CACHE_FLUSH));
+  private KeyValue completeCacheFlushLogEdit() {
+    return new KeyValue(METAROW, METACOLUMN, System.currentTimeMillis(),
+      COMPLETE_CACHE_FLUSH);
   }
 
   /**
@@ -747,7 +761,7 @@ public class HLog implements HConstants, Syncable {
         // HADOOP-4751 is committed.
         long length = logfiles[i].getLen();
         HLogKey key = new HLogKey();
-        HLogEdit val = new HLogEdit();
+        KeyValue val = new KeyValue();
         try {
           SequenceFile.Reader in =
             new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
@@ -773,7 +787,7 @@ public class HLog implements HConstants, Syncable {
                   old = new SequenceFile.Reader(fs, oldlogfile, conf);
                 }
                 w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
-                    HLogEdit.class, getCompressionType(conf));
+                  KeyValue.class, getCompressionType(conf));
                 // Use copy of regionName; regionName object is reused inside in
                 // HStoreKey.getRegionName so its content changes as we iterate.
                 logWriters.put(regionName, w);
@@ -785,7 +799,7 @@ public class HLog implements HConstants, Syncable {
                 if (old != null) {
                   // Copy from existing log file
                   HLogKey oldkey = new HLogKey();
-                  HLogEdit oldval = new HLogEdit();
+                  KeyValue oldval = new KeyValue();
                   for (; old.next(oldkey, oldval); count++) {
                     if (LOG.isDebugEnabled() && count > 0 && count % 10000 == 0) {
                       LOG.debug("Copied " + count + " edits");
@@ -918,7 +932,7 @@ public class HLog implements HConstants, Syncable {
         Reader log = new SequenceFile.Reader(fs, logPath, conf);
         try {
           HLogKey key = new HLogKey();
-          HLogEdit val = new HLogEdit();
+          KeyValue val = new KeyValue();
           while (log.next(key, val)) {
             System.out.println(key.toString() + " " + val.toString());
           }

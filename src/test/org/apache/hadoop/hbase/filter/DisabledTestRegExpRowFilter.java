@@ -31,7 +31,6 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.regionserver.HLogEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**

@@ -119,23 +119,23 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       // Now open a reader on the log and assert append worked.
       reader = new SequenceFile.Reader(fs, filename, conf);
       HLogKey key = new HLogKey();
-      HLogEdit val = new HLogEdit();
+      KeyValue val = new KeyValue();
       for (int i = 0; i < COL_COUNT; i++) {
         reader.next(key, val);
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
-        assertTrue(Bytes.equals(row, val.getKeyValue().getRow()));
-        assertEquals((byte)(i + '0'), val.getKeyValue().getValue()[0]);
+        assertTrue(Bytes.equals(row, val.getRow()));
+        assertEquals((byte)(i + '0'), val.getValue()[0]);
         System.out.println(key + " " + val);
       }
       while (reader.next(key, val)) {
         // Assert only one more row... the meta flushed row.
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
-        assertTrue(Bytes.equals(HLog.METAROW, val.getKeyValue().getRow()));
-        assertTrue(Bytes.equals(HLog.METACOLUMN, val.getKeyValue().getColumn()));
-        assertEquals(0, Bytes.compareTo(HLogEdit.COMPLETE_CACHE_FLUSH,
-          val.getKeyValue().getValue()));
+        assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
+        assertTrue(Bytes.equals(HLog.METACOLUMN, val.getColumn()));
+        assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
+          val.getValue()));
         System.out.println(key + " " + val);
       }
     } finally {

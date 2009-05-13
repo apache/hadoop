@@ -290,7 +290,7 @@ public class Store implements HConstants {
       reconstructionLog, this.conf);
     try {
       HLogKey key = new HLogKey();
-      HLogEdit val = new HLogEdit();
+      KeyValue val = new KeyValue();
       long skippedEdits = 0;
       long editsCount = 0;
       // How many edits to apply before we send a progress report.
@@ -304,15 +304,14 @@ public class Store implements HConstants {
         }
         // Check this edit is for me. Also, guard against writing the special
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
-        KeyValue kv = val.getKeyValue();
-        if (val.isTransactionEntry() ||
-            kv.matchingColumnNoDelimiter(HLog.METACOLUMN,
+        if (/* Commented out for now -- St.Ack val.isTransactionEntry() ||*/
+            val.matchingColumnNoDelimiter(HLog.METACOLUMN,
               HLog.METACOLUMN.length - 1) ||
           !Bytes.equals(key.getRegionName(), regioninfo.getRegionName()) ||
-          !kv.matchingFamily(family.getName())) {
+          !val.matchingFamily(family.getName())) {
           continue;
         }
-        reconstructedCache.add(kv);
+        reconstructedCache.add(val);
         editsCount++;
         // Every 2k edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.

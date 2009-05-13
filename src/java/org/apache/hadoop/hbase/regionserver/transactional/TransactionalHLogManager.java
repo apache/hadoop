@@ -37,10 +37,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.regionserver.HLog;
-import org.apache.hadoop.hbase.regionserver.HLogEdit;
 import org.apache.hadoop.hbase.regionserver.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.SequenceFile;
@@ -51,6 +51,18 @@ import org.apache.hadoop.util.Progressable;
  * to/from the HLog.
  */
 class TransactionalHLogManager {
+  /** If transactional log entry, these are the op codes */
+  // TODO: Make these into types on the KeyValue!!! -- St.Ack
+  public enum TransactionalOperation {
+    /** start transaction */
+    START,
+    /** Equivalent to append in non-transactional environment */
+    WRITE,
+    /** Transaction commit entry */
+    COMMIT,
+    /** Abort transaction entry */
+    ABORT
+  }
 
   private static final Log LOG = LogFactory
       .getLog(TransactionalHLogManager.class);
@@ -84,10 +96,11 @@ class TransactionalHLogManager {
    * @throws IOException
    */
   public void writeStartToLog(final long transactionId) throws IOException {
+    /*
     HLogEdit logEdit;
-    logEdit = new HLogEdit(transactionId, HLogEdit.TransactionalOperation.START);
-
-    hlog.append(regionInfo, logEdit);
+    logEdit = new HLogEdit(transactionId, TransactionalOperation.START);
+*/
+    hlog.append(regionInfo, null/*logEdit*/);
   }
 
   /**
@@ -103,8 +116,8 @@ class TransactionalHLogManager {
         : update.getTimestamp();
 
     for (BatchOperation op : update) {
-      HLogEdit logEdit = new HLogEdit(transactionId, update.getRow(), op, commitTime);
-      hlog.append(regionInfo, update.getRow(), logEdit);
+      // COMMENTED OUT  HLogEdit logEdit = new HLogEdit(transactionId, update.getRow(), op, commitTime);
+      hlog.append(regionInfo, update.getRow(), null /*logEdit*/);
     }
   }
 
@@ -113,11 +126,11 @@ class TransactionalHLogManager {
    * @throws IOException
    */
   public void writeCommitToLog(final long transactionId) throws IOException {
-    HLogEdit logEdit;
+    /*HLogEdit logEdit;
     logEdit = new HLogEdit(transactionId,
         HLogEdit.TransactionalOperation.COMMIT);
-
-    hlog.append(regionInfo, logEdit);
+*/
+    hlog.append(regionInfo, null /*logEdit*/);
   }
 
   /**
@@ -125,10 +138,10 @@ class TransactionalHLogManager {
    * @throws IOException
    */
   public void writeAbortToLog(final long transactionId) throws IOException {
-    HLogEdit logEdit;
+    /*HLogEdit logEdit;
     logEdit = new HLogEdit(transactionId, HLogEdit.TransactionalOperation.ABORT);
-
-    hlog.append(regionInfo, logEdit);
+*/
+    hlog.append(regionInfo, null /*logEdit*/);
   }
 
   /**
@@ -161,10 +174,10 @@ class TransactionalHLogManager {
 
     SequenceFile.Reader logReader = new SequenceFile.Reader(fileSystem,
         reconstructionLog, conf);
-
+    /*
     try {
       HLogKey key = new HLogKey();
-      HLogEdit val = new HLogEdit();
+      KeyValue val = new KeyValue();
       long skippedEdits = 0;
       long totalEdits = 0;
       long startCount = 0;
@@ -174,6 +187,7 @@ class TransactionalHLogManager {
       // How many edits to apply before we send a progress report.
       int reportInterval = conf.getInt("hbase.hstore.report.interval.edits",
           2000);
+
       while (logReader.next(key, val)) {
         LOG.debug("Processing edit: key: " + key.toString() + " val: "
             + val.toString());
@@ -185,6 +199,7 @@ class TransactionalHLogManager {
         // against a KeyValue.  Each invocation creates a new instance.  St.Ack.
 
         // Check this edit is for me.
+
         byte[] column = val.getKeyValue().getColumn();
         Long transactionId = val.getTransactionId();
         if (!val.isTransactionEntry() || HLog.isMetaColumn(column)
@@ -194,6 +209,7 @@ class TransactionalHLogManager {
 
         List<BatchUpdate> updates = pendingTransactionsById.get(transactionId);
         switch (val.getOperation()) {
+
         case START:
           if (updates != null || abortedTransactions.contains(transactionId)
               || commitedTransactionsById.containsKey(transactionId)) {
@@ -259,6 +275,7 @@ class TransactionalHLogManager {
           pendingTransactionsById.remove(transactionId);
           commitedTransactionsById.put(transactionId, updates);
           commitCount++;
+
         }
         totalEdits++;
 
@@ -283,6 +300,7 @@ class TransactionalHLogManager {
               + " unfinished transactions. Going to the transaction log to resolve");
       throw new RuntimeException("Transaction log not yet implemented");
     }
+              */
 
     return commitedTransactionsById;
   }

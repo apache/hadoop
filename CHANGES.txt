@@ -18,6 +18,7 @@ Release 0.20.0 - Unreleased
    HBASE-1361  Disable bloom filters
    HBASE-1367  Get rid of Thrift exception 'NotFound'
    HBASE-1381  Remove onelab and bloom filters files from hbase
+   HBASE-1411  Remove HLogEdit.
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)

@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Test the transaction functionality. This requires to run an
  * {@link TransactionalRegionServer}.
  */
-public class TestTransactions extends HBaseClusterTestCase {
+public class DisabledTestTransactions extends HBaseClusterTestCase {
 
   private static final String TABLE_NAME = "table1";
 
@@ -52,7 +52,7 @@ public class TestTransactions extends HBaseClusterTestCase {
   private TransactionManager transactionManager;
 
   /** constructor */
-  public TestTransactions() {
+  public DisabledTestTransactions() {
     conf.set(HConstants.REGION_SERVER_CLASS, TransactionalRegionInterface.class
         .getName());
     conf.set(HConstants.REGION_SERVER_IMPL, TransactionalRegionServer.class
@@ -94,7 +94,7 @@ public class TestTransactions extends HBaseClusterTestCase {
     transactionManager.tryCommit(transactionState2);
   }
 
-  public void testTwoTransactionsWithConflict() throws IOException,
+  public void TestTwoTransactionsWithConflict() throws IOException,
       CommitUnsuccessfulException {
     TransactionState transactionState1 = makeTransaction1();
     TransactionState transactionState2 = makeTransaction2();
