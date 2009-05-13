@@ -105,11 +105,14 @@ public class ThriftUtilities {
    * @return Thrift TCell array
    */
   static public List<TCell> cellFromHBase(Cell[] in) {
-    List<TCell> list = new ArrayList<TCell>(in.length);
+    List<TCell> list = null;
     if (in != null) {
+      list = new ArrayList<TCell>(in.length);
       for (int i = 0; i < in.length; i++) {
         list.add(new TCell(in[i].getValue(), in[i].getTimestamp()));
       }
+    } else {
+      list = new ArrayList<TCell>(0);
     }
     return list;
   }

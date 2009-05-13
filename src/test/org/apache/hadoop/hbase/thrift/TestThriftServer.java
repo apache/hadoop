@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Unit testing for ThriftServer.HBaseHandler, a part of the 
  * org.apache.hadoop.hbase.thrift package.  
  */
-public class DisabledTestThriftServer extends HBaseClusterTestCase {
+public class TestThriftServer extends HBaseClusterTestCase {
 
   // Static names for tables, columns, rows, and values
   private static byte[] tableAname = Bytes.toBytes("tableA");
@@ -152,8 +152,10 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     handler.deleteAllRow(tableAname, rowBname);
 
     // Assert that the deletes were applied
-    assertFalse(handler.get(tableAname, rowAname, columnBname).size() == 0);
-    assertFalse(handler.getRow(tableAname, rowBname).size() == 0);
+    int size = handler.get(tableAname, rowAname, columnBname).size();
+    assertEquals(0, size);
+    size = handler.getRow(tableAname, rowBname).size();
+    assertEquals(0, size);
 
     // Teardown
     handler.disableTable(tableAname);
@@ -188,8 +190,10 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     handler.mutateRowTs(tableAname, rowBname, getMutations(), time2);
 
     // Assert that the timestamp-related methods retrieve the correct data
-    assertEquals(handler.getVerTs(tableAname, rowAname, columnBname, time2, MAXVERSIONS).size(), 2);
-    assertEquals(handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS).size(), 1);
+    assertEquals(handler.getVerTs(tableAname, rowAname, columnBname, time2,
+      MAXVERSIONS).size(), 2);
+    assertEquals(handler.getVerTs(tableAname, rowAname, columnBname, time1,
+      MAXVERSIONS).size(), 1);
 
     TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1).get(0);
     TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2).get(0);
@@ -197,7 +201,10 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertTrue(Bytes.equals(rowResult2.columns.get(columnBname).value, valueCname));
     
-    assertFalse(rowResult2.columns.containsKey(columnAname));
+    // Maybe I'd reading this wrong but at line #187 above, the BatchMutations
+    // are adding a columnAname at time2 so the below should be true not false
+    // -- St.Ack
+    assertTrue(rowResult2.columns.containsKey(columnAname));
     
     List<byte[]> columns = new ArrayList<byte[]>();
     columns.add(columnBname);
@@ -215,7 +222,8 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     handler.deleteAllRowTs(tableAname, rowBname, time2);
 
     // Assert that the timestamp-related methods retrieve the correct data
-    assertFalse(handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS).size() > 0);
+    int size = handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS).size();
+    assertFalse(size > 0);
     assertTrue(Bytes.equals(handler.get(tableAname, rowAname, columnBname).get(0).value, valueCname));
     assertFalse(handler.getRow(tableAname, rowBname).size() > 0);
 
@@ -251,7 +259,10 @@ public class DisabledTestThriftServer extends HBaseClusterTestCase {
     int scanner1 = handler.scannerOpen(tableAname, rowAname, getColumnList(true, true));
     TRowResult rowResult1a = handler.scannerGet(scanner1).get(0);
     assertTrue(Bytes.equals(rowResult1a.row, rowAname));
-    assertEquals(rowResult1a.columns.size(), 1);
+    // This used to be '1'.  I don't know why when we are asking for two columns
+    // and when the mutations above would seem to add two columns to the row.
+    // -- St.Ack 05/12/2009
+    assertEquals(rowResult1a.columns.size(), 2);
     assertTrue(Bytes.equals(rowResult1a.columns.get(columnBname).value, valueCname));
     TRowResult rowResult1b = handler.scannerGet(scanner1).get(0);
     assertTrue(Bytes.equals(rowResult1b.row, rowBname));
