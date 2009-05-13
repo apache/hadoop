@@ -111,12 +111,14 @@ Release 0.20.0 - Unreleased
    HBASE-1264  Wrong return values of comparators for ColumnValueFilter
                (Thomas Schneider via Andrew Purtell)
    HBASE-1374  NPE out of ZooKeeperWrapper.loadZooKeeperConfig
-   HBASE-1336  Splitting up the compare of family+column into 2 different compare 
+   HBASE-1336  Splitting up the compare of family+column into 2 different
+               compare 
    HBASE-1377  RS address is null in master web UI
-   HBASE-1344  WARN IllegalStateException: Cannot set a region as open if it has
-               not been pending
+   HBASE-1344  WARN IllegalStateException: Cannot set a region as open if it
+               has not been pending
    HBASE-1386  NPE in housekeeping
-   HBASE-1396  Remove unused sequencefile and mapfile config. from hbase-default.xml
+   HBASE-1396  Remove unused sequencefile and mapfile config. from
+               hbase-default.xml
    HBASE-1398  TableOperation doesnt format keys for meta scan properly
                (Ryan Rawson via Stack)
    HBASE-1399  Can't drop tables since HBASE-1398 (Ryan Rawson via Andrew
@@ -144,7 +146,8 @@ Release 0.20.0 - Unreleased
                initial Michael Gottesman work via Stack)
    HBASE-5121  Fix shell usage for format.width
    HBASE-845   HCM.isTableEnabled doesn't really tell if it is, or not
-   HBASE-903   [shell] Can't set table descriptor attributes when I alter a table
+   HBASE-903   [shell] Can't set table descriptor attributes when I alter a
+               table
    HBASE-1166  saveVersion.sh doesn't work with git (Nitay Joffe via Stack)
    HBASE-1167  JSP doesn't work in a git checkout (Nitay Joffe via Andrew
                Purtell)
@@ -178,7 +181,8 @@ Release 0.20.0 - Unreleased
                (Jonathan Gray via Stack)
    HBASE-1258,1259 ganglia metrics for 'requests' is confusing
                (Ryan Rawson via Stack)
-   HBASE-1265  HLogEdit static constants should be final (Nitay Joffe via Stack)
+   HBASE-1265  HLogEdit static constants should be final (Nitay Joffe via
+               Stack)
    HBASE-1244  ZooKeeperWrapper constants cleanup (Nitay Joffe via Stack)
    HBASE-1262  Eclipse warnings, including performance related things like
                synthetic accessors (Nitay Joffe via Stack)
@@ -236,6 +240,8 @@ Release 0.20.0 - Unreleased
                (Erik Holstad and Jon Gray via Stack)
    HBASE-1380  Make KeyValue implement HeapSize
                (Erik Holstad and Jon Gray via Stack)
+   HBASE-1413  Fall back to filesystem block size default if HLog blocksize is
+               not specified
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
