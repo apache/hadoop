@@ -19,12 +19,16 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.RawComparator;
 
 /**
@@ -45,10 +49,10 @@ import org.apache.hadoop.io.RawComparator;
  * Byte.MAX_SIZE, and column qualifier + key length must be < Integer.MAX_SIZE.
  * The column does not contain the family/qualifier delimiter.
  * 
- * <p>TODO: Group Key-only compartors and operations into a Key class, just
+ * <p>TODO: Group Key-only comparators and operations into a Key class, just
  * for neatness sake, if can figure what to call it.
  */
-public class KeyValue {
+public class KeyValue implements Writable, HeapSize {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
   /**
@@ -190,9 +194,12 @@ public class KeyValue {
   public static final KeyValue LOWESTKEY = 
     new KeyValue(HConstants.EMPTY_BYTE_ARRAY, HConstants.LATEST_TIMESTAMP);
   
-  private final byte [] bytes;
-  private final int offset;
-  private final int length;
+  private byte [] bytes = null;
+  private int offset = 0;
+  private int length = 0;
+
+  /** Writable Constructor -- DO NOT USE */
+  public KeyValue() {}
 
   /**
    * Creates a KeyValue from the start of the specified byte array.
@@ -1419,5 +1426,23 @@ public class KeyValue {
       }
       return 0;
     }
+  }
+  
+  // HeapSize
+  public long heapSize() {
+    return this.length;
+  }
+  
+  // Writable
+  public void readFields(final DataInput in) throws IOException {
+    this.length = in.readInt();
+    this.offset = 0;
+    this.bytes = new byte[this.length];
+    in.readFully(this.bytes, 0, this.length);
+  }
+  
+  public void write(final DataOutput out) throws IOException {
+    out.writeInt(this.length);
+    out.write(this.bytes, this.offset, this.length);
   }
 }

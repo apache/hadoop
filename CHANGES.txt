@@ -232,6 +232,10 @@ Release 0.20.0 - Unreleased
    HBASE-1345  Remove distributed mode from MiniZooKeeper (Nitay Joffe via
                Stack)
    HBASE-1414  Add server status logging chore to ServerManager
+   HBASE-1379  Make KeyValue implement Writable
+               (Erik Holstad and Jon Gray via Stack)
+   HBASE-1380  Make KeyValue implement HeapSize
+               (Erik Holstad and Jon Gray via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

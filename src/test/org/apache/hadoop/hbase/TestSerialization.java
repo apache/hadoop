@@ -43,6 +43,15 @@ public class TestSerialization extends HBaseTestCase {
     super.tearDown();
   }
 
+  public void testKeyValue() throws Exception {
+    byte [] row = Bytes.toBytes(getName());
+    byte [] column = Bytes.toBytes(getName() + ":" + getName());
+    KeyValue original = new KeyValue(row, column);
+    byte [] bytes = Writables.getBytes(original);
+    KeyValue newone = (KeyValue)Writables.getWritable(bytes, new KeyValue());
+    assertTrue(KeyValue.COMPARATOR.compare(original, newone) == 0);
+  }
+
   public void testHbaseMapWritable() throws Exception {
     HbaseMapWritable<byte [], byte []> hmw =
       new HbaseMapWritable<byte[], byte[]>();
