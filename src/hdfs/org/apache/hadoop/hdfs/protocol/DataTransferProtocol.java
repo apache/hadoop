@@ -31,15 +31,11 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 14:
-   *    OP_REPLACE_BLOCK is sent from the Balancer server to the destination,
-   *    including the block id, source, and proxy.
-   *    OP_COPY_BLOCK is sent from the destination to the proxy, which contains
-   *    only the block id.
-   *    A reply to OP_COPY_BLOCK sends the block content.
-   *    A reply to OP_REPLACE_BLOCK includes an operation status.
+   * Version 15:
+   *    Added a new status OP_STATUS_ERROR_ACCESS_TOKEN
+   *    Access token is now required on all DN operations
    */
-  public static final int DATA_TRANSFER_VERSION = 14;
+  public static final int DATA_TRANSFER_VERSION = 15;
 
   // Processed at datanode stream-handler
   public static final byte OP_WRITE_BLOCK = (byte) 80;
@@ -54,7 +50,8 @@ public interface DataTransferProtocol {
   public static final int OP_STATUS_ERROR_CHECKSUM = 2;  
   public static final int OP_STATUS_ERROR_INVALID = 3;  
   public static final int OP_STATUS_ERROR_EXISTS = 4;  
-  public static final int OP_STATUS_CHECKSUM_OK = 5;  
+  public static final int OP_STATUS_ERROR_ACCESS_TOKEN = 5;
+  public static final int OP_STATUS_CHECKSUM_OK = 6;
 
 
 

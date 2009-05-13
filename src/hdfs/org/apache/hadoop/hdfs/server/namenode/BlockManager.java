@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -22,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
+import org.apache.hadoop.security.AccessTokenHandler;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -219,7 +221,7 @@ public class BlockManager {
 
 
   List<LocatedBlock> getBlockLocations(Block[] blocks, long offset,
-      long length, int nrBlocksToReturn) {
+      long length, int nrBlocksToReturn) throws IOException {
     int curBlk = 0;
     long curPos = 0, blkSize = 0;
     int nrBlocks = (blocks[0].getNumBytes() == 0) ? 0 : blocks.length;
@@ -263,8 +265,13 @@ public class BlockManager {
             machineSet[numNodes++] = dn;
         }
       }
-      results.add(new LocatedBlock(blocks[curBlk], machineSet, curPos,
-          blockCorrupt));
+      LocatedBlock b = new LocatedBlock(blocks[curBlk], machineSet, curPos,
+          blockCorrupt);
+      if (namesystem.isAccessTokenEnabled) {
+        b.setAccessToken(namesystem.accessTokenHandler.generateToken(b.getBlock()
+            .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.READ)));
+      }
+      results.add(b);
       curPos += blocks[curBlk].getNumBytes();
       curBlk++;
     } while (curPos < endOff && curBlk < blocks.length

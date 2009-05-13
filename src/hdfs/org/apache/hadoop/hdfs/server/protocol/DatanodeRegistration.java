@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.security.ExportedAccessKeys;
 
 /** 
  * DatanodeRegistration class contains all information the name-node needs
@@ -46,6 +47,7 @@ implements Writable, NodeRegistration {
   }
 
   public StorageInfo storageInfo;
+  public ExportedAccessKeys exportedKeys;
 
   /**
    * Default constructor.
@@ -60,6 +62,7 @@ implements Writable, NodeRegistration {
   public DatanodeRegistration(String nodeName) {
     super(nodeName);
     this.storageInfo = new StorageInfo();
+    this.exportedKeys = new ExportedAccessKeys();
   }
   
   public void setInfoPort(int infoPort) {
@@ -115,6 +118,7 @@ implements Writable, NodeRegistration {
     out.writeShort(ipcPort);
 
     storageInfo.write(out);
+    exportedKeys.write(out);
   }
 
   /** {@inheritDoc} */
@@ -125,5 +129,6 @@ implements Writable, NodeRegistration {
     this.ipcPort = in.readShort() & 0x0000ffff;
 
     storageInfo.readFields(in);
+    exportedKeys.readFields(in);
   }
 }

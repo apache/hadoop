@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.ExportedAccessKeys;
 
 /*****************************************************************************
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
@@ -34,12 +35,10 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
    * 
-   * 3: Backup node support: versionRequest(), errorReport(), register(),
-   *      startCheckpoint(), endCheckpoint(), journalSize(), journal().
-   *    SecondaryNameNode methods deprecated:
-   *      getEditLogSize(), rollEditLog(), rollFSImage().
+   * 4: new method added: getAccessKeys()
+   *      
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
 
   // Error codes passed by errorReport().
   final static int NOTIFY = 0;
@@ -68,6 +67,14 @@ public interface NamenodeProtocol extends VersionedProtocol {
    */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
   throws IOException;
+
+  /**
+   * Get the current access keys
+   * 
+   * @return ExportedAccessKeys containing current access keys
+   * @throws IOException 
+   */
+  public ExportedAccessKeys getAccessKeys() throws IOException;
 
   /**
    * Get the size of the current edit log (in bytes).

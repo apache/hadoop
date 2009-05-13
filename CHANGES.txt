@@ -53,6 +53,9 @@ Trunk (unreleased changes)
     HADOOP-5679. Resolve findbugs warnings in core/streaming/pipes/examples. 
     (Jothi Padmanabhan via sharad)
 
+    HADOOP-4359. Support for data access authorization checking on Datanodes.
+    (Kan Zhang via rangadi)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

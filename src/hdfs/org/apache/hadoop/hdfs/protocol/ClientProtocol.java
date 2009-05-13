@@ -41,9 +41,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 43: added restoreFailedStorage command
+   * 44: All LocatedBlock objects contain access tokens
    */
-  public static final long versionID = 43L;
+  public static final long versionID = 44L;
   
   ///////////////////////////////////////
   // File contents

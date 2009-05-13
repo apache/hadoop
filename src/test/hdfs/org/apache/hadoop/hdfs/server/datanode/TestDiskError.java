@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.AccessToken;
 
 import junit.framework.TestCase;
 
@@ -119,6 +120,7 @@ public class TestDiskError extends TestCase {
       Text.writeString( out, "" );
       out.writeBoolean(false); // Not sending src node information
       out.writeInt(0);
+      AccessToken.DUMMY_TOKEN.write(out);
       
       // write check header
       out.writeByte( 1 );

@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessToken;
 import org.apache.hadoop.util.DataChecksum;
 
 /**
@@ -183,6 +184,7 @@ public class TestDataTransferProtocol extends TestCase {
     Text.writeString(sendOut, "cl");// clientID
     sendOut.writeBoolean(false); // no src node info
     sendOut.writeInt(0);           // number of downstream targets
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     
     // bad bytes per checksum
@@ -218,6 +220,7 @@ public class TestDataTransferProtocol extends TestCase {
     Text.writeString(sendOut, "cl");// clientID
     sendOut.writeBoolean(false); // no src node info
     sendOut.writeInt(0);
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt((int)512);
     sendOut.writeInt(4);           // size of packet
@@ -245,6 +248,7 @@ public class TestDataTransferProtocol extends TestCase {
     Text.writeString(sendOut, "cl");// clientID
     sendOut.writeBoolean(false); // no src node info
     sendOut.writeInt(0);
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt((int)512);    // checksum size
     sendOut.writeInt(8);           // size of packet
@@ -274,6 +278,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(fileLen);
     recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);
     Text.writeString(sendOut, "cl");
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendRecvData("Wrong block ID " + newBlockId + " for read", false); 
 
     // negative block start offset
@@ -285,6 +290,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(-1L);
     sendOut.writeLong(fileLen);
     Text.writeString(sendOut, "cl");
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendRecvData("Negative start-offset for read for block " + 
                  firstBlock.getBlockId(), false);
 
@@ -297,6 +303,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(fileLen);
     sendOut.writeLong(fileLen);
     Text.writeString(sendOut, "cl");
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendRecvData("Wrong start-offset for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -311,6 +318,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(0);
     sendOut.writeLong(-1-random.nextInt(oneMil));
     Text.writeString(sendOut, "cl");
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendRecvData("Negative length for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -325,6 +333,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(0);
     sendOut.writeLong(fileLen + 1);
     Text.writeString(sendOut, "cl");
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     sendRecvData("Wrong length for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -337,6 +346,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeLong(0);
     sendOut.writeLong(fileLen);
     Text.writeString(sendOut, "cl");
+    AccessToken.DUMMY_TOKEN.write(sendOut);
     readFile(fileSys, file, fileLen);
   }
 }
