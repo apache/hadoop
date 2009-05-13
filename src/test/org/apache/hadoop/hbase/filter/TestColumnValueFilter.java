@@ -79,9 +79,9 @@ public class TestColumnValueFilter extends TestCase {
 
   private void substrFilterTests(RowFilterInterface filter) 
       throws Exception {
-    assertTrue("substrTrue", filter.filterColumn(ROW, 0, ROW.length,
+    assertFalse("substrTrue", filter.filterColumn(ROW, 0, ROW.length,
         COLUMN, 0, COLUMN.length, FULLSTRING_1, 0, FULLSTRING_1.length));
-    assertFalse("substrFalse", filter.filterColumn(ROW, 0, ROW.length,
+    assertTrue("substrFalse", filter.filterColumn(ROW, 0, ROW.length,
         COLUMN, 0, COLUMN.length, FULLSTRING_2, 0, FULLSTRING_2.length));
     assertFalse("substrFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("substrFilterNotNull", filter.filterRow((List<KeyValue>)null));
@@ -89,9 +89,9 @@ public class TestColumnValueFilter extends TestCase {
 
   private void regexFilterTests(RowFilterInterface filter) 
       throws Exception {
-    assertTrue("regexTrue", filter.filterColumn(ROW, 0, ROW.length,
+    assertFalse("regexTrue", filter.filterColumn(ROW, 0, ROW.length,
         COLUMN, 0, COLUMN.length, FULLSTRING_1, 0, FULLSTRING_1.length));
-    assertFalse("regexFalse", filter.filterColumn(ROW, 0, ROW.length,
+    assertTrue("regexFalse", filter.filterColumn(ROW, 0, ROW.length,
         COLUMN, 0, COLUMN.length, FULLSTRING_2, 0, FULLSTRING_2.length));
     assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("regexFilterNotNull", filter.filterRow((List<KeyValue>)null));
