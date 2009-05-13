@@ -143,8 +143,8 @@ public class KeyValue {
   public static enum Type {
     Put((byte)4),
     Delete((byte)8),
-    DeleteColumn((byte)16),
-    DeleteFamily((byte)32),
+    DeleteColumn((byte)12),
+    DeleteFamily((byte)14),
     // Maximum is used when searching; you look from maximum on down.
     Maximum((byte)255);
     

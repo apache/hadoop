@@ -234,6 +234,7 @@ Release 0.20.0 - Unreleased
    HBASE-1414  Add server status logging chore to ServerManager
 
   OPTIMIZATIONS
+   HBASE-1412  Change values for delete column and column family in KeyValue
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
