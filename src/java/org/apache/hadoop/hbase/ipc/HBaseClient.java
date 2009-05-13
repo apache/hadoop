@@ -202,8 +202,8 @@ public class HBaseClient {
       this.remoteId = remoteId;
       UserGroupInformation ticket = remoteId.getTicket();
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
-          remoteId.getAddress().toString() +
-          " from " + ((ticket==null)?"an unknown user":ticket.getUserName()));
+        remoteId.getAddress().toString() +
+        ((ticket==null)?" from an unknown user": (" from " + ticket.getUserName())));
       this.setDaemon(true);
     }
 

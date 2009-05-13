@@ -242,6 +242,7 @@ Release 0.20.0 - Unreleased
                (Erik Holstad and Jon Gray via Stack)
    HBASE-1413  Fall back to filesystem block size default if HLog blocksize is
                not specified
+   HBASE-1417  Cleanup disorientating RPC message
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
