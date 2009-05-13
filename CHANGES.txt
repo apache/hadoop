@@ -340,6 +340,8 @@ Trunk (unreleased changes)
 
     HADOOP-5780. Improve per block message prited by "-metaSave" in HDFS.
     (Raghu Angadi)
+   
+    HADOOP-5792. To resolve jsp-2.1 jars through ivy (Giridharan Kesavan) 
 
   OPTIMIZATIONS
 

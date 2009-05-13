@@ -17,8 +17,8 @@
 	<classpathentry kind="lib" path="lib/commons-cli-2.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/kfs-0.2.2.jar"/>
-	<classpathentry kind="lib" path="lib/jsp-2.1/jsp-2.1.jar"/>
-	<classpathentry kind="lib" path="lib/jsp-2.1/jsp-api-2.1.jar"/>
+	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jsp-2.1-6.1.14.jar"/>
+	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jsp-api-2.1-6.1.14.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-codec-1.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-httpclient-3.0.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-el-1.0.jar"/>
