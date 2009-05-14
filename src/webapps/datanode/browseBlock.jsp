@@ -24,17 +24,13 @@
   import="java.io.*"
   import="java.util.*"
   import="java.net.*"
+
   import="org.apache.hadoop.hdfs.*"
   import="org.apache.hadoop.hdfs.server.namenode.*"
-  import="org.apache.hadoop.hdfs.server.datanode.*"
   import="org.apache.hadoop.hdfs.protocol.*"
-  import="org.apache.hadoop.io.*"
-  import="org.apache.hadoop.conf.*"
-  import="org.apache.hadoop.net.DNS"
   import="org.apache.hadoop.security.AccessToken"
   import="org.apache.hadoop.security.AccessTokenHandler"
   import="org.apache.hadoop.util.*"
-  import="java.text.DateFormat"
 %>
 
 <%!
@@ -46,14 +42,11 @@
     long startOffset = 0;
     int datanodePort;
 
-    String blockIdStr = null;
-    long currBlockId = 0;
-    blockIdStr = req.getParameter("blockId");
-    if (blockIdStr == null) {
+    final Long blockId = JspHelper.validateLong(req.getParameter("blockId"));
+    if (blockId == null) {
       out.print("Invalid input (blockId absent)");
       return;
     }
-    currBlockId = Long.parseLong(blockIdStr);
 
     String datanodePortStr = req.getParameter("datanodePort");
     if (datanodePortStr == null) {
@@ -74,8 +67,9 @@
       startOffset = 0;
     else startOffset = Long.parseLong(startOffsetStr);
     
-    String filename = req.getParameter("filename");
-    if (filename == null || filename.length() == 0) {
+    final String filename = JspHelper.validatePath(
+        req.getParameter("filename"));
+    if (filename == null) {
       out.print("Invalid input");
       return;
     }
@@ -102,7 +96,6 @@
     DatanodeInfo chosenNode;
     //URL for TAIL 
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
-    long blockId = lastBlk.getBlock().getBlockId();
     try {
       chosenNode = JspHelper.bestNode(lastBlk);
     } catch (IOException e) {
@@ -124,7 +117,7 @@
 
     out.print("<form action=\"/browseBlock.jsp\" method=GET>");
     out.print("<b>Chunk size to view (in bytes, up to file's DFS block size): </b>");
-    out.print("<input type=\"hidden\" name=\"blockId\" value=\"" + currBlockId +
+    out.print("<input type=\"hidden\" name=\"blockId\" value=\"" + blockId +
               "\">");
     out.print("<input type=\"hidden\" name=\"blockSize\" value=\"" + 
               blockSize + "\">");
@@ -147,10 +140,9 @@
     out.println("\n<table>");
     for (LocatedBlock cur : blocks) {
       out.print("<tr>");
-      blockId = cur.getBlock().getBlockId();
+      final String blockidstring = Long.toString(cur.getBlock().getBlockId());
       blockSize = cur.getBlock().getNumBytes();
-      String blk = "blk_" + Long.toString(blockId);
-      out.print("<td>"+Long.toString(blockId)+":</td>");
+      out.print("<td>"+blockidstring+":</td>");
       DatanodeInfo[] locs = cur.getLocations();
       for(int j=0; j<locs.length; j++) {
         String datanodeAddr = locs[j].getName();
@@ -160,7 +152,7 @@
         fqdn = InetAddress.getByName(locs[j].getHost()).getCanonicalHostName();
         String blockUrl = "http://"+ fqdn + ":" +
                         locs[j].getInfoPort() +
-                        "/browseBlock.jsp?blockId=" + Long.toString(blockId) +
+                        "/browseBlock.jsp?blockId=" + blockidstring +
                         "&blockSize=" + blockSize +
                "&filename=" + URLEncoder.encode(filename, "UTF-8")+ 
                         "&datanodePort=" + datanodePort + 
@@ -191,20 +183,18 @@
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
 
-    String filename = req.getParameter("filename");
+    final String filename = JspHelper.validatePath(
+        req.getParameter("filename"));
     if (filename == null) {
       out.print("Invalid input (filename absent)");
       return;
     }
     
-    String blockIdStr = null;
-    long blockId = 0;
-    blockIdStr = req.getParameter("blockId");
-    if (blockIdStr == null) {
+    final Long blockId = JspHelper.validateLong(req.getParameter("blockId"));
+    if (blockId == null) {
       out.print("Invalid input (blockId absent)");
       return;
     }
-    blockId = Long.parseLong(blockIdStr);
 
     final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(), JspHelper.conf);
     
@@ -226,14 +216,11 @@
       }
     }
     
-    String blockGenStamp = null;
-    long genStamp = 0;
-    blockGenStamp = req.getParameter("genstamp");
-    if (blockGenStamp == null) {
+    final Long genStamp = JspHelper.validateLong(req.getParameter("genstamp"));
+    if (genStamp == null) {
       out.print("Invalid input (genstamp absent)");
       return;
     }
-    genStamp = Long.parseLong(blockGenStamp);
 
     String blockSizeStr;
     long blockSize = 0;
@@ -307,10 +294,10 @@
     } 
     else {
       //we are in the same block
-      nextBlockIdStr = blockIdStr;
+      nextBlockIdStr = blockId.toString();
       nextStartOffset = startOffset + chunkSizeToView;
       nextBlockSize = blockSize;
-      nextGenStamp = blockGenStamp;
+      nextGenStamp = genStamp.toString();
     }
     String nextUrl = null;
     if (nextBlockIdStr != null) {
@@ -361,11 +348,11 @@
     }
     else {
       //we are in the same block
-      prevBlockIdStr = blockIdStr;
+      prevBlockIdStr = blockId.toString();
       prevStartOffset = startOffset - chunkSizeToView;
       if (prevStartOffset < 0) prevStartOffset = 0;
       prevBlockSize = blockSize;
-      prevGenStamp = blockGenStamp;
+      prevGenStamp = genStamp.toString();
     }
 
     String prevUrl = null;

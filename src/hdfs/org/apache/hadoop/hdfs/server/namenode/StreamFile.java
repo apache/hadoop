@@ -17,17 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
-import java.io.*;
-import java.net.*;
-import org.apache.hadoop.fs.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.InetSocketAddress;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.conf.*;
 
 public class StreamFile extends DfsServlet {
+  /** for java.io.Serializable */
+  private static final long serialVersionUID = 1L;
+
   static InetSocketAddress nameNodeAddr;
   static DataNode datanode = null;
   private static final Configuration masterConf = new Configuration();
@@ -48,8 +56,9 @@ public class StreamFile extends DfsServlet {
   
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-    String filename = request.getParameter("filename");
-    if (filename == null || filename.length() == 0) {
+    final String filename = JspHelper.validatePath(
+        request.getParameter("filename"));
+    if (filename == null) {
       response.setContentType("text/plain");
       PrintWriter out = response.getWriter();
       out.print("Invalid input");

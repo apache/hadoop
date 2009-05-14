@@ -24,17 +24,13 @@
   import="java.io.*"
   import="java.util.*"
   import="java.net.*"
+
   import="org.apache.hadoop.hdfs.*"
   import="org.apache.hadoop.hdfs.server.namenode.*"
-  import="org.apache.hadoop.hdfs.server.datanode.*"
   import="org.apache.hadoop.hdfs.protocol.*"
-  import="org.apache.hadoop.io.*"
-  import="org.apache.hadoop.conf.*"
-  import="org.apache.hadoop.net.DNS"
   import="org.apache.hadoop.security.AccessToken"
   import="org.apache.hadoop.util.*"
   import="org.apache.hadoop.net.NetUtils"
-  import="java.text.DateFormat"
 %>
 
 <%!
@@ -42,13 +38,14 @@
 
   public void generateFileChunks(JspWriter out, HttpServletRequest req) 
     throws IOException {
-    String referrer = req.getParameter("referrer");
+    final String referrer = JspHelper.validateURL(req.getParameter("referrer"));
     boolean noLink = false;
     if (referrer == null) {
       noLink = true;
     }
 
-    String filename = req.getParameter("filename");
+    final String filename = JspHelper.validatePath(
+        req.getParameter("filename"));
     if (filename == null) {
       out.print("Invalid input (file name absent)");
       return;

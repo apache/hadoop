@@ -21,7 +21,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.Socket;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -390,5 +393,37 @@ public class JspHelper {
         + "\n  <tr><td id='col1'>Version:</td><td>" + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
         + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
         + "\n</table></div>";
+  }
+
+  /**
+   * Validate filename. 
+   * @return null if the filename is invalid.
+   *         Otherwise, return the validated filename.
+   */
+  public static String validatePath(String p) {
+    return p == null || p.length() == 0?
+        null: new Path(p).toUri().getPath();
+  }
+
+  /**
+   * Validate a long value. 
+   * @return null if the value is invalid.
+   *         Otherwise, return the validated Long object.
+   */
+  public static Long validateLong(String value) {
+    return value == null? null: Long.parseLong(value);
+  }
+
+  /**
+   * Validate a URL.
+   * @return null if the value is invalid.
+   *         Otherwise, return the validated URL String.
+   */
+  public static String validateURL(String value) {
+    try {
+      return URLEncoder.encode(new URL(value).toString(), "UTF-8");
+    } catch (IOException e) {
+      return null;
+    }
   }
 }

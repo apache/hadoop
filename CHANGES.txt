@@ -582,6 +582,9 @@ Trunk (unreleased changes)
     HADOOP-5818. Revert the renaming from FSNamesystem.checkSuperuserPrivilege
     to checkAccess by HADOOP-5643.  (Amar Kamat via szetszwo)
 
+    HADOOP-5820.  Fix findbugs warnings for http related codes in hdfs.
+    (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

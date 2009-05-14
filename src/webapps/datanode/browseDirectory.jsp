@@ -24,16 +24,12 @@
   import="java.io.*"
   import="java.util.*"
   import="java.net.*"
+
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.hdfs.*"
   import="org.apache.hadoop.hdfs.server.namenode.*"
-  import="org.apache.hadoop.hdfs.server.datanode.*"
   import="org.apache.hadoop.hdfs.protocol.*"
-  import="org.apache.hadoop.io.*"
-  import="org.apache.hadoop.conf.*"
-  import="org.apache.hadoop.net.DNS"
   import="org.apache.hadoop.util.*"
-  import="java.text.DateFormat"
 %>
 <%!
   static final DataNode datanode = DataNode.getDataNode();
@@ -42,8 +38,8 @@
                                           HttpServletRequest req,
                                           HttpServletResponse resp) 
     throws IOException {
-    String dir = req.getParameter("dir");
-    if (dir == null || dir.length() == 0) {
+    final String dir = JspHelper.validatePath(req.getParameter("dir"));
+    if (dir == null) {
       out.print("Invalid input");
       return;
     }
