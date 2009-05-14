@@ -109,10 +109,6 @@ class DataXceiver implements Runnable, FSConstants {
         else
           datanode.myMetrics.writesFromRemoteClient.inc();
         break;
-      case DataTransferProtocol.OP_READ_METADATA:
-        readMetadata( in );
-        datanode.myMetrics.readMetadataOp.inc(DataNode.now() - startTime);
-        break;
       case DataTransferProtocol.OP_REPLACE_BLOCK: // for balancing purpose; send to a destination
         replaceBlock(in);
         datanode.myMetrics.replaceBlockOp.inc(DataNode.now() - startTime);
@@ -416,44 +412,6 @@ class DataXceiver implements Runnable, FSConstants {
     }
   }
 
-  /**
-   * Reads the metadata and sends the data in one 'DATA_CHUNK'.
-   * @param in
-   */
-  void readMetadata(DataInputStream in) throws IOException {
-    Block block = new Block( in.readLong(), 0 , in.readLong());
-    MetaDataInputStream checksumIn = null;
-    DataOutputStream out = null;
-    
-    try {
-
-      checksumIn = datanode.data.getMetaDataInputStream(block);
-      
-      long fileSize = checksumIn.getLength();
-
-      if (fileSize >= 1L<<31 || fileSize <= 0) {
-          throw new IOException("Unexpected size for checksumFile of block" +
-                  block);
-      }
-
-      byte [] buf = new byte[(int)fileSize];
-      IOUtils.readFully(checksumIn, buf, 0, buf.length);
-      
-      out = new DataOutputStream(
-                NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
-      
-      out.writeByte(DataTransferProtocol.OP_STATUS_SUCCESS);
-      out.writeInt(buf.length);
-      out.write(buf);
-      
-      //last DATA_CHUNK
-      out.writeInt(0);
-    } finally {
-      IOUtils.closeStream(out);
-      IOUtils.closeStream(checksumIn);
-    }
-  }
-  
   /**
    * Get block checksum (MD5 of CRC32).
    * @param in

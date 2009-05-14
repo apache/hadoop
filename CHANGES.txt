@@ -350,6 +350,9 @@ Trunk (unreleased changes)
     UTF8 related javac warnings. These warnings are removed in 
     FSEditLog.java as a use case. (Raghu Angadi)
 
+    HADOOP-5824. Deprecate DataTransferProtocol.OP_READ_METADATA and remove
+    the corresponding unused codes.  (Kan Zhang via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
