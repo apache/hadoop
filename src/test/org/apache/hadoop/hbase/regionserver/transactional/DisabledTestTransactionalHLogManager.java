@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** JUnit test case for HLog */
-public class TestTransactionalHLogManager extends HBaseTestCase implements
+public class DisabledTestTransactionalHLogManager extends HBaseTestCase implements
     HConstants {
   private Path dir;
   private MiniDFSCluster cluster;
