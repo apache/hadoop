@@ -579,6 +579,9 @@ Trunk (unreleased changes)
 
     HADOOP-5203. TT's version build is too restrictive. (Rick Cox via sharad)
 
+    HADOOP-5818. Revert the renaming from FSNamesystem.checkSuperuserPrivilege
+    to checkAccess by HADOOP-5643.  (Amar Kamat via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
