@@ -346,6 +346,10 @@ Trunk (unreleased changes)
    
     HADOOP-5792. To resolve jsp-2.1 jars through ivy (Giridharan Kesavan) 
 
+    HADOOP-5823. Added a new class DeprecatedUTF8 to help with removing
+    UTF8 related javac warnings. These warnings are removed in 
+    FSEditLog.java as a use case. (Raghu Angadi)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

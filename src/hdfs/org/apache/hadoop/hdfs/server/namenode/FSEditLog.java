@@ -49,7 +49,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.DeprecatedUTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -1088,32 +1088,32 @@ public class FSEditLog {
    */
   public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
 
-    UTF8 nameReplicationPair[] = new UTF8[] { 
-      new UTF8(path), 
+    DeprecatedUTF8 nameReplicationPair[] = new DeprecatedUTF8[] { 
+      new DeprecatedUTF8(path), 
       FSEditLog.toLogReplication(newNode.getReplication()),
       FSEditLog.toLogLong(newNode.getModificationTime()),
       FSEditLog.toLogLong(newNode.getAccessTime()),
       FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_ADD,
-            new ArrayWritable(UTF8.class, nameReplicationPair), 
+            new ArrayWritable(DeprecatedUTF8.class, nameReplicationPair), 
             new ArrayWritable(Block.class, newNode.getBlocks()),
             newNode.getPermissionStatus(),
-            new UTF8(newNode.getClientName()),
-            new UTF8(newNode.getClientMachine()));
+            new DeprecatedUTF8(newNode.getClientName()),
+            new DeprecatedUTF8(newNode.getClientMachine()));
   }
 
   /** 
    * Add close lease record to edit log.
    */
   public void logCloseFile(String path, INodeFile newNode) {
-    UTF8 nameReplicationPair[] = new UTF8[] {
-      new UTF8(path),
+    DeprecatedUTF8 nameReplicationPair[] = new DeprecatedUTF8[] {
+      new DeprecatedUTF8(path),
       FSEditLog.toLogReplication(newNode.getReplication()),
       FSEditLog.toLogLong(newNode.getModificationTime()),
       FSEditLog.toLogLong(newNode.getAccessTime()),
       FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_CLOSE,
-            new ArrayWritable(UTF8.class, nameReplicationPair),
+            new ArrayWritable(DeprecatedUTF8.class, nameReplicationPair),
             new ArrayWritable(Block.class, newNode.getBlocks()),
             newNode.getPermissionStatus());
   }
@@ -1122,12 +1122,12 @@ public class FSEditLog {
    * Add create directory record to edit log
    */
   public void logMkDir(String path, INode newNode) {
-    UTF8 info[] = new UTF8[] {
-      new UTF8(path),
+    DeprecatedUTF8 info[] = new DeprecatedUTF8[] {
+      new DeprecatedUTF8(path),
       FSEditLog.toLogLong(newNode.getModificationTime()),
       FSEditLog.toLogLong(newNode.getAccessTime())
     };
-    logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info),
+    logEdit(OP_MKDIR, new ArrayWritable(DeprecatedUTF8.class, info),
         newNode.getPermissionStatus());
   }
   
@@ -1136,11 +1136,11 @@ public class FSEditLog {
    * TODO: use String parameters until just before writing to disk
    */
   void logRename(String src, String dst, long timestamp) {
-    UTF8 info[] = new UTF8[] { 
-      new UTF8(src),
-      new UTF8(dst),
+    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
+      new DeprecatedUTF8(src),
+      new DeprecatedUTF8(dst),
       FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_RENAME, new ArrayWritable(UTF8.class, info));
+    logEdit(OP_RENAME, new ArrayWritable(DeprecatedUTF8.class, info));
   }
   
   /** 
@@ -1148,7 +1148,7 @@ public class FSEditLog {
    */
   void logSetReplication(String src, short replication) {
     logEdit(OP_SET_REPLICATION, 
-            new UTF8(src), 
+            new DeprecatedUTF8(src), 
             FSEditLog.toLogReplication(replication));
   }
   
@@ -1158,30 +1158,30 @@ public class FSEditLog {
    * @param quota the directory size limit
    */
   void logSetQuota(String src, long nsQuota, long dsQuota) {
-    logEdit(OP_SET_QUOTA, new UTF8(src), 
+    logEdit(OP_SET_QUOTA, new DeprecatedUTF8(src), 
             new LongWritable(nsQuota), new LongWritable(dsQuota));
   }
 
   /**  Add set permissions record to edit log */
   void logSetPermissions(String src, FsPermission permissions) {
-    logEdit(OP_SET_PERMISSIONS, new UTF8(src), permissions);
+    logEdit(OP_SET_PERMISSIONS, new DeprecatedUTF8(src), permissions);
   }
 
   /**  Add set owner record to edit log */
   void logSetOwner(String src, String username, String groupname) {
-    UTF8 u = new UTF8(username == null? "": username);
-    UTF8 g = new UTF8(groupname == null? "": groupname);
-    logEdit(OP_SET_OWNER, new UTF8(src), u, g);
+    DeprecatedUTF8 u = new DeprecatedUTF8(username == null? "": username);
+    DeprecatedUTF8 g = new DeprecatedUTF8(groupname == null? "": groupname);
+    logEdit(OP_SET_OWNER, new DeprecatedUTF8(src), u, g);
   }
 
   /** 
    * Add delete file record to edit log
    */
   void logDelete(String src, long timestamp) {
-    UTF8 info[] = new UTF8[] { 
-      new UTF8(src),
+    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
+      new DeprecatedUTF8(src),
       FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_DELETE, new ArrayWritable(UTF8.class, info));
+    logEdit(OP_DELETE, new ArrayWritable(DeprecatedUTF8.class, info));
   }
 
   /** 
@@ -1195,19 +1195,19 @@ public class FSEditLog {
    * Add access time record to edit log
    */
   void logTimes(String src, long mtime, long atime) {
-    UTF8 info[] = new UTF8[] { 
-      new UTF8(src),
+    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
+      new DeprecatedUTF8(src),
       FSEditLog.toLogLong(mtime),
       FSEditLog.toLogLong(atime)};
-    logEdit(OP_TIMES, new ArrayWritable(UTF8.class, info));
+    logEdit(OP_TIMES, new ArrayWritable(DeprecatedUTF8.class, info));
   }
   
-  static private UTF8 toLogReplication(short replication) {
-    return new UTF8(Short.toString(replication));
+  static private DeprecatedUTF8 toLogReplication(short replication) {
+    return new DeprecatedUTF8(Short.toString(replication));
   }
   
-  static private UTF8 toLogLong(long timestamp) {
-    return new UTF8(Long.toString(timestamp));
+  static private DeprecatedUTF8 toLogLong(long timestamp) {
+    return new DeprecatedUTF8(Long.toString(timestamp));
   }
 
   /**
