@@ -161,9 +161,9 @@ public class ColumnValueFilter implements RowFilterInterface {
       final int length) {
     int compareResult;
     if (comparator != null) {
-      compareResult = comparator.compareTo(data);
+      compareResult = comparator.compareTo(Arrays.copyOfRange(data, offset, offset+length));
     } else {
-      compareResult = compare(value, data);
+      compareResult = Bytes.compareTo(value, 0, value.length, data, offset, length);
     }
 
     switch (compareOp) {
@@ -228,19 +228,8 @@ public class ColumnValueFilter implements RowFilterInterface {
     if (found == null) {
       return false;
     }
-    return this.filterColumnValue(found.getValue(), found.getValueOffset(),
+    return this.filterColumnValue(found.getBuffer(), found.getValueOffset(),
       found.getValueLength());
-  }
-
-  private int compare(final byte[] b1, final byte[] b2) {
-    int len = Math.min(b1.length, b2.length);
-
-    for (int i = 0; i < len; i++) {
-      if (b1[i] != b2[i]) {
-        return b1[i] - b2[i];
-      }
-    }
-    return b1.length - b2.length;
   }
 
   public boolean processAlways() {

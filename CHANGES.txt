@@ -129,6 +129,8 @@ Release 0.20.0 - Unreleased
    HBASE-1391  NPE in TableInputFormatBase$TableRecordReader.restart if zoo.cfg
                is wrong or missing on task trackers
    HBASE-1323  hbase-1234 broke TestThriftServer; fix and reenable
+   HBASE-1425  ColumnValueFilter and WhileMatchFilter fixes on trunk
+               (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

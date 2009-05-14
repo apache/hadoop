@@ -159,7 +159,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   public boolean filterColumn(byte[] rowKey, int roffset, int rlength,
       byte[] colunmName, int coffset, int clength, byte[] columnValue,
       int voffset, int vlength) {
-    // TODO Auto-generated method stub
-    return false;
+    changeFAR(this.filter.filterColumn(rowKey, roffset, rlength, colunmName, coffset, clength, columnValue, voffset, vlength));
+    return filterAllRemaining();
   }
 }
