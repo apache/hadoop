@@ -244,6 +244,8 @@ Release 0.20.0 - Unreleased
    HBASE-1413  Fall back to filesystem block size default if HLog blocksize is
                not specified
    HBASE-1417  Cleanup disorientating RPC message
+   HBASE-1424  have shell print regioninfo and location on first load if
+               DEBUG enabled
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

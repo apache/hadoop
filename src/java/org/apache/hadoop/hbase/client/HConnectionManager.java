@@ -592,6 +592,7 @@ public class HConnectionManager implements HConstants {
           // instantiate the location
           location = new HRegionLocation(regionInfo,
               new HServerAddress(serverAddress));
+          LOG.debug(location);
           cacheLocation(tableName, location);
           return location;
         } catch (TableNotFoundException e) {
