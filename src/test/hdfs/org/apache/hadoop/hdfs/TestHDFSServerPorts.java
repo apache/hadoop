@@ -21,13 +21,13 @@ import java.io.File;
 import java.io.IOException;
 
 import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
-import org.apache.hadoop.ipc.RPC;
 
 /**
  * This test checks correctness of port usage by hdfs components:

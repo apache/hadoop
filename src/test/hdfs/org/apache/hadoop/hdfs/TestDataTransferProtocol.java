@@ -60,8 +60,6 @@ public class TestDataTransferProtocol extends TestCase {
   InetSocketAddress dnAddr;
   ByteArrayOutputStream sendBuf = new ByteArrayOutputStream(128);
   DataOutputStream sendOut = new DataOutputStream(sendBuf);
-  // byte[] recvBuf = new byte[128];
-  // ByteBuffer recvByteBuf = ByteBuffer.wrap(recvBuf);
   ByteArrayOutputStream recvBuf = new ByteArrayOutputStream(128);
   DataOutputStream recvOut = new DataOutputStream(recvBuf);
 
@@ -170,13 +168,13 @@ public class TestDataTransferProtocol extends TestCase {
     // bad ops
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)(DataTransferProtocol.OP_WRITE_BLOCK-1));
+    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK - 1);
     sendRecvData("Wrong Op Code", true);
     
     /* Test OP_WRITE_BLOCK */
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_WRITE_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
     sendOut.writeLong(newBlockId); // block id
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -196,7 +194,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_WRITE_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
     sendOut.writeLong(newBlockId);
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -212,7 +210,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_WRITE_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
     sendOut.writeLong(++newBlockId);
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -222,7 +220,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);
     AccessToken.DUMMY_TOKEN.write(sendOut);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
-    sendOut.writeInt((int)512);
+    sendOut.writeInt(512);
     sendOut.writeInt(4);           // size of packet
     sendOut.writeLong(0);          // OffsetInBlock
     sendOut.writeLong(100);        // sequencenumber
@@ -240,7 +238,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_WRITE_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
     sendOut.writeLong(++newBlockId);
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -250,7 +248,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);
     AccessToken.DUMMY_TOKEN.write(sendOut);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
-    sendOut.writeInt((int)512);    // checksum size
+    sendOut.writeInt(512);         // checksum size
     sendOut.writeInt(8);           // size of packet
     sendOut.writeLong(0);          // OffsetInBlock
     sendOut.writeLong(100);        // sequencenumber
@@ -270,7 +268,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_READ_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
     newBlockId = firstBlock.getBlockId()-1;
     sendOut.writeLong(newBlockId);
     sendOut.writeLong(firstBlock.getGenerationStamp());
@@ -284,7 +282,7 @@ public class TestDataTransferProtocol extends TestCase {
     // negative block start offset
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_READ_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(-1L);
@@ -297,7 +295,7 @@ public class TestDataTransferProtocol extends TestCase {
     // bad block start offset
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_READ_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(fileLen);
@@ -312,7 +310,7 @@ public class TestDataTransferProtocol extends TestCase {
     recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);    
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_READ_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
@@ -327,7 +325,7 @@ public class TestDataTransferProtocol extends TestCase {
     recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);    
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_READ_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
@@ -340,7 +338,7 @@ public class TestDataTransferProtocol extends TestCase {
     //At the end of all this, read the file to make sure that succeeds finally.
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte((byte)DataTransferProtocol.OP_READ_BLOCK);
+    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);

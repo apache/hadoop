@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.util.Random;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -50,7 +55,7 @@ public class TestFSInputChecker extends TestCase {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, new FsPermission((short)0777),
         true, fileSys.getConf().getInt("io.file.buffer.size", 4096),
-        (short)NUM_OF_DATANODES, BLOCK_SIZE, null);
+        NUM_OF_DATANODES, BLOCK_SIZE, null);
     stm.write(expected);
     stm.close();
   }
@@ -169,7 +174,7 @@ public class TestFSInputChecker extends TestCase {
     
     // test skip to non-checksum-boundary pos
     stm.seek(0);
-    testSkip1(HALF_CHUNK_SIZE+1);
+    testSkip1(HALF_CHUNK_SIZE + 1);
     testSkip1(BYTES_PER_SUM);
     testSkip1(HALF_CHUNK_SIZE);
     
@@ -322,7 +327,7 @@ public class TestFSInputChecker extends TestCase {
 
   private void checkSeekAndRead() throws IOException {
     int position = 1;
-    int len = 2 * BYTES_PER_SUM - (int) position;
+    int len = 2 * BYTES_PER_SUM - position;
     readAndCompare(stm, position, len);
 
     position = BYTES_PER_SUM;

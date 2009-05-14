@@ -36,7 +36,7 @@ public class TestNodeCount extends TestCase {
       Block block = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
 
       // keep a copy of all datanode descriptor
-      DatanodeDescriptor[] datanodes = (DatanodeDescriptor[])
+      DatanodeDescriptor[] datanodes = 
          namesystem.heartbeats.toArray(new DatanodeDescriptor[REPLICATION_FACTOR]);
       
       // start two new nodes

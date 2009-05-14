@@ -585,6 +585,9 @@ Trunk (unreleased changes)
     HADOOP-5820.  Fix findbugs warnings for http related codes in hdfs.
     (szetszwo)
 
+    HADOOP-5822.  Fix javac warnings in several dfs tests related to unncessary
+    casts.  (Jakob Homan via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

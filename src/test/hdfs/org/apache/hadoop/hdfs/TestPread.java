@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Random;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,7 +45,7 @@ public class TestPread extends TestCase {
     // test empty file open and read
     stm.close();
     FSDataInputStream in = fileSys.open(name);
-    byte[] buffer = new byte[(int)(12*blockSize)];
+    byte[] buffer = new byte[12 * blockSize];
     in.readFully(0, buffer, 0, 0);
     IOException res = null;
     try { // read beyond the end of the file
@@ -85,7 +88,7 @@ public class TestPread extends TestCase {
   
   private void pReadFile(FileSystem fileSys, Path name) throws IOException {
     FSDataInputStream stm = fileSys.open(name);
-    byte[] expected = new byte[(int)(12*blockSize)];
+    byte[] expected = new byte[12 * blockSize];
     if (simulatedStorage) {
       for (int i= 0; i < expected.length; i++) {  
         expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
@@ -109,17 +112,17 @@ public class TestPread extends TestCase {
     // Now see if we can cross a single block boundary successfully
     // read 4K bytes from blockSize - 2K offset
     stm.readFully(blockSize - 2048, actual, 0, 4096);
-    checkAndEraseData(actual, (int)(blockSize-2048), expected, "Pread Test 3");
+    checkAndEraseData(actual, (blockSize - 2048), expected, "Pread Test 3");
     // now see if we can cross two block boundaries successfully
     // read blockSize + 4K bytes from blockSize - 2K offset
-    actual = new byte[(int)(blockSize+4096)];
+    actual = new byte[blockSize + 4096];
     stm.readFully(blockSize - 2048, actual);
-    checkAndEraseData(actual, (int)(blockSize-2048), expected, "Pread Test 4");
+    checkAndEraseData(actual, (blockSize - 2048), expected, "Pread Test 4");
     // now see if we can cross two block boundaries that are not cached
     // read blockSize + 4K bytes from 10*blockSize - 2K offset
-    actual = new byte[(int)(blockSize+4096)];
-    stm.readFully(10*blockSize - 2048, actual);
-    checkAndEraseData(actual, (int)(10*blockSize-2048), expected, "Pread Test 5");
+    actual = new byte[blockSize + 4096];
+    stm.readFully(10 * blockSize - 2048, actual);
+    checkAndEraseData(actual, (10 * blockSize - 2048), expected, "Pread Test 5");
     // now check that even after all these preads, we can still read
     // bytes 8K-12K
     actual = new byte[4096];

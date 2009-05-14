@@ -17,18 +17,20 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileUtil.HardLink;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -175,8 +177,8 @@ public class TestFileAppend extends TestCase {
       // Create hard links for a few of the blocks
       //
       for (int i = 0; i < blocks.size(); i = i + 2) {
-        Block b = (Block) blocks.get(i).getBlock();
-        FSDataset fsd = (FSDataset) dataset;
+        Block b = blocks.get(i).getBlock();
+        FSDataset fsd = dataset;
         File f = fsd.getFile(b);
         File link = new File(f.toString() + ".link");
         System.out.println("Creating hardlink for File " + f + 
@@ -188,7 +190,7 @@ public class TestFileAppend extends TestCase {
       // Detach all blocks. This should remove hardlinks (if any)
       //
       for (int i = 0; i < blocks.size(); i++) {
-        Block b = (Block) blocks.get(i).getBlock();
+        Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned true",
                    dataset.detachBlock(b, 1) == true);
@@ -198,7 +200,7 @@ public class TestFileAppend extends TestCase {
       // return false
       //
       for (int i = 0; i < blocks.size(); i++) {
-        Block b = (Block) blocks.get(i).getBlock();
+        Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned false",
                    dataset.detachBlock(b, 1) == false);
