@@ -356,6 +356,8 @@ Trunk (unreleased changes)
     HADOOP-5721. Factor out EditLogFileInputStream and EditLogFileOutputStream
     into independent classes. (Luca Telloli & Flavio Junqueira via shv)
 
+    HADOOP-5838. Fix a few javac warnings in HDFS. (Raghu Angadi)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

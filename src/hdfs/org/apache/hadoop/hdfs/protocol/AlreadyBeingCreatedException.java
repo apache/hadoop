@@ -25,6 +25,7 @@ import java.io.IOException;
  * is being created, but is not closed yet.
  */
 public class AlreadyBeingCreatedException extends IOException {
+  static final long serialVersionUID = 0x12308AD009L;
   public AlreadyBeingCreatedException(String msg) {
     super(msg);
   }

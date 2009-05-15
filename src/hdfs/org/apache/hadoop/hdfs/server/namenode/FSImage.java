@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.DeprecatedUTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
@@ -410,7 +410,8 @@ public class FSImage extends Storage {
       StorageState curState = dataDirStates.get(sd);
       switch(curState) {
       case NON_EXISTENT:
-        assert false : StorageState.NON_EXISTENT + " state cannot be here";
+        throw new IOException(StorageState.NON_EXISTENT + 
+                              " state cannot be here");
       case NOT_FORMATTED:
         LOG.info("Storage directory " + sd.getRoot() + " is not formatted.");
         LOG.info("Formatting ...");
@@ -1839,7 +1840,7 @@ public class FSImage extends Storage {
  return dirs;    
   }
 
-  static private final UTF8 U_STR = new UTF8();
+  static private final DeprecatedUTF8 U_STR = new DeprecatedUTF8();
   // This should be reverted to package private once the ImageLoader
   // code is moved into this package. This method should not be called
   // by other code.

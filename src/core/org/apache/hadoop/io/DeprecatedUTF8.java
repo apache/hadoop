@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.io;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * Wrapper for {@link UTF8}.
  * This class should be used only when it is absolutely necessary
  * to use {@link UTF8}. The only difference is that using this class
- * does not require "@SupressWarning" annotation to avoid javac warning. 
- * In stead the deprecation is implied in the class name.
+ * does not require "@SuppressWarning" annotation to avoid javac warning. 
+ * Instead the deprecation is implied in the class name.
  */
+@SuppressWarnings("deprecation")
 public class DeprecatedUTF8 extends UTF8 {
   
   public DeprecatedUTF8() {
@@ -39,5 +44,17 @@ public class DeprecatedUTF8 extends UTF8 {
   /** Construct from a given string. */
   public DeprecatedUTF8(DeprecatedUTF8 utf8) {
     super(utf8);
+  }
+  
+  /* The following two are the mostly commonly used methods.
+   * wrapping them so that editors do not complain about the deprecation.
+   */
+  
+  public static String readString(DataInput in) throws IOException {
+    return UTF8.readString(in);
+  }
+  
+  public static int writeString(DataOutput out, String s) throws IOException {
+    return UTF8.writeString(out, s);
   }
 }

@@ -641,7 +641,7 @@ public class Balancer implements Tool {
      */
     private long getBlockList() throws IOException {
       BlockWithLocations[] newBlocks = namenode.getBlocks(datanode, 
-        (long)Math.min(MAX_BLOCKS_SIZE_TO_FETCH, blocksToReceive)).getBlocks();
+        Math.min(MAX_BLOCKS_SIZE_TO_FETCH, blocksToReceive)).getBlocks();
       long bytesReceived = 0;
       for (BlockWithLocations blk : newBlocks) {
         bytesReceived += blk.getBlock().getNumBytes();

@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -90,35 +91,6 @@ public class SecondaryNameNode implements Runnable {
       + "\nCheckpoint Size      : " + checkpointSize + " MB"
       + "\nCheckpoint Dirs      : " + checkpointDirs
       + "\nCheckpoint Edits Dirs: " + checkpointEditsDirs;
-  }
-  /**
-   * Utility class to facilitate junit test error simulation.
-   */
-  static class ErrorSimulator {
-    private static boolean[] simulation = null; // error simulation events
-    static void initializeErrorSimulationEvent(int numberOfEvents) {
-      simulation = new boolean[numberOfEvents]; 
-      for (int i = 0; i < numberOfEvents; i++) {
-        simulation[i] = false;
-      }
-    }
-    
-    static boolean getErrorSimulation(int index) {
-      if(simulation == null)
-        return false;
-      assert(index < simulation.length);
-      return simulation[index];
-    }
-    
-    static void setErrorSimulation(int index) {
-      assert(index < simulation.length);
-      simulation[index] = true;
-    }
-    
-    static void clearErrorSimulation(int index) {
-      assert(index < simulation.length);
-      simulation[index] = false;
-    }
   }
 
   FSImage getFSImage() {
@@ -315,7 +287,7 @@ public class SecondaryNameNode implements Runnable {
 
     // Tell the namenode to start logging transactions in a new edit file
     // Returns a token that would be used to upload the merged image.
-    CheckpointSignature sig = (CheckpointSignature)namenode.rollEditLog();
+    CheckpointSignature sig = namenode.rollEditLog();
 
     // error simulation code for junit test
     if (ErrorSimulator.getErrorSimulation(0)) {

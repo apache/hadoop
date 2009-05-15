@@ -58,7 +58,7 @@ public class DistributedFileSystem extends FileSystem {
   public DistributedFileSystem() {
   }
 
-  /** @deprecated */
+  @Deprecated
   public DistributedFileSystem(InetSocketAddress namenode,
     Configuration conf) throws IOException {
     initialize(NameNode.getUri(namenode), conf);

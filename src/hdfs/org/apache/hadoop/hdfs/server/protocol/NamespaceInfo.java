@@ -25,7 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.DeprecatedUTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -70,13 +70,13 @@ public class NamespaceInfo extends StorageInfo {
   }
 
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, getBuildVersion());
+    DeprecatedUTF8.writeString(out, getBuildVersion());
     super.write(out);
     out.writeInt(getDistributedUpgradeVersion());
   }
 
   public void readFields(DataInput in) throws IOException {
-    buildVersion = UTF8.readString(in);
+    buildVersion = DeprecatedUTF8.readString(in);
     super.readFields(in);
     distributedUpgradeVersion = in.readInt();
   }

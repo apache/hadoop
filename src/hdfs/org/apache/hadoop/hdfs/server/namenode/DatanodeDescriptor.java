@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.DeprecatedUTF8;
 import org.apache.hadoop.io.WritableUtils;
 
 /**************************************************
@@ -411,8 +411,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   /** Serialization for FSEditLog */
   void readFieldsFromFSEditLog(DataInput in) throws IOException {
-    this.name = UTF8.readString(in);
-    this.storageID = UTF8.readString(in);
+    this.name = DeprecatedUTF8.readString(in);
+    this.storageID = DeprecatedUTF8.readString(in);
     this.infoPort = in.readShort() & 0x0000ffff;
 
     this.capacity = in.readLong();

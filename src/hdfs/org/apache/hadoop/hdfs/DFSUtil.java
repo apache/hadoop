@@ -47,5 +47,35 @@ public class DFSUtil {
     return true;
   }
 
+  /**
+   * Utility class to facilitate junit test error simulation.
+   */
+  public static class ErrorSimulator {
+    private static boolean[] simulation = null; // error simulation events
+    public static void initializeErrorSimulationEvent(int numberOfEvents) {
+      simulation = new boolean[numberOfEvents]; 
+      for (int i = 0; i < numberOfEvents; i++) {
+        simulation[i] = false;
+      }
+    }
+    
+    public static boolean getErrorSimulation(int index) {
+      if(simulation == null)
+        return false;
+      assert(index < simulation.length);
+      return simulation[index];
+    }
+    
+    public static void setErrorSimulation(int index) {
+      assert(index < simulation.length);
+      simulation[index] = true;
+    }
+    
+    public static void clearErrorSimulation(int index) {
+      assert(index < simulation.length);
+      simulation[index] = false;
+    }
+  }
+
 }
 

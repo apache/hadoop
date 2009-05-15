@@ -22,7 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.DeprecatedUTF8;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -170,15 +170,15 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   /////////////////////////////////////////////////
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, name);
-    UTF8.writeString(out, storageID);
+    DeprecatedUTF8.writeString(out, name);
+    DeprecatedUTF8.writeString(out, storageID);
     out.writeShort(infoPort);
   }
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    name = UTF8.readString(in);
-    storageID = UTF8.readString(in);
+    name = DeprecatedUTF8.readString(in);
+    storageID = DeprecatedUTF8.readString(in);
     // the infoPort read could be negative, if the port is a large number (more
     // than 15 bits in storage size (but less than 16 bits).
     // So chop off the first two bytes (and hence the signed bits) before 
