@@ -25,6 +25,8 @@ import java.io.IOException;
  */
 public class S3Exception extends IOException {
 
+  private static final long serialVersionUID = 1L;
+
   public S3Exception(Throwable t) {
     super(t);
   }

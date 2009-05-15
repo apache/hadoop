@@ -281,7 +281,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   private static Integer getValidPID(String pid) {
     Integer retPid = -1;
     try {
-      retPid = Integer.parseInt((String) pid);
+      retPid = Integer.parseInt(pid);
       if (retPid <= 0) {
         retPid = -1;
       }

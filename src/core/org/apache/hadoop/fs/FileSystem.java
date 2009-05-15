@@ -1600,6 +1600,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return a Map having a key as URI scheme and value as Statistics object
    * @deprecated use {@link #getAllStatistics} instead
    */
+  @Deprecated
   public static synchronized Map<String, Statistics> getStatistics() {
     Map<String, Statistics> result = new HashMap<String, Statistics>();
     for(Statistics stat: statisticsTable.values()) {
