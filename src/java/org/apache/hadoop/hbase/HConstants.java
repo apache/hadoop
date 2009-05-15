@@ -133,6 +133,10 @@ public interface HConstants {
   /** Default size of a reservation block   */
   static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
   
+  /** Default number of threads to use when log splitting 
+   *  to rewrite the logs. More means faster but bigger mem consumption */
+  static final int DEFAULT_NUMBER_LOG_WRITER_THREAD = 10;
+  
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
   
