@@ -587,13 +587,13 @@ Trunk (unreleased changes)
     HADOOP-5818. Revert the renaming from FSNamesystem.checkSuperuserPrivilege
     to checkAccess by HADOOP-5643.  (Amar Kamat via szetszwo)
 
-    HADOOP-5820.  Fix findbugs warnings for http related codes in hdfs.
+    HADOOP-5820. Fix findbugs warnings for http related codes in hdfs.
     (szetszwo)
 
-    HADOOP-5822.  Fix javac warnings in several dfs tests related to unncessary
+    HADOOP-5822. Fix javac warnings in several dfs tests related to unncessary
     casts.  (Jakob Homan via szetszwo)
 
-    HADOOP-5842.  Fix a few javac warnings under packages fs and util.
+    HADOOP-5842. Fix a few javac warnings under packages fs and util.
     (Hairong Kuang via szetszwo)
 
     HADOOP-5845. Build successful despite test failure on test-core target.
@@ -601,6 +601,9 @@ Trunk (unreleased changes)
 
     HADOOP-5314. Prevent unnecessary saving of the file system image during 
     name-node startup. (Jakob Homan via shv)
+
+    HADOOP-5855. Fix javac warnings for DisallowedDatanodeException and
+    UnsupportedActionException.  (szetszwo)
 
 Release 0.20.1 - Unreleased
 

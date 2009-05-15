@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
  * 
  */
 public class DisallowedDatanodeException extends IOException {
+  /** for java.io.Serializable */
+  private static final long serialVersionUID = 1L;
 
   public DisallowedDatanodeException(DatanodeID nodeID) {
     super("Datanode denied communication with namenode: " + nodeID.getName());
