@@ -64,6 +64,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5641. Fix a NullPointerException in capacity scheduler's memory
     based scheduling code when jobs get retired. (yhemanth)
 
+    HADOOP-5828. Use absolute path for mapred.local.dir of JobTracker in
+    MiniMRCluster. (yhemanth)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
