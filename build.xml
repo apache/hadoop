@@ -882,7 +882,7 @@
         <fileset dir="${test.src.dir}/core" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-  	<fail if="tests.failed" unless="continueOnFailure">Tests failed!</fail>
+    <antcall target="checkfailure"/>
   </target>   
 
   <target name="run-test-hdfs" depends="compile-hdfs-test" description="Run hdfs unit tests">
@@ -925,7 +925,7 @@
         <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-    <fail if="tests.failed" unless="continueOnFailure">Tests failed!</fail>
+    <antcall target="checkfailure"/>
   </target>  
 
   <target name="run-test-mapred" depends="compile-mapred-test" description="Run mapred unit tests">
@@ -971,7 +971,7 @@
         <fileset dir="${test.src.dir}/mapred" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-    <fail if="tests.failed" unless="continueOnFailure">Tests failed!</fail>
+    <antcall target="checkfailure"/>
   </target> 
 
   <target name="run-test-hdfs-with-mr" depends="compile-hdfs-with-mr-test" description="Run hdfs unit tests that require mapred">
@@ -1015,8 +1015,13 @@
         <fileset dir="${test.src.dir}/hdfs-with-mr" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-    <fail if="tests.failed" unless="continueOnFailure">Tests failed!</fail>
+    <antcall target="checkfailure"/>
   </target>  
+
+  <target name="checkfailure" if="tests.failed">
+    <touch file="${test.build.dir}/testsfailed"/>
+    <fail unless="continueOnFailure">Tests failed!</fail>
+  </target>
 
   <target name="test-contrib" depends="compile, compile-hdfs-with-mr-test" description="Run contrib unit tests">
     <subant target="test">
@@ -1027,22 +1032,14 @@
   </target>
 
   <target name="test-core" description="Run core, hdfs and mapred unit tests">
-    <subant target="run-test-core">
-      <property name="continueOnFailure" value="true"/>
-      <fileset file="${basedir}/build.xml"/>
-     </subant>
-    <subant target="run-test-hdfs">
-      <property name="continueOnFailure" value="true"/>
-      <fileset file="${basedir}/build.xml"/>
-     </subant>
-    <subant target="run-test-mapred">
-      <property name="continueOnFailure" value="true"/>
-      <fileset file="${basedir}/build.xml"/>
-     </subant>
-    <subant target="run-test-hdfs-with-mr">
-      <property name="continueOnFailure" value="true"/>
-      <fileset file="${basedir}/build.xml"/>
-     </subant>
+    <delete file="${test.build.dir}/testsfailed"/>
+    <property name="continueOnFailure" value="true"/>
+    <antcall target="run-test-core"/>
+    <antcall target="run-test-hdfs"/>
+    <antcall target="run-test-mapred"/>
+    <antcall target="run-test-hdfs-with-mr"/>
+    <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
+    <fail if="testsfailed">Tests failed!</fail>
   </target>
 
   <target name="test" depends="test-c++-libhdfs, jar-test, test-core" description="Run all unit tests">

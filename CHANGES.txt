@@ -594,6 +594,9 @@ Trunk (unreleased changes)
     HADOOP-5842.  Fix a few javac warnings under packages fs and util.
     (Hairong Kuang via szetszwo)
 
+    HADOOP-5845. Build successful despite test failure on test-core target.
+    (sharad)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
