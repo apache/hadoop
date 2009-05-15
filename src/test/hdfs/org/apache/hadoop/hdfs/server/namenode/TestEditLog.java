@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.*;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
@@ -101,7 +101,7 @@ public class TestEditLog extends TestCase {
       FSEditLog editLog = fsimage.getEditLog();
   
       // set small size of flush buffer
-      FSEditLog.setBufferCapacity(2048);
+      editLog.setBufferCapacity(2048);
       editLog.close();
       editLog.open();
     

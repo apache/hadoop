@@ -22,12 +22,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -47,7 +42,6 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.DeprecatedUTF8;
 import org.apache.hadoop.io.Writable;
@@ -91,7 +85,7 @@ public class FSEditLog {
   static final String NO_JOURNAL_STREAMS_WARNING = "!!! WARNING !!!" +
   		" File system changes are not persistent. No journal streams.";
 
-  private static int sizeFlushBuffer = 512*1024;
+  private volatile int sizeOutputFlushBuffer = 512*1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
   private FSImage fsimage = null;
@@ -129,207 +123,6 @@ public class FSEditLog {
     }
   };
 
-  /**
-   * An implementation of the abstract class {@link EditLogOutputStream},
-   * which stores edits in a local file.
-   */
-  static private class EditLogFileOutputStream extends EditLogOutputStream {
-    private static int EDITS_FILE_HEADER_SIZE_BYTES = Integer.SIZE/Byte.SIZE;
-
-    private File file;
-    private FileOutputStream fp;    // file stream for storing edit logs 
-    private FileChannel fc;         // channel of the file stream for sync
-    private DataOutputBuffer bufCurrent;  // current buffer for writing
-    private DataOutputBuffer bufReady;    // buffer ready for flushing
-    static ByteBuffer fill = ByteBuffer.allocateDirect(512); // preallocation
-
-    EditLogFileOutputStream(File name) throws IOException {
-      super();
-      file = name;
-      bufCurrent = new DataOutputBuffer(sizeFlushBuffer);
-      bufReady = new DataOutputBuffer(sizeFlushBuffer);
-      RandomAccessFile rp = new RandomAccessFile(name, "rw");
-      fp = new FileOutputStream(rp.getFD()); // open for append
-      fc = rp.getChannel();
-      fc.position(fc.size());
-    }
-
-    @Override // JournalStream
-    public String getName() {
-      return file.getPath();
-    }
-
-    @Override // JournalStream
-    public JournalType getType() {
-      return JournalType.FILE;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void write(int b) throws IOException {
-      bufCurrent.write(b);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    void write(byte op, Writable ... writables) throws IOException {
-      write(op);
-      for(Writable w : writables) {
-        w.write(bufCurrent);
-      }
-    }
-
-    /**
-     * Create empty edits logs file.
-     */
-    @Override
-    void create() throws IOException {
-      fc.truncate(0);
-      fc.position(0);
-      bufCurrent.writeInt(FSConstants.LAYOUT_VERSION);
-      setReadyToFlush();
-      flush();
-    }
-
-    @Override
-    public void close() throws IOException {
-      // close should have been called after all pending transactions 
-      // have been flushed & synced.
-      int bufSize = bufCurrent.size();
-      if (bufSize != 0) {
-        throw new IOException("FSEditStream has " + bufSize +
-                              " bytes still to be flushed and cannot " +
-                              "be closed.");
-      } 
-      bufCurrent.close();
-      bufReady.close();
-
-      // remove the last INVALID marker from transaction log.
-      fc.truncate(fc.position());
-      fp.close();
-      
-      bufCurrent = bufReady = null;
-    }
-
-    /**
-     * All data that has been written to the stream so far will be flushed.
-     * New data can be still written to the stream while flushing is performed.
-     */
-    @Override
-    void setReadyToFlush() throws IOException {
-      assert bufReady.size() == 0 : "previous data is not flushed yet";
-      write(OP_INVALID);           // insert end-of-file marker
-      DataOutputBuffer tmp = bufReady;
-      bufReady = bufCurrent;
-      bufCurrent = tmp;
-    }
-
-    /**
-     * Flush ready buffer to persistent store.
-     * currentBuffer is not flushed as it accumulates new log records
-     * while readyBuffer will be flushed and synced.
-     */
-    @Override
-    protected void flushAndSync() throws IOException {
-      preallocate();            // preallocate file if necessary
-      bufReady.writeTo(fp);     // write data to file
-      bufReady.reset();         // erase all data in the buffer
-      fc.force(false);          // metadata updates not needed because of preallocation
-      fc.position(fc.position()-1); // skip back the end-of-file marker
-    }
-
-    /**
-     * Return the size of the current edit log including buffered data.
-     */
-    @Override
-    long length() throws IOException {
-      // file size - header size + size of both buffers
-      return fc.size() - EDITS_FILE_HEADER_SIZE_BYTES
-                       + bufReady.size() + bufCurrent.size();
-    }
-
-    // allocate a big chunk of data
-    private void preallocate() throws IOException {
-      long position = fc.position();
-      if (position + 4096 >= fc.size()) {
-        FSNamesystem.LOG.debug("Preallocating Edit log, current size " +
-                                fc.size());
-        long newsize = position + 1024*1024; // 1MB
-        fill.position(0);
-        int written = fc.write(fill, newsize);
-        FSNamesystem.LOG.debug("Edit log size is now " + fc.size() +
-                              " written " + written + " bytes " +
-                              " at offset " +  newsize);
-      }
-    }
-
-    /**
-     * Operations like OP_JSPOOL_START and OP_CHECKPOINT_TIME
-     * should not be written into edits file.
-     */
-    @Override
-    boolean isOperationSupported(byte op) {
-      return op < OP_JSPOOL_START - 1;
-    }
-
-    /**
-     * Returns the file associated with this stream
-     */
-    File getFile() {
-      return file;
-    }
-  }
-
-  /**
-   * An implementation of the abstract class {@link EditLogInputStream},
-   * which reads edits from a local file.
-   */
-  static class EditLogFileInputStream extends EditLogInputStream {
-    private File file;
-    private FileInputStream fStream;
-
-    EditLogFileInputStream(File name) throws IOException {
-      file = name;
-      fStream = new FileInputStream(name);
-    }
-
-    @Override // JournalStream
-    public String getName() {
-      return file.getPath();
-    }
-
-    @Override // JournalStream
-    public JournalType getType() {
-      return JournalType.FILE;
-    }
-
-    @Override
-    public int available() throws IOException {
-      return fStream.available();
-    }
-
-    @Override
-    public int read() throws IOException {
-      return fStream.read();
-    }
-
-    @Override
-    public int read(byte[] b, int off, int len) throws IOException {
-      return fStream.read(b, off, len);
-    }
-
-    @Override
-    public void close() throws IOException {
-      fStream.close();
-    }
-
-    @Override
-    long length() throws IOException {
-      // file size + size of both buffers
-      return file.length();
-    }
-  }
-
   FSEditLog(FSImage image) {
     fsimage = image;
     isSyncRunning = false;
@@ -363,7 +156,7 @@ public class FSEditLog {
    * 
    * @throws IOException
    */
-  public synchronized void open() throws IOException {
+  synchronized void open() throws IOException {
     numTransactions = totalTimeTransactions = numTransactionsBatchedInSync = 0;
     if (editStreams == null)
       editStreams = new ArrayList<EditLogOutputStream>();
@@ -388,13 +181,15 @@ public class FSEditLog {
   }
   
   
-  public synchronized void addNewEditLogStream(File eFile) throws IOException {
-    EditLogOutputStream eStream = new EditLogFileOutputStream(eFile);
+  synchronized void addNewEditLogStream(File eFile) throws IOException {
+    EditLogOutputStream eStream = new EditLogFileOutputStream(eFile,
+        sizeOutputFlushBuffer);
     editStreams.add(eStream);
   }
 
-  public synchronized void createEditLogFile(File name) throws IOException {
-    EditLogOutputStream eStream = new EditLogFileOutputStream(name);
+  synchronized void createEditLogFile(File name) throws IOException {
+    EditLogOutputStream eStream = new EditLogFileOutputStream(name,
+        sizeOutputFlushBuffer);
     eStream.create();
     eStream.close();
   }
@@ -1279,7 +1074,7 @@ public class FSEditLog {
    * @param dest new stream path relative to the storage directory root.
    * @throws IOException
    */
-  void divertFileStreams(String dest) throws IOException {
+  synchronized void divertFileStreams(String dest) throws IOException {
     assert getNumEditStreams() >= getNumEditsDirs() :
       "Inconsistent number of streams";
     ArrayList<EditLogOutputStream> errorStreams = null;
@@ -1296,7 +1091,8 @@ public class FSEditLog {
         // close old stream
         closeStream(eStream);
         // create new stream
-        eStream = new EditLogFileOutputStream(new File(sd.getRoot(), dest));
+        eStream = new EditLogFileOutputStream(new File(sd.getRoot(), dest),
+            sizeOutputFlushBuffer);
         eStream.create();
         // replace by the new stream
         itE.replace(eStream);
@@ -1357,7 +1153,7 @@ public class FSEditLog {
           }
         }
         // open new stream
-        eStream = new EditLogFileOutputStream(editFile);
+        eStream = new EditLogFileOutputStream(editFile, sizeOutputFlushBuffer);
         // replace by the new stream
         itE.replace(eStream);
       } catch (IOException e) {
@@ -1394,8 +1190,8 @@ public class FSEditLog {
   }
 
   // sets the initial capacity of the flush buffer.
-  static void setBufferCapacity(int size) {
-    sizeFlushBuffer = size;
+  public void setBufferCapacity(int size) {
+    sizeOutputFlushBuffer = size;
   }
 
   /**
