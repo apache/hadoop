@@ -28,42 +28,41 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
-import java.util.Map;
-import java.util.HashMap;
-import java.lang.Math;
-import java.nio.ByteBuffer;
+import java.util.Set;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.io.DeprecatedUTF8;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
-import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.io.DeprecatedUTF8;
+import org.apache.hadoop.io.Writable;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -362,7 +361,7 @@ public class FSImage extends Storage {
         case NON_EXISTENT:
           // name-node fails if any of the configured storage dirs are missing
           throw new InconsistentFSStateException(sd.getRoot(),
-                                                 "storage directory does not exist or is not accessible.");
+                      "storage directory does not exist or is not accessible.");
         case NOT_FORMATTED:
           break;
         case NORMAL:
@@ -396,9 +395,9 @@ public class FSImage extends Storage {
           && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
           && layoutVersion != FSConstants.LAYOUT_VERSION)
         throw new IOException(
-                          "\nFile system image contains an old layout version " + layoutVersion
-                          + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
-                          + " is required.\nPlease restart NameNode with -upgrade option.");
+           "\nFile system image contains an old layout version " + layoutVersion
+         + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
+         + " is required.\nPlease restart NameNode with -upgrade option.");
     // check whether distributed upgrade is reguired and/or should be continued
     verifyDistributedUpgradeProgress(startOpt);
 
@@ -628,6 +627,13 @@ public class FSImage extends Storage {
     this.checkpointTime = readCheckpointTime(sd);
   }
 
+  /**
+   * Determine the checkpoint time of the specified StorageDirectory
+   * 
+   * @param sd StorageDirectory to check
+   * @return If file exists and can be read, last checkpoint time. If not, 0L.
+   * @throws IOException On errors processing file pointed to by sd
+   */
   long readCheckpointTime(StorageDirectory sd) throws IOException {
     File timeFile = getImageFile(sd, NameNodeFile.TIME);
     long timeStamp = 0L;
@@ -844,51 +850,65 @@ public class FSImage extends Storage {
    * @throws IOException
    */
   boolean loadFSImage() throws IOException {
-    // Now check all curFiles and see which is the newest
     long latestNameCheckpointTime = Long.MIN_VALUE;
     long latestEditsCheckpointTime = Long.MIN_VALUE;
-    StorageDirectory latestNameSD = null;
-    StorageDirectory latestEditsSD = null;
     boolean needToSave = false;
     isUpgradeFinalized = true;
+    
+    StorageDirectory latestNameSD = null;
+    StorageDirectory latestEditsSD = null;
+    
     Collection<String> imageDirs = new ArrayList<String>();
     Collection<String> editsDirs = new ArrayList<String>();
+    
+    // Set to determine if all of storageDirectories share the same checkpoint
+    Set<Long> checkpointTimes = new HashSet<Long>();
+
+    // Process each of the storage directories to find the pair of
+    // newest image file and edit file
     for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
+
+      // Was the file just formatted?
       if (!sd.getVersionFile().exists()) {
         needToSave |= true;
-        continue; // some of them might have just been formatted
+        continue;
       }
-      boolean imageExists = false, editsExists = false;
+      
+      boolean imageExists = false;
+      boolean editsExists = false;
+      
+      // Determine if sd is image, edits or both
       if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
         imageExists = getImageFile(sd, NameNodeFile.IMAGE).exists();
         imageDirs.add(sd.getRoot().getCanonicalPath());
       }
+      
       if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
         editsExists = getImageFile(sd, NameNodeFile.EDITS).exists();
         editsDirs.add(sd.getRoot().getCanonicalPath());
       }
       
       checkpointTime = readCheckpointTime(sd);
-      if ((checkpointTime != Long.MIN_VALUE) && 
-          ((checkpointTime != latestNameCheckpointTime) || 
-           (checkpointTime != latestEditsCheckpointTime))) {
-        // Force saving of new image if checkpoint time
-        // is not same in all of the storage directories.
-        needToSave |= true;
-      }
+
+      checkpointTimes.add(checkpointTime);
+      
       if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE) && 
          (latestNameCheckpointTime < checkpointTime) && imageExists) {
         latestNameCheckpointTime = checkpointTime;
         latestNameSD = sd;
       }
+      
       if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS) && 
            (latestEditsCheckpointTime < checkpointTime) && editsExists) {
         latestEditsCheckpointTime = checkpointTime;
         latestEditsSD = sd;
       }
+      
+      // check that we have a valid, non-default checkpointTime
       if (checkpointTime <= 0L)
         needToSave |= true;
+      
       // set finalized flag
       isUpgradeFinalized = isUpgradeFinalized && !sd.getPreviousDir().exists();
     }
@@ -901,10 +921,13 @@ public class FSImage extends Storage {
 
     // Make sure we are loading image and edits from same checkpoint
     if (latestNameCheckpointTime != latestEditsCheckpointTime)
-      throw new IOException("Inconsitent storage detected, " +
+      throw new IOException("Inconsistent storage detected, " +
                             "name and edits storage do not match");
     
-    // Recover from previous interrrupted checkpoint if any
+    // If there was more than one checkpointTime recorded we should save
+    needToSave |= checkpointTimes.size() != 1;
+    
+    // Recover from previous interrupted checkpoint, if any
     needToSave |= recoverInterruptedCheckpoint(latestNameSD, latestEditsSD);
 
     long startTime = FSNamesystem.now();
@@ -920,12 +943,16 @@ public class FSImage extends Storage {
     
     // Load latest edits
     needToSave |= (loadFSEdits(latestEditsSD) > 0);
+
+    assert editLog != null : "editLog must be initialized";
+    if(!editLog.isOpen())
+      editLog.open();
     
     return needToSave;
   }
 
   /**
-   * Load in the filesystem imagefrom file. It's a big list of
+   * Load in the filesystem image from file. It's a big list of
    * filenames and blocks.  Return whether we should
    * "re-save" and consolidate the edit-logs
    */
@@ -1099,16 +1126,20 @@ public class FSImage extends Storage {
     int numEdits = 0;
     EditLogFileInputStream edits = 
       new EditLogFileInputStream(getImageFile(sd, NameNodeFile.EDITS));
+    
     numEdits = editLog.loadFSEdits(edits);
     edits.close();
     File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
+    
     if (editsNew.exists() && editsNew.length() > 0) {
       edits = new EditLogFileInputStream(editsNew);
       numEdits += editLog.loadFSEdits(edits);
       edits.close();
     }
+    
     // update the counts.
     getFSNamesystem().dir.updateCountForINodeWithQuota();    
+    
     return numEdits;
   }
 

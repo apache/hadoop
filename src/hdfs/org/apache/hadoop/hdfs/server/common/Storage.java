@@ -159,7 +159,7 @@ public abstract class Storage extends StorageInfo {
   
   /**
    * Return default iterator
-   * This iterator returns all entires of storageDirs
+   * This iterator returns all entries in storageDirs
    */
   public Iterator<StorageDirectory> dirIterator() {
     return dirIterator(null);
@@ -167,7 +167,7 @@ public abstract class Storage extends StorageInfo {
   
   /**
    * Return iterator based on Storage Directory Type
-   * This iterator selects entires of storageDirs of type dirType and returns
+   * This iterator selects entries in storageDirs of type dirType and returns
    * them via the Iterator
    */
   public Iterator<StorageDirectory> dirIterator(StorageDirType dirType) {
