@@ -97,7 +97,8 @@ public class MiniMRCluster {
     public void run() {
       try {
         jc = (jc == null) ? createJobConf() : createJobConf(jc);
-        jc.set("mapred.local.dir","build/test/mapred/local");
+        File f = new File("build/test/mapred/local").getAbsoluteFile();
+        jc.set("mapred.local.dir",f.getAbsolutePath());
         jc.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
         tracker = JobTracker.startTracker(jc);
