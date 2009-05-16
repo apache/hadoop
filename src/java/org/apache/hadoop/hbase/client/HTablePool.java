@@ -28,6 +28,7 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -39,6 +40,7 @@ public class HTablePool {
   private static final Map<byte[], HTablePool> poolMap = 
     new TreeMap<byte[], HTablePool>(Bytes.BYTES_COMPARATOR);
 
+  private final HBaseConfiguration config;
   private final byte[] tableName;
   private final Deque<HTable> pool;
   private final int maxSize;
@@ -48,8 +50,18 @@ public class HTablePool {
    * @param tableName the table name
    * @return the table pool
    */
+  public static HTablePool getPool(HBaseConfiguration config, 
+      byte[] tableName) {
+    return getPool(config, tableName, 10);
+  }
+
+  /**
+   * Get a shared table pool.
+   * @param tableName the table name
+   * @return the table pool
+   */
   public static HTablePool getPool(byte[] tableName) {
-    return getPool(tableName, 10);
+    return getPool(new HBaseConfiguration(), tableName, 10);
   }
 
   /**
@@ -59,15 +71,17 @@ public class HTablePool {
    * shared pool will be allocated with <i>maxSize</i> as the size limit.
    * However, if the shared pool already exists, and was created with a 
    * different (or default) value for <i>maxSize</i>, it will not be changed.
+   * @param config HBase configuration
    * @param tableName the table name
    * @param maxSize the maximum size of the pool
    * @return the table pool
    */
-  public static HTablePool getPool(byte[] tableName, int maxSize) {
+  public static HTablePool getPool(HBaseConfiguration config, byte[] tableName,
+      int maxSize) {
     synchronized (poolMap) {
       HTablePool pool = poolMap.get(tableName);
       if (pool == null) {
-        pool = new HTablePool(tableName, maxSize);
+        pool = new HTablePool(config, tableName, maxSize);
         poolMap.put(tableName, pool);
       }
       return pool;
@@ -75,12 +89,16 @@ public class HTablePool {
   }
 
   /**
-   * Constructor
+   * Constructor 
+   * @param config HBase configuration
    * @param tableName the table name
+   * @param maxSize maximum pool size
    */
-  public HTablePool(byte[] tableName) {
+  public HTablePool(HBaseConfiguration config, byte[] tableName,
+      int maxSize) {
+    this.config = config;
     this.tableName = tableName;
-    this.maxSize = 10;
+    this.maxSize = maxSize;
     this.pool = new ArrayDeque<HTable>(this.maxSize);
   }
 
@@ -90,9 +108,15 @@ public class HTablePool {
    * @param maxSize maximum pool size
    */
   public HTablePool(byte[] tableName, int maxSize) {
-    this.tableName = tableName;
-    this.maxSize = maxSize;
-    this.pool = new ArrayDeque<HTable>(this.maxSize);
+    this(new HBaseConfiguration(), tableName, maxSize);
+  }
+
+  /**
+   * Constructor
+   * @param tableName the table name
+   */
+  public HTablePool(byte[] tableName) {
+    this(new HBaseConfiguration(), tableName, 10);
   }
 
   /**
@@ -109,7 +133,7 @@ public class HTablePool {
         return pool.pop();
       }
     }
-    return new HTable(tableName);
+    return new HTable(config, tableName);
   }
 
   /**

@@ -248,9 +248,11 @@ Release 0.20.0 - Unreleased
    HBASE-1417  Cleanup disorientating RPC message
    HBASE-1424  have shell print regioninfo and location on first load if
                DEBUG enabled
-   HBASE-1008  [performance] The replay of logs on server crash takes way too long
+   HBASE-1008  [performance] The replay of logs on server crash takes way too
+               long
    HBASE-1394  Uploads sometimes fall to 0 requests/second (Binding up on
                HLog#append?)
+   HBASE-1429  Allow passing of a configuration object to HTablePool
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
@@ -280,7 +282,8 @@ Release 0.19.0 - 01/21/2009
    HBASE-912   PE is broken when other tables exist
    HBASE-853   [shell] Cannot describe meta tables (Izaak Rubin via Stack)
    HBASE-844   Can't pass script to hbase shell 
-   HBASE-837   Add unit tests for ThriftServer.HBaseHandler (Izaak Rubin via Stack)
+   HBASE-837   Add unit tests for ThriftServer.HBaseHandler (Izaak Rubin via
+               Stack)
    HBASE-913   Classes using log4j directly
    HBASE-914   MSG_REPORT_CLOSE has a byte array for a message
    HBASE-918   Region balancing during startup makes cluster unstable
@@ -291,7 +294,7 @@ Release 0.19.0 - 01/21/2009
    HBASE-924   Update hadoop in lib on 0.18 hbase branch to 0.18.1
    HBASE-929   Clarify that ttl in HColumnDescriptor is seconds
    HBASE-930   RegionServer stuck: HLog: Could not append. Requesting close of
-               log java.io.IOException: Could not get block locations. Aborting...
+               log java.io.IOException: Could not get block locations
    HBASE-926   If no master, regionservers should hang out rather than fail on
                connection and shut themselves down
    HBASE-919   Master and Region Server need to provide root region location if
@@ -301,11 +304,13 @@ Release 0.19.0 - 01/21/2009
    HBASE-939   NPE in HStoreKey
    HBASE-945   Be consistent in use of qualified/unqualified mapfile paths
    HBASE-946   Row with 55k deletes timesout scanner lease
-   HBASE-950   HTable.commit no longer works with existing RowLocks though it's still in API
+   HBASE-950   HTable.commit no longer works with existing RowLocks though it's
+               still in API
    HBASE-952   Deadlock in HRegion.batchUpdate
    HBASE-954   Don't reassign root region until ProcessServerShutdown has split
                the former region server's log
-   HBASE-957   PerformanceEvaluation tests if table exists by comparing descriptors
+   HBASE-957   PerformanceEvaluation tests if table exists by comparing
+               descriptors
    HBASE-728,  HBASE-956, HBASE-955 Address thread naming, which threads are
                Chores, vs Threads, make HLog manager the write ahead log and
                not extend it to provided optional HLog sync operations.
@@ -320,7 +325,8 @@ Release 0.19.0 - 01/21/2009
    HBASE-977   Arcane HStoreKey comparator bug
    HBASE-979   REST web app is not started automatically
    HBASE-980   Undo core of HBASE-975, caching of start and end row
-   HBASE-982   Deleting a column in MapReduce fails (Doğacan Güney via Stack)
+   HBASE-982   Deleting a column in MapReduce fails (Doğacan Güney via
+               Stack)
    HBASE-984   Fix javadoc warnings
    HBASE-985   Fix javadoc warnings
    HBASE-951   Either shut down master or let it finish cleanup
