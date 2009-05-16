@@ -175,14 +175,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.maxlogentries</name>
-    <value>100000</value>
-    <description>Rotate the HRegion HLogs when count of entries exceeds this
-    value.  Default: 100,000.  Value is checked by a thread that runs every
-    hbase.server.thread.wakefrequency.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.flushlogentries</name>
     <value>100</value>
     <description>Sync the HLog to the HDFS when it has accumulated this many

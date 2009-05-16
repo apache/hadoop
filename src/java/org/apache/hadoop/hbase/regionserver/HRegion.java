@@ -1341,7 +1341,7 @@ public class HRegion implements HConstants {
           edits.add(kv);
         }
         if (!edits.isEmpty()) {
-          update(edits, writeToWAL);
+          update(edits, writeToWAL, now);
         }
         if (latestTimestampDeletes != null &&
             !latestTimestampDeletes.isEmpty()) {
@@ -1349,7 +1349,7 @@ public class HRegion implements HConstants {
           // as edits.  Need to do individually after figuring which is latest
           // timestamp to delete.
           for (byte [] column: latestTimestampDeletes) {
-            deleteMultiple(row, column, LATEST_TIMESTAMP, 1);
+            deleteMultiple(row, column, LATEST_TIMESTAMP, 1, now);
           }
         }
       } finally {
@@ -1387,6 +1387,7 @@ public class HRegion implements HConstants {
     splitsAndClosesLock.readLock().lock();
     try {
       byte[] row = b.getRow();
+      long now = System.currentTimeMillis();
       Integer lid = getLock(lockid,row);
       try {
         NavigableSet<byte []> keySet =
@@ -1404,7 +1405,7 @@ public class HRegion implements HConstants {
         }
         if (success) {
           long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP)?
-            System.currentTimeMillis(): b.getTimestamp();
+            now: b.getTimestamp();
           Set<byte []> latestTimestampDeletes = null;
           List<KeyValue> edits = new ArrayList<KeyValue>();
           for (BatchOperation op: b) {
@@ -1431,7 +1432,7 @@ public class HRegion implements HConstants {
             edits.add(kv);
           }
           if (!edits.isEmpty()) {
-            update(edits, writeToWAL);
+            update(edits, writeToWAL, now);
           }
           if (latestTimestampDeletes != null &&
               !latestTimestampDeletes.isEmpty()) {
@@ -1439,7 +1440,7 @@ public class HRegion implements HConstants {
             // as edits.  Need to do individually after figuring which is latest
             // timestamp to delete.
             for (byte [] column: latestTimestampDeletes) {
-              deleteMultiple(row, column, LATEST_TIMESTAMP, 1);
+              deleteMultiple(row, column, LATEST_TIMESTAMP, 1, now);
             }
           }
         }
@@ -1530,7 +1531,7 @@ public class HRegion implements HConstants {
     try {
       // Delete ALL versions rather than column family VERSIONS.  If we just did
       // VERSIONS, then if 2* VERSION cells, subsequent gets would get old stuff.
-      deleteMultiple(row, column, ts, ALL_VERSIONS);
+      deleteMultiple(row, column, ts, ALL_VERSIONS, System.currentTimeMillis());
     } finally {
       if(lockid == null) releaseRowLock(lid);
     }
@@ -1547,9 +1548,10 @@ public class HRegion implements HConstants {
   throws IOException {
     checkReadOnly();
     Integer lid = getLock(lockid, row);
+    long now = System.currentTimeMillis();
     long time = ts;
     if (ts == HConstants.LATEST_TIMESTAMP) {
-      time = System.currentTimeMillis();
+      time = now;
     }
     KeyValue kv = KeyValue.createFirstOnRow(row, time);
     try {
@@ -1561,7 +1563,7 @@ public class HRegion implements HConstants {
           // This is UGLY. COPY OF KEY PART OF KeyValue.
           edits.add(key.cloneDelete());
         }
-        update(edits);
+        update(edits, now);
       }
     } finally {
       if (lockid == null) releaseRowLock(lid);
@@ -1594,7 +1596,7 @@ public class HRegion implements HConstants {
         for (KeyValue key: keyvalues) {
           edits.add(key.cloneDelete());
         }
-        update(edits);
+        update(edits, now);
       }
     } finally {
       if(lockid == null) releaseRowLock(lid);
@@ -1629,7 +1631,7 @@ public class HRegion implements HConstants {
       for (KeyValue kv: keyvalues) {
         edits.add(kv.cloneDelete());
       }
-      update(edits);
+      update(edits, now);
     } finally {
       if(lockid == null) releaseRowLock(lid);
     }
@@ -1668,7 +1670,7 @@ public class HRegion implements HConstants {
         for (KeyValue k: keyvalues) {
           edits.add(k.cloneDelete());
         }
-        update(edits);
+        update(edits, now);
       }
     } finally {
       if(lockid == null) releaseRowLock(lid);
@@ -1684,10 +1686,11 @@ public class HRegion implements HConstants {
    * @param ts Timestamp to start search on.
    * @param versions How many versions to delete. Pass
    * {@link HConstants#ALL_VERSIONS} to delete all.
+   * @param now
    * @throws IOException
    */
   private void deleteMultiple(final byte [] row, final byte [] column,
-      final long ts, final int versions)
+      final long ts, final int versions, final long now)
   throws IOException {
     checkReadOnly();
     // We used to have a getKeys method that purportedly only got the keys and
@@ -1704,7 +1707,7 @@ public class HRegion implements HConstants {
       for (KeyValue key: keys) {
         edits.add(key.cloneDelete());
       }
-      update(edits);
+      update(edits, now);
     }
   }
 
@@ -1748,10 +1751,12 @@ public class HRegion implements HConstants {
    * Add updates first to the hlog and then add values to memcache.
    * Warning: Assumption is caller has lock on passed in row.
    * @param edits Cell updates by column
+   * @praram now
    * @throws IOException
    */
-  private void update(final List<KeyValue> edits) throws IOException {
-    this.update(edits, true);
+  private void update(final List<KeyValue> edits, final long now)
+  throws IOException {
+    this.update(edits, true, now);
   }
 
   /** 
@@ -1759,9 +1764,11 @@ public class HRegion implements HConstants {
    * Warning: Assumption is caller has lock on passed in row.
    * @param writeToWAL if true, then we should write to the log
    * @param updatesByColumn Cell updates by column
+   * @param now
    * @throws IOException
    */
-  private void update(final List<KeyValue> edits, boolean writeToWAL)
+  private void update(final List<KeyValue> edits, boolean writeToWAL,
+    final long now)
   throws IOException {
     if (edits == null || edits.isEmpty()) {
       return;
@@ -1772,7 +1779,7 @@ public class HRegion implements HConstants {
       if (writeToWAL) {
         this.log.append(regionInfo.getRegionName(),
           regionInfo.getTableDesc().getName(), edits,
-          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()));
+          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
       }
       long size = 0;
       for (KeyValue kv: edits) {
@@ -2273,7 +2280,7 @@ public class HRegion implements HConstants {
       List<KeyValue> edits = new ArrayList<KeyValue>();
       edits.add(new KeyValue(row, COL_REGIONINFO, System.currentTimeMillis(),
         Writables.getBytes(r.getRegionInfo())));
-      meta.update(edits);
+      meta.update(edits, System.currentTimeMillis());
     } finally {
       meta.releaseRowLock(lid);
     }

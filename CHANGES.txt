@@ -249,6 +249,8 @@ Release 0.20.0 - Unreleased
    HBASE-1424  have shell print regioninfo and location on first load if
                DEBUG enabled
    HBASE-1008  [performance] The replay of logs on server crash takes way too long
+   HBASE-1394  Uploads sometimes fall to 0 requests/second (Binding up on
+               HLog#append?)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

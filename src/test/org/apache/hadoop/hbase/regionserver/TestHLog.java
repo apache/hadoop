@@ -77,7 +77,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
             edit.add(new KeyValue(rowName, column, System.currentTimeMillis(),
               column));
-            log.append(Bytes.toBytes(Integer.toString(i)), tableName, edit, false);
+            log.append(Bytes.toBytes(Integer.toString(i)), tableName, edit,
+              false, System.currentTimeMillis());
           }
         }
         log.rollWriter();
@@ -110,7 +111,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         cols.add(new KeyValue(row, Bytes.toBytes("column:" + Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
-      log.append(regionName, tableName, cols, false);
+      log.append(regionName, tableName, cols, false, System.currentTimeMillis());
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId);
       log.close();

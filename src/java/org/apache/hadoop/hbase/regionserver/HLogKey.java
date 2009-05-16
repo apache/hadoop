@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.*;
 
@@ -34,14 +36,18 @@ import java.io.*;
  * <p>Some Transactional edits (START, COMMIT, ABORT) will not have an
  * associated row.
  */
-public class HLogKey implements WritableComparable<HLogKey> {
+public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
   private byte [] regionName;
   private byte [] tablename;
   private long logSeqNum;
+  // Time at which this edit was written.
+  private long writeTime;
+  private int HEAP_TAX = HeapSize.OBJECT + (2 * HeapSize.BYTE_ARRAY) +
+    (2 * HeapSize.LONG);
 
-  /** Create an empty key useful when deserializing */
+  /** Writable Consructor -- Do not use. */
   public HLogKey() {
-    this(null, null, 0L);
+    this(null, null, 0L, HConstants.LATEST_TIMESTAMP);
   }
   
   /**
@@ -52,12 +58,14 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * @param regionName  - name of region
    * @param tablename   - name of table
    * @param logSeqNum   - log sequence number
+   * @param now Time at which this edit was written.
    */
   public HLogKey(final byte [] regionName, final byte [] tablename,
-      long logSeqNum) {
+      long logSeqNum, final long now) {
     this.regionName = regionName;
     this.tablename = tablename;
     this.logSeqNum = logSeqNum;
+    this.writeTime = now;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -78,7 +86,11 @@ public class HLogKey implements WritableComparable<HLogKey> {
   public long getLogSeqNum() {
     return logSeqNum;
   }
-  
+
+  public long getWriteTime() {
+    return this.writeTime;
+  }
+
   @Override
   public String toString() {
     return Bytes.toString(tablename) + "/" + Bytes.toString(regionName) + "/" +
@@ -100,38 +112,44 @@ public class HLogKey implements WritableComparable<HLogKey> {
   public int hashCode() {
     int result = this.regionName.hashCode();
     result ^= this.logSeqNum;
+    result ^= this.writeTime;
     return result;
   }
 
-  //
-  // Comparable
-  //
-
   public int compareTo(HLogKey o) {
     int result = Bytes.compareTo(this.regionName, o.regionName);
-    if(result == 0) {
+    if (result == 0) {
       if (this.logSeqNum < o.logSeqNum) {
         result = -1;
       } else if (this.logSeqNum > o.logSeqNum) {
         result = 1;
       }
+      if (result == 0) {
+        if (this.writeTime < o.writeTime) {
+          result = -1;
+        } else if (this.writeTime > o.writeTime) {
+          return 1;
+        }
+      }
     }
     return result;
   }
-
-  //
-  // Writable
-  //
 
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.regionName);
     Bytes.writeByteArray(out, this.tablename);
     out.writeLong(logSeqNum);
+    out.writeLong(this.writeTime);
   }
   
   public void readFields(DataInput in) throws IOException {
     this.regionName = Bytes.readByteArray(in);
     this.tablename = Bytes.readByteArray(in);
     this.logSeqNum = in.readLong();
+    this.writeTime = in.readLong();
+  }
+
+  public long heapSize() {
+    return this.regionName.length + this.tablename.length + HEAP_TAX;
   }
 }

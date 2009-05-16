@@ -100,7 +100,7 @@ class TransactionalHLogManager {
     HLogEdit logEdit;
     logEdit = new HLogEdit(transactionId, TransactionalOperation.START);
 */
-    hlog.append(regionInfo, null/*logEdit*/);
+    hlog.append(regionInfo, null/*logEdit*/, System.currentTimeMillis());
   }
 
   /**
@@ -117,7 +117,7 @@ class TransactionalHLogManager {
 
     for (BatchOperation op : update) {
       // COMMENTED OUT  HLogEdit logEdit = new HLogEdit(transactionId, update.getRow(), op, commitTime);
-      hlog.append(regionInfo, update.getRow(), null /*logEdit*/);
+      hlog.append(regionInfo, update.getRow(), null /*logEdit*/, System.currentTimeMillis());
     }
   }
 
@@ -130,7 +130,7 @@ class TransactionalHLogManager {
     logEdit = new HLogEdit(transactionId,
         HLogEdit.TransactionalOperation.COMMIT);
 */
-    hlog.append(regionInfo, null /*logEdit*/);
+    hlog.append(regionInfo, null /*logEdit*/, System.currentTimeMillis());
   }
 
   /**
@@ -141,7 +141,7 @@ class TransactionalHLogManager {
     /*HLogEdit logEdit;
     logEdit = new HLogEdit(transactionId, HLogEdit.TransactionalOperation.ABORT);
 */
-    hlog.append(regionInfo, null /*logEdit*/);
+    hlog.append(regionInfo, null /*logEdit*/, System.currentTimeMillis());
   }
 
   /**

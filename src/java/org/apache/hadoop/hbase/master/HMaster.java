@@ -267,7 +267,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         this.rootdir, this.conf);
       HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
         this.rootdir, this.conf);
-
       // Add first region from the META table to the ROOT region.
       HRegion.addRegionToMETA(root, meta);
       root.close();

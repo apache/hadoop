@@ -205,9 +205,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
-  protected volatile HLog log;
-  LogRoller logRoller;
-  LogFlusher logFlusher;
+  protected volatile HLog hlog;
+  LogRoller hlogRoller;
+  LogFlusher hlogFlusher;
   
   // limit compactions while starting up
   CompactionLimitThread compactionLimitThread;
@@ -344,10 +344,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.compactSplitThread = new CompactSplitThread(this);
     
     // Log rolling thread
-    this.logRoller = new LogRoller(this);
+    this.hlogRoller = new LogRoller(this);
     
     // Log flushing thread
-    this.logFlusher =
+    this.hlogFlusher =
       new LogFlusher(this.threadWakeFrequency, this.stopRequested);
     
     // Background thread to check for major compactions; needed if region
@@ -513,14 +513,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
                 if (checkFileSystem()) {
                   closeAllRegions();
                   try {
-                    log.closeAndDelete();
+                    hlog.closeAndDelete();
                   } catch (Exception e) {
                     LOG.error("error closing and deleting HLog", e);
                   }
                   try {
                     serverInfo.setStartCode(System.currentTimeMillis());
-                    log = setupHLog();
-                    this.logFlusher.setHLog(log);
+                    hlog = setupHLog();
+                    this.hlogFlusher.setHLog(hlog);
                   } catch (IOException e) {
                     this.abortRequested = true;
                     this.stopRequested.set(true);
@@ -620,17 +620,17 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
     cacheFlusher.interruptIfNecessary();
-    logFlusher.interrupt();
+    hlogFlusher.interrupt();
     compactSplitThread.interruptIfNecessary();
-    logRoller.interruptIfNecessary();
+    hlogRoller.interruptIfNecessary();
     this.majorCompactionChecker.interrupt();
 
     if (abortRequested) {
       if (this.fsOk) {
         // Only try to clean up if the file system is available
         try {
-          if (this.log != null) {
-            this.log.close();
+          if (this.hlog != null) {
+            this.hlog.close();
             LOG.info("On abort, closed hlog");
           }
         } catch (Throwable e) {
@@ -644,7 +644,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     } else {
       ArrayList<HRegion> closedRegions = closeAllRegions();
       try {
-        log.closeAndDelete();
+        hlog.closeAndDelete();
       } catch (Throwable e) {
         LOG.error("Close and delete failed",
           RemoteExceptionHandler.checkThrowable(e));
@@ -743,8 +743,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
       this.hdfsShutdownThread = suppressHdfsShutdownHook();
 
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
-      this.log = setupHLog();
-      this.logFlusher.setHLog(log);
+      this.hlog = setupHLog();
+      this.hlogFlusher.setHLog(hlog);
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       startServiceThreads();
@@ -1058,7 +1058,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         "running at " + this.serverInfo.getServerAddress().toString() +
         " because logdir " + logdir.toString() + " exists");
     }
-    HLog newlog = new HLog(fs, logdir, conf, logRoller);
+    HLog newlog = new HLog(fs, logdir, conf, hlogRoller);
     return newlog;
   }
   
@@ -1127,9 +1127,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
         LOG.fatal("Set stop flag in " + t.getName(), e);
       }
     };
-    Threads.setDaemonThreadRunning(this.logRoller, n + ".logRoller",
+    Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller",
         handler);
-    Threads.setDaemonThreadRunning(this.logFlusher, n + ".logFlusher",
+    Threads.setDaemonThreadRunning(this.hlogFlusher, n + ".logFlusher",
         handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
@@ -1199,7 +1199,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     // Verify that all threads are alive
     if (!(leases.isAlive() && compactSplitThread.isAlive() &&
-        cacheFlusher.isAlive() && logRoller.isAlive() &&
+        cacheFlusher.isAlive() && hlogRoller.isAlive() &&
         workerThread.isAlive() && this.majorCompactionChecker.isAlive())) {
       // One or more threads are no longer alive - shut down
       stop();
@@ -1234,7 +1234,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   /** @return the HLog */
   HLog getLog() {
-    return this.log;
+    return this.hlog;
   }
 
   /**
@@ -1270,7 +1270,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     Threads.shutdown(this.workerThread);
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.compactSplitThread);
-    Threads.shutdown(this.logRoller);
+    Threads.shutdown(this.hlogRoller);
   }
 
   private boolean getMaster() {
@@ -1540,7 +1540,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       this.lock.writeLock().lock();
       try {
-        this.log.setSequenceNumber(region.getMinSequenceId());
+        this.hlog.setSequenceNumber(region.getMinSequenceId());
         this.onlineRegions.put(mapKey, region);
       } finally {
         this.lock.writeLock().unlock();
@@ -1552,7 +1552,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   protected HRegion instantiateRegion(final HRegionInfo regionInfo)
       throws IOException {
     HRegion r = new HRegion(HTableDescriptor.getTableDir(rootDir, regionInfo
-        .getTableDesc().getName()), this.log, this.fs, conf, regionInfo,
+        .getTableDesc().getName()), this.hlog, this.fs, conf, regionInfo,
         this.cacheFlusher);
     r.initialize(null,  new Progressable() {
       public void progress() {

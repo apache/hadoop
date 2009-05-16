@@ -111,7 +111,7 @@ public class TransactionalRegionServer extends HRegionServer implements
   protected HRegion instantiateRegion(final HRegionInfo regionInfo)
       throws IOException {
     HRegion r = new TransactionalRegion(HTableDescriptor.getTableDir(super
-        .getRootDir(), regionInfo.getTableDesc().getName()), super.log, super
+        .getRootDir(), regionInfo.getTableDesc().getName()), super.hlog, super
         .getFileSystem(), super.conf, regionInfo, super.getFlushRequester());
     r.initialize(null, new Progressable() {
       public void progress() {

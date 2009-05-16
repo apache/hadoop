@@ -61,7 +61,7 @@ public class IndexedRegionServer extends TransactionalRegionServer implements
   protected HRegion instantiateRegion(final HRegionInfo regionInfo)
       throws IOException {
     HRegion r = new IndexedRegion(HTableDescriptor.getTableDir(super
-        .getRootDir(), regionInfo.getTableDesc().getName()), super.log, super
+        .getRootDir(), regionInfo.getTableDesc().getName()), super.hlog, super
         .getFileSystem(), super.conf, regionInfo, super.getFlushRequester());
     r.initialize(null, new Progressable() {
       public void progress() {
