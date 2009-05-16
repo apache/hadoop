@@ -509,23 +509,25 @@ class DataBlockScanner implements Runnable {
    */
   private boolean assignInitialVerificationTimes() {
     int numBlocks = 1;
+    LogFileHandler log = null;
     synchronized (this) {
+      log = verificationLog;
       numBlocks = Math.max(blockMap.size(), 1);
     }
     
     //First udpates the last verification times from the log file.
     LogFileHandler.Reader logReader = null;
     try {
-      if (verificationLog != null) {
-        logReader = verificationLog.new Reader(false);
+      if (log != null) {
+        logReader = log.new Reader(false);
       }
     } catch (IOException e) {
       LOG.warn("Could not read previous verification times : " +
                StringUtils.stringifyException(e));
     }
     
-    if (verificationLog != null) {
-      verificationLog.updateCurNumLines();
+    if (log != null) {
+      log.updateCurNumLines();
     }
     
     try {

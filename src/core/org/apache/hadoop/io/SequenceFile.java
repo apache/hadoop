@@ -2170,6 +2170,11 @@ public class SequenceFile {
       }
     }
 
+    /** disables sync. often invoked for tmp files */
+    synchronized void ignoreSync() {
+      sync = null;
+    }
+    
     /** Set the current byte position in the input file.
      *
      * <p>The position passed must be a position returned by {@link
@@ -3108,7 +3113,7 @@ public class SequenceFile {
                                      segmentLength, conf, false);
         
           //sometimes we ignore syncs especially for temp merge files
-          if (ignoreSync) reader.sync = null;
+          if (ignoreSync) reader.ignoreSync();
 
           if (reader.getKeyClass() != keyClass)
             throw new IOException("wrong key class: " + reader.getKeyClass() +

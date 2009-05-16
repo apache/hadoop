@@ -47,7 +47,7 @@ class FSDirectory implements Closeable {
 
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
-  private boolean ready = false;
+  private volatile boolean ready = false;
   // Metrics record
   private MetricsRecord directoryMetrics = null;
 

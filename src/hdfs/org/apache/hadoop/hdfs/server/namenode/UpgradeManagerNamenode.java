@@ -115,8 +115,8 @@ class UpgradeManagerNamenode extends UpgradeManager {
     namesystem.leaveSafeMode(false);
   }
 
-  UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
-                                                ) throws IOException {
+  synchronized UpgradeStatusReport distributedUpgradeProgress
+                                  (UpgradeAction action) throws IOException {
     boolean isFinalized = false;
     if(currentUpgrades == null) { // no upgrades are in progress
       FSImage fsimage = namesystem.getFSImage();

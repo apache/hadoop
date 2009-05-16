@@ -203,7 +203,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   // allow appending to hdfs files
   private boolean supportAppends = true;
 
-  private SafeModeInfo safeMode;  // safe mode information
+  private volatile SafeModeInfo safeMode;  // safe mode information
   private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
     
   // datanode networktoplogy
@@ -3115,7 +3115,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     /**
      * Set manual safe mode.
      */
-    void setManual() {
+    synchronized void setManual() {
       extension = Integer.MAX_VALUE;
     }
 

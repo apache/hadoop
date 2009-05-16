@@ -39,15 +39,15 @@ public abstract class UpgradeManager {
     return this.broadcastCommand;
   }
 
-  public boolean getUpgradeState() {
+  public synchronized boolean getUpgradeState() {
     return this.upgradeState;
   }
 
-  public int getUpgradeVersion(){
+  public synchronized int getUpgradeVersion(){
     return this.upgradeVersion;
   }
 
-  public void setUpgradeState(boolean uState, int uVersion) {
+  public synchronized void setUpgradeState(boolean uState, int uVersion) {
     this.upgradeState = uState;
     this.upgradeVersion = uVersion;
   }
@@ -57,13 +57,13 @@ public abstract class UpgradeManager {
                                             getUpgradeVersion(), getType());
   }
 
-  public short getUpgradeStatus() {
+  public synchronized short getUpgradeStatus() {
     if(currentUpgrades == null)
       return 100;
     return currentUpgrades.first().getUpgradeStatus();
   }
 
-  public boolean initializeUpgrade() throws IOException {
+  public synchronized boolean initializeUpgrade() throws IOException {
     currentUpgrades = getDistributedUpgrades();
     if(currentUpgrades == null) {
       // set new upgrade state
@@ -76,7 +76,7 @@ public abstract class UpgradeManager {
     return true;
   }
 
-  public boolean isUpgradeCompleted() {
+  public synchronized boolean isUpgradeCompleted() {
     if (currentUpgrades == null) {
       return true;
     }

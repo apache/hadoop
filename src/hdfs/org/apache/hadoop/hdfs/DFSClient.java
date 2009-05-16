@@ -2087,7 +2087,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   ****************************************************************/
   class DFSOutputStream extends FSOutputSummer implements Syncable {
     private Socket s;
-    boolean closed = false;
+    // closed is accessed by different threads under different locks.
+    volatile boolean closed = false;
   
     private String src;
     private DataOutputStream blockStream;
@@ -2113,7 +2114,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private volatile IOException lastException = null;
     private long artificialSlowdown = 0;
     private long lastFlushOffset = -1; // offset when flush was invoked
-    private boolean persistBlocks = false; // persist blocks on namenode
+    //volatile: written holding dataQueue and read holding DFSOutputStream 
+    private volatile boolean persistBlocks = false;//persist blocks on namenode
     private int recoveryErrorCount = 0; // number of times block recovery failed
     private int maxRecoveryErrorCount = 5; // try block recovery 5 times
     private volatile boolean appendChunk = false;   // appending to existing partial block
