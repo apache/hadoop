@@ -608,6 +608,9 @@ Trunk (unreleased changes)
     HADOOP-5855. Fix javac warnings for DisallowedDatanodeException and
     UnsupportedActionException.  (szetszwo)
 
+    HADOOP-5582. Fixes a problem in Hadoop Vaidya to do with reading
+    counters from job history files. (Suhas Gogate via ddas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
