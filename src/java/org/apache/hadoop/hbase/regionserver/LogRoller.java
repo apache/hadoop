@@ -40,17 +40,32 @@ class LogRoller extends Thread implements LogRollListener {
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
   private final HRegionServer server;
-  
+  private volatile long lastrolltime = System.currentTimeMillis();
+  // Period to roll log.
+  private final long rollperiod;
+
   /** @param server */
   public LogRoller(final HRegionServer server) {
     super();
     this.server = server;
+    this.rollperiod =
+      this.server.conf.getLong("hbase.regionserver.logroll.period", 3600000);
   }
 
   @Override
   public void run() {
     while (!server.isStopRequested()) {
+      long now = System.currentTimeMillis();
+      boolean periodic = false;
       if (!rollLog.get()) {
+        periodic = (now - this.lastrolltime) < this.rollperiod;
+        if (periodic) {
+          // Time for periodic roll
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
+          }
+          break;
+        }
         synchronized (rollLog) {
           try {
             rollLog.wait(server.threadWakeFrequency);
@@ -62,6 +77,7 @@ class LogRoller extends Thread implements LogRollListener {
       }
       rollLock.lock();          // Don't interrupt us. We're working
       try {
+        this.lastrolltime = now;
         byte [] regionToFlush = server.getLog().rollWriter();
         if (regionToFlush != null) {
           scheduleFlush(regionToFlush);
@@ -90,7 +106,7 @@ class LogRoller extends Thread implements LogRollListener {
     }
     LOG.info("LogRoller exiting.");
   }
-  
+
   private void scheduleFlush(final byte [] region) {
     boolean scheduled = false;
     HRegion r = this.server.getOnlineRegion(region);
@@ -114,7 +130,7 @@ class LogRoller extends Thread implements LogRollListener {
       rollLog.notifyAll();
     }
   }
-  
+
   /**
    * Called by region server to wake up this thread if it sleeping.
    * It is sleeping if rollLock is not held.
