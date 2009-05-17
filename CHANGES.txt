@@ -253,6 +253,7 @@ Release 0.20.0 - Unreleased
    HBASE-1394  Uploads sometimes fall to 0 requests/second (Binding up on
                HLog#append?)
    HBASE-1429  Allow passing of a configuration object to HTablePool
+   HBASE-1432  LuceneDocumentWrapper is not public
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

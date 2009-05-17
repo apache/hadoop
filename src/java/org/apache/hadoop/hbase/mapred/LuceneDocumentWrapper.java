@@ -28,8 +28,8 @@ import org.apache.lucene.document.Document;
  * A utility class used to pass a lucene document from reduce to OutputFormat.
  * It doesn't really serialize/deserialize a lucene document.
  */
-class LuceneDocumentWrapper implements Writable {
-  private Document doc;
+public class LuceneDocumentWrapper implements Writable {
+  protected Document doc;
 
   /**
    * @param doc
