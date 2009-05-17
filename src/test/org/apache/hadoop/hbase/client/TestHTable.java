@@ -235,12 +235,24 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     BatchUpdate batchUpdate = new BatchUpdate(row);
     BatchUpdate batchUpdate2 = new BatchUpdate(row);
     BatchUpdate batchUpdate3 = new BatchUpdate(row);
+
+    // this row doesn't exist when checkAndSave is invoked
+    byte [] row1 = Bytes.toBytes("row1");
+    BatchUpdate batchUpdate4 = new BatchUpdate(row1);
     
+    // to be used for a checkAndSave for expected empty columns
+    BatchUpdate batchUpdate5 = new BatchUpdate(row);
+
     HbaseMapWritable<byte[],byte[]> expectedValues =
       new HbaseMapWritable<byte[],byte[]>();
     HbaseMapWritable<byte[],byte[]> badExpectedValues =
       new HbaseMapWritable<byte[],byte[]>();
-    
+    HbaseMapWritable<byte[],byte[]> expectedNoValues =
+      new HbaseMapWritable<byte[],byte[]>();
+    // the columns used here must not be updated on batchupate
+    HbaseMapWritable<byte[],byte[]> expectedNoValues1 =
+      new HbaseMapWritable<byte[],byte[]>();
+
     for(int i = 0; i < 5; i++) {
       // This batchupdate is our initial batch update,
       // As such we also set our expected values to the same values
@@ -250,7 +262,12 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       
       badExpectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i),
         Bytes.toBytes(500));
-      
+
+      expectedNoValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i), new byte[] {});
+      // the columns used here must not be updated on batchupate
+      expectedNoValues1.put(Bytes.toBytes(COLUMN_FAMILY_STR+i+","+i), new byte[] {});
+
+
       // This is our second batchupdate that we will use to update the initial
       // batchupdate
       batchUpdate2.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+1));
@@ -258,6 +275,14 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       // This final batch update is to check that our expected values (which
       // are now wrong)
       batchUpdate3.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+2));
+
+      // Batch update that will not happen because it is to happen with some 
+      // expected values, but the row doesn't exist
+      batchUpdate4.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
+
+      // Batch update will happen: the row exists, but the expected columns don't,
+      // just as the condition
+      batchUpdate5.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+3));
     }
     
     // Initialize rows
@@ -279,6 +304,58 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     
     // make sure that the old expected values fail
     assertFalse(table.checkAndSave(batchUpdate3, expectedValues,null));
+
+    // row doesn't exist, so doesn't matter the expected 
+    // values (unless they are empty) 
+    assertFalse(table.checkAndSave(batchUpdate4, badExpectedValues, null));
+
+    assertTrue(table.checkAndSave(batchUpdate4, expectedNoValues, null));
+    // make sure check and save saves the data when expected values were empty and the row
+    // didn't exist
+    r = table.getRow(row1);
+    columns = batchUpdate4.getColumns();
+    for(int i = 0; i < columns.length;i++) {
+      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate4.get(columns[i])));
+    }  
+
+    // since the row isn't empty anymore, those expected (empty) values 
+    // are not valid anymore, so check and save method doesn't save. 
+    assertFalse(table.checkAndSave(batchUpdate4, expectedNoValues, null));
+    
+    // the row exists, but the columns don't. since the expected values are 
+    // for columns without value, checkAndSave must be successful. 
+    assertTrue(table.checkAndSave(batchUpdate5, expectedNoValues1, null));
+    // make sure checkAndSave saved values for batchUpdate5.
+    r = table.getRow(row);
+    columns = batchUpdate5.getColumns();
+    for(int i = 0; i < columns.length;i++) {
+      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate5.get(columns[i])));
+    }  
+
+    // since the condition wasn't changed, the following checkAndSave 
+    // must also be successful.
+    assertTrue(table.checkAndSave(batchUpdate, expectedNoValues1, null));
+    // make sure checkAndSave saved values for batchUpdate1
+    r = table.getRow(row);
+    columns = batchUpdate.getColumns();
+    for(int i = 0; i < columns.length;i++) {
+      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate.get(columns[i])));
+    }
+
+    // one failing condition must make the following checkAndSave fail
+    // the failing condition is a column to be empty, however, it has a value.
+    HbaseMapWritable<byte[],byte[]> expectedValues1 =
+      new HbaseMapWritable<byte[],byte[]>();
+    expectedValues1.put(Bytes.toBytes(COLUMN_FAMILY_STR+0), new byte[] {});
+    expectedValues1.put(Bytes.toBytes(COLUMN_FAMILY_STR+"EMPTY+ROW"), new byte[] {});
+    assertFalse(table.checkAndSave(batchUpdate5, expectedValues1, null));
+
+    // assure the values on the row remain the same
+    r = table.getRow(row);
+    columns = batchUpdate.getColumns();
+    for(int i = 0; i < columns.length;i++) {
+      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate.get(columns[i])));
+    }    
   }
 
   /**
@@ -373,5 +450,5 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
      fail("Should have thrown a TableNotFoundException instead of a " +
        e.getClass());
    }
-  }
+   }
 }

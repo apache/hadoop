@@ -131,6 +131,8 @@ Release 0.20.0 - Unreleased
    HBASE-1323  hbase-1234 broke TestThriftServer; fix and reenable
    HBASE-1425  ColumnValueFilter and WhileMatchFilter fixes on trunk
                (Clint Morgan via Stack)
+   HBASE-1431  NPE in HTable.checkAndSave when row doesn't exist (Guilherme
+               Mauro Germoglio Barbosa via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

@@ -1396,13 +1396,17 @@ public class HRegion implements HConstants {
         Map<byte[],Cell> actualValues = getFull(row, keySet,
           HConstants.LATEST_TIMESTAMP, 1,lid);
         for (byte[] key : keySet) {
-          // If test fails exit
-          if(!Bytes.equals(actualValues.get(key).getValue(),
-              expectedValues.get(key))) {
-            success = false;
-            break;
-          }
-        }
+	  // If test fails exit
+	  Cell cell = actualValues.get(key);
+	  byte[] actualValue = new byte[] {};
+	  if (cell != null) 
+	    actualValue = cell.getValue();
+	  if(!Bytes.equals(actualValue,
+			   expectedValues.get(key))) {
+	    success = false;
+	    break;
+	  }
+	}
         if (success) {
           long commitTime = (b.getTimestamp() == LATEST_TIMESTAMP)?
             now: b.getTimestamp();
