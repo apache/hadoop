@@ -388,26 +388,30 @@ class ServerManager implements HConstants {
     return processMsgs(serverInfo, mostLoadedRegions, msgs);
   }
 
-  /** 
+  /*
    * Process all the incoming messages from a server that's contacted us.
-   * 
    * Note that we never need to update the server's load information because
    * that has already been done in regionServerReport.
+   * @param serverInfo
+   * @param mostLoadedRegions
+   * @param incomingMsgs
+   * @return
    */
   private HMsg[] processMsgs(HServerInfo serverInfo,
-      HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[])
-  throws IOException { 
+      HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[]) { 
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     if (serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
     }
     // Get reports on what the RegionServer did.
+    // Be careful that in message processors we don't throw exceptions that
+    // break the switch below because then we might drop messages on the floor.
     int openingCount = 0;
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
       LOG.info("Received " + incomingMsgs[i] + " from " +
-          serverInfo.getServerName());
+        serverInfo.getServerName() + "; " + i + " of " + incomingMsgs.length);
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
           openingCount++;
@@ -422,13 +426,11 @@ class ServerManager implements HConstants {
           break;
 
         case MSG_REPORT_SPLIT:
-          processSplitRegion(region, incomingMsgs[++i], incomingMsgs[++i],
-              returnMsgs);
+          processSplitRegion(region, incomingMsgs[++i], incomingMsgs[++i]);
           break;
 
         default:
-          throw new IOException(
-            "Impossible state during message processing. Instruction: " +
+          LOG.warn("Impossible state during message processing. Instruction: " +
             incomingMsgs[i].getType());
       }
     }
@@ -456,7 +458,7 @@ class ServerManager implements HConstants {
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
   
-  /**
+  /*
    * A region has split.
    *
    * @param region
@@ -464,21 +466,16 @@ class ServerManager implements HConstants {
    * @param splitB
    * @param returnMsgs
    */
-  private void processSplitRegion(HRegionInfo region, HMsg splitA, HMsg splitB,
-      ArrayList<HMsg> returnMsgs) {
-
+  private void processSplitRegion(HRegionInfo region, HMsg splitA, HMsg splitB) {
     synchronized (master.regionManager) {
       // Cancel any actions pending for the affected region.
       // This prevents the master from sending a SPLIT message if the table
       // has already split by the region server. 
       master.regionManager.endActions(region.getRegionName());
-
       HRegionInfo newRegionA = splitA.getRegionInfo();
       master.regionManager.setUnassigned(newRegionA, false);
-
       HRegionInfo newRegionB = splitB.getRegionInfo();
       master.regionManager.setUnassigned(newRegionB, false);
-
       if (region.isMetaTable()) {
         // A meta region has split.
         master.regionManager.offlineMetaRegion(region.getStartKey());
@@ -487,10 +484,14 @@ class ServerManager implements HConstants {
     }
   }
 
-  /** Region server is reporting that a region is now opened */
+  /*
+   * Region server is reporting that a region is now opened
+   * @param serverInfo
+   * @param region
+   * @param returnMsgs
+   */
   private void processRegionOpen(HServerInfo serverInfo, 
-    HRegionInfo region, ArrayList<HMsg> returnMsgs) 
-  throws IOException {
+      HRegionInfo region, ArrayList<HMsg> returnMsgs) {
     boolean duplicateAssignment = false;
     synchronized (master.regionManager) {
       if (!master.regionManager.isUnassigned(region) &&
@@ -549,19 +550,30 @@ class ServerManager implements HConstants {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
           master.regionManager.setOpen(region.getRegionNameAsString());
-          // Queue up an update to note the region location.
-          try {
-            master.toDoQueue.put(
-                new ProcessRegionOpen(master, serverInfo, region));
-          } catch (InterruptedException e) {
-            throw new RuntimeException(
-                "Putting into toDoQueue was interrupted.", e);
+          // Queue up an update to note the region location.  Do inside
+          // a retry loop in case interrupted.
+          boolean succeeded = false;
+          for (int i = 0; i < 10; i++) {
+            try {
+              master.toDoQueue.
+                put(new ProcessRegionOpen(master, serverInfo, region));
+              succeeded = true;
+            } catch (InterruptedException e) {
+              LOG.warn("Putting into toDoQueue was interrupted.", e);
+            }
           }
-        } 
+          if (!succeeded) {
+            LOG.warn("FAILED ADDING OPEN TO TODO QUEUE: " + serverInfo);
+          }
+        }
       }
     }
   }
-  
+
+  /*
+   * @param region
+   * @throws Exception
+   */
   private void processRegionClose(HRegionInfo region) {
     synchronized (master.regionManager) {
       if (region.isRootRegion()) {

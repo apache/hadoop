@@ -42,7 +42,7 @@ abstract class RegionServerOperation implements Delayed, HConstants {
     // DelayQueue we're inserted in on lease expiration.
     this.expire = System.currentTimeMillis() + this.master.leaseTimeout / 2;
   }
-  
+
   public long getDelay(TimeUnit unit) {
     return unit.convert(this.expire - System.currentTimeMillis(),
       TimeUnit.MILLISECONDS);

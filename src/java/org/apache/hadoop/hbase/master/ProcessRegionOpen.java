@@ -40,11 +40,9 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
    * @param master
    * @param info
    * @param regionInfo
-   * @throws IOException
    */
   public ProcessRegionOpen(HMaster master, HServerInfo info,
-      HRegionInfo regionInfo)
-  throws IOException {
+      HRegionInfo regionInfo) {
     super(master, regionInfo);
     if (info == null) {
       throw new NullPointerException("HServerInfo cannot be null; " +
