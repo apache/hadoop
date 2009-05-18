@@ -42,17 +42,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
@@ -122,13 +114,13 @@ public class TestFileSystem extends TestCase {
 
     SequenceFile.Writer writer =
       SequenceFile.createWriter(fs, conf, controlFile, 
-                                UTF8.class, LongWritable.class, CompressionType.NONE);
+                                Text.class, LongWritable.class, CompressionType.NONE);
 
     long totalSize = 0;
     long maxSize = ((megaBytes / numFiles) * 2) + 1;
     try {
       while (totalSize < megaBytes) {
-        UTF8 name = new UTF8(Long.toString(random.nextLong()));
+        Text name = new Text(Long.toString(random.nextLong()));
 
         long size = random.nextLong();
         if (size < 0)
@@ -148,7 +140,7 @@ public class TestFileSystem extends TestCase {
   }
 
   public static class WriteMapper extends Configured
-      implements Mapper<UTF8, LongWritable, UTF8, LongWritable> {
+      implements Mapper<Text, LongWritable, Text, LongWritable> {
     
     private Random random = new Random();
     private byte[] buffer = new byte[BUFFER_SIZE];
@@ -175,8 +167,8 @@ public class TestFileSystem extends TestCase {
       fastCheck = job.getBoolean("fs.test.fastCheck", false);
     }
 
-    public void map(UTF8 key, LongWritable value,
-                    OutputCollector<UTF8, LongWritable> collector,
+    public void map(Text key, LongWritable value,
+                    OutputCollector<Text, LongWritable> collector,
                     Reporter reporter)
       throws IOException {
       
@@ -211,7 +203,7 @@ public class TestFileSystem extends TestCase {
       // rename to final location
       fs.rename(tempFile, new Path(DATA_DIR, name));
 
-      collector.collect(new UTF8("bytes"), new LongWritable(written));
+      collector.collect(new Text("bytes"), new LongWritable(written));
 
       reporter.setStatus("wrote " + name);
     }
@@ -237,14 +229,14 @@ public class TestFileSystem extends TestCase {
     job.setReducerClass(LongSumReducer.class);
 
     FileOutputFormat.setOutputPath(job, WRITE_DIR);
-    job.setOutputKeyClass(UTF8.class);
+    job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);
     JobClient.runJob(job);
   }
 
   public static class ReadMapper extends Configured
-      implements Mapper<UTF8, LongWritable, UTF8, LongWritable> {
+      implements Mapper<Text, LongWritable, Text, LongWritable> {
     
     private Random random = new Random();
     private byte[] buffer = new byte[BUFFER_SIZE];
@@ -269,8 +261,8 @@ public class TestFileSystem extends TestCase {
       fastCheck = job.getBoolean("fs.test.fastCheck", false);
     }
 
-    public void map(UTF8 key, LongWritable value,
-                    OutputCollector<UTF8, LongWritable> collector,
+    public void map(Text key, LongWritable value,
+                    OutputCollector<Text, LongWritable> collector,
                     Reporter reporter)
       throws IOException {
       
@@ -309,7 +301,7 @@ public class TestFileSystem extends TestCase {
         in.close();
       }
 
-      collector.collect(new UTF8("bytes"), new LongWritable(read));
+      collector.collect(new Text("bytes"), new LongWritable(read));
 
       reporter.setStatus("read " + name);
     }
@@ -335,7 +327,7 @@ public class TestFileSystem extends TestCase {
     job.setReducerClass(LongSumReducer.class);
 
     FileOutputFormat.setOutputPath(job, READ_DIR);
-    job.setOutputKeyClass(UTF8.class);
+    job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);
     JobClient.runJob(job);
@@ -343,7 +335,7 @@ public class TestFileSystem extends TestCase {
 
 
   public static class SeekMapper<K> extends Configured
-    implements Mapper<WritableComparable, LongWritable, K, LongWritable> {
+    implements Mapper<Text, LongWritable, K, LongWritable> {
     
     private Random random = new Random();
     private byte[] check  = new byte[BUFFER_SIZE];
@@ -367,7 +359,7 @@ public class TestFileSystem extends TestCase {
       fastCheck = job.getBoolean("fs.test.fastCheck", false);
     }
 
-    public void map(WritableComparable key, LongWritable value,
+    public void map(Text key, LongWritable value,
                     OutputCollector<K, LongWritable> collector,
                     Reporter reporter)
       throws IOException {
@@ -431,7 +423,7 @@ public class TestFileSystem extends TestCase {
     job.setReducerClass(LongSumReducer.class);
 
     FileOutputFormat.setOutputPath(job, READ_DIR);
-    job.setOutputKeyClass(UTF8.class);
+    job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);
     JobClient.runJob(job);

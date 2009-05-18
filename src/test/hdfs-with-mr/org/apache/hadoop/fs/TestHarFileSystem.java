@@ -18,33 +18,18 @@
 
 package org.apache.hadoop.fs;
 
-
 import java.io.IOException;
 import java.util.Iterator;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.tools.HadoopArchives;
 import org.apache.hadoop.util.ToolRunner;
-
-import junit.framework.TestCase;
 
 /**
  * test the har file system
@@ -183,14 +168,17 @@ public class TestHarFileSystem extends TestCase {
     FSDataInputStream fin = harFs.open(harFilea);
     byte[] b = new byte[4];
     int readBytes = fin.read(b);
+    assertTrue("Empty read.", readBytes > 0);
     fin.close();
     assertTrue("strings are equal ", (b[0] == "a".getBytes()[0]));
     fin = harFs.open(harFileb);
-    fin.read(b);
+    readBytes = fin.read(b);
+    assertTrue("Empty read.", readBytes > 0);
     fin.close();
     assertTrue("strings are equal ", (b[0] == "b".getBytes()[0]));
     fin = harFs.open(harFilec);
-    fin.read(b);
+    readBytes = fin.read(b);
+    assertTrue("Empty read.", readBytes > 0);
     fin.close();
     assertTrue("strings are equal ", (b[0] == "c".getBytes()[0]));
     // ok all files match 
@@ -214,7 +202,8 @@ public class TestHarFileSystem extends TestCase {
     Path reduceFile = status[0].getPath();
     FSDataInputStream reduceIn = fs.open(reduceFile);
     b = new byte[6];
-    reduceIn.read(b);
+    readBytes = reduceIn.read(b);
+    assertTrue("Should read 6 bytes.", readBytes == 6);
     //assuming all the 6 bytes were read.
     Text readTxt = new Text(b);
     assertTrue("a\nb\nc\n".equals(readTxt.toString()));
