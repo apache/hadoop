@@ -87,4 +87,38 @@ public class TestMapFile extends TestCase {
     closest = (Text)reader.getClosest(key, value, true);
     assertEquals(new Text("90"), closest);
   }
+
+  public void testMidKey() throws Exception {
+    // Write a mapfile of simple data: keys are 
+    Path dirName = new Path(System.getProperty("test.build.data",".") +
+      getName() + ".mapfile"); 
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path qualifiedDirName = fs.makeQualified(dirName);
+ 
+    MapFile.Writer writer = new MapFile.Writer(conf, fs,
+      qualifiedDirName.toString(), IntWritable.class, IntWritable.class);
+    writer.append(new IntWritable(1), new IntWritable(1));
+    writer.close();
+    // Now do getClosest on created mapfile.
+    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
+      conf);
+    assertEquals(new IntWritable(1), reader.midKey());
+  }
+
+
+  public void testMidKeyEmpty() throws Exception {
+    // Write a mapfile of simple data: keys are 
+    Path dirName = new Path(System.getProperty("test.build.data",".") +
+      getName() + ".mapfile"); 
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path qualifiedDirName = fs.makeQualified(dirName);
+ 
+    MapFile.Writer writer = new MapFile.Writer(conf, fs,
+      qualifiedDirName.toString(), IntWritable.class, IntWritable.class);
+    writer.close();
+    // Now do getClosest on created mapfile.
+    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
+      conf);
+    assertEquals(null, reader.midKey());
+  }
 }

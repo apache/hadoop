@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.io;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.io.*;
 
 import org.apache.commons.logging.Log;
@@ -73,6 +75,16 @@ public class MapFile {
     private DataInputBuffer inBuf = new DataInputBuffer();
     private DataOutputBuffer outBuf = new DataOutputBuffer();
     private WritableComparable lastKey;
+
+    /** What's the position (in bytes) we wrote when we got the last index */
+    private long lastIndexPos = -1;
+
+    /**
+     * What was size when we last wrote an index. Set to MIN_VALUE to ensure that
+     * we have an index at position zero -- midKey will throw an exception if this
+     * is not the case
+     */
+    private long lastIndexKeyCount = Long.MIN_VALUE;
 
 
     /** Create the named map for keys of the named class. */
@@ -190,10 +202,15 @@ public class MapFile {
       throws IOException {
 
       checkKey(key);
-      
-      if (size % indexInterval == 0) {            // add an index entry
-        position.set(data.getLength());           // point to current eof
+
+      long pos = data.getLength();      
+      // Only write an index if we've changed positions. In a block compressed
+      // file, this means we write an entry at the start of each block      
+      if (size >= lastIndexKeyCount + indexInterval && pos > lastIndexPos) {
+        position.set(pos);                        // point to current eof
         index.append(key, position);
+        lastIndexPos = pos;
+        lastIndexKeyCount = size;
       }
 
       data.append(key, val);                      // append key/value to data
@@ -307,12 +324,14 @@ public class MapFile {
       if (this.keys != null)
         return;
       this.count = 0;
-      this.keys = new WritableComparable[1024];
       this.positions = new long[1024];
+
       try {
         int skip = INDEX_SKIP;
         LongWritable position = new LongWritable();
         WritableComparable lastKey = null;
+        long lastIndex = -1;
+        ArrayList<WritableComparable> keyBuilder = new ArrayList<WritableComparable>(1024);
         while (true) {
           WritableComparable k = comparator.newKey();
 
@@ -323,7 +342,6 @@ public class MapFile {
           if (lastKey != null && comparator.compare(lastKey, k) > 0)
             throw new IOException("key out of order: "+k+" after "+lastKey);
           lastKey = k;
-          
           if (skip > 0) {
             skip--;
             continue;                             // skip this entry
@@ -331,20 +349,23 @@ public class MapFile {
             skip = INDEX_SKIP;                    // reset skip
           }
 
-          if (count == keys.length) {                // time to grow arrays
-            int newLength = (keys.length*3)/2;
-            WritableComparable[] newKeys = new WritableComparable[newLength];
-            long[] newPositions = new long[newLength];
-            System.arraycopy(keys, 0, newKeys, 0, count);
-            System.arraycopy(positions, 0, newPositions, 0, count);
-            keys = newKeys;
-            positions = newPositions;
+	  // don't read an index that is the same as the previous one. Block
+	  // compressed map files used to do this (multiple entries would point
+	  // at the same block)
+	  if (position.get() == lastIndex)
+	    continue;
+
+          if (count == positions.length) {
+	    positions = Arrays.copyOf(positions, positions.length * 2);
           }
 
-          keys[count] = k;
+          keyBuilder.add(k);
           positions[count] = position.get();
           count++;
         }
+
+        this.keys = keyBuilder.toArray(new WritableComparable[count]);
+        positions = Arrays.copyOf(positions, count);
       } catch (EOFException e) {
         LOG.warn("Unexpected EOF reading " + index +
                               " at entry #" + count + ".  Ignoring.");
@@ -359,19 +380,17 @@ public class MapFile {
       data.seek(firstPosition);
     }
 
-    /** Get the key at approximately the middle of the file.
-     * 
-     * @throws IOException
+    /** Get the key at approximately the middle of the file. Or null if the
+     *  file is empty. 
      */
     public synchronized WritableComparable midKey() throws IOException {
 
       readIndex();
-      int pos = ((count - 1) / 2);              // middle of the index
-      if (pos < 0) {
-        throw new IOException("MapFile empty");
+      if (count == 0) {
+        return null;
       }
-      
-      return keys[pos];
+    
+      return keys[(count - 1) / 2];
     }
     
     /** Reads the final key from the file.
