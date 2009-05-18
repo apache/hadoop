@@ -1388,11 +1388,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * Data structure to hold a HMsg and retries count.
    */
   private static final class ToDoEntry {
-    protected volatile int tries;
+    protected final AtomicInteger tries = new AtomicInteger(0);
     protected final HMsg msg;
 
     ToDoEntry(final HMsg msg) {
-      this.tries = 0;
       this.msg = msg;
     }
   }
@@ -1487,9 +1486,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
             if (ex instanceof IOException) {
               ex = RemoteExceptionHandler.checkIOException((IOException) ex);
             }
-            if(e != null && e.tries < numRetries) {
+            if(e != null && e.tries.get() < numRetries) {
               LOG.warn(ex);
-              e.tries++;
+              e.tries.incrementAndGet();
               try {
                 toDo.put(e);
               } catch (InterruptedException ie) {
