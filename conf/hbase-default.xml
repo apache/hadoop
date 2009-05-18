@@ -92,15 +92,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.dns.interface</name>
-    <value>default</value>
-    <description>Name of the network interface which a regionserver
-    should use to determine it's "real" IP address.  This lookup
-    prevents strings like "localhost" and "127.0.0.1" from being
-    reported back to the master.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.info.port</name>
     <value>60030</value>
     <description>The port for the hbase regionserver web UI

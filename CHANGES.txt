@@ -136,6 +136,8 @@ Release 0.20.0 - Unreleased
    HBASE-1421  Processing a regionserver message -- OPEN, CLOSE, SPLIT, etc. --
                and if we're carrying more than one message in payload, if
                exception, all messages that follow are dropped on floor
+   HBASE-1434  Duplicate property in hbase-default.xml (Lars George via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
