@@ -256,8 +256,6 @@ Release 0.20.0 - Unreleased
                HLog#append?)
    HBASE-1429  Allow passing of a configuration object to HTablePool
    HBASE-1432  LuceneDocumentWrapper is not public
-   HBASE-1401  close HLog (and open new one) if there hasnt been edits in N
-               minutes/hours
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

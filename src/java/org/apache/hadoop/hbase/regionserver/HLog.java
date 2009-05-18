@@ -132,6 +132,7 @@ public class HLog implements HConstants, Syncable {
   private final AtomicLong logSeqNum = new AtomicLong(0);
 
   private volatile long filenum = -1;
+  private volatile long old_filenum = -1;
   
   private final AtomicInteger numEntries = new AtomicInteger(0);
 
@@ -273,10 +274,6 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   public byte [] rollWriter() throws FailedLogCloseException, IOException {
-    // Return if nothing to flush.
-    if (this.writer != null && this.numEntries.get() <= 0) {
-      return null;
-    }
     byte [] regionToFlush = null;
     this.cacheFlushLock.lock();
     try {
@@ -286,6 +283,9 @@ public class HLog implements HConstants, Syncable {
       synchronized (updateLock) {
         // Clean up current writer.
         Path oldFile = cleanupCurrentWriter(this.filenum);
+        if (this.filenum >= 0) {
+          this.old_filenum = this.filenum;
+        }
         this.filenum = System.currentTimeMillis();
         Path newPath = computeFilename(this.filenum);
         this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
@@ -587,7 +587,7 @@ public class HLog implements HConstants, Syncable {
       }
     }
   }
-
+  
   private void requestLogRoll() {
     if (this.listener != null) {
       this.listener.logRollRequested();
