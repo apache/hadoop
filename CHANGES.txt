@@ -624,6 +624,9 @@ Trunk (unreleased changes)
     HADOOP-5835. Fix findbugs warnings found in Block, DataNode, NameNode and
     a few other hdfs classes.  (Suresh Srinivas via szetszwo)
 
+    HADOOP-5853. Undeprecate HttpServer.addInternalServlet method.  (Suresh
+    Srinivas via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
