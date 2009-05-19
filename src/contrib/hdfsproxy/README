@@ -1,0 +1,51 @@
+HDFSPROXY is an HTTPS proxy server that exposes the same HSFTP interface as a 
+real cluster. It authenticates users via user certificates and enforce access 
+control based on configuration files.
+
+Starting up an HDFSPROXY server is similar to starting up an HDFS cluster. 
+Simply run "hdfsproxy" shell command. The main configuration file is 
+hdfsproxy-default.xml, which should be on the classpath. hdfsproxy-env.sh 
+can be used to set up environmental variables. In particular, JAVA_HOME should 
+be set. Additional configuration files include user-certs.xml, 
+user-permissions.xml and ssl-server.xml, which are used to specify allowed user
+certs, allowed directories/files, and ssl keystore information for the proxy, 
+respectively. The location of these files can be specified in 
+hdfsproxy-default.xml. Environmental variable HDFSPROXY_CONF_DIR can be used to
+point to the directory where these configuration files are located. The 
+configuration files of the proxied HDFS cluster should also be available on the
+classpath (hdfs-default.xml and hdfs-site.xml).
+
+Mirroring those used in HDFS, a few shell scripts are provided to start and 
+stop a group of proxy servers. The hosts to run hdfsproxy on are specified in 
+hdfsproxy-hosts file, one host per line. All hdfsproxy servers are stateless 
+and run independently from each other. Simple load balancing can be set up by 
+mapping all hdfsproxy server IP addresses to a single hostname. Users should 
+use that hostname to access the proxy. If an IP address look up for that 
+hostname returns more than one IP addresses, an HFTP/HSFTP client will randomly
+pick one to use.
+
+Command "hdfsproxy -reloadPermFiles" can be used to trigger reloading of 
+user-certs.xml and user-permissions.xml files on all proxy servers listed in 
+the hdfsproxy-hosts file. Similarly, "hdfsproxy -clearUgiCache" command can be 
+used to clear the UGI caches on all proxy servers.
+
+For tomcat based installation.
+1. set up the environment and configuration files. 
+	 a) export HADOOP_CONF_DIR=${user.home}/devel/source-conf
+	 	source-conf directory should point to the source cluster's configuration directory, 
+	 	where core-site.xml, and hdfs-site.xml should already be correctly configured for 
+	 	the source cluster settings.
+	 b) export HDFSPROXY_CONF_DIR=${user.home}/devel/proxy-conf
+	  proxy-conf directory should point to the proxy's configuration directory, where 
+	  hdfsproxy-default.xml, etc, should already be properly configured.
+
+2. cd ==> hdfsproxy directory,  ant war
+	 
+3. download and install tomcat6, change tomcat conf/server.xml file to include https support. 
+	 uncomment item below SSL HTTP/1.1 Connector and add paths, resulting something look like this:
+	 <Connector port="8443" protocol="HTTP/1.1" SSLEnabled="true"
+               maxThreads="150" scheme="https" secure="true" keystoreFile="${user.home}/grid/hdfsproxy-conf/server2.keystore" 
+               keystorePass="changeme" keystoreType="JKS"  clientAuth="true" sslProtocol="TLS" />
+4. copy war file in step 2 to tomcat's webapps directory and rename it to ROOT.war
+5. export JAVA_OPTS="-Djavax.net.ssl.trustStore=${user.home}/grid/hdfsproxy-conf/server2.keystore -Djavax.net.ssl.trustStorePassword=changeme"
+6. start up tomcat with tomcat's bin/startup.sh 
