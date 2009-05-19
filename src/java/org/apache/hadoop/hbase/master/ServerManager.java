@@ -110,15 +110,22 @@ class ServerManager implements HConstants {
       int numServers = serverAddressToServerInfo.size();
       int numDeadServers = deadServers.size();
       double averageLoad = getAverageLoad();
-      LOG.info(numServers + " region servers, " + numDeadServers + 
-        " dead, average load " + averageLoad);
+      String deadServersList = null;
       if (numDeadServers > 0) {
-        LOG.info("DEAD [");
+        StringBuilder sb = new StringBuilder("Dead Server [");
+        boolean first = true;
         for (String server: deadServers) {
-          LOG.info("  " + server);
+          if (!first) {
+            sb.append(",  ");
+            first = false;
+          }
+          sb.append(server);
         }
-        LOG.info("]");
+        sb.append("]");
+        deadServersList = sb.toString();
       }
+      LOG.info(numServers + " region servers, " + numDeadServers + 
+        " dead, average load " + averageLoad + (deadServersList != null? deadServers: ""));
     }
     
   }
@@ -411,7 +418,7 @@ class ServerManager implements HConstants {
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
       LOG.info("Received " + incomingMsgs[i] + " from " +
-        serverInfo.getServerName() + "; " + i + " of " + incomingMsgs.length);
+        serverInfo.getServerName() + "; " + (i + 1) + " of " + incomingMsgs.length);
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
           openingCount++;
