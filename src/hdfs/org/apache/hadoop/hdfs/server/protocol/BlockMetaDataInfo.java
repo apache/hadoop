@@ -55,4 +55,12 @@ public class BlockMetaDataInfo extends Block {
     super.readFields(in);
     lastScanTime = in.readLong();
   }
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

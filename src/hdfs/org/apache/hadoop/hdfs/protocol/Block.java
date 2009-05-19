@@ -191,6 +191,9 @@ public class Block implements Writable, Comparable<Block> {
 
   /** {@inheritDoc} */
   public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
     if (!(o instanceof Block)) {
       return false;
     }

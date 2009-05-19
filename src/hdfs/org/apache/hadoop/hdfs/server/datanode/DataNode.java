@@ -185,7 +185,7 @@ public class DataNode extends Configured
   private DataStorage storage = null;
   private HttpServer infoServer = null;
   DataNodeMetrics myMetrics;
-  private static InetSocketAddress nameNodeAddr;
+  private InetSocketAddress nameNodeAddr;
   private InetSocketAddress selfAddr;
   private static DataNode datanodeObject = null;
   private Thread dataNodeThread = null;
@@ -225,8 +225,7 @@ public class DataNode extends Configured
   DataNode(Configuration conf, 
            AbstractList<File> dataDirs) throws IOException {
     super(conf);
-    datanodeObject = this;
-
+    DataNode.setDataNode(this);
     try {
       startDataNode(conf, dataDirs);
     } catch (IOException ie) {
@@ -258,7 +257,7 @@ public class DataNode extends Configured
                                      conf.get("dfs.datanode.dns.interface","default"),
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     }
-    InetSocketAddress nameNodeAddr = NameNode.getAddress(conf);
+    this.nameNodeAddr = NameNode.getAddress(conf);
     
     this.socketTimeout =  conf.getInt("dfs.socket.timeout",
                                       HdfsConstants.READ_TIMEOUT);
@@ -341,7 +340,6 @@ public class DataNode extends Configured
         "dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
     }
     this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
-    DataNode.nameNodeAddr = nameNodeAddr;
 
     //initialize periodic block scanner
     String reason = null;
@@ -456,6 +454,10 @@ public class DataNode extends Configured
       "Data-node and name-node layout versions must be the same."
       + "Expected: "+ FSConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
     return nsInfo;
+  }
+
+  private static void setDataNode(DataNode node) {
+    datanodeObject = node;
   }
 
   /** Return the DataNode object
