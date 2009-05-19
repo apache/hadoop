@@ -288,6 +288,15 @@ class CapacityTaskScheduler extends TaskScheduler {
         JobInProgress job) throws IOException; 
     abstract int getPendingTasks(JobInProgress job);
     abstract TaskSchedulingInfo getTSI(QueueSchedulingInfo qsi);
+    /**
+     * To check if job has a speculative task on the particular tracker.
+     * 
+     * @param job job to check for speculative tasks.
+     * @param tts task tracker on which speculative task would run.
+     * @return true if there is a speculative task to run on the tracker.
+     */
+    abstract boolean hasSpeculativeTask(JobInProgress job, 
+        TaskTrackerStatus tts);
 
     /**
      * List of QSIs for assigning tasks.
@@ -400,29 +409,32 @@ class CapacityTaskScheduler extends TaskScheduler {
         // check if the job's user is over limit
         if (isUserOverLimit(j.getProfile().getUser(), qsi)) {
           continue;
-        }
-        if (getPendingTasks(j) != 0) {
-          // Not accurate TODO:
-          // check if the job's memory requirements are met
-          if (scheduler.memoryMatcher.matchesMemoryRequirements(j, taskTracker)) {
-            // We found a suitable job. Get task from it.
-            Task t = obtainNewTask(taskTracker, j);
-            if (t != null) {
-              // we're successful in getting a task
-              return TaskLookupResult.getTaskFoundResult(t);
-            }
+        } 
+        //If this job meets memory requirements. Ask the JobInProgress for
+        //a task to be scheduled on the task tracker.
+        //if we find a job then we pass it on.
+        if (scheduler.memoryMatcher.matchesMemoryRequirements(j, taskTracker)) {
+          // We found a suitable job. Get task from it.
+          Task t = obtainNewTask(taskTracker, j);
+          //if there is a task return it immediately.
+          if (t != null) {
+            // we're successful in getting a task
+            return TaskLookupResult.getTaskFoundResult(t);
+          } else {
+            //skip to the next job in the queue.
+            continue;
           }
-          else {
-            // mem requirements not met or could not be computed for this TT
-            // Rather than look at the next job, 
-            // we return nothing to the TT, with the hope that we improve 
-            // chances of finding a suitable TT for this job. This lets us
-            // avoid starving jobs with high mem requirements.         
+        } else {
+          //if memory requirements don't match then we check if the 
+          //job has either pending or speculative task. If the job
+          //has pending or speculative task we block till this job
+          //tasks get scheduled. So that high memory jobs are not starved
+          if (getPendingTasks(j) != 0 || hasSpeculativeTask(j, taskTracker)) {
             return TaskLookupResult.getMemFailedResult();
-          }
-        }
+          } 
+        }//end of memory check block
         // if we're here, this job has no task to run. Look at the next job.
-      }
+      }//end of for loop
 
       // if we're here, we haven't found any task to run among all jobs in 
       // the queue. This could be because there is nothing to run, or that 
@@ -444,24 +456,28 @@ class CapacityTaskScheduler extends TaskScheduler {
         if (j.getStatus().getRunState() != JobStatus.RUNNING) {
           continue;
         }
-        if (getPendingTasks(j) != 0) {
-          // Not accurate TODO:
-          // check if the job's memory requirements are met
-          if (scheduler.memoryMatcher.matchesMemoryRequirements(j, taskTracker)) {
-            // We found a suitable job. Get task from it.
-            Task t = obtainNewTask(taskTracker, j);
-            if (t != null) {
-              // we're successful in getting a task
-              return TaskLookupResult.getTaskFoundResult(t);
-            }
+        if (scheduler.memoryMatcher.matchesMemoryRequirements(j, taskTracker)) {
+          // We found a suitable job. Get task from it.
+          Task t = obtainNewTask(taskTracker, j);
+          //if there is a task return it immediately.
+          if (t != null) {
+            // we're successful in getting a task
+            return TaskLookupResult.getTaskFoundResult(t);
+          } else {
+            //skip to the next job in the queue.
+            continue;
           }
-          else {
-            // mem requirements not met. 
+        } else {
+          //if memory requirements don't match then we check if the 
+          //job has either pending or speculative task. If the job
+          //has pending or speculative task we block till this job
+          //tasks get scheduled, so that high memory jobs are not 
+          //starved
+          if (getPendingTasks(j) != 0 || hasSpeculativeTask(j, taskTracker)) {
             return TaskLookupResult.getMemFailedResult();
-          }
-        }
-        // if we're here, this job has no task to run. Look at the next job.
-      }
+          } 
+        }//end of memory check block
+      }//end of for loop
 
       // found nothing for this queue, look at the next one.
       String msg = "Found no task from the queue " + qsi.queueName;
@@ -516,6 +532,27 @@ class CapacityTaskScheduler extends TaskScheduler {
       LOG.debug(s);
     }
     
+    /**
+     * Check if one of the tasks have a speculative task to execute on the 
+     * particular task tracker.
+     * 
+     * @param tips tasks of a job
+     * @param progress percentage progress of the job
+     * @param tts task tracker status for which we are asking speculative tip
+     * @return true if job has a speculative task to run on particular TT.
+     */
+    boolean hasSpeculativeTask(TaskInProgress[] tips, float progress, 
+        TaskTrackerStatus tts) {
+      long currentTime = System.currentTimeMillis();
+      for(TaskInProgress tip : tips)  {
+        if(tip.isRunning() 
+            && !(tip.hasRunOnMachine(tts.getHost(), tts.getTrackerName())) 
+            && tip.hasSpeculativeTask(currentTime, progress)) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 
   /**
@@ -547,6 +584,15 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     TaskSchedulingInfo getTSI(QueueSchedulingInfo qsi) {
       return qsi.mapTSI;
+    }
+
+    @Override
+    boolean hasSpeculativeTask(JobInProgress job, TaskTrackerStatus tts) {
+      //Check if job supports speculative map execution first then 
+      //check if job has speculative maps.
+      return (job.getJobConf().getMapSpeculativeExecution())&& (
+          hasSpeculativeTask(job.getMapTasks(), 
+              job.getStatus().mapProgress(), tts));
     }
 
   }
@@ -581,6 +627,16 @@ class CapacityTaskScheduler extends TaskScheduler {
     TaskSchedulingInfo getTSI(QueueSchedulingInfo qsi) {
       return qsi.reduceTSI;
     }
+
+    @Override
+    boolean hasSpeculativeTask(JobInProgress job, TaskTrackerStatus tts) {
+      //check if the job supports reduce speculative execution first then
+      //check if the job has speculative tasks.
+      return (job.getJobConf().getReduceSpeculativeExecution()) && (
+          hasSpeculativeTask(job.getReduceTasks(), 
+              job.getStatus().reduceProgress(), tts));
+    }
+
   }
   
   /** the scheduling mgrs for Map and Reduce tasks */ 

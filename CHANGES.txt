@@ -67,6 +67,10 @@ Release 0.20.1 - Unreleased
     HADOOP-5828. Use absolute path for mapred.local.dir of JobTracker in
     MiniMRCluster. (yhemanth)
 
+    HADOOP-4981. Fix capacity scheduler to schedule speculative tasks
+    correctly in the presence of High RAM jobs.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
