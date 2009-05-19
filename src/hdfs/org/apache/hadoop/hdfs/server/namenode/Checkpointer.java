@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +29,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.CheckpointStates;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -165,7 +168,9 @@ class Checkpointer implements Runnable {
   private void downloadCheckpoint(CheckpointSignature sig) throws IOException {
     // Retrieve image file
     String fileid = "getimage=1";
-    File[] files = getFSImage().getImageFiles();
+    Collection<File> list = getFSImage().getFiles(NameNodeFile.IMAGE,
+        NameNodeDirType.IMAGE);
+    File[] files = list.toArray(new File[list.size()]);
     assert files.length > 0 : "No checkpoint targets.";
     String nnHttpAddr = backupNode.nnHttpAddress;
     TransferFsImage.getFileClient(nnHttpAddr, fileid, files);
@@ -174,7 +179,8 @@ class Checkpointer implements Runnable {
 
     // Retrieve edits file
     fileid = "getedit=1";
-    files = getFSImage().getEditsFiles();
+    list = getFSImage().getFiles(NameNodeFile.EDITS, NameNodeDirType.EDITS);
+    files = list.toArray(new File[list.size()]);
     assert files.length > 0 : "No checkpoint targets.";
     TransferFsImage.getFileClient(nnHttpAddr, fileid, files);
     LOG.info("Downloaded file " + files[0].getName() + " size " +

@@ -27,6 +27,7 @@ import org.apache.hadoop.util.StringUtils;
  * 
  */
 public class InconsistentFSStateException extends IOException {
+  private static final long serialVersionUID = 1L;
 
   public InconsistentFSStateException(File dir, String descr) {
     super("Directory " + getFilePath(dir)

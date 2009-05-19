@@ -256,27 +256,6 @@ public class FSImage extends Storage {
     return list;
   }
 
-  @Deprecated // Use getFiles() instead
-  File[] getFileNames(NameNodeFile type, NameNodeDirType dirType) {
-    Collection<File> list = getFiles(type, dirType);
-    return list.toArray(new File[list.size()]);
-  }
-
-  @Deprecated
-  File[] getImageFiles() {
-    return getFileNames(NameNodeFile.IMAGE, NameNodeDirType.IMAGE);
-  }
-
-  @Deprecated
-  File[] getEditsFiles() {
-    return getFileNames(NameNodeFile.EDITS, NameNodeDirType.EDITS);
-  }
-
-  @Deprecated // should be removed
-  File[] getTimeFiles() {
-    return getFileNames(NameNodeFile.TIME, null);
-  }
-
   Collection<File> getDirectories(NameNodeDirType dirType) {
     ArrayList<File> list = new ArrayList<File>();
     Iterator<StorageDirectory> it = (dirType == null) ? dirIterator() :

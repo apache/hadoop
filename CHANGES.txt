@@ -617,6 +617,10 @@ Trunk (unreleased changes)
     HADOOP-5582. Fixes a problem in Hadoop Vaidya to do with reading
     counters from job history files. (Suhas Gogate via ddas)
 
+    HADOOP-5829. Fix javac warnings found in ReplicationTargetChooser,
+    FSImage, Checkpointer, SecondaryNameNode and a few other hdfs classes.
+    (Suresh Srinivas via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -23,10 +23,11 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 
 /**
  * The exception is thrown when external version does not match 
- * current version of the appication.
+ * current version of the application.
  * 
  */
 public class IncorrectVersionException extends IOException {
+  private static final long serialVersionUID = 1L;
 
   public IncorrectVersionException(int versionReported, String ofWhat) {
     this(versionReported, ofWhat, FSConstants.LAYOUT_VERSION);

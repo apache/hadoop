@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.RPC;
@@ -237,7 +239,9 @@ public class SecondaryNameNode implements Runnable {
 
     // get fsimage
     String fileid = "getimage=1";
-    File[] srcNames = checkpointImage.getImageFiles();
+    Collection<File> list = checkpointImage.getFiles(NameNodeFile.IMAGE,
+        NameNodeDirType.IMAGE);
+    File[] srcNames = list.toArray(new File[list.size()]);
     assert srcNames.length > 0 : "No checkpoint targets.";
     TransferFsImage.getFileClient(fsName, fileid, srcNames);
     LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
@@ -245,7 +249,8 @@ public class SecondaryNameNode implements Runnable {
 
     // get edits file
     fileid = "getedit=1";
-    srcNames = checkpointImage.getEditsFiles();
+    list = getFSImage().getFiles(NameNodeFile.EDITS, NameNodeDirType.EDITS);
+    srcNames = list.toArray(new File[list.size()]);;
     assert srcNames.length > 0 : "No checkpoint targets.";
     TransferFsImage.getFileClient(fsName, fileid, srcNames);
     LOG.info("Downloaded file " + srcNames[0].getName() + " size " +

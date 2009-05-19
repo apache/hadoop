@@ -47,6 +47,8 @@ class ReplicationTargetChooser {
   }
     
   private static class NotEnoughReplicasException extends Exception {
+    private static final long serialVersionUID = 1L;
+
     NotEnoughReplicasException(String msg) {
       super(msg);
     }
@@ -147,24 +149,25 @@ class ReplicationTargetChooser {
     int numOfResults = results.size();
     boolean newBlock = (numOfResults==0);
     if (writer == null && !newBlock) {
-      writer = (DatanodeDescriptor)results.get(0);
+      writer = results.get(0);
     }
       
     try {
-      switch(numOfResults) {
-      case 0:
+      if (numOfResults == 0) {
         writer = chooseLocalNode(writer, excludedNodes, 
                                  blocksize, maxNodesPerRack, results);
         if (--numOfReplicas == 0) {
-          break;
+          return writer;
         }
-      case 1:
+      }
+      if (numOfResults <= 1) {
         chooseRemoteRack(1, results.get(0), excludedNodes, 
                          blocksize, maxNodesPerRack, results);
         if (--numOfReplicas == 0) {
-          break;
+          return writer;
         }
-      case 2:
+      }
+      if (numOfResults <= 2) {
         if (clusterMap.isOnSameRack(results.get(0), results.get(1))) {
           chooseRemoteRack(1, results.get(0), excludedNodes,
                            blocksize, maxNodesPerRack, results);
@@ -176,12 +179,11 @@ class ReplicationTargetChooser {
                           maxNodesPerRack, results);
         }
         if (--numOfReplicas == 0) {
-          break;
+          return writer;
         }
-      default:
-        chooseRandom(numOfReplicas, NodeBase.ROOT, excludedNodes, 
-                     blocksize, maxNodesPerRack, results);
       }
+      chooseRandom(numOfReplicas, NodeBase.ROOT, excludedNodes, 
+                   blocksize, maxNodesPerRack, results);
     } catch (NotEnoughReplicasException e) {
       FSNamesystem.LOG.warn("Not able to place enough replicas, still in need of "
                + numOfReplicas);
