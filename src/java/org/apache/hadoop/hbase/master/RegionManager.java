@@ -978,7 +978,8 @@ class RegionManager implements HConstants {
         // regionServerReport message from the HRegionServer that has been
         // allocated the ROOT region below.
         try {
-          rootRegionLocation.wait();
+          // Cycle rather than hold here in case master is closed meantime.
+          rootRegionLocation.wait(this.master.threadWakeFrequency);
         } catch (InterruptedException e) {
           // continue
         }
