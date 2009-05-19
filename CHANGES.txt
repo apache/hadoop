@@ -367,6 +367,9 @@ Trunk (unreleased changes)
     HADOOP-5858. Eliminate UTF8 and fix warnings in test/hdfs-with-mr package.
     (shv)
 
+    HADOOP-5866. Move DeprecatedUTF8 from o.a.h.io to o.a.h.hdfs since it may
+    not be used outside hdfs. (Raghu Angadi)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

@@ -767,7 +767,7 @@ public abstract class Storage extends StorageInfo {
   
     file.seek(0);
     file.writeInt(FSConstants.LAYOUT_VERSION);
-    org.apache.hadoop.io.DeprecatedUTF8.writeString(file, "");
+    org.apache.hadoop.hdfs.DeprecatedUTF8.writeString(file, "");
     file.writeBytes(messageForPreUpgradeVersion);
     file.getFD().sync();
   }

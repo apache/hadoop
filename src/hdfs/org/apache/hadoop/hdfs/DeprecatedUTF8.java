@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io;
+package org.apache.hadoop.hdfs;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * Wrapper for {@link UTF8}.
+ * A simple wrapper around {@link org.apache.hadoop.io.UTF8}.
  * This class should be used only when it is absolutely necessary
- * to use {@link UTF8}. The only difference is that using this class
- * does not require "@SuppressWarning" annotation to avoid javac warning. 
- * Instead the deprecation is implied in the class name.
+ * to use {@link org.apache.hadoop.io.UTF8}. The only difference is that 
+ * using this class does not require "@SuppressWarning" annotation to avoid 
+ * javac warning. Instead the deprecation is implied in the class name.
+ * 
+ * This should be treated as package private class to HDFS.
  */
 @SuppressWarnings("deprecation")
-public class DeprecatedUTF8 extends UTF8 {
+public class DeprecatedUTF8 extends org.apache.hadoop.io.UTF8 {
   
   public DeprecatedUTF8() {
     super();
@@ -51,10 +53,10 @@ public class DeprecatedUTF8 extends UTF8 {
    */
   
   public static String readString(DataInput in) throws IOException {
-    return UTF8.readString(in);
+    return org.apache.hadoop.io.UTF8.readString(in);
   }
   
   public static int writeString(DataOutput out, String s) throws IOException {
-    return UTF8.writeString(out, s);
+    return org.apache.hadoop.io.UTF8.writeString(out, s);
   }
 }
