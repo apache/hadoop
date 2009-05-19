@@ -138,6 +138,8 @@ Release 0.20.0 - Unreleased
                exception, all messages that follow are dropped on floor
    HBASE-1434  Duplicate property in hbase-default.xml (Lars George via Andrew
                Purtell)
+   HBASE-1435  HRegionServer is using wrong info bind address from
+               hbase-site.xml (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

@@ -1147,7 +1147,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     int port = this.conf.getInt("hbase.regionserver.info.port", 60030);
     // -1 is for disabling info server
     if (port >= 0) {
-      String addr = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+      String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
       // check if auto port bind enabled
       boolean auto = this.conf.getBoolean("hbase.regionserver.info.port.auto",
           false);
