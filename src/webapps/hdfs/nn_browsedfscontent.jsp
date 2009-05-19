@@ -32,32 +32,6 @@
   import="java.net.InetAddress"
   import="java.net.URLEncoder"
 %>
-<%!
-  public void redirectToRandomDataNode(
-                            NameNode nn, 
-                            HttpServletResponse resp) throws IOException {
-    FSNamesystem fsn = nn.getNamesystem();
-    String datanode = fsn.randomDataNode();
-    String redirectLocation;
-    String nodeToRedirect;
-    int redirectPort;
-    if (datanode != null) {
-      redirectPort = Integer.parseInt(datanode.substring(datanode.indexOf(':') + 1));
-      nodeToRedirect = datanode.substring(0, datanode.indexOf(':'));
-    }
-    else {
-      nodeToRedirect = nn.getHttpAddress().getHostName();
-      redirectPort = nn.getHttpAddress().getPort();
-    }
-    String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
-    redirectLocation = "http://" + fqdn + ":" + redirectPort + 
-                       "/browseDirectory.jsp?namenodeInfoPort=" + 
-                       nn.getHttpAddress().getPort() +
-                       "&dir=" + URLEncoder.encode("/", "UTF-8");
-    resp.sendRedirect(redirectLocation);
-  }
-%>
-
 <html>
 
 <title></title>
@@ -65,7 +39,7 @@
 <body>
 <% 
   NameNode nn = (NameNode)application.getAttribute("name.node");
-  redirectToRandomDataNode(nn, response); 
+  NamenodeJspHelper.redirectToRandomDataNode(nn, response); 
 %>
 <hr>
 

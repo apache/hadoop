@@ -370,6 +370,9 @@ Trunk (unreleased changes)
     HADOOP-5866. Move DeprecatedUTF8 from o.a.h.io to o.a.h.hdfs since it may
     not be used outside hdfs. (Raghu Angadi)
 
+    HADOOP-5857. Move normal java methods from hdfs .jsp files to .java files.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
