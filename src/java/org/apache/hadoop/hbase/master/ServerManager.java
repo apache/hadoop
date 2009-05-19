@@ -558,6 +558,7 @@ class ServerManager implements HConstants {
               master.toDoQueue.
                 put(new ProcessRegionOpen(master, serverInfo, region));
               succeeded = true;
+              break;
             } catch (InterruptedException e) {
               LOG.warn("Putting into toDoQueue was interrupted.", e);
             }

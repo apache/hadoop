@@ -140,6 +140,7 @@ Release 0.20.0 - Unreleased
                Purtell)
    HBASE-1435  HRegionServer is using wrong info bind address from
                hbase-site.xml (Lars George via Stack)
+   HBASE-1438  HBASE-1421 broke the build (#602 up on hudson)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
