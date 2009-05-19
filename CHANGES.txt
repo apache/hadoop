@@ -266,6 +266,8 @@ Release 0.20.0 - Unreleased
    HBASE-1432  LuceneDocumentWrapper is not public
    HBASE-1401  close HLog (and open new one) if there hasnt been edits in N
                minutes/hours
+   HBASE-1420  add abliity to add and remove (table) indexes on existing
+               tables (Clint Morgan via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

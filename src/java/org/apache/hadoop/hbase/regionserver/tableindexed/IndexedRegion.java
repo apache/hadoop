@@ -141,7 +141,7 @@ class IndexedRegion extends TransactionalRegion {
     Iterator<IndexSpecification> indexIterator = indexesToUpdate.iterator();
     while (indexIterator.hasNext()) {
       IndexSpecification indexSpec = indexIterator.next();
-      if (!doesApplyToIndex(indexSpec, newColumnValues)) {
+      if (!IndexMaintenanceUtils.doesApplyToIndex(indexSpec, newColumnValues)) {
         indexIterator.remove();
       }
     }
@@ -209,59 +209,18 @@ class IndexedRegion extends TransactionalRegion {
     }
     return false;
   }
-  
-  /** Ask if this update does apply to the index. 
-   * 
-   * @param indexSpec
-   * @param b
-   * @return true if possibly apply.
-   */
-  private boolean doesApplyToIndex(IndexSpecification indexSpec,  SortedMap<byte[], byte[]> columnValues) {
-    
-    for (byte [] neededCol : indexSpec.getIndexedColumns()) {
-      if (! columnValues.containsKey(neededCol))  {
-        LOG.debug("Index [" + indexSpec.getIndexId() + "] can't be updated because ["
-            + Bytes.toString(neededCol) + "] is missing");
-        return false;
-      }
-    }
-    return true;
-  }
 
+  // FIXME: This call takes place in an RPC, and requires an RPC. This makes for
+  // a likely deadlock if the number of RPCs we are trying to serve is >= the
+  // number of handler threads.
   private void updateIndex(IndexSpecification indexSpec, byte[] row,
       SortedMap<byte[], byte[]> columnValues) throws IOException {
-    BatchUpdate indexUpdate = createIndexUpdate(indexSpec, row, columnValues);
-    getIndexTable(indexSpec).commit(indexUpdate);
+    BatchUpdate indexUpdate = IndexMaintenanceUtils.createIndexUpdate(indexSpec, row, columnValues);
+    getIndexTable(indexSpec).commit(indexUpdate); // FIXME, this is synchronized
     LOG.debug("Index [" + indexSpec.getIndexId() + "] adding new entry ["
         + Bytes.toString(indexUpdate.getRow()) + "] for row ["
         + Bytes.toString(row) + "]");
 
-  }
-
-  private BatchUpdate createIndexUpdate(IndexSpecification indexSpec,
-      byte[] row, SortedMap<byte[], byte[]> columnValues) {
-    byte[] indexRow = indexSpec.getKeyGenerator().createIndexKey(row,
-        columnValues);
-    BatchUpdate update = new BatchUpdate(indexRow);
-
-    update.put(IndexedTable.INDEX_BASE_ROW_COLUMN, row);
-
-    for (byte[] col : indexSpec.getIndexedColumns()) {
-      byte[] val = columnValues.get(col);
-      if (val == null) {
-        throw new RuntimeException("Unexpected missing column value. ["+Bytes.toString(col)+"]");
-      }
-      update.put(col, val);
-    }
-    
-    for (byte [] col : indexSpec.getAdditionalColumns()) {
-      byte[] val = columnValues.get(col);
-      if (val != null) {
-        update.put(col, val);
-      }
-    }
-
-    return update;
   }
 
   @Override
@@ -289,7 +248,7 @@ class IndexedRegion extends TransactionalRegion {
         SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentColumnCells);
         
         for (IndexSpecification indexSpec : getIndexes()) {
-          if (doesApplyToIndex(indexSpec, currentColumnValues)) {
+          if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, currentColumnValues)) {
             updateIndex(indexSpec, row, currentColumnValues);
           }
         }
@@ -334,7 +293,7 @@ class IndexedRegion extends TransactionalRegion {
       SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentColumnCells);
       
       for (IndexSpecification indexSpec : getIndexes()) {
-        if (doesApplyToIndex(indexSpec, currentColumnValues)) {
+        if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, currentColumnValues)) {
           updateIndex(indexSpec, row, currentColumnValues);
         }
       }

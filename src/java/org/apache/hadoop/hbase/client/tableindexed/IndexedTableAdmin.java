@@ -21,8 +21,13 @@ package org.apache.hadoop.hbase.client.tableindexed;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.Map.Entry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ColumnNameParseException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -31,6 +36,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.regionserver.tableindexed.IndexMaintenanceUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -38,6 +48,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * 
  */
 public class IndexedTableAdmin extends HBaseAdmin {
+
+  private static final Log LOG = LogFactory.getLog(IndexedTableAdmin.class);
 
   /**
    * Constructor
@@ -93,5 +105,50 @@ public class IndexedTableAdmin extends HBaseAdmin {
     }
 
     return indexTableDesc;
+  }
+  
+  /** Remove an index for a table. 
+   * @throws IOException 
+   * 
+   */
+  public void removeIndex(byte[] baseTableName, String indexId) throws IOException {
+    super.disableTable(baseTableName);
+    HTableDescriptor desc = super.getTableDescriptor(baseTableName);
+    IndexSpecification spec = desc.getIndex(indexId);
+    desc.removeIndex(indexId);
+    this.disableTable(spec.getIndexedTableName(baseTableName));
+    this.deleteTable(spec.getIndexedTableName(baseTableName));
+    super.modifyTable(baseTableName, desc);
+    super.enableTable(baseTableName);
+  }
+  
+  /** Add an index to a table. */
+  public void addIndex(byte []baseTableName, IndexSpecification indexSpec) throws IOException {
+    LOG.warn("Adding index to existing table ["+Bytes.toString(baseTableName)+"], this may take a long time");
+    // TODO, make table read-only
+    LOG.warn("Not putting table in readonly, if its being written to, the index may get out of sync");
+    HTableDescriptor indexTableDesc = createIndexTableDesc(baseTableName, indexSpec);
+    super.createTable(indexTableDesc);
+    super.disableTable(baseTableName);
+    HTableDescriptor desc = super.getTableDescriptor(baseTableName);
+    desc.addIndex(indexSpec);
+    super.modifyTable(baseTableName, desc);
+    super.enableTable(baseTableName);
+    reIndexTable(baseTableName, indexSpec);
+  }
+
+  private void reIndexTable(byte[] baseTableName, IndexSpecification indexSpec) throws IOException {
+    HTable baseTable = new HTable(baseTableName);
+    HTable indexTable = new HTable(indexSpec.getIndexedTableName(baseTableName));
+    for (RowResult rowResult : baseTable.getScanner(indexSpec.getAllColumns())) {
+      SortedMap<byte[], byte[]> columnValues = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+      for (Entry<byte[], Cell> entry : rowResult.entrySet()) {
+        columnValues.put(entry.getKey(), entry.getValue().getValue());
+      }
+      if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, columnValues)) {
+        BatchUpdate indexUpdate = IndexMaintenanceUtils.createIndexUpdate(indexSpec, rowResult.getRow(), columnValues);
+        indexTable.commit(indexUpdate);
+      }
+    }
   }
 }
