@@ -1122,11 +1122,11 @@ class RegionManager implements HConstants {
   
   private void applyActions(final HServerInfo serverInfo,
       final ArrayList<HMsg> returnMsgs,
-      SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> map,
+      final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> map,
       final HMsg.Type msg) {
     HServerAddress addr = serverInfo.getServerAddress();
-    Iterator<Pair<HRegionInfo, HServerAddress>> i = map.values().iterator();
     synchronized (map) {
+      Iterator<Pair<HRegionInfo, HServerAddress>> i = map.values().iterator();
       while (i.hasNext()) {
         Pair<HRegionInfo,HServerAddress> pair = i.next();
         if (addr.equals(pair.getSecond())) {

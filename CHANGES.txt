@@ -144,6 +144,7 @@ Release 0.20.0 - Unreleased
    HBASE-1440  master won't go down because joined on a rootscanner that is
                waiting for ever
    HBASE-1441  NPE in ProcessRegionStatusChange#getMetaRegion
+   HBASE-1162  CME in Master in RegionManager.applyActions
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
