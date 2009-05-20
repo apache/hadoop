@@ -122,6 +122,12 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     LOG.debug("Adding 4th region server");    
     cluster.startRegionServer();    
     assertRegionsAreBalanced();
+
+    for (int i = 0; i < 6; i++){
+      LOG.debug("Adding " + (i + 5) + "th region server");    
+      cluster.startRegionServer();
+    }
+    assertRegionsAreBalanced();
   }
     
   /** figure out how many regions are currently being served. */
@@ -140,6 +146,8 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    */
   private void assertRegionsAreBalanced() {
     boolean success = false;
+    float slop = conf.getFloat("hbase.regions.slop", (float)0.1);
+    if (slop <= 0) slop = 1;
 
     for (int i = 0; i < 5; i++) {
       success = true;
@@ -148,14 +156,20 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
       int regionCount = getRegionCount();
       List<HRegionServer> servers = getOnlineRegionServers();
-      double avg = Math.ceil((double)regionCount / (double)servers.size());
+      double avg = cluster.getMaster().getAverageLoad();
+      int avgLoadPlusSlop = (int)Math.ceil(avg * (1 + slop));
+      int avgLoadMinusSlop = (int)Math.floor(avg * (1 - slop)) - 1;
       LOG.debug("There are " + servers.size() + " servers and " + regionCount 
-        + " regions. Load Average: " + avg);
+        + " regions. Load Average: " + avg + " low border: " + avgLoadMinusSlop
+        + ", up border: " + avgLoadPlusSlop + "; attempt: " + i);
 
       for (HRegionServer server : servers) {
         int serverLoad = server.getOnlineRegions().size();
         LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " + serverLoad);
-        if (!(serverLoad <= avg + 2 && serverLoad >= avg - 2)) {
+        if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop 
+            && serverLoad >= avgLoadMinusSlop)) {
+          LOG.debug(server.hashCode() + " Isn't balanced!!! Avg: " + avg +
+              " actual: " + serverLoad + " slop: " + slop);
           success = false;
         }
       }

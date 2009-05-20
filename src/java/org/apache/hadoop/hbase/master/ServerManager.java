@@ -174,7 +174,10 @@ class ServerManager implements HConstants {
         Set<String> servers = loadToServers.get(load);
         if (servers != null) {
           servers.remove(serverName);
-          loadToServers.put(load, servers);
+          if (servers.size() > 0)
+            loadToServers.put(load, servers);
+          else
+            loadToServers.remove(load);
         }
       }
     }
@@ -374,7 +377,10 @@ class ServerManager implements HConstants {
           // Note that servers should never be null because loadToServers
           // and serversToLoad are manipulated in pairs
           servers.remove(serverInfo.getServerName());
-          loadToServers.put(load, servers);
+          if (servers.size() > 0)
+            loadToServers.put(load, servers);
+          else
+            loadToServers.remove(load);
         }
       }
     }
@@ -641,7 +647,10 @@ class ServerManager implements HConstants {
           Set<String> servers = loadToServers.get(load);
           if (servers != null) {
             servers.remove(serverName);
-            loadToServers.put(load, servers);
+            if(servers.size() > 0)
+              loadToServers.put(load, servers);
+            else
+              loadToServers.remove(load);
           }
         }
       }
@@ -664,7 +673,7 @@ class ServerManager implements HConstants {
       for (HServerLoad load : serversToLoad.values()) {
         totalLoad += load.getNumberOfRegions();
       }
-      averageLoad = Math.ceil((double)totalLoad / (double)numServers);
+      averageLoad = (double)totalLoad / (double)numServers;
     }
     return averageLoad;
   }
@@ -704,6 +713,15 @@ class ServerManager implements HConstants {
   public Map<String, HServerLoad> getServersToLoad() {
     synchronized (serversToLoad) {
       return Collections.unmodifiableMap(serversToLoad);
+    }
+  }
+
+  /**
+   * @return Read-only map of load to servers.
+   */
+  SortedMap<HServerLoad, Set<String>> getLoadToServers() {
+    synchronized (loadToServers) {
+      return Collections.unmodifiableSortedMap(loadToServers);
     }
   }
 
@@ -775,7 +793,10 @@ class ServerManager implements HConstants {
               Set<String> servers = loadToServers.get(load);
               if (servers != null) {
                 servers.remove(serverName);
-                loadToServers.put(load, servers);
+                if(servers.size() > 0)
+                  loadToServers.put(load, servers);
+                else
+                  loadToServers.remove(load);
               }
             }
           }

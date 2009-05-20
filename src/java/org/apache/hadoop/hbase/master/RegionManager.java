@@ -102,9 +102,9 @@ class RegionManager implements HConstants {
   // How many regions to assign a server at a time.
   private final int maxAssignInOneGo;
 
-  private final HMaster master;
+  final HMaster master;
   private final RegionHistorian historian;
-  private final float slop;
+  private final LoadBalancer loadBalancer;
 
   /** Set of regions to split. */
   private final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>>
@@ -137,7 +137,7 @@ class RegionManager implements HConstants {
     this.master = master;
     this.historian = RegionHistorian.getInstance();
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
-    this.slop = conf.getFloat("hbase.regions.slop", (float)0.1);
+    this.loadBalancer = new LoadBalancer(conf);
 
     // The root region
     rootScannerThread = new RootScanner(master);
@@ -199,20 +199,7 @@ class RegionManager implements HConstants {
       if (!inSafeMode()) {
         // We only do load balancing once all regions are assigned.
         // This prevents churn while the cluster is starting up.
-        double avgLoad = master.serverManager.getAverageLoad();
-        double avgLoadWithSlop = avgLoad +
-        ((this.slop != 0)? avgLoad * this.slop: avgLoad);
-        if (avgLoad > 2.0 &&
-            thisServersLoad.getNumberOfRegions() > avgLoadWithSlop) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Server " + info.getServerName() +
-                " is overloaded. Server load: " + 
-                thisServersLoad.getNumberOfRegions() + " avg: " + avgLoad +
-                ", slop: " + this.slop);
-          }
-          unassignSomeRegions(info, thisServersLoad,
-              avgLoad, mostLoadedRegions, returnMsgs);
-        }
+        loadBalancer.loadBalancing(info, mostLoadedRegions, returnMsgs);
       }
     } else {
       // if there's only one server, just give it all the regions
@@ -432,10 +419,9 @@ class RegionManager implements HConstants {
    * Note that no synchronization is needed because the only caller 
    * (assignRegions) whose caller owns the monitor for RegionManager
    */
-  private void unassignSomeRegions(final HServerInfo info, 
-      final HServerLoad load, final double avgLoad,
-      final HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs) {
-    int numRegionsToClose = load.getNumberOfRegions() - (int)Math.ceil(avgLoad);
+  void unassignSomeRegions(final HServerInfo info, 
+      int numRegionsToClose, final HRegionInfo[] mostLoadedRegions,
+      ArrayList<HMsg> returnMsgs) {
     LOG.debug("Choosing to reassign " + numRegionsToClose 
       + " regions. mostLoadedRegions has " + mostLoadedRegions.length 
       + " regions in it.");
@@ -1151,6 +1137,115 @@ class RegionManager implements HConstants {
           i.remove();
         }
       }
+    }
+  }
+
+  /**
+   * Class to balance region servers load.
+   * It keeps Region Servers load in slop range by unassigning Regions
+   * from most loaded servers.
+   * 
+   * Equilibrium is reached when load of all serves are in slop range
+   * [avgLoadMinusSlop, avgLoadPlusSlop], where 
+   *  avgLoadPlusSlop = Math.ceil(avgLoad * (1 + this.slop)), and
+   *  avgLoadMinusSlop = Math.floor(avgLoad * (1 - this.slop)) - 1.
+   */
+  private class LoadBalancer {
+    private float slop;                 // hbase.regions.slop
+    private final int maxRegToClose;    // hbase.regions.close.max
+    
+    LoadBalancer(HBaseConfiguration conf) {
+      this.slop = conf.getFloat("hbase.regions.slop", (float)0.1);
+      if (this.slop <= 0) this.slop = 1;
+      //maxRegToClose to constrain balance closing per one iteration
+      // -1 to turn off 
+      // TODO: change default in HBASE-862, need a suggestion
+      this.maxRegToClose = conf.getInt("hbase.regions.close.max", -1);
+    }
+
+    /**
+     * Balance server load by unassigning some regions.
+     * 
+     * @param info - server info
+     * @param mostLoadedRegions - array of most loaded regions
+     * @param returnMsgs - array of return massages
+     */
+    void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
+        ArrayList<HMsg> returnMsgs) {
+      HServerLoad servLoad = info.getLoad();
+      double avg = master.serverManager.getAverageLoad();
+
+      // nothing to balance if server load not more then average load
+      if (servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) return;
+      
+      // check if server is overloaded
+      int numRegionsToClose = balanceFromOverloaded(servLoad, avg);
+      
+      // check if we can unload server by low loaded servers
+      if (numRegionsToClose <= 0)
+        balanceToLowloaded(info.getServerName(), servLoad, avg);
+      
+      if (maxRegToClose > 0)
+        numRegionsToClose = Math.min(numRegionsToClose, maxRegToClose);
+              
+      if (numRegionsToClose > 0){
+        unassignSomeRegions(info, numRegionsToClose, mostLoadedRegions, 
+            returnMsgs);
+      }
+    }
+
+    /* 
+     * Check if server load is not overloaded (with load > avgLoadPlusSlop).
+     * @return number of regions to unassign.
+     */
+    private int balanceFromOverloaded(HServerLoad srvLoad, double avgLoad) {
+      int avgLoadPlusSlop = (int)Math.ceil(avgLoad * (1 + this.slop));
+      int numSrvRegs = srvLoad.getNumberOfRegions();
+      if (numSrvRegs > avgLoadPlusSlop) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Server is overloaded. Server load: " + numSrvRegs +
+              " avg: " + avgLoad + ", slop: " + this.slop);
+        }
+        return numSrvRegs - (int)Math.ceil(avgLoad);
+      }
+      return 0;
+    }
+
+    /* 
+     * Check if server is most loaded and can be unloaded to 
+     * low loaded servers (with load < avgLoadMinusSlop).
+     * @return number of regions to unassign.
+     */
+    private int balanceToLowloaded(String srvName, HServerLoad srvLoad, 
+        double avgLoad) {
+
+      SortedMap<HServerLoad, Set<String>> loadToServers = 
+        master.serverManager.getLoadToServers();
+      // check if server most loaded
+      if (!loadToServers.get(loadToServers.lastKey()).contains(srvName))
+        return 0;
+       
+      // this server is most loaded, we will try to unload it by lowest
+      // loaded servers
+      int avgLoadMinusSlop = (int)Math.floor(avgLoad * (1 - this.slop)) - 1;
+      int lowestLoad = loadToServers.firstKey().getNumberOfRegions();
+      
+      if(lowestLoad >= avgLoadMinusSlop)
+        return 0; // there is no low loaded servers
+      
+      int lowSrvCount = loadToServers.get(loadToServers.firstKey()).size();
+      int numRegionsToClose = 0;
+      
+      int numSrvRegs = srvLoad.getNumberOfRegions();
+      int numMoveToLowLoaded = (avgLoadMinusSlop - lowestLoad) * lowSrvCount;
+      numRegionsToClose = numSrvRegs - (int)Math.ceil(avgLoad);
+      numRegionsToClose = Math.min(numRegionsToClose, numMoveToLowLoaded);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Server " + srvName + " will be unloaded for " +
+            "balance. Server load: " + numSrvRegs + " avg: " +
+            avgLoad + ", regions can be moved: " + numMoveToLowLoaded);
+      }
+      return numRegionsToClose;
     }
   }
 
