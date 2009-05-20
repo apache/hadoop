@@ -71,7 +71,9 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     } else {
       this.metaRegion =
         master.regionManager.getFirstMetaRegionForRegion(regionInfo);
-      this.metaRegionName = this.metaRegion.getRegionName();
+      if (this.metaRegion != null) {
+        this.metaRegionName = this.metaRegion.getRegionName();
+      }
     }
     return this.metaRegion;
   }

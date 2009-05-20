@@ -143,6 +143,7 @@ Release 0.20.0 - Unreleased
    HBASE-1438  HBASE-1421 broke the build (#602 up on hudson)
    HBASE-1440  master won't go down because joined on a rootscanner that is
                waiting for ever
+   HBASE-1441  NPE in ProcessRegionStatusChange#getMetaRegion
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
