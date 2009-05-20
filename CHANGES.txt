@@ -636,6 +636,10 @@ Trunk (unreleased changes)
     HADOOP-5853. Undeprecate HttpServer.addInternalServlet method.  (Suresh
     Srinivas via szetszwo)
 
+    HADOOP-5801. Fixes the problem: If the hosts file is changed across restart
+    then it should be refreshed upon recovery so that the excluded hosts are 
+    lost and the maps are re-executed. (Amar Kamat via ddas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
