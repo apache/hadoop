@@ -373,8 +373,8 @@ public class TestJobHistory extends TestCase {
                    (status.equals("SUCCESS") || status.equals("FAILED") ||
                     status.equals("KILLED")));
 
-        // Reduce Task Attempts should have valid SHUFFLE_FINISHED time and
-        // SORT_FINISHED time
+        // Successful Reduce Task Attempts should have valid SHUFFLE_FINISHED
+        // time and SORT_FINISHED time
         if (type.equals("REDUCE") && status.equals("SUCCESS")) {
           time1 = attempt.get(Keys.SHUFFLE_FINISHED);
           assertTrue("SHUFFLE_FINISHED time of task attempt " + id +
@@ -388,6 +388,15 @@ public class TestJobHistory extends TestCase {
                      " in history file", isTimeValid(time));
           assertTrue("Reduce Task SORT_FINISHED time is < SORT_FINISHED time" +
                      " in history file", areTimesInOrder(time1, time));
+        }
+        else if (type.equals("MAP") && status.equals("SUCCESS")) {
+          // Successful MAP Task Attempts should have valid MAP_FINISHED time
+          time1 = attempt.get(Keys.MAP_FINISHED);
+          assertTrue("MAP_FINISHED time of task attempt " + id +
+                     " is in unexpected format:" + time1 +
+                     " in history file", isTimeValid(time1));
+          assertTrue("MAP_FINISHED time of map task is < START_TIME " +
+                     "in history file", areTimesInOrder(time, time1));
         }
 
         // check if hostname is valid

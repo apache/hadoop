@@ -1086,6 +1086,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         taskStatus.setShuffleFinishTime(shuffleTime);
         taskStatus.setSortFinishTime(sortTime);
       }
+      else if (type.equals(Values.MAP.name())) {
+        taskStatus.setMapFinishTime(
+            Long.parseLong(attempt.get(Keys.MAP_FINISHED)));
+      }
 
       // Add the counters
       String counterString = attempt.get(Keys.COUNTERS);

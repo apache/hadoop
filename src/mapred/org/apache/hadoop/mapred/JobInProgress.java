@@ -2011,7 +2011,9 @@ class JobInProgress {
                                        status.getTaskTracker(), 
                                        ttStatus.getHttpPort(), 
                                        taskType); 
-      JobHistory.MapAttempt.logFinished(status.getTaskID(), status.getFinishTime(), 
+      JobHistory.MapAttempt.logFinished(status.getTaskID(),
+                                        status.getMapFinishTime(),
+                                        status.getFinishTime(), 
                                         trackerHostname, taskType,
                                         status.getStateString(), 
                                         status.getCounters()); 

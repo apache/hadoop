@@ -73,8 +73,13 @@ class MapTask extends Task {
 
   private static final Log LOG = LogFactory.getLog(MapTask.class.getName());
 
+  private Progress mapPhase;
+  private Progress sortPhase;
+  
+  
   {   // set phase for this task
     setPhase(TaskStatus.Phase.MAP); 
+    getProgress().setStatus("map");
   }
 
   public MapTask() {
@@ -273,6 +278,11 @@ class MapTask extends Task {
   public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException, ClassNotFoundException, InterruptedException {
 
+    if (isMapTask()) {
+      mapPhase = getProgress().addPhase("map", 0.667f);
+      sortPhase  = getProgress().addPhase("sort", 0.333f);
+    }
+    
     // start thread that will handle communication with parent
     TaskReporter reporter = new TaskReporter(getProgress(), umbilical);
     reporter.startCommunicationThread();
@@ -348,6 +358,9 @@ class MapTask extends Task {
 
     try {
       runner.run(in, collector, reporter);      
+      mapPhase.complete();
+      setPhase(TaskStatus.Phase.SORT);
+      statusUpdate(umbilical);
       collector.flush();
     } finally {
       //close
@@ -510,6 +523,9 @@ class MapTask extends Task {
 
       input.initialize(split, mapperContext);
       mapper.run(mapperContext);
+      mapPhase.complete();
+      setPhase(TaskStatus.Phase.SORT);
+      statusUpdate(umbilical);
       input.close();
       output.close(mapperContext);
     } catch (NoSuchMethodException e) {
@@ -1385,6 +1401,9 @@ class MapTask extends Task {
         return;
       }
       {
+        sortPhase.addPhases(partitions); // Divide sort phase into sub-phases
+        Merger.considerFinalMergeForProgress();
+        
         IndexRecord rec = new IndexRecord();
         final SpillRecord spillRec = new SpillRecord(partitions);
         for (int parts = 0; parts < partitions; parts++) {
@@ -1406,14 +1425,17 @@ class MapTask extends Task {
             }
           }
 
+          int mergeFactor = job.getInt("io.sort.factor", 100);
+          // sort the segments only if there are intermediate merges
+          boolean sortSegments = segmentList.size() > mergeFactor;
           //merge
           @SuppressWarnings("unchecked")
           RawKeyValueIterator kvIter = Merger.merge(job, rfs,
                          keyClass, valClass,
-                         segmentList, job.getInt("io.sort.factor", 100),
+                         segmentList, mergeFactor,
                          new Path(mapId.toString()),
-                         job.getOutputKeyComparator(), reporter,
-                         null, spilledRecordsCounter);
+                         job.getOutputKeyComparator(), reporter, sortSegments,
+                         null, spilledRecordsCounter, sortPhase.phase());
 
           //write merged output to disk
           long segmentStart = finalOut.getPos();
@@ -1430,6 +1452,8 @@ class MapTask extends Task {
           //close
           writer.close();
 
+          sortPhase.startNextPhase();
+          
           // record offsets
           rec.startOffset = segmentStart;
           rec.rawLength = writer.getRawLength();

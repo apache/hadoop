@@ -376,6 +376,9 @@ Trunk (unreleased changes)
     HADOOP-5873. Remove deprecated methods randomDataNode() and
     getDatanodeByIndex(..) in FSNamesystem.  (szetszwo)
 
+    HADOOP-5572. Improves the progress reporting for the sort phase for both
+    maps and reduces. (Ravi Gummadi via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

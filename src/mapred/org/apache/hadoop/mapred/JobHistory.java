@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -121,8 +120,8 @@ public class JobHistory {
     LAUNCH_TIME, TOTAL_MAPS, TOTAL_REDUCES, FAILED_MAPS, FAILED_REDUCES, 
     FINISHED_MAPS, FINISHED_REDUCES, JOB_STATUS, TASKID, HOSTNAME, TASK_TYPE, 
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
-    SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
-    TRACKER_NAME, STATE_STRING, VERSION
+    SHUFFLE_FINISHED, SORT_FINISHED, MAP_FINISHED, COUNTERS, SPLITS,
+    JOB_PRIORITY, HTTP_PORT, TRACKER_NAME, STATE_STRING, VERSION
   }
 
   /**
@@ -1394,29 +1393,56 @@ public class JobHistory {
     /**
      * Log finish time of map task attempt. 
      * @param taskAttemptId task attempt id 
-     * @param finishTime finish time
+     * @param finishTime finish time of map task
      * @param hostName host name 
      * @deprecated Use 
-     * {@link #logFinished(TaskAttemptID, long, String, String, String, Counters)}
+     * {@link #logFinished(TaskAttemptID, long, long, String, String, String,
+     *  Counters)}
      */
     @Deprecated
     public static void logFinished(TaskAttemptID taskAttemptId, long finishTime, 
                                    String hostName){
-      logFinished(taskAttemptId, finishTime, hostName, Values.MAP.name(), "", 
-                  new Counters());
+      logFinished(taskAttemptId, finishTime, finishTime, hostName,
+                  Values.MAP.name(), "", new Counters());
     }
 
     /**
      * Log finish time of map task attempt. 
      * 
      * @param taskAttemptId task attempt id 
-     * @param finishTime finish time
+     * @param finishTime finish time of map task
+     * @param hostName host name 
+     * @param taskType Whether the attempt is cleanup or setup or map 
+     * @param stateString state string of the task attempt
+     * @param counter counters of the task attempt
+     * @deprecated Use 
+     * {@link #logFinished(TaskAttemptID, long, long, String, String, String,
+     *  Counters)}
+     */
+    @Deprecated
+    public static void logFinished(TaskAttemptID taskAttemptId,
+                                   long finishTime, 
+                                   String hostName,
+                                   String taskType,
+                                   String stateString, 
+                                   Counters counter) {
+      logFinished(taskAttemptId, finishTime, finishTime, hostName,
+          taskType, stateString, counter);
+    }
+    
+    /**
+     * Log finish time of map task attempt. 
+     * 
+     * @param taskAttemptId task attempt id 
+     * @param mapFinishTime finish time of map phase in map task
+     * @param finishTime finish time of map task
      * @param hostName host name 
      * @param taskType Whether the attempt is cleanup or setup or map 
      * @param stateString state string of the task attempt
      * @param counter counters of the task attempt
      */
     public static void logFinished(TaskAttemptID taskAttemptId, 
+                                   long mapFinishTime,
                                    long finishTime, 
                                    String hostName,
                                    String taskType,
@@ -1430,12 +1456,14 @@ public class JobHistory {
           JobHistory.log(writer, RecordTypes.MapAttempt, 
                          new Keys[]{ Keys.TASK_TYPE, Keys.TASKID, 
                                      Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
+                                     Keys.MAP_FINISHED,
                                      Keys.FINISH_TIME, Keys.HOSTNAME, 
                                      Keys.STATE_STRING, Keys.COUNTERS},
                          new String[]{taskType, 
                                       taskAttemptId.getTaskID().toString(),
                                       taskAttemptId.toString(), 
                                       Values.SUCCESS.name(),  
+                                      String.valueOf(mapFinishTime),
                                       String.valueOf(finishTime), hostName, 
                                       stateString, 
                                       counter.makeEscapedCompactString()}); 

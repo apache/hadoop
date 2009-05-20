@@ -241,7 +241,7 @@ class ReduceTask extends Task {
     }
     
     public void informReduceProgress() {
-      reducePhase.set(super.in.getProgress().get()); // update progress
+      reducePhase.set(super.in.getProgress().getProgress()); // update progress
       reporter.progress();
     }
   }
@@ -392,7 +392,7 @@ class ReduceTask extends Task {
           job.getMapOutputValueClass(), codec, getMapFiles(rfs, true),
           !conf.getKeepFailedTaskFiles(), job.getInt("io.sort.factor", 100),
           new Path(getTaskID().toString()), job.getOutputKeyComparator(),
-          reporter, spilledRecordsCounter, null)
+          reporter, spilledRecordsCounter, null, sortPhase)
       : reduceCopier.createKVIterator(job, rfs, reporter);
         
     // free up the data structures
@@ -1786,9 +1786,7 @@ class ReduceTask extends Task {
       InMemFSMergeThread inMemFSMergeThread = null;
       GetMapEventsThread getMapEventsThread = null;
       
-      for (int i = 0; i < numMaps; i++) {
-        copyPhase.addPhase();       // add sub-phase per file
-      }
+      copyPhase.addPhases(numMaps); // add sub-phase per file
       
       copiers = new ArrayList<MapOutputCopier>(numCopiers);
       
@@ -2243,6 +2241,10 @@ class ReduceTask extends Task {
       // segments required to vacate memory
       List<Segment<K,V>> memDiskSegments = new ArrayList<Segment<K,V>>();
       long inMemToDiskBytes = 0;
+      // sortPhaseFinished will be set to true if we call merge() separately
+      // here to vacate memory(i.e. there will not be any intermediate merges.
+      // In other words, only final merge is pending).
+      boolean sortPhaseFinished = false;
       if (mapOutputsFilesInMemory.size() > 0) {
         TaskID mapId = mapOutputsFilesInMemory.get(0).mapId;
         inMemToDiskBytes = createInMemorySegments(memDiskSegments,
@@ -2250,12 +2252,20 @@ class ReduceTask extends Task {
         final int numMemDiskSegments = memDiskSegments.size();
         if (numMemDiskSegments > 0 &&
               ioSortFactor > mapOutputFilesOnDisk.size()) {
+          // As we have < ioSortFactor files on disk now, after this
+          // merging of inMemory segments, we would have at most ioSortFactor
+          // files on disk. So only final merge(directly feeding to reducers)
+          // will be pending. i.e. reduce phase will be pending.
+          sortPhaseFinished = true;
+          
           // must spill to disk, but can't retain in-mem for intermediate merge
           final Path outputPath = mapOutputFile.getInputFileForWrite(mapId,
                             reduceTask.getTaskID(), inMemToDiskBytes);
           final RawKeyValueIterator rIter = Merger.merge(job, fs,
               keyClass, valueClass, memDiskSegments, numMemDiskSegments,
-              tmpDir, comparator, reporter, spilledRecordsCounter, null);
+              tmpDir, comparator, reporter, spilledRecordsCounter, null,
+              sortPhase);
+
           final Writer writer = new Writer(job, fs, outputPath,
               keyClass, valueClass, codec, null);
           try {
@@ -2311,10 +2321,12 @@ class ReduceTask extends Task {
         final int numInMemSegments = memDiskSegments.size();
         diskSegments.addAll(0, memDiskSegments);
         memDiskSegments.clear();
+        Progress mergePhase = (sortPhaseFinished) ? null : sortPhase; 
         RawKeyValueIterator diskMerge = Merger.merge(
             job, fs, keyClass, valueClass, diskSegments,
             ioSortFactor, 0 == numInMemSegments ? 0 : numInMemSegments - 1,
-            tmpDir, comparator, reporter, false, spilledRecordsCounter, null);
+            tmpDir, comparator, reporter, false, spilledRecordsCounter, null,
+            mergePhase);
         diskSegments.clear();
         if (0 == finalSegments.size()) {
           return diskMerge;
@@ -2324,7 +2336,7 @@ class ReduceTask extends Task {
       }
       return Merger.merge(job, fs, keyClass, valueClass,
                    finalSegments, finalSegments.size(), tmpDir,
-                   comparator, reporter, spilledRecordsCounter, null);
+                   comparator, reporter, spilledRecordsCounter, null, null);
     }
 
     class RawKVIteratorReader extends IFile.Reader<K,V> {
@@ -2465,7 +2477,7 @@ class ReduceTask extends Task {
                                   codec, mapFiles.toArray(new Path[mapFiles.size()]), 
                                   true, ioSortFactor, tmpDir, 
                                   conf.getOutputKeyComparator(), reporter,
-                                  spilledRecordsCounter, null);
+                                  spilledRecordsCounter, null, null);
               
               Merger.writeFile(iter, writer, reporter, conf);
               writer.close();
@@ -2562,7 +2574,7 @@ class ReduceTask extends Task {
                                inMemorySegments, inMemorySegments.size(),
                                new Path(reduceTask.getTaskID().toString()),
                                conf.getOutputKeyComparator(), reporter,
-                               spilledRecordsCounter, null);
+                               spilledRecordsCounter, null, null);
           
           if (combinerRunner == null) {
             Merger.writeFile(rIter, writer, reporter, conf);
