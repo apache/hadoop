@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
 
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -222,15 +223,13 @@ class NamenodeJspHelper {
 
   static void redirectToRandomDataNode(NameNode nn, HttpServletResponse resp)
       throws IOException {
-    FSNamesystem fsn = nn.getNamesystem();
-    String datanode = fsn.randomDataNode();
-    String redirectLocation;
-    String nodeToRedirect;
+    final DatanodeID datanode = nn.getNamesystem().getRandomDatanode();
+    final String redirectLocation;
+    final String nodeToRedirect;
     int redirectPort;
     if (datanode != null) {
-      redirectPort = Integer.parseInt(datanode
-          .substring(datanode.indexOf(':') + 1));
-      nodeToRedirect = datanode.substring(0, datanode.indexOf(':'));
+      nodeToRedirect = datanode.getHost();
+      redirectPort = datanode.getInfoPort();
     } else {
       nodeToRedirect = nn.getHttpAddress().getHostName();
       redirectPort = nn.getHttpAddress().getPort();

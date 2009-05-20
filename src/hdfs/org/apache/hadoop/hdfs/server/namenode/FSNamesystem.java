@@ -2842,43 +2842,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     return node;
   }
-    
-  /** Stop at and return the datanode at index (used for content browsing)*/
-  @Deprecated
-  private DatanodeDescriptor getDatanodeByIndex(int index) {
-    int i = 0;
-    for (DatanodeDescriptor node : datanodeMap.values()) {
-      if (i == index) {
-        return node;
-      }
-      i++;
-    }
-    return null;
-  }
-    
-  @Deprecated
-  public String randomDataNode() {
-    int size = datanodeMap.size();
-    int index = 0;
-    if (size != 0) {
-      index = r.nextInt(size);
-      for(int i=0; i<size; i++) {
-        DatanodeDescriptor d = getDatanodeByIndex(index);
-        if (d != null && !d.isDecommissioned() && !isDatanodeDead(d) &&
-            !d.isDecommissionInProgress()) {
-          return d.getHost() + ":" + d.getInfoPort();
-        }
-        index = (index + 1) % size;
-      }
-    }
-    return null;
-  }
 
   /** Choose a random datanode
    * 
    * @return a randomly chosen datanode
    */
-  public DatanodeDescriptor getRandomDatanode() {
+  DatanodeDescriptor getRandomDatanode() {
     return (DatanodeDescriptor)clusterMap.chooseRandom(NodeBase.ROOT);
   }
 
