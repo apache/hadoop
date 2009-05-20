@@ -644,7 +644,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     } else {
       ArrayList<HRegion> closedRegions = closeAllRegions();
       try {
-        hlog.closeAndDelete();
+        if (this.hlog != null) {
+          hlog.closeAndDelete();
+        }
       } catch (Throwable e) {
         LOG.error("Close and delete failed",
           RemoteExceptionHandler.checkThrowable(e));
