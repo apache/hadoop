@@ -137,6 +137,10 @@ public interface HConstants {
    *  to rewrite the logs. More means faster but bigger mem consumption */
   static final int DEFAULT_NUMBER_LOG_WRITER_THREAD = 10;
   
+  /** Default number of logs to read concurrently
+   *  when log splitting. More means faster but bigger mem consumption  */
+  static final int DEFAULT_NUMBER_CONCURRENT_LOG_READS = 10;
+  
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
   
