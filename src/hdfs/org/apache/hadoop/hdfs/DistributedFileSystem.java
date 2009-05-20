@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
@@ -439,7 +440,11 @@ public class DistributedFileSystem extends FileSystem {
   public boolean reportChecksumFailure(Path f, 
     FSDataInputStream in, long inPos, 
     FSDataInputStream sums, long sumsPos) {
-
+    
+    if(!(in instanceof DFSDataInputStream && sums instanceof DFSDataInputStream))
+      throw new IllegalArgumentException("Input streams must be types " +
+                                         "of DFSDataInputStream");
+    
     LocatedBlock lblocks[] = new LocatedBlock[2];
 
     // Find block in data stream.

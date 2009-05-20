@@ -246,24 +246,18 @@ public class DatanodeInfo extends DatanodeID implements Node {
    * Returns true if the node is in the process of being decommissioned
    */
   public boolean isDecommissionInProgress() {
-    if (adminState == AdminStates.DECOMMISSION_INPROGRESS) {
-      return true;
-    }
-    return false;
+    return adminState == AdminStates.DECOMMISSION_INPROGRESS;
   }
 
   /**
    * Returns true if the node has been decommissioned.
    */
   public boolean isDecommissioned() {
-    if (adminState == AdminStates.DECOMMISSIONED) {
-      return true;
-    }
-    return false;
+    return adminState == AdminStates.DECOMMISSIONED;
   }
 
   /**
-   * Sets the admin state to indicate that decommision is complete.
+   * Sets the admin state to indicate that decommission is complete.
    */
   public void setDecommissioned() {
     adminState = AdminStates.DECOMMISSIONED;
@@ -347,5 +341,18 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.location = Text.readString(in);
     this.hostName = Text.readString(in);
     setAdminState(WritableUtils.readEnum(in, AdminStates.class));
+  }
+
+  @Override
+  public int hashCode() {
+    // Super implementation is sufficient
+    return super.hashCode();
+  }
+  
+  @Override
+  public boolean equals(Object obj) {
+    // Sufficient to use super equality as datanodes are uniquely identified
+    // by DatanodeID
+    return (this == obj) || super.equals(obj);
   }
 }

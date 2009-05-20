@@ -640,6 +640,9 @@ Trunk (unreleased changes)
     then it should be refreshed upon recovery so that the excluded hosts are 
     lost and the maps are re-executed. (Amar Kamat via ddas)
 
+    HADOOP-5841. Resolve findbugs warnings in DistributedFileSystem,
+    DatanodeInfo, BlocksMap, DataNodeDescriptor.  (Jakob Homan via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

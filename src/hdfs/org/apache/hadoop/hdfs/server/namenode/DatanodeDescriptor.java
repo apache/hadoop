@@ -94,8 +94,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** A set of blocks to be invalidated by this datanode */
   private Set<Block> invalidateBlocks = new TreeSet<Block>();
 
-  /* Variables for maintaning number of blocks scheduled to be written to
-   * this datanode. This count is approximate and might be slightly higger
+  /* Variables for maintaining number of blocks scheduled to be written to
+   * this datanode. This count is approximate and might be slightly bigger
    * in case of errors (e.g. datanode does not report if an error occurs 
    * while writing the block).
    */
@@ -159,7 +159,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param networkLocation location of the data node in network
    * @param capacity capacity of the data node, including space used by non-dfs
    * @param dfsUsed the used space by dfs datanode
-   * @param remaining remaing capacity of the data node
+   * @param remaining remaining capacity of the data node
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID,
@@ -174,7 +174,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Add data-node to the block.
+   * Add datanode to the block.
    * Add block to the head of the list of blocks belonging to the data-node.
    */
   boolean addBlock(BlockInfo b) {
@@ -187,7 +187,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   
   /**
    * Remove block from the list of blocks belonging to the data-node.
-   * Remove data-node from the block.
+   * Remove datanode from the block.
    */
   boolean removeBlock(BlockInfo b) {
     blockList = b.listRemove(blockList, this);
@@ -228,7 +228,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Iterates over the list of blocks belonging to the data-node.
+   * Iterates over the list of blocks belonging to the datanode.
    */
   static private class BlockIterator implements Iterator<Block> {
     private BlockInfo current;
@@ -462,5 +462,18 @@ public class DatanodeDescriptor extends DatanodeInfo {
       currApproxBlocksScheduled = 0;
       lastBlocksScheduledRollTime = now;
     }
+  }
+  
+  @Override
+  public int hashCode() {
+    // Super implementation is sufficient
+    return super.hashCode();
+  }
+  
+  @Override
+  public boolean equals(Object obj) {
+    // Sufficient to use super equality as datanodes are uniquely identified
+    // by DatanodeID
+    return (this == obj) || super.equals(obj);
   }
 }
