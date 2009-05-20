@@ -71,6 +71,9 @@ Release 0.20.1 - Unreleased
     correctly in the presence of High RAM jobs.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-5210. Solves a problem in the progress report of the reduce task.
+    (Ravi Gummadi via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
