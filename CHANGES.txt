@@ -643,6 +643,9 @@ Trunk (unreleased changes)
     HADOOP-5841. Resolve findbugs warnings in DistributedFileSystem,
     DatanodeInfo, BlocksMap, DataNodeDescriptor.  (Jakob Homan via szetszwo)
 
+    HADOOP-5878. Fix import and Serializable javac warnings found in hdfs jsp.
+    (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

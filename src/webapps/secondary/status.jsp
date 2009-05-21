@@ -22,6 +22,10 @@
   import="org.apache.hadoop.hdfs.server.common.JspHelper"
   import="org.apache.hadoop.util.ServletUtil"
 %>
+<%!
+  //for java.io.Serializable
+  private static final long serialVersionUID = 1L;
+%>
 
 <html>
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
