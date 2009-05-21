@@ -102,9 +102,9 @@ public class BlockManager {
 
   void setConfigurationParameters(Configuration conf) throws IOException {
     this.replicator = new ReplicationTargetChooser(
-                          conf.getBoolean("dfs.replication.considerLoad", true),
-                          namesystem,
-                          namesystem.clusterMap);
+                         conf.getBoolean("dfs.replication.considerLoad", true),
+                         namesystem,
+                         namesystem.clusterMap);
 
     this.defaultReplication = conf.getInt("dfs.replication", 3);
     this.maxReplication = conf.getInt("dfs.replication.max", 512);
@@ -144,8 +144,8 @@ public class BlockManager {
     // Dump contents of neededReplication
     //
     synchronized (neededReplications) {
-      out.println("Metasave: Blocks waiting for replication: "
-          + neededReplications.size());
+      out.println("Metasave: Blocks waiting for replication: " + 
+                  neededReplications.size());
       for (Block block : neededReplications) {
         List<DatanodeDescriptor> containingNodes =
                                           new ArrayList<DatanodeDescriptor>();
@@ -201,8 +201,7 @@ public class BlockManager {
   }
 
   /**
-   * Get all valid locations of the block & add the block to results
-   * return the length of the added block; 0 if the block is not added
+   * Get all valid locations of the block
    */
   ArrayList<String> addBlock(Block block) {
     ArrayList<String> machineSet =
@@ -251,16 +250,16 @@ public class BlockManager {
             + " but corrupt replicas map has " + numCorruptReplicas);
       }
       boolean blockCorrupt = (numCorruptNodes == numNodes);
-      int numMachineSet = blockCorrupt ? numNodes
-          : (numNodes - numCorruptNodes);
+      int numMachineSet = blockCorrupt ? numNodes :
+                          (numNodes - numCorruptNodes);
       DatanodeDescriptor[] machineSet = new DatanodeDescriptor[numMachineSet];
       if (numMachineSet > 0) {
         numNodes = 0;
-        for (Iterator<DatanodeDescriptor> it = blocksMap
-            .nodeIterator(blocks[curBlk]); it.hasNext();) {
+        for (Iterator<DatanodeDescriptor> it = 
+             blocksMap.nodeIterator(blocks[curBlk]); it.hasNext();) {
           DatanodeDescriptor dn = it.next();
-          boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(
-              blocks[curBlk], dn);
+          boolean replicaCorrupt = 
+            corruptReplicas.isReplicaCorrupt(blocks[curBlk], dn);
           if (blockCorrupt || (!blockCorrupt && !replicaCorrupt))
             machineSet[numNodes++] = dn;
         }
@@ -274,8 +273,9 @@ public class BlockManager {
       results.add(b);
       curPos += blocks[curBlk].getNumBytes();
       curBlk++;
-    } while (curPos < endOff && curBlk < blocks.length
-        && results.size() < nrBlocksToReturn);
+    } while (curPos < endOff 
+          && curBlk < blocks.length
+          && results.size() < nrBlocksToReturn);
     return results;
   }
 
@@ -291,9 +291,11 @@ public class BlockManager {
       //common case. avoid building 'text'
       return;
     }
-
-    String text = "file " + src + ((clientName != null) ? " on client "
-      + clientName : "") + ".\n" + "Requested replication " + replication;
+    
+    String text = "file " + src 
+      + ((clientName != null) ? " on client " + clientName : "")
+      + ".\n"
+      + "Requested replication " + replication;
 
     if (replication > maxReplication)
       throw new IOException(text + " exceeds maximum " + maxReplication);
@@ -362,9 +364,9 @@ public class BlockManager {
   void markBlockAsCorrupt(Block blk, DatanodeInfo dn) throws IOException {
     DatanodeDescriptor node = namesystem.getDatanode(dn);
     if (node == null) {
-      throw new IOException("Cannot mark block" + blk.getBlockName()
-          + " as corrupt because datanode " + dn.getName()
-          + " does not exist. ");
+      throw new IOException("Cannot mark block" + blk.getBlockName() +
+                            " as corrupt because datanode " + dn.getName() +
+                            " does not exist. ");
     }
 
     final BlockInfo storedBlockInfo = blocksMap.getStoredBlock(blk);
@@ -373,18 +375,20 @@ public class BlockManager {
       // ignore the request for now. This could happen when BlockScanner
       // thread of Datanode reports bad block before Block reports are sent
       // by the Datanode on startup
-      NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: "
-          + "block " + blk + " could not be marked "
-          + "as corrupt as it does not exists in " + "blocksMap");
+      NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: " +
+                                   "block " + blk + " could not be marked " +
+                                   "as corrupt as it does not exists in " +
+                                   "blocksMap");
     } else {
       INodeFile inode = storedBlockInfo.getINode();
       if (inode == null) {
-        NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: "
-            + "block " + blk + " could not be marked "
-            + "as corrupt as it does not belong to " + "any file");
+        NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: " +
+                                     "block " + blk + " could not be marked " +
+                                     "as corrupt as it does not belong to " +
+                                     "any file");
         addToInvalidates(storedBlockInfo, node);
         return;
-      }
+      } 
       // Add this replica to corruptReplicas Map
       corruptReplicas.addToCorruptReplicasMap(storedBlockInfo, node);
       if (countNodes(storedBlockInfo).liveReplicas() > inode.getReplication()) {
@@ -402,12 +406,13 @@ public class BlockManager {
    */
   private void invalidateBlock(Block blk, DatanodeInfo dn)
       throws IOException {
-    NameNode.stateChangeLog.info("DIR* NameSystem.invalidateBlock: " + blk
-        + " on " + dn.getName());
+    NameNode.stateChangeLog.info("DIR* NameSystem.invalidateBlock: "
+                                 + blk + " on " + dn.getName());
     DatanodeDescriptor node = namesystem.getDatanode(dn);
     if (node == null) {
-      throw new IOException("Cannot invalidate block " + blk
-          + " because datanode " + dn.getName() + " does not exist.");
+      throw new IOException("Cannot invalidate block " + blk +
+                            " because datanode " + dn.getName() +
+                            " does not exist.");
     }
 
     // Check how many copies we have of the block. If we have at least one
@@ -417,7 +422,8 @@ public class BlockManager {
       addToInvalidates(blk, dn);
       removeStoredBlock(blk, node);
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.invalidateBlocks: "
-          + blk + " on " + dn.getName() + " listed for deletion.");
+                                   + blk + " on "
+                                   + dn.getName() + " listed for deletion.");
     } else {
       NameNode.stateChangeLog.info("BLOCK* NameSystem.invalidateBlocks: "
           + blk + " on " + dn.getName()
@@ -799,9 +805,8 @@ public class BlockManager {
   }
 
   /**
-   * Modify (block-->datanode) map. Remove block from set of needed replications
-   * if this takes care of the problem.
-   *
+   * Modify (block-->datanode) map. Remove block from set of
+   * needed replications if this takes care of the problem.
    * @return the block that is stored in blockMap.
    */
   private Block addStoredBlock(Block block, DatanodeDescriptor node,
@@ -810,9 +815,10 @@ public class BlockManager {
     if (storedBlock == null || storedBlock.getINode() == null) {
       // If this block does not belong to anyfile, then we are done.
       NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
-          + "addStoredBlock request received for " + block + " on "
-          + node.getName() + " size " + block.getNumBytes()
-          + " But it does not belong to any file.");
+                                   + "addStoredBlock request received for "
+                                   + block + " on " + node.getName()
+                                   + " size " + block.getNumBytes()
+                                   + " But it does not belong to any file.");
       // we could add this block to invalidate set of this datanode.
       // it will happen in next block report otherwise.
       return block;
@@ -829,9 +835,10 @@ public class BlockManager {
         if (cursize == 0) {
           storedBlock.setNumBytes(block.getNumBytes());
         } else if (cursize != block.getNumBytes()) {
-          FSNamesystem.LOG.warn("Inconsistent size for block " + block
-              + " reported from " + node.getName() + " current size is "
-              + cursize + " reported size is " + block.getNumBytes());
+          FSNamesystem.LOG.warn("Inconsistent size for block " + block +
+                   " reported from " + node.getName() +
+                   " current size is " + cursize +
+                   " reported size is " + block.getNumBytes());
           try {
             if (cursize > block.getNumBytes()) {
               // new replica is smaller in size than existing block.
@@ -847,7 +854,7 @@ public class BlockManager {
               int count = 0;
               DatanodeDescriptor nodes[] = new DatanodeDescriptor[numNodes];
               Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
-              for (; it != null && it.hasNext();) {
+              for (; it != null && it.hasNext(); ) {
                 DatanodeDescriptor dd = it.next();
                 if (!dd.equals(node)) {
                   nodes[count++] = dd;
@@ -878,11 +885,11 @@ public class BlockManager {
 
         // Updated space consumed if required.
         INodeFile file = (storedBlock != null) ? storedBlock.getINode() : null;
-        long diff = (file == null) ? 0
-            : (file.getPreferredBlockSize() - storedBlock.getNumBytes());
-
-        if (diff > 0 && file.isUnderConstruction()
-            && cursize < storedBlock.getNumBytes()) {
+        long diff = (file == null) ? 0 :
+                    (file.getPreferredBlockSize() - storedBlock.getNumBytes());
+        
+        if (diff > 0 && file.isUnderConstruction() &&
+            cursize < storedBlock.getNumBytes()) {
           try {
             String path = /* For finding parents */
             namesystem.leaseManager.findPath((INodeFileUnderConstruction) file);
@@ -923,7 +930,7 @@ public class BlockManager {
     NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
     int numCurrentReplica = numLiveReplicas
-        + pendingReplications.getNumReplicas(block);
+      + pendingReplications.getNumReplicas(block);
 
     // check whether safe replication is reached for the block
     namesystem.incrementSafeBlockCount(numCurrentReplica);
@@ -958,9 +965,9 @@ public class BlockManager {
     int corruptReplicasCount = corruptReplicas.numCorruptReplicas(block);
     int numCorruptNodes = num.corruptReplicas();
     if (numCorruptNodes != corruptReplicasCount) {
-      FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for "
-          + block + "blockMap has " + numCorruptNodes
-          + " but corrupt replicas map has " + corruptReplicasCount);
+      FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for " +
+          block + "blockMap has " + numCorruptNodes + 
+          " but corrupt replicas map has " + corruptReplicasCount);
     }
     if ((corruptReplicasCount > 0) && (numLiveReplicas >= fileReplication))
       invalidateCorruptReplicas(block);
@@ -970,28 +977,29 @@ public class BlockManager {
   /**
    * Invalidate corrupt replicas.
    * <p>
-   * This will remove the replicas from the block's location list, add them to
-   * {@link #recentInvalidateSets} so that they could be further deleted from
-   * the respective data-nodes, and remove the block from corruptReplicasMap.
+   * This will remove the replicas from the block's location list,
+   * add them to {@link #recentInvalidateSets} so that they could be further
+   * deleted from the respective data-nodes,
+   * and remove the block from corruptReplicasMap.
    * <p>
-   * This method should be called when the block has sufficient number of live
-   * replicas.
+   * This method should be called when the block has sufficient
+   * number of live replicas.
    *
-   * @param blk
-   *          Block whose corrupt replicas need to be invalidated
+   * @param blk Block whose corrupt replicas need to be invalidated
    */
   private void invalidateCorruptReplicas(Block blk) {
     Collection<DatanodeDescriptor> nodes = corruptReplicas.getNodes(blk);
     boolean gotException = false;
     if (nodes == null)
       return;
-    for (Iterator<DatanodeDescriptor> it = nodes.iterator(); it.hasNext();) {
+    for (Iterator<DatanodeDescriptor> it = nodes.iterator(); it.hasNext(); ) {
       DatanodeDescriptor node = it.next();
       try {
         invalidateBlock(blk, node);
       } catch (IOException e) {
-        NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas "
-            + "error in deleting bad block " + blk + " on " + node + e);
+        NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas " +
+                                      "error in deleting bad block " + blk +
+                                      " on " + node + e);
         gotException = true;
       }
     }
@@ -1040,9 +1048,9 @@ public class BlockManager {
   }
 
   /**
-   * Find how many of the containing nodes are "extra", if any. If there are any
-   * extras, call chooseExcessReplicates() to mark them in the
-   * excessReplicateMap.
+   * Find how many of the containing nodes are "extra", if any.
+   * If there are any extras, call chooseExcessReplicates() to
+   * mark them in the excessReplicateMap.
    */
   void processOverReplicatedBlock(Block block, short replication,
       DatanodeDescriptor addedNode, DatanodeDescriptor delNodeHint) {
@@ -1052,8 +1060,8 @@ public class BlockManager {
     Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
     Collection<DatanodeDescriptor> corruptNodes = corruptReplicas
         .getNodes(block);
-    for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block); it
-        .hasNext();) {
+    for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
+         it.hasNext();) {
       DatanodeDescriptor cur = it.next();
       Collection<Block> excessBlocks = excessReplicateMap.get(cur
           .getStorageID());
@@ -1066,8 +1074,8 @@ public class BlockManager {
         }
       }
     }
-    namesystem.chooseExcessReplicates(nonExcess, block, replication, addedNode,
-        delNodeHint);
+    namesystem.chooseExcessReplicates(nonExcess, block, replication, 
+        addedNode, delNodeHint);
   }
 
   void addToExcessReplicate(DatanodeInfo dn, Block block) {
@@ -1171,8 +1179,8 @@ public class BlockManager {
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
       } else {
-        Collection<Block> blocksExcess = excessReplicateMap.get(node
-            .getStorageID());
+        Collection<Block> blocksExcess =
+          excessReplicateMap.get(node.getStorageID());
         if (blocksExcess != null && blocksExcess.contains(b)) {
           excess++;
         } else {

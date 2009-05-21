@@ -650,6 +650,9 @@ Trunk (unreleased changes)
     HADOOP-5878. Fix import and Serializable javac warnings found in hdfs jsp.
     (szetszwo)
 
+    HADOOP-5782. Revert a few formatting changes introduced in HADOOP-5015.
+    (Suresh Srinivas via rangadi)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
