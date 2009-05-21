@@ -118,15 +118,16 @@ if [ -d "$HBASE_HOME/build/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME/build
 fi
 
-# for releases, add hbase & webapps to CLASSPATH
+# For releases, add hbase & webapps to CLASSPATH
+# Webapps must come first else it messes up Jetty
+if [ -d "$HBASE_HOME/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HBASE_HOME
+fi
 for f in $HBASE_HOME/hbase*.jar; do
   if [ -f $f ]; then
     CLASSPATH=${CLASSPATH}:$f;
   fi
 done
-if [ -d "$HBASE_HOME/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HBASE_HOME
-fi
 
 # Add libs to CLASSPATH
 for f in $HBASE_HOME/lib/*.jar; do

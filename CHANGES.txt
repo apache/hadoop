@@ -153,6 +153,7 @@ Release 0.20.0 - Unreleased
    HBASE-1272  Unreadable log messages -- "... to the only server
                localhost_1237525439599_56094" <- You'd have to be perverse
                to recognize that as a hostname, startcode, and port
+   HBASE-1395  InfoServers no longer put up a UI
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
