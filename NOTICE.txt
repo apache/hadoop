@@ -12,6 +12,7 @@ Facebook, Inc. (http://developers.facebook.com/thrift/ -- Page includes the Thri
 
 JUnit (http://www.junit.org/)
 
+The JSON jar source is here: http://www.json.org/java/index.html
 
 Michael Gottesman developed AgileJSON.  Its source code is here:
 
