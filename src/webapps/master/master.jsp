@@ -7,9 +7,12 @@
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
+  import="org.apache.hadoop.hbase.HColumnDescriptor" 
+  import="org.apache.hadoop.hbase.client.tableindexed.IndexSpecification"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
@@ -29,6 +32,17 @@
       <meta http-equiv="refresh" content="300"/>
 <title>HBase Master: <%= master.getMasterAddress().getHostname()%>:<%= master.getMasterAddress().getPort() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
+<link rel="stylesheet" type="text/css" href="/static/jquery.treeview.css" />
+<script src="/static/scripts/jquery-1.3.1.min.js" type="text/javascript"></script>
+<script src="/static/scripts/jquery.cookie.js" type="text/javascript"></script>
+<script src="/static/scripts/jquery.treeview.pack.js" type="text/javascript"></script>
+<script>
+$(document).ready(function(){
+	$("#tables").treeview({
+		control: "#tablecontrol",
+		persist: "cookie"
+	});
+});</script>
 </head>
 
 <body>
@@ -83,7 +97,7 @@
 %>
 
 <table>
-<tr><th rowspan=<%= serverToServerInfos.size() + 1%>></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
+<tr><th rowspan="<%= serverToServerInfos.size() + 1%>"></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
 <%   String[] serverNames = serverToServerInfos.keySet().toArray(new String[serverToServerInfos.size()]);
      Arrays.sort(serverNames);
      for (String serverName: serverNames) {

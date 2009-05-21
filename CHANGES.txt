@@ -149,6 +149,7 @@ Release 0.20.0 - Unreleased
    HBASE-1415  Stuck on memcache flush
    HBASE-1257  base64 encoded values are not contained in quotes during the
                HBase REST JSON serialization (Brian Beggs via Stack)
+   HBASE-1436  Killing regionserver can make corrupted hfile
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
