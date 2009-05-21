@@ -326,8 +326,6 @@ Trunk (unreleased changes)
     HADOOP-5080. Add new test cases to TestMRCLI and TestHDFSCLI
     (V.Karthikeyan via nigel)
 
-    HADOOP-4372. Improves the way history filenames are obtained and manipulated.
-    (Amar Kamat via ddas)
 
     HADOOP-5135. Splits the tests into different directories based on the 
     package. Four new test targets have been defined - run-test-core, 
@@ -665,6 +663,9 @@ Release 0.20.1 - Unreleased
 
     HADOOP-5714. Add a metric for NameNode getFileInfo operation. (Jakob Homan
     via szetszwo)
+
+    HADOOP-4372. Improves the way history filenames are obtained and manipulated.
+    (Amar Kamat via ddas)
 
   OPTIMIZATIONS
 
