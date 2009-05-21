@@ -122,6 +122,9 @@ Trunk (unreleased changes)
     HADOOP-5643. Adds a way to decommission TaskTrackers while the JobTracker
     is running. (Amar Kamat via ddas)
 
+    HADOOP-4829. Allow FileSystem shutdown hook to be disabled.
+    (Todd Lipcon via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
