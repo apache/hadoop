@@ -146,6 +146,7 @@ Release 0.20.0 - Unreleased
    HBASE-1441  NPE in ProcessRegionStatusChange#getMetaRegion
    HBASE-1162  CME in Master in RegionManager.applyActions
    HBASE-1010  IOE on regionserver shutdown because hadn't opened an HLog
+   HBASE-1415  Stuck on memcache flush
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
