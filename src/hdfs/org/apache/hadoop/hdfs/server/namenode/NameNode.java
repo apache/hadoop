@@ -189,13 +189,28 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   public static InetSocketAddress getAddress(Configuration conf) {
-    return getAddress(FileSystem.getDefaultUri(conf).getAuthority());
+    URI filesystemURI = FileSystem.getDefaultUri(conf);
+    String authority = filesystemURI.getAuthority();
+    if (authority == null) {
+      throw new IllegalArgumentException(String.format(
+          "Invalid URI for NameNode address (check %s): %s has no authority.",
+          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString()));
+    }
+    if (!FSConstants.HDFS_URI_SCHEME.equalsIgnoreCase(
+        filesystemURI.getScheme())) {
+      throw new IllegalArgumentException(String.format(
+          "Invalid URI for NameNode address (check %s): %s is not of scheme '%s'.",
+          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString(),
+          FSConstants.HDFS_URI_SCHEME));
+    }
+    return getAddress(authority);
   }
 
   public static URI getUri(InetSocketAddress namenode) {
     int port = namenode.getPort();
     String portString = port == DEFAULT_PORT ? "" : (":"+port);
-    return URI.create("hdfs://"+ namenode.getHostName()+portString);
+    return URI.create(FSConstants.HDFS_URI_SCHEME + "://" 
+        + namenode.getHostName()+portString);
   }
 
   /**

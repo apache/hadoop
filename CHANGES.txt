@@ -653,6 +653,9 @@ Trunk (unreleased changes)
     HADOOP-5782. Revert a few formatting changes introduced in HADOOP-5015.
     (Suresh Srinivas via rangadi)
 
+    HADOOP-5687. NameNode throws NPE if fs.default.name is the default value.
+    (Philip Zeyliger via shv)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
