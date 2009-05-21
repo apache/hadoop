@@ -150,6 +150,9 @@ Release 0.20.0 - Unreleased
    HBASE-1257  base64 encoded values are not contained in quotes during the
                HBase REST JSON serialization (Brian Beggs via Stack)
    HBASE-1436  Killing regionserver can make corrupted hfile
+   HBASE-1272  Unreadable log messages -- "... to the only server
+               localhost_1237525439599_56094" <- You'd have to be perverse
+               to recognize that as a hostname, startcode, and port
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

@@ -245,10 +245,10 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   private static String getServerName(String hostName, int port, long startCode) {
     StringBuilder name = new StringBuilder(hostName);
-    name.append("_");
-    name.append(startCode);
-    name.append("_");
+    name.append(",");
     name.append(port);
+    name.append(",");
+    name.append(startCode);
     return name.toString();
   }
 }
