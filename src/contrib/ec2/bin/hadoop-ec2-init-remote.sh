@@ -17,7 +17,9 @@ MASTER_HOST=%MASTER_HOST% # Interpolated before being sent to EC2 node
 SECURITY_GROUPS=`wget -q -O - http://169.254.169.254/latest/meta-data/security-groups`
 IS_MASTER=`echo $SECURITY_GROUPS | awk '{ a = match ($0, "-master$"); if (a) print "true"; else print "false"; }'`
 if [ "$IS_MASTER" == "true" ]; then
- MASTER_HOST=`wget -q -O - http://169.254.169.254/latest/meta-data/local-hostname`
+ # use public hostnames for master. private hostnames can be used by substituting:
+ # MASTER_HOST=`wget -q -O - http://169.254.169.254/latest/meta-data/local-hostname`
+ MASTER_HOST=`wget -q -O - 'http://169.254.169.254/latest/meta-data/public-hostname'`
 fi
 
 HADOOP_HOME=`ls -d /usr/local/hadoop-*`
@@ -76,6 +78,12 @@ cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 <property>
   <name>dfs.client.block.write.retries</name>
   <value>3</value>
+</property>
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.default</name>
+  <value>org.apache.hadoop.net.StandardSocketFactory</value>
+  <final>true</final>
 </property>
 
 </configuration>

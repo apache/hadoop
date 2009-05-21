@@ -377,6 +377,9 @@ Trunk (unreleased changes)
     HADOOP-5572. Improves the progress reporting for the sort phase for both
     maps and reduces. (Ravi Gummadi via ddas)
 
+    HADOOP-5839. Fix EC2 scripts to allow remote job submission.
+    (Joydeep Sen Sarma via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
