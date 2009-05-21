@@ -373,6 +373,10 @@ class JobInProgress {
     return tasksInited.get();
   }
   
+  boolean hasRestarted() {
+    return restartCount > 0;
+  }
+
   /**
    * Construct the splits, etc.  This is invoked from an async
    * thread so that split-computation doesn't block anyone.
@@ -392,7 +396,7 @@ class JobInProgress {
 
     // log job info
     JobHistory.JobInfo.logSubmitted(getJobID(), conf, jobFile.toString(), 
-                                    this.startTime);
+                                    this.startTime, hasRestarted());
     // log the job priority
     setPriority(this.priority);
     

@@ -20,6 +20,9 @@ Release 0.20.1 - Unreleased
     HADOOP-4674. Fix fs help messages for -test, -text, -tail, -stat 
     and -touchz options.  (Ravi Phulari via szetszwo)
 
+    HADOOP-4372. Improves the way history filenames are obtained and manipulated.
+    (Amar Kamat via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
