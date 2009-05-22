@@ -30,6 +30,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobClient.RawSplit;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -731,7 +732,10 @@ class TaskInProgress {
    * Get the split locations 
    */
   public String[] getSplitLocations() {
-    return rawSplit.getLocations();
+    if (isMapTask() && !jobSetup && !jobCleanup) {
+      return rawSplit.getLocations();
+    }
+    return new String[0];
   }
   
   /**
@@ -915,12 +919,18 @@ class TaskInProgress {
                              boolean taskCleanup) {
     // create the task
     Task t = null;
-    if (isMapTask()) {
-      LOG.debug("attempt "+  numTaskFailures   +
-          " sending skippedRecords "+failedRanges.getIndicesCount());
-      t = new MapTask(jobFile, taskid, partition, 
-          rawSplit.getClassName(), rawSplit.getBytes());
-    } else {
+    if (isMapTask() && !jobSetup && !jobCleanup) {
+      LOG.debug("attempt " + numTaskFailures + " sending skippedRecords "
+          + failedRanges.getIndicesCount());
+
+      t =
+          new MapTask(jobFile, taskid, partition, rawSplit.getClassName(),
+              rawSplit.getBytes());
+
+    } else if (jobSetup || jobCleanup) {
+      t = new MapTask(jobFile, taskid, partition, null, new BytesWritable());
+    }
+    else {
       t = new ReduceTask(jobFile, taskid, partition, numMaps);
     }
     if (jobCleanup) {
@@ -1029,7 +1039,7 @@ class TaskInProgress {
    * Gets the Node list of input split locations sorted in rack order.
    */ 
   public String getSplitNodes() {
-    if ( rawSplit == null) {
+    if (!isMapTask() || jobSetup || jobCleanup) {
       return "";
     }
     String[] splits = rawSplit.getLocations();

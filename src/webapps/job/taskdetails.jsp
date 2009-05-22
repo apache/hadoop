@@ -278,7 +278,7 @@
 </center>
 
 <%
-      if (ts[0].getIsMap()) {
+      if (ts[0].getIsMap() && !isCleanupOrSetup) {
 %>
 <h3>Input Split Locations</h3>
 <table border=2 cellpadding="5" cellspacing="2">
