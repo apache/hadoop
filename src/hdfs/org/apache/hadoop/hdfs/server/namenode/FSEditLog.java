@@ -946,7 +946,7 @@ public class FSEditLog {
     if (lastPrintTime + 60000 > now && !force) {
       return;
     }
-    if (editStreams == null) {
+    if (editStreams == null || editStreams.size()==0) {
       return;
     }
     lastPrintTime = now;
