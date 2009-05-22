@@ -392,7 +392,7 @@ class JobInProgress {
       jobInitKillStatus.initStarted = true;
     }
 
-    LOG.debug("initializing " + this.jobId);
+    LOG.info("Initializing " + jobId);
 
     // log job info
     JobHistory.JobInfo.logSubmitted(getJobID(), conf, jobFile.toString(), 
@@ -437,37 +437,14 @@ class JobInProgress {
                                    splits[i], 
                                    jobtracker, conf, this, i);
     }
-    LOG.info("Input size for job "+ jobId + " = " + inputLength);
+    LOG.info("Input size for job " + jobId + " = " + inputLength
+        + ". Number of splits = " + splits.length);
     if (numMapTasks > 0) { 
-      LOG.info("Split info for job:" + jobId + " with " + 
-               splits.length + " splits:");
       nonRunningMapCache = createCache(splits, maxLevel);
     }
         
     // set the launch time
     this.launchTime = System.currentTimeMillis();
-
-    // if no split is returned, job is considered completed and successful
-    if (numMapTasks == 0) {
-      // Finished time need to be setted here to prevent this job to be retired
-      // from the job tracker jobs at the next retire iteration.
-      this.finishTime = this.launchTime;
-      status.setSetupProgress(1.0f);
-      status.setMapProgress(1.0f);
-      status.setReduceProgress(1.0f);
-      status.setCleanupProgress(1.0f);
-      status.setRunState(JobStatus.SUCCEEDED);
-      tasksInited.set(true);
-      JobHistory.JobInfo.logInited(profile.getJobID(), 
-                                    this.launchTime, 0, 0);
-      JobHistory.JobInfo.logFinished(profile.getJobID(), 
-                                     this.finishTime, 0, 0, 0, 0,
-                                     getCounters());
-      // Special case because the Job is not queued
-      JobEndNotifier.registerNotification(this.getJobConf(), this.getStatus());
-
-      return;
-    }
 
     //
     // Create reduce tasks
@@ -490,9 +467,11 @@ class JobInProgress {
 
     // create cleanup two cleanup tips, one map and one reduce.
     cleanup = new TaskInProgress[2];
-    // cleanup map tip. This map is doesn't use split. 
-    // Just assign splits[0]
-    cleanup[0] = new TaskInProgress(jobId, jobFile, splits[0], 
+
+    // cleanup map tip. This map doesn't use any splits. Just assign an empty
+    // split.
+    JobClient.RawSplit emptySplit = new JobClient.RawSplit();
+    cleanup[0] = new TaskInProgress(jobId, jobFile, emptySplit, 
             jobtracker, conf, this, numMapTasks);
     cleanup[0].setJobCleanupTask();
 
@@ -503,9 +482,10 @@ class JobInProgress {
 
     // create two setup tips, one map and one reduce.
     setup = new TaskInProgress[2];
-    // setup map tip. This map is doesn't use split. 
-    // Just assign splits[0]
-    setup[0] = new TaskInProgress(jobId, jobFile, splits[0], 
+
+    // setup map tip. This map doesn't use any split. Just assign an empty
+    // split.
+    setup[0] = new TaskInProgress(jobId, jobFile, emptySplit, 
             jobtracker, conf, this, numMapTasks + 1 );
     setup[0].setJobSetupTask();
 
@@ -898,20 +878,11 @@ class JobInProgress {
     if (!tip.isJobCleanupTask() && !tip.isJobSetupTask()) {
       double progressDelta = tip.getProgress() - oldProgress;
       if (tip.isMapTask()) {
-        if (maps.length == 0) {
-          this.status.setMapProgress(1.0f);
-        } else {
           this.status.setMapProgress((float) (this.status.mapProgress() +
                                               progressDelta / maps.length));
-        }
       } else {
-        if (reduces.length == 0) {
-          this.status.setReduceProgress(1.0f);
-        } else {
-          this.status.setReduceProgress
-            ((float) (this.status.reduceProgress() +
-                      (progressDelta / reduces.length)));
-        }
+        this.status.setReduceProgress((float) (this.status.reduceProgress() + 
+                                           (progressDelta / reduces.length)));
       }
     }
   }
@@ -1138,8 +1109,10 @@ class JobInProgress {
         status.getRunState() != JobStatus.PREP) {
       return false;
     }
-    // check if cleanup task has been launched already. 
-    if (launchedCleanup) {
+    // check if cleanup task has been launched already or if setup isn't
+    // launched already. The later check is useful when number of maps is
+    // zero.
+    if (launchedCleanup || !isSetupFinished()) {
       return false;
     }
     // check if job has failed or killed
@@ -1173,7 +1146,6 @@ class JobInProgress {
       if (!canLaunchSetupTask()) {
         return null;
       }
-      
       String taskTracker = tts.getTrackerName();
       // Update the last-known clusterSize
       this.clusterSize = clusterSize;
@@ -2121,6 +2093,12 @@ class JobInProgress {
     if (this.status.getRunState() == JobStatus.RUNNING ) {
       this.status.setRunState(JobStatus.SUCCEEDED);
       this.status.setCleanupProgress(1.0f);
+      if (maps.length == 0) {
+        this.status.setMapProgress(1.0f);
+      }
+      if (reduces.length == 0) {
+        this.status.setReduceProgress(1.0f);
+      }
       this.finishTime = System.currentTimeMillis();
       LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
@@ -2436,6 +2414,14 @@ class JobInProgress {
     } else {
       setup[1].kill();
     }
+  }
+
+  boolean isSetupFinished() {
+    if (setup[0].isComplete() || setup[0].isFailed() || setup[1].isComplete()
+        || setup[1].isFailed()) {
+      return true;
+    }
+    return false;
   }
 
   /**
