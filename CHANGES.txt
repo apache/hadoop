@@ -656,6 +656,9 @@ Trunk (unreleased changes)
     HADOOP-5687. NameNode throws NPE if fs.default.name is the default value.
     (Philip Zeyliger via shv)
 
+    HADOOP-5867. Fix javac warnings found in NNBench and NNBenchWithoutMR.
+    (Konstantin Boudnik via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -156,7 +156,6 @@ public class NNBench {
         if (writer != null) {
           writer.close();
         }
-        writer = null;
       }
     }
   }
@@ -210,6 +209,9 @@ public class NNBench {
 
   /**
    * check for arguments and fail if the values are not specified
+   * @param index  positional number of an argument in the list of command
+   *   line's arguments
+   * @param length total number of arguments
    */
   public static void checkArgs(final int index, final int length) {
     if (index == length) {
@@ -220,8 +222,8 @@ public class NNBench {
   
   /**
    * Parse input arguments
-   * 
-   * @params args Command line inputs
+   *
+   * @param args array of command line's parameters to be parsed
    */
   public static void parseInputs(final String[] args) {
     // If there are no command line arguments, exit
@@ -358,8 +360,8 @@ public class NNBench {
     
     // Average latency is the average time to perform 'n' number of
     // operations, n being the number of files
-    double avgLatency1 = (double) totalTimeAL1 / (double) successfulFileOps;
-    double avgLatency2 = (double) totalTimeAL2 / (double) successfulFileOps;
+    double avgLatency1 = (double) totalTimeAL1 / successfulFileOps;
+    double avgLatency2 = (double) totalTimeAL2 / successfulFileOps;
     
     // The time it takes for the longest running map is measured. Using that,
     // cluster transactions per second is calculated. It includes time to 
@@ -367,7 +369,7 @@ public class NNBench {
     double longestMapTimeTPmS = (double) (mapEndTimeTPmS - mapStartTimeTPmS);
     double totalTimeTPS = (longestMapTimeTPmS == 0) ?
             (1000 * successfulFileOps) :
-            (double) (1000 * successfulFileOps) / (double) longestMapTimeTPmS;
+            (double) (1000 * successfulFileOps) / longestMapTimeTPmS;
             
     // The time it takes to perform 'n' operations is calculated (in ms),
     // n being the number of files. Using that time, the average execution 
@@ -375,22 +377,22 @@ public class NNBench {
     // failed operations
     double AverageExecutionTime = (totalTimeTPmS == 0) ?
         (double) successfulFileOps : 
-        (double) (totalTimeTPmS / successfulFileOps);
+        (double) totalTimeTPmS / successfulFileOps;
             
     if (operation.equals(OP_CREATE_WRITE)) {
       // For create/write/close, it is treated as two transactions,
       // since a file create from a client perspective involves create and close
       resultTPSLine1 = "               TPS: Create/Write/Close: " + 
         (int) (totalTimeTPS * 2);
-      resultTPSLine2 = "Avg exec time (ms): Create/Write/Close: " + 
-        (double) AverageExecutionTime;
+      resultTPSLine2 = "Avg exec time (ms): Create/Write/Close: " +
+        AverageExecutionTime;
       resultALLine1 = "            Avg Lat (ms): Create/Write: " + avgLatency1;
       resultALLine2 = "                   Avg Lat (ms): Close: " + avgLatency2;
     } else if (operation.equals(OP_OPEN_READ)) {
       resultTPSLine1 = "                        TPS: Open/Read: " + 
         (int) totalTimeTPS;
       resultTPSLine2 = "         Avg Exec time (ms): Open/Read: " + 
-        (double) AverageExecutionTime;
+        AverageExecutionTime;
       resultALLine1 = "                    Avg Lat (ms): Open: " + avgLatency1;
       if (readFileAfterOpen) {
         resultALLine2 = "                  Avg Lat (ms): Read: " + avgLatency2;
@@ -399,13 +401,13 @@ public class NNBench {
       resultTPSLine1 = "                           TPS: Rename: " + 
         (int) totalTimeTPS;
       resultTPSLine2 = "            Avg Exec time (ms): Rename: " + 
-        (double) AverageExecutionTime;
+        AverageExecutionTime;
       resultALLine1 = "                  Avg Lat (ms): Rename: " + avgLatency1;
     } else if (operation.equals(OP_DELETE)) {
       resultTPSLine1 = "                           TPS: Delete: " + 
         (int) totalTimeTPS;
       resultTPSLine2 = "            Avg Exec time (ms): Delete: " + 
-        (double) AverageExecutionTime;
+        AverageExecutionTime;
       resultALLine1 = "                  Avg Lat (ms): Delete: " + avgLatency1;
     }
     
@@ -558,6 +560,7 @@ public class NNBench {
   /**
   * Main method for running the NNBench benchmarks
   *
+  * @param args array of command line arguments
   * @throws IOException indicates a problem with test startup
   */
   public static void main(String[] args) throws IOException {
@@ -587,7 +590,7 @@ public class NNBench {
   /**
    * Mapper class
    */
-  static class NNBenchMapper extends Configured 
+  static class NNBenchMapper extends Configured
           implements Mapper<Text, LongWritable, Text, Text> {
     FileSystem filesystem = null;
     private String hostName = null;
@@ -639,13 +642,15 @@ public class NNBench {
      */
     public void close() throws IOException {
     }
-    
+
     /**
-    * Returns when the current number of seconds from the epoch equals
-    * the command line argument given by <code>-startTime</code>.
-    * This allows multiple instances of this program, running on clock
-    * synchronized nodes, to start at roughly the same time.
-    */
+     * Returns when the current number of seconds from the epoch equals
+     * the command line argument given by <code>-startTime</code>.
+     * This allows multiple instances of this program, running on clock
+     * synchronized nodes, to start at roughly the same time.
+     * @return true if the method was able to sleep for <code>-startTime</code>
+     * without interruption; false otherwise
+     */
     private boolean barrier() {
       long startTime = getConf().getLong("test.nnbench.starttime", 0l);
       long currentTime = System.currentTimeMillis();
@@ -698,16 +703,16 @@ public class NNBench {
       if (barrier()) {
         if (op.equals(OP_CREATE_WRITE)) {
           startTimeTPmS = System.currentTimeMillis();
-          doCreateWriteOp("file_" + hostName + "_", output, reporter);
+          doCreateWriteOp("file_" + hostName + "_", reporter);
         } else if (op.equals(OP_OPEN_READ)) {
           startTimeTPmS = System.currentTimeMillis();
-          doOpenReadOp("file_" + hostName + "_", output, reporter);
+          doOpenReadOp("file_" + hostName + "_", reporter);
         } else if (op.equals(OP_RENAME)) {
           startTimeTPmS = System.currentTimeMillis();
-          doRenameOp("file_" + hostName + "_", output, reporter);
+          doRenameOp("file_" + hostName + "_", reporter);
         } else if (op.equals(OP_DELETE)) {
           startTimeTPmS = System.currentTimeMillis();
-          doDeleteOp("file_" + hostName + "_", output, reporter);
+          doDeleteOp("file_" + hostName + "_", reporter);
         }
         
         endTimeTPms = System.currentTimeMillis();
@@ -735,11 +740,13 @@ public class NNBench {
     
     /**
      * Create and Write operation.
+     * @param name of the prefix of the putput file to be created
+     * @param reporter an instanse of (@link Reporter) to be used for
+     *   status' updates
      */
     private void doCreateWriteOp(String name,
-            OutputCollector<Text, Text> output,
-            Reporter reporter) {
-      FSDataOutputStream out = null;
+                                 Reporter reporter) {
+      FSDataOutputStream out;
       byte[] buffer = new byte[bytesToWrite];
       
       for (long l = 0l; l < numberOfFiles; l++) {
@@ -783,11 +790,13 @@ public class NNBench {
     
     /**
      * Open operation
+     * @param name of the prefix of the putput file to be read
+     * @param reporter an instanse of (@link Reporter) to be used for
+     *   status' updates
      */
     private void doOpenReadOp(String name,
-            OutputCollector<Text, Text> output,
-            Reporter reporter) {
-      FSDataInputStream input = null;
+                              Reporter reporter) {
+      FSDataInputStream input;
       byte[] buffer = new byte[bytesToWrite];
       
       for (long l = 0l; l < numberOfFiles; l++) {
@@ -824,10 +833,12 @@ public class NNBench {
     
     /**
      * Rename operation
+     * @param name of prefix of the file to be renamed
+     * @param reporter an instanse of (@link Reporter) to be used for
+     *   status' updates
      */
     private void doRenameOp(String name,
-            OutputCollector<Text, Text> output,
-            Reporter reporter) {
+                            Reporter reporter) {
       for (long l = 0l; l < numberOfFiles; l++) {
         Path filePath = new Path(new Path(baseDir, dataDirName), 
                 name + "_" + l);
@@ -857,10 +868,12 @@ public class NNBench {
     
     /**
      * Delete operation
+     * @param name of prefix of the file to be deleted
+     * @param reporter an instanse of (@link Reporter) to be used for
+     *   status' updates
      */
     private void doDeleteOp(String name,
-            OutputCollector<Text, Text> output,
-            Reporter reporter) {
+                            Reporter reporter) {
       for (long l = 0l; l < numberOfFiles; l++) {
         Path filePath = new Path(new Path(baseDir, dataDirName), 
                 name + "_" + l);
