@@ -110,6 +110,9 @@ Release 0.19.2 - Unreleased
 
     HADOOP-5579. Set errno correctly in libhdfs for permission, quota, and FNF
     conditions. (Brian Bockelman via cdouglas)
+    
+    HADOOP-5728. Fixed FSEditLog.printStatistics IndexOutOfBoundsException.
+    (Wang Xu via johan)
 
 Release 0.19.1 - 2009-02-23 
 
