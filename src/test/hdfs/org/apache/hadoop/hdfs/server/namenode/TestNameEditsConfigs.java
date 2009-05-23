@@ -88,6 +88,9 @@ public class TestNameEditsConfigs extends TestCase {
     assertTrue(!fileSys.exists(name));
   }
 
+  // This deprecation suppress warning does not work due to known Java bug:
+  // http://bugs.sun.com/view_bug.do?bug_id=6460147
+  @SuppressWarnings("deprecation")
   SecondaryNameNode startSecondaryNameNode(Configuration conf
                                           ) throws IOException {
     conf.set("dfs.secondary.http.address", "0.0.0.0:0");
@@ -106,6 +109,7 @@ public class TestNameEditsConfigs extends TestCase {
    * All along the test, we create and delete files at reach restart to make
    * sure we are reading proper edits and image.
    */
+  @SuppressWarnings("deprecation")
   public void testNameEditsConfigs() throws IOException {
     Path file1 = new Path("TestNameEditsConfigs1");
     Path file2 = new Path("TestNameEditsConfigs2");

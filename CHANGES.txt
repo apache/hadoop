@@ -329,7 +329,6 @@ Trunk (unreleased changes)
     HADOOP-5080. Add new test cases to TestMRCLI and TestHDFSCLI
     (V.Karthikeyan via nigel)
 
-
     HADOOP-5135. Splits the tests into different directories based on the 
     package. Four new test targets have been defined - run-test-core, 
     run-test-mapred, run-test-hdfs and run-test-hdfs-with-mr.
@@ -382,6 +381,10 @@ Trunk (unreleased changes)
 
     HADOOP-5839. Fix EC2 scripts to allow remote job submission.
     (Joydeep Sen Sarma via tomwhite)
+
+    HADOOP-5877. Fix javac warnings in TestHDFSServerPorts, TestCheckpoint, 
+    TestNameEditsConfig, TestStartup and TestStorageRestore.
+    (Jakob Homan via shv)
 
   OPTIMIZATIONS
 

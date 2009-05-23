@@ -134,6 +134,7 @@ public class TestCheckpoint extends TestCase {
   /*
    * Simulate namenode crashing after rolling edit log.
    */
+  @SuppressWarnings("deprecation")
   private void testSecondaryNamenodeError1(Configuration conf)
     throws IOException {
     System.out.println("Starting testSecondaryNamenodeError 1");
@@ -210,6 +211,7 @@ public class TestCheckpoint extends TestCase {
   /*
    * Simulate a namenode crash after uploading new image
    */
+  @SuppressWarnings("deprecation")
   private void testSecondaryNamenodeError2(Configuration conf)
     throws IOException {
     System.out.println("Starting testSecondaryNamenodeError 21");
@@ -268,6 +270,7 @@ public class TestCheckpoint extends TestCase {
   /*
    * Simulate a secondary namenode crash after rolling the edit log.
    */
+  @SuppressWarnings("deprecation")
   private void testSecondaryNamenodeError3(Configuration conf)
     throws IOException {
     System.out.println("Starting testSecondaryNamenodeError 31");
@@ -336,6 +339,7 @@ public class TestCheckpoint extends TestCase {
    * back to the name-node.
    * Used to truncate primary fsimage file.
    */
+  @SuppressWarnings("deprecation")
   void testSecondaryFailsToReturnImage(Configuration conf)
     throws IOException {
     System.out.println("Starting testSecondaryFailsToReturnImage");
@@ -399,6 +403,7 @@ public class TestCheckpoint extends TestCase {
    * <li> Complete failed checkpoint for secondary node.
    * </ol>
    */
+  @SuppressWarnings("deprecation")
   void testStartup(Configuration conf) throws IOException {
     System.out.println("Startup of the name-node in the checkpoint directory.");
     String primaryDirs = conf.get("dfs.name.dir");
@@ -553,6 +558,9 @@ public class TestCheckpoint extends TestCase {
     return nn;
   }
 
+  // This deprecation suppress warning does not work due to known Java bug:
+  // http://bugs.sun.com/view_bug.do?bug_id=6460147
+  @SuppressWarnings("deprecation")
   SecondaryNameNode startSecondaryNameNode(Configuration conf
                                           ) throws IOException {
     conf.set("dfs.secondary.http.address", "0.0.0.0:0");
@@ -562,6 +570,7 @@ public class TestCheckpoint extends TestCase {
   /**
    * Tests checkpoint in HDFS.
    */
+  @SuppressWarnings("deprecation")
   public void testCheckpoint() throws IOException {
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");

@@ -51,7 +51,7 @@ import org.apache.hadoop.util.Daemon;
  * namespace image to local disk(s).</li>
  * </ol>
  */
-class BackupNode extends NameNode {
+public class BackupNode extends NameNode {
   private static final String BN_ADDRESS_NAME_KEY = "dfs.backup.address";
   private static final String BN_ADDRESS_DEFAULT = "localhost:50100";
   private static final String BN_HTTP_ADDRESS_NAME_KEY = "dfs.backup.http.address";
@@ -90,6 +90,9 @@ class BackupNode extends NameNode {
 
   @Override // NameNode
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
+    // It is necessary to resolve the hostname at this point in order
+    // to ensure that the server address that is sent to the namenode
+    // is correct.
     assert rpcAddress != null : "rpcAddress should be calculated first";
     String addr = conf.get(BN_HTTP_ADDRESS_NAME_KEY, BN_HTTP_ADDRESS_DEFAULT);
     int port = NetUtils.createSocketAddr(addr).getPort();
