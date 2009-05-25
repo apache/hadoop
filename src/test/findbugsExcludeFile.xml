@@ -84,6 +84,19 @@
        <Bug pattern="BC_UNCONFIRMED_CAST" />
      </Match>
      <!--
+       We intentionally cast from a super class to sub class.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapreduce.lib.input.LineRecordReader" />
+       <Method name="initialize" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapreduce.lib.input.SequenceFileRecordReader" />
+       <Method name="initialize" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     <!--
        We intentionally do the get name from the inner class
      -->
      <Match>

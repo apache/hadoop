@@ -25,7 +25,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -38,12 +40,16 @@ public class SequenceFileRecordReader<K, V> extends RecordReader<K, V> {
   private K key = null;
   private V value = null;
   protected Configuration conf;
+  private Counter inputByteCounter;
+  private long pos;
   
   @Override
   public void initialize(InputSplit split, 
                          TaskAttemptContext context
                          ) throws IOException, InterruptedException {
     FileSplit fileSplit = (FileSplit) split;
+    inputByteCounter = ((MapContext)context).getCounter(
+      FileInputFormat.COUNTER_GROUP, FileInputFormat.BYTES_READ);
     conf = context.getConfiguration();    
     Path path = fileSplit.getPath();
     FileSystem fs = path.getFileSystem(conf);
@@ -64,7 +70,8 @@ public class SequenceFileRecordReader<K, V> extends RecordReader<K, V> {
     if (!more) {
       return false;
     }
-    long pos = in.getPosition();
+    inputByteCounter.increment(in.getPosition()-pos);
+    pos = in.getPosition();
     key = (K) in.next(key);
     if (key == null || (pos >= end && in.syncSeen())) {
       more = false;

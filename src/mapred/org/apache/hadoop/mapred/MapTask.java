@@ -51,6 +51,7 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.IndexedSortable;
@@ -157,7 +158,9 @@ class MapTask extends Task {
       throws IOException{
       rawIn = raw;
       inputRecordCounter = reporter.getCounter(TaskCounter.MAP_INPUT_RECORDS);
-      inputByteCounter = reporter.getCounter(TaskCounter.MAP_INPUT_BYTES);
+      inputByteCounter = reporter.getCounter(
+                           FileInputFormat.COUNTER_GROUP,
+                           FileInputFormat.BYTES_READ);
       this.reporter = reporter;
     }
 

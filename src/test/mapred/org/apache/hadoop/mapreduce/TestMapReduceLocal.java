@@ -118,6 +118,9 @@ public class TestMapReduceLocal extends TestCase {
                  out);
     Counters ctrs = job.getCounters();
     System.out.println("Counters: " + ctrs);
+    long mapIn = ctrs.findCounter(FileInputFormat.COUNTER_GROUP, 
+                                  FileInputFormat.BYTES_READ).getValue();
+    assertTrue(mapIn != 0);    
     long combineIn = ctrs.findCounter(COUNTER_GROUP,
                                       "COMBINE_INPUT_RECORDS").getValue();
     long combineOut = ctrs.findCounter(COUNTER_GROUP, 

@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
-import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
@@ -98,8 +97,10 @@ public class TestMiniMRDFSSort extends TestCase {
     Sort sort = new Sort();
     assertEquals(ToolRunner.run(job, sort, sortArgs), 0);
     Counters counters = sort.getResult().getCounters();
-    long mapInput = counters.findCounter(TaskCounter.MAP_INPUT_BYTES
-    ).getValue();
+    long mapInput = counters.findCounter(
+      org.apache.hadoop.mapreduce.lib.input.FileInputFormat.COUNTER_GROUP,
+      org.apache.hadoop.mapreduce.lib.input.FileInputFormat.BYTES_READ).
+      getValue();
     long hdfsRead = counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP,
                                          "HDFS_BYTES_READ").getValue();
     // the hdfs read should be between 100% and 110% of the map input bytes
