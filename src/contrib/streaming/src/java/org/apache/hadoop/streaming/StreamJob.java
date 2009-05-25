@@ -727,6 +727,9 @@ public class StreamJob implements Tool {
           || inputFormatSpec_.equals(KeyValueTextInputFormat.class
               .getCanonicalName())
           || inputFormatSpec_.equals(KeyValueTextInputFormat.class.getSimpleName())) {
+        if (inReaderSpec_ == null) {
+          fmt = KeyValueTextInputFormat.class;
+        }
       } else if (inputFormatSpec_.equals(SequenceFileInputFormat.class
           .getName())
           || inputFormatSpec_
@@ -734,6 +737,9 @@ public class StreamJob implements Tool {
                   .getCanonicalName())
           || inputFormatSpec_
               .equals(org.apache.hadoop.mapred.SequenceFileInputFormat.class.getSimpleName())) {
+        if (inReaderSpec_ == null) {
+          fmt = SequenceFileInputFormat.class;
+        }
       } else if (inputFormatSpec_.equals(SequenceFileAsTextInputFormat.class
           .getName())
           || inputFormatSpec_.equals(SequenceFileAsTextInputFormat.class

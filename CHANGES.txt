@@ -670,6 +670,9 @@ Trunk (unreleased changes)
 
     HADOOP-5847. Fixed failing Streaming unit tests (gkesavan) 
 
+    HADOOP-5252. Streaming overrides -inputformat option (Klaas Bosteels 
+    via sharad)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
