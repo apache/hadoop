@@ -632,6 +632,7 @@ public class DataNode extends Configured
 
       // wait for all data receiver threads to exit
       if (this.threadGroup != null) {
+        int sleepMs = 2;
         while (true) {
           this.threadGroup.interrupt();
           LOG.info("Waiting for threadgroup to exit, active threads is " +
@@ -640,8 +641,12 @@ public class DataNode extends Configured
             break;
           }
           try {
-            Thread.sleep(1000);
+            Thread.sleep(sleepMs);
           } catch (InterruptedException e) {}
+          sleepMs = sleepMs * 3 / 2; // exponential backoff
+          if (sleepMs > 1000) {
+            sleepMs = 1000;
+          }
         }
       }
       // wait for dataXceiveServer to terminate
