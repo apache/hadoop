@@ -400,8 +400,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       int buffersize
       ) throws IOException {
     return create(src, FsPermission.getDefault(),
-        overwrite, replication, blockSize, progress, buffersize);
+        overwrite ? EnumSet.of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE), 
+        replication, blockSize, progress, buffersize);
   }
+
   /**
    * Create a new dfs file with the specified block replication 
    * with write-progress reporting and return an output stream for writing
@@ -410,7 +412,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param src stream name
    * @param permission The permission of the directory being created.
    * If permission == null, use {@link FsPermission#getDefault()}.
-   * @param overwrite do not check for file existence if true
+   * @param flag do not check for file existence if true
    * @param replication block replication
    * @return output stream
    * @throws IOException
@@ -418,7 +420,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public OutputStream create(String src, 
                              FsPermission permission,
-                             boolean overwrite, 
+                             EnumSet<CreateFlag> flag, 
                              short replication,
                              long blockSize,
                              Progressable progress,
@@ -431,7 +433,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
     LOG.debug(src + ": masked=" + masked);
     OutputStream result = new DFSOutputStream(src, masked,
-        overwrite, replication, blockSize, progress, buffersize,
+        flag, replication, blockSize, progress, buffersize,
         conf.getInt("io.bytes.per.checksum", 512));
     leasechecker.put(src, result);
     return result;
@@ -2679,7 +2681,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * Create a new output stream to the given DataNode.
      * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
      */
-    DFSOutputStream(String src, FsPermission masked, boolean overwrite,
+    DFSOutputStream(String src, FsPermission masked, EnumSet<CreateFlag> flag,
         short replication, long blockSize, Progressable progress,
         int buffersize, int bytesPerChecksum) throws IOException {
       this(src, blockSize, progress, bytesPerChecksum);
@@ -2688,7 +2690,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
       try {
         namenode.create(
-            src, masked, clientName, overwrite, replication, blockSize);
+            src, masked, clientName, new EnumSetWritable<CreateFlag>(flag), replication, blockSize);
       } catch(RemoteException re) {
         throw re.unwrapRemoteException(AccessControlException.class,
                                        QuotaExceededException.class);

@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -506,6 +507,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Opens an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
+   * @deprecated Consider using {@link #create(Path, FsPermission, EnumSet, int, short, long, Progressable)} instead.
    * @param f the file name to open
    * @param permission
    * @param overwrite if a file with this name already exists, then if true,
@@ -517,13 +519,36 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
-  public abstract FSDataOutputStream create(Path f,
+  public FSDataOutputStream create(Path f,
       FsPermission permission,
       boolean overwrite,
       int bufferSize,
       short replication,
       long blockSize,
-      Progressable progress) throws IOException;
+      Progressable progress) throws IOException{
+    return create(f, permission, overwrite ? EnumSet.of(CreateFlag.OVERWRITE)
+        : EnumSet.of(CreateFlag.CREATE), bufferSize, replication, blockSize,
+        progress);
+  }
+  
+  /**
+   * Opens an FSDataOutputStream at the indicated Path with write-progress
+   * reporting.
+   * @param f the file name to open.
+   * @param permission
+   * @param flag determines the semantic of this create.
+   * @param bufferSize the size of the buffer to be used.
+   * @param replication required block replication for the file.
+   * @param blockSize
+   * @param progress
+   * @throws IOException
+   * @see #setPermission(Path, FsPermission)
+   * @see CreateFlag
+   */
+  public abstract FSDataOutputStream create(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException ;
+  
 
   /**
    * Creates the given Path as a brand-new zero-length file.  If

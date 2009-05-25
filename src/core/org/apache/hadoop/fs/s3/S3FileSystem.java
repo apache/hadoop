@@ -22,12 +22,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -201,18 +203,24 @@ public class S3FileSystem extends FileSystem {
    */
   @Override
   public FSDataOutputStream create(Path file, FsPermission permission,
-      boolean overwrite, int bufferSize,
+      EnumSet<CreateFlag> flag, int bufferSize,
       short replication, long blockSize, Progressable progress)
     throws IOException {
 
     INode inode = store.retrieveINode(makeAbsolute(file));
     if (inode != null) {
-      if (overwrite) {
+      if (flag.contains(CreateFlag.OVERWRITE)) {
         delete(file, true);
+      } else if (flag.contains(CreateFlag.APPEND)){
+        return append(file, bufferSize, progress);
       } else {
         throw new IOException("File already exists: " + file);
       }
     } else {
+      
+      if(flag.contains(CreateFlag.APPEND) && !flag.contains(CreateFlag.CREATE))
+        throw new FileNotFoundException("File does not exist: "+ file);
+      
       Path parent = file.getParent();
       if (parent != null) {
         if (!mkdirs(parent)) {

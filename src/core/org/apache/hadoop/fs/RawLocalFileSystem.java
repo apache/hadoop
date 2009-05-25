@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -244,10 +245,19 @@ public class RawLocalFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      boolean overwrite, int bufferSize, short replication, long blockSize,
+      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
+    
+      if(flag.contains(CreateFlag.APPEND)){
+        if (!exists(f)){
+          if(flag.contains(CreateFlag.CREATE))
+            return create(f, false, bufferSize, replication, blockSize, progress);
+        }
+        return append(f, bufferSize, progress);
+    }
+   
     FSDataOutputStream out = create(f,
-        overwrite, bufferSize, replication, blockSize, progress);
+        flag.contains(CreateFlag.OVERWRITE), bufferSize, replication, blockSize, progress);
     setPermission(f, permission);
     return out;
   }

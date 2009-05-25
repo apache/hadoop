@@ -30,6 +30,7 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BufferedFSInputStream;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSInputStream;
@@ -274,16 +276,25 @@ public class NativeS3FileSystem extends FileSystem {
   
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      boolean overwrite, int bufferSize, short replication, long blockSize,
+      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
 
-    if (exists(f) && !overwrite) {
-      throw new IOException("File already exists:"+f);
+    if(exists(f)) {
+      if(flag.contains(CreateFlag.APPEND)){
+        return append(f, bufferSize, progress);
+      } else if(!flag.contains(CreateFlag.OVERWRITE)) {
+        throw new IOException("File already exists: "+f);
+      }
+    } else {
+       if (flag.contains(CreateFlag.APPEND) && !flag.contains(CreateFlag.CREATE))
+         throw new IOException("File already exists: " + f.toString());
     }
+    
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     return new FSDataOutputStream(new NativeS3FsOutputStream(getConf(), store,
         key, progress, bufferSize), statistics);
+    
   }
   
   @Override

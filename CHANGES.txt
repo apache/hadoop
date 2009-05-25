@@ -386,6 +386,9 @@ Trunk (unreleased changes)
     TestNameEditsConfig, TestStartup and TestStorageRestore.
     (Jakob Homan via shv)
 
+    HADOOP-5438. Provide a single FileSystem method to create or open-for-append 
+    to a file.  (He Yongqiang via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
