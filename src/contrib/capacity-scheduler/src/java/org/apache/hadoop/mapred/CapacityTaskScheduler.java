@@ -278,11 +278,7 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     /** our TaskScheduler object */
     protected CapacityTaskScheduler scheduler;
-    // can be replaced with a global type, if we have one
-    protected static enum TYPE {
-      MAP, REDUCE
-    }
-    protected TYPE type = null;
+    protected CapacityTaskScheduler.TYPE type = null;
 
     abstract Task obtainNewTask(TaskTrackerStatus taskTracker, 
         JobInProgress job) throws IOException; 
@@ -413,7 +409,8 @@ class CapacityTaskScheduler extends TaskScheduler {
         //If this job meets memory requirements. Ask the JobInProgress for
         //a task to be scheduled on the task tracker.
         //if we find a job then we pass it on.
-        if (scheduler.memoryMatcher.matchesMemoryRequirements(j, taskTracker)) {
+        if (scheduler.memoryMatcher.matchesMemoryRequirements(j, type,
+            taskTracker)) {
           // We found a suitable job. Get task from it.
           Task t = obtainNewTask(taskTracker, j);
           //if there is a task return it immediately.
@@ -422,6 +419,8 @@ class CapacityTaskScheduler extends TaskScheduler {
             return TaskLookupResult.getTaskFoundResult(t);
           } else {
             //skip to the next job in the queue.
+            LOG.debug("Job " + j.getJobID().toString()
+                + " returned no tasks of type " + type);
             continue;
           }
         } else {
@@ -456,7 +455,8 @@ class CapacityTaskScheduler extends TaskScheduler {
         if (j.getStatus().getRunState() != JobStatus.RUNNING) {
           continue;
         }
-        if (scheduler.memoryMatcher.matchesMemoryRequirements(j, taskTracker)) {
+        if (scheduler.memoryMatcher.matchesMemoryRequirements(j, type,
+            taskTracker)) {
           // We found a suitable job. Get task from it.
           Task t = obtainNewTask(taskTracker, j);
           //if there is a task return it immediately.
@@ -561,7 +561,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   private static class MapSchedulingMgr extends TaskSchedulingMgr {
     MapSchedulingMgr(CapacityTaskScheduler dad) {
       super(dad);
-      type = TaskSchedulingMgr.TYPE.MAP;
+      type = CapacityTaskScheduler.TYPE.MAP;
       queueComparator = mapComparator;
     }
     Task obtainNewTask(TaskTrackerStatus taskTracker, JobInProgress job) 
@@ -603,7 +603,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   private static class ReduceSchedulingMgr extends TaskSchedulingMgr {
     ReduceSchedulingMgr(CapacityTaskScheduler dad) {
       super(dad);
-      type = TaskSchedulingMgr.TYPE.REDUCE;
+      type = CapacityTaskScheduler.TYPE.REDUCE;
       queueComparator = reduceComparator;
     }
     Task obtainNewTask(TaskTrackerStatus taskTracker, JobInProgress job) 
@@ -664,13 +664,18 @@ class CapacityTaskScheduler extends TaskScheduler {
       return System.currentTimeMillis();
     }
   }
+  // can be replaced with a global type, if we have one
+  protected static enum TYPE {
+    MAP, REDUCE
+  }
+
   private Clock clock;
   private JobInitializationPoller initializationPoller;
 
-  long limitMaxVmemForTasks;
-  long limitMaxPmemForTasks;
-  long defaultMaxVmPerTask;
-  float defaultPercentOfPmemInVmem;
+  private long memSizeForMapSlotOnJT;
+  private long memSizeForReduceSlotOnJT;
+  private long limitMaxMemForMapTasks;
+  private long limitMaxMemForReduceTasks;
 
   public CapacityTaskScheduler() {
     this(new Clock());
@@ -687,37 +692,45 @@ class CapacityTaskScheduler extends TaskScheduler {
     this.schedConf = conf;
   }
 
-  /**
-   * Normalize the negative values in configuration
-   * 
-   * @param val
-   * @return normalized value
-   */
-  private long normalizeMemoryConfigValue(long val) {
-    if (val < 0) {
-      val = JobConf.DISABLED_MEMORY_LIMIT;
-    }
-    return val;
+  private void initializeMemoryRelatedConf() {
+    memSizeForMapSlotOnJT =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    memSizeForReduceSlotOnJT =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    limitMaxMemForMapTasks =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    LOG.info(new StringBuilder().append("Scheduler configured with ").append(
+        "(memSizeForMapSlotOnJT, memSizeForReduceSlotOnJT,").append(
+        " limitMaxMemForMapTasks, limitMaxMemForReduceTasks)").append(
+        memSizeForMapSlotOnJT).append(", ").append(memSizeForReduceSlotOnJT)
+        .append(", ").append(limitMaxMemForMapTasks).append(", ").append(
+            limitMaxMemForReduceTasks).append(")"));
   }
 
-  private void initializeMemoryRelatedConf() {
-    limitMaxVmemForTasks =
-        normalizeMemoryConfigValue(conf.getLong(
-            JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
-            JobConf.DISABLED_MEMORY_LIMIT));
+  long getMemSizeForMapSlot() {
+    return memSizeForMapSlotOnJT;
+  }
 
-    limitMaxPmemForTasks =
-        normalizeMemoryConfigValue(schedConf.getLimitMaxPmemForTasks());
+  long getMemSizeForReduceSlot() {
+    return memSizeForReduceSlotOnJT;
+  }
 
-    defaultMaxVmPerTask =
-        normalizeMemoryConfigValue(conf.getLong(
-            JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
-            JobConf.DISABLED_MEMORY_LIMIT));
+  long getLimitMaxMemForMapSlot() {
+    return limitMaxMemForMapTasks;
+  }
 
-    defaultPercentOfPmemInVmem = schedConf.getDefaultPercentOfPmemInVmem();
-    if (defaultPercentOfPmemInVmem < 0) {
-      defaultPercentOfPmemInVmem = JobConf.DISABLED_MEMORY_LIMIT;
-    }
+  long getLimitMaxMemForReduceSlot() {
+    return limitMaxMemForReduceTasks;
   }
 
   @Override
@@ -955,14 +968,12 @@ class CapacityTaskScheduler extends TaskScheduler {
         // found a task; return
         return Collections.singletonList(tlr.getTask());
       }
-      else if (TaskLookupResult.LookUpStatus.TASK_FAILING_MEMORY_REQUIREMENT == 
-        tlr.getLookUpStatus()) {
-        // return no task
-        return null;
-      }
       // if we didn't get any, look at map tasks, if TT has space
-      else if ((TaskLookupResult.LookUpStatus.NO_TASK_FOUND == 
-        tlr.getLookUpStatus()) && (maxMapTasks > currentMapTasks)) {
+      else if ((TaskLookupResult.LookUpStatus.TASK_FAILING_MEMORY_REQUIREMENT
+                                  == tlr.getLookUpStatus() ||
+                TaskLookupResult.LookUpStatus.NO_TASK_FOUND
+                                  == tlr.getLookUpStatus())
+          && (maxMapTasks > currentMapTasks)) {
         mapScheduler.updateCollectionOfQSIs();
         tlr = mapScheduler.assignTasks(taskTracker);
         if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
@@ -980,13 +991,12 @@ class CapacityTaskScheduler extends TaskScheduler {
         // found a task; return
         return Collections.singletonList(tlr.getTask());
       }
-      else if (TaskLookupResult.LookUpStatus.TASK_FAILING_MEMORY_REQUIREMENT == 
-        tlr.getLookUpStatus()) {
-        return null;
-      }
       // if we didn't get any, look at reduce tasks, if TT has space
-      else if ((TaskLookupResult.LookUpStatus.NO_TASK_FOUND == 
-        tlr.getLookUpStatus()) && (maxReduceTasks > currentReduceTasks)) {
+      else if ((TaskLookupResult.LookUpStatus.TASK_FAILING_MEMORY_REQUIREMENT
+                                    == tlr.getLookUpStatus()
+                || TaskLookupResult.LookUpStatus.NO_TASK_FOUND
+                                    == tlr.getLookUpStatus())
+          && (maxReduceTasks > currentReduceTasks)) {
         reduceScheduler.updateCollectionOfQSIs();
         tlr = reduceScheduler.assignTasks(taskTracker);
         if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
@@ -996,38 +1006,6 @@ class CapacityTaskScheduler extends TaskScheduler {
       }
     }
 
-    return null;
-  }
-
-  /**
-   * Kill the job if it has invalid requirements and return why it is killed
-   * 
-   * @param job
-   * @return string mentioning why the job is killed. Null if the job has valid
-   *         requirements.
-   */
-  private String killJobIfInvalidRequirements(JobInProgress job) {
-    if (!memoryMatcher.isSchedulingBasedOnVmemEnabled()) {
-      return null;
-    }
-    if ((job.getMaxVirtualMemoryForTask() > limitMaxVmemForTasks)
-        || (memoryMatcher.isSchedulingBasedOnPmemEnabled() && (job
-            .getMaxPhysicalMemoryForTask() > limitMaxPmemForTasks))) {
-      String msg =
-          job.getJobID() + " (" + job.getMaxVirtualMemoryForTask() + "vmem, "
-              + job.getMaxPhysicalMemoryForTask()
-              + "pmem) exceeds the cluster's max-memory-limits ("
-              + limitMaxVmemForTasks + "vmem, " + limitMaxPmemForTasks
-              + "pmem). Cannot run in this cluster, so killing it.";
-      LOG.warn(msg);
-      try {
-        taskTrackerManager.killJob(job.getJobID());
-        return msg;
-      } catch (IOException ioe) {
-        LOG.warn("Failed to kill the job " + job.getJobID() + ". Reason : "
-            + StringUtils.stringifyException(ioe));
-      }
-    }
     return null;
   }
 
@@ -1050,13 +1028,6 @@ class CapacityTaskScheduler extends TaskScheduler {
     qsi.numJobsByUser.put(job.getProfile().getUser(), i);
     LOG.debug("Job " + job.getJobID().toString() + " is added under user " 
               + job.getProfile().getUser() + ", user now has " + i + " jobs");
-
-    // Kill the job if it cannot run in the cluster because of invalid
-    // resource requirements.
-    String statusMsg = killJobIfInvalidRequirements(job);
-    if (statusMsg != null) {
-      throw new IOException(statusMsg);
-    }
   }
 
   // called when a job completes

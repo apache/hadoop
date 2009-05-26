@@ -1482,6 +1482,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   Path systemDir = null;
   private JobConf conf;
 
+  long limitMaxMemForMapTasks;
+  long limitMaxMemForReduceTasks;
+  long memSizeForMapSlotOnJT;
+  long memSizeForReduceSlotOnJT;
+
   private QueueManager queueManager;
 
   /**
@@ -1509,6 +1514,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // on startup, and can delete any files that we're done with
     this.conf = conf;
     JobConf jobConf = new JobConf(conf);
+
+    initializeTaskMemoryRelatedConfig();
 
     // Read the hosts/exclude files to restrict access to the jobtracker.
     this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
@@ -2940,6 +2947,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       throw ioe;
     }
 
+    // Check the job if it cannot run in the cluster because of invalid memory
+    // requirements.
+    try {
+      checkMemoryRequirements(job);
+    } catch (IOException ioe) {
+      new CleanupQueue().addToQueue(conf, getSystemDirectoryForJob(jobId));
+      throw ioe;
+    }
+
    return addJob(jobId, job); 
   }
 
@@ -3199,6 +3215,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
   
   TaskCompletionEvent[] EMPTY_EVENTS = new TaskCompletionEvent[0];
+
+  static final String MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY =
+      "mapred.cluster.map.memory.mb";
+  static final String MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY =
+      "mapred.cluster.reduce.memory.mb";
+
+  static final String MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY =
+      "mapred.cluster.max.map.memory.mb";
+  static final String MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY =
+      "mapred.cluster.max.reduce.memory.mb";
   
   /* 
    * Returns a list of TaskCompletionEvent for the given job, 
@@ -3594,5 +3620,82 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       throw new AuthorizationException("Service Level Authorization not enabled!");
     }
     SecurityUtil.getPolicy().refresh();
+  }
+
+  private void initializeTaskMemoryRelatedConfig() {
+    memSizeForMapSlotOnJT =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    memSizeForReduceSlotOnJT =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    limitMaxMemForMapTasks =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    LOG.info(new StringBuilder().append("Scheduler configured with ").append(
+        "(memSizeForMapSlotOnJT, memSizeForReduceSlotOnJT,").append(
+        " limitMaxMemForMapTasks, limitMaxMemForReduceTasks) (").append(
+        memSizeForMapSlotOnJT).append(", ").append(memSizeForReduceSlotOnJT)
+        .append(", ").append(limitMaxMemForMapTasks).append(", ").append(
+            limitMaxMemForReduceTasks).append(")"));
+  }
+
+  private boolean perTaskMemoryConfigurationSetOnJT() {
+    if (limitMaxMemForMapTasks == JobConf.DISABLED_MEMORY_LIMIT
+        || limitMaxMemForReduceTasks == JobConf.DISABLED_MEMORY_LIMIT
+        || memSizeForMapSlotOnJT == JobConf.DISABLED_MEMORY_LIMIT
+        || memSizeForReduceSlotOnJT == JobConf.DISABLED_MEMORY_LIMIT) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Check the job if it has invalid requirements and throw and IOException if does have.
+   * 
+   * @param job
+   * @throws IOException 
+   */
+  private void checkMemoryRequirements(JobInProgress job)
+      throws IOException {
+    if (!perTaskMemoryConfigurationSetOnJT()) {
+      LOG.debug("Per-Task memory configuration is not set on JT. "
+          + "Not checking the job for invalid memory requirements.");
+      return;
+    }
+
+    boolean invalidJob = false;
+    String msg = "";
+    long maxMemForMapTask = job.getJobConf().getMemoryForMapTask();
+    long maxMemForReduceTask = job.getJobConf().getMemoryForReduceTask();
+
+    if (maxMemForMapTask == JobConf.DISABLED_MEMORY_LIMIT
+        || maxMemForReduceTask == JobConf.DISABLED_MEMORY_LIMIT) {
+      invalidJob = true;
+      msg = "Invalid job requirements.";
+    }
+
+    if (maxMemForMapTask > limitMaxMemForMapTasks
+        || maxMemForReduceTask > limitMaxMemForReduceTasks) {
+      invalidJob = true;
+      msg = "Exceeds the cluster's max-memory-limit.";
+    }
+
+    if (invalidJob) {
+      StringBuilder jobStr =
+          new StringBuilder().append(job.getJobID().toString()).append("(")
+              .append(maxMemForMapTask).append(" memForMapTasks ").append(
+                  maxMemForReduceTask).append(" memForReduceTasks): ");
+      LOG.warn(jobStr.toString() + msg);
+
+      throw new IOException(jobStr.toString() + msg);
+    }
   }
 }

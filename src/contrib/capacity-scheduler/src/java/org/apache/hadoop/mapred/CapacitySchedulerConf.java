@@ -351,44 +351,4 @@ class CapacitySchedulerConf {
     rmConf.setInt(
         "mapred.capacity-scheduler.init-worker-threads", poolSize);
   }
-
-  /**
-   * Get the upper limit on the maximum physical memory that can be specified by
-   * a job.
-   * 
-   * @return upper limit for max pmem for tasks.
-   */
-  public long getLimitMaxPmemForTasks() {
-    return rmConf.getLong(UPPER_LIMIT_ON_TASK_PMEM_PROPERTY,
-        JobConf.DISABLED_MEMORY_LIMIT);
-  }
-
-  /**
-   * Get the upper limit on the maximum physical memory that can be specified by
-   * a job.
-   * 
-   * @param value
-   */
-  public void setLimitMaxPmemForTasks(long value) {
-    rmConf.setLong(UPPER_LIMIT_ON_TASK_PMEM_PROPERTY, value);
-  }
-
-  /**
-   * Get cluster-wide default percentage of pmem in vmem.
-   * 
-   * @return cluster-wide default percentage of pmem in vmem.
-   */
-  public float getDefaultPercentOfPmemInVmem() {
-    return rmConf.getFloat(DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY,
-        JobConf.DISABLED_MEMORY_LIMIT);
-  }
-
-  /**
-   * Set cluster-wide default percentage of pmem in vmem.
-   * 
-   * @param value
-   */
-  public void setDefaultPercentOfPmemInVmem(float value) {
-    rmConf.setFloat(DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY, value);
-  }
 }

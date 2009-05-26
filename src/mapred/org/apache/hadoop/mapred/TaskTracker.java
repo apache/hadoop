@@ -197,58 +197,10 @@ public class TaskTracker
   private TaskMemoryManagerThread taskMemoryManager;
   private boolean taskMemoryManagerEnabled = true;
   private long totalVirtualMemoryOnTT = JobConf.DISABLED_MEMORY_LIMIT;
-  private long totalPmemOnTT = JobConf.DISABLED_MEMORY_LIMIT;
-  private long reservedVirtualMemory = JobConf.DISABLED_MEMORY_LIMIT;
-  private long reservedPmem = JobConf.DISABLED_MEMORY_LIMIT;
-
-  // Cluster wide default value for max-vm per task
-  private long defaultMaxVmPerTask = JobConf.DISABLED_MEMORY_LIMIT;
-  // Cluster wide upper limit on max-vm per task
-  private long limitMaxVmPerTask = JobConf.DISABLED_MEMORY_LIMIT;
-
-  /**
-   * Configuration property to specify the amount of virtual memory that has to
-   * be reserved by the TaskTracker for system usage (OS, TT etc). The reserved
-   * virtual memory should be a part of the total virtual memory available on
-   * the TaskTracker. TaskTracker obtains the total virtual memory available on
-   * the system by using a {@link MemoryCalculatorPlugin}. The total physical
-   * memory is set to {@link JobConf#DISABLED_MEMORY_LIMIT} on systems lacking a
-   * MemoryCalculatorPlugin implementation.
-   * 
-   * <p>
-   * 
-   * The reserved virtual memory and the total virtual memory values are
-   * reported by the TaskTracker as part of heart-beat so that they can
-   * considered by a scheduler.
-   * 
-   * <p>
-   * 
-   * These two values are also used by the TaskTracker for tracking tasks'
-   * memory usage. Memory management functionality on a TaskTracker is disabled
-   * if this property is not set, if it more than the total virtual memory
-   * reported by MemoryCalculatorPlugin, or if either of the values is negative.
-   */
-  static final String MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY =
-      "mapred.tasktracker.vmem.reserved";
-
-  /**
-   * Configuration property to specify the amount of physical memory that has to
-   * be reserved by the TaskTracker for system usage (OS, TT etc). The reserved
-   * physical memory should be a part of the total physical memory available on
-   * the TaskTracker. TaskTracker obtains the total physical memory available on
-   * the system by using a {@link MemoryCalculatorPlugin}. The total physical
-   * memory is set to {@link JobConf#DISABLED_MEMORY_LIMIT} on systems lacking a
-   * MemoryCalculatorPlugin implementation.
-   * 
-   * <p>
-   * 
-   * The reserved virtual memory and the total virtual memory values are
-   * reported by the TaskTracker as part of heart-beat so that they can
-   * considered by a scheduler.
-   * 
-   */
-  static final String MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY =
-      "mapred.tasktracker.pmem.reserved";
+  private long totalPhysicalMemoryOnTT = JobConf.DISABLED_MEMORY_LIMIT;
+  private long mapSlotMemorySizeOnTT = JobConf.DISABLED_MEMORY_LIMIT;
+  private long reduceSlotSizeMemoryOnTT = JobConf.DISABLED_MEMORY_LIMIT;
+  private long totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
 
   static final String MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY =
       "mapred.tasktracker.memory_calculator_plugin";
@@ -1232,14 +1184,14 @@ public class TaskTracker
       long freeDiskSpace = getFreeSpace();
       long totVmem = getTotalVirtualMemoryOnTT();
       long totPmem = getTotalPhysicalMemoryOnTT();
-      long rsrvdVmem = getReservedVirtualMemory();
-      long rsrvdPmem = getReservedPhysicalMemory();
 
       status.getResourceStatus().setAvailableSpace(freeDiskSpace);
       status.getResourceStatus().setTotalVirtualMemory(totVmem);
       status.getResourceStatus().setTotalPhysicalMemory(totPmem);
-      status.getResourceStatus().setReservedVirtualMemory(rsrvdVmem);
-      status.getResourceStatus().setReservedPhysicalMemory(rsrvdPmem);
+      status.getResourceStatus().setMapSlotMemorySizeOnTT(
+          mapSlotMemorySizeOnTT);
+      status.getResourceStatus().setReduceSlotMemorySizeOnTT(
+          reduceSlotSizeMemoryOnTT);
     }
       
     //
@@ -1302,53 +1254,11 @@ public class TaskTracker
    * @return total size of physical memory.
    */
   long getTotalPhysicalMemoryOnTT() {
-    return totalPmemOnTT;
+    return totalPhysicalMemoryOnTT;
   }
 
-  /**
-   * Return the amount of virtual memory reserved on the TaskTracker for system
-   * usage (OS, TT etc).
-   */
-  long getReservedVirtualMemory() {
-    return reservedVirtualMemory;
-  }
-
-  /**
-   * Return the amount of physical memory reserved on the TaskTracker for system
-   * usage (OS, TT etc).
-   */
-  long getReservedPhysicalMemory() {
-    return reservedPmem;
-  }
-
-  /**
-   * Return the limit on the maxVMemPerTask on this TaskTracker
-   * @return limitMaxVmPerTask
-   */
-  long getLimitMaxVMemPerTask() {
-    return limitMaxVmPerTask;
-  }
-
-  /**
-   * Obtain the virtual memory allocated for a TIP.
-   * 
-   * If the TIP's job has a configured value for the max-virtual memory, that
-   * will be returned. Else, the cluster-wide default maxvirtual memory for
-   * tasks is returned.
-   * 
-   * @param conf
-   * @return the virtual memory allocated for the TIP.
-   */
-  long getVirtualMemoryForTask(JobConf conf) {
-    long vMemForTask =
-        normalizeMemoryConfigValue(conf.getMaxVirtualMemoryForTask());
-    if (vMemForTask == JobConf.DISABLED_MEMORY_LIMIT) {
-      vMemForTask =
-          normalizeMemoryConfigValue(fConf.getLong(
-              JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
-              JobConf.DISABLED_MEMORY_LIMIT));
-    }
-    return vMemForTask;
+  long getTotalMemoryAllottedForTasksOnTT() {
+    return totalMemoryAllottedForTasks;
   }
 
   /**
@@ -1621,7 +1531,6 @@ public class TaskTracker
 
   private TaskLauncher mapLauncher;
   private TaskLauncher reduceLauncher;
-      
   public JvmManager getJvmManagerInstance() {
     return jvmManager;
   }
@@ -1759,12 +1668,14 @@ public class TaskTracker
     }
   }
   
-  void addToMemoryManager(TaskAttemptID attemptId, 
+  void addToMemoryManager(TaskAttemptID attemptId, boolean isMap,
                           JobConf conf, 
                           String pidFile) {
     if (isTaskMemoryManagerEnabled()) {
       taskMemoryManager.addTask(attemptId, 
-        getVirtualMemoryForTask(conf), pidFile);
+          isMap ? conf
+              .getMemoryForMapTask() * 1024 * 1024L : conf
+              .getMemoryForReduceTask() * 1024 * 1024L, pidFile);
     }
   }
 
@@ -3098,33 +3009,35 @@ public class TaskTracker
             + "Setting it to " + JobConf.DISABLED_MEMORY_LIMIT);
         totalVirtualMemoryOnTT = JobConf.DISABLED_MEMORY_LIMIT;
       }
-      totalPmemOnTT = memoryCalculatorPlugin.getPhysicalMemorySize();
-      if (totalPmemOnTT <= 0) {
+      totalPhysicalMemoryOnTT = memoryCalculatorPlugin.getPhysicalMemorySize();
+      if (totalPhysicalMemoryOnTT <= 0) {
         LOG.warn("TaskTracker's totalPmem could not be calculated. "
             + "Setting it to " + JobConf.DISABLED_MEMORY_LIMIT);
-        totalPmemOnTT = JobConf.DISABLED_MEMORY_LIMIT;
+        totalPhysicalMemoryOnTT = JobConf.DISABLED_MEMORY_LIMIT;
       }
     }
 
-    reservedVirtualMemory =
-        normalizeMemoryConfigValue(fConf.getLong(
-            TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY,
-            JobConf.DISABLED_MEMORY_LIMIT));
-
-    reservedPmem =
-        normalizeMemoryConfigValue(fConf.getLong(
-            TaskTracker.MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY,
-            JobConf.DISABLED_MEMORY_LIMIT));
-
-    defaultMaxVmPerTask =
-        normalizeMemoryConfigValue(fConf.getLong(
-            JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
-            JobConf.DISABLED_MEMORY_LIMIT));
-
-    limitMaxVmPerTask =
-        normalizeMemoryConfigValue(fConf.getLong(
-            JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
-            JobConf.DISABLED_MEMORY_LIMIT));
+    mapSlotMemorySizeOnTT =
+        fConf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT);
+    reduceSlotSizeMemoryOnTT =
+        fConf.getLong(
+            JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT);
+    totalMemoryAllottedForTasks =
+        maxCurrentMapTasks * mapSlotMemorySizeOnTT + maxCurrentReduceTasks
+            * reduceSlotSizeMemoryOnTT;
+    if (totalMemoryAllottedForTasks < 0) {
+      totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
+    }
+    if (totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT) {
+      LOG.info("totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT."
+          + " Thrashing might happen.");
+    } else if (totalMemoryAllottedForTasks > totalVirtualMemoryOnTT) {
+      LOG.info("totalMemoryAllottedForTasks > totalVirtualMemoryOnTT."
+          + " Thrashing might happen.");
+    }
 
     // start the taskMemoryManager thread only if enabled
     setTaskMemoryManagerEnabledFlag();
@@ -3143,55 +3056,12 @@ public class TaskTracker
       return;
     }
 
-    // /// Missing configuration
-    StringBuilder mesg = new StringBuilder();
-
-    long totalVmemOnTT = getTotalVirtualMemoryOnTT();
-    if (totalVmemOnTT == JobConf.DISABLED_MEMORY_LIMIT) {
-      mesg.append("TaskTracker's totalVmem could not be calculated.\n");
+    if (totalMemoryAllottedForTasks == JobConf.DISABLED_MEMORY_LIMIT) {
       taskMemoryManagerEnabled = false;
-    }
-
-    long reservedVmem = getReservedVirtualMemory();
-    if (reservedVmem == JobConf.DISABLED_MEMORY_LIMIT) {
-      mesg.append("TaskTracker's reservedVmem is not configured.\n");
-      taskMemoryManagerEnabled = false;
-    }
-
-    if (defaultMaxVmPerTask == JobConf.DISABLED_MEMORY_LIMIT) {
-      mesg.append("TaskTracker's defaultMaxVmPerTask is not configured.\n");
-      taskMemoryManagerEnabled = false;
-    }
-
-    if (limitMaxVmPerTask == JobConf.DISABLED_MEMORY_LIMIT) {
-      mesg.append("TaskTracker's limitMaxVmPerTask is not configured.\n");
-      taskMemoryManagerEnabled = false;
-    }
-
-    if (!taskMemoryManagerEnabled) {
-      LOG.warn(mesg.toString() + "TaskMemoryManager is disabled.");
+      LOG.warn("TaskTracker's totalMemoryAllottedForTasks is -1."
+          + " TaskMemoryManager is disabled.");
       return;
     }
-    // ///// End of missing configuration
-
-    // ///// Mis-configuration
-    if (defaultMaxVmPerTask > limitMaxVmPerTask) {
-      mesg.append("defaultMaxVmPerTask is mis-configured. "
-          + "It shouldn't be greater than limitMaxVmPerTask. ");
-      taskMemoryManagerEnabled = false;
-    }
-
-    if (reservedVmem > totalVmemOnTT) {
-      mesg.append("reservedVmemOnTT is mis-configured. "
-          + "It shouldn't be greater than totalVmemOnTT");
-      taskMemoryManagerEnabled = false;
-    }
-
-    if (!taskMemoryManagerEnabled) {
-      LOG.warn(mesg.toString() + "TaskMemoryManager is disabled.");
-      return;
-    }
-    // ///// End of mis-configuration
 
     taskMemoryManagerEnabled = true;
   }

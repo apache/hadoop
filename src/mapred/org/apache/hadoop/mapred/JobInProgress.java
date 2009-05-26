@@ -175,8 +175,6 @@ class JobInProgress {
   private boolean hasSpeculativeMaps;
   private boolean hasSpeculativeReduces;
   private long inputLength = 0;
-  private long maxVirtualMemoryForTask;
-  private long maxPhysicalMemoryForTask;
   
   // Per-job counters
   public static enum Counter { 
@@ -283,8 +281,6 @@ class JobInProgress {
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
-    setMaxVirtualMemoryForTask(conf.getMaxVirtualMemoryForTask());
-    setMaxPhysicalMemoryForTask(conf.getMaxPhysicalMemoryForTask());
   }
 
   /**
@@ -566,23 +562,6 @@ class JobInProgress {
     }
     // log and change to the job's priority
     JobHistory.JobInfo.logJobPriority(jobId, priority);
-  }
-
-  // Accessors for resources.
-  long getMaxVirtualMemoryForTask() {
-    return maxVirtualMemoryForTask;
-  }
-
-  void setMaxVirtualMemoryForTask(long maxVMem) {
-    maxVirtualMemoryForTask = maxVMem;
-  }
-
-  long getMaxPhysicalMemoryForTask() {
-    return maxPhysicalMemoryForTask;
-  }
-
-  void setMaxPhysicalMemoryForTask(long maxPMem) {
-    maxPhysicalMemoryForTask = maxPMem;
   }
 
   // Update the job start/launch time (upon restart) and log to history

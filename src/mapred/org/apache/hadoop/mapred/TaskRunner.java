@@ -373,7 +373,7 @@ abstract class TaskRunner extends Thread {
              taskid.toString(), t.isTaskCleanupTask())),
             this.conf).toString();
       t.setPidFile(pidFile);
-      tracker.addToMemoryManager(t.getTaskID(), conf, pidFile);
+      tracker.addToMemoryManager(t.getTaskID(), t.isMapTask(), conf, pidFile);
 
       // set memory limit using ulimit if feasible and necessary ...
       String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);
