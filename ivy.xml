@@ -1,5 +1,3 @@
-<?xml version="1.0" ?>
-
 <!--
    Licensed to the Apache Software Foundation (ASF) under one or more
    contributor license agreements.  See the NOTICE file distributed with
@@ -59,8 +57,12 @@
     <conf name="javadoc" visibility="private" description="artiracts required while performing doc generation"
       extends="common,mandatory,jetty,lucene"/>
     <!--Testing pulls in everything-->
-    <conf name="test" extends="common,default,s3-server,kfs" visibility="private"
+    <conf name="test" extends="common,s3-server,kfs" visibility="private"
       description="the classpath needed to run tests"/>
+
+    <conf name="test-hdfswithmr" extends="test" visibility="private"
+      description="the classpath needed to run tests"/>
+
     <conf name="releaseaudit" visibility="private"
 	description="Artifacts required for releaseaudit target"/>
      
@@ -80,11 +82,10 @@
   <dependencies>
 
  <!--used client side-->
-<!--  <dependency org="commons-cli"
-    name="commons-cli"
-    rev="${commons-cli.version}"
-    conf="client->default"/> -->
-
+    <dependency org="commons-cli"
+      name="commons-cli"
+      rev="${commons-cli.version}"
+      conf="client->default"/>
     <dependency org="checkstyle"
       name="checkstyle"
       rev="${checkstyle.version}"
@@ -198,18 +199,31 @@
       name="servlet-api-2.5"
       rev="${servlet-api-2.5.version}"
       conf="s3-client->master"/>
-
-    <!--Configuration: kfs -->
-
-    <!-- This is not in the repository
-  <dependency org="org.kosmix"
-    name="kfs"
-    rev="${kfs.version}"
-    conf="kfs->default"/>-->
+    <dependency org="net.sf.kosmosfs"
+      name="kfs"
+      rev="${kfs.version}"
+      conf="kfs->default"/>
 
     <!--Configuration: test -->
-
     <!--artifacts needed for testing -->
+
+    <dependency org="org.apache.ftpserver"
+      name="ftplet-api"
+      rev="${ftplet-api.version}"
+      conf="test->default"/>
+    <dependency org="org.apache.mina"
+      name="mina-core"
+      rev="${mina-core.version}"
+      conf="test->default"/>
+    <dependency org="org.apache.ftpserver"
+      name="ftpserver-core"
+      rev="${ftpserver-core.version}"
+      conf="test->default"/>
+    <dependency org="org.apache.ftpserver"
+      name="ftpserver-deprecated"
+      rev="${ftpserver-deprecated.version}"
+      conf="test->default"/>
+
     <dependency org="junit"
       name="junit"
       rev="${junit.version}"
@@ -226,14 +240,10 @@
       name="commons-collections"
       rev="${commons-collections.version}"
       conf="releaseaudit->default"/>
-<!--<dependency org="hsqldb"
+    <dependency org="hsqldb"
       name="hsqldb"
       rev="${hsqldb.version}"
       conf="common->default"/>
-    <dependency org="lucene"
-      name="lucene"
-      rev="${lucene.version}"
-      conf="javadoc->default"/> --> 
     <dependency org="org.apache.lucene"
       name="lucene-core"
       rev="${lucene-core.version}"
