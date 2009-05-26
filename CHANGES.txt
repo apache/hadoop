@@ -154,6 +154,8 @@ Release 0.20.0 - Unreleased
                localhost_1237525439599_56094" <- You'd have to be perverse
                to recognize that as a hostname, startcode, and port
    HBASE-1395  InfoServers no longer put up a UI
+   HBASE-1302  When a new master comes up, regionservers should continue with
+               their region assignments from the last master
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

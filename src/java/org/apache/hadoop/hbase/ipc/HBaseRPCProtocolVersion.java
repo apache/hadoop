@@ -69,7 +69,8 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * HMasterInterface.findRootRegion. We use ZooKeeper to store root region
    * location instead.</li>
    * <li>Version 17: Added incrementColumnValue.</li>
+   * <li>Version 18: HBASE-1302.</li>
    * </ul>
    */
-  public static final long versionID = 17L;
+  public static final long versionID = 18L;
 }

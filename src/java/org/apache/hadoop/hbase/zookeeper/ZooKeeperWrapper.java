@@ -462,12 +462,12 @@ public class ZooKeeperWrapper implements HConstants {
    */
   public boolean writeRSLocation(HServerInfo info) {
     ensureExists(rsZNode);
-    byte[] data = Bytes.toBytes(info.getServerAddress().getBindAddress());
+    byte[] data = Bytes.toBytes(info.getServerAddress().toString());
     String znode = joinPath(rsZNode, Long.toString(info.getStartCode()));
     try {
       zooKeeper.create(znode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
       LOG.debug("Created ZNode " + znode
-          + " with data " + info.getServerAddress().getBindAddress());
+          + " with data " + info.getServerAddress().toString());
       return true;
     } catch (KeeperException e) {
       LOG.warn("Failed to create " + znode + " znode in ZooKeeper: " + e);
@@ -484,12 +484,12 @@ public class ZooKeeperWrapper implements HConstants {
    * @return true if the update is done, false if it failed
    */
   public boolean updateRSLocationGetWatch(HServerInfo info, Watcher watcher) {
-    byte[] data = Bytes.toBytes(info.getServerAddress().getBindAddress());
-    String znode = rsZNode + "/" + info.getStartCode();
+    byte[] data = Bytes.toBytes(info.getServerAddress().toString());
+    String znode = rsZNode + ZNODE_PATH_SEPARATOR + info.getStartCode();
     try {
       zooKeeper.setData(znode, data, -1);
       LOG.debug("Updated ZNode " + znode
-          + " with data " + info.getServerAddress().getBindAddress());
+          + " with data " + info.getServerAddress().toString());
       zooKeeper.getData(znode, watcher, null);
       return true;
     } catch (KeeperException e) {
@@ -499,6 +499,43 @@ public class ZooKeeperWrapper implements HConstants {
     }
 
     return false;
+  }
+  
+  /**
+   * Scans the regions servers directory
+   * @return A list of server addresses
+   */
+  public List<HServerAddress> scanRSDirectory() {
+    List<HServerAddress> addresses = new ArrayList<HServerAddress>();
+    try {
+      List<String> nodes = zooKeeper.getChildren(rsZNode, false);
+      for (String node : nodes) {
+        addresses.add(readAddress(rsZNode + ZNODE_PATH_SEPARATOR + node, null));
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Failed to read " + rsZNode + " znode in ZooKeeper: " + e);
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to read " + rsZNode + " znode in ZooKeeper: " + e);
+    }
+    return addresses;
+  }
+  
+  /**
+   * Method used to make sure the region server directory is empty.
+   *
+   */
+  public void clearRSDirectory() {
+    try {
+      List<String> nodes = zooKeeper.getChildren(rsZNode, false);
+      for (String node : nodes) {
+        LOG.debug("Deleting node: " + node);
+        zooKeeper.delete(node, -1);
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Failed to delete " + rsZNode + " znode in ZooKeeper: " + e);
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to delete " + rsZNode + " znode in ZooKeeper: " + e);
+    }
   }
   
   private boolean checkExistenceOf(String path) {

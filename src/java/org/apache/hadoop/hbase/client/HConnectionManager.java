@@ -116,6 +116,7 @@ public class HConnectionManager implements HConstants {
     }
   }
 
+
   /* Encapsulates finding the servers for an HBase instance */
   private static class TableServers implements ServerConnection, HConstants, Watcher {
     private static final Log LOG = LogFactory.getLog(TableServers.class);
@@ -766,9 +767,12 @@ public class HConnectionManager implements HConstants {
       tableLocations.put(startKey, location);
     }
     
-    public HRegionInterface getHRegionConnection(HServerAddress regionServer) 
+    public HRegionInterface getHRegionConnection(
+        HServerAddress regionServer, boolean getMaster) 
     throws IOException {
-      getMaster();
+      if(getMaster) {
+        getMaster();
+      }
       HRegionInterface server;
       synchronized (this.servers) {
         // See if we already have a connection
@@ -786,6 +790,12 @@ public class HConnectionManager implements HConstants {
         }
       }
       return server;
+    }
+    
+    public HRegionInterface getHRegionConnection(
+        HServerAddress regionServer) 
+    throws IOException {
+      return getHRegionConnection(regionServer, true);
     }
 
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {

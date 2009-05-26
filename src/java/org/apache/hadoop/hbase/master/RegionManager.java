@@ -554,6 +554,7 @@ class RegionManager implements HConstants {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
+    zooKeeperWrapper.clearRSDirectory();
     zooKeeperWrapper.close();
   }
   

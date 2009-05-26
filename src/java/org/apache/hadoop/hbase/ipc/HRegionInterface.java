@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 
 /**
@@ -306,4 +307,18 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public long incrementColumnValue(byte [] regionName, byte [] row,
       byte [] column, long amount) throws IOException;
+  
+  /**
+   * Method used when a master is taking the place of another failed one.
+   * @return All regions assigned on this region server
+   * @throws IOException
+   */
+  public HRegionInfo[] getRegionsAssignment() throws IOException;
+  
+  /**
+   * Method used when a master is taking the place of another failed one.
+   * @return The HSI
+   * @throws IOException
+   */
+  public HServerInfo getHServerInfo() throws IOException;
 }

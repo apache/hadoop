@@ -133,6 +133,17 @@ public interface HConnection {
   public HRegionInterface getHRegionConnection(HServerAddress regionServer)
   throws IOException;
   
+  /** 
+   * Establishes a connection to the region server at the specified address.
+   * @param regionServer - the server to connect to
+   * @param getMaster - do we check if master is alive
+   * @return proxy for HRegionServer
+   * @throws IOException
+   */
+  public HRegionInterface getHRegionConnection(
+      HServerAddress regionServer, boolean getMaster)
+  throws IOException;
+  
   /**
    * Find region location hosting passed row
    * @param tableName

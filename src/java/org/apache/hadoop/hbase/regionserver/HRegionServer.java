@@ -323,15 +323,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   private void reinitializeZooKeeper() throws IOException {
     zooKeeperWrapper = new ZooKeeperWrapper(conf);
     watchMasterAddress();
-
-    boolean startCodeOk = false; 
-    while(!startCodeOk) {
-      serverInfo.setStartCode(System.currentTimeMillis());
-      startCodeOk = zooKeeperWrapper.writeRSLocation(serverInfo);
-      if(!startCodeOk) {
-        LOG.debug("Start code already taken, trying another one");
-      }
-    }
   }
 
   private void reinitializeThreads() {
@@ -384,6 +375,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if (state == KeeperState.Expired) {
       LOG.error("ZooKeeper session expired");
       restart();
+    } else if (type == EventType.NodeDeleted) {
+      watchMasterAddress();
     } else if (type == EventType.NodeCreated) {
       getMaster();
 
@@ -1330,6 +1323,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
         if (LOG.isDebugEnabled())
           LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
+        boolean startCodeOk = false; 
+        while(!startCodeOk) {
+          serverInfo.setStartCode(System.currentTimeMillis());
+          startCodeOk = zooKeeperWrapper.writeRSLocation(serverInfo);
+          if(!startCodeOk) {
+           LOG.debug("Start code already taken, trying another one");
+          }
+        }
         result = this.hbaseMaster.regionServerStartup(serverInfo);
         break;
       } catch (Leases.LeaseStillHeldException e) {
@@ -2451,7 +2452,20 @@ public class HRegionServer implements HConstants, HRegionInterface,
       checkFileSystem();
       throw e;
     }
-    
-    
+  }
+  
+  /** {@inheritDoc} */
+  public HRegionInfo[] getRegionsAssignment() throws IOException {
+    HRegionInfo[] regions = new HRegionInfo[onlineRegions.size()];
+    Iterator<HRegion> ite = onlineRegions.values().iterator();
+    for(int i = 0; ite.hasNext(); i++) {
+      regions[i] = ite.next().getRegionInfo();
+    }
+    return regions;
+  }
+  
+  /** {@inheritDoc} */
+  public HServerInfo getHServerInfo() throws IOException {
+    return serverInfo;
   }
 }

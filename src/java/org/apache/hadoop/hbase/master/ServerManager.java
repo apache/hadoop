@@ -161,8 +161,6 @@ class ServerManager implements HConstants {
       LOG.debug("deadServers.contains: " + deadServers.contains(serverName));
       throw new Leases.LeaseStillHeldException(serverName);
     }
-    Watcher watcher = new ServerExpirer(serverName, info.getServerAddress());
-    zooKeeperWrapper.updateRSLocationGetWatch(info, watcher);
     
     LOG.info("Received start message from: " + serverName);
     // Go on to process the regionserver registration.
@@ -198,9 +196,21 @@ class ServerManager implements HConstants {
         LOG.error("Insertion into toDoQueue was interrupted", e);
       }
     }
-    // record new server
-    load = new HServerLoad();
+    recordNewServer(info);
+  }
+  
+  /**
+   * Adds the HSI to the RS list
+   * @param info The region server informations
+   */
+  public void recordNewServer(HServerInfo info) {
+    HServerLoad load = new HServerLoad();
+    String serverName = HServerInfo.getServerName(info);
     info.setLoad(load);
+    // We must set this watcher here because it can be set on a fresh start
+    // or on a failover
+    Watcher watcher = new ServerExpirer(serverName, info.getServerAddress());
+    zooKeeperWrapper.updateRSLocationGetWatch(info, watcher);
     serversToServerInfo.put(serverName, info);
     serverAddressToServerInfo.put(info.getServerAddress(), info);
     serversToLoad.put(serverName, load);

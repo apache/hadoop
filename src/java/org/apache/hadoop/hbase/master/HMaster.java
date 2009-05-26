@@ -25,6 +25,7 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
@@ -374,6 +376,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public void run() {
     final String threadName = "HMaster";
     Thread.currentThread().setName(threadName);
+    verifyClusterState();
     startServiceThreads();
     /* Main processing loop */
     try {
@@ -503,6 +506,61 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return true;
   }
   
+  /*
+   * Verifies if this instance of HBase is fresh or the master was started
+   * following a failover. In the second case, it inspects the region server
+   * directory and gets their regions assignment. 
+   */
+  private void verifyClusterState()  {
+    try {
+      LOG.debug("Checking cluster state...");
+      HServerAddress rootLocation = zooKeeperWrapper.readRootRegionLocation();
+      List<HServerAddress> addresses =  zooKeeperWrapper.scanRSDirectory();
+      
+      // Check if this is a fresh start of the cluster
+      if(addresses.size() == 0) {
+        LOG.debug("This is a fresh start, proceeding with normal startup");
+        return;
+      }
+      LOG.info("This is a failover, ZK inspection begins...");
+      boolean isRootRegionAssigned = false;
+      Map<byte[], HRegionInfo> assignedRegions = 
+        new HashMap<byte[], HRegionInfo>();
+      // This is a failover case. We must:
+      // - contact every region server to add them to the regionservers list
+      // - get their current regions assignment 
+      for (HServerAddress address : addresses) {
+        HRegionInterface hri = 
+          this.connection.getHRegionConnection(address, false);
+        HServerInfo info = hri.getHServerInfo();
+        LOG.debug("Inspection found server " + info.getName());
+        serverManager.recordNewServer(info);
+        HRegionInfo[] regions = hri.getRegionsAssignment();
+        for (HRegionInfo region : regions) {
+          if(region.isRootRegion()) {
+            connection.setRootRegionLocation(
+                new HRegionLocation(region, rootLocation));
+            regionManager.setRootRegionLocation(rootLocation);
+            // Undo the unassign work in the RegionManager constructor
+            regionManager.removeRegion(region);
+            isRootRegionAssigned = true;
+          }
+          else if(region.isMetaRegion()) {
+            MetaRegion m =
+              new MetaRegion(new HServerAddress(address),
+                  region.getRegionName(), region.getStartKey());
+            regionManager.addMetaRegionToScan(m);
+          }
+          assignedRegions.put(region.getRegionName(), region);
+        }
+      }
+      LOG.info("Inspection found " + assignedRegions.size() + " regions, " + 
+          (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
+    } catch(IOException ex) {
+      ex.printStackTrace();
+    }
+  }
+
   /*
    * Start up all services. If any of these threads gets an unhandled exception
    * then they just die with a logged message.  This should be fine because
