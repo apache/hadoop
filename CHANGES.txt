@@ -125,6 +125,9 @@ Trunk (unreleased changes)
     HADOOP-4829. Allow FileSystem shutdown hook to be disabled.
     (Todd Lipcon via tomwhite)
 
+    HADOOP-5815. Sqoop: A database import tool for Hadoop.
+    (Aaron Kimball via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
