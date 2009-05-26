@@ -108,7 +108,7 @@ public class RunJar {
 
     File tmpDir = new File(new Configuration().get("hadoop.tmp.dir"));
     boolean b = tmpDir.mkdirs();
-    if (!b || !tmpDir.isDirectory()) { 
+    if (!b && !tmpDir.isDirectory()) { 
       System.err.println("Mkdirs failed to create " + tmpDir);
       System.exit(-1);
     }
@@ -119,7 +119,7 @@ public class RunJar {
       System.exit(-1);
     }
     b = workDir.mkdirs();
-    if (!b || !workDir.isDirectory()) {
+    if (!b && !workDir.isDirectory()) {
       System.err.println("Mkdirs failed to create " + workDir);
       System.exit(-1);
     }

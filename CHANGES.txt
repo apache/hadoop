@@ -682,6 +682,9 @@ Trunk (unreleased changes)
     HADOOP-5710. Counter MAP_INPUT_BYTES missing from new mapreduce api. 
     (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5809. Fix job submission, broken by errant directory creation.
+    (Sreekanth Ramakrishnan and Jothi Padmanabhan via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
