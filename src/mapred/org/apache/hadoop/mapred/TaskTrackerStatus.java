@@ -55,16 +55,16 @@ class TaskTrackerStatus implements Writable {
   static class ResourceStatus implements Writable {
     
     private long totalVirtualMemory;
-    private long reservedVirtualMemory;
     private long totalPhysicalMemory;
-    private long reservedPhysicalMemory;
+    private long mapSlotMemorySizeOnTT;
+    private long reduceSlotMemorySizeOnTT;
     private long availableSpace;
     
     ResourceStatus() {
       totalVirtualMemory = JobConf.DISABLED_MEMORY_LIMIT;
-      reservedVirtualMemory = JobConf.DISABLED_MEMORY_LIMIT;
       totalPhysicalMemory = JobConf.DISABLED_MEMORY_LIMIT;
-      reservedPhysicalMemory = JobConf.DISABLED_MEMORY_LIMIT;
+      mapSlotMemorySizeOnTT = JobConf.DISABLED_MEMORY_LIMIT;
+      reduceSlotMemorySizeOnTT = JobConf.DISABLED_MEMORY_LIMIT;
       availableSpace = Long.MAX_VALUE;
     }
 
@@ -90,24 +90,6 @@ class TaskTrackerStatus implements Writable {
     }
 
     /**
-     * Set the amount of virtual memory reserved on the TaskTracker for system
-     * usage (OS, TT etc).
-     * 
-     * @param reservedVmem amount of virtual memory reserved in bytes.
-     */
-    void setReservedVirtualMemory(long reservedVmem) {
-      reservedVirtualMemory = reservedVmem;
-    }
-
-    /**
-     * Get the amount of virtual memory reserved on the TaskTracker for system
-     * usage (OS, TT etc).
-     */
-    long getReservedTotalMemory() {
-      return reservedVirtualMemory;
-    }
-
-    /**
      * Set the maximum amount of physical memory on the tasktracker.
      * 
      * @param totalRAM maximum amount of physical memory on the tasktracker in
@@ -130,23 +112,49 @@ class TaskTrackerStatus implements Writable {
     }
 
     /**
-     * Set the amount of physical memory reserved on the TaskTracker for system
-     * usage (OS, TT etc).
+     * Set the memory size of each map slot on this TT. This will be used by JT
+     * for accounting more slots for jobs that use more memory.
      * 
-     * @param reservedPmem amount of physical memory reserved in bytes.
+     * @param mem
      */
-    void setReservedPhysicalMemory(long reservedPmem) {
-      reservedPhysicalMemory = reservedPmem;
+    void setMapSlotMemorySizeOnTT(long mem) {
+      mapSlotMemorySizeOnTT = mem;
     }
 
     /**
-     * Get the amount of physical memory reserved on the TaskTracker for system
-     * usage (OS, TT etc).
+     * Get the memory size of each map slot on this TT. See
+     * {@link #setMapSlotMemorySizeOnTT(long)}
+     * 
+     * @return
      */
-    long getReservedPhysicalMemory() {
-      return reservedPhysicalMemory;
+    long getMapSlotMemorySizeOnTT() {
+      return mapSlotMemorySizeOnTT;
     }
 
+    /**
+     * Set the memory size of each reduce slot on this TT. This will be used by
+     * JT for accounting more slots for jobs that use more memory.
+     * 
+     * @param mem
+     */
+    void setReduceSlotMemorySizeOnTT(long mem) {
+      reduceSlotMemorySizeOnTT = mem;
+    }
+
+    /**
+     * Get the memory size of each reduce slot on this TT. See
+     * {@link #setReduceSlotMemorySizeOnTT(long)}
+     * 
+     * @return
+     */
+    long getReduceSlotMemorySizeOnTT() {
+      return reduceSlotMemorySizeOnTT;
+    }
+
+    /**
+     * Set the available disk space on the TT
+     * @param availSpace
+     */
     void setAvailableSpace(long availSpace) {
       availableSpace = availSpace;
     }
@@ -161,17 +169,17 @@ class TaskTrackerStatus implements Writable {
     
     public void write(DataOutput out) throws IOException {
       WritableUtils.writeVLong(out, totalVirtualMemory);
-      WritableUtils.writeVLong(out, reservedVirtualMemory);
       WritableUtils.writeVLong(out, totalPhysicalMemory);
-      WritableUtils.writeVLong(out, reservedPhysicalMemory);
+      WritableUtils.writeVLong(out, mapSlotMemorySizeOnTT);
+      WritableUtils.writeVLong(out, reduceSlotMemorySizeOnTT);
       WritableUtils.writeVLong(out, availableSpace);
     }
     
     public void readFields(DataInput in) throws IOException {
       totalVirtualMemory = WritableUtils.readVLong(in);
-      reservedVirtualMemory = WritableUtils.readVLong(in);
       totalPhysicalMemory = WritableUtils.readVLong(in);
-      reservedPhysicalMemory = WritableUtils.readVLong(in);
+      mapSlotMemorySizeOnTT = WritableUtils.readVLong(in);
+      reduceSlotMemorySizeOnTT = WritableUtils.readVLong(in);
       availableSpace = WritableUtils.readVLong(in);
     }
   }

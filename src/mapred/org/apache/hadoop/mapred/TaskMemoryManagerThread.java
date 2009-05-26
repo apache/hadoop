@@ -59,8 +59,7 @@ class TaskMemoryManagerThread extends Thread {
     tasksToBeRemoved = new ArrayList<TaskAttemptID>();
 
     maxMemoryAllowedForAllTasks =
-        taskTracker.getTotalVirtualMemoryOnTT()
-            - taskTracker.getReservedVirtualMemory();
+        taskTracker.getTotalMemoryAllottedForTasksOnTT() * 1024 * 1024L;
 
     monitoringInterval = taskTracker.getJobConf().getLong(
         "mapred.tasktracker.taskmemorymanager.monitoring-interval", 5000L);
@@ -202,17 +201,6 @@ class TaskMemoryManagerThread extends Thread {
           LOG.info("Memory usage of ProcessTree " + pId + " :"
               + currentMemUsage + "bytes. Limit : " + limit + "bytes");
 
-          if (limit > taskTracker.getLimitMaxVMemPerTask()) {
-            // TODO: With monitoring enabled and no scheduling based on
-            // memory,users can seriously hijack the system by specifying memory
-            // requirements well above the cluster wide limit. Ideally these
-            // jobs should have been rejected by JT/scheduler. Because we can't
-            // do that, in the minimum we should fail the tasks and hence the
-            // job.
-            LOG.warn("Task " + tid
-                + " 's maxVmemPerTask is greater than TT's limitMaxVmPerTask");
-          }
-
           if (limit != JobConf.DISABLED_MEMORY_LIMIT
               && currentMemUsage > limit) {
             // Task (the root process) is still alive and overflowing memory.
@@ -242,12 +230,11 @@ class TaskMemoryManagerThread extends Thread {
         }
       }
 
-      LOG.debug("Memory still in usage across all tasks : " + memoryStillInUsage
-          + "bytes. Total limit : " + maxMemoryAllowedForAllTasks);
-
       if (memoryStillInUsage > maxMemoryAllowedForAllTasks) {
-        LOG.warn("The total memory usage is still overflowing TTs limits."
-            + " Trying to kill a few tasks with the least progress.");
+        LOG.warn("The total memory in usage " + memoryStillInUsage
+            + " is still overflowing TTs limits "
+            + maxMemoryAllowedForAllTasks
+            + ". Trying to kill a few tasks with the least progress.");
         killTasksWithLeastProgress(memoryStillInUsage);
       }
     

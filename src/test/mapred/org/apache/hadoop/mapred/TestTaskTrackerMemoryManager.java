@@ -19,20 +19,19 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.fs.FileSystem;
 
 import junit.framework.TestCase;
 
@@ -43,27 +42,25 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
   private static final Log LOG =
       LogFactory.getLog(TestTaskTrackerMemoryManager.class);
-  private MiniDFSCluster miniDFSCluster;
   private MiniMRCluster miniMRCluster;
 
   private String taskOverLimitPatternString =
       "TaskTree \\[pid=[0-9]*,tipID=.*\\] is running beyond memory-limits. "
           + "Current usage : [0-9]*bytes. Limit : %sbytes. Killing task.";
 
-  private void startCluster(JobConf conf) throws Exception {
-    miniDFSCluster = new MiniDFSCluster(conf, 1, true, null);
-    FileSystem fileSys = miniDFSCluster.getFileSystem();
-    String namenode = fileSys.getUri().toString();
-    miniMRCluster = new MiniMRCluster(1, namenode, 1, null, null, conf);
+  private void startCluster(JobConf conf)
+      throws Exception {
+    conf.set("mapred.job.tracker.handler.count", "1");
+    conf.set("mapred.tasktracker.map.tasks.maximum", "1");
+    conf.set("mapred.tasktracker.reduce.tasks.maximum", "1");
+    conf.set("mapred.tasktracker.tasks.sleeptime-before-sigkill", "0");
+    miniMRCluster = new MiniMRCluster(1, "file:///", 1, null, null, conf);
   }
 
   @Override
   protected void tearDown() {
     if (miniMRCluster != null) {
       miniMRCluster.shutdown();
-    }
-    if (miniDFSCluster != null) {
-      miniDFSCluster.shutdown();
     }
   }
 
@@ -74,15 +71,6 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
   private void runAndCheckSuccessfulJob(JobConf conf)
       throws IOException {
-    // Set up job.
-    JobTracker jt = miniMRCluster.getJobTrackerRunner().getJobTracker();
-    conf.set("mapred.job.tracker", jt.getJobTrackerMachine() + ":"
-        + jt.getTrackerPort());
-    NameNode nn = miniDFSCluster.getNameNode();
-    conf.set("fs.default.name", "hdfs://"
-        + nn.getNameNodeAddress().getHostName() + ":"
-        + nn.getNameNodeAddress().getPort());
-
     Pattern taskOverLimitPattern =
         Pattern.compile(String.format(taskOverLimitPatternString, "[0-9]*"));
     Matcher mat = null;
@@ -148,43 +136,12 @@ public class TestTaskTrackerMemoryManager extends TestCase {
       return;
     }
 
-    JobConf conf = new JobConf();
     // Task-memory management disabled by default.
-    startCluster(conf);
-    long PER_TASK_LIMIT = 100L; // Doesn't matter how low.
-    conf.setMaxVirtualMemoryForTask(PER_TASK_LIMIT);
-    runAndCheckSuccessfulJob(conf);
-  }
-
-  /**
-   * Test for verifying that tasks with no limits, with the cumulative usage
-   * still under TT's limits, succeed.
-   * 
-   * @throws Exception
-   */
-  public void testTasksWithNoLimits()
-      throws Exception {
-    // Run the test only if memory management is enabled
-    if (!isProcfsBasedTreeAvailable()) {
-      return;
-    }
-
-    // Fairly large value for sleepJob to succeed
-    long ttLimit = 4 * 1024 * 1024 * 1024L;
-    // Start cluster with proper configuration.
-    JobConf fConf = new JobConf();
-
-    fConf.setClass(
-        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
-        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
-    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
-        ttLimit);
-    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY, ttLimit);
-    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, ttLimit);
-    fConf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
-    startCluster(fConf);
-    JobConf conf = new JobConf();
+    startCluster(new JobConf());
+    long PER_TASK_LIMIT = 1L; // Doesn't matter how low.
+    JobConf conf = miniMRCluster.createJobConf();
+    conf.setMemoryForMapTask(PER_TASK_LIMIT);
+    conf.setMemoryForReduceTask(PER_TASK_LIMIT);
     runAndCheckSuccessfulJob(conf);
   }
 
@@ -202,33 +159,25 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     }
 
     // Large so that sleepjob goes through and fits total TT usage
-    long PER_TASK_LIMIT = 2 * 1024 * 1024 * 1024L;
-    long TASK_TRACKER_LIMIT = 4 * 1024 * 1024 * 1024L;
+    long PER_TASK_LIMIT = 2 * 1024L;
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-
-    fConf.setClass(
-        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
-        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
-    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
-        TASK_TRACKER_LIMIT);
-    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
-        TASK_TRACKER_LIMIT);
-    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
-        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+        2 * 1024L);
     fConf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
-    startCluster(fConf);
-    JobConf conf = new JobConf();
-    conf.setMaxVirtualMemoryForTask(PER_TASK_LIMIT);
-    runAndCheckSuccessfulJob(conf);
+        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+        2 * 1024L);
+    startCluster(new JobConf());
 
+    JobConf conf = new JobConf(miniMRCluster.createJobConf());
+    conf.setMemoryForMapTask(PER_TASK_LIMIT);
+    conf.setMemoryForReduceTask(PER_TASK_LIMIT);
+    runAndCheckSuccessfulJob(conf);
   }
 
   /**
-   * Test for verifying that tasks that go beyond limits, though the cumulative
-   * usage is under TT's limits, get killed.
+   * Test for verifying that tasks that go beyond limits get killed.
    * 
    * @throws Exception
    */
@@ -240,43 +189,32 @@ public class TestTaskTrackerMemoryManager extends TestCase {
       return;
     }
 
-    long PER_TASK_LIMIT = 444; // Low enough to kill off sleepJob tasks.
-    long TASK_TRACKER_LIMIT = 4 * 1024 * 1024 * 1024L; // Large so as to fit
-    // total usage
+    long PER_TASK_LIMIT = 1L; // Low enough to kill off sleepJob tasks.
+
     Pattern taskOverLimitPattern =
         Pattern.compile(String.format(taskOverLimitPatternString, String
-            .valueOf(PER_TASK_LIMIT)));
+            .valueOf(PER_TASK_LIMIT*1024*1024L)));
     Matcher mat = null;
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-    fConf.setClass(
-        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
-        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
-    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
-        TASK_TRACKER_LIMIT);
-    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
-        TASK_TRACKER_LIMIT);
-    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
-        TASK_TRACKER_LIMIT);
-    fConf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
 
     // very small value, so that no task escapes to successful completion.
     fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
         String.valueOf(300));
+    fConf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+        2 * 1024);
+    fConf.setLong(
+        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+        2 * 1024);
     startCluster(fConf);
 
     // Set up job.
-    JobConf conf = new JobConf();
-    conf.setMaxVirtualMemoryForTask(PER_TASK_LIMIT);
-    JobTracker jt = miniMRCluster.getJobTrackerRunner().getJobTracker();
-    conf.set("mapred.job.tracker", jt.getJobTrackerMachine() + ":"
-        + jt.getTrackerPort());
-    NameNode nn = miniDFSCluster.getNameNode();
-    conf.set("fs.default.name", "hdfs://"
-        + nn.getNameNodeAddress().getHostName() + ":"
-        + nn.getNameNodeAddress().getPort());
+    JobConf conf = new JobConf(miniMRCluster.createJobConf());
+    conf.setMemoryForMapTask(PER_TASK_LIMIT);
+    conf.setMemoryForReduceTask(PER_TASK_LIMIT);
+    conf.setMaxMapAttempts(1);
+    conf.setMaxReduceAttempts(1);
 
     // Start the job.
     int ret = 0;
@@ -334,48 +272,39 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     }
 
     // Large enough for SleepJob Tasks.
-    long PER_TASK_LIMIT = 100000000000L;
-    // Very Limited TT. All tasks will be killed.
-    long TASK_TRACKER_LIMIT = 100L;
-    Pattern taskOverLimitPattern =
-        Pattern.compile(String.format(taskOverLimitPatternString, String
-            .valueOf(PER_TASK_LIMIT)));
-    Pattern trackerOverLimitPattern =
-        Pattern
-            .compile("Killing one of the least progress tasks - .*, as "
-                + "the cumulative memory usage of all the tasks on the TaskTracker"
-                + " exceeds virtual memory limit " + TASK_TRACKER_LIMIT + ".");
-    Matcher mat = null;
+    long PER_TASK_LIMIT = 100 * 1024L;
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-    fConf.setClass(
-        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
-        DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
-    fConf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
-        TASK_TRACKER_LIMIT);
-    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
-        TASK_TRACKER_LIMIT);
-    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
-        TASK_TRACKER_LIMIT);
+    fConf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+        1L);
     fConf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY, 0);
+        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY, 1L);
+
+    // Because of the above, the total tt limit is 2mb
+    long TASK_TRACKER_LIMIT = 2 * 1024 * 1024L;
+
     // very small value, so that no task escapes to successful completion.
     fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
         String.valueOf(300));
 
     startCluster(fConf);
 
+    Pattern taskOverLimitPattern =
+      Pattern.compile(String.format(taskOverLimitPatternString, String
+          .valueOf(PER_TASK_LIMIT)));
+
+    Pattern trackerOverLimitPattern =
+      Pattern
+          .compile("Killing one of the least progress tasks - .*, as "
+              + "the cumulative memory usage of all the tasks on the TaskTracker"
+              + " exceeds virtual memory limit " + TASK_TRACKER_LIMIT + ".");
+    Matcher mat = null;
+
     // Set up job.
-    JobConf conf = new JobConf();
-    conf.setMaxVirtualMemoryForTask(PER_TASK_LIMIT);
-    JobTracker jt = miniMRCluster.getJobTrackerRunner().getJobTracker();
-    conf.set("mapred.job.tracker", jt.getJobTrackerMachine() + ":"
-        + jt.getTrackerPort());
-    NameNode nn = miniDFSCluster.getNameNode();
-    conf.set("fs.default.name", "hdfs://"
-        + nn.getNameNodeAddress().getHostName() + ":"
-        + nn.getNameNodeAddress().getPort());
+    JobConf conf = new JobConf(miniMRCluster.createJobConf());
+    conf.setMemoryForMapTask(PER_TASK_LIMIT);
+    conf.setMemoryForReduceTask(PER_TASK_LIMIT);
 
     JobClient jClient = new JobClient(conf);
     SleepJob sleepJob = new SleepJob();
@@ -385,10 +314,12 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     job.submit();
     boolean TTOverFlowMsgPresent = false;
     while (true) {
-      // Set-up tasks are the first to be launched.
-      TaskReport[] setUpReports = jClient.getSetupTaskReports(
-                                    (org.apache.hadoop.mapred.JobID)job.getID());
-      for (TaskReport tr : setUpReports) {
+      List<TaskReport> allTaskReports = new ArrayList<TaskReport>();
+      allTaskReports.addAll(Arrays.asList(jClient
+          .getSetupTaskReports((org.apache.hadoop.mapred.JobID) job.getID())));
+      allTaskReports.addAll(Arrays.asList(jClient
+          .getMapTaskReports((org.apache.hadoop.mapred.JobID) job.getID())));
+      for (TaskReport tr : allTaskReports) {
         String[] diag = tr.getDiagnostics();
         for (String str : diag) {
           mat = taskOverLimitPattern.matcher(str);
