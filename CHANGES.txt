@@ -392,6 +392,9 @@ Trunk (unreleased changes)
     HADOOP-5438. Provide a single FileSystem method to create or open-for-append 
     to a file.  (He Yongqiang via dhruba)
 
+    HADOOP-5472. Change DistCp to support globbing of input paths.  (Dhruba
+    Borthakur and Rodrigo Schmidt via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

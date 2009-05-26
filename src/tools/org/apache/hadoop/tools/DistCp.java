@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Stack;
@@ -616,15 +617,24 @@ public class DistCp implements Tool {
   private static void checkSrcPath(Configuration conf, List<Path> srcPaths
       ) throws IOException {
     List<IOException> rslt = new ArrayList<IOException>();
+    List<Path> unglobbed = new LinkedList<Path>(); 
     for (Path p : srcPaths) {
       FileSystem fs = p.getFileSystem(conf);
-      if (!fs.exists(p)) {
+      FileStatus[] inputs = fs.globStatus(p);
+      
+      if(inputs.length > 0) {
+        for (FileStatus onePath: inputs) {
+          unglobbed.add(onePath.getPath());
+        }
+      } else {
         rslt.add(new IOException("Input source " + p + " does not exist."));
       }
     }
     if (!rslt.isEmpty()) {
       throw new InvalidInputException(rslt);
     }
+    srcPaths.clear();
+    srcPaths.addAll(unglobbed);
   }
 
   /**
