@@ -82,6 +82,7 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Service;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -90,7 +91,8 @@ import org.apache.hadoop.util.VersionInfo;
  * tracking MR jobs in a network environment.
  *
  *******************************************************/
-public class JobTracker implements MRConstants, InterTrackerProtocol,
+public class JobTracker extends Service 
+    implements MRConstants, InterTrackerProtocol,
     JobSubmissionProtocol, TaskTrackerManager,
     RefreshAuthorizationPolicyProtocol, AdminOperationsProtocol {
 
@@ -119,7 +121,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public static enum State { INITIALIZING, RUNNING }
   State state = State.INITIALIZING;
   private static final int SYSTEM_DIR_CLEANUP_RETRY_PERIOD = 10000;
-
+  /**
+   * Time in milliseconds to sleep while trying to start the job tracker:
+   * {@value}
+   */
+  private static final int STARTUP_SLEEP_INTERVAL = 1000;
   private DNSToSwitchMapping dnsToSwitchMapping;
   private NetworkTopology clusterMap = new NetworkTopology();
   private int numTaskCacheLevels; // the max level to which we cache tasks
@@ -179,7 +185,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     while (true) {
       try {
         result = new JobTracker(conf);
-        result.taskScheduler.setTaskTrackerManager(result);
+        startService(result);
         break;
       } catch (VersionMismatch e) {
         throw e;
@@ -188,19 +194,24 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       } catch (UnknownHostException e) {
         throw e;
       } catch (IOException e) {
-        LOG.warn("Error starting tracker: " + 
-                 StringUtils.stringifyException(e));
+        LOG.warn("Error starting tracker: " +
+                e.getMessage(), e);
       }
-      Thread.sleep(1000);
+      Thread.sleep(STARTUP_SLEEP_INTERVAL);
     }
-    if (result != null) {
+    if (result != null && result.isRunning()) {
       JobEndNotifier.startNotifier();
     }
     return result;
   }
 
-  public void stopTracker() throws IOException {
-    JobEndNotifier.stopNotifier();
+  /**
+   * This stops the tracker, the JobEndNotifier and moves the service into the
+   * terminated state.
+   *
+   * @throws IOException for any trouble during closedown
+   */
+  public synchronized void stopTracker() throws IOException {
     close();
   }
     
@@ -1390,7 +1401,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
-  private final JobTrackerInstrumentation myInstrumentation;
+  private JobTrackerInstrumentation myInstrumentation;
     
   /////////////////////////////////////////////////////////////////
   // The real JobTracker
@@ -1516,7 +1527,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                    );
 
   // Used to provide an HTML view on Job, Task, and TaskTracker structures
-  final HttpServer infoServer;
+  HttpServer infoServer;
   int infoPort;
 
   Server interTrackerServer;
@@ -1538,9 +1549,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private QueueManager queueManager;
 
   /**
-   * Start the JobTracker process, listen on the indicated port
+   * Create the JobTracker, based on the configuration
+   * @param conf configuration to use
+   * @throws IOException on problems initializing the tracker
    */
   JobTracker(JobConf conf) throws IOException, InterruptedException {
+    super(conf);
+    this.conf = conf;
+
     // find the owner of the process
     try {
       mrOwner = UnixUserGroupInformation.login(conf);
@@ -1568,10 +1584,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     AVERAGE_BLACKLIST_THRESHOLD = 
       conf.getFloat("mapred.cluster.average.blacklist.threshold", 0.5f); 
 
-    // This is a directory of temporary submission files.  We delete it
-    // on startup, and can delete any files that we're done with
-    this.conf = conf;
-    JobConf jobConf = new JobConf(conf);
 
     initializeTaskMemoryRelatedConfig();
 
@@ -1587,7 +1599,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       = conf.getClass("mapred.jobtracker.taskScheduler",
           JobQueueTaskScheduler.class, TaskScheduler.class);
     taskScheduler = (TaskScheduler) ReflectionUtils.newInstance(schedulerClass, conf);
+    taskScheduler.setTaskTrackerManager(this);
+  }
                                            
+  /**
+   * This contains the startup logic moved out of the constructor.
+   * It must never be called directly. Instead call {@link Service#start()} and
+   * let service decide whether to invoke this method once and once only.
+   *
+   * Although most of the intialization work has been performed, the
+   * JobTracker does not go live until {@link #offerService()} is called.
+   * accordingly, JobTracker does not enter the Live state here.
+   * @throws IOException for any startup problems
+   */
+  protected void innerStart() throws IOException {
+    // This is a directory of temporary submission files.  We delete it
+    // on startup, and can delete any files that we're done with
+    JobConf jobConf = new JobConf(conf);
     // Set ports, start RPC servers, setup security policy etc.
     InetSocketAddress addr = getAddress(conf);
     this.localMachine = addr.getHostName();
@@ -1640,6 +1668,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     trackerIdentifier = getDateFormat().format(new Date());
 
     // Initialize instrumentation
+    //this operation is synchronized to stop findbugs warning of inconsistent
+    //access
+    synchronized (this) {    
     JobTrackerInstrumentation tmp;
     Class<? extends JobTrackerInstrumentation> metricsInst =
       getInstrumentationClass(jobConf);
@@ -1654,6 +1685,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       tmp = new JobTrackerMetricsInst(this, jobConf);
     }
     myInstrumentation = tmp;
+    }
     
     // The rpc/web-server ports can be ephemeral ports... 
     // ... ensure we have the correct info
@@ -1673,6 +1705,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // if we haven't contacted the namenode go ahead and do it
         if (fs == null) {
           fs = FileSystem.get(conf);
+          if(fs == null) {
+            throw new IllegalStateException("Unable to bind to the filesystem");
+          }
         }
         // clean up the system dir, which will only work if hdfs is out of 
         // safe mode
@@ -1714,9 +1749,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                 ((RemoteException)ie).getClassName())) {
           throw ie;
         }
-        LOG.info("problem cleaning system directory: " + systemDir, ie);
+        LOG.info("problem cleaning system directory: " + systemDir + ": " + ie,
+                ie);
       }
-      Thread.sleep(SYSTEM_DIR_CLEANUP_RETRY_PERIOD);
+      try {
+        Thread.sleep(SYSTEM_DIR_CLEANUP_RETRY_PERIOD);
+      } catch (InterruptedException e) {
+        throw new IOException("Interrupted during system directory cleanup ",
+                e);
+      }
     }
 
     // Prepare for recovery. This is done irrespective of the status of restart
@@ -1756,7 +1797,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         NetworkTopology.DEFAULT_HOST_LEVEL);
 
     //initializes the job status store
-    completedJobStatusStore = new CompletedJobStatusStore(conf,fs);
+    //this operation is synchronized to stop findbugs warning of inconsistent
+    //access
+    synchronized(this) {
+      completedJobStatusStore = new CompletedJobStatusStore(conf, fs);
+    }
   }
 
   private static SimpleDateFormat getDateFormat() {
@@ -1848,9 +1893,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   /**
-   * Run forever
+   * Run forever.
+   * Change the system state to indicate that we are live
+   * @throws InterruptedException interrupted operations
+   * @throws IOException IO Problems
    */
   public void offerService() throws InterruptedException, IOException {
+    if(!enterLiveState()) {
+      //catch re-entrancy by returning early
+      return;
+    };
     taskScheduler.start();
     
     //  Start the recovery after starting the scheduler
@@ -1870,25 +1922,70 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     this.retireJobsThread.start();
     expireLaunchingTaskThread.start();
 
-    if (completedJobStatusStore.isActive()) {
-      completedJobsStoreThread = new Thread(completedJobStatusStore,
-                                            "completedjobsStore-housekeeper");
-      completedJobsStoreThread.start();
+    synchronized (this) {
+      //this is synchronized to stop findbugs warning
+      if (completedJobStatusStore.isActive()) {
+        completedJobsStoreThread = new Thread(completedJobStatusStore,
+                                              "completedjobsStore-housekeeper");
+        completedJobsStoreThread.start();
+      }
     }
 
+    LOG.info("Starting interTrackerServer");
     // start the inter-tracker server once the jt is ready
     this.interTrackerServer.start();
     
-    synchronized (this) {
-      state = State.RUNNING;
-    }
     LOG.info("Starting RUNNING");
     
     this.interTrackerServer.join();
     LOG.info("Stopped interTrackerServer");
   }
 
-  void close() throws IOException {
+  /////////////////////////////////////////////////////
+  // Service Lifecycle
+  /////////////////////////////////////////////////////
+
+  /**
+   * {@inheritDoc}
+   *
+   * @param status a status that can be updated with problems
+   * @throws IOException for any problem
+   */
+  @Override
+  public void innerPing(ServiceStatus status) throws IOException {
+    if (infoServer == null || !infoServer.isAlive()) {
+      status.addThrowable(
+              new IOException("TaskTracker HttpServer is not running on port "
+                      + infoPort));
+    }
+    if (interTrackerServer == null) {
+      status.addThrowable(
+              new IOException("InterTrackerServer is not running"));
+    }
+  }
+
+  /**
+   * This service shuts down by stopping the
+   * {@link JobEndNotifier} and then closing down the job
+   * tracker
+   *
+   * @throws IOException exceptions which will be logged
+   */
+  @Override
+  protected void innerClose() throws IOException {
+    JobEndNotifier.stopNotifier();
+    closeJobTracker();
+  }
+
+  /**
+   * Close down all the Job tracker threads, and the
+   * task scheduler.
+   * This was package scoped, but has been made private so that
+   * it does not get used. Callers should call {@link #close()} to
+   * stop a JobTracker
+   * @throws IOException if problems occur
+   */
+  private void closeJobTracker() throws IOException {
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
@@ -1901,48 +1998,63 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       LOG.info("Stopping interTrackerServer");
       this.interTrackerServer.stop();
     }
-    if (this.expireTrackersThread != null && this.expireTrackersThread.isAlive()) {
-      LOG.info("Stopping expireTrackers");
-      this.expireTrackersThread.interrupt();
-      try {
-        this.expireTrackersThread.join();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
-    }
-    if (this.retireJobsThread != null && this.retireJobsThread.isAlive()) {
-      LOG.info("Stopping retirer");
-      this.retireJobsThread.interrupt();
-      try {
-        this.retireJobsThread.join();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
-    }
+    retireThread("expireTrackersThread", expireTrackersThread);
+    retireThread("retirer", retireJobsThread);
     if (taskScheduler != null) {
       taskScheduler.terminate();
     }
-    if (this.expireLaunchingTaskThread != null && this.expireLaunchingTaskThread.isAlive()) {
-      LOG.info("Stopping expireLaunchingTasks");
-      this.expireLaunchingTaskThread.interrupt();
-      try {
-        this.expireLaunchingTaskThread.join();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
-    }
-    if (this.completedJobsStoreThread != null &&
-        this.completedJobsStoreThread.isAlive()) {
-      LOG.info("Stopping completedJobsStore thread");
-      this.completedJobsStoreThread.interrupt();
-      try {
-        this.completedJobsStoreThread.join();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
-    }
+    retireThread("expireLaunchingTasks", expireLaunchingTaskThread);
+    retireThread("completedJobsStore thread", completedJobsStoreThread);
     LOG.info("stopped all jobtracker services");
-    return;
+  }
+
+  /**
+   * Close the filesystem without raising an exception. At the end of this
+   * method, fs==null.
+   * Warning: closing the FS may make it unusable for other clients in the same JVM.
+   */
+  protected synchronized void closeTheFilesystemQuietly() {
+    if (fs != null) {
+      try {
+        fs.close();
+      } catch (IOException e) {
+        LOG.warn("When closing the filesystem: " + e, e);
+      }
+      fs = null;
+    }
+  }
+
+  /**
+   * Retire a named thread if it is not null and still alive. The thread will be
+   * interruped and then joined.
+   *
+   * @param name   thread name for log messages
+   * @param thread thread -can be null.
+   * @return true if the thread was shut down; false implies this thread was
+   *         interrupted.
+   */
+  protected boolean retireThread(String name, Thread thread) {
+    if (thread != null && thread.isAlive()) {
+      LOG.info("Stopping " + name);
+      thread.interrupt();
+      try {
+        thread.join();
+      } catch (InterruptedException ex) {
+        LOG.info("interruped during " + name + " shutdown", ex);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @return the name of this service
+   */
+  @Override
+  public String getServiceName() {
+    return "JobTracker";
   }
     
   ///////////////////////////////////////////////////////
@@ -2476,7 +2588,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return numTaskCacheLevels;
   }
   public int getNumResolvedTaskTrackers() {
-    return numResolved;
+    return taskTrackers.size();
   }
   
   public int getNumberOfUniqueHosts() {
@@ -3012,6 +3124,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Allocates a new JobId string.
    */
   public synchronized JobID getNewJobId() throws IOException {
+    verifyServiceState(ServiceState.LIVE);
     return new JobID(getTrackerIdentifier(), nextJobId++);
   }
 
@@ -3024,6 +3137,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * the JobTracker alone.
    */
   public synchronized JobStatus submitJob(JobID jobId) throws IOException {
+    verifyServiceState(ServiceState.LIVE);
     if(jobs.containsKey(jobId)) {
       //job already running, don't start twice
       return jobs.get(jobId).getStatus();
@@ -3118,6 +3232,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
   public synchronized ClusterStatus getClusterStatus(boolean detailed) {
     synchronized (taskTrackers) {
+      //backport the service state into the job tracker state
+      State state = getServiceState() == ServiceState.LIVE ?
+              State.RUNNING :
+              State.INITIALIZING;
       if (detailed) {
         List<List<String>> trackerNames = taskTrackerNames();
         return new ClusterStatus(trackerNames.get(0),
@@ -3445,6 +3563,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getSystemDir()
    */
   public String getSystemDir() {
+    if (fs == null) {
+      throw new java.lang.IllegalStateException("Filesystem is null; "
+              + "JobTracker is not live: " + this);
+    }
     Path sysDir = new Path(conf.get("mapred.system.dir", "/tmp/hadoop/mapred/system"));  
     return fs.makeQualified(sysDir).toString();
   }

@@ -309,6 +309,18 @@ class TaskTrackerStatus implements Writable {
   }  
   
   /**
+   * String value prints the basic status of the task tracker
+   * @return a string value for diagnostics
+   */
+  @Override
+  public String toString() {
+    return trackerName
+            + " at http://" + host + ":" + httpPort + "/"
+            + " current task count: " + taskReports.size()
+            + " failed task count: " + failures;
+  }
+  
+  /**
    * Return the {@link ResourceStatus} object configured with this
    * status.
    * 
