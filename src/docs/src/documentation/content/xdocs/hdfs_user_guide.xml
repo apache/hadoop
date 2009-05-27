@@ -466,8 +466,7 @@
       <li> <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a> from Hadoop Wiki.
       </li>
       <li>
-        Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/">
-          JavaDoc API</a>.
+        Hadoop <a href="ext:api">JavaDoc API</a>.
       </li>
       <li>
         Hadoop User Mailing List : 

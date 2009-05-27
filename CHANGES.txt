@@ -86,6 +86,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5728. Fixed FSEditLog.printStatistics IndexOutOfBoundsException.
     (Wang Xu via johan)    
 
+    HADOOP-4626. Correct the API links in hdfs forrest doc so that they
+    point to the same version of hadoop.  (szetszwo)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
