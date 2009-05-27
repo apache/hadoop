@@ -685,6 +685,10 @@ Trunk (unreleased changes)
     HADOOP-5809. Fix job submission, broken by errant directory creation.
     (Sreekanth Ramakrishnan and Jothi Padmanabhan via cdouglas)
 
+    HADOOP-5759. Fix for  IllegalArgumentException when 
+    CombineFileInputFormat is used as job InputFormat.
+    (Amareshwari Sriramadasu via dhruba)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
