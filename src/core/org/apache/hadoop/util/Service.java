@@ -199,7 +199,7 @@ public abstract class Service extends Configured implements Closeable {
    * {@link ServiceState#FAILED} and {@link ServiceState#CLOSED}
    * to be valid, so it is OK to ping a
    * component that is still starting up. However, in such situations, the inner
-   * ping health tests are skipped, because they are generally irrelvant.
+   * ping health tests are skipped, because they are generally irrelevant.
    *
    * Subclasses should not normally override this method, but instead override
    * {@link #innerPing(ServiceStatus)} with extra health checks that will only
@@ -264,6 +264,7 @@ public abstract class Service extends Configured implements Closeable {
    * @param thrown the exception to forward
    * @return an IOException representing or containing the forwarded exception
    */
+  @SuppressWarnings({"ThrowableInstanceNeverThrown"})
   protected IOException forwardAsIOException(Throwable thrown) {
     IOException newException;
     if(thrown instanceof IOException) {
@@ -691,7 +692,6 @@ public abstract class Service extends Configured implements Closeable {
    * Terminate a service or other closeable that is not null
    *
    * @param closeable the object to close
-   * @throws IOException any exception during the close operation
    */
   public static void close(Closeable closeable) {
     if (closeable != null) {
@@ -925,6 +925,10 @@ public abstract class Service extends Configured implements Closeable {
       }
     }
 
+    /**
+     * Get the list of throwables. This may be null.
+     * @return A list of throwables or null
+     */
     public List<Throwable> getThrowables() {
       return throwables;
     }
@@ -962,7 +966,7 @@ public abstract class Service extends Configured implements Closeable {
     }
 
     /**
-     * Get the timestamp of the last state change
+     * Get the date of the last state change
      * @return when the service state last changed
      */
     public Date getLastStateChange() {
