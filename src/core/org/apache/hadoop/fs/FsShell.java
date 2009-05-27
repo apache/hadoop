@@ -61,6 +61,7 @@ public class FsShell extends Configured implements Tool {
   static final String COPYTOLOCAL_SHORT_USAGE = GET_SHORT_USAGE.replace(
       "-get", "-copyToLocal");
   static final String TAIL_USAGE="-tail [-f] <file>";
+  static final String DU_USAGE="-du [-s] [-h] <paths...>";
 
   /**
    */
@@ -670,58 +671,98 @@ public class FsShell extends Configured implements Tool {
 
   /**
    * Show the size of all files that match the file pattern <i>src</i>
-   * @param src a file pattern specifying source files
+   * @param cmd
+   * @param pos ignore anything before this pos in cmd
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
-  void du(String src) throws IOException {
-    Path srcPath = new Path(src);
-    FileSystem srcFs = srcPath.getFileSystem(getConf());
-    Path[] pathItems = FileUtil.stat2Paths(srcFs.globStatus(srcPath), 
-                                           srcPath);
-    FileStatus items[] = srcFs.listStatus(pathItems);
-    if ((items == null) || ((items.length == 0) && 
-        (!srcFs.exists(srcPath)))){
-      throw new FileNotFoundException("Cannot access " + src
-            + ": No such file or directory.");
-    } else {
-      System.out.println("Found " + items.length + " items");
-      int maxLength = 10;
-      
-      long length[] = new long[items.length];
-      for (int i = 0; i < items.length; i++) {
-        length[i] = items[i].isDir() ?
-          srcFs.getContentSummary(items[i].getPath()).getLength() :
-          items[i].getLen();
-        int len = String.valueOf(length[i]).length();
-        if (len > maxLength) maxLength = len;
+  void du(String[] cmd, int pos) throws IOException {
+    CommandFormat c = new CommandFormat(
+      "du", 0, Integer.MAX_VALUE, "h", "s");
+    List<String> params;
+    try {
+      params = c.parse(cmd, pos);
+    } catch (IllegalArgumentException iae) {
+      System.err.println("Usage: java FsShell " + DU_USAGE);
+      throw iae;
+    }
+    boolean humanReadable = c.getOpt("h");
+    boolean summary = c.getOpt("s");
+
+    // Default to cwd
+    if (params.isEmpty()) {
+      params.add(".");
+    }
+
+    List<UsagePair> usages = new ArrayList<UsagePair>();
+
+    for (String src : params) {
+      Path srcPath = new Path(src);
+      FileSystem srcFs = srcPath.getFileSystem(getConf());
+      FileStatus globStatus[] = srcFs.globStatus(srcPath);
+      FileStatus statusToPrint[];
+
+      if (summary) {
+        statusToPrint = globStatus;
+      } else {
+        Path statPaths[] = FileUtil.stat2Paths(globStatus, srcPath);
+        statusToPrint = srcFs.listStatus(statPaths);
       }
-      for(int i = 0; i < items.length; i++) {
-        System.out.printf("%-"+ (maxLength + BORDER) +"d", length[i]);
-        System.out.println(items[i].getPath());
+      if ((statusToPrint == null) || ((statusToPrint.length == 0) &&
+                                      (!srcFs.exists(srcPath)))){
+        throw new FileNotFoundException("Cannot access " + src
+                                        + ": No such file or directory.");
+      }
+
+      if (!summary) {
+        System.out.println("Found " + statusToPrint.length + " items");
+      }
+
+      for (FileStatus stat : statusToPrint) {
+        long length;
+        if (summary || stat.isDir()) {
+          length = srcFs.getContentSummary(stat.getPath()).getLength();
+        } else {
+          length = stat.getLen();
+        }
+
+        usages.add(new UsagePair(String.valueOf(stat.getPath()), length));
       }
     }
+    printUsageSummary(usages, humanReadable);
   }
     
   /**
    * Show the summary disk usage of each dir/file 
    * that matches the file pattern <i>src</i>
-   * @param src a file pattern specifying source files
+   * @param cmd
+   * @param pos ignore anything before this pos in cmd
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
-  void dus(String src) throws IOException {
-    Path srcPath = new Path(src);
-    FileSystem srcFs = srcPath.getFileSystem(getConf());
-    FileStatus status[] = srcFs.globStatus(new Path(src));
-    if (status==null || status.length==0) {
-      throw new FileNotFoundException("Cannot access " + src + 
-          ": No such file or directory.");
+  void dus(String[] cmd, int pos) throws IOException {
+    String newcmd[] = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, newcmd, 0, cmd.length);
+    newcmd[cmd.length] = "-s";
+    du(newcmd, pos);
+  }
+
+  private void printUsageSummary(List<UsagePair> usages,
+                                 boolean humanReadable) {
+    int maxColumnWidth = 0;
+    for (UsagePair usage : usages) {
+      String toPrint = humanReadable ?
+        StringUtils.humanReadableInt(usage.bytes) : String.valueOf(usage.bytes);
+      if (toPrint.length() > maxColumnWidth) {
+        maxColumnWidth = toPrint.length();
+      }
     }
-    for(int i=0; i<status.length; i++) {
-      long totalSize = srcFs.getContentSummary(status[i].getPath()).getLength();
-      String pathStr = status[i].getPath().toString();
-      System.out.println(("".equals(pathStr)?".":pathStr) + "\t" + totalSize);
+
+    for (UsagePair usage : usages) {
+      String toPrint = humanReadable ?
+        StringUtils.humanReadableInt(usage.bytes) : String.valueOf(usage.bytes);
+      System.out.printf("%-"+ (maxColumnWidth + BORDER) +"s", toPrint);
+      System.out.println(usage.path);
     }
   }
 
@@ -1558,10 +1599,6 @@ public class FsShell extends Configured implements Tool {
           delete(argv[i], true);
         } else if ("-df".equals(cmd)) {
           df(argv[i]);
-        } else if ("-du".equals(cmd)) {
-          du(argv[i]);
-        } else if ("-dus".equals(cmd)) {
-          dus(argv[i]);
         } else if (Count.matches(cmd)) {
           new Count(argv, i, getConf()).runAll();
         } else if ("-ls".equals(cmd)) {
@@ -1809,17 +1846,9 @@ public class FsShell extends Configured implements Tool {
           df(null);
         }
       } else if ("-du".equals(cmd)) {
-        if (i < argv.length) {
-          exitCode = doall(cmd, argv, i);
-        } else {
-          du(".");
-        }
+        du(argv, i);
       } else if ("-dus".equals(cmd)) {
-        if (i < argv.length) {
-          exitCode = doall(cmd, argv, i);
-        } else {
-          dus(".");
-        }         
+        dus(argv, i);
       } else if (Count.matches(cmd)) {
         exitCode = new Count(argv, i, getConf()).runAll();
       } else if ("-mkdir".equals(cmd)) {
@@ -1920,6 +1949,20 @@ public class FsShell extends Configured implements Tool {
           throw exceptions.get(0);
         else 
           throw new IOException("Multiple IOExceptions: " + exceptions);
+    }
+  }
+
+
+  /**
+   * Utility class for a line of du output
+   */
+  private static class UsagePair {
+    public String path;
+    public long bytes;
+
+    public UsagePair(String path, long bytes) {
+      this.path = path;
+      this.bytes = bytes;
     }
   }
 }

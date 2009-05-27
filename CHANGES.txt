@@ -128,6 +128,9 @@ Trunk (unreleased changes)
     HADOOP-5815. Sqoop: A database import tool for Hadoop.
     (Aaron Kimball via tomwhite)
 
+    HADOOP-4861. Add disk usage with human-readable size (-duh).
+    (Todd Lipcon via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

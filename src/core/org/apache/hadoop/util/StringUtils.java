@@ -88,7 +88,8 @@ public class StringUtils {
     double result = number;
     String suffix = "";
     if (absNumber < 1024) {
-      // nothing
+      // since no division has occurred, don't format with a decimal point
+      return String.valueOf(number);
     } else if (absNumber < 1024 * 1024) {
       result = number / 1024.0;
       suffix = "k";
