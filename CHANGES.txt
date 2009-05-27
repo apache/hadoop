@@ -700,6 +700,9 @@ Trunk (unreleased changes)
     HADOOP-5700. INode.getPathComponents throws NPE when given a non-absolute
     path. (Todd Lipcon via tomwhite)
 
+    HADOOP-5856. Fix "unsafe multithreaded use of DateFormat" findbugs warning
+    in DataBlockScanner.  (Kan Zhang via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
