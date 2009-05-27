@@ -114,6 +114,9 @@ Release 0.19.2 - Unreleased
     HADOOP-5728. Fixed FSEditLog.printStatistics IndexOutOfBoundsException.
     (Wang Xu via johan)
 
+    HADOOP-5816. Fixes a problem in the KeyFieldBasedComparator to do with
+    ArrayIndexOutOfBounds exception. (He Yongqiang via ddas)
+
 Release 0.19.1 - 2009-02-23 
 
     HADOOP-5225. Workaround for tmp file handling in HDFS. sync() is 

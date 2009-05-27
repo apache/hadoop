@@ -106,7 +106,7 @@ implements JobConfigurable {
     }
     int compareResult = 0;
     if (!key.numeric) {
-      compareResult = compareBytes(first, start1, end1, second, start2, end2);
+      compareResult = compareBytes(first, start1, end1-start1+1, second, start2, end2-start2+1);
     }
     if (key.numeric) {
       compareResult = numericalCompare (first, start1, end1, second, start2, end2);
