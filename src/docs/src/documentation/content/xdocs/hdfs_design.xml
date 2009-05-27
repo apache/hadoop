@@ -271,7 +271,7 @@
       <title> Accessibility </title>
       <!-- XXX Make an API section ? (HTTP is "web service" API?) -->
       <p>
-      HDFS can be accessed from applications in many different ways. Natively, HDFS provides a <a href="http://hadoop.apache.org/core/docs/current/api/">Java API</a> for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the <acronym title="Web-based Distributed Authoring and Versioning">WebDAV</acronym> protocol. 
+      HDFS can be accessed from applications in many different ways. Natively, HDFS provides a <a href="ext:api/org/apache/hadoop/fs/filesystem">FileSystem Java API</a> for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the <acronym title="Web-based Distributed Authoring and Versioning">WebDAV</acronym> protocol. 
       </p>
 
       <section>
@@ -353,10 +353,7 @@
     <section>
       <title> References </title>
       <p>
-      HDFS Java API: 
-      <a href="http://hadoop.apache.org/core/docs/current/api/"> 
-        http://hadoop.apache.org/core/docs/current/api/
-      </a>
+      Hadoop <a href="ext:api">JavaDoc API</a>.
       </p>
       <p>
       HDFS source code: 
