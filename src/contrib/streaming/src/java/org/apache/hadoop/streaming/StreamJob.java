@@ -1131,7 +1131,7 @@ public class StreamJob implements Tool {
 
   protected RunningJob running_;
   protected JobID jobId_;
-  protected static final String LINK_URI = "You need to specify the uris as hdfs://host:port/#linkname," +
+  protected static final String LINK_URI = "You need to specify the uris as scheme://path#linkname," +
     "Please specify a different link name for all of your caching URIs";
 
 }
