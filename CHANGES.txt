@@ -692,6 +692,9 @@ Trunk (unreleased changes)
     HADOOP-5635. Change distributed cache to work with other distributed file
     systems. (Andrew Hitchcock via tomwhite)
 
+    HADOOP-5700. INode.getPathComponents throws NPE when given a non-absolute
+    path. (Todd Lipcon via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
