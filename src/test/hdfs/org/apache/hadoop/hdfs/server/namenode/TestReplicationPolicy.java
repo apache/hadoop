@@ -58,6 +58,7 @@ public class TestReplicationPolicy extends TestCase {
       CONF.set("dfs.http.address", "0.0.0.0:0");
       NameNode.format(CONF);
       namenode = new NameNode(CONF);
+      NameNode.startService(namenode);
     } catch (IOException e) {
       e.printStackTrace();
       throw (RuntimeException)new RuntimeException().initCause(e);
