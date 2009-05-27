@@ -38,12 +38,16 @@ import org.apache.hadoop.mapred.TextOutputFormat;
 
 public class TestKeyFieldBasedComparator extends HadoopTestCase {
   JobConf conf;
-  String line1 = "123 -123 005120 123.9 0.01 0.18 010 10.1 4444 011 011 234";
-  String line2 = "134 -12 005100 123.10 -1.01 0.19 02 10.0 4444.1";
+  JobConf localConf;
+  
+  String line1 = "123 -123 005120 123.9 0.01 0.18 010 10.0 4444.1 011 011 234";
+  String line2 = "134 -12 005100 123.10 -1.01 0.19 02 10.1 4444";
 
   public TestKeyFieldBasedComparator() throws IOException {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
     conf = createJobConf();
+    localConf = createJobConf();
+    localConf.set("map.output.key.field.separator", " ");
   }
   public void configure(String keySpec, int expect) throws Exception {
     Path testdir = new Path("build/test/test.mapred.spill");
@@ -123,9 +127,24 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     configure("-k2.4,2.4n", 2);
     configure("-k7,7", 1);
     configure("-k7,7n", 2);
-    configure("-k8,8n", 2);
-    configure("-k9,9n", 1);
+    configure("-k8,8n", 1);
+    configure("-k9,9", 2);
     configure("-k11,11",2);
     configure("-k10,10",2);
+    
+    localTestWithoutMRJob("-k9,9", 1);
+  }
+  
+  byte[] line1_bytes = line1.getBytes();
+  byte[] line2_bytes = line2.getBytes();
+
+  public void localTestWithoutMRJob(String keySpec, int expect) throws Exception {
+    KeyFieldBasedComparator<Void, Void> keyFieldCmp = new KeyFieldBasedComparator<Void, Void>();
+    localConf.setKeyFieldComparatorOptions(keySpec);
+    keyFieldCmp.configure(localConf);
+    int result = keyFieldCmp.compare(line1_bytes, 0, line1_bytes.length,
+        line2_bytes, 0, line2_bytes.length);
+    if ((expect >= 0 && result < 0) || (expect < 0 && result >= 0))
+      fail();
   }
 }

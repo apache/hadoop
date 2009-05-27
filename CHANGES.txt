@@ -86,6 +86,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5728. Fixed FSEditLog.printStatistics IndexOutOfBoundsException.
     (Wang Xu via johan)    
 
+    HADOOP-5816. Fixes a problem in the KeyFieldBasedComparator to do with
+    ArrayIndexOutOfBounds exception. (He Yongqiang via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
