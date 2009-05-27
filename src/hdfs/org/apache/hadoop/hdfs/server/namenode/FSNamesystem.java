@@ -106,7 +106,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
   };
 
-  private static final void logAuditEvent(UserGroupInformation ugi,
+  private static void logAuditEvent(UserGroupInformation ugi,
       InetAddress addr, String cmd, String src, String dst,
       FileStatus stat) {
     final Formatter fmt = auditFormatter.get();
@@ -433,6 +433,51 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
+   * Test for a thread ref not being null or pointing to a dead thread
+   * @param thread the thread to check
+   * @return true if the thread is considered dead
+   */
+  private boolean isDead(Thread thread) {
+      return thread == null || !thread.isAlive();
+  }
+
+  /**
+   * Perform a cursory health check of the namesystem, particulary that it has
+   * not been closed and that all threads are running.
+   * @throws IOException for any health check
+   */
+  void ping() throws IOException {
+    if (!fsRunning) {
+      throw new IOException("Namesystem is not running");
+    }
+    boolean bad = false;
+    StringBuilder sb = new StringBuilder();
+    if (isDead(hbthread)) {
+      bad = true;
+      sb.append("[Heartbeat thread is dead]");
+    }
+    if (isDead(replthread)) {
+      bad = true;
+      sb.append("[Replication thread is dead]");
+    }
+    // this thread's liveness is only relevant in safe mode.
+    if (safeMode!=null && isDead(smmthread)) {
+      bad = true;
+      sb.append("[SafeModeMonitor thread is dead while the name system is in safe mode]");
+    }
+    if (isDead(dnthread)) {
+        bad = true;
+        sb.append("[DecommissionedMonitor thread is dead]");
+    }
+    if (isDead(lmthread)) {
+      bad = true;
+      sb.append("[Lease monitor thread is dead]");
+    }
+    if (bad) {
+      throw new IOException(sb.toString());
+    }
+  }
+  /**
    * Close down this file system manager.
    * Causes heartbeat and lease daemons to stop; waits briefly for
    * them to finish, but a short timeout returns control back to caller.
@@ -454,7 +499,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           lmthread.interrupt();
           lmthread.join(3000);
         }
-        dir.close();
+        if(dir != null) {
+         dir.close();
+         dir =  null;
+        }
       } catch (InterruptedException ie) {
       } catch (IOException ie) {
         LOG.error("Error closing FSDirectory", ie);
@@ -1117,7 +1165,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (targets.length < blockManager.minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +
                             targets.length + " nodes, instead of " +
-                            blockManager.minReplication);
+                            blockManager.minReplication
+                            + ". ( there are currently " 
+                            + heartbeats.size()
+                            +" live data nodes in the cluster)");
     }
 
     // Allocate a new block and record it in the INode. 
