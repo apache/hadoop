@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="Hadoop" default="compile" 
+<project name="Hadoop-Core" default="compile" 
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -46,8 +46,6 @@
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
   <property name="build.src" value="${build.dir}/src"/>
-  <property name="build.tools" value="${build.dir}/tools"/>
-  <property name="build.webapps" value="${build.dir}/webapps"/>
 
   <!-- convert spaces to _ so that mac os doesn't break things -->
   <exec executable="sed" inputstring="${os.name}" 
@@ -89,16 +87,7 @@
   <property name="test.junit.maxmemory" value="512m" />
 
   <property name="test.core.build.classes" value="${test.build.dir}/core/classes"/>
-  <property name="test.core.classpath.id" value="test.core.classpath"/>
-  <property name="test.hdfs.build.classes" value="${test.build.dir}/hdfs/classes"/>
-  <property name="test.hdfs.classpath.id" value="test.hdfs.classpath"/>
-  <property name="test.mapred.build.classes" value="${test.build.dir}/mapred/classes"/>
-  <property name="test.mapred.classpath.id" value="test.mapred.classpath"/>
-  <property name="test.hdfs.with.mr.build.classes" value="${test.build.dir}/hdfs-with-mr/classes"/>
-  <property name="test.hdfs.with.mr.classpath.id" value="test.hdfs.with.mr.classpath"/>
 
-  <property name="web.src.dir" value="${basedir}/src/web"/>
-  <property name="src.webapps" value="${basedir}/src/webapps"/>
 
   <property name="javadoc.link.java"
 	    value="http://java.sun.com/javase/6/docs/api/"/>
@@ -154,7 +143,7 @@
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>
-  <property name="hadoop.jar" location="${build.dir}/${final.name}.jar" />
+  <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -179,12 +168,6 @@
     <path refid="ivy-common.classpath"/>
   </path>
 
-  <!-- the unit test classpath: uses test.src.dir for configuration 
-  Keeping this target as many target depend on this. -->
-  <path id="test.classpath">
-    <path refid="test.hdfs.with.mr.classpath"/>
-  </path>
-
   <path id="test.core.classpath">
     <pathelement location="${test.build.extraconf}"/>
     <pathelement location="${test.core.build.classes}" />
@@ -196,7 +179,7 @@
     <path refid="test-classpath"/>
     <path refid="classpath"/>
   </path>
-
+<!--
   <path id="test.hdfs.classpath">
     <pathelement location="${test.hdfs.build.classes}" />
     <path refid="test.core.classpath"/>
@@ -211,7 +194,7 @@
     <pathelement location="${test.hdfs.with.mr.build.classes}" />
     <path refid="test.mapred.classpath"/>
   </path>
-
+-->
   <!-- the cluster test classpath: uses conf.dir for configuration -->
   <path id="test.cluster.classpath">
     <path refid="classpath"/>
@@ -242,11 +225,6 @@
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.src}"/>
-    <mkdir dir="${build.webapps}/task/WEB-INF"/>
-    <mkdir dir="${build.webapps}/job/WEB-INF"/>
-    <mkdir dir="${build.webapps}/hdfs/WEB-INF"/>
-    <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
-    <mkdir dir="${build.webapps}/secondary/WEB-INF"/>
  
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
@@ -258,11 +236,6 @@
     </touch>
     <delete file="${touch.temp.file}"/>
     <!-- copy all of the jsp and static files -->
-    <copy todir="${build.webapps}">
-      <fileset dir="${src.webapps}">
-        <exclude name="**/*.jsp" />
-      </fileset>
-    </copy>
 
     <copy todir="${conf.dir}" verbose="true">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
@@ -403,11 +376,11 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="jar" depends="compile-core" description="Make hadoop.jar">
+  <target name="jar" depends="compile-core" description="Make hadoop-core.jar">
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
-    <jar jarfile="${hadoop.jar}"
+    <jar jarfile="${hadoop-core.jar}"
          basedir="${build.classes}">
       <manifest>
         <section name="org/apache/hadoop">
@@ -419,7 +392,6 @@
       <fileset file="${conf.dir}/commons-logging.properties"/>
       <fileset file="${conf.dir}/log4j.properties"/>
       <fileset file="${conf.dir}/hadoop-metrics.properties"/>
-      <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>
 
@@ -482,27 +454,6 @@
 
   </target>
 
-  <target name="compile-hdfs-with-mr-test" depends="compile-core-classes,ivy-retrieve-test-hdfswithmr">
-
-    <mkdir dir="${test.hdfs.with.mr.build.classes}"/>
-
-    <javac 
-      encoding="${build.encoding}" 
-      srcdir="${test.src.dir}/hdfs-with-mr"
-      includes="org/apache/hadoop/**/*.java"
-      destdir="${test.hdfs.with.mr.build.classes}"
-      debug="${javac.debug}"
-      optimize="${javac.optimize}"
-      target="${javac.version}"
-      source="${javac.version}"
-      deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args} ${javac.args.warnings}" />
-      <classpath refid="test.mapred.classpath"/>
-    </javac>
-
-  </target>
-
-
   <!-- ================================================================== -->
   <!-- Make hadoop-test.jar                                               -->
   <!-- ================================================================== -->
@@ -512,22 +463,13 @@
     <copy todir="${test.build.classes}">
       <fileset dir="${test.core.build.classes}"/>
     </copy>
-<!--    <copy todir="${test.build.classes}">
-      <fileset dir="${test.hdfs.build.classes}"/>
-    </copy>
-    <copy todir="${test.build.classes}">
-      <fileset dir="${test.mapred.build.classes}"/>
-    </copy>
-    <copy todir="${test.build.classes}">
-      <fileset dir="${test.hdfs.with.mr.build.classes}"/>
-    </copy> -->
     <jar jarfile="${build.dir}/${test.final.name}.jar"
          basedir="${test.build.classes}">
          <manifest>
            <attribute name="Main-Class"
                       value="org/apache/hadoop/test/CoreTestDriver"/>
           <section name="org/apache/hadoop">
-            <attribute name="Implementation-Title" value="Hadoop"/>
+            <attribute name="Implementation-Title" value="${ant.project.name}"/>
             <attribute name="Implementation-Version" value="${version}"/>
             <attribute name="Implementation-Vendor" value="Apache"/>
           </section>
@@ -538,7 +480,7 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="run-test-core" depends="compile-core-test" description="Run core unit tests">
+  <target name="test-core" depends="compile-core-test" description="Run core unit tests">
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
@@ -568,70 +510,26 @@
       <syspropertyset dynamic="no">
          <propertyref name="compile.c++"/>
       </syspropertyset>
-      <classpath refid="${test.core.classpath.id}"/>
+      <classpath refid="test.core.classpath"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.src.dir}/core"
 	         includes="**/${test.include}.java"
 		 excludes="**/${test.exclude}.java" />
       </batchtest>
-      <batchtest todir="${test.build.dir}/core" if="testcase">
-        <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
-      </batchtest>
-    </junit>
-    <antcall target="checkfailure"/>
-  </target>   
-
-  <target name="run-test-hdfs-with-mr" depends="compile-hdfs-with-mr-test" description="Run hdfs unit tests that require mapred">
-
-    <delete dir="${test.build.data}"/>
-    <mkdir dir="${test.build.data}"/>
-    <delete dir="${test.log.dir}"/>
-    <mkdir dir="${test.log.dir}"/>
-    <copy file="${test.src.dir}/hadoop-policy.xml" 
-      todir="${test.build.extraconf}" />
-    <junit showoutput="${test.output}"
-      printsummary="${test.junit.printsummary}"
-      haltonfailure="${test.junit.haltonfailure}"
-      fork="yes"
-      forkmode="${test.junit.fork.mode}"
-      maxmemory="${test.junit.maxmemory}"
-      dir="${basedir}" timeout="${test.timeout}"
-      errorProperty="tests.failed" failureProperty="tests.failed">
-      <sysproperty key="test.build.data" value="${test.build.data}"/>
-      <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
-      <sysproperty key="test.debug.data" value="${test.debug.data}"/>
-      <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
-      <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-      <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
-      <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
-      <sysproperty key="java.library.path"
-       value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
-      <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
-      <!-- set compile.c++ in the child jvm only if it is set -->
-      <syspropertyset dynamic="no">
-         <propertyref name="compile.c++"/>
-      </syspropertyset>
-      <classpath refid="${test.hdfs.with.mr.classpath.id}"/>
-      <formatter type="${test.junit.output.format}" />
-      <batchtest todir="${test.build.dir}" unless="testcase">
-        <fileset dir="${test.src.dir}/hdfs-with-mr"
-           includes="**/${test.include}.java"
-     excludes="**/${test.exclude}.java" />
-      </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.src.dir}/hdfs-with-mr" includes="**/${testcase}.java"/>
+        <fileset dir="${test.src.dir}/core" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-    <antcall target="checkfailure"/>
-  </target>  
+    <antcall target="checkfailure"/> 
+  </target>   
 
   <target name="checkfailure" if="tests.failed">
     <touch file="${test.build.dir}/testsfailed"/>
     <fail unless="continueOnFailure">Tests failed!</fail>
   </target>
 
-  <target name="test-contrib" depends="compile, compile-hdfs-with-mr-test" description="Run contrib unit tests">
+  <target name="test-contrib" depends="compile, compile-core-test" description="Run contrib unit tests">
     <subant target="test">
        <property name="version" value="${version}"/>
        <property name="clover.jar" value="${clover.jar}"/>
@@ -639,18 +537,24 @@
     </subant> 
   </target>
 
-  <target name="test-core" description="Run core, hdfs and mapred unit tests">
-    <delete file="${test.build.dir}/testsfailed"/>
-    <property name="continueOnFailure" value="true"/>
+<!--
+  <target name="test-core" description="Run core unit tests">
+    <delete file="${test.build.dir}/testsfailed"/> 
+    <property name="continueOnFailure" value="true"/> 
     <antcall target="run-test-core"/>
     <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
-    <fail if="testsfailed">Tests failed!</fail>
+    <fail if="testsfailed">Tests failed!</fail> 
   </target>
+-->
 
-  <target name="test" depends="jar-test, test-core" description="Run all unit tests">
-    <subant target="test-contrib">
-      <fileset file="${basedir}/build.xml"/>
-     </subant>
+  <target name="test" depends="jar-test" description="Run all unit tests">
+    <!--<property name="continueOnFailure" value="true"/> -->
+    <subant target="test-core" failonError="false">	 
+      <fileset dir="." includes="build.xml"/>
+    </subant>
+    <subant target="test-contrib">	 
+      <fileset dir="." includes="build.xml"/>
+    </subant>
   </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
@@ -788,9 +692,7 @@
       maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
-
-    	<packageset dir="src/contrib/data_join/src/java"/>
-    	<packageset dir="src/contrib/index/src/java"/>
+	<packageset dir="src/contrib/failmon/src/java/"/> 
 
         <link href="${javadoc.link.java}"/>
 
@@ -805,8 +707,7 @@
         </classpath>
 
     	<group title="Core" packages="org.apache.*"/>
-        <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib.utils.join*"/>
-        <group title="contrib: Index" packages="org.apache.hadoop.contrib.index*"/>
+        <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
 
     </javadoc>
   </target>	
@@ -837,7 +738,6 @@
       maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
-
 	<packageset dir="src/contrib/failmon/src/java/"/> 
 	
         <link href="${javadoc.link.java}"/>
@@ -852,10 +752,7 @@
           <pathelement location="${build.tools}"/>
         </classpath>
 
-    	<group title="Core" packages="org.apache.*"/>
-
-       <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib.utils.join*"/>
-       <group title="contrib: Index" packages="org.apache.hadoop.contrib.index*"/>
+       <group title="Core" packages="org.apache.*"/>
        <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
     </javadoc>
   </target>	
@@ -955,10 +852,6 @@
       <property name="dist.dir" value="${dist.dir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
-
-    <copy todir="${dist.dir}/webapps">
-      <fileset dir="${build.webapps}"/>
-    </copy>
 
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${final.name}.jar"/>
@@ -1060,13 +953,8 @@
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
-    <copy todir="${dist.dir}/webapps">
-      <fileset dir="${build.webapps}"/>
-    </copy>
-
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${final.name}.jar"/>
-      <fileset file="${build.dir}/${test.final.name}.jar"/>
     </copy>
     
     <copy todir="${dist.dir}/bin">
@@ -1396,10 +1284,10 @@
     <fail>
       <condition >
         <not>
-          <available file="${hadoop.jar}" />
+          <available file="${hadoop-core.jar}" />
         </not>
       </condition>
-      Not found: ${hadoop.jar}
+      Not found: ${hadoop-core.jar}
       Please run the target "jar" in the main build file
     </fail>
 
@@ -1432,7 +1320,7 @@
 
 
   <target name="copy-jar-to-maven" depends="ready-to-publish">
-    <copy file="${hadoop.jar}"
+    <copy file="${hadoop-core.jar}"
       tofile="${build.ivy.maven.jar}"/>
     <checksum file="${build.ivy.maven.jar}" algorithm="md5"/>
   </target>
