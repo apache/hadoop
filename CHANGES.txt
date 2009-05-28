@@ -89,6 +89,10 @@ Release 0.20.1 - Unreleased
     HADOOP-4626. Correct the API links in hdfs forrest doc so that they
     point to the same version of hadoop.  (szetszwo)
 
+    HADOOP-5883. Fixed tasktracker memory monitoring to account for
+    momentary spurts in memory usage due to java's fork() model.
+    (yhemanth)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

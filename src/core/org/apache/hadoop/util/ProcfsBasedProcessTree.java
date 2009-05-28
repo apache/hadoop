@@ -52,14 +52,23 @@ public class ProcfsBasedProcessTree {
   private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern
       .compile("^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+\\s){16}([0-9]+)(\\s[0-9-]+){16}");
 
+  // to enable testing, using this variable which can be configured
+  // to a test directory.
+  private String procfsDir;
+  
   private Integer pid = -1;
 
   private Map<Integer, ProcessInfo> processTree = new HashMap<Integer, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
-    this.pid = getValidPID(pid);
+    this(pid, PROCFS);
   }
 
+  public ProcfsBasedProcessTree(String pid, String procfsDir) {
+    this.pid = getValidPID(pid);
+    this.procfsDir = procfsDir;
+  }
+  
   public void setSigKillInterval(long interval) {
     sleepTimeBeforeSigKill = interval;
   }
@@ -96,13 +105,17 @@ public class ProcfsBasedProcessTree {
       List<Integer> processList = getProcessList();
 
       Map<Integer, ProcessInfo> allProcessInfo = new HashMap<Integer, ProcessInfo>();
+      
+      // cache the processTree to get the age for processes
+      Map<Integer, ProcessInfo> oldProcs = 
+              new HashMap<Integer, ProcessInfo>(processTree);
       processTree.clear();
 
       ProcessInfo me = null;
       for (Integer proc : processList) {
         // Get information for each process
         ProcessInfo pInfo = new ProcessInfo(proc);
-        if (constructProcessInfo(pInfo) != null) {
+        if (constructProcessInfo(pInfo, procfsDir) != null) {
           allProcessInfo.put(proc, pInfo);
           if (proc.equals(this.pid)) {
             me = pInfo; // cache 'me'
@@ -136,6 +149,16 @@ public class ProcfsBasedProcessTree {
           processTree.put(pInfo.getPid(), pInfo);
         }
         pInfoQueue.addAll(pInfo.getChildren());
+      }
+
+      // update age values.
+      for (Map.Entry<Integer, ProcessInfo> procs : processTree.entrySet()) {
+        ProcessInfo oldInfo = oldProcs.get(procs.getKey());
+        if (oldInfo != null) {
+          if (procs.getValue() != null) {
+            procs.getValue().updateAge(oldInfo);  
+          }
+        }
       }
 
       if (LOG.isDebugEnabled()) {
@@ -197,9 +220,23 @@ public class ProcfsBasedProcessTree {
    * @return cumulative virtual memory used by the process-tree in bytes.
    */
   public long getCumulativeVmem() {
+    // include all processes.. all processes will be older than 0.
+    return getCumulativeVmem(0);
+  }
+
+  /**
+   * Get the cumulative virtual memory used by all the processes in the
+   * process-tree that are older than the passed in age.
+   * 
+   * @param olderThanAge processes above this age are included in the
+   *                      memory addition
+   * @return cumulative virtual memory used by the process-tree in bytes,
+   *          for processes older than this age.
+   */
+  public long getCumulativeVmem(int olderThanAge) {
     long total = 0;
     for (ProcessInfo p : processTree.values()) {
-      if (p != null) {
+      if ((p != null) && (p.getAge() > olderThanAge)) {
         total += p.getVmem();
       }
     }
@@ -268,13 +305,13 @@ public class ProcfsBasedProcessTree {
    * Get the list of all processes in the system.
    */
   private List<Integer> getProcessList() {
-    String[] processDirs = (new File(PROCFS)).list();
+    String[] processDirs = (new File(procfsDir)).list();
     List<Integer> processList = new ArrayList<Integer>();
 
     for (String dir : processDirs) {
       try {
         int pd = Integer.parseInt(dir);
-        if ((new File(PROCFS + dir)).isDirectory()) {
+        if ((new File(procfsDir, dir)).isDirectory()) {
           processList.add(Integer.valueOf(pd));
         }
       } catch (NumberFormatException n) {
@@ -292,12 +329,29 @@ public class ProcfsBasedProcessTree {
    * same. Returns null on failing to read from procfs,
    */
   private ProcessInfo constructProcessInfo(ProcessInfo pinfo) {
+    return constructProcessInfo(pinfo, PROCFS);
+  }
+
+  /**
+   * Construct the ProcessInfo using the process' PID and procfs rooted at the
+   * specified directory and return the same. It is provided mainly to assist
+   * testing purposes.
+   * 
+   * Returns null on failing to read from procfs,
+   *
+   * @param pinfo ProcessInfo that needs to be updated
+   * @param procfsDir root of the proc file system
+   * @return updated ProcessInfo, null on errors.
+   */
+  private ProcessInfo constructProcessInfo(ProcessInfo pinfo, 
+                                                    String procfsDir) {
     ProcessInfo ret = null;
-    // Read "/proc/<pid>/stat" file
+    // Read "procfsDir/<pid>/stat" file
     BufferedReader in = null;
     FileReader fReader = null;
     try {
-      fReader = new FileReader(PROCFS + pinfo.getPid() + "/stat");
+      File pidDir = new File(procfsDir, String.valueOf(pinfo.getPid()));
+      fReader = new FileReader(new File(pidDir, "/stat"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // The process vanished in the interim!
@@ -311,7 +365,7 @@ public class ProcfsBasedProcessTree {
       boolean mat = m.find();
       if (mat) {
         // Set ( name ) ( ppid ) ( pgrpId ) (session ) (vsize )
-        pinfo.update(m.group(2), Integer.parseInt(m.group(3)), Integer
+        pinfo.updateProcessInfo(m.group(2), Integer.parseInt(m.group(3)), Integer
             .parseInt(m.group(4)), Integer.parseInt(m.group(5)), Long
             .parseLong(m.group(7)));
       }
@@ -338,7 +392,7 @@ public class ProcfsBasedProcessTree {
 
     return ret;
   }
-
+  
   /**
    * Is the process with PID pid still alive?
    */
@@ -391,7 +445,6 @@ public class ProcfsBasedProcessTree {
       }
     }
   }
-
   /**
    * Returns a string printing PIDs of process present in the
    * ProcfsBasedProcessTree. Output format : [pid pid ..]
@@ -417,10 +470,14 @@ public class ProcfsBasedProcessTree {
     private Integer ppid; // parent process-id
     private Integer sessionId; // session-id
     private Long vmem; // virtual memory usage
+    // how many times has this process been seen alive
+    private int age; 
     private List<ProcessInfo> children = new ArrayList<ProcessInfo>(); // list of children
 
     public ProcessInfo(int pid) {
       this.pid = Integer.valueOf(pid);
+      // seeing this the first time.
+      this.age = 1;
     }
 
     public Integer getPid() {
@@ -447,6 +504,10 @@ public class ProcfsBasedProcessTree {
       return vmem;
     }
 
+    public int getAge() {
+      return age;
+    }
+    
     public boolean isParent(ProcessInfo p) {
       if (pid.equals(p.getPpid())) {
         return true;
@@ -454,7 +515,7 @@ public class ProcfsBasedProcessTree {
       return false;
     }
 
-    public void update(String name, Integer ppid, Integer pgrpId,
+    public void updateProcessInfo(String name, Integer ppid, Integer pgrpId,
         Integer sessionId, Long vmem) {
       this.name = name;
       this.ppid = ppid;
@@ -463,6 +524,10 @@ public class ProcfsBasedProcessTree {
       this.vmem = vmem;
     }
 
+    public void updateAge(ProcessInfo oldInfo) {
+      this.age = oldInfo.age + 1;
+    }
+    
     public boolean addChild(ProcessInfo p) {
       return children.add(p);
     }
