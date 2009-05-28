@@ -84,6 +84,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   final int writePacketSize;
   private final FileSystem.Statistics stats;
   private int maxBlockAcquireFailures;
+  private IOException closedLocation;
     
  
   public static ClientProtocol createNamenode(Configuration conf) throws IOException {
@@ -196,6 +197,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private void checkOpen() throws IOException {
     if (!clientRunning) {
       IOException result = new IOException("Filesystem closed");
+      if (closedLocation != null) {
+        result.initCause(closedLocation);
+      }
       throw result;
     }
   }
@@ -215,6 +219,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   
       // close connections to the namenode
       RPC.stopProxy(rpcNamenode);
+      if (LOG.isDebugEnabled()) {
+        closedLocation = new IOException("Filesystem closed");
+        LOG.debug("Closing filesystem", closedLocation);
+      }
     }
   }
 
