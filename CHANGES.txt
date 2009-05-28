@@ -701,6 +701,9 @@ Trunk (unreleased changes)
     HADOOP-5856. Fix "unsafe multithreaded use of DateFormat" findbugs warning
     in DataBlockScanner.  (Kan Zhang via szetszwo)
 
+    HADOOP-4864. Fixes a problem to do with -libjars with multiple jars when
+    client and cluster reside on different OSs. (Amareshwari Sriramadasu via ddas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -683,7 +683,7 @@ public class DistributedCache {
     throws IOException {
     String classpath = conf.get("mapred.job.classpath.files");
     conf.set("mapred.job.classpath.files", classpath == null ? file.toString()
-             : classpath + System.getProperty("path.separator") + file.toString());
+             : classpath + "," + file.toString());
     FileSystem fs = FileSystem.get(conf);
     URI uri = fs.makeQualified(file).toUri();
 
@@ -696,14 +696,14 @@ public class DistributedCache {
    * @param conf Configuration that contains the classpath setting
    */
   public static Path[] getFileClassPaths(Configuration conf) {
-    String classpath = conf.get("mapred.job.classpath.files");
-    if (classpath == null)
-      return null;
-    ArrayList list = Collections.list(new StringTokenizer(classpath, System
-                                                          .getProperty("path.separator")));
+    ArrayList<String> list = (ArrayList<String>)conf.getStringCollection(
+                                "mapred.job.classpath.files");
+    if (list.size() == 0) { 
+      return null; 
+    }
     Path[] paths = new Path[list.size()];
     for (int i = 0; i < list.size(); i++) {
-      paths[i] = new Path((String) list.get(i));
+      paths[i] = new Path(list.get(i));
     }
     return paths;
   }
@@ -719,8 +719,7 @@ public class DistributedCache {
     throws IOException {
     String classpath = conf.get("mapred.job.classpath.archives");
     conf.set("mapred.job.classpath.archives", classpath == null ? archive
-             .toString() : classpath + System.getProperty("path.separator")
-             + archive.toString());
+             .toString() : classpath + "," + archive.toString());
     FileSystem fs = FileSystem.get(conf);
     URI uri = fs.makeQualified(archive).toUri();
 
@@ -733,14 +732,14 @@ public class DistributedCache {
    * @param conf Configuration that contains the classpath setting
    */
   public static Path[] getArchiveClassPaths(Configuration conf) {
-    String classpath = conf.get("mapred.job.classpath.archives");
-    if (classpath == null)
-      return null;
-    ArrayList list = Collections.list(new StringTokenizer(classpath, System
-                                                          .getProperty("path.separator")));
+    ArrayList<String> list = (ArrayList<String>)conf.getStringCollection(
+                                "mapred.job.classpath.archives");
+    if (list.size() == 0) { 
+      return null; 
+    }
     Path[] paths = new Path[list.size()];
     for (int i = 0; i < list.size(); i++) {
-      paths[i] = new Path((String) list.get(i));
+      paths[i] = new Path(list.get(i));
     }
     return paths;
   }
