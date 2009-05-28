@@ -390,13 +390,16 @@ Trunk (unreleased changes)
     TestNameEditsConfig, TestStartup and TestStorageRestore.
     (Jakob Homan via shv)
 
-    HADOOP-5438. Provide a single FileSystem method to create or open-for-append 
+    HADOOP-5438. Provide a single FileSystem method to create or open-for-append
     to a file.  (He Yongqiang via dhruba)
 
     HADOOP-5472. Change DistCp to support globbing of input paths.  (Dhruba
     Borthakur and Rodrigo Schmidt via szetszwo)
 
     HADOOP-5175. Don't unpack libjars on classpath. (Todd Lipcon via tomwhite)
+
+    HADOOP-5620. Add an option to DistCp for preserving modification and access
+    times.  (Rodrigo Schmidt via szetszwo)
 
   OPTIMIZATIONS
 

@@ -86,7 +86,8 @@ public class DistCp implements Tool {
     "\n                       u: user" + 
     "\n                       g: group" +
     "\n                       p: permission" +
-    "\n                       -p alone is equivalent to -prbugp" +
+    "\n                       t: modification and access times" +
+    "\n                       -p alone is equivalent to -prbugpt" +
     "\n-i                     Ignore failures" +
     "\n-log <logdir>          Write logs to <logdir>" +
     "\n-m <num_maps>          Maximum number of simultaneous copies" +
@@ -146,7 +147,7 @@ public class DistCp implements Tool {
     }
   }
   static enum FileAttribute {
-    BLOCK_SIZE, REPLICATION, USER, GROUP, PERMISSION;
+    BLOCK_SIZE, REPLICATION, USER, GROUP, PERMISSION, TIMES;
 
     final char symbol;
 
@@ -460,7 +461,7 @@ public class DistCp implements Tool {
               + ") but expected " + bytesString(srcstat.getLen()) 
               + " from " + srcstat.getPath());        
         } 
-        updatePermissions(srcstat, dststat);
+        updateDestStatus(srcstat, dststat);
       }
 
       // report at least once for each file
@@ -486,10 +487,10 @@ public class DistCp implements Tool {
       }
     }
 
-    private void updatePermissions(FileStatus src, FileStatus dst
+    private void updateDestStatus(FileStatus src, FileStatus dst
         ) throws IOException {
       if (preserve_status) {
-        DistCp.updatePermissions(src, dst, preseved, destFileSys);
+        DistCp.updateDestStatus(src, dst, preseved, destFileSys);
       }
     }
 
@@ -669,7 +670,7 @@ public class DistCp implements Tool {
     }
   }
 
-  private static void updatePermissions(FileStatus src, FileStatus dst,
+  private static void updateDestStatus(FileStatus src, FileStatus dst,
       EnumSet<FileAttribute> preseved, FileSystem destFileSys
       ) throws IOException {
     String owner = null;
@@ -688,6 +689,9 @@ public class DistCp implements Tool {
     if (preseved.contains(FileAttribute.PERMISSION)
         && !src.getPermission().equals(dst.getPermission())) {
       destFileSys.setPermission(dst.getPath(), src.getPermission());
+    }
+    if (preseved.contains(FileAttribute.TIMES)) {
+      destFileSys.setTimes(dst.getPath(), src.getModificationTime(), src.getAccessTime());
     }
   }
 
@@ -713,7 +717,7 @@ public class DistCp implements Tool {
       FilePair pair = new FilePair(); 
       for(; in.next(dsttext, pair); ) {
         Path absdst = new Path(destPath, pair.output);
-        updatePermissions(pair.input, dstfs.getFileStatus(absdst),
+        updateDestStatus(pair.input, dstfs.getFileStatus(absdst),
             preseved, dstfs);
       }
     } finally {
