@@ -796,6 +796,10 @@ Release 0.20.1 - Unreleased
     momentary spurts in memory usage due to java's fork() model.
     (yhemanth)
 
+    HADOOP-5539. Fixes a problem to do with not preserving intermediate
+    output compression for merged data.
+    (Jothi Padmanabhan and Billy Pearson via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
