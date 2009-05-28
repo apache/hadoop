@@ -704,6 +704,9 @@ Trunk (unreleased changes)
     HADOOP-4864. Fixes a problem to do with -libjars with multiple jars when
     client and cluster reside on different OSs. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-5623. Fixes a problem to do with status messages getting overwritten
+    in streaming jobs. (Rick Cox and Jothi Padmanabhan via ddas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

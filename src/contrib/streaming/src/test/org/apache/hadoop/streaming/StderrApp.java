@@ -32,8 +32,16 @@ public class StderrApp
    * postWriteLines to stderr.
    */
   public static void go(int preWriteLines, int sleep, int postWriteLines) throws IOException {
+    go(preWriteLines, sleep, postWriteLines, false);
+  }
+  
+  public static void go(int preWriteLines, int sleep, int postWriteLines, boolean status) throws IOException {
     BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
     String line;
+    
+    if (status) {
+      System.err.println("reporter:status:starting echo");
+    }      
        
     while (preWriteLines > 0) {
       --preWriteLines;
@@ -57,13 +65,14 @@ public class StderrApp
 
   public static void main(String[] args) throws IOException {
     if (args.length < 3) {
-      System.err.println("Usage: StderrApp PREWRITE SLEEP POSTWRITE");
+      System.err.println("Usage: StderrApp PREWRITE SLEEP POSTWRITE [STATUS]");
       return;
     }
     int preWriteLines = Integer.parseInt(args[0]);
     int sleep = Integer.parseInt(args[1]);
     int postWriteLines = Integer.parseInt(args[2]);
+    boolean status = args.length > 3 ? Boolean.parseBoolean(args[3]) : false;
     
-    go(preWriteLines, sleep, postWriteLines);
+    go(preWriteLines, sleep, postWriteLines, status);
   }
 }
