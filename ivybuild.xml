@@ -238,6 +238,8 @@ ${build.ivy.report.dir}
     </delegate2>
   </target>
 
+  <!-- generate a junit report. 
+  tip: you can run this while junit is still going on-->
   <target name="junitreport"  depends="ready-to-test">
     <junitreport todir="${test.reports.dir}">
       <fileset dir="${test.data.dir}">
@@ -250,4 +252,34 @@ ${build.ivy.report.dir}
 
   <target name="tested" depends="junit,junitreport" />
 
+  <target name="svn-init" >
+   <presetdef name="svn" >
+    <exec executable="svn" failonerror="true">
+    </exec>
+   </presetdef>
+   <property name="trunk" 
+    value="https://svn.apache.org/repos/asf/hadoop/core/trunk"/>
+  </target>
+  
+  <target name="svn-merge" depends="svn-init"
+    description="merge in the trunk"  >
+    <svn>
+      <arg line="merge ${trunk}"/>
+    </svn>
+  </target>
+  
+  <target name="svn-diff" depends="svn-init"
+    description="diff the local code against the branch"  >
+    <svn>
+      <arg line="diff"/>
+    </svn>
+  </target>
+
+  <target name="svn-resolved" depends="svn-init"
+    description="mark the tree as resolved"  >
+    <svn>
+      <arg line="resolve"/>
+    </svn>
+  </target>
+  
 </project>
