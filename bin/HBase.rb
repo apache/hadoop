@@ -271,6 +271,18 @@ module HBase
         for server in status.getDeadServerNames()
           puts("    %s" % [ server ])
         end
+      elsif format != nil and format == "simple"
+        puts("%d live servers" % [ status.getServers() ])
+        for server in status.getServerInfo()
+          puts("    %s:%d %d" % \
+            [ server.getServerAddress().getHostname(),  \
+              server.getServerAddress().getPort(), server.getStartCode() ])
+          puts("        %s" % [ server.getLoad().toString() ])
+        end
+        puts("%d dead servers" % [ status.getDeadServers() ])
+        for server in status.getDeadServerNames()
+          puts("    %s" % [ server ])
+        end
       else
         puts("%d servers, %d dead, %.4f average load" % \
           [ status.getServers(), status.getDeadServers(), \
