@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,9 +29,12 @@ import java.util.regex.Matcher;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.examples.SleepJob;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.TestProcfsBasedProcessTree;
 import org.apache.hadoop.util.ToolRunner;
 
 import junit.framework.TestCase;
@@ -42,6 +46,9 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
   private static final Log LOG =
       LogFactory.getLog(TestTaskTrackerMemoryManager.class);
+  private static String TEST_ROOT_DIR = new Path(System.getProperty(
+		    "test.build.data", "/tmp")).toString().replace(' ', '+');
+
   private MiniMRCluster miniMRCluster;
 
   private String taskOverLimitPatternString =
@@ -344,5 +351,91 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     // Test succeeded, kill the job.
     job.killJob();
+  }
+  
+  /**
+   * Test to verify the check for whether a process tree is over limit or not.
+   * @throws IOException if there was a problem setting up the
+   *                      fake procfs directories or files.
+   */
+  public void testProcessTreeLimits() throws IOException {
+    
+    // set up a dummy proc file system
+    File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
+    String[] pids = { "100", "200", "300", "400", "500", "600", "700" };
+    try {
+      TestProcfsBasedProcessTree.setupProcfsRootDir(procfsRootDir);
+      
+      // create pid dirs.
+      TestProcfsBasedProcessTree.setupPidDirs(procfsRootDir, pids);
+      
+      // create process infos.
+      TestProcfsBasedProcessTree.ProcessStatInfo[] procs =
+          new TestProcfsBasedProcessTree.ProcessStatInfo[7];
+
+      // assume pids 100, 500 are in 1 tree 
+      // 200,300,400 are in another
+      // 600,700 are in a third
+      procs[0] = new TestProcfsBasedProcessTree.ProcessStatInfo(
+          new String[] {"100", "proc1", "1", "100", "100", "100000"});
+      procs[1] = new TestProcfsBasedProcessTree.ProcessStatInfo(
+          new String[] {"200", "proc2", "1", "200", "200", "200000"});
+      procs[2] = new TestProcfsBasedProcessTree.ProcessStatInfo(
+          new String[] {"300", "proc3", "200", "200", "200", "300000"});
+      procs[3] = new TestProcfsBasedProcessTree.ProcessStatInfo(
+          new String[] {"400", "proc4", "200", "200", "200", "400000"});
+      procs[4] = new TestProcfsBasedProcessTree.ProcessStatInfo(
+          new String[] {"500", "proc5", "100", "100", "100", "1500000"});
+      procs[5] = new TestProcfsBasedProcessTree.ProcessStatInfo(
+          new String[] {"600", "proc6", "1", "600", "600", "100000"});
+      procs[6] = new TestProcfsBasedProcessTree.ProcessStatInfo(
+          new String[] {"700", "proc7", "600", "600", "600", "100000"});
+      // write stat files.
+      TestProcfsBasedProcessTree.writeStatFiles(procfsRootDir, pids, procs);
+
+      // vmem limit
+      long limit = 700000;
+      
+      // Create TaskMemoryMonitorThread
+      TaskMemoryManagerThread test = new TaskMemoryManagerThread(1000000L,
+                                                                5000L);
+      // create process trees
+      // tree rooted at 100 is over limit immediately, as it is
+      // twice over the mem limit.
+      ProcfsBasedProcessTree pTree = new ProcfsBasedProcessTree(
+                                          "100", true, 100L, 
+                                          procfsRootDir.getAbsolutePath());
+      pTree.getProcessTree();
+      assertTrue("tree rooted at 100 should be over limit " +
+                    "after first iteration.",
+                  test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      
+      // the tree rooted at 200 is initially below limit.
+      pTree = new ProcfsBasedProcessTree("200", true, 100L,
+                                          procfsRootDir.getAbsolutePath());
+      pTree.getProcessTree();
+      assertFalse("tree rooted at 200 shouldn't be over limit " +
+                    "after one iteration.",
+                  test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      // second iteration - now the tree has been over limit twice,
+      // hence it should be declared over limit.
+      pTree.getProcessTree();
+      assertTrue("tree rooted at 200 should be over limit after 2 iterations",
+                  test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      
+      // the tree rooted at 600 is never over limit.
+      pTree = new ProcfsBasedProcessTree("600", true, 100L,
+                                            procfsRootDir.getAbsolutePath());
+      pTree.getProcessTree();
+      assertFalse("tree rooted at 600 should never be over limit.",
+                    test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+      
+      // another iteration does not make any difference.
+      pTree.getProcessTree();
+      assertFalse("tree rooted at 600 should never be over limit.",
+                    test.isProcessTreeOverLimit(pTree, "dummyId", limit));
+    } finally {
+      FileUtil.fullyDelete(procfsRootDir);
+    }
   }
 }
