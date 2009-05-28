@@ -1415,7 +1415,7 @@ class MapTask extends Task {
           //merge
           @SuppressWarnings("unchecked")
           RawKeyValueIterator kvIter = Merger.merge(job, rfs,
-                         keyClass, valClass,
+                         keyClass, valClass, codec,
                          segmentList, job.getInt("io.sort.factor", 100),
                          new Path(mapId.toString()),
                          job.getOutputKeyComparator(), reporter,

@@ -65,6 +65,23 @@ class Merger {
   }
   
   public static <K extends Object, V extends Object>
+  RawKeyValueIterator merge(Configuration conf, FileSystem fs,
+                                   Class<K> keyClass, Class<V> valueClass,
+                                   CompressionCodec codec,
+                                   List<Segment<K, V>> segments, 
+                                   int mergeFactor, Path tmpDir,
+                                   RawComparator<K> comparator, Progressable reporter,
+                                   Counters.Counter readsCounter,
+                                   Counters.Counter writesCounter)
+      throws IOException {
+    return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
+        false, codec).merge(keyClass, valueClass,
+            mergeFactor, tmpDir,
+            readsCounter, writesCounter);
+
+  }
+
+  public static <K extends Object, V extends Object>
   RawKeyValueIterator merge(Configuration conf, FileSystem fs, 
                             Class<K> keyClass, Class<V> valueClass, 
                             List<Segment<K, V>> segments, 
@@ -109,6 +126,25 @@ class Merger {
                                                tmpDir,
                                                readsCounter, writesCounter);
   }
+
+
+  static <K extends Object, V extends Object>
+  RawKeyValueIterator merge(Configuration conf, FileSystem fs,
+                          Class<K> keyClass, Class<V> valueClass,
+                          CompressionCodec codec,
+                          List<Segment<K, V>> segments,
+                          int mergeFactor, int inMemSegments, Path tmpDir,
+                          RawComparator<K> comparator, Progressable reporter,
+                          boolean sortSegments,
+                          Counters.Counter readsCounter,
+                          Counters.Counter writesCounter)
+    throws IOException {
+  return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
+                         sortSegments, codec).merge(keyClass, valueClass,
+                                             mergeFactor, inMemSegments,
+                                             tmpDir,
+                                             readsCounter, writesCounter);
+}
 
   public static <K extends Object, V extends Object>
   void writeFile(RawKeyValueIterator records, Writer<K, V> writer, 
@@ -265,6 +301,13 @@ class Merger {
       if (sortSegments) {
         Collections.sort(segments, segmentComparator);
       }
+    }
+
+    public MergeQueue(Configuration conf, FileSystem fs,
+        List<Segment<K, V>> segments, RawComparator<K> comparator,
+        Progressable reporter, boolean sortSegments, CompressionCodec codec) {
+      this(conf, fs, segments, comparator, reporter, sortSegments);
+      this.codec = codec;
     }
 
     public void close() throws IOException {

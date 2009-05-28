@@ -2234,7 +2234,7 @@ class ReduceTask extends Task {
         diskSegments.addAll(0, memDiskSegments);
         memDiskSegments.clear();
         RawKeyValueIterator diskMerge = Merger.merge(
-            job, fs, keyClass, valueClass, diskSegments,
+            job, fs, keyClass, valueClass, codec, diskSegments,
             ioSortFactor, numInMemSegments, tmpDir, comparator,
             reporter, false, spilledRecordsCounter, null);
         diskSegments.clear();
