@@ -710,6 +710,9 @@ Trunk (unreleased changes)
     HADOOP-5895. Fixes computation of count of merged bytes for logging.
     (Ravi Gummadi via ddas)
 
+    HADOOP-5805. problem using top level s3 buckets as input/output directories.
+    (Ian Nowland via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

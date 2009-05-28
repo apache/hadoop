@@ -251,6 +251,11 @@ public class NativeS3FileSystem extends FileSystem {
   }
   
   private static String pathToKey(Path path) {
+    if (path.toUri().getScheme() != null && "".equals(path.toUri().getPath())) {
+      // allow uris without trailing slash after bucket to refer to root,
+      // like s3n://mybucket
+      return "";
+    }
     if (!path.isAbsolute()) {
       throw new IllegalArgumentException("Path must be absolute: " + path);
     }

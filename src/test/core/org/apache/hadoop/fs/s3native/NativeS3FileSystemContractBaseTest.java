@@ -56,4 +56,7 @@ public abstract class NativeS3FileSystemContractBaseTest
     assertEquals(path("/test"), paths[0].getPath());
   }
   
+  public void testNoTrailingBackslashOnBucket() throws Exception {
+    assertTrue(fs.getFileStatus(new Path(fs.getUri().toString())).isDir());
+  }
 }
