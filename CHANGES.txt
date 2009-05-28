@@ -707,6 +707,9 @@ Trunk (unreleased changes)
     HADOOP-5623. Fixes a problem to do with status messages getting overwritten
     in streaming jobs. (Rick Cox and Jothi Padmanabhan via ddas)
 
+    HADOOP-5895. Fixes computation of count of merged bytes for logging.
+    (Ravi Gummadi via ddas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -513,9 +513,9 @@ class Merger {
             long startPos = segment.getPosition();
             boolean hasNext = segment.nextRawKey();
             long endPos = segment.getPosition();
-            startBytes += endPos - startPos;
             
             if (hasNext) {
+              startBytes += endPos - startPos;
               segmentsToMerge.add(segment);
               segmentsConsidered++;
             }
@@ -691,13 +691,15 @@ class Merger {
         segmentSizes.add(segments.get(i).getLength());
       }
       
-      if (includeFinalMerge) {
-        // just increment so that the following while loop iterates
-        // for 1 more iteration. This is to include final merge as part of
-        // the computation of expected input bytes of merges
-        n++;
-      }
-      while (n > f) {
+      // If includeFinalMerge is true, allow the following while loop iterate
+      // for 1 more iteration. This is to include final merge as part of the
+      // computation of expected input bytes of merges
+      boolean considerFinalMerge = includeFinalMerge;
+      
+      while (n > f || considerFinalMerge) {
+        if (n <=f ) {
+          considerFinalMerge = false;
+        }
         long mergedSize = 0;
         f = Math.min(f, segmentSizes.size());
         for (int j = 0; j < f; j++) {
