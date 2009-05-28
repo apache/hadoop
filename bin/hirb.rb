@@ -237,6 +237,13 @@ HBASE SHELL COMMANDS:
            hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, \\
              STARTROW => 'xyz'}
 
+ status    Show cluster status. Can be 'simple' or 'detailed'. The default is
+           'simple'. Examples:
+           
+           hbase> status
+           hbase> status 'simple'
+           hbase> status 'detailed'
+
  shutdown  Shut down the cluster.
 
  truncate  Disables, drops and recreates the specified table.
@@ -334,7 +341,11 @@ end
 def close_region(regionName, server = nil)
   admin().close_region(regionName, server)
 end
-  
+
+def status(format = 'simple')
+  admin().status(format)
+end
+
 # CRUD
   
 def get(table, row, args = {})

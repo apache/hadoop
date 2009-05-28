@@ -70,7 +70,8 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * location instead.</li>
    * <li>Version 17: Added incrementColumnValue.</li>
    * <li>Version 18: HBASE-1302.</li>
+   * <li>Version 19: Added getClusterStatus().</li>
    * </ul>
    */
-  public static final long versionID = 18L;
+  public static final long versionID = 19L;
 }

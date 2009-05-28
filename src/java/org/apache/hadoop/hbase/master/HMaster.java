@@ -40,6 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -967,6 +968,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     default:
       throw new IOException("unsupported modifyTable op " + op);
     }
+  }
+
+  /**
+   * @return cluster status
+   */
+  public ClusterStatus getClusterStatus() {
+    ClusterStatus status = new ClusterStatus();
+    status.setServerInfo(serverManager.serversToServerInfo.values());
+    status.setDeadServers(serverManager.deadServers);
+    return status;
   }
 
   /**

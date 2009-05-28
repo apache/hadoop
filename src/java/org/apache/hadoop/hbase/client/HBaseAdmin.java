@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -789,6 +790,17 @@ public class HBaseAdmin {
     } finally {
       this.master = null;
     }
+  }
+
+  /**
+   * @return cluster status
+   * @throws IOException
+   */
+  public ClusterStatus getClusterStatus() throws IOException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    return this.master.getClusterStatus();
   }
 
   private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)

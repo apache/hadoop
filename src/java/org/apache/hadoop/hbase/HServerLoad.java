@@ -23,7 +23,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -92,6 +95,13 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      */
     public byte[] getName() {
       return name;
+    }
+
+    /**
+     * @return the region name as a string
+     */
+    public String getNameAsString() {
+      return Bytes.toString(name);
     }
 
     /**
@@ -320,6 +330,13 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
    */
   public int getNumberOfRequests() {
     return numberOfRequests;
+  }
+
+  /**
+   * @return region load metrics
+   */
+  public Collection<RegionLoad> getRegionsLoad() {
+    return Collections.unmodifiableCollection(regionLoad);
   }
 
   /**

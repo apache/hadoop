@@ -253,6 +253,31 @@ module HBase
       @admin.shutdown()
     end
 
+    def status(format)
+      status = @admin.getClusterStatus()
+      if format != nil and format == "detailed"
+        puts("%d live servers" % [ status.getServers() ])
+        for server in status.getServerInfo()
+          puts("    %s:%d %d" % \
+            [ server.getServerAddress().getHostname(),  \
+              server.getServerAddress().getPort(), server.getStartCode() ])
+          puts("        %s" % [ server.getLoad().toString() ])
+          for region in server.getLoad().getRegionsLoad()
+            puts("        %s" % [ region.getNameAsString() ])
+            puts("            %s" % [ region.toString() ])
+          end
+        end
+        puts("%d dead servers" % [ status.getDeadServers() ])
+        for server in status.getDeadServerNames()
+          puts("    %s" % [ server ])
+        end
+      else
+        puts("%d servers, %d dead, %.4f average load" % \
+          [ status.getServers(), status.getDeadServers(), \
+            status.getAverageLoad()]) 
+      end
+    end
+
     def hcd(arg)
       # Return a new HColumnDescriptor made of passed args
       # TODO: This is brittle code.

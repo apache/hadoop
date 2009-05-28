@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Writable;
@@ -116,4 +117,9 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @throws IOException
    */
   public void shutdown() throws IOException;
+
+  /**
+   * Return cluster status.
+   */
+  public ClusterStatus getClusterStatus();
 }

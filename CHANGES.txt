@@ -286,6 +286,7 @@ Release 0.20.0 - Unreleased
    HBASE-1430  Read the logs in batches during log splitting to avoid OOME
    HBASE-1017  Region balancing does not bring newly added node within
                acceptable range (Evgeny Ryabitskiy via Stack)
+   HBASE-1454  HBaseAdmin.getClusterStatus
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
