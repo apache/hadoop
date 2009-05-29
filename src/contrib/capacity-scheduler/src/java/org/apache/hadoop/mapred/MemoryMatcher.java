@@ -53,10 +53,9 @@ class MemoryMatcher {
    * @return amount of memory that is used by the residing tasks,
    *          null if memory cannot be computed for some reason.
    */
-  private synchronized Long getMemReservedForTasks(
+  synchronized Long getMemReservedForTasks(
       TaskTrackerStatus taskTracker, CapacityTaskScheduler.TYPE taskType) {
     long vmem = 0;
-    long myVmem = 0;
 
     for (TaskStatus task : taskTracker.getTaskReports()) {
       // the following task states are one in which the slot is
@@ -90,6 +89,7 @@ class MemoryMatcher {
         // tasks' memory limits to the nearest multiple of the slot-memory-size
         // set on JT. This essentially translates to tasks of a high memory job
         // using multiple slots.
+        long myVmem = 0;
         if (task.getIsMap() && taskType.equals(CapacityTaskScheduler.TYPE.MAP)) {
           myVmem = jConf.getMemoryForMapTask();
           myVmem =

@@ -812,6 +812,10 @@ Release 0.20.1 - Unreleased
     output compression for merged data.
     (Jothi Padmanabhan and Billy Pearson via ddas)
 
+    HADOOP-5932. Fixes a problem in capacity scheduler in computing
+    available memory on a tasktracker.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
