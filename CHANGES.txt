@@ -404,6 +404,10 @@ Trunk (unreleased changes)
     HADOOP-5664. Change map serialization so a lock is obtained only where
     contention is possible, rather than for each write. (cdouglas)
 
+    HADOOP-5896. Remove the dependency of GenericOptionsParser on 
+    Option.withArgPattern. (Giridharan Kesavan and Sharad Agarwal via 
+    sharad)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

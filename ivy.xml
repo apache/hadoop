@@ -78,13 +78,14 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
-
- <!--used client side-->
-<!--  <dependency org="commons-cli"
-    name="commons-cli"
-    rev="${commons-cli.version}"
-    conf="client->default"/> -->
-
+    <dependency org="org.apache.mahout.commons"
+      name="commons-cli"
+      rev="${commons-cli2.version}"
+      conf="common->default"/>
+    <dependency org="commons-cli"
+      name="commons-cli"
+      rev="${commons-cli.version}"
+      conf="common->default"/>
     <dependency org="checkstyle"
       name="checkstyle"
       rev="${checkstyle.version}"
@@ -98,7 +99,6 @@
       rev="${xerces.version}"
       conf="jdiff->default">
     </dependency>
-
     <dependency org="xmlenc"
       name="xmlenc"
       rev="${xmlenc.version}"

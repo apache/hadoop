@@ -205,8 +205,7 @@ public class GenericOptionsParser {
     .withDescription("specify an application configuration file")
     .create("conf");
     Option property = OptionBuilder.withArgName("property=value")
-    .hasArgs()
-    .withArgPattern("=", 1)
+    .hasArg()
     .withDescription("use value for given property")
     .create('D');
     Option libjars = OptionBuilder.withArgName("paths")
@@ -281,9 +280,11 @@ public class GenericOptionsParser {
     }
     if (line.hasOption('D')) {
       String[] property = line.getOptionValues('D');
-      for(int i=0; i<property.length-1; i=i+2) {
-        if (property[i]!=null)
-          conf.set(property[i], property[i+1]);
+      for(String prop : property) {
+        String[] keyval = prop.split("=");
+        if (keyval.length == 2) {
+          conf.set(keyval[0], keyval[1]);
+        }
       }
     }
     conf.setBoolean("mapred.used.genericoptionsparser", true);
