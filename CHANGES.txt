@@ -708,9 +708,6 @@ Trunk (unreleased changes)
     HADOOP-5635. Change distributed cache to work with other distributed file
     systems. (Andrew Hitchcock via tomwhite)
 
-    HADOOP-5700. INode.getPathComponents throws NPE when given a non-absolute
-    path. (Todd Lipcon via tomwhite)
-
     HADOOP-5856. Fix "unsafe multithreaded use of DateFormat" findbugs warning
     in DataBlockScanner.  (Kan Zhang via szetszwo)
 
