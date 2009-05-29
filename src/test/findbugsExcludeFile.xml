@@ -220,9 +220,17 @@
        <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
      </Match>
 
+     <!--
+       CreateBlockWriteStreams and getTmpInputStreams are pretty much like a stream constructor.
+       The newly created streams are not supposed to be closed in the constructor. So ignore
+       the OBL warning.
+     -->
      <Match>
-       <Class name="org.apache.hadoop.examples.ContextFactory" />
-       <Method name="setAttributes" />
+       <Class name="org.apache.hadoop.hdfs.server.datanode.FSDataset" />
+       <Or>
+         <Method name="createBlockWriteStreams" />
+         <Method name="getTmpInputStreams" />
+       </Or>
        <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
      </Match>
 

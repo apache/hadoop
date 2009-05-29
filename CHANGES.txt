@@ -726,6 +726,9 @@ Trunk (unreleased changes)
     HADOOP-5940. trunk eclipse-plugin build fails while trying to copy 
     commons-cli jar from the lib dir (Giridharan Kesavan via gkesavan)
 
+    HADOOP-5864. Fix DMI and OBL findbugs in packages hdfs and metrics.
+    (hairong)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

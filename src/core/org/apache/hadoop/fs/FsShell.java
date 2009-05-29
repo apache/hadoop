@@ -1170,10 +1170,13 @@ public class FsShell extends Configured implements Tool {
 
     while (true) {
       FSDataInputStream in = srcFs.open(path);
-      in.seek(offset);
-      IOUtils.copyBytes(in, System.out, 1024, false);
-      offset = in.getPos();
-      in.close();
+      try {
+        in.seek(offset);
+        IOUtils.copyBytes(in, System.out, 1024);
+        offset = in.getPos();
+      } finally {
+        in.close();
+      }
       if (!foption) {
         break;
       }

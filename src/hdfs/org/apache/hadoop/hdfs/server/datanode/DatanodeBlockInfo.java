@@ -86,9 +86,17 @@ class DatanodeBlockInfo {
   private void detachFile(File file, Block b) throws IOException {
     File tmpFile = volume.createDetachFile(b, file.getName());
     try {
-      IOUtils.copyBytes(new FileInputStream(file),
-                        new FileOutputStream(tmpFile),
-                        16*1024, true);
+      FileInputStream in = new FileInputStream(file);
+      try {
+        FileOutputStream out = new FileOutputStream(tmpFile);
+        try {
+          IOUtils.copyBytes(in, out, 16*1024);
+        } finally {
+          out.close();
+        }
+      } finally {
+        in.close();
+      }
       if (file.length() != tmpFile.length()) {
         throw new IOException("Copy of file " + file + " size " + file.length()+
                               " into file " + tmpFile +
