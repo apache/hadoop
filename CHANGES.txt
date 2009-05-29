@@ -725,6 +725,9 @@ Trunk (unreleased changes)
 
     HADOOP-5805. problem using top level s3 buckets as input/output directories.
     (Ian Nowland via tomwhite)
+   
+    HADOOP-5940. trunk eclipse-plugin build fails while trying to copy 
+    commons-cli jar from the lib dir (Giridharan Kesavan via gkesavan)
 
 Release 0.20.1 - Unreleased
 
