@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.mapreduce.lib.input;
 
 import java.io.*;
 import java.lang.reflect.*;
 
 import org.apache.hadoop.fs.FileSystem;
 
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -33,32 +33,34 @@ import org.apache.hadoop.conf.Configuration;
  * This class allows using different RecordReaders for processing
  * these data chunks from different files.
  * @see CombineFileSplit
- * @deprecated Use
- * {@link org.apache.hadoop.mapreduce.lib.input.CombineFileRecordReader}
  */
-@Deprecated
-public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
+
+public class CombineFileRecordReader<K, V> extends RecordReader<K, V> {
 
   static final Class [] constructorSignature = new Class [] 
-                                         {CombineFileSplit.class, 
-                                          Configuration.class, 
-                                          Reporter.class,
+                                         {CombineFileSplit.class,
+                                          TaskAttemptContext.class,
                                           Integer.class};
 
   protected CombineFileSplit split;
-  protected JobConf jc;
-  protected Reporter reporter;
-  protected Class<RecordReader<K, V>> rrClass;
-  protected Constructor<RecordReader<K, V>> rrConstructor;
+  protected Class<? extends RecordReader<K,V>> rrClass;
+  protected Constructor<? extends RecordReader<K,V>> rrConstructor;
   protected FileSystem fs;
+  protected TaskAttemptContext context;
   
   protected int idx;
   protected long progress;
   protected RecordReader<K, V> curReader;
   
-  public boolean next(K key, V value) throws IOException {
+  public void initialize(InputSplit split,
+      TaskAttemptContext context) throws IOException, InterruptedException {
+    this.split = (CombineFileSplit)split;
+    this.context = context;
+  }
+  
+  public boolean nextKeyValue() throws IOException, InterruptedException {
 
-    while ((curReader == null) || !curReader.next(key, value)) {
+    while ((curReader == null) || !curReader.nextKeyValue()) {
       if (!initNextRecordReader()) {
         return false;
       }
@@ -66,19 +68,12 @@ public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
     return true;
   }
 
-  public K createKey() {
-    return curReader.createKey();
+  public K getCurrentKey() throws IOException, InterruptedException {
+    return curReader.getCurrentKey();
   }
   
-  public V createValue() {
-    return curReader.createValue();
-  }
-  
-  /**
-   * return the amount of data processed
-   */
-  public long getPos() throws IOException {
-    return progress;
+  public V getCurrentValue() throws IOException, InterruptedException {
+    return curReader.getCurrentValue();
   }
   
   public void close() throws IOException {
@@ -99,14 +94,13 @@ public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
    * A generic RecordReader that can hand out different recordReaders
    * for each chunk in the CombineFileSplit.
    */
-  public CombineFileRecordReader(JobConf job, CombineFileSplit split, 
-                                 Reporter reporter,
-                                 Class<RecordReader<K, V>> rrClass)
+  public CombineFileRecordReader(CombineFileSplit split,
+                                 TaskAttemptContext context,
+                                 Class<? extends RecordReader<K,V>> rrClass)
     throws IOException {
     this.split = split;
-    this.jc = job;
+    this.context = context;
     this.rrClass = rrClass;
-    this.reporter = reporter;
     this.idx = 0;
     this.curReader = null;
     this.progress = 0;
@@ -142,12 +136,13 @@ public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
     // get a record reader for the idx-th chunk
     try {
       curReader =  rrConstructor.newInstance(new Object [] 
-                            {split, jc, reporter, Integer.valueOf(idx)});
+                            {split, context, Integer.valueOf(idx)});
 
+      Configuration conf = context.getConfiguration();
       // setup some helper config variables.
-      jc.set("map.input.file", split.getPath(idx).toString());
-      jc.setLong("map.input.start", split.getOffset(idx));
-      jc.setLong("map.input.length", split.getLength(idx));
+      conf.set("map.input.file", split.getPath(idx).toString());
+      conf.setLong("map.input.start", split.getOffset(idx));
+      conf.setLong("map.input.length", split.getLength(idx));
     } catch (Exception e) {
       throw new RuntimeException (e);
     }

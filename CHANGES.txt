@@ -408,6 +408,9 @@ Trunk (unreleased changes)
     Option.withArgPattern. (Giridharan Kesavan and Sharad Agarwal via 
     sharad)
 
+    HADOOP-5698. Change org.apache.hadoop.examples.MultiFileWordCount to 
+    use new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

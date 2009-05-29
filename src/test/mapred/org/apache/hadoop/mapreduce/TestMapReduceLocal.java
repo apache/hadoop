@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.examples.MultiFileWordCount;
 import org.apache.hadoop.examples.SecondarySort;
 import org.apache.hadoop.examples.WordCount;
 import org.apache.hadoop.examples.SecondarySort.FirstGroupingComparator;
@@ -41,6 +42,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A JUnit test to test min map-reduce cluster with local file system.
@@ -88,6 +90,7 @@ public class TestMapReduceLocal extends TestCase {
       Configuration conf = mr.createJobConf();
       runWordCount(conf);
       runSecondarySort(conf);
+      runMultiFileWordCount(conf);
     } finally {
       if (mr != null) { mr.shutdown(); }
     }
@@ -172,5 +175,21 @@ public class TestMapReduceLocal extends TestCase {
                  "------------------------------------------------\n" +
                  "10\t20\n10\t25\n10\t30\n", out);
   }
-  
+ 
+  public void runMultiFileWordCount(Configuration  conf) throws Exception  {
+    localFs.delete(new Path(TEST_ROOT_DIR + "/in"), true);
+    localFs.delete(new Path(TEST_ROOT_DIR + "/out"), true);    
+    writeFile("in/part1", "this is a test\nof " +
+              "multi file word count test\ntest\n");
+    writeFile("in/part2", "more test");
+
+    int ret = ToolRunner.run(conf, new MultiFileWordCount(), 
+                new String[] {TEST_ROOT_DIR + "/in", TEST_ROOT_DIR + "/out"});
+    assertTrue("MultiFileWordCount failed", ret == 0);
+    String out = readFile("out/part-r-00000");
+    System.out.println(out);
+    assertEquals("a\t1\ncount\t1\nfile\t1\nis\t1\n" +
+      "more\t1\nmulti\t1\nof\t1\ntest\t4\nthis\t1\nword\t1\n", out);
+  }
+
 }
