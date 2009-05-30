@@ -106,20 +106,21 @@ invalid = "foo-\xfc\xa1\xa1\xa1\xa1\xa1"
 valid = "foo-\xE7\x94\x9F\xE3\x83\x93\xE3\x83\xBC\xE3\x83\xAB";
 
 # non-utf8 is fine for data
-mutations = [Mutation({"column":"entry:foo", "value":invalid})]
+mutations = [Mutation(column="entry:foo",value=invalid)]
+print str(mutations)
 client.mutateRow(t, "foo", mutations)
 
 # try empty strings
-mutations = [Mutation({"column":"entry:", "value":""})]
+mutations = [Mutation(column="entry:", value="")]
 client.mutateRow(t, "", mutations)
 
 # this row name is valid utf8
-mutations = [Mutation({"column":"entry:foo", "value":valid})]
+mutations = [Mutation(column="entry:foo", value=valid)]
 client.mutateRow(t, valid, mutations)
 
 # non-utf8 is not allowed in row names
 try:
-  mutations = [Mutation({"column":"entry:foo", "value":invalid})]
+  mutations = [Mutation(column="entry:foo", value=invalid)]
   client.mutateRow(t, invalid, mutations)
 except ttypes.IOError, e:
   print 'expected exception: %s' %(e.message)
@@ -127,11 +128,12 @@ except ttypes.IOError, e:
 # Run a scanner on the rows we just created
 print "Starting scanner..."
 scanner = client.scannerOpen(t, "", ["entry:"])
-try:
-  while 1:
-    printRow(client.scannerGet(scanner))
-except ttypes.NotFound, e:
-  print "Scanner finished"
+
+r = client.scannerGet(scanner)
+while r:
+  printRow(r[0])
+  r = client.scannerGet(scanner)
+print "Scanner finished"
 
 #
 # Run some operations on a bunch of rows.
@@ -140,46 +142,32 @@ for e in range(100, 0, -1):
     # format row keys as "00000" to "00100"
   row = "%0.5d" % (e)
 
-  mutations = [Mutation({"column":"unused:", "value":"DELETE_ME"})]
+  mutations = [Mutation(column="unused:", value="DELETE_ME")]
   client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row))
+  printRow(client.getRow(t, row)[0])
   client.deleteAllRow(t, row)
 
-  mutations = [Mutation({"column":"entry:num", "value":"0"}),
-               Mutation({"column":"entry:foo", "value":"FOO"})]
+  mutations = [Mutation(column="entry:num", value="0"),
+               Mutation(column="entry:foo", value="FOO")]
   client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row));
+  printRow(client.getRow(t, row)[0]);
 
-  mutations = []
-  m = Mutation()
-  m.column = "entry:foo"
-  m.isDelete = 1
-  mutations.append(m)
-  m = Mutation()
-  m.column = "entry:num"
-  m.value = "-1"
-  mutations.append(m)
+  mutations = [Mutation(column="entry:foo",isDelete=True),
+               Mutation(column="entry:num",value="-1")]
   client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row))
+  printRow(client.getRow(t, row)[0])
 
-  mutations = [Mutation({"column":"entry:num", "value":str(e)}),
-               Mutation({"column":"entry:sqr", "value":str(e*e)})]
+  mutations = [Mutation(column="entry:num", value=str(e)),
+               Mutation(column="entry:sqr", value=str(e*e))]
   client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row));
+  printRow(client.getRow(t, row)[0])
 
   time.sleep(0.05)
 
-  mutations = []
-  m = Mutation()
-  m.column = "entry:num"
-  m.value = "-999"
-  mutations.append(m)
-  m = Mutation()
-  m.column = "entry:sqr"
-  m.isDelete = 1
-  mutations.append(m)
+  mutations = [Mutation(column="entry:num",value="-999"),
+               Mutation(column="entry:sqr",isDelete=True)]
   client.mutateRowTs(t, row, mutations, 1) # shouldn't override latest
-  printRow(client.getRow(t, row))
+  printRow(client.getRow(t, row)[0])
 
   versions = client.getVer(t, row, "entry:num", 10)
   printVersions(row, versions)
@@ -187,13 +175,12 @@ for e in range(100, 0, -1):
     print("FATAL: wrong # of versions")
     sys.exit(-1)
 
-  try:
-    client.get(t, row, "entry:foo")
+  r = client.get(t, row, "entry:foo")
+  if not r:
+    print "yup, we didn't find entry:foo"
+  # just to be explicit, we get lists back, if it's empty there was no matching row.
+  if len(r) > 0:
     raise "shouldn't get here!"
-  except ttypes.NotFound, e:
-	pass
-
-  print
 
 columnNames = []
 for (col, desc) in client.getColumnDescriptors(t).items():
@@ -203,11 +190,13 @@ for (col, desc) in client.getColumnDescriptors(t).items():
 
 print "Starting scanner..."
 scanner = client.scannerOpenWithStop(t, "00020", "00040", columnNames)
-try:
-  while 1:
-    printRow(client.scannerGet(scanner))
-except ttypes.NotFound:
-  client.scannerClose(scanner)
-  print "Scanner finished"
+
+r = client.scannerGet(scanner)
+while r:
+  printRow(r[0])
+  r = client.scannerGet(scanner)
+
+client.scannerClose(scanner)
+print "Scanner finished"
 
 transport.close()
