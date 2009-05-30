@@ -573,7 +573,7 @@
       <syspropertyset dynamic="no">
          <propertyref name="compile.c++"/>
       </syspropertyset>
-      <classpath refid="${test.classpath}"/>
+      <classpath refid="test.classpath"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.src.dir}/mapred"
