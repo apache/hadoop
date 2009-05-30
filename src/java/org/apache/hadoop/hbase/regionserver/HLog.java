@@ -202,7 +202,7 @@ public class HLog implements HConstants, Syncable {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
     fs.mkdirs(dir);
-    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 64);
+    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
     LOG.info("HLog configuration: blocksize=" + this.blocksize +
       ", rollsize=" + this.logrollsize +
