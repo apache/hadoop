@@ -7,9 +7,12 @@
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
+  import="org.apache.hadoop.hbase.HColumnDescriptor" 
+  import="org.apache.hadoop.hbase.client.tableindexed.IndexSpecification"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
@@ -29,6 +32,17 @@
       <meta http-equiv="refresh" content="300"/>
 <title>HBase Master: <%= master.getMasterAddress().getHostname()%>:<%= master.getMasterAddress().getPort() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
+<link rel="stylesheet" type="text/css" href="/static/jquery.treeview.css" />
+<script src="/static/scripts/jquery-1.3.1.min.js" type="text/javascript"></script>
+<script src="/static/scripts/jquery.cookie.js" type="text/javascript"></script>
+<script src="/static/scripts/jquery.treeview.pack.js" type="text/javascript"></script>
+<script>
+$(document).ready(function(){
+   $("#tables").treeview({
+       control: "#tablecontrol",
+       persist: "cookie"
+   });
+});</script>
 </head>
 
 <body>
@@ -46,8 +60,8 @@
 <tr><td>Hadoop Version</td><td><%= org.apache.hadoop.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
 <tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
 <tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>
-<tr><td>Load average</td><td><%= master.getAverageLoad() %></td><td>Average load across all region servers. Naive computation.</td></tr>
-<tr><td>Regions On FS</td><td><%= master.countRegionsOnFS() %></td><td>The Number of regions on FileSystem. Rough count.</td></tr>
+<tr><td>Load average</td><td><%= master.getAverageLoad() %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
+<tr><td>Regions On FS</td><td><%= master.countRegionsOnFS() %></td><td>Number of regions on FileSystem. Rough count.</td></tr>
 </table>
 
 <h2>Catalog Tables</h2>
@@ -55,10 +69,10 @@
   if (rootLocation != null) { %>
 <table>
 <tr><th>Table</th><th>Description</th></tr>
-<tr><td><a href=/table.jsp?name=<%= URLEncoder.encode(Bytes.toString(HConstants.ROOT_TABLE_NAME), "UTF-8") %>><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td><td>The -ROOT- table holds references to all .META. regions.</td></tr>
+<tr><td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %>"><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td><td>The -ROOT- table holds references to all .META. regions.</td></tr>
 <%
     if (onlineRegions != null && onlineRegions.size() > 0) { %>
-<tr><td><a href=/table.jsp?name=<%= URLEncoder.encode(Bytes.toString(HConstants.META_TABLE_NAME), "UTF-8") %>><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td><td>The .META. table holds references to all User Table regions</td></tr>
+<tr><td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>"><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td><td>The .META. table holds references to all User Table regions</td></tr>
   
 <%  } %>
 </table>
@@ -67,11 +81,69 @@
 <h2>User Tables</h2>
 <% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables(); 
    if(tables != null && tables.length > 0) { %>
-<table>
-<tr><th>Table</th><th>Description</th></tr>
-<%   for(HTableDescriptor htDesc : tables ) { %>
-<tr><td><a href=/table.jsp?name=<%= URLEncoder.encode(htDesc.getNameAsString(), "UTF-8") %>><%= htDesc.getNameAsString() %></a> </td><td><%= htDesc.toString() %></td></tr>
+<div id="tablecontrol">
+  <a title="Collapse the entire tree below" href="#"><img src="/static/images/minus.gif" /> Collapse All</a>
+  <a title="Expand the entire tree below" href="#"><img src="/static/images/plus.gif" /> Expand All</a>
+  <a style="display: none" title="Toggle the tree below, opening closed branches, closing open branches" href="#"> Toggle All </a>
+</div>
+<br/>
+<ul id="tables">
+<%   for(HTableDescriptor htDesc : tables) { %>
+<li class="closed"><span>&nbsp;<a href="/table.jsp?name=<%= htDesc.getNameAsString() %>"><%= htDesc.getNameAsString() %></a></span>
+<ul>
+<li><span>&nbsp;Parameters</span>
+<ul>
+<%     Map<ImmutableBytesWritable, ImmutableBytesWritable> vals = htDesc.getValues();
+       if (vals.size() > 0) {
+         for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: vals.entrySet()) { %>
+<li>&nbsp; <%= Bytes.toString(e.getKey().get()).toLowerCase() %>: <%= Bytes.toString(e.getValue().get()).toLowerCase() %> </li>
+<%       }
+       } else { %>
+<li>&nbsp; none</li>
+<%       } %>
+</ul>
+</li>
+
+<li><span>&nbsp;Families</span>
+<ul>
+<%     Collection<HColumnDescriptor> cols = htDesc.getFamilies();
+       if (cols.size() > 0) {
+         for (HColumnDescriptor hcd: htDesc.getFamilies()) { %>
+<li><span>&nbsp;Name: <%= hcd.getNameAsString() %> </span>
+<ul>
+<%         for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: hcd.getValues().entrySet()) { %>
+<li>&nbsp; <%= Bytes.toString(e.getKey().get()).toLowerCase() %>: <%= Bytes.toString(e.getValue().get()).toLowerCase() %> </li>
+<%         } %>
+</ul>
+<%       } %>
+</li>
+<%     } else { %>
+<li>&nbsp;none</li>
+<%     }%>
+</ul>
+</li>  
+
+<li><span>&nbsp;Indexes</span>
+<ul>
+<%     Collection<IndexSpecification> idx = htDesc.getIndexes();
+       if (idx.size() > 0) 
+         for (IndexSpecification is: idx) { %>
+<li>&nbsp;ID: <%= is.getIndexId() %> </li>
+<%       } 
+       else { %>
+<li>&nbsp;none</li>
+<%     } %>
+</ul>
+</li>
+
+</ul>
+</li>
+
+
 <%   }  %>
+
+</ul>
+
 <p> <%= tables.length %> table(s) in set.</p>
 </table>
 <% } %>
@@ -83,7 +155,7 @@
 %>
 
 <table>
-<tr><th rowspan=<%= serverToServerInfos.size() + 1%>></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
+<tr><th rowspan="<%= serverToServerInfos.size() + 1%>"></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
 <%   String[] serverNames = serverToServerInfos.keySet().toArray(new String[serverToServerInfos.size()]);
      Arrays.sort(serverNames);
      for (String serverName: serverNames) {
