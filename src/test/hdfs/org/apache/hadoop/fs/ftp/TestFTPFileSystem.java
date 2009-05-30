@@ -24,7 +24,7 @@ import org.apache.ftpserver.DefaultFtpServerContext;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.ftplet.Authority;
 import org.apache.ftpserver.ftplet.UserManager;
-import org.apache.ftpserver.listener.mina.MinaListener;
+import org.apache.ftpserver.listener.nio.NioListener;
 import org.apache.ftpserver.usermanager.BaseUser;
 import org.apache.ftpserver.usermanager.WritePermission;
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +54,7 @@ public class TestFTPFileSystem extends TestCase {
   private void startServer() {
     try {
       DefaultFtpServerContext context = new DefaultFtpServerContext(false);
-      MinaListener listener = new MinaListener();
+      NioListener listener = new NioListener();
       // Set port to 0 for OS to give a free port
       listener.setPort(0);
       context.setListener("default", listener);
@@ -93,7 +93,7 @@ public class TestFTPFileSystem extends TestCase {
     defaultConf = new Configuration();
     localFs = FileSystem.getLocal(defaultConf);
     ftpServerConfig = new Path(localFs.getWorkingDirectory(), "res");
-    MinaListener listener = (MinaListener) server.getServerContext()
+    NioListener listener = (NioListener) server.getServerContext()
         .getListener("default");
     int serverPort = listener.getPort();
     ftpFs = FileSystem.get(URI.create("ftp://admin:admin@localhost:"
