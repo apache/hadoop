@@ -55,7 +55,7 @@ public interface HeapSize {
   
   static final int BLOCK_SIZE_TAX = 8;
 
-  
+  static final int BYTE_BUFFER = 56;
   
   /**
    * @return Approximate 'exclusive deep size' of implementing object.  Includes

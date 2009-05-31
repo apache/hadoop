@@ -394,4 +394,11 @@
       mode flag is stored at /hbase/safe-mode.
     </description>
   </property>
+  <property>
+      <name>hfile.block.cache.size</name>
+      <value>50000000</value>
+      <description>
+          The size of the block cache used by HFile/StoreFile. Set to 0 to disable.
+      </description>
+  </property>
 </configuration>

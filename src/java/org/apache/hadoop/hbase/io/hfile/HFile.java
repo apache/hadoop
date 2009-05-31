@@ -526,6 +526,10 @@ public class HFile {
       }
     }
 
+    public long getTotalBytes() {
+      return this.totalBytes;
+    }
+
     public void close() throws IOException {
       if (this.outputStream == null) {
         return;

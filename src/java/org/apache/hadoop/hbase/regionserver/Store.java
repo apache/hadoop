@@ -358,7 +358,7 @@ public class Store implements HConstants {
       }
       StoreFile curfile = null;
       try {
-        curfile = new StoreFile(fs, p);
+        curfile = new StoreFile(fs, p, this.conf);
       } catch (IOException ioe) {
         LOG.warn("Failed open of " + p + "; presumption is that file was " +
           "corrupted at flush and lost edits picked up by commit log replay. " +
@@ -499,7 +499,7 @@ public class Store implements HConstants {
         writer.close();
       }
     }
-    StoreFile sf = new StoreFile(this.fs, writer.getPath());
+    StoreFile sf = new StoreFile(this.fs, writer.getPath(), this.conf);
     this.storeSize += sf.getReader().length();
     if(LOG.isDebugEnabled()) {
       LOG.debug("Added " + sf + ", entries=" + sf.getReader().getEntries() +
@@ -962,7 +962,7 @@ public class Store implements HConstants {
       LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
       return;
     }
-    StoreFile finalCompactedFile = new StoreFile(this.fs, p);
+    StoreFile finalCompactedFile = new StoreFile(this.fs, p, this.conf);
     this.lock.writeLock().lock();
     try {
       try {

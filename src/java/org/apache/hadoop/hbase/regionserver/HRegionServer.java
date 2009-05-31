@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
@@ -1093,6 +1094,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.metrics.storefiles.set(storefiles);
     this.metrics.memcacheSizeMB.set((int)(memcacheSize/(1024*1024)));
     this.metrics.storefileIndexSizeMB.set((int)(storefileIndexSize/(1024*1024)));
+
+    LruBlockCache lruBlockCache = (LruBlockCache)StoreFile.getBlockCache(conf);
+    if (lruBlockCache != null) {
+      this.metrics.blockCacheCount.set(lruBlockCache.size());
+      this.metrics.blockCacheFree.set(lruBlockCache.getMemFree());
+      this.metrics.blockCacheSize.set(lruBlockCache.getMemUsed());
+      double ratio = lruBlockCache.getHitRatio();
+      int percent = (int) (ratio * 100);
+      this.metrics.blockCacheHitRatio.set(percent);
+    }
   }
 
   /**

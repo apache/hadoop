@@ -76,7 +76,7 @@ import org.apache.hadoop.util.StringUtils;
  *
  * <p>We maintain multiple HStores for a single HRegion.
  * 
- * <p>An HStore is a set of rows with some column data; together,
+ * <p>An Store is a set of rows with some column data; together,
  * they make up all the data for the rows.  
  *
  * <p>Each HRegion has a 'startKey' and 'endKey'.
@@ -96,9 +96,9 @@ import org.apache.hadoop.util.StringUtils;
  * 
  * <p>An HRegion is defined by its table and its key extent.
  * 
- * <p>It consists of at least one HStore.  The number of HStores should be 
+ * <p>It consists of at least one Store.  The number of Stores should be
  * configurable, so that data which is accessed together is stored in the same
- * HStore.  Right now, we approximate that by building a single HStore for 
+ * Store.  Right now, we approximate that by building a single Store for 
  * each column family.  (This config info will be communicated via the 
  * tabledesc.)
  * 
