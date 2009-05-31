@@ -292,6 +292,7 @@ Release 0.20.0 - Unreleased
    HBASE-1236  Improve readability of table descriptions in the UI
                (Lars George and Alex Newman via Stack)
    HBASE-1455  Update DemoClient.py for thrift 1.0 (Tim Sell via Stack)
+   HBASE-1464  Add hbase.regionserver.logroll.period to hbase-default
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

@@ -180,6 +180,11 @@
     milliseconds.
     </description>
   </property>
+    <name>hbase.regionserver.logroll.period</name>
+    <value>3600000</value>
+    <description>Period at which we will roll the commit log.</description>
+  <property>
+  </property>
   <property>
     <name>hbase.regionserver.thread.splitcompactcheckfrequency</name>
     <value>20000</value>
