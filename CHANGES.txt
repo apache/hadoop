@@ -729,6 +729,9 @@ Trunk (unreleased changes)
     HADOOP-5864. Fix DMI and OBL findbugs in packages hdfs and metrics.
     (hairong)
 
+    HADOOP-5935. Fix Hudson's release audit warnings link is broken. 
+    (Giridharan Kesavan via gkesavan)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
