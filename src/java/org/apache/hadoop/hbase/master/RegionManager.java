@@ -96,7 +96,7 @@ class RegionManager implements HConstants {
    * 
    * @see RegionState inner-class below
    */
-  private final SortedMap<String, RegionState> regionsInTransition =
+   final SortedMap<String, RegionState> regionsInTransition =
     Collections.synchronizedSortedMap(new TreeMap<String, RegionState>());
 
   // How many regions to assign a server at a time.
@@ -164,6 +164,7 @@ class RegionManager implements HConstants {
       rootRegionLocation.set(null);
       regionsInTransition.remove(
           HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString());
+      LOG.info("-ROOT- region unset (but not set to be reassigned)");
     }
   }
   
@@ -175,6 +176,7 @@ class RegionManager implements HConstants {
         s.setUnassigned();
         regionsInTransition.put(
             HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString(), s);
+        LOG.info("ROOT inserted into regionsInTransition");
       }
     }
   }
@@ -191,9 +193,12 @@ class RegionManager implements HConstants {
   void assignRegions(HServerInfo info, HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
     HServerLoad thisServersLoad = info.getLoad();
+    boolean isSingleServer = master.serverManager.numServers() == 1;
+
     // figure out what regions need to be assigned and aren't currently being
     // worked on elsewhere.
-    Set<RegionState> regionsToAssign = regionsAwaitingAssignment();
+    Set<RegionState> regionsToAssign = regionsAwaitingAssignment(info.getServerAddress(),
+        isSingleServer);
     if (regionsToAssign.size() == 0) {
       // There are no regions waiting to be assigned.
       if (!inSafeMode()) {
@@ -203,12 +208,12 @@ class RegionManager implements HConstants {
       }
     } else {
       // if there's only one server, just give it all the regions
-      if (master.serverManager.numServers() == 1) {
+      if (isSingleServer) {
         assignRegionsToOneServer(regionsToAssign, info, returnMsgs);
       } else {
         // otherwise, give this server a few regions taking into account the 
         // load of all the other servers.
-        assignRegionsToMultipleServers(thisServersLoad, regionsToAssign, 
+        assignRegionsToMultipleServers(thisServersLoad, regionsToAssign,
             info, returnMsgs);
       }
     }
@@ -224,11 +229,21 @@ class RegionManager implements HConstants {
   private void assignRegionsToMultipleServers(final HServerLoad thisServersLoad,
     final Set<RegionState> regionsToAssign, final HServerInfo info, 
     final ArrayList<HMsg> returnMsgs) {
-    
+
+    boolean isMetaAssign = false;
+    for (RegionState s : regionsToAssign) {
+      if (s.getRegionInfo().isMetaRegion())
+        isMetaAssign = true;
+    }
+
     int nRegionsToAssign = regionsToAssign.size();
     int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
+    LOG.debug("multi assing for " + info + ": nregions to assign: "
+        + nRegionsToAssign
+        +" and nregions: " + nregions
+        + " metaAssign: " + isMetaAssign);
     nRegionsToAssign -= nregions;
-    if (nRegionsToAssign > 0) {
+    if (nRegionsToAssign > 0 || isMetaAssign) {
       // We still have more regions to assign. See how many we can assign
       // before this server becomes more heavily loaded than the next
       // most heavily loaded server.
@@ -244,6 +259,8 @@ class RegionManager implements HConstants {
         // continue;
       }
 
+      LOG.debug("Doing for " + info + " nregions: " + nregions +
+      " and nRegionsToAssign: " + nRegionsToAssign);
       if (nregions < nRegionsToAssign) {
         // There are some more heavily loaded servers
         // but we can't assign all the regions to this server.
@@ -306,8 +323,32 @@ class RegionManager implements HConstants {
     LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
     rs.setPendingOpen(sinfo.getServerName());
     this.regionsInTransition.put(regionName, rs);
-    this.historian.addRegionAssignment(rs.getRegionInfo(),
-        sinfo.getServerName());
+
+    // Since the meta/root may not be available at this moment, we
+    try {
+      // TODO move this into an actual class, and use the RetryableMetaOperation
+      master.toDoQueue.put(
+        new RegionServerOperation(master) {
+            protected boolean process() throws IOException {
+              if (!rootAvailable() || !metaTableAvailable()) {
+                return true; // the two above us will put us on the delayed queue
+              }
+              
+              // this call can cause problems if meta/root is offline!
+              historian.addRegionAssignment(rs.getRegionInfo(),
+                  sinfo.getServerName());
+              return true;
+            }
+          public String toString() {
+            return "RegionAssignmentHistorian from " + sinfo.getServerName();
+          }
+        }
+      );
+    } catch (InterruptedException e) {
+      // ignore and don't write the region historian
+      LOG.info("doRegionAssignment: Couldn't queue the region historian due to exception: " + e);
+    }
+
     returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
   }
 
@@ -355,18 +396,40 @@ class RegionManager implements HConstants {
    * only caller (assignRegions, whose caller is ServerManager.processMsgs) owns
    * the monitor for RegionManager
    */ 
-  private Set<RegionState> regionsAwaitingAssignment() {
+  private Set<RegionState> regionsAwaitingAssignment(HServerAddress addr,
+                                                     boolean isSingleServer) {
     // set of regions we want to assign to this server
     Set<RegionState> regionsToAssign = new HashSet<RegionState>();
-    
-    // Look over the set of regions that aren't currently assigned to 
+
+    boolean isMetaServer = isMetaServer(addr);
+
+    // Handle if root is unassigned... only assign root if root is offline.
+    RegionState rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString());
+    if (rootState != null && rootState.isUnassigned()) {
+      // make sure root isnt assigned here first.
+      // if so return 'empty list'
+      // by definition there is no way this could be a ROOT region (since it's
+      // unassigned) so just make sure it isn't hosting META regions.
+      if (!isMetaServer) {
+        regionsToAssign.add(rootState);
+      }
+      return regionsToAssign;
+    }
+
+    // Look over the set of regions that aren't currently assigned to
     // determine which we should assign to this server.
+    boolean reassigningMetas = numberOfMetaRegions.get() != onlineMetaRegions.size();
+    boolean isMetaOrRoot = isMetaServer || isRootServer(addr);
+    if (reassigningMetas && isMetaOrRoot && !isSingleServer) {
+      return regionsToAssign; // dont assign anything to this server.
+    }
+
     for (RegionState s: regionsInTransition.values()) {
       HRegionInfo i = s.getRegionInfo();
       if (i == null) {
         continue;
       }
-      if (numberOfMetaRegions.get() != onlineMetaRegions.size() &&
+      if (reassigningMetas &&
           !i.isMetaRegion()) {
         // Can't assign user regions until all meta regions have been assigned
         // and are on-line
@@ -455,7 +518,7 @@ class RegionManager implements HConstants {
     }
     LOG.info("Skipped " + skipped + " region(s) that are in transition states");
   }
-  
+
   static class TableDirFilter implements PathFilter {
 
     public boolean accept(Path path) {
@@ -607,7 +670,7 @@ class RegionManager implements HConstants {
             Bytes.toString(HConstants.ROOT_TABLE_NAME));
       }
       metaRegions.add(new MetaRegion(rootRegionLocation.get(),
-          HRegionInfo.ROOT_REGIONINFO.getRegionName()));
+          HRegionInfo.ROOT_REGIONINFO));
     } else {
       if (!areAllMetaRegionsOnline()) {
         throw new NotAllMetaRegionsOnlineException();
@@ -685,7 +748,7 @@ class RegionManager implements HConstants {
    * @return list of MetaRegion objects
    */
   public List<MetaRegion> getListOfOnlineMetaRegions() {
-    List<MetaRegion> regions = null;
+    List<MetaRegion> regions;
     synchronized(onlineMetaRegions) {
       regions = new ArrayList<MetaRegion>(onlineMetaRegions.values());
     }
@@ -712,11 +775,104 @@ class RegionManager implements HConstants {
   /** 
    * Set an online MetaRegion offline - remove it from the map. 
    * @param startKey region name
+   * @return the MetaRegion that was taken offline.
    */
-  public void offlineMetaRegion(byte [] startKey) {
-    onlineMetaRegions.remove(startKey); 
+  public MetaRegion offlineMetaRegion(byte [] startKey) {
+    LOG.info("META region removed from onlineMetaRegions");
+    return onlineMetaRegions.remove(startKey);
   }
-  
+
+  public boolean isRootServer(HServerAddress server) {
+    if (master.getRootRegionLocation() != null
+        && server.equals(master.getRootRegionLocation()))
+      return true;
+    return false;
+  }
+
+  /**
+   * Returns the list of byte[] start-keys for any .META. regions hosted
+   * on the indicated server.
+   *
+   * @param server server address
+   * @return list of meta region start-keys.
+   */
+  public List<byte[]> listMetaRegionsForServer(HServerAddress server) {
+    List<byte[]> metas = new ArrayList<byte[]>();
+
+    for ( MetaRegion region : onlineMetaRegions.values() ) {
+      if (server.equals(region.getServer())) {
+        metas.add(region.getStartKey());
+      }
+    }
+
+    return metas;
+  }
+
+  /**
+   * Does this server have any META regions open on it, or any meta
+   * regions being assigned to it?
+   *
+   * @param server Server IP:port
+   * @return true if server has meta region assigned
+   */
+  public boolean isMetaServer(HServerAddress server) {
+    for ( MetaRegion region : onlineMetaRegions.values() ) {
+      if (server.equals(region.getServer())) {
+        return true;
+      }
+    }
+
+    // This might be expensive, but we need to make sure we dont
+    // get double assignment to the same regionserver.
+    for (RegionState s : regionsInTransition.values()) {
+      if (s.getRegionInfo().isMetaRegion()
+          && !s.isUnassigned()
+          && s.getServerName() != null
+          && s.getServerName().equals(server.toString())) {
+        // Has an outstanding meta region to be assigned.
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Call to take this metaserver offline for immediate reassignment.  Used only
+   * when we know a region has shut down cleanly.
+   *
+   * A meta server is a server that hosts either -ROOT- or any .META. regions.
+   *
+   * If you are considering a unclean shutdown potentially, use ProcessServerShutdown which
+   * calls other methods to immediately unassign root/meta but delay the reassign until the
+   * log has been split.
+   *
+   * @param server the server that went down
+   * @return true if this was in fact a meta server, false if it did not carry meta regions.
+   */
+  public synchronized boolean offlineMetaServer(HServerAddress server) {
+    boolean hasMeta = false;
+
+    // check to see if ROOT and/or .META. are on this server, reassign them.
+    // use master.getRootRegionLocation.
+    if (master.getRootRegionLocation() != null &&
+        server.equals(master.getRootRegionLocation())) {
+      LOG.info("Offlined ROOT server: " + server);
+      reassignRootRegion();
+      hasMeta = true;
+    }
+    // AND
+    for ( MetaRegion region : onlineMetaRegions.values() ) {
+      if (server.equals(region.getServer())) {
+        LOG.info("Offlining META region: " + region);
+        offlineMetaRegion(region.getStartKey());
+        // Set for reassignment.
+        setUnassigned(region.getRegionInfo(), true);
+        hasMeta = true;
+      }
+    }
+    return hasMeta;
+  }
+
   /**
    * Remove a region from the region state map.
    * 

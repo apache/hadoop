@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -44,12 +45,14 @@ import org.apache.hadoop.hbase.io.RowResult;
  */
 class ProcessServerShutdown extends RegionServerOperation {
   private final String deadServer;
-  private final boolean rootRegionServer;
-  private boolean rootRegionReassigned = false;
+  private boolean isRootServer;
+  private List<MetaRegion> metaRegions;
+
   private Path oldLogDir;
   private boolean logSplit;
   private boolean rootRescanned;
-  
+  private HServerAddress deadServerAddress;
+
 
   private static class ToDoEntry {
     boolean regionOffline;
@@ -66,17 +69,33 @@ class ProcessServerShutdown extends RegionServerOperation {
   /**
    * @param master
    * @param serverInfo
-   * @param rootRegionServer
    */
-  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo,
-      boolean rootRegionServer) {
+  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo) {
     super(master);
     this.deadServer = HServerInfo.getServerName(serverInfo);
-    this.rootRegionServer = rootRegionServer;
+    this.deadServerAddress = serverInfo.getServerAddress();
     this.logSplit = false;
     this.rootRescanned = false;
     this.oldLogDir =
       new Path(master.rootdir, HLog.getHLogDirectoryName(serverInfo));
+
+    // check to see if I am responsible for either ROOT or any of the META tables.
+
+    closeMetaRegions();
+  }
+
+  private void closeMetaRegions() {
+    isRootServer = master.regionManager.isRootServer(deadServerAddress);
+    if (isRootServer) {
+      master.regionManager.unsetRootRegion();
+    }
+    List<byte[]> metaStarts = master.regionManager.listMetaRegionsForServer(deadServerAddress);
+
+    metaRegions = new ArrayList<MetaRegion>();
+    for (byte [] region : metaStarts) {
+      MetaRegion r = master.regionManager.offlineMetaRegion(region);
+      metaRegions.add(r);
+    }
   }
 
   @Override
@@ -254,16 +273,22 @@ class ProcessServerShutdown extends RegionServerOperation {
       logSplit = true;
     }
 
-    if (this.rootRegionServer && !this.rootRegionReassigned) {
-      // avoid multiple root region reassignment 
-      this.rootRegionReassigned = true;
-      // The server that died was serving the root region. Now that the log
-      // has been split, get it reassigned.
+    LOG.info("Log split complete, meta reassignment and scanning:");
+
+    if (this.isRootServer) {
+      LOG.info("ProcessServerShutdown reassigning ROOT region");
       master.regionManager.reassignRootRegion();
-      // When we call rootAvailable below, it will put us on the delayed
-      // to do queue to allow some time to pass during which the root 
-      // region will hopefully get reassigned.
+
+      isRootServer = false;  // prevent double reassignment... heh.
     }
+
+    for (MetaRegion metaRegion : metaRegions) {
+      LOG.info("ProcessServerShutdown setting to unassigned: " + metaRegion.toString());
+      master.regionManager.setUnassigned(metaRegion.getRegionInfo(), true);
+    }
+    // one the meta regions are online, "forget" about them.  Since there are explicit
+    // checks below to make sure meta/root are online, this is likely to occur.
+    metaRegions.clear();
 
     if (!rootAvailable()) {
       // Return true so that worker does not put this request back on the
@@ -276,8 +301,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       // Scan the ROOT region
       Boolean result = new ScanRootRegion(
           new MetaRegion(master.getRootRegionLocation(),
-              HRegionInfo.ROOT_REGIONINFO.getRegionName(),
-              HConstants.EMPTY_START_ROW), this.master).doWithRetries();
+              HRegionInfo.ROOT_REGIONINFO), this.master).doWithRetries();
       if (result == null) {
         // Master is closing - give up
         return true;
@@ -314,5 +338,10 @@ class ProcessServerShutdown extends RegionServerOperation {
       LOG.debug("Removed " + deadServer + " from deadservers Map");
     }
     return true;
+  }
+
+  @Override
+  protected int getPriority() {
+    return 2; // high but not highest priority
   }
 }

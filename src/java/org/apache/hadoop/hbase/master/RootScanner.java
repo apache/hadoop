@@ -52,7 +52,7 @@ class RootScanner extends BaseScanner {
       synchronized(scannerLock) {
         if (master.getRootRegionLocation() != null) {
           scanRegion(new MetaRegion(master.getRootRegionLocation(),
-            HRegionInfo.ROOT_REGIONINFO.getRegionName()));
+            HRegionInfo.ROOT_REGIONINFO));
         }
       }
     } catch (IOException e) {

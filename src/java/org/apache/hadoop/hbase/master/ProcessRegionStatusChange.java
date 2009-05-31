@@ -31,7 +31,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected final HRegionInfo regionInfo;
   private volatile MetaRegion metaRegion = null;
   protected volatile byte[] metaRegionName = null;
-  
+
   /**
    * @param master
    * @param regionInfo
@@ -47,6 +47,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     if (isMetaTable) {
       // This operation is for the meta table
       if (!rootAvailable()) {
+        requeue();
         // But we can't proceed unless the root region is available
         available = false;
       }
@@ -67,7 +68,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     if (isMetaTable) {
       this.metaRegionName = HRegionInfo.ROOT_REGIONINFO.getRegionName();
       this.metaRegion = new MetaRegion(master.getRootRegionLocation(),
-          this.metaRegionName, HConstants.EMPTY_START_ROW);
+          HRegionInfo.ROOT_REGIONINFO);
     } else {
       this.metaRegion =
         master.regionManager.getFirstMetaRegionForRegion(regionInfo);

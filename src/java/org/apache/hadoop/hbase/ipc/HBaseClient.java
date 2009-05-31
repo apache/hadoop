@@ -65,7 +65,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class HBaseClient {
   
   public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.HBaseClass");
+    LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
   protected Hashtable<ConnectionId, Connection> connections =
     new Hashtable<ConnectionId, Connection>();
 

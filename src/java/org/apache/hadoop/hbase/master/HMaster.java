@@ -34,6 +34,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -124,7 +125,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   volatile DelayQueue<RegionServerOperation> delayedToDoQueue =
     new DelayQueue<RegionServerOperation>();
   volatile BlockingQueue<RegionServerOperation> toDoQueue =
-    new LinkedBlockingQueue<RegionServerOperation>();
+    new PriorityBlockingQueue<RegionServerOperation>();
 
   private final HBaseServer server;
   private final HServerAddress address;
@@ -234,6 +235,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     //  The rpc-server port can be ephemeral... ensure we have the correct info
     this.address = new HServerAddress(server.getListenerAddress());
+
+    // dont retry too much
+    conf.setInt("hbase.client.retries.number", 3);
 
     this.connection = ServerConnectionManager.getConnection(conf);
 
@@ -494,15 +498,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         return false;
       }
       LOG.warn("Processing pending operations: " + op.toString(), ex);
-      try {
-        // put the operation back on the queue... maybe it'll work next time.
-        toDoQueue.put(op);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(
-          "Putting into toDoQueue was interrupted.", e);
-      } catch (Exception e) {
-        LOG.error("main processing loop: " + op.toString(), e);
-      }
+      delayedToDoQueue.put(op);
     }
     return true;
   }
@@ -549,7 +545,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           else if(region.isMetaRegion()) {
             MetaRegion m =
               new MetaRegion(new HServerAddress(address),
-                  region.getRegionName(), region.getStartKey());
+                  region);
             regionManager.addMetaRegionToScan(m);
           }
           assignedRegions.put(region.getRegionName(), region);

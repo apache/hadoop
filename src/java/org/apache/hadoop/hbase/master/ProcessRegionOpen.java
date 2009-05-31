@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RegionHistorian;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -58,67 +59,68 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
 
   @Override
   protected boolean process() throws IOException {
-    Boolean result =
-      new RetryableMetaOperation<Boolean>(getMetaRegion(), this.master) {
-        private final RegionHistorian historian = RegionHistorian.getInstance();
-      
-        public Boolean call() throws IOException {
-          LOG.info(regionInfo.getRegionNameAsString() + " open on " +
-            serverInfo.getServerAddress().toString());
-          if (!metaRegionAvailable()) {
-            // We can't proceed unless the meta region we are going to update
-            // is online. metaRegionAvailable() has put this operation on the
-            // delayedToDoQueue, so return true so the operation is not put 
-            // back on the toDoQueue
-            return true;
-          }
+    if (!metaRegionAvailable()) {
+      // We can't proceed unless the meta region we are going to update
+      // is online. metaRegionAvailable() has put this operation on the
+      // delayedToDoQueue, so return true so the operation is not put
+      // back on the toDoQueue
+      return true;
+    }
 
-          // Register the newly-available Region's location.
-          LOG.info("updating row " + regionInfo.getRegionNameAsString() +
-              " in region " + Bytes.toString(metaRegionName) + " with " +
-              " with startcode " + serverInfo.getStartCode() + " and server " +
-              serverInfo.getServerAddress());
-          BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
-          b.put(COL_SERVER,
-              Bytes.toBytes(serverInfo.getServerAddress().toString()));
-          b.put(COL_STARTCODE, Bytes.toBytes(serverInfo.getStartCode()));
-          server.batchUpdate(metaRegionName, b, -1L);
-          if (!this.historian.isOnline()) {
-            // This is safest place to do the onlining of the historian in
-            // the master.  When we get to here, we know there is a .META.
-            // for the historian to go against.
-            this.historian.online(this.master.getConfiguration());
+    final RegionHistorian historian = RegionHistorian.getInstance();
+    HRegionInterface server =
+        master.connection.getHRegionConnection(getMetaRegion().getServer());
+    LOG.info(regionInfo.getRegionNameAsString() + " open on " +
+        serverInfo.getServerAddress().toString());
+
+    // Register the newly-available Region's location.
+    LOG.info("updating row " + regionInfo.getRegionNameAsString() +
+        " in region " + Bytes.toString(metaRegionName) + " with " +
+        " with startcode " + serverInfo.getStartCode() + " and server " +
+        serverInfo.getServerAddress());
+    BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
+    b.put(COL_SERVER,
+        Bytes.toBytes(serverInfo.getServerAddress().toString()));
+    b.put(COL_STARTCODE, Bytes.toBytes(serverInfo.getStartCode()));
+    server.batchUpdate(metaRegionName, b, -1L);
+    if (!historian.isOnline()) {
+      // This is safest place to do the onlining of the historian in
+      // the master.  When we get to here, we know there is a .META.
+      // for the historian to go against.
+      historian.online(this.master.getConfiguration());
+    }
+    historian.addRegionOpen(regionInfo, serverInfo.getServerAddress());
+    synchronized (master.regionManager) {
+      if (isMetaTable) {
+        // It's a meta region.
+        MetaRegion m =
+            new MetaRegion(new HServerAddress(serverInfo.getServerAddress()),
+                regionInfo);
+        if (!master.regionManager.isInitialMetaScanComplete()) {
+          // Put it on the queue to be scanned for the first time.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Adding " + m.toString() + " to regions to scan");
           }
-          this.historian.addRegionOpen(regionInfo, serverInfo.getServerAddress());
-          synchronized (master.regionManager) {
-            if (isMetaTable) {
-              // It's a meta region.
-              MetaRegion m =
-                new MetaRegion(new HServerAddress(serverInfo.getServerAddress()),
-                  regionInfo.getRegionName(), regionInfo.getStartKey());
-              if (!master.regionManager.isInitialMetaScanComplete()) {
-                // Put it on the queue to be scanned for the first time.
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Adding " + m.toString() + " to regions to scan");
-                }
-                master.regionManager.addMetaRegionToScan(m);
-              } else {
-                // Add it to the online meta regions
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Adding to onlineMetaRegions: " + m.toString());
-                }
-                master.regionManager.putMetaRegionOnline(m);
-                // Interrupting the Meta Scanner sleep so that it can
-                // process regions right away
-                master.regionManager.metaScannerThread.interrupt();
-              }
-            }
-            // If updated successfully, remove from pending list.
-            master.regionManager.removeRegion(regionInfo);
-            return true;
+          master.regionManager.addMetaRegionToScan(m);
+        } else {
+          // Add it to the online meta regions
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Adding to onlineMetaRegions: " + m.toString());
           }
+          master.regionManager.putMetaRegionOnline(m);
+          // Interrupting the Meta Scanner sleep so that it can
+          // process regions right away
+          master.regionManager.metaScannerThread.interrupt();
         }
-    }.doWithRetries();
-    return result == null ? true : result;
+      }
+      // If updated successfully, remove from pending list.
+      master.regionManager.removeRegion(regionInfo);
+      return true;
+    }
+  }
+
+  @Override
+  protected int getPriority() {
+    return 0; // highest priority
   }
 }

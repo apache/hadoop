@@ -344,7 +344,7 @@ public class HConnectionManager implements HConstants {
               rowResult.get(COL_REGIONINFO));
 
           // Only examine the rows where the startKey is zero length
-          if (info.getStartKey().length == 0) {
+          if (info != null && info.getStartKey().length == 0) {
             uniqueTables.add(info.getTableDesc());
           }
           return true;

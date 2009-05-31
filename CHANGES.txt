@@ -156,6 +156,8 @@ Release 0.20.0 - Unreleased
    HBASE-1395  InfoServers no longer put up a UI
    HBASE-1302  When a new master comes up, regionservers should continue with
                their region assignments from the last master
+   HBASE-1457  Taking down ROOT/META regionserver can result in cluster
+               becoming in-operational (Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

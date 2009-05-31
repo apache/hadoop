@@ -89,6 +89,14 @@ abstract class RegionServerOperation implements Delayed, HConstants {
     }
     return available;
   }
-  
+
+  public int compareTo(RegionServerOperation other) {
+    return getPriority() - other.getPriority();
+  }
+
+  // the Priority of this operation, 0 is lowest priority
+  protected int getPriority() {
+    return Integer.MAX_VALUE;
+  }
   protected abstract boolean process() throws IOException;
 }
