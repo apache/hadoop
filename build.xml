@@ -384,9 +384,6 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
   <target name="jar" depends="compile-core" description="Make hadoop-mapered.jar">
-<!--<tar compression="gzip" destfile="${build.classes}/bin.tgz">
-      <tarfileset dir="bin" mode="755"/>
-    </tar> -->
     <jar jarfile="${hadoop-mapred.jar}"
          basedir="${build.classes}">
       <manifest>
@@ -426,19 +423,6 @@
         <attribute name="Main-Class" 
                    value="org/apache/hadoop/examples/ExampleDriver"/>
       </manifest>
-    </jar>
-  </target>
-
-  <!-- ================================================================== -->
-  <!-- Make the Hadoop metrics jar. (for use outside Hadoop)              -->
-  <!-- ================================================================== -->
-  <!--                                                                    -->
-  <!-- ================================================================== -->
-  <target name="metrics.jar" depends="compile-core" description="Make the Hadoop metrics jar. (for use outside Hadoop)">
-    <jar jarfile="${build.dir}/hadoop-metrics-${version}.jar"
-         basedir="${build.classes}">
-      <include name="**/metrics/**" />
-      <exclude name="**/package.html" />
     </jar>
   </target>
 
@@ -748,7 +732,7 @@
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
-      overview="${core.src.dir}/overview.html"
+      overview="${mapred.src.dir}/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc.dev}"
       author="true"
@@ -812,7 +796,6 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}"
       >
-        <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>
     	<packageset dir="${examples.dir}"/>
 
@@ -845,10 +828,9 @@
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
-         <param name="-apiname" value="hadoop ${version}"/>
+         <param name="-apiname" value="hadoop-mapred ${version}"/>
        </doclet>
-       <packageset dir="src/core"/>
-       <packageset dir="src/mapred"/>
+       <packageset dir="src/java"/>
        <packageset dir="src/tools"/>
        <classpath >
          <path refid="classpath" />
@@ -872,8 +854,8 @@
 	     maxmemory="${javadoc.maxmemory}">
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
-         <param name="-oldapi" value="hadoop ${jdiff.stable}"/>
-         <param name="-newapi" value="hadoop ${version}"/>
+         <param name="-oldapi" value="hadoop-mapred ${jdiff.stable}"/>
+         <param name="-newapi" value="hadoop-mapred ${version}"/>
          <param name="-oldapidir" value="${jdiff.xml.dir}"/>
          <param name="-newapidir" value="${jdiff.xml.dir}"/>
          <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
@@ -936,15 +918,12 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}.jar"/>
-      <fileset file="${build.dir}/${test.final.name}.jar"/>
+      <fileset file="${build.dir}/${final.name}*.jar"/>
+    <!--  <fileset file="${build.dir}/${test.final.name}.jar"/>
       <fileset file="${build.dir}/${examples.final.name}.jar"/>
-      <fileset file="${build.dir}/${tools.final.name}.jar"/>
+      <fileset file="${build.dir}/${tools.final.name}.jar"/> -->
     </copy>
     
-    <copy todir="${dist.dir}/bin">
-      <fileset dir="bin"/>
-    </copy>
 
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
@@ -977,11 +956,9 @@
     <copy todir="${dist.dir}/" file="build.xml"/>
 
     <chmod perm="ugo+x" type="file" parallel="false">
-        <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/src/contrib/">
           <include name="*/bin/*" />
         </fileset>
-        <fileset dir="${dist.dir}/src/contrib/ec2/bin/image"/>
     </chmod>
     <chmod perm="ugo+x" type="file">
         <fileset dir="${dist.dir}/src/c++/pipes/debug"/>
@@ -1038,16 +1015,12 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}.jar"/>
-      <fileset file="${build.dir}/${test.final.name}.jar"/>
+      <fileset file="${build.dir}/${final.name}*.jar"/>
+ <!-- <fileset file="${build.dir}/${test.final.name}.jar"/>
       <fileset file="${build.dir}/${examples.final.name}.jar"/>
-      <fileset file="${build.dir}/${tools.final.name}.jar"/>
+      <fileset file="${build.dir}/${tools.final.name}.jar"/> -->
     </copy>
     
-    <copy todir="${dist.dir}/bin">
-      <fileset dir="bin"/>
-    </copy>
-
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
     </copy>
@@ -1070,9 +1043,6 @@
 
     <copy todir="${dist.dir}/" file="build.xml"/>
 
-    <chmod perm="ugo+x" type="file" parallel="false">
-        <fileset dir="${dist.dir}/bin"/>
-    </chmod>
   </target>
 
   <target name="binary" depends="bin-package" description="Make tarball without source and documentation">
@@ -1083,9 +1053,6 @@
           <exclude name="${final.name}/src/**" />
           <exclude name="${final.name}/docs/**" />
           <include name="${final.name}/**" />
-        </tarfileset>
-        <tarfileset dir="${build.dir}" mode="755">
-          <include name="${final.name}/bin/*" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>
