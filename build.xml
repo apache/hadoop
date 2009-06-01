@@ -28,6 +28,8 @@
   <property name="Name" value="Hadoop-Hdfs"/>
   <property name="name" value="hadoop-hdfs"/>
   <property name="version" value="0.21.0-dev"/>
+  <property name="hadoop-core.version" value="0.21.0-dev"/>
+  <property name="hadoop-mr.version" value="0.21.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
   <property name="test.hdfswithmr.final.name" value="${name}-hdsfwithmr-test-${version}"/>
@@ -169,10 +171,7 @@
   <!-- the normal classpath -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
-    <fileset dir="${lib.dir}">
-      <include name="hadoop-core-${version}.jar" />
-      <exclude name="**/excluded/" />
-    </fileset>
+    <pathelement path="${lib.dir}/hadoop-core-${hadoop-core.version}.jar"/>
     <pathelement location="${conf.dir}"/>
     <path refid="ivy-common.classpath"/>
   </path>
@@ -186,7 +185,7 @@
     <pathelement path="${clover.jar}"/>
     <path refid="ivy-test.classpath"/>
     <fileset dir="${lib.dir}">
-      <include name="hadoop-core-test-${version}.jar" />
+      <include name="hadoop-core-test-${hadoop-core.version}.jar" />
       <exclude name="**/excluded/" />
     </fileset>
     <path refid="classpath"/>
@@ -195,10 +194,10 @@
   <path id="test.hdfs.with.mr.classpath">
     <path refid="test.classpath"/>
     <pathelement location="${test.hdfs.with.mr.build.classes}" />
-    <pathelement location="${lib.dir}/hadoop-mapred-test-${version}.jar" />
-    <pathelement location="${lib.dir}/hadoop-mapred-${version}.jar" />
-    <pathelement location="${lib.dir}/hadoop-mapred-tools-${version}.jar" />
-    <pathelement location="${lib.dir}/hadoop-mapred-examples-${version}.jar" />
+    <pathelement location="${lib.dir}/hadoop-mapred-test-${hadoop-mr.version}.jar" />
+    <pathelement location="${lib.dir}/hadoop-mapred-${hadoop-mr.version}.jar" />
+    <pathelement location="${lib.dir}/hadoop-mapred-tools-${hadoop-mr.version}.jar" />
+    <pathelement location="${lib.dir}/hadoop-mapred-examples-${hadoop-mr.version}.jar" />
   </path>
 
   <!-- the cluster test classpath: uses conf.dir for configuration -->
@@ -253,37 +252,7 @@
     </copy>
   </target>
 
-  <!-- ====================================================== -->
-  <!-- Compile the Java files                                 -->
-  <!-- ====================================================== -->
-  <target name="record-parser" depends="init" if="javacc.home">
-      <javacc
-          target="${core.src.dir}/org/apache/hadoop/record/compiler/generated/rcc.jj"
-          outputdirectory="${core.src.dir}/org/apache/hadoop/record/compiler/generated"
-          javacchome="${javacc.home}" />
-  </target>
-  
-  <target name="compile-rcc-compiler" depends="init, record-parser">
-    <javac 
-        encoding="${build.encoding}" 
-        srcdir="${hdfs.src.dir}"
-        includes="org/apache/hadoop/record/compiler/**/*.java"
-        destdir="${build.classes}"
-        debug="${javac.debug}"
-        optimize="${javac.optimize}"
-        target="${javac.version}"
-        source="${javac.version}"
-        deprecation="${javac.deprecation}">
-        <compilerarg line="${javac.args}"/>
-        <classpath refid="classpath"/>
-    </javac>
-    
-    <taskdef name="recordcc" classname="org.apache.hadoop.record.compiler.ant.RccTask">
-      <classpath refid="classpath" />
-    </taskdef>
-  </target>
-
-  <target name="compile-hdfs-classes" depends="init, compile-rcc-compiler">
+  <target name="compile-hdfs-classes" depends="init">
     <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
        <classpath refid="classpath"/>
     </taskdef>
