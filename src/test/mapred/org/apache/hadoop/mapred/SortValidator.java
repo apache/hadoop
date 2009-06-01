@@ -210,9 +210,9 @@ public class SortValidator extends Configured implements Tool {
           try {
             URI inputURI = new URI(job.get("map.input.file"));
             String inputFile = inputURI.getPath();
-            partition = Integer.valueOf(
-                                        inputFile.substring(inputFile.lastIndexOf("part")+5)
-                                        ).intValue();
+            // part file is of the form part-r-xxxxx
+            partition = Integer.valueOf(inputFile.substring(
+              inputFile.lastIndexOf("part") + 7)).intValue();
             noSortReducers = job.getInt("sortvalidate.sort.reduce.tasks", -1);
           } catch (Exception e) {
             System.err.println("Caught: " + e);
