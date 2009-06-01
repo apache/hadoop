@@ -29,6 +29,7 @@
   <property name="name" value="hadoop-mapred"/>
   <property name="version" value="0.21.0-dev"/>
   <property name="hadoop-core.version" value="0.21.0-dev"/>
+  <property name="hadoop-mr.version" value="0.21.0-dev"/>
   <property name="hadoop-hdfs.version" value="0.21.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
@@ -675,7 +676,7 @@
       <class location="${basedir}/build/${final.name}.jar" />
       <class location="${basedir}/build/${examples.final.name}.jar" />
       <class location="${basedir}/build/${tools.final.name}.jar" />
-      <class location="${basedir}/build/contrib/streaming/${final.name}-streaming.jar" />
+      <class location="${basedir}/build/contrib/streaming/hadoop-${hadoop-mr.version}-streaming.jar" />
     </findbugs>
 
         <xslt style="${findbugs.home}/src/xsl/default.xsl"
