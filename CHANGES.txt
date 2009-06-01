@@ -737,9 +737,6 @@ Trunk (unreleased changes)
 
     HADOOP-5947. Delete empty TestCombineFileInputFormat.java
 
-    HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
-    via szetszwo)
-
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -836,6 +833,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5932. Fixes a problem in capacity scheduler in computing
     available memory on a tasktracker.
     (Vinod Kumar Vavilapalli via yhemanth)
+
+    HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
+    via szetszwo)
 
     HADOOP-5882. Fixes a problem with reducer progress update in new
     mapreduce API. (Amareshwari Sriramadasu via sharad) 
