@@ -101,7 +101,7 @@ checkout () {
   echo ""
   echo ""
   ### When run by a developer, if the workspace contains modifications, do not continue
-  status=`$SVN stat`
+  status=`$SVN stat --ignore-externals | sed -e '/^X[ ]*/D'`
   if [[ $HUDSON == "false" ]] ; then
     if [[ "$status" != "" ]] ; then
       echo "ERROR: can't run in a workspace that contains the following modifications"
@@ -674,8 +674,9 @@ checkStyle
 (( RESULT = RESULT + $? ))
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
-checkEclipse
-(( RESULT = RESULT + $? ))
+##Commenting out as dependencies are now resolved using ivy
+##checkEclipse
+##(( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings
 (( RESULT = RESULT + $? ))
 ### Do not call these when run by a developer 
