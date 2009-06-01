@@ -139,11 +139,13 @@
   <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar" />
 
   <!--this is the naming policy for artifacts we want pulled down-->
+  <property name="ivy.module" location="hadoop-core" />
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
-  <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>
+  <property name="ivy.publish.pattern" value="hadoop-core-[revision].[ext]"/>
   <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
+  <property name="hadoop-core-test.jar" location="${build.dir}/${test.final.name}.jar" />
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -477,7 +479,7 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="test-core" depends="compile-core-test" description="Run core unit tests">
+  <target name="run-test-core" depends="compile-core-test" description="Run core unit tests">
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
@@ -534,7 +536,6 @@
     </subant> 
   </target>
 
-<!--
   <target name="test-core" description="Run core unit tests">
     <delete file="${test.build.dir}/testsfailed"/> 
     <property name="continueOnFailure" value="true"/> 
@@ -542,13 +543,8 @@
     <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail> 
   </target>
--->
 
-  <target name="test" depends="jar-test" description="Run all unit tests">
-    <!--<property name="continueOnFailure" value="true"/> -->
-    <subant target="test-core" failonError="false">	 
-      <fileset dir="." includes="build.xml"/>
-    </subant>
+  <target name="test" depends="jar-test,test-core" description="Run all unit tests">
     <subant target="test-contrib">	 
       <fileset dir="." includes="build.xml"/>
     </subant>
