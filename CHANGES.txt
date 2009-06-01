@@ -737,6 +737,9 @@ Trunk (unreleased changes)
 
     HADOOP-5947. Delete empty TestCombineFileInputFormat.java
 
+    HADOOP-5899. Move a log message in FSEditLog to the right place for
+    avoiding unnecessary log.  (Suresh Srinivas via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

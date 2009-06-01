@@ -262,13 +262,12 @@ public class FSEditLog {
       ArrayList<EditLogOutputStream> errorStreams,
       boolean propagate) {
     
-    String lsd = fsimage.listStorageDirectories();
-    FSNamesystem.LOG.info("current list of storage dirs:" + lsd);
-    
     if (errorStreams == null || errorStreams.size() == 0) {
       return;                       // nothing to do
     }
 
+    String lsd = fsimage.listStorageDirectories();
+    FSNamesystem.LOG.info("current list of storage dirs:" + lsd);
     //EditLogOutputStream
     if (editStreams == null || editStreams.size() <= 1) {
       FSNamesystem.LOG.fatal(
