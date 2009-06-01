@@ -737,6 +737,9 @@ Trunk (unreleased changes)
 
     HADOOP-5947. Delete empty TestCombineFileInputFormat.java
 
+    HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
+    via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
