@@ -209,6 +209,7 @@
     <pathelement location="${build.dir}"/>
   </path>
 
+
   <!-- ====================================================== -->
   <!-- Macro definitions                                      -->
   <!-- ====================================================== -->
@@ -240,6 +241,7 @@
     <mkdir dir="${test.build.extraconf}"/>
     <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
     <touch millis="0" file="${touch.temp.file}">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
       <fileset dir="${contrib.dir}" includes="**/*.template"/>
     </touch>
     <delete file="${touch.temp.file}"/>
@@ -254,8 +256,34 @@
   <!-- ====================================================== -->
   <!-- Compile the Java files                                 -->
   <!-- ====================================================== -->
+  <target name="record-parser" depends="init" if="javacc.home">
+      <javacc
+          target="${core.src.dir}/org/apache/hadoop/record/compiler/generated/rcc.jj"
+          outputdirectory="${core.src.dir}/org/apache/hadoop/record/compiler/generated"
+          javacchome="${javacc.home}" />
+  </target>
+  
+  <target name="compile-rcc-compiler" depends="init, record-parser">
+    <javac 
+        encoding="${build.encoding}" 
+        srcdir="${hdfs.src.dir}"
+        includes="org/apache/hadoop/record/compiler/**/*.java"
+        destdir="${build.classes}"
+        debug="${javac.debug}"
+        optimize="${javac.optimize}"
+        target="${javac.version}"
+        source="${javac.version}"
+        deprecation="${javac.deprecation}">
+        <compilerarg line="${javac.args}"/>
+        <classpath refid="classpath"/>
+    </javac>
+    
+    <taskdef name="recordcc" classname="org.apache.hadoop.record.compiler.ant.RccTask">
+      <classpath refid="classpath" />
+    </taskdef>
+  </target>
 
-  <target name="compile-hdfs-classes" depends="init">
+  <target name="compile-hdfs-classes" depends="init, compile-rcc-compiler">
     <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
        <classpath refid="classpath"/>
     </taskdef>
@@ -310,10 +338,10 @@
      </subant>  	
   </target>
   
-  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks" description="Compile hdfs and contrib" />
+  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks" description="Compile core, contrib"/>
 
   <!-- ================================================================== -->
-  <!-- Make hadoop-hdfs.jar                                               -->
+  <!-- Make hadoop.jar                                                     -->
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
@@ -333,10 +361,6 @@
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>
-
-  <!-- ================================================================== -->
-  <!-- Compile test code                                                  --> 
-  <!-- ================================================================== -->
 
   <target name="compile-hdfs-test" depends="compile-hdfs-classes, ivy-retrieve-test">
     <mkdir dir="${test.hdfs.build.classes}"/>
@@ -453,8 +477,6 @@
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
       <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
       <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
-      <sysproperty key="java.library.path"
-       value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
       <classpath refid="test.classpath"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
@@ -470,6 +492,7 @@
   </target>  
 
   <target name="run-test-hdfs-with-mr" depends="compile-hdfs-with-mr-test" description="Run hdfs unit tests that require mapred">
+
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
     <delete dir="${test.log.dir}"/>
@@ -491,8 +514,6 @@
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
       <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
       <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
-      <sysproperty key="java.library.path"
-       value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
       <classpath refid="test.hdfs.with.mr.classpath"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
@@ -520,7 +541,7 @@
     </subant> 
   </target>
 
-  <target name="test-core" description="Run hdfs, hdfs with mapred unit tests">
+  <target name="test-core" description="Run core, hdfs and mapred unit tests">
     <delete file="${test.build.dir}/testsfailed"/>
     <property name="continueOnFailure" value="true"/>
     <antcall target="run-test-hdfs"/>
@@ -810,7 +831,7 @@
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${final.name}-*.jar"/>
     </copy>
-    
+
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
     </copy>
@@ -837,6 +858,12 @@
 
     <copy todir="${dist.dir}/" file="build.xml"/>
 
+    <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/src/contrib/">
+          <include name="*/bin/*" />
+        </fileset>
+    </chmod>
+
   </target>
 
   <!-- ================================================================== -->
@@ -846,17 +873,11 @@
     <macro_tar param.destfile="${build.dir}/${final.name}.tar.gz">
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
-          <exclude name="${final.name}/bin/*" />
           <exclude name="${final.name}/contrib/*/bin/*" />
-          <exclude name="${final.name}/src/contrib/ec2/bin/*" />
-          <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
-          <include name="${final.name}/bin/*" />
           <include name="${final.name}/contrib/*/bin/*" />
-          <include name="${final.name}/src/contrib/ec2/bin/*" />
-          <include name="${final.name}/src/contrib/ec2/bin/image/*" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>
@@ -867,7 +888,6 @@
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>
-    <mkdir dir="${dist.dir}/bin"/>
 
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
       <fileset dir="${common.ivy.lib.dir}"/>
@@ -894,7 +914,7 @@
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${final.name}-*.jar"/>
     </copy>
-
+    
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
     </copy>
@@ -923,6 +943,9 @@
           <exclude name="${final.name}/src/**" />
           <exclude name="${final.name}/docs/**" />
           <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>
@@ -957,7 +980,7 @@
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
   </target>
-	
+
   <target name="compile-ant-tasks" depends="compile-core">
     <javac
         encoding="${build.encoding}"
@@ -1286,5 +1309,4 @@
   <target name="published" depends="ivy-publish-local,maven-artifacts">
 
   </target>
-
 </project>
