@@ -1607,7 +1607,7 @@ Release 0.20.0 - 2009-04-15
     (Rahul Kumar Singh via yhemanth)
 
     HADOOP-5328. Fixes a problem in the renaming of job history files during 
-    job recovery. Amar Kamat via ddas)
+    job recovery. (Amar Kamat via ddas)
 
     HADOOP-5417. Don't ignore InterruptedExceptions that happen when calling 
     into rpc. (omalley)
@@ -1720,7 +1720,7 @@ Release 0.19.2 - Unreleased
     (ddas)
 
     HADOOP-5392. Fixes a problem to do with JT crashing during recovery when
-    the job files are garbled. (Amar Kamat vi ddas)
+    the job files are garbled. (Amar Kamat via ddas)
 
     HADOOP-5332. Appending to files is not allowed (by default) unless
     dfs.support.append is set to true. (dhruba)
@@ -2424,7 +2424,7 @@ Release 0.19.0 - 2008-11-18
     (Lohit Vijayarenu via mahadev)
 
     HADOOP-3778. DFSInputStream.seek() did not retry in case of some errors.
-    (LN via rangadi)
+    (Luo Ning via rangadi)
 
     HADOOP-3661. The handling of moving files deleted through fuse-dfs to
     Trash made similar to the behaviour from dfs shell.
