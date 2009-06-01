@@ -831,6 +831,9 @@ Release 0.20.1 - Unreleased
     available memory on a tasktracker.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-5882. Fixes a problem with reducer progress update in new
+    mapreduce API. (Amareshwari Sriramadasu via sharad) 
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
