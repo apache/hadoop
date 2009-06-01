@@ -182,7 +182,6 @@
     <pathelement location="${test.hdfs.build.classes}" />
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
-    <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
     <path refid="ivy-test.classpath"/>
