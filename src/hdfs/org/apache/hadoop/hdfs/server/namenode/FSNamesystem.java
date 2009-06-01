@@ -4182,7 +4182,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           return leaveMsg + " upon completion of " + 
             "the distributed upgrade: upgrade progress = " + 
             getDistributedUpgradeStatus() + "%";
-        leaveMsg = "Use \"hadoop dfs -safemode leave\" to turn safe mode off";
+        leaveMsg = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off";
       }
       if(blockTotal < 0)
         return leaveMsg + ".";
