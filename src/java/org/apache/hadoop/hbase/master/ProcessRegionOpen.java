@@ -75,7 +75,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
 
     // Register the newly-available Region's location.
     LOG.info("updating row " + regionInfo.getRegionNameAsString() +
-        " in region " + Bytes.toString(metaRegionName) + " with " +
+        " in region " + Bytes.toString(metaRegionName) +
         " with startcode " + serverInfo.getStartCode() + " and server " +
         serverInfo.getServerAddress());
     BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
