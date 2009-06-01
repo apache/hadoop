@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- This is a template file for queue acls configuration properties -->
+
+<configuration>
+
+<property>
+  <name>mapred.queue.default.acl-submit-job</name>
+  <value>*</value>
+  <description> Comma separated list of user and group names that are allowed
+    to submit jobs to the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to 
+    submit jobs. 
+  </description>
+</property>
+
+<property>
+  <name>mapred.queue.default.acl-administer-jobs</name>
+  <value>*</value>
+  <description> Comma separated list of user and group names that are allowed
+    to delete jobs or modify job's priority for jobs not owned by the current
+    user in the 'default' queue. The user list and the group list
+    are separated by a blank. For e.g. alice,bob group1,group2. 
+    If set to the special value '*', it means all users are allowed to do 
+    this operation.
+  </description>
+</property>
+
+</configuration>
