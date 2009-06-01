@@ -58,10 +58,8 @@ abstract public class Shell {
   /** 
    * Get the Unix command for setting the maximum virtual memory available
    * to a given child process. This is only relevant when we are forking a
-   * process from within the {@link org.apache.hadoop.mapred.Mapper} or the 
-   * {@link org.apache.hadoop.mapred.Reducer} implementations 
-   * e.g. <a href="{@docRoot}/org/apache/hadoop/mapred/pipes/package-summary.html">Hadoop Pipes</a> 
-   * or <a href="{@docRoot}/org/apache/hadoop/streaming/package-summary.html">Hadoop Streaming</a>.
+   * process from within the Mapper or the Reducer implementations.
+   * see also Hadoop Pipes and Streaming.
    * 
    * It also checks to ensure that we are running on a *nix platform else 
    * (e.g. in Cygwin/Windows) it returns <code>null</code>.

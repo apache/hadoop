@@ -34,8 +34,8 @@ import java.net.URI;
  * framework to cache files (text, archives, jars etc.) needed by applications.
  * </p>
  * 
- * <p>Applications specify the files, via urls (hdfs:// or http://) to be cached 
- * via the {@link org.apache.hadoop.mapred.JobConf}.
+ * <p>Applications specify the files, via urls (hdfs:// or http://) to be 
+ * cached via the org.apache.hadoop.mapred.JobConf.
  * The <code>DistributedCache</code> assumes that the
  * files specified via hdfs:// urls are already present on the 
  * {@link FileSystem} at the path specified by the url.</p>
@@ -82,8 +82,8 @@ import java.net.URI;
  *     DistributedCache.addCacheArchive(new URI("/myapp/mytgz.tgz", job);
  *     DistributedCache.addCacheArchive(new URI("/myapp/mytargz.tar.gz", job);
  *     
- *     3. Use the cached files in the {@link org.apache.hadoop.mapred.Mapper}
- *     or {@link org.apache.hadoop.mapred.Reducer}:
+ *     3. Use the cached files in the org.apache.hadoop.mapred.Mapper
+ *     or org.apache.hadoop.mapred.Reducer:
  *     
  *     public static class MapClass extends MapReduceBase  
  *     implements Mapper&lt;K, V, K, V&gt; {
@@ -109,8 +109,6 @@ import java.net.URI;
  *     
  * </pre></blockquote></p>
  * 
- * @see org.apache.hadoop.mapred.JobConf
- * @see org.apache.hadoop.mapred.JobClient
  */
 public class DistributedCache {
   // cacheID to cacheStatus mapping
