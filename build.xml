@@ -28,6 +28,8 @@
   <property name="Name" value="Hadoop-Mapred"/>
   <property name="name" value="hadoop-mapred"/>
   <property name="version" value="0.21.0-dev"/>
+  <property name="hadoop-core.version" value="0.21.0-dev"/>
+  <property name="hadoop-hdfs.version" value="0.21.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="examples.final.name" value="${name}-examples-${version}"/>
@@ -178,7 +180,7 @@
   <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
   <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
   <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
-  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-core-${version}.pom" />
+  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-mapred-${version}.pom" />
   <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar" />
 
   <!--this is the naming policy for artifacts we want pulled down-->
@@ -208,8 +210,8 @@
   <path id="classpath">
     <pathelement location="${build.classes}"/>
     <pathelement location="${conf.dir}"/>
-    <pathelement path="${lib.dir}/hadoop-core-${version}.jar"/>
-    <pathelement path="${lib.dir}/hadoop-hdfs-${version}.jar"/>
+    <pathelement path="${lib.dir}/hadoop-core-${hadoop-core.version}.jar"/>
+    <pathelement path="${lib.dir}/hadoop-hdfs-${hadoop-hdfs.version}.jar"/>
     <path refid="ivy-common.classpath"/>
   </path>
 
@@ -221,8 +223,8 @@
     <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
-    <pathelement path="${lib.dir}/hadoop-core-test-${version}.jar"/>
-    <pathelement path="${lib.dir}/hadoop-hdfs-test-${version}.jar"/>
+    <pathelement path="${lib.dir}/hadoop-core-test-${hadoop-core.version}.jar"/>
+    <pathelement path="${lib.dir}/hadoop-hdfs-test-${hadoop-hdfs.version}.jar"/>
     <path refid="classpath"/>
     <pathelement location="${test.mapred.build.classes}" />
     <path refid="ivy-test.classpath"/>
