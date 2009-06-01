@@ -529,7 +529,7 @@ public class ZooKeeperWrapper implements HConstants {
       List<String> nodes = zooKeeper.getChildren(rsZNode, false);
       for (String node : nodes) {
         LOG.debug("Deleting node: " + node);
-        zooKeeper.delete(node, -1);
+        zooKeeper.delete(joinPath(this.rsZNode, node), -1);
       }
     } catch (KeeperException e) {
       LOG.warn("Failed to delete " + rsZNode + " znode in ZooKeeper: " + e);

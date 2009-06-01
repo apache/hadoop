@@ -158,6 +158,8 @@ Release 0.20.0 - Unreleased
                their region assignments from the last master
    HBASE-1457  Taking down ROOT/META regionserver can result in cluster
                becoming in-operational (Ryan Rawson via Stack)
+   HBASE-1471  During cluster shutdown, deleting zookeeper regionserver nodes
+               causes exceptions
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
