@@ -176,7 +176,7 @@
     <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
-    <path refid="test-classpath"/>
+    <path refid="ivy-test.classpath"/>
     <path refid="classpath"/>
   </path>
 <!--
@@ -287,9 +287,6 @@
   </target>
   
   <target name="compile-core-classes" depends="init, compile-rcc-compiler">
-    <!-- <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
-        <classpath refid="classpath"/>
-     </taskdef> -->
     <!-- Compile Java files (excluding JSPs) checking warnings -->
     <javac 
      encoding="${build.encoding}" 
@@ -384,7 +381,7 @@
          basedir="${build.classes}">
       <manifest>
         <section name="org/apache/hadoop">
-          <attribute name="Implementation-Title" value="Hadoop"/>
+          <attribute name="Implementation-Title" value="${ant.project.name}"/>
           <attribute name="Implementation-Version" value="${version}"/>
           <attribute name="Implementation-Vendor" value="Apache"/>
         </section>
@@ -762,7 +759,7 @@
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
-         <param name="-apiname" value="hadoop ${version}"/>
+         <param name="-apiname" value="hadoop-core ${version}"/>
        </doclet>
        <packageset dir="src/java"/>
        <classpath >
@@ -787,8 +784,8 @@
 	     maxmemory="${javadoc.maxmemory}">
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
-         <param name="-oldapi" value="hadoop ${jdiff.stable}"/>
-         <param name="-newapi" value="hadoop ${version}"/>
+         <param name="-oldapi" value="hadoop-core ${jdiff.stable}"/>
+         <param name="-newapi" value="hadoop-core ${version}"/>
          <param name="-oldapidir" value="${jdiff.xml.dir}"/>
          <param name="-newapidir" value="${jdiff.xml.dir}"/>
          <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
@@ -1246,14 +1243,14 @@
     description="Retrieve Ivy-managed artifacts for the test configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
-    <ivy:cachepath pathid="test-classpath" conf="test-hdfswithmr"/>
+    <ivy:cachepath pathid="ivy-test.classpath" conf="test-hdfswithmr"/>
   </target>
 
   <target name="ivy-retrieve-test" depends="ivy-resolve-test"
     description="Retrieve Ivy-managed artifacts for the test configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
-    <ivy:cachepath pathid="test-classpath" conf="test"/>
+    <ivy:cachepath pathid="ivy-test.classpath" conf="test"/>
   </target>
 
   <target name="ivy-retrieve-common" depends="ivy-resolve-common"
