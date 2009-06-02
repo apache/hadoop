@@ -300,6 +300,8 @@ Release 0.20.0 - Unreleased
    HBASE-1192  LRU-style map for the block cache (Jon Gray and Ryan Rawson
                via Stack)
    HBASE-1445  Add the ability to start a master from any machine
+   HBASE-1474  Add zk attributes to list of attributes 
+               in master and regionserver UIs
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
