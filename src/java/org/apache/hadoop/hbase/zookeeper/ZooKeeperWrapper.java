@@ -152,8 +152,8 @@ public class ZooKeeperWrapper implements HConstants {
     try {
       properties = HQuorumPeer.parseZooKeeperConfig();
     } catch (IOException e) {
-      LOG.error("fail to read properties from " + ZOOKEEPER_CONFIG_NAME);
-      return;
+      LOG.fatal("Fail to read properties from " + ZOOKEEPER_CONFIG_NAME, e);
+      System.exit(-1);
     }
 
     String clientPort = null;
@@ -532,9 +532,9 @@ public class ZooKeeperWrapper implements HConstants {
         zooKeeper.delete(joinPath(this.rsZNode, node), -1);
       }
     } catch (KeeperException e) {
-      LOG.warn("Failed to delete " + rsZNode + " znode in ZooKeeper: " + e);
+      LOG.warn("Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
     } catch (InterruptedException e) {
-      LOG.warn("Failed to delete " + rsZNode + " znode in ZooKeeper: " + e);
+      LOG.warn("Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
     }
   }
   

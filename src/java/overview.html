@@ -79,15 +79,9 @@ operation, continue reading.
 </p>
 
 <h2><a name="distributed">Distributed Operation</a></h2>
-<p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS) and a ZooKeeper cluster.
+<p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS).
 See the Hadoop <a href="http://lucene.apache.org/hadoop/api/overview-summary.html#overview_description">
 requirements and instructions</a> for how to set up a DFS.
-See the ZooKeeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html">Getting Started Guide</a>
-for information about the ZooKeeper distributed coordination service.
-If you do not configure a ZooKeeper cluster, HBase will manage a single instance
-ZooKeeper service for you running on the master node.
-This is intended for development and local testing only.
-It SHOULD NOT be used in a fully-distributed production operation.
 </p>
 
 <h3><a name="pseudo-distrib">Pseudo-Distributed Operation</a></h3>
@@ -122,21 +116,19 @@ create them if you let it).
 For running a fully-distributed operation on more than one host, the following
 configurations must be made <i>in addition</i> to those described in the
 <a href="#pseudo-distrib">pseudo-distributed operation</a> section above.
+A Zookeeper cluster is also required to ensure higher availability.
 In <code>hbase-site.xml</code>, you must also configure
-<code>hbase.master.hostname</code> to the host on which the HBase master runs
-(<a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">read 
-about the HBase master, regionservers, etc</a>).
-For example, adding the below to your <code>hbase-site.xml</code> says the
-master is up on the host example.org:
+<code>hbase.cluster.distributed</code> to 'true'. 
 </p>
 <pre>
 &lt;configuration&gt;
   ...
   &lt;property&gt;
-    &lt;name&gt;hbase.master.hostname&lt;/name&gt;
-    &lt;value&gt;example.org&lt;/value&gt;
-    &lt;description&gt;The host that the HBase master runs at.
-      A value of 'local' runs the master and regionserver in a single process.
+    &lt;name&gt;hbase.cluster.distributed&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+    &lt;description&gt;The mode the cluster will be in. Possible values are
+      false: standalone and pseudo-distributed setups with managed Zookeeper
+      true: fully-distributed with unmanaged Zookeeper Quorum (see hbase-env.sh)
     &lt;/description&gt;
   &lt;/property&gt;
   ...
@@ -151,14 +143,35 @@ operation requires that you also modify <code>${HBASE_HOME}/conf/regionservers</
 in HBase is like the hadoop slaves file at <code>${HADOOP_HOME}/conf/slaves</code>).
 </p>
 <p>
-Furthermore, you should configure a distributed ZooKeeper cluster.
+Furthermore, you have to configure a distributed ZooKeeper cluster.
 The ZooKeeper configuration file is stored at <code>${HBASE_HOME}/conf/zoo.cfg</code>.
 See the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html"> Getting Started Guide</a> for information about the format and options of that file.
 Specifically, look at the <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html#sc_RunningReplicatedZooKeeper">Running Replicated ZooKeeper</a> section.
-In <code>${HBASE_HOME}/conf/hbase-env.sh</code>, set <code>HBASE_MANAGES_ZK=false</code> to tell HBase not to manage its own single instance ZooKeeper service.
+In <code>${HBASE_HOME}/conf/hbase-env.sh</code>, set the following to tell HBase not to manage its own single instance of ZooKeeper.
+<pre>
+  ...
+# Tell HBase whether it should manage it's own instance of Zookeeper or not.
+export HBASE_MANAGES_ZK=false
+</pre>
+</p>
+<p>
+It's still possible to use HBase in order to start a single Zookeeper instance in fully-distributed operation.
+The first thing to do is still to change <code>${HBASE_HOME}/conf/zoo.cfg</code> and set a single node.
+Note that leaving the value "localhost" will make it impossible to start HBase.
+<pre>
+  ...
+server.0=example.org:2888:3888
+</pre>
+Then on the example.org server do the following <i>before</i> running HBase. 
+<pre>
+${HBASE_HOME}/bin/hbase-daemon.sh start zookeeper
+</pre>
+Be aware that this option is only recommanded for testing purposes as a failure
+on that node would render HBase <b>unusable</b>.
 </p>
 
-<p>Of note, if you have made <i>HDFS client configuration</i> on your hadoop cluster, hbase will not
+
+<p>Of note, if you have made <i>HDFS client configuration</i> on your hadoop cluster, HBase will not
 see this configuration unless you do one of the following:
 <ul>
     <li>Add a pointer to your <code>HADOOP_CONF_DIR</code> to <code>CLASSPATH</code> in <code>hbase-env.sh</code></li>
@@ -167,7 +180,7 @@ see this configuration unless you do one of the following:
 </ul>
 An example of such an HDFS client configuration is <code>dfs.replication</code>.  If for example,
 you want to run with a replication factor of 5, hbase will create files with the default of 3 unless 
-you do the above to make the configuration available to hbase.
+you do the above to make the configuration available to HBase.
 </p>
 
 <h2><a name="runandconfirm">Running and Confirming Your Installation</a></h2>

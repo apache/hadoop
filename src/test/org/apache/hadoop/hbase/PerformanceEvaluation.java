@@ -767,12 +767,6 @@ public class PerformanceEvaluation implements HConstants {
           errCode = 0;
           break;
         }
-        
-        final String masterArgKey = "--master=";
-        if (cmd.startsWith(masterArgKey)) {
-          this.conf.set(MASTER_ADDRESS, cmd.substring(masterArgKey.length()));
-          continue;
-        }
        
         final String miniClusterArgKey = "--miniCluster";
         if (cmd.startsWith(miniClusterArgKey)) {

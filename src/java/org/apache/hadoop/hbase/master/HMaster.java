@@ -85,6 +85,7 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -161,17 +162,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @throws IOException
    */
   public HMaster(HBaseConfiguration conf) throws IOException {
-    // find out our address. If it's set in config, use that, otherwise look it
-    // up in DNS.
-    String addressStr = conf.get(MASTER_ADDRESS);
-    if (addressStr == null) {
-      addressStr = conf.get(MASTER_HOST_NAME);
-      if (addressStr == null) {
-        addressStr = InetAddress.getLocalHost().getCanonicalHostName();
-      }
-      addressStr += ":";
-      addressStr += conf.get("hbase.master.port", Integer.toString(DEFAULT_MASTER_PORT));
-    }
+    // find out our address up in DNS.
+    String addressStr = DNS.getDefaultHost(
+        conf.get("hbase.master.dns.interface","default"),
+        conf.get("hbase.master.dns.nameserver","default"));
+    addressStr += ":" + 
+      conf.get("hbase.master.port", Integer.toString(DEFAULT_MASTER_PORT));
     HServerAddress address = new HServerAddress(addressStr);
     LOG.info("My address is " + address);
 
@@ -531,7 +527,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           this.connection.getHRegionConnection(address, false);
         HServerInfo info = hri.getHServerInfo();
         LOG.debug("Inspection found server " + info.getName());
-        serverManager.recordNewServer(info);
+        serverManager.recordNewServer(info, true);
         HRegionInfo[] regions = hri.getRegionsAssignment();
         for (HRegionInfo region : regions) {
           if(region.isRootRegion()) {
@@ -1075,13 +1071,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
-
-    final String addressArgKey = "--bind=";
     for (String cmd: args) {
-      if (cmd.startsWith(addressArgKey)) {
-        conf.set(MASTER_ADDRESS, cmd.substring(addressArgKey.length()));
-        continue;
-      }
 
       if (cmd.equals("start")) {
         try {

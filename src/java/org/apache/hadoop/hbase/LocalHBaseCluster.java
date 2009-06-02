@@ -90,7 +90,6 @@ public class LocalHBaseCluster implements HConstants {
     final int noRegionServers)
   throws IOException {
     this.conf = conf;
-    doLocal(conf);
     // Create the master
     this.master = new HMaster(conf);
     // Start the HRegionServers.  Always have region servers come up on
@@ -317,46 +316,12 @@ public class LocalHBaseCluster implements HConstants {
   }
 
   /**
-   * Changes <code>hbase.master</code> from 'local' to 'localhost:PORT' in
-   * passed Configuration instance.
-   * @param c
-   * @return The passed <code>c</code> configuration modified if hbase.master
-   * value was 'local' otherwise, unaltered.
-   */
-  private static HBaseConfiguration doLocal(final HBaseConfiguration c) {
-    if (!isLocal(c)) {
-      return c;
-    }
-
-    // Need to rewrite address in Configuration if not done already.
-    String address = c.get(MASTER_ADDRESS);
-    if (address != null) {
-      String port = address.startsWith(LOCAL_COLON)?
-        address.substring(LOCAL_COLON.length()):
-        Integer.toString(DEFAULT_MASTER_PORT);
-      c.set(MASTER_ADDRESS, "localhost:" + port);
-    }
-
-    // Need to rewrite host in Configuration if not done already.
-    String host = c.get(MASTER_HOST_NAME);
-    if (host != null && host.equals(LOCAL)) {
-      c.set(MASTER_HOST_NAME, "localhost");
-    }
-
-    return c;
-  }
-
-  /**
    * @param c Configuration to check.
    * @return True if a 'local' address in hbase.master value.
    */
   public static boolean isLocal(final Configuration c) {
-    String address = c.get(MASTER_ADDRESS);
-    boolean addressIsLocal = address == null || address.equals(LOCAL) ||
-                             address.startsWith(LOCAL_COLON);
-    String host = c.get(MASTER_HOST_NAME);
-    boolean hostIsLocal = host == null || host.equals(LOCAL);
-    return addressIsLocal && hostIsLocal;
+    String mode = c.get(CLUSTER_DISTRIBUTED);
+    return mode == null || mode.equals(CLUSTER_IS_LOCAL);
   }
 
   /**

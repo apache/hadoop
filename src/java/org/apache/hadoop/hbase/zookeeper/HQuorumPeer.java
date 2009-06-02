@@ -101,6 +101,7 @@ public class HQuorumPeer implements HConstants {
     }
     for (Entry<Object, Object> entry : properties.entrySet()) {
       String value = entry.getValue().toString().trim();
+      String key = entry.getKey().toString().trim();
       StringBuilder newValue = new StringBuilder();
       int varStart = value.indexOf(VARIABLE_START);
       int varEnd = 0;
@@ -123,19 +124,24 @@ public class HQuorumPeer implements HConstants {
           LOG.fatal(msg);
           throw new IOException(msg);
         }
-        // Special case for 'hbase.master.hostname' property being 'local'
-        if (variable.equals(HConstants.MASTER_HOST_NAME) && substituteValue.equals("local")) {
-          substituteValue = "localhost";
-        }
+        
         newValue.append(substituteValue);
 
         varEnd += VARIABLE_END_LENGTH;
         varStart = value.indexOf(VARIABLE_START, varEnd);
       }
-
+      // Special case for 'hbase.cluster.distributed' property being 'true'
+      if (key.startsWith("server.")) {
+        if(conf.get(CLUSTER_DISTRIBUTED).equals(CLUSTER_IS_DISTRIBUTED) && 
+            value.startsWith("localhost")) {
+           String msg = "The server in zoo.cfg cannot be set to localhost " +
+              "in a fully-distributed setup because it won't be reachable. " +
+              "See \"Getting Started\" for more information.";
+           LOG.fatal(msg);
+           throw new IOException(msg);
+        }
+      }
       newValue.append(value.substring(varEnd));
-
-      String key = entry.getKey().toString().trim();
       properties.setProperty(key, newValue.toString());
     }
     return properties;

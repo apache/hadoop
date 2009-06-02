@@ -19,6 +19,8 @@ Release 0.20.0 - Unreleased
    HBASE-1367  Get rid of Thrift exception 'NotFound'
    HBASE-1381  Remove onelab and bloom filters files from hbase
    HBASE-1411  Remove HLogEdit.
+   HBASE-1357  If one sets the hbase.master to 0.0.0.0 non local regionservers
+               can't find the master
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
@@ -297,6 +299,7 @@ Release 0.20.0 - Unreleased
    HBASE-1464  Add hbase.regionserver.logroll.period to hbase-default
    HBASE-1192  LRU-style map for the block cache (Jon Gray and Ryan Rawson
                via Stack)
+   HBASE-1445  Add the ability to start a master from any machine
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

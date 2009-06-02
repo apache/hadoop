@@ -194,12 +194,23 @@ class ServerManager implements HConstants {
     recordNewServer(info);
   }
   
+  
   /**
-   * Adds the HSI to the RS list
+   * Adds the HSI to the RS list and creates an empty load
    * @param info The region server informations
    */
   public void recordNewServer(HServerInfo info) {
-    HServerLoad load = new HServerLoad();
+    recordNewServer(info, false);
+  }
+  
+  /**
+   * Adds the HSI to the RS list
+   * @param info The region server informations
+   * @param useInfoLoad True if the load from the info should be used
+   *                    like under a master failover
+   */
+  public void recordNewServer(HServerInfo info, boolean useInfoLoad) {
+    HServerLoad load = useInfoLoad ? info.getLoad() : new HServerLoad();
     String serverName = HServerInfo.getServerName(info);
     info.setLoad(load);
     // We must set this watcher here because it can be set on a fresh start

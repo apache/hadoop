@@ -52,21 +52,16 @@ public interface HConstants {
   
   // Configuration parameters
   
-  // TODO: URL for hbase master like hdfs URLs with host and port.
-  // Like jdbc URLs?  URLs could be used to refer to table cells?
-  // jdbc:mysql://[host][,failoverhost...][:port]/[database]
-  // jdbc:mysql://[host][,failoverhost...][:port]/[database][?propertyName1][=propertyValue1][&propertyName2][=propertyValue2]...
+  //TODO: Is having HBase homed on port 60k OK?
   
-  // Key into HBaseConfiguration for the hbase.master address.
-  // TODO: Support 'local': i.e. default of all running in single
-  // process.  Same for regionserver. TODO: Is having HBase homed
-  // on port 60k OK?
+  /** Cluster is in distributed mode or not */
+  static final String CLUSTER_DISTRIBUTED = "hbase.cluster.distributed";
   
-  /** Parameter name for master address */
-  static final String MASTER_ADDRESS = "hbase.master";
-
-  /** Parameter name for master host name. */
-  static final String MASTER_HOST_NAME = "hbase.master.hostname";
+  /** Cluster is standalone or pseudo-distributed */
+  static final String CLUSTER_IS_LOCAL = "false";
+  
+  /** Cluster is fully-distributed */
+  static final String CLUSTER_IS_DISTRIBUTED = "true";
 
   /** default host address */
   static final String DEFAULT_HOST = "0.0.0.0";

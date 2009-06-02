@@ -31,16 +31,17 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.hostname</name>
-    <value>local</value>
-    <description>The host that the HBase master runs at.
-      A value of 'local' runs the master and regionserver in a single process.
-    </description>
-  </property>
-  <property>
     <name>hbase.master.port</name>
     <value>60000</value>
     <description>The port master should bind to.</description>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>false</value>
+    <description>The mode the cluster will be in. Possible values are
+      false: standalone and pseudo-distributed setups with managed Zookeeper
+      true: fully-distributed with unmanaged Zookeeper Quorum (see hbase-env.sh)
+    </description>
   </property>
   <property>
     <name>hbase.tmp.dir</name>
@@ -211,6 +212,21 @@
     <description>The host name or IP address of the name server (DNS)
       which a region server should use to determine the host name used by the
       master for communication and display purposes.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.dns.interface</name>
+    <value>default</value>
+    <description>The name of the Network Interface from which a master 
+      should report its IP address.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.dns.nameserver</name>
+    <value>default</value>
+    <description>The host name or IP address of the name server (DNS)
+      which a master should use to determine the host name used 
+      for communication and display purposes.
     </description>
   </property>
   <property>
