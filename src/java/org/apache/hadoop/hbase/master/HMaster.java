@@ -243,7 +243,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
     
     zooKeeperWrapper = new ZooKeeperWrapper(conf);
-    zkMasterAddressWatcher = new ZKMasterAddressWatcher(zooKeeperWrapper);
+    zkMasterAddressWatcher = new ZKMasterAddressWatcher(this);
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
 
@@ -257,7 +257,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private void writeAddressToZooKeeper() {
     while (true) {
       zkMasterAddressWatcher.waitForMasterAddressAvailability();
-      if (zooKeeperWrapper.writeMasterAddress(address)) {
+      // Check if we need to shutdown instead of taking control
+      if(this.shutdownRequested.get())
+      {
+        return;
+      } else if(zooKeeperWrapper.writeMasterAddress(address)) {
+        zooKeeperWrapper.setClusterState(true);
         return;
       }
     }
@@ -666,6 +671,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
     this.shutdownRequested.set(true);
+    this.zooKeeperWrapper.setClusterState(false);
   }
 
   public void createTable(HTableDescriptor desc)
@@ -1088,6 +1094,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             Constructor<? extends HMaster> c =
               masterClass.getConstructor(HBaseConfiguration.class);
             HMaster master = c.newInstance(conf);
+            if(master.shutdownRequested.get()) {
+              LOG.info("Won't bring the Master up as a shutdown is requested");
+              return;
+            }
             master.start();
           }
         } catch (Throwable t) {

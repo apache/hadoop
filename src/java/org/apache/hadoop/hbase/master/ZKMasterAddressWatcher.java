@@ -38,13 +38,15 @@ public class ZKMasterAddressWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZKMasterAddressWatcher.class);
 
   private final ZooKeeperWrapper zooKeeper;
+  private final HMaster master;
 
   /**
    * Create a watcher with a ZooKeeperWrapper instance.
    * @param zooKeeper ZooKeeperWrapper to use to talk to ZooKeeper.
    */
-  public ZKMasterAddressWatcher(ZooKeeperWrapper zooKeeper) {
-    this.zooKeeper = zooKeeper;
+  public ZKMasterAddressWatcher(HMaster master) {
+    this.master = master;
+    this.zooKeeper = master.getZooKeeperWrapper();
   }
 
   /**
@@ -53,9 +55,22 @@ public class ZKMasterAddressWatcher implements Watcher {
   @Override
   public synchronized void process(WatchedEvent event) {
     EventType type = event.getType();
+    LOG.debug(("Got event " + type + " with path " + event.getPath()));
     if (type.equals(EventType.NodeDeleted)) {
-      LOG.debug("Master address ZNode deleted, notifying waiting masters");
-      notifyAll();
+      if(event.getPath().equals(this.zooKeeper.clusterStateZNode)) {
+        LOG.info("The cluster was shutdown while waiting, shutting down" +
+            " this master.");
+        master.shutdownRequested.set(true);
+      }
+      else {
+        LOG.debug("Master address ZNode deleted, notifying waiting masters");
+        notifyAll();
+      }
+    }
+    else if(type.equals(EventType.NodeCreated) && 
+        event.getPath().equals(this.zooKeeper.clusterStateZNode)) {
+      LOG.debug("Resetting the watch on the cluster state node.");
+      this.zooKeeper.setClusterStateWatch(this);
     }
   }
 
@@ -66,7 +81,9 @@ public class ZKMasterAddressWatcher implements Watcher {
   public synchronized void waitForMasterAddressAvailability() {
     while (zooKeeper.readMasterAddress(this) != null) {
       try {
-        LOG.debug("Waiting for master address ZNode to be deleted");
+        LOG.debug("Waiting for master address ZNode to be deleted " +
+            "and watching the cluster state node");
+        this.zooKeeper.setClusterStateWatch(this);
         wait();
       } catch (InterruptedException e) {
       }
