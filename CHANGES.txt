@@ -750,6 +750,9 @@ Trunk (unreleased changes)
     even when the default value of dfs.http.address is not overridden.
     (Todd Lipcon via dhruba)
 
+    HADOOP-5953. The isDirectory(..) and isFile(..) methods in KosmosFileSystem
+    should not be deprecated.  (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
