@@ -46,6 +46,7 @@
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
   <property name="build.src" value="${build.dir}/src"/>
+  <property name="build.webapps" value="${build.dir}/webapps"/>
 
   <!-- convert spaces to _ so that mac os doesn't break things -->
   <exec executable="sed" inputstring="${os.name}" 
@@ -227,6 +228,7 @@
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.src}"/>
+    <mkdir dir="${build.webapps}"/>
  
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>

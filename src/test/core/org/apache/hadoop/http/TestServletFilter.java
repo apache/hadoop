@@ -99,7 +99,7 @@ public class TestServletFilter extends junit.framework.TestCase {
     //start a http server with CountingFilter
     conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
         SimpleFilter.Initializer.class.getName());
-    HttpServer http = new HttpServer("datanode", "localhost", 0, true, conf);
+    HttpServer http = new HttpServer("..", "localhost", 0, true, conf);
     http.start();
 
     final String fsckURL = "/fsck";
