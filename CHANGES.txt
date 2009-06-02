@@ -850,9 +850,6 @@ Release 0.20.1 - Unreleased
     HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
     via szetszwo)
 
-    HADOOP-5882. Fixes a problem with reducer progress update in new
-    mapreduce API. (Amareshwari Sriramadasu via sharad) 
-
     HADOOP-5908. Fixes a problem to do with ArithmeticException in the 
     JobTracker when there are jobs with 0 maps. (Amar Kamat via ddas)
 
