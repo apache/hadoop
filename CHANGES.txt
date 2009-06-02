@@ -753,6 +753,10 @@ Trunk (unreleased changes)
     HADOOP-5953. The isDirectory(..) and isFile(..) methods in KosmosFileSystem
     should not be deprecated.  (szetszwo)
 
+    HADOOP-5954. Fix javac warnings in TestFileCreation, TestSmallBlock,
+    TestFileStatus, TestDFSShellGenericOptions, TestSeekBug and
+    TestDFSStartupVersions.  (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
