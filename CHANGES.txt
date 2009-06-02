@@ -743,6 +743,10 @@ Trunk (unreleased changes)
     HADOOP-5944. Add Apache license header to BlockManager.java.  (Suresh
     Srinivas via szetszwo)
 
+    HADOOP-5891. SecondaryNamenode is able to converse with the NameNode 
+    even when the default value of dfs.http.address is not overridden.
+    (Todd Lipcon via dhruba)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
