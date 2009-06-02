@@ -21,7 +21,7 @@
   <property name="version" value="0.20.0-dev"/>
   <property name="Name" value="HBase"/>
   <property name="final.name" value="hbase-${version}"/>
-  <property name="year" value="2008"/>
+  <property name="year" value="2009"/>
  
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
