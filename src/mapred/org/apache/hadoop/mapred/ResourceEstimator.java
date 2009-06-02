@@ -82,7 +82,10 @@ class ResourceEstimator {
    * @return estimated length of this job's average map output
    */
   long getEstimatedMapOutputSize() {
-    long estimate = getEstimatedTotalMapOutputSize()  / job.desiredMaps();
+    long estimate = 0L;
+    if (job.desiredMaps() > 0) {
+      estimate = getEstimatedTotalMapOutputSize()  / job.desiredMaps();
+    }
     return estimate;
   }
 

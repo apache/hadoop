@@ -575,6 +575,14 @@ class JobInProgress {
     return inputLength;
   }
  
+  boolean isCleanupLaunched() {
+    return launchedCleanup;
+  }
+
+  boolean isSetupLaunched() {
+    return launchedSetup;
+  }
+
   /**
    * Get the list of map tasks
    * @return the raw array of maps for this job
@@ -1658,6 +1666,11 @@ class JobInProgress {
                                           final int numUniqueHosts,
                                           final int maxCacheLevel,
                                           final double avgProgress) {
+    if (numMapTasks == 0) {
+      LOG.info("No maps to schedule for " + profile.getJobID());
+      return -1;
+    }
+
     String taskTracker = tts.getTrackerName();
     TaskInProgress tip = null;
     
@@ -1863,6 +1876,11 @@ class JobInProgress {
                                              int clusterSize,
                                              int numUniqueHosts,
                                              double avgProgress) {
+    if (numReduceTasks == 0) {
+      LOG.info("No reduces to schedule for " + profile.getJobID());
+      return -1;
+    }
+
     String taskTracker = tts.getTrackerName();
     TaskInProgress tip = null;
     
