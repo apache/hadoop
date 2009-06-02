@@ -103,6 +103,9 @@ Release 0.20.1 - Unreleased
 
     HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
     via szetszwo)
+ 
+    HADOOP-5648. Fixes a build issue in not being able to generate gridmix.jar
+    in hadoop binary tarball. (Giridharan Kesavan via gkesavan)
 
 Release 0.20.0 - 2009-04-15
 
