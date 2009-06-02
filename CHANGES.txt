@@ -757,6 +757,9 @@ Trunk (unreleased changes)
     TestFileStatus, TestDFSShellGenericOptions, TestSeekBug and
     TestDFSStartupVersions.  (szetszwo)
 
+    HADOOP-5956. Fix ivy dependency in hdfsproxy and capacity-scheduler.
+    (Giridharan Kesavan via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
