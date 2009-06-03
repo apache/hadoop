@@ -874,6 +874,9 @@ Release 0.20.1 - Unreleased
     tasks that report back but the corresponding job hasn't been initialized
     yet. (Amar Kamat via ddas)
 
+    HADOOP-5882. Fixes a reducer progress update problem for new mapreduce
+    api. (Amareshwari Sriramadasu via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
