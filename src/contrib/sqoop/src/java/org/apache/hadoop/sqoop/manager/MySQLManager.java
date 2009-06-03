@@ -41,6 +41,19 @@ public class MySQLManager extends GenericJdbcManager {
 
   public MySQLManager(final ImportOptions opts) {
     super(DRIVER_CLASS, opts);
+
+    String connectString = opts.getConnectString();
+    if (null != connectString && connectString.indexOf("//localhost") != -1) {
+      // if we're not doing a remote connection, they should have a LocalMySQLManager.
+      LOG.warn("It looks like you are importing from mysql on localhost.");
+      LOG.warn("This transfer can be faster! Use the --local option to exercise a");
+      LOG.warn("MySQL-specific fast path.");
+    }
+  }
+
+  protected MySQLManager(final ImportOptions opts, boolean ignored) {
+    // constructor used by subclasses to avoid the --local warning.
+    super(DRIVER_CLASS, opts);
   }
 
   @Override

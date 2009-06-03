@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     HADOOP-4861. Add disk usage with human-readable size (-duh).
     (Todd Lipcon via tomwhite)
 
+    HADOOP-5844. Use mysqldump when connecting to local mysql instance in Sqoop.
+    (Aaron Kimball via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

@@ -21,6 +21,7 @@ package org.apache.hadoop.sqoop;
 import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.manager.GenericJdbcManager;
 import org.apache.hadoop.sqoop.manager.HsqldbManager;
+import org.apache.hadoop.sqoop.manager.LocalMySQLManager;
 import org.apache.hadoop.sqoop.manager.MySQLManager;
 
 import java.io.IOException;
@@ -70,7 +71,11 @@ public final class ConnFactory {
     }
 
     if (scheme.equals("jdbc:mysql:")) {
-      return new MySQLManager(opts);
+      if (opts.isLocal()) {
+        return new LocalMySQLManager(opts);
+      } else {
+        return new MySQLManager(opts);
+      }
     } else if (scheme.equals("jdbc:hsqldb:hsql:")) {
       return new HsqldbManager(opts);
     } else {
