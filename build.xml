@@ -250,6 +250,12 @@
         <exclude name="**/*.jsp" />
       </fileset>
     </copy>
+    <unzip src="${lib.dir}/hadoop-mapred-${hadoop-mr.version}.jar"
+        dest="${build.dir}">
+      <patternset>
+        <include name="webapps/**"/>
+      </patternset>
+    </unzip>
   </target>
 
   <target name="compile-hdfs-classes" depends="init">
