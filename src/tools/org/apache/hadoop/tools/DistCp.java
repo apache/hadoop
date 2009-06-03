@@ -1054,7 +1054,7 @@ public class DistCp implements Tool {
     final boolean special =
       (args.srcs.size() == 1 && !dstExists) || update || overwrite;
     int srcCount = 0, cnsyncf = 0, dirsyn = 0;
-    long fileCount = 0L, byteCount = 0L, cbsyncs = 0L;
+    long fileCount = 0L, dirCount = 0L, byteCount = 0L, cbsyncs = 0L;
     try {
       for(Iterator<Path> srcItr = args.srcs.iterator(); srcItr.hasNext(); ) {
         final Path src = srcItr.next();
@@ -1063,6 +1063,10 @@ public class DistCp implements Tool {
         Path root = special && srcfilestat.isDir()? src: src.getParent();
         if (srcfilestat.isDir()) {
           ++srcCount;
+          ++dirCount;
+          final String dst = makeRelative(root,src);
+          src_writer.append(new LongWritable(0), new FilePair(srcfilestat, dst));
+          dst_writer.append(new Text(dst), new Text(src.toString()));
         }
 
         Stack<FileStatus> pathstack = new Stack<FileStatus>();
@@ -1077,6 +1081,7 @@ public class DistCp implements Tool {
 
             if (child.isDir()) {
               pathstack.push(child);
+              ++dirCount;
             }
             else {
               //skip file if the src and the dst files are the same.
@@ -1161,7 +1166,7 @@ public class DistCp implements Tool {
     jobConf.setInt(SRC_COUNT_LABEL, srcCount);
     jobConf.setLong(TOTAL_SIZE_LABEL, byteCount);
     setMapCount(byteCount, jobConf);
-    return fileCount > 0;
+    return (fileCount + dirCount) > 0;
   }
 
   /**

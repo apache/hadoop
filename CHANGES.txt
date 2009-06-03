@@ -774,6 +774,9 @@ Trunk (unreleased changes)
 
     HADOOP-5861. s3n files are not getting split by default. (tomwhite)
 
+    HADOOP-5762. Fix a problem that DistCp does not copy empty directory.
+    (Rodrigo Schmidt via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
