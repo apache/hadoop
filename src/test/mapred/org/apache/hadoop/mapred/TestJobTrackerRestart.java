@@ -34,11 +34,11 @@ import java.util.List;
  * recover previosuly submitted jobs.
  */
 public class TestJobTrackerRestart extends TestCase {
-  final Path testDir = 
+  static final Path testDir = 
     new Path(System.getProperty("test.build.data","/tmp"), 
              "jt-restart-testing");
   final Path inDir = new Path(testDir, "input");
-  final Path shareDir = new Path(testDir, "share");
+  static final Path shareDir = new Path(testDir, "share");
   final Path outputDir = new Path(testDir, "output");
   private static int numJobsSubmitted = 0;
   
@@ -400,6 +400,115 @@ public class TestJobTrackerRestart extends TestCase {
            && status.getReduceTasks() == 0;
   }
   
+  /** Committer with setup waiting
+   */
+  static class CommitterWithDelaySetup extends FileOutputCommitter {
+    @Override
+    public void setupJob(JobContext context) throws IOException {
+      FileSystem fs = FileSystem.get(context.getConfiguration());
+      while (true) {
+        if (fs.exists(shareDir)) {
+          break;
+        }
+        UtilsForTests.waitFor(100);
+      }
+      super.cleanupJob(context);
+    }
+  }
+
+  /** Tests a job on jobtracker with restart-recovery turned on and empty 
+   *  jobhistory file.
+   * Preparation :
+   *    - Configure a job with
+   *       - num-maps : 0 (long waiting setup)
+   *       - num-reducers : 0
+   *    
+   * Check if the job succeedes after restart.
+   * 
+   * Assumption that map slots are given first for setup.
+   */
+  public void testJobRecoveryWithEmptyHistory(MiniDFSCluster dfs, 
+                                              MiniMRCluster mr) 
+  throws IOException {
+    mr.startTaskTracker(null, null, 1, 1);
+    FileSystem fileSys = dfs.getFileSystem();
+    
+    cleanUp(fileSys, shareDir);
+    cleanUp(fileSys, inDir);
+    cleanUp(fileSys, outputDir);
+    
+    JobConf conf = mr.createJobConf();
+    conf.setNumReduceTasks(0);
+    conf.setOutputCommitter(TestEmptyJob.CommitterWithDelayCleanup.class);
+    fileSys.delete(outputDir, false);
+    RunningJob job1 = 
+      UtilsForTests.runJob(conf, inDir, outputDir, 30, 0);
+    
+    conf.setNumReduceTasks(0);
+    conf.setOutputCommitter(CommitterWithDelaySetup.class);
+    Path inDir2 = new Path(testDir, "input2");
+    fileSys.mkdirs(inDir2);
+    Path outDir2 = new Path(testDir, "output2");
+    fileSys.delete(outDir2, false);
+    JobConf newConf = getJobs(mr.createJobConf(),
+                              new JobPriority[] {JobPriority.NORMAL},
+                              new int[] {10}, new int[] {0},
+                              outDir2, inDir2,
+                              getMapSignalFile(shareDir),
+                              getReduceSignalFile(shareDir))[0];
+
+    JobClient jobClient = new JobClient(newConf);
+    RunningJob job2 = jobClient.submitJob(newConf);
+    JobID id = job2.getID();
+
+    /*RunningJob job2 = 
+      UtilsForTests.runJob(mr.createJobConf(), inDir2, outDir2, 0);
+    
+    JobID id = job2.getID();*/
+    JobInProgress jip = mr.getJobTrackerRunner().getJobTracker().getJob(id);
+    
+    jip.initTasks();
+    
+    // find out the history filename
+    String history = 
+      JobHistory.JobInfo.getJobHistoryFileName(jip.getJobConf(), id);
+    Path historyPath = JobHistory.JobInfo.getJobHistoryLogLocation(history);
+    
+    //  make sure that setup is launched
+    while (jip.runningMaps() == 0) {
+      UtilsForTests.waitFor(100);
+    }
+    
+    id = job1.getID();
+    jip = mr.getJobTrackerRunner().getJobTracker().getJob(id);
+    
+    jip.initTasks();
+    
+    //  make sure that cleanup is launched and is waiting
+    while (!jip.isCleanupLaunched()) {
+      UtilsForTests.waitFor(100);
+    }
+    
+    mr.stopJobTracker();
+    
+    // delete the history file .. just to be safe.
+    FileSystem historyFS = historyPath.getFileSystem(conf);
+    historyFS.delete(historyPath, false);
+    historyFS.create(historyPath).close(); // create an empty file
+    
+    
+    UtilsForTests.signalTasks(dfs, fileSys, getMapSignalFile(shareDir), getReduceSignalFile(shareDir), (short)1);
+
+    // Turn on the recovery
+    mr.getJobTrackerConf().setBoolean("mapred.jobtracker.restart.recover", 
+                                      true);
+    
+    mr.startJobTracker();
+    
+    job1.waitForCompletion();
+    job2.waitForCompletion();
+  }
+  
   public void testJobTrackerRestart() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;
@@ -450,6 +559,9 @@ public class TestJobTrackerRestart extends TestCase {
       
       // Test jobtracker with restart-recovery turned off
       testRestartWithoutRecovery(dfs, mr);
+      
+      // test recovery with empty file
+      testJobRecoveryWithEmptyHistory(dfs, mr);
     } finally {
       if (mr != null) {
         try {

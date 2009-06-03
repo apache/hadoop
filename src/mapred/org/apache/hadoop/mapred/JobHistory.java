@@ -875,6 +875,11 @@ public class JobHistory {
         String logFileName = null;
         if (restarted) {
           logFileName = getJobHistoryFileName(jobConf, jobId);
+          if (logFileName == null) {
+            logFileName =
+              encodeJobHistoryFileName(getNewJobHistoryFileName(jobConf, jobId));
+            
+          }
         } else {
           logFileName = 
             encodeJobHistoryFileName(getNewJobHistoryFileName(jobConf, jobId));

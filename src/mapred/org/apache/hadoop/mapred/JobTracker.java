@@ -1439,6 +1439,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   Map<String, Set<JobID>> trackerToJobsToCleanup = 
     new HashMap<String, Set<JobID>>();
   
+  // (trackerID --> list of tasks to cleanup)
+  Map<String, Set<TaskAttemptID>> trackerToTasksToCleanup = 
+    new HashMap<String, Set<TaskAttemptID>>();
+  
   // All the known TaskInProgress items, mapped to by taskids (taskid->TIP)
   Map<TaskAttemptID, TaskInProgress> taskidToTIPMap =
     new TreeMap<TaskAttemptID, TaskInProgress>();
@@ -2823,8 +2827,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                                               String taskTracker) {
     
     Set<TaskAttemptID> taskIds = trackerToTaskMap.get(taskTracker);
+    List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
     if (taskIds != null) {
-      List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
       for (TaskAttemptID killTaskId : taskIds) {
         TaskInProgress tip = taskidToTIPMap.get(killTaskId);
         if (tip == null) {
@@ -2842,10 +2846,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           }
         }
       }
-            
-      return killList;
     }
-    return null;
+    
+    // add the stray attempts for uninited jobs
+    synchronized (trackerToTasksToCleanup) {
+      Set<TaskAttemptID> set = trackerToTasksToCleanup.remove(taskTracker);
+      if (set != null) {
+        for (TaskAttemptID id : set) {
+          killList.add(new KillTaskAction(id));
+        }
+      }
+    }
+    return killList;
   }
 
   /**
@@ -3521,6 +3533,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         continue;
       }
       
+      if (!job.inited()) {
+        // if job is not yet initialized ... kill the attempt
+        synchronized (trackerToTasksToCleanup) {
+          Set<TaskAttemptID> tasks = trackerToTasksToCleanup.get(trackerName);
+          if (tasks == null) {
+            tasks = new HashSet<TaskAttemptID>();
+            trackerToTasksToCleanup.put(trackerName, tasks);
+          }
+          tasks.add(taskId);
+        }
+        continue;
+      }
+
       TaskInProgress tip = taskidToTIPMap.get(taskId);
       // Check if the tip is known to the jobtracker. In case of a restarted
       // jt, some tasks might join in later
@@ -3583,6 +3608,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // remove the tracker from the local structures
     synchronized (trackerToJobsToCleanup) {
       trackerToJobsToCleanup.remove(trackerName);
+    }
+    
+    synchronized (trackerToTasksToCleanup) {
+      trackerToTasksToCleanup.remove(trackerName);
     }
     
     // Inform the recovery manager
