@@ -303,6 +303,7 @@ Release 0.20.0 - Unreleased
    HBASE-1474  Add zk attributes to list of attributes 
                in master and regionserver UIs
    HBASE-1448  Add a node in ZK to tell all masters to shutdown
+   HBASE-1478  Remove hbase master options from shell (Nitay Joffe via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

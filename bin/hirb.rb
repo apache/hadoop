@@ -31,17 +31,12 @@ cmdline_help = <<HERE # HERE document output as shell usage
 HBase Shell command-line options:
  format        Formatter for outputting results: console | html. Default: console
  format-width  Width of table outputs. Default: 110 characters.
- master        HBase master shell should connect to: e.g --master=example:60000
 HERE
-master = nil
 found = []
 format = 'console'
 format_width = 110
 for arg in ARGV
-  if arg =~ /^--master=(.+)/i
-    master = $1
-    found.push(arg)
-  elsif arg =~ /^--format=(.+)/i
+  if arg =~ /^--format=(.+)/i
     format = $1
     if format =~ /^html$/i
       raise NoMethodError.new("Not yet implemented")
@@ -70,10 +65,9 @@ end
 @formatter = Formatter::Console.new(STDOUT, format_width)
 # TODO, etc.  @formatter = Formatter::XHTML.new(STDOUT)
 
-# Setup the HBase module.  Create a configuration.  If a master, set it.
+# Setup the HBase module.  Create a configuration.
 # Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
 @configuration = org.apache.hadoop.hbase.HBaseConfiguration.new()
-@configuration.set("hbase.master", master) if master
 @configuration.setInt("hbase.client.retries.number", 5)
 @configuration.setInt("ipc.client.connect.max.retries", 3)
 
