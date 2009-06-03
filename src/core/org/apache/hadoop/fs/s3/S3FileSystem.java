@@ -332,6 +332,11 @@ public class S3FileSystem extends FileSystem {
     }
     return new S3FileStatus(f.makeQualified(this), inode);
   }
+  
+  @Override
+  public long getDefaultBlockSize() {
+    return getConf().getLong("fs.s3.block.size", 64 * 1024 * 1024);
+  }
 
   // diagnostic methods
 

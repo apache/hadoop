@@ -132,4 +132,18 @@ public abstract class NativeS3FileSystemContractBaseTest
     store.storeEmptyFile("test/hadoop/file1");
     fs.open(path("/test/hadoop/file1")).close();
   }
+  
+  public void testBlockSize() throws Exception {
+    Path file = path("/test/hadoop/file");
+    createFile(file);
+    assertEquals("Default block size", fs.getDefaultBlockSize(),
+    fs.getFileStatus(file).getBlockSize());
+
+    // Block size is determined at read time
+    long newBlockSize = fs.getDefaultBlockSize() * 2;
+    fs.getConf().setLong("fs.s3n.block.size", newBlockSize);
+    assertEquals("Double default block size", newBlockSize,
+    fs.getFileStatus(file).getBlockSize());
+  }
+
 }

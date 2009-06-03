@@ -23,6 +23,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.apache.hadoop.fs.Path;
 
 public abstract class S3FileSystemContractBaseTest
   extends FileSystemContractBaseTest {
@@ -43,6 +44,17 @@ public abstract class S3FileSystemContractBaseTest
   protected void tearDown() throws Exception {
     store.purge();
     super.tearDown();
+  }
+  
+  public void testBlockSize() throws Exception {
+    
+    long newBlockSize = fs.getDefaultBlockSize() * 2;
+    fs.getConf().setLong("fs.s3.block.size", newBlockSize);
+    
+    Path file = path("/test/hadoop/file");
+    createFile(file);
+    assertEquals("Double default block size", newBlockSize,
+	fs.getFileStatus(file).getBlockSize());
   }
   
 }

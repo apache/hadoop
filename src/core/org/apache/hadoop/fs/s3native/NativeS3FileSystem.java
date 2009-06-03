@@ -83,7 +83,6 @@ public class NativeS3FileSystem extends FileSystem {
     LogFactory.getLog(NativeS3FileSystem.class);
   
   private static final String FOLDER_SUFFIX = "_$folder$";
-  private static final long MAX_S3_FILE_SIZE = 5 * 1024 * 1024 * 1024L;
   static final String PATH_DELIMITER = Path.SEPARATOR;
   private static final int S3_MAX_LISTING_LENGTH = 1000;
   
@@ -464,13 +463,12 @@ public class NativeS3FileSystem extends FileSystem {
   }
   
   private FileStatus newFile(FileMetadata meta, Path path) {
-    return new FileStatus(meta.getLength(), false, 1, MAX_S3_FILE_SIZE,
+    return new FileStatus(meta.getLength(), false, 1, getDefaultBlockSize(),
         meta.getLastModified(), path.makeQualified(this));
   }
   
   private FileStatus newDirectory(Path path) {
-    return new FileStatus(0, true, 1, MAX_S3_FILE_SIZE, 0,
-        path.makeQualified(this));
+    return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this));
   }
 
   @Override
@@ -608,6 +606,11 @@ public class NativeS3FileSystem extends FileSystem {
     }
 
     return true;
+  }
+  
+  @Override
+  public long getDefaultBlockSize() {
+    return getConf().getLong("fs.s3n.block.size", 64 * 1024 * 1024);
   }
 
   /**

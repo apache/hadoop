@@ -772,6 +772,8 @@ Trunk (unreleased changes)
     HADOOP-5836. Bug in S3N handling of directory markers using an object with
     a trailing "/" causes jobs to fail. (Ian Nowland via tomwhite)
 
+    HADOOP-5861. s3n files are not getting split by default. (tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
