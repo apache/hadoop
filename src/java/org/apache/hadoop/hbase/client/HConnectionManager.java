@@ -328,7 +328,6 @@ public class HConnectionManager implements HConstants {
     public HRegionLocation getRegionLocation(final byte [] name,
         final byte [] row, boolean reload)
     throws IOException {
-      getMaster();
       return reload? relocateRegion(name, row): locateRegion(name, row);
     }
 
@@ -476,14 +475,12 @@ public class HConnectionManager implements HConstants {
     public HRegionLocation locateRegion(final byte [] tableName,
         final byte [] row)
     throws IOException{
-      getMaster();
       return locateRegion(tableName, row, true);
     }
 
     public HRegionLocation relocateRegion(final byte [] tableName,
         final byte [] row)
     throws IOException{
-      getMaster();
       return locateRegion(tableName, row, false);
     }
 
@@ -795,7 +792,7 @@ public class HConnectionManager implements HConstants {
     public HRegionInterface getHRegionConnection(
         HServerAddress regionServer) 
     throws IOException {
-      return getHRegionConnection(regionServer, true);
+      return getHRegionConnection(regionServer, false);
     }
 
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
@@ -806,7 +803,7 @@ public class HConnectionManager implements HConstants {
     }
 
     /*
-     * Repeatedly try to find the root region by asking the master for where it is
+     * Repeatedly try to find the root region in ZK
      * @return HRegionLocation for root region if found
      * @throws NoServerForRegionException - if the root region can not be
      * located after retrying
@@ -814,7 +811,6 @@ public class HConnectionManager implements HConstants {
      */
     private HRegionLocation locateRootRegion()
     throws IOException {
-      getMaster();
 
       // We lazily instantiate the ZooKeeper object because we don't want to
       // make the constructor have to throw IOException or handle it itself.
@@ -901,7 +897,6 @@ public class HConnectionManager implements HConstants {
 
     public <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
     throws IOException, RuntimeException {
-      getMaster();
       List<Throwable> exceptions = new ArrayList<Throwable>();
       for(int tries = 0; tries < numRetries; tries++) {
         try {
@@ -934,7 +929,6 @@ public class HConnectionManager implements HConstants {
     
     public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable)
         throws IOException, RuntimeException {
-      getMaster();
       try {
         callable.instantiateServer(false);
         return callable.call();
@@ -957,7 +951,6 @@ public class HConnectionManager implements HConstants {
       boolean reload)
     throws IOException {
       boolean reloadFlag = reload;
-      getMaster();
       List<Throwable> exceptions = new ArrayList<Throwable>();
       HRegionLocation location = null;
       int tries = 0;

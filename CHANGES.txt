@@ -304,6 +304,7 @@ Release 0.20.0 - Unreleased
                in master and regionserver UIs
    HBASE-1448  Add a node in ZK to tell all masters to shutdown
    HBASE-1478  Remove hbase master options from shell (Nitay Joffe via Stack)
+   HBASE-1462  hclient still seems to depend on master
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
