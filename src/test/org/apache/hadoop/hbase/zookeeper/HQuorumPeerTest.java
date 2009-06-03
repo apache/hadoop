@@ -24,8 +24,8 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 
@@ -33,8 +33,36 @@ import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
  * Test for HQuorumPeer.
  */
 public class HQuorumPeerTest extends HBaseTestCase {
+  private Path dataDir;
+
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    String userName = System.getProperty("user.name");
+    dataDir = new Path("/tmp/hbase-" + userName, "zookeeper");
+    if (fs.exists(dataDir)) {
+      if (!fs.isDirectory(dataDir)) {
+        fail();
+      }
+    } else {
+      if (!fs.mkdirs(dataDir)) {
+        fail();
+      }
+    }
+  }
+
+  @Override
+  protected void tearDown() throws Exception {
+    if (fs.exists(dataDir) && !fs.delete(dataDir, true)) {
+      fail();
+    }
+    super.tearDown();
+  }
+
   /** @throws Exception */
   public void testConfigInjection() throws Exception {
+
+
     String s =
       "tickTime=2000\n" +
       "initLimit=10\n" +
@@ -46,27 +74,25 @@ public class HQuorumPeerTest extends HBaseTestCase {
     InputStream is = new ByteArrayInputStream(s.getBytes());
     Properties properties = HQuorumPeer.parseConfig(is);
 
-    String userName = System.getProperty("user.name");
-    String dataDir = "/tmp/hbase-" + userName + "/zookeeper";
-
     assertEquals(Integer.valueOf(2000), Integer.valueOf(properties.getProperty("tickTime")));
     assertEquals(Integer.valueOf(10), Integer.valueOf(properties.getProperty("initLimit")));
     assertEquals(Integer.valueOf(5), Integer.valueOf(properties.getProperty("syncLimit")));
-    assertEquals(dataDir, properties.get("dataDir"));
+    assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(2181), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
 
-    QuorumPeerConfig.parseProperties(properties);
+    QuorumPeerConfig config = new QuorumPeerConfig();
+    config.parseProperties(properties);
 
-    int tickTime = QuorumPeerConfig.getTickTime();
+    int tickTime = config.getTickTime();
     assertEquals(2000, tickTime);
-    int initLimit = QuorumPeerConfig.getInitLimit();
+    int initLimit = config.getInitLimit();
     assertEquals(10, initLimit);
-    int syncLimit = QuorumPeerConfig.getSyncLimit();
+    int syncLimit = config.getSyncLimit();
     assertEquals(5, syncLimit);
-    assertEquals(dataDir, ServerConfig.getDataDir());
-    assertEquals(2181, ServerConfig.getClientPort());
-    Map<Long,QuorumServer> servers = QuorumPeerConfig.getServers();
+    assertEquals(dataDir.toString(), config.getDataDir());
+    assertEquals(2181, config.getClientPort());
+    Map<Long,QuorumServer> servers = config.getServers();
     assertEquals(1, servers.size());
     assertTrue(servers.containsKey(Long.valueOf(0)));
     QuorumServer server = servers.get(Long.valueOf(0));
@@ -78,9 +104,9 @@ public class HQuorumPeerTest extends HBaseTestCase {
     properties = HQuorumPeer.parseConfig(is);
     assertEquals("foo.bar:2888:3888", properties.get("server.0"));
 
-    QuorumPeerConfig.parseProperties(properties);
+    config.parseProperties(properties);
 
-    servers = QuorumPeerConfig.getServers();
+    servers = config.getServers();
     server = servers.get(Long.valueOf(0));
     assertEquals("foo.bar", server.addr.getHostName());
 
@@ -90,9 +116,9 @@ public class HQuorumPeerTest extends HBaseTestCase {
     properties = HQuorumPeer.parseConfig(is);
     assertEquals("localhost:2888:3888", properties.get("server.0"));
 
-    QuorumPeerConfig.parseProperties(properties);
+    config.parseProperties(properties);
 
-    servers = QuorumPeerConfig.getServers();
+    servers = config.getServers();
     server = servers.get(Long.valueOf(0));
     assertEquals("localhost", server.addr.getHostName());
   }

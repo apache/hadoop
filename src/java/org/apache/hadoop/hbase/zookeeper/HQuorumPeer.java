@@ -52,19 +52,25 @@ public class HQuorumPeer implements HConstants {
    * While parsing the zoo.cfg, we substitute variables with values from
    * hbase-site.xml.
    * @param args String[] of command line arguments. Not used.
+   * @throws IOException 
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
+    QuorumPeerConfig config = new QuorumPeerConfig();
     try {
       Properties properties = parseZooKeeperConfig();
-      QuorumPeerConfig.parseProperties(properties);
+      config.parseProperties(properties);
     } catch (Exception e) {
       e.printStackTrace();
       System.exit(-1);
     }
-    if (ServerConfig.isStandalone()) {
-      ZooKeeperServerMain.main(args);
+    if (config.isDistributed()) {
+      QuorumPeerMain qp = new QuorumPeerMain();
+      qp.runFromConfig(config);
     } else {
-      QuorumPeerMain.runPeerFromConfig();
+      ZooKeeperServerMain zk = new ZooKeeperServerMain();
+      ServerConfig serverConfig = new ServerConfig();
+      serverConfig.readFrom(config);
+      zk.runFromConfig(serverConfig);
     }
   }
 
