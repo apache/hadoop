@@ -280,6 +280,13 @@
       </fileset>
     </copy>
 
+    <unzip src="${lib.dir}/hadoop-hdfs-${hadoop-hdfs.version}.jar"
+        dest="${build.dir}">
+      <patternset>
+        <include name="webapps/**"/>
+      </patternset>
+    </unzip>
+
     <copy todir="${contrib.dir}" verbose="true">
       <fileset dir="${contrib.dir}" includes="**/*.template"/>
       <mapper type="glob" from="*.template" to="*"/>
