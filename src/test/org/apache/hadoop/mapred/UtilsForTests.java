@@ -535,6 +535,12 @@ public class UtilsForTests {
   // Start a job and return its RunningJob object
   static RunningJob runJob(JobConf conf, Path inDir, Path outDir)
                     throws IOException {
+    return runJob(conf, inDir, outDir, conf.getNumMapTasks(), conf.getNumReduceTasks());
+  }
+
+  // Start a job and return its RunningJob object
+  static RunningJob runJob(JobConf conf, Path inDir, Path outDir, int numMaps, 
+                           int numReds) throws IOException {
 
     FileSystem fs = FileSystem.get(conf);
     fs.delete(outDir, true);
@@ -543,9 +549,11 @@ public class UtilsForTests {
     }
     String input = "The quick brown fox\n" + "has many silly\n"
         + "red fox sox\n";
-    DataOutputStream file = fs.create(new Path(inDir, "part-0"));
-    file.writeBytes(input);
-    file.close();
+    for (int i = 0; i < numMaps; ++i) {
+      DataOutputStream file = fs.create(new Path(inDir, "part-" + i));
+      file.writeBytes(input);
+      file.close();
+    }    
 
     conf.setInputFormat(TextInputFormat.class);
     conf.setOutputKeyClass(LongWritable.class);
@@ -553,8 +561,8 @@ public class UtilsForTests {
 
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
-    conf.setNumMapTasks(1);
-    conf.setNumReduceTasks(1);
+    conf.setNumMapTasks(numMaps);
+    conf.setNumReduceTasks(numReds);
 
     JobClient jobClient = new JobClient(conf);
     RunningJob job = jobClient.submitJob(conf);

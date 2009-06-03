@@ -107,6 +107,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5648. Fixes a build issue in not being able to generate gridmix.jar
     in hadoop binary tarball. (Giridharan Kesavan via gkesavan)
 
+    HADOOP-5908. Fixes a problem to do with ArithmeticException in the 
+    JobTracker when there are jobs with 0 maps. (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

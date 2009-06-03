@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -47,6 +48,26 @@ public class TestEmptyJob extends TestCase {
 
   MiniMRCluster mr = null;
 
+  /** Committer with cleanup waiting on a signal
+   */
+  static class CommitterWithDelayCleanup extends FileOutputCommitter {
+    @Override
+    public void cleanupJob(JobContext context) throws IOException {
+      Configuration conf = context.getConfiguration();
+      Path share = new Path(conf.get("share"));
+      FileSystem fs = FileSystem.get(conf);
+
+      
+      while (true) {
+        if (fs.exists(share)) {
+          break;
+        }
+        UtilsForTests.waitFor(100);
+      }
+      super.cleanupJob(context);
+    }
+  }
+
   /**
    * Simple method running a MapReduce job with no input data. Used to test that
    * such a job is successful.
@@ -62,8 +83,13 @@ public class TestEmptyJob extends TestCase {
     // create an empty input dir
     final Path inDir = new Path(TEST_ROOT_DIR, "testing/empty/input");
     final Path outDir = new Path(TEST_ROOT_DIR, "testing/empty/output");
+    final Path inDir2 = new Path(TEST_ROOT_DIR, "testing/dummy/input");
+    final Path outDir2 = new Path(TEST_ROOT_DIR, "testing/dummy/output");
+    final Path share = new Path(TEST_ROOT_DIR, "share");
+
     JobConf conf = mr.createJobConf();
     FileSystem fs = FileSystem.get(fileSys, conf);
+    fs.delete(new Path(TEST_ROOT_DIR), true);
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       LOG.warn("Can't create " + inDir);
@@ -75,6 +101,7 @@ public class TestEmptyJob extends TestCase {
     conf.setJobName("empty");
     // use an InputFormat which returns no split
     conf.setInputFormat(EmptyInputFormat.class);
+    conf.setOutputCommitter(CommitterWithDelayCleanup.class);
     conf.setOutputKeyClass(Text.class);
     conf.setOutputValueClass(IntWritable.class);
     conf.setMapperClass(IdentityMapper.class);
@@ -83,11 +110,53 @@ public class TestEmptyJob extends TestCase {
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
+    conf.set("share", share.toString());
 
     // run job and wait for completion
     JobClient jc = new JobClient(conf);
     RunningJob runningJob = jc.submitJob(conf);
+    JobInProgress job = mr.getJobTrackerRunner().getJobTracker().getJob(runningJob.getID());
+    
     while (true) {
+      if (job.isCleanupLaunched()) {
+        LOG.info("Waiting for cleanup to be launched for job " 
+                 + runningJob.getID());
+        break;
+      }
+      UtilsForTests.waitFor(100);
+    }
+    
+    // submit another job so that the map load increases and scheduling happens
+    LOG.info("Launching dummy job ");
+    RunningJob dJob = null;
+    try {
+      JobConf dConf = new JobConf(conf);
+      dConf.setOutputCommitter(FileOutputCommitter.class);
+      dJob = UtilsForTests.runJob(dConf, inDir2, outDir2, 2, 0);
+    } catch (Exception e) {
+      LOG.info("Exception ", e);
+      throw new IOException(e);
+    }
+    
+    while (true) {
+      LOG.info("Waiting for job " + dJob.getID() + " to complete");
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+      }
+      if (dJob.isComplete()) {
+        break;
+      }
+    }
+    
+    // check if the second job is successful
+    assertTrue(dJob.isSuccessful());
+
+    // signal the cleanup
+    fs.create(share).close();
+    
+    while (true) {
+      LOG.info("Waiting for job " + runningJob.getID() + " to complete");
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
@@ -148,7 +217,7 @@ public class TestEmptyJob extends TestCase {
       throws IOException {
     FileSystem fileSys = null;
     try {
-      final int taskTrackers = 1;
+      final int taskTrackers = 2;
       JobConf conf = new JobConf();
       fileSys = FileSystem.get(conf);
 
