@@ -420,6 +420,9 @@ Trunk (unreleased changes)
     HADOOP-5955. Changes TestFileOuputFormat so that is uses LOCAL_MR
     instead of CLUSTER_MR. (Jothi Padmanabhan via das)
 
+    HADOOP-5948. Changes TestJavaSerialization to use LocalJobRunner 
+    instead of MiniMR/DFS cluster. (Jothi Padmanabhan via das)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
