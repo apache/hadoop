@@ -300,10 +300,8 @@ Release 0.20.0 - Unreleased
    HBASE-1464  Add hbase.regionserver.logroll.period to hbase-default
    HBASE-1192  LRU-style map for the block cache (Jon Gray and Ryan Rawson
                via Stack)
-<<<<<<< .mine
    HBASE-1466  Binary keys are not first class citizens
                (Ryan Rawson via Stack)
-=======
    HBASE-1445  Add the ability to start a master from any machine
    HBASE-1474  Add zk attributes to list of attributes 
                in master and regionserver UIs
@@ -311,9 +309,6 @@ Release 0.20.0 - Unreleased
    HBASE-1478  Remove hbase master options from shell (Nitay Joffe via Stack)
    HBASE-1462  hclient still seems to depend on master
    HBASE-1143  region count erratic in master UI
-               (kill server hosting root or meta and see how count goes awry)....
-               make sure you have a bunch of reions in there
->>>>>>> .r781864
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
