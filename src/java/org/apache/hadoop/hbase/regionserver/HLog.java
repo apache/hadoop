@@ -800,8 +800,6 @@ public class HLog implements HConstants, Syncable {
           try {
             in = new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
             try {
-              // Make the key and value new each time; otherwise same instance
-              // is used over and over.
               HLogKey key = new HLogKey();
               KeyValue val = new KeyValue();
               while (in.next(key, val)) {
@@ -814,6 +812,10 @@ public class HLog implements HConstants, Syncable {
                 }
                 queue.push(new HLogEntry(val, key));
                 count++;
+                // Make the key and value new each time; otherwise same instance
+                // is used over and over.
+                key = new HLogKey();
+                val = new KeyValue();
               }
               LOG.debug("Pushed " + count + " entries from " +
                 logfiles[i].getPath());
