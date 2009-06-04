@@ -376,6 +376,9 @@ public abstract class PipeMapRed {
       if (errThread_ != null) {
         errThread_.join(joinDelay_);
       }
+      if (outerrThreadsThrowable != null) {
+        throw new RuntimeException(outerrThreadsThrowable);
+      }
     } catch (InterruptedException e) {
       //ignore
     }
@@ -577,6 +580,7 @@ public abstract class PipeMapRed {
       if (sim != null) sim.destroy();
       logprintln("mapRedFinished");
     } catch (RuntimeException e) {
+      logprintln("PipeMapRed failed!");
       logStackTrace(e);
       throw e;
     }
