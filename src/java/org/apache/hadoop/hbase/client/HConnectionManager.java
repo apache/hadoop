@@ -461,7 +461,7 @@ public class HConnectionManager implements HConstants {
         return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
       }
       if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
-        return new UnmodifyableHTableDescriptor(HTableDescriptor.META_TABLEDESC);
+        return HTableDescriptor.META_TABLEDESC;
       }
       HTableDescriptorFinder finder = new HTableDescriptorFinder(tableName);
       MetaScanner.metaScan(conf, finder);
