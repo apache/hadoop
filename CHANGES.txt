@@ -118,6 +118,10 @@ Release 0.20.1 - Unreleased
     HADOOP-5882. Fixes a reducer progress update problem for new mapreduce
     api. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5746. Fixes a corner case problem in Streaming, where if an exception
+    happens in MROutputThread after the last call to the map/reduce method, the 
+    exception goes undetected. (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
