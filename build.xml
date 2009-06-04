@@ -586,7 +586,7 @@
     <fail unless="continueOnFailure">Tests failed!</fail>
   </target>
 
-  <target name="test-contrib" depends="compile" description="Run contrib unit tests">
+  <target name="test-contrib" depends="compile,compile-mapred-test" description="Run contrib unit tests">
     <subant target="test">
        <property name="version" value="${version}"/>
        <property name="clover.jar" value="${clover.jar}"/>
