@@ -783,6 +783,9 @@ Trunk (unreleased changes)
     HADOOP-5762. Fix a problem that DistCp does not copy empty directory.
     (Rodrigo Schmidt via szetszwo)
 
+    HADOOP-5859. Fix "wait() or sleep() with locks held" findbugs warnings in
+    DFSClient.  (Kan Zhang via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
