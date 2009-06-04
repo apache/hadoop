@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-5844. Use mysqldump when connecting to local mysql instance in Sqoop.
     (Aaron Kimball via tomwhite)
 
+    HADOOP-5170. Allows jobs to set max maps/reduces per-node and per-cluster.
+    (Matei Zaharia via ddas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
