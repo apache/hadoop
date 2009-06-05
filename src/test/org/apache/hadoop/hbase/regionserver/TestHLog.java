@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Reader;
 
+
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
   private Path dir;
@@ -68,26 +69,61 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
     HLog log = new HLog(this.fs, this.dir, this.conf, null);
+    final int howmany = 3;
     // Add edits for three regions.
     try {
-      for (int ii = 0; ii < 3; ii++) {
-        for (int i = 0; i < 3; i++) {
-          for (int j = 0; j < 3; j++) {
+      for (int ii = 0; ii < howmany; ii++) {
+        for (int i = 0; i < howmany; i++) {
+          for (int j = 0; j < howmany; j++) {
             List<KeyValue> edit = new ArrayList<KeyValue>();
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
             edit.add(new KeyValue(rowName, column, System.currentTimeMillis(),
               column));
-            log.append(Bytes.toBytes(Integer.toString(i)), tableName, edit,
+            System.out.println("Region " + i + ": " + edit);
+            log.append(Bytes.toBytes("" + i), tableName, edit,
               false, System.currentTimeMillis());
           }
         }
         log.rollWriter();
       }
-      HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
+      List<Path> splits =
+        HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
+      verifySplits(splits, howmany);
       log = null;
     } finally {
       if (log != null) {
         log.closeAndDelete();
+      }
+    }
+  }
+
+  private void verifySplits(List<Path> splits, final int howmany)
+  throws IOException {
+    assertEquals(howmany, splits.size());
+    for (int i = 0; i < splits.size(); i++) {
+      SequenceFile.Reader r =
+        new SequenceFile.Reader(this.fs, splits.get(i), this.conf);
+      try {
+        HLogKey key = new HLogKey();
+        KeyValue kv = new KeyValue();
+        int count = 0;
+        String previousRegion = null;
+        long seqno = -1;
+        while(r.next(key, kv)) {
+          String region = Bytes.toString(key.getRegionName());
+          // Assert that all edits are for same region.
+          if (previousRegion != null) {
+            assertEquals(previousRegion, region);
+          }
+          assertTrue(seqno < key.getLogSeqNum());
+          seqno = key.getLogSeqNum();
+          previousRegion = region;
+          System.out.println(key + " " + kv);
+          count++;
+        }
+        assertEquals(howmany * howmany, count);
+      } finally {
+        r.close();
       }
     }
   }

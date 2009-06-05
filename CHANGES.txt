@@ -86,9 +86,7 @@ Release 0.20.0 - Unreleased
    HBASE-1310  Off by one error in Bytes.vintToBytes
    HBASE-1202  getRow does not always work when specifying number of versions
    HBASE-1324  hbase-1234 broke testget2 unit test (and broke the build)
-   HBASE-1321  hbase-1234 broke TestCompaction; fix and reenable
-   HBASE-1330  binary keys broken on trunk (Ryan Rawson via Stack)
-   HBASE-1332  regionserver carrying .META. starts sucking all cpu, drives load
+   HBASE-1321  hbase-1234 broke TestCompaction; fix and reenable HBASE-1330  binary keys broken on trunk (Ryan Rawson via Stack) HBASE-1332  regionserver carrying .META. starts sucking all cpu, drives load
                up - infinite loop? (Ryan Rawson via Stack)
    HBASE-1334  .META. region running into hfile errors (Ryan Rawson via Stack)
    HBASE-1338  lost use of compaction.dir; we were compacting into live store
@@ -163,6 +161,8 @@ Release 0.20.0 - Unreleased
    HBASE-1471  During cluster shutdown, deleting zookeeper regionserver nodes
                causes exceptions
    HBASE-1483  HLog split loses track of edits (Clint Morgan via Stack)
+   HBASE-1484  commit log split writes files with newest edits first
+               (since hbase-1430); should be other way round
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
