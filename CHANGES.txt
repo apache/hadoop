@@ -785,6 +785,9 @@ Trunk (unreleased changes)
 
     HADOOP-5859. Fix "wait() or sleep() with locks held" findbugs warnings in
     DFSClient.  (Kan Zhang via szetszwo)
+   
+    HADOOP-5457. Fix to continue to run builds even if contrib test fails
+    (Giridharan Kesavan via gkesavan)
 
 Release 0.20.1 - Unreleased
 
