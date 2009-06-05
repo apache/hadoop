@@ -39,8 +39,6 @@ import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
-
-
 public class TestCapacityScheduler extends TestCase {
 
   static final Log LOG =
@@ -605,13 +603,13 @@ public class TestCapacityScheduler extends TestCase {
   // represents a fake queue configuration info
   static class FakeQueueInfo {
     String queueName;
-    float gc;
+    float capacity;
     boolean supportsPrio;
     int ulMin;
 
-    public FakeQueueInfo(String queueName, float gc, boolean supportsPrio, int ulMin) {
+    public FakeQueueInfo(String queueName, float capacity, boolean supportsPrio, int ulMin) {
       this.queueName = queueName;
-      this.gc = gc;
+      this.capacity = capacity;
       this.supportsPrio = supportsPrio;
       this.ulMin = ulMin;
     }
@@ -641,10 +639,10 @@ public class TestCapacityScheduler extends TestCase {
     }*/
     
     public float getCapacity(String queue) {
-      if(queueMap.get(queue).gc == -1) {
+      if(queueMap.get(queue).capacity == -1) {
         return super.getCapacity(queue);
       }
-      return queueMap.get(queue).gc;
+      return queueMap.get(queue).capacity;
     }
     
     public int getMinimumUserLimitPercent(String queue) {
@@ -899,13 +897,6 @@ public class TestCapacityScheduler extends TestCase {
     return queue.toArray(new JobInProgress[0]);
   }
   
-  /*protected void submitJobs(int number, int state, int maps, int reduces)
-    throws IOException {
-    for (int i = 0; i < number; i++) {
-      submitJob(state, maps, reduces);
-    }
-  }*/
-  
   // tests if tasks can be assinged when there are multiple jobs from a same
   // user
   public void testJobFinished() throws Exception {
@@ -1042,7 +1033,7 @@ public class TestCapacityScheduler extends TestCase {
     String[] qs = {"default", "q2"};
     taskTrackerManager.addQueues(qs);
     ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
-    // set the gc % as 10%, so that gc will be zero initially as 
+    // set the capacity % as 10%, so that capacity will be zero initially as 
     // the cluster capacity increase slowly.
     queues.add(new FakeQueueInfo("default", 10.0f, true, 25));
     queues.add(new FakeQueueInfo("q2", 90.0f, true, 25));
@@ -1076,7 +1067,7 @@ public class TestCapacityScheduler extends TestCase {
     // add another tt to increase tt slots
     taskTrackerManager.addTaskTracker("tt5");
     // now job from default should run, as it is furthest away
-    // in terms of runningMaps / gc.
+    // in terms of runningMaps / capacity.
     checkAssignment("tt4", "attempt_test_0001_m_000001_0 on tt4");
     verifyCapacity("1", "default");
     verifyCapacity("9", "q2");
@@ -1087,7 +1078,7 @@ public class TestCapacityScheduler extends TestCase {
     String schedInfo = taskTrackerManager.getQueueManager().
                           getSchedulerInfo(queue).toString();    
     assertTrue(schedInfo.contains("Map tasks\nCapacity: " 
-        + expectedCapacity));
+        + expectedCapacity + " slots"));
   }
   
   // test capacity transfer
@@ -1268,7 +1259,82 @@ public class TestCapacityScheduler extends TestCase {
     // first in the queue
     checkAssignment("tt4", "attempt_test_0001_m_000007_0 on tt4");
   }
-  
+
+  /**
+   * Test to verify that high memory jobs hit user limits faster than any normal
+   * job.
+   * 
+   * @throws IOException
+   */
+  public void testUserLimitsForHighMemoryJobs()
+      throws IOException {
+    taskTrackerManager = new FakeTaskTrackerManager(1, 10, 10);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    String[] qs = { "default" };
+    taskTrackerManager.addQueues(qs);
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, true, 50));
+    resConf.setFakeQueues(queues);
+    // enabled memory-based scheduling
+    // Normal job in the cluster would be 1GB maps/reduces
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY, 2 * 1024);
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY, 1 * 1024);
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY, 2 * 1024);
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY, 1 * 1024);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+
+    // Submit one normal job to the other queue.
+    JobConf jConf = new JobConf(conf);
+    jConf.setMemoryForMapTask(1 * 1024);
+    jConf.setMemoryForReduceTask(1 * 1024);
+    jConf.setNumMapTasks(6);
+    jConf.setNumReduceTasks(6);
+    jConf.setUser("u1");
+    jConf.setQueueName("default");
+    FakeJobInProgress job1 = submitJobAndInit(JobStatus.PREP, jConf);
+
+    LOG.debug("Submit one high memory(2GB maps, 2GB reduces) job of "
+        + "6 map and 6 reduce tasks");
+    jConf = new JobConf(conf);
+    jConf.setMemoryForMapTask(2 * 1024);
+    jConf.setMemoryForReduceTask(2 * 1024);
+    jConf.setNumMapTasks(6);
+    jConf.setNumReduceTasks(6);
+    jConf.setQueueName("default");
+    jConf.setUser("u2");
+    FakeJobInProgress job2 = submitJobAndInit(JobStatus.PREP, jConf);
+
+    // Verify that normal job takes 3 task assignments to hit user limits
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_m_000002_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000002_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_m_000003_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000003_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_m_000004_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000004_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_m_000005_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000005_0 on tt1");
+    // u1 has 5 map slots and 5 reduce slots. u2 has none. So u1's user limits
+    // are hit. So u2 should get slots
+
+    checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0002_r_000001_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0002_m_000002_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0002_r_000002_0 on tt1");
+
+    // u1 has 5 map slots and 5 reduce slots. u2 has 4 map slots and 4 reduce
+    // slots. Because of high memory tasks, giving u2 another task would
+    // overflow limits. So, no more tasks should be given to anyone.
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+    assertNull(scheduler.assignTasks(tracker("tt1")));
+  }
+
   /*
    * Following is the testing strategy for testing scheduling information.
    * - start capacity scheduler with two queues.
@@ -1318,21 +1384,35 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.assignTasks(tracker("tt1")); // heartbeat
     scheduler.assignTasks(tracker("tt2")); // heartbeat
     int totalMaps = taskTrackerManager.getClusterStatus().getMaxMapTasks();
-    int totalReduces = taskTrackerManager.getClusterStatus().getMaxReduceTasks();
+    int totalReduces =
+        taskTrackerManager.getClusterStatus().getMaxReduceTasks();
     QueueManager queueManager = scheduler.taskTrackerManager.getQueueManager();
-    String schedulingInfo = queueManager.getJobQueueInfo("default").getSchedulingInfo();
-    String schedulingInfo2 = queueManager.getJobQueueInfo("q2").getSchedulingInfo();
+    String schedulingInfo =
+        queueManager.getJobQueueInfo("default").getSchedulingInfo();
+    String schedulingInfo2 =
+        queueManager.getJobQueueInfo("q2").getSchedulingInfo();
     String[] infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 16);
-    assertEquals(infoStrings[1] , "Capacity Percentage: 50.0%");
-    assertEquals(infoStrings[6] , "Capacity: " + totalMaps * 50/100);
-    assertEquals(infoStrings[10] , "Capacity: " + totalReduces * 50/100);
-    assertEquals(infoStrings[2] , "User Limit: 25%");
-    assertEquals(infoStrings[3] , "Priority Supported: YES");
-    assertEquals(infoStrings[7], "Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[11],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[14] , "Number of Waiting Jobs: 0");
-    assertEquals(infoStrings[15] , "Number of users who have submitted jobs: 0");
+    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings[0], "Queue configuration");
+    assertEquals(infoStrings[1], "Capacity Percentage: 50.0%");
+    assertEquals(infoStrings[2], "User Limit: 25%");
+    assertEquals(infoStrings[3], "Priority Supported: YES");
+    assertEquals(infoStrings[4], "-------------");
+    assertEquals(infoStrings[5], "Map tasks");
+    assertEquals(infoStrings[6], "Capacity: " + totalMaps * 50 / 100
+        + " slots");
+    assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 0");
+    assertEquals(infoStrings[9], "-------------");
+    assertEquals(infoStrings[10], "Reduce tasks");
+    assertEquals(infoStrings[11], "Capacity: " + totalReduces * 50 / 100
+        + " slots");
+    assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[13], "Running tasks: 0");
+    assertEquals(infoStrings[14], "-------------");
+    assertEquals(infoStrings[15], "Job info");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 0");
+    assertEquals(infoStrings[17], "Number of users who have submitted jobs: 0");
     assertEquals(schedulingInfo, schedulingInfo2);
 
     //Testing with actual job submission.
@@ -1343,10 +1423,13 @@ public class TestCapacityScheduler extends TestCase {
     infoStrings = schedulingInfo.split("\n");
 
     //waiting job should be equal to number of jobs submitted.
-    assertEquals(infoStrings.length, 16);
-    assertEquals(infoStrings[7], "Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[11],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[14] , "Number of Waiting Jobs: 5");
+    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 0");
+    assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[13], "Running tasks: 0");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 5");
+    assertEquals(infoStrings[17], "Number of users who have submitted jobs: 1");
 
     //Initalize the jobs but don't raise events
     controlledInitializationPoller.selectJobsToInitialize();
@@ -1354,12 +1437,14 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 16);
+    assertEquals(infoStrings.length, 18);
     //should be previous value as nothing is scheduled because no events
     //has been raised after initialization.
-    assertEquals(infoStrings[7], "Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[11],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[14] , "Number of Waiting Jobs: 5");
+    assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 0");
+    assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[13], "Running tasks: 0");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 5");
 
     //Raise status change event so that jobs can move to running queue.
     raiseStatusChangeEvents(scheduler.jobQueuesManager);
@@ -1376,10 +1461,14 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
-    assertEquals(infoStrings[7], "Running tasks: 100.0% of Capacity");
-    assertEquals(infoStrings[13],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[16] , "Number of Waiting Jobs: 4");
+    assertEquals(infoStrings.length, 20);
+    assertEquals(infoStrings[7], "Used capacity: 1 (100.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 1");
+    assertEquals(infoStrings[9], "Active users:");
+    assertEquals(infoStrings[10], "User 'u1': 1 (100.0% of used capacity)");
+    assertEquals(infoStrings[14], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[15], "Running tasks: 0");
+    assertEquals(infoStrings[18], "Number of Waiting Jobs: 4");
 
     //assign a reduce task
     Task t2 = checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
@@ -1388,10 +1477,16 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 20);
-    assertEquals(infoStrings[7], "Running tasks: 100.0% of Capacity");
-    assertEquals(infoStrings[13],"Running tasks: 100.0% of Capacity");
-    assertEquals(infoStrings[18] , "Number of Waiting Jobs: 4");
+    assertEquals(infoStrings.length, 22);
+    assertEquals(infoStrings[7], "Used capacity: 1 (100.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 1");
+    assertEquals(infoStrings[9], "Active users:");
+    assertEquals(infoStrings[10], "User 'u1': 1 (100.0% of used capacity)");
+    assertEquals(infoStrings[14], "Used capacity: 1 (100.0% of Capacity)");
+    assertEquals(infoStrings[15], "Running tasks: 1");
+    assertEquals(infoStrings[16], "Active users:");
+    assertEquals(infoStrings[17], "User 'u1': 1 (100.0% of used capacity)");
+    assertEquals(infoStrings[20], "Number of Waiting Jobs: 4");
 
     //Complete the job and check the running tasks count
     FakeJobInProgress u1j1 = userJobs.get(0);
@@ -1404,10 +1499,12 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 16);
-    assertEquals(infoStrings[7], "Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[11],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[14] , "Number of Waiting Jobs: 4");
+    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 0");
+    assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[13], "Running tasks: 0");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 4");
 
     //Fail a job which is initialized but not scheduled and check the count.
     FakeJobInProgress u1j2 = userJobs.get(1);
@@ -1421,10 +1518,14 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 16);
-    assertEquals(infoStrings[7], "Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[11],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[14] , "Number of Waiting Jobs: 3");
+    assertEquals(infoStrings.length, 18);
+    //should be previous value as nothing is scheduled because no events
+    //has been raised after initialization.
+    assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 0");
+    assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[13], "Running tasks: 0");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 3");
 
     //Fail a job which is not initialized but is in the waiting queue.
     FakeJobInProgress u1j5 = userJobs.get(4);
@@ -1439,10 +1540,14 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 16);
-    assertEquals(infoStrings[7], "Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[11],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[14] , "Number of Waiting Jobs: 2");
+    assertEquals(infoStrings.length, 18);
+    //should be previous value as nothing is scheduled because no events
+    //has been raised after initialization.
+    assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 0");
+    assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[13], "Running tasks: 0");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 2");
 
     //Raise status change events as none of the intialized jobs would be
     //in running queue as we just failed the second job which was initialized
@@ -1465,10 +1570,12 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
-    assertEquals(infoStrings[7], "Running tasks: 100.0% of Capacity");
-    assertEquals(infoStrings[13],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[16] , "Number of Waiting Jobs: 1");
+    assertEquals(infoStrings.length, 20);
+    assertEquals(infoStrings[7], "Used capacity: 1 (100.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 1");
+    assertEquals(infoStrings[9], "Active users:");
+    assertEquals(infoStrings[10], "User 'u1': 1 (100.0% of used capacity)");
+    assertEquals(infoStrings[18], "Number of Waiting Jobs: 1");
 
     //Fail the executing job
     taskTrackerManager.finalizeJob(u1j3, JobStatus.FAILED);
@@ -1478,11 +1585,10 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 16);
-    assertEquals(infoStrings[7], "Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[11],"Running tasks: 0.0% of Capacity");
-    assertEquals(infoStrings[14] , "Number of Waiting Jobs: 1");
-
+    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
+    assertEquals(infoStrings[8], "Running tasks: 0");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 1");
   }
 
   /**
@@ -1556,8 +1662,10 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.start();
 
     // The situation : Two jobs in the queue. First job with only maps and no
-    // reduces and is a high memory job. Second job is a normal job with both maps and reduces.
-    // First job cannot run for want of memory for maps. In this case, second job's reduces should run.
+    // reduces and is a high memory job. Second job is a normal job with both
+    // maps and reduces.
+    // First job cannot run for want of memory for maps. In this case, second
+    // job's reduces should run.
     
     LOG.debug("Submit one high memory(2GB maps, 0MB reduces) job of "
         + "2 map tasks");
@@ -1583,11 +1691,16 @@ public class TestCapacityScheduler extends TestCase {
     
     // first, a map from j1 will run
     checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    // Total 2 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 2, 100.0f);
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 0L);
 
     // at this point, the scheduler tries to schedule another map from j1. 
     // there isn't enough space. The second job's reduce should be scheduled.
     checkAssignment("tt1", "attempt_test_0002_r_000001_0 on tt1");
+    // Total 1 reduce slot should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 1,
+        100.0f);
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 1 * 1024L);
   }
 
@@ -1622,7 +1735,7 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.start();
 
     LOG.debug("Submit one normal memory(1GB maps/reduces) job of "
-        + "1 map, 0 reduce tasks.");
+        + "1 map, 1 reduce tasks.");
     JobConf jConf = new JobConf(conf);
     jConf.setMemoryForMapTask(1 * 1024);
     jConf.setMemoryForReduceTask(1 * 1024);
@@ -1634,8 +1747,19 @@ public class TestCapacityScheduler extends TestCase {
 
     // Fill the second tt with this job.
     checkAssignment("tt2", "attempt_test_0001_m_000001_0 on tt2");
+    // Total 1 map slot should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 1, 25.0f);
+    assertEquals(String.format(
+        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 1, 1, 0, 0),
+        (String) job1.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt2", 1 * 1024L, 0L);
     checkAssignment("tt2", "attempt_test_0001_r_000001_0 on tt2");
+    // Total 1 map slot should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 1,
+        25.0f);
+    assertEquals(String.format(
+        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 1, 1, 1, 1),
+        (String) job1.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt2", 1 * 1024L, 1 * 1024L);
 
     LOG.debug("Submit one high memory(2GB maps/reduces) job of "
@@ -1650,8 +1774,20 @@ public class TestCapacityScheduler extends TestCase {
     FakeJobInProgress job2 = submitJobAndInit(JobStatus.PREP, jConf);
 
     checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");
+    // Total 3 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 3, 75.0f);
+    assertEquals(String.format(
+        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 1, 2, 0, 0),
+        (String) job2.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 0L);
+
     checkAssignment("tt1", "attempt_test_0002_r_000001_0 on tt1");
+    // Total 3 reduce slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 3,
+        75.0f);
+    assertEquals(String.format(
+        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 1, 2, 1, 2),
+        (String) job2.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 2 * 1024L);
 
     LOG.debug("Submit one normal memory(1GB maps/reduces) job of "
@@ -1670,8 +1806,17 @@ public class TestCapacityScheduler extends TestCase {
     assertNull(scheduler.assignTasks(tracker("tt2")));
     assertNull(scheduler.assignTasks(tracker("tt1")));
     assertNull(scheduler.assignTasks(tracker("tt2")));
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 3, 75.0f);
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 3,
+        75.0f);
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 2 * 1024L);
     checkMemReservedForTasksOnTT("tt2", 1 * 1024L, 1 * 1024L);
+    assertEquals(String.format(
+        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 1, 2, 1, 2),
+        (String) job2.getSchedulingInfo());
+    assertEquals(String.format(
+        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 0, 0, 0, 0),
+        (String) job3.getSchedulingInfo());
   }
 
   /**
@@ -1720,10 +1865,23 @@ public class TestCapacityScheduler extends TestCase {
 
     // 1st cycle - 1 map gets assigned.
     Task t = checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    // Total 1 map slot should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 1, 50.0f);
     checkMemReservedForTasksOnTT("tt1",  512L, 0L);
+
+    // 1st cycle of reduces - 1 reduce gets assigned.
+    Task t1 = checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
+    // Total 1 reduce slot should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 1,
+        50.0f);
+    checkMemReservedForTasksOnTT("tt1",  512L, 512L);
     
     // kill this job !
     taskTrackerManager.killJob(job1.getJobID());
+    // No more map/reduce slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 0, 0, 0.0f);
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 0, 0,
+        0.0f);
     
     // retire the job
     taskTrackerManager.removeJob(job1.getJobID());
@@ -1748,56 +1906,22 @@ public class TestCapacityScheduler extends TestCase {
     assertNull(scheduler.assignTasks(tracker("tt1")));
     checkMemReservedForTasksOnTT("tt1", null, null);
     
-    // finish the task on the tracker.
+    // finish the tasks on the tracker.
     taskTrackerManager.finishTask("tt1", t.getTaskID().toString(), job1);
+    taskTrackerManager.finishTask("tt1", t1.getTaskID().toString(), job1);
+
     // now a new task can be assigned.
     t = checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");
+    // Total 1 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 1, 50.0f);
     checkMemReservedForTasksOnTT("tt1", 512L, 0L);
 
     // reduce can be assigned.
     t = checkAssignment("tt1", "attempt_test_0002_r_000001_0 on tt1");
+    // Total 1 reduce slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 1,
+        50.0f);
     checkMemReservedForTasksOnTT("tt1", 512L, 512L);
-  }
-  
-  protected TaskTrackerStatus tracker(String taskTrackerName) {
-    return taskTrackerManager.getTaskTracker(taskTrackerName);
-  }
-  
-  protected Task checkAssignment(String taskTrackerName,
-      String expectedTaskString) throws IOException {
-    List<Task> tasks = scheduler.assignTasks(tracker(taskTrackerName));
-    assertNotNull(expectedTaskString, tasks);
-    assertEquals(expectedTaskString, 1, tasks.size());
-    assertEquals(expectedTaskString, tasks.get(0).toString());
-    return tasks.get(0);
-  }
-
-  /**
-   * Get the amount of memory that is reserved for tasks on the taskTracker and
-   * verify that it matches what is expected.
-   * 
-   * @param taskTracker
-   * @param expectedMemForMapsOnTT
-   * @param expectedMemForReducesOnTT
-   */
-  private void checkMemReservedForTasksOnTT(String taskTracker,
-      Long expectedMemForMapsOnTT, Long expectedMemForReducesOnTT) {
-    Long observedMemForMapsOnTT =
-        scheduler.memoryMatcher.getMemReservedForTasks(tracker(taskTracker),
-            CapacityTaskScheduler.TYPE.MAP);
-    Long observedMemForReducesOnTT =
-        scheduler.memoryMatcher.getMemReservedForTasks(tracker(taskTracker),
-            CapacityTaskScheduler.TYPE.REDUCE);
-    if (expectedMemForMapsOnTT == null) {
-      assertTrue(observedMemForMapsOnTT == null);
-    } else {
-      assertTrue(observedMemForMapsOnTT.equals(expectedMemForMapsOnTT));
-    }
-    if (expectedMemForReducesOnTT == null) {
-      assertTrue(observedMemForReducesOnTT == null);
-    } else {
-      assertTrue(observedMemForReducesOnTT.equals(expectedMemForReducesOnTT));
-    }
   }
 
   /*
@@ -2006,10 +2130,9 @@ public class TestCapacityScheduler extends TestCase {
     checkFailedInitializedJobMovement();
 
     // Check failed waiting job movement
-    checkFailedWaitingJobMovement();
-    
+    checkFailedWaitingJobMovement(); 
   }
-  
+
   public void testStartWithoutDefaultQueueConfigured() throws Exception {
     //configure a single queue which is not default queue
     String[] qs = {"q1"};
@@ -2189,9 +2312,9 @@ public class TestCapacityScheduler extends TestCase {
     checkAssignment("tt1", "attempt_test_0002_r_000001_0 on tt1");
     taskTrackerManager.finishTask("tt1", "attempt_test_0002_m_000001_0", fjob2);
     taskTrackerManager.finishTask("tt2", "attempt_test_0002_r_000001_0", fjob2);
-    taskTrackerManager.finalizeJob(fjob2);
-    
+    taskTrackerManager.finalizeJob(fjob2);    
   }
+
   /**
    * Test case to test scheduling of
    * <ol> 
@@ -2207,17 +2330,16 @@ public class TestCapacityScheduler extends TestCase {
    * <ul>
    * <li>Submit one high ram job which has speculative reduce.</li>
    * <li>Submit a normal job which has no speculative reduce.</li>
-   * <li>Scheduler should schedule first all reduce tasks from first job and block
-   * the cluster till both reduces are completed.</li>
+   * <li>Scheduler should schedule first all reduce tasks from first job and
+   * block the cluster till both reduces are completed.</li>
    * </ul>
    * </li>
    * </ol>
    * @throws IOException
    */
   public void testHighRamJobWithSpeculativeExecution() throws IOException {
-    // 2 map and 2 reduce slots
+    // 2 TTs, 3 map and 3 reduce slots on each TT
     taskTrackerManager = new FakeTaskTrackerManager(2, 3, 3);
-    // 1GB for each map, 1GB for each reduce
 
     taskTrackerManager.addQueues(new String[] { "default" });
     ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
@@ -2225,6 +2347,7 @@ public class TestCapacityScheduler extends TestCase {
     resConf.setFakeQueues(queues);
     scheduler.setTaskTrackerManager(taskTrackerManager);
     // enabled memory-based scheduling
+    // 1GB for each map, 1GB for each reduce
     scheduler.getConf().setLong(
         JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
         3 * 1024L);
@@ -2248,8 +2371,9 @@ public class TestCapacityScheduler extends TestCase {
     jConf.setUser("u1");
     jConf.setMapSpeculativeExecution(true);
     jConf.setReduceSpeculativeExecution(false);
-    FakeJobInProgress job1 = new FakeJobInProgress(new JobID("test", ++jobCounter),
-          jConf, taskTrackerManager,"u1");
+    FakeJobInProgress job1 =
+        new FakeJobInProgress(new JobID("test", ++jobCounter), jConf,
+            taskTrackerManager, "u1");
     taskTrackerManager.submitJob(job1);
 
     //Submit normal job
@@ -2273,21 +2397,29 @@ public class TestCapacityScheduler extends TestCase {
     //complete none of the tasks from other jobs would be scheduled.
     checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 0L);
-
     assertEquals("pending maps greater than zero " , job1.pendingMaps(), 0);
+    // Total 2 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 2, 33.3f);
+
     //make same tracker get back, check if you are blocking. Your job
     //has speculative map task so tracker should be blocked even tho' it
     //can run job2's map.
     assertNull(scheduler.assignTasks(tracker("tt1")));
+    // Total 2 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 2, 33.3f);
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 0L);
 
     //TT2 now gets speculative map of the job1
     checkAssignment("tt2", "attempt_test_0001_m_000001_1 on tt2");
+    // Total 4 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 4, 66.7f);
     checkMemReservedForTasksOnTT("tt2", 2 * 1024L, 0L);
 
     // Now since the first job has no more speculative maps, it can schedule
     // the second job.
     checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");
+    // Total 5 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 5, 83.3f);
     checkMemReservedForTasksOnTT("tt1", 3 * 1024L, 0L);
 
     //finish everything
@@ -2310,14 +2442,15 @@ public class TestCapacityScheduler extends TestCase {
     jConf.setUser("u1");
     jConf.setMapSpeculativeExecution(false);
     jConf.setReduceSpeculativeExecution(true);
-    FakeJobInProgress job3 = new FakeJobInProgress(new JobID("test", ++jobCounter),
-          jConf, taskTrackerManager,"u1");
+    FakeJobInProgress job3 =
+        new FakeJobInProgress(new JobID("test", ++jobCounter), jConf,
+            taskTrackerManager, "u1");
     taskTrackerManager.submitJob(job3);
 
     //Submit normal job w.r.t reduces
     jConf = new JobConf();
-    jConf.setMemoryForMapTask(2 * 1024L);
-    jConf.setMemoryForReduceTask(1 * 104L);
+    jConf.setMemoryForMapTask(1 * 1024L);
+    jConf.setMemoryForReduceTask(1 * 1024L);
     jConf.setNumMapTasks(1);
     jConf.setNumReduceTasks(1);
     jConf.setQueueName("default");
@@ -2331,30 +2464,165 @@ public class TestCapacityScheduler extends TestCase {
 
     // Finish up the map scheduler
     checkAssignment("tt1", "attempt_test_0003_m_000001_0 on tt1");
+    // Total 2 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 2, 33.3f);
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 0L);
+
     checkAssignment("tt2", "attempt_test_0004_m_000001_0 on tt2");
-    checkMemReservedForTasksOnTT("tt2", 2 * 1024L, 0L);
+    // Total 3 map slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.MAP, 1, 3, 50.0f);
+    checkMemReservedForTasksOnTT("tt2", 1 * 1024L, 0L);
 
     // first, a reduce from j3 will run
     // at this point, there is a speculative task for the same job to be
     //scheduled. This task would be scheduled. Till the tasks from job3 gets
     //complete none of the tasks from other jobs would be scheduled.
     checkAssignment("tt1", "attempt_test_0003_r_000001_0 on tt1");
-    assertEquals("pending reduces greater than zero " , job3.pendingMaps(), 0);
+    assertEquals("pending reduces greater than zero ", job3.pendingReduces(),
+        0);
+    // Total 2 reduce slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 2,
+        33.3f);
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 2*1024L);
 
     //make same tracker get back, check if you are blocking. Your job
     //has speculative reduce task so tracker should be blocked even tho' it
     //can run job4's reduce.
     assertNull(scheduler.assignTasks(tracker("tt1")));
-    //TT2 now gets speculative map of the job1
+    // Total 2 reduce slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 2,
+        33.3f);
+
+    //TT2 now gets speculative reduce of the job3
     checkAssignment("tt2", "attempt_test_0003_r_000001_1 on tt2");
-    checkMemReservedForTasksOnTT("tt2", 2 * 1024L, 2 * 1024L);
+    // Total 4 reduce slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 4,
+        66.7f);
+    checkMemReservedForTasksOnTT("tt2", 1 * 1024L, 2 * 1024L);
 
     // Now since j3 has no more speculative reduces, it can schedule
     // the j4.
     checkAssignment("tt1", "attempt_test_0004_r_000001_0 on tt1");
+    // Total 5 reduce slots should be accounted for.
+    checkOccupiedSlots("default", CapacityTaskScheduler.TYPE.REDUCE, 1, 5,
+        83.3f);
     checkMemReservedForTasksOnTT("tt1", 2 * 1024L, 3 * 1024L);
+  }
+
+  /**
+   * Test to verify that queue ordering is based on the number of slots occupied
+   * and hence to verify that presence of high memory jobs is reflected properly
+   * while determining used capacities of queues and hence the queue ordering.
+   * 
+   * @throws IOException
+   */
+  public void testQueueOrdering()
+      throws IOException {
+    taskTrackerManager = new FakeTaskTrackerManager(2, 6, 6);
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    String[] qs = { "default", "q1" };
+    String[] reversedQs = { qs[1], qs[0] };
+    taskTrackerManager.addQueues(qs);
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 50.0f, true, 100));
+    queues.add(new FakeQueueInfo("q1", 50.0f, true, 100));
+    resConf.setFakeQueues(queues);
+    // enabled memory-based scheduling
+    // Normal job in the cluster would be 1GB maps/reduces
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY, 2 * 1024);
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY, 1 * 1024);
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY, 1 * 1024);
+    scheduler.getConf().setLong(
+        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY, 1 * 1024);
+    scheduler.setResourceManagerConf(resConf);
+    scheduler.start();
+
+    LOG.debug("Submit one high memory(2GB maps, 2GB reduces) job of "
+        + "6 map and 6 reduce tasks");
+    JobConf jConf = new JobConf(conf);
+    jConf.setMemoryForMapTask(2 * 1024);
+    jConf.setMemoryForReduceTask(2 * 1024);
+    jConf.setNumMapTasks(6);
+    jConf.setNumReduceTasks(6);
+    jConf.setQueueName("default");
+    jConf.setUser("u1");
+    FakeJobInProgress job1 = submitJobAndInit(JobStatus.PREP, jConf);
+
+    // Submit a normal job to the other queue.
+    jConf = new JobConf(conf);
+    jConf.setMemoryForMapTask(1 * 1024);
+    jConf.setMemoryForReduceTask(1 * 1024);
+    jConf.setNumMapTasks(6);
+    jConf.setNumReduceTasks(6);
+    jConf.setUser("u1");
+    jConf.setQueueName("q1");
+    FakeJobInProgress job2 = submitJobAndInit(JobStatus.PREP, jConf);
+
+    // Map 1 of high memory job
+    checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
+    checkQueuesOrder(qs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.MAP));
+
+    // Reduce 1 of high memory job
+    checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
+    checkQueuesOrder(qs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.REDUCE));
+
+    // Map 1 of normal job
+    checkAssignment("tt1", "attempt_test_0002_m_000001_0 on tt1");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.MAP));
+
+    // Reduce 1 of normal job
+    checkAssignment("tt1", "attempt_test_0002_r_000001_0 on tt1");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.REDUCE));
+
+    // Map 2 of normal job
+    checkAssignment("tt1", "attempt_test_0002_m_000002_0 on tt1");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.MAP));
+
+    // Reduce 2 of normal job
+    checkAssignment("tt1", "attempt_test_0002_r_000002_0 on tt1");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.REDUCE));
+
+    // Now both the queues are equally served. But the comparator doesn't change
+    // the order if queues are equally served.
+
+    // Map 3 of normal job
+    checkAssignment("tt2", "attempt_test_0002_m_000003_0 on tt2");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.MAP));
+
+    // Reduce 3 of normal job
+    checkAssignment("tt2", "attempt_test_0002_r_000003_0 on tt2");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.REDUCE));
+
+    // Map 2 of high memory job
+    checkAssignment("tt2", "attempt_test_0001_m_000002_0 on tt2");
+    checkQueuesOrder(qs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.MAP));
+
+    // Reduce 2 of high memory job
+    checkAssignment("tt2", "attempt_test_0001_r_000002_0 on tt2");
+    checkQueuesOrder(qs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.REDUCE));
+
+    // Map 4 of normal job
+    checkAssignment("tt2", "attempt_test_0002_m_000004_0 on tt2");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.MAP));
+
+    // Reduce 4 of normal job
+    checkAssignment("tt2", "attempt_test_0002_r_000004_0 on tt2");
+    checkQueuesOrder(reversedQs, scheduler
+        .getOrderedQueues(CapacityTaskScheduler.TYPE.REDUCE));
   }
 
   private void checkFailedInitializedJobMovement() throws IOException {
@@ -2436,6 +2704,89 @@ public class TestCapacityScheduler extends TestCase {
       userJobs.put(user, jips);
     }
     return userJobs;
+  }
 
+  
+  protected TaskTrackerStatus tracker(String taskTrackerName) {
+    return taskTrackerManager.getTaskTracker(taskTrackerName);
+  }
+  
+  protected Task checkAssignment(String taskTrackerName,
+      String expectedTaskString) throws IOException {
+    List<Task> tasks = scheduler.assignTasks(tracker(taskTrackerName));
+    assertNotNull(expectedTaskString, tasks);
+    assertEquals(expectedTaskString, 1, tasks.size());
+    assertEquals(expectedTaskString, tasks.get(0).toString());
+    return tasks.get(0);
+  }
+
+  /**
+   * Get the amount of memory that is reserved for tasks on the taskTracker and
+   * verify that it matches what is expected.
+   * 
+   * @param taskTracker
+   * @param expectedMemForMapsOnTT
+   * @param expectedMemForReducesOnTT
+   */
+  private void checkMemReservedForTasksOnTT(String taskTracker,
+      Long expectedMemForMapsOnTT, Long expectedMemForReducesOnTT) {
+    Long observedMemForMapsOnTT =
+        scheduler.memoryMatcher.getMemReservedForTasks(tracker(taskTracker),
+            CapacityTaskScheduler.TYPE.MAP);
+    Long observedMemForReducesOnTT =
+        scheduler.memoryMatcher.getMemReservedForTasks(tracker(taskTracker),
+            CapacityTaskScheduler.TYPE.REDUCE);
+    if (expectedMemForMapsOnTT == null) {
+      assertTrue(observedMemForMapsOnTT == null);
+    } else {
+      assertTrue(observedMemForMapsOnTT.equals(expectedMemForMapsOnTT));
+    }
+    if (expectedMemForReducesOnTT == null) {
+      assertTrue(observedMemForReducesOnTT == null);
+    } else {
+      assertTrue(observedMemForReducesOnTT.equals(expectedMemForReducesOnTT));
+    }
+  }
+
+  /**
+   * Verify the number of slots of type 'type' from the queue 'queue'.
+   * 
+   * @param queue
+   * @param type
+   * @param numActiveUsers in the queue at present.
+   * @param expectedOccupiedSlots
+   * @param expectedOccupiedSlotsPercent
+   * @return
+   */
+  private void checkOccupiedSlots(String queue,
+      CapacityTaskScheduler.TYPE type, int numActiveUsers,
+      int expectedOccupiedSlots, float expectedOccupiedSlotsPercent) {
+    scheduler.updateQSIInfoForTests();
+    QueueManager queueManager = scheduler.taskTrackerManager.getQueueManager();
+    String schedulingInfo =
+        queueManager.getJobQueueInfo(queue).getSchedulingInfo();
+    String[] infoStrings = schedulingInfo.split("\n");
+    int index = -1;
+    if (type.equals(CapacityTaskScheduler.TYPE.MAP)) {
+      index = 7;
+    } else if (type.equals(CapacityTaskScheduler.TYPE.REDUCE)) {
+      index = (numActiveUsers == 0 ? 12 : 13 + numActiveUsers);
+    }
+    LOG.info(infoStrings[index]);
+    assertEquals(String.format("Used capacity: %d (%.1f%% of Capacity)",
+        expectedOccupiedSlots, expectedOccupiedSlotsPercent),
+        infoStrings[index]);
+  }
+
+  private void checkQueuesOrder(String[] expectedOrder, String[] observedOrder) {
+    assertTrue("Observed and expected queues are not of same length.",
+        expectedOrder.length == observedOrder.length);
+    int i = 0;
+    for (String expectedQ : expectedOrder) {
+      assertTrue("Observed and expected queues are not in the same order. "
+          + "Differ at index " + i + ". Got " + observedOrder[i]
+          + " instead of " + expectedQ, expectedQ.equals(observedOrder[i]));
+      i++;
+    }
   }
 }

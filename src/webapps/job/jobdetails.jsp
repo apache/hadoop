@@ -248,6 +248,10 @@
           "<a href=\"jobblacklistedtrackers.jsp?jobid=" + jobId + "\">" +
           flakyTaskTrackers + "</a><br>\n");
     }
+    if (job.getSchedulingInfo() != null) {
+      out.print("<b>Job Scheduling information: </b>" +
+          job.getSchedulingInfo().toString() +"\n");
+    }
     out.print("<hr>\n");
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
     out.print("<tr><th>Kind</th><th>% Complete</th><th>Num Tasks</th>" +
