@@ -432,6 +432,9 @@ Trunk (unreleased changes)
     HADOOP-2838. Add mapred.child.env to pass environment variables to 
     tasktracker's child processes. (Amar Kamat via sharad)
 
+    HADOOP-5961. DataNode process understand generic hadoop command line
+    options (like -Ddfs.property=value). (Raghu Angadi)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
