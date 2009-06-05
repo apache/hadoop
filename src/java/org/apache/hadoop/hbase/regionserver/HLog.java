@@ -553,7 +553,6 @@ public class HLog implements HConstants, Syncable {
       for (KeyValue kv: edits) {
         HLogKey logKey =
           new HLogKey(regionName, tableName, seqNum[counter++], now);
-        System.out.println("REMOVE " + logKey);
         doWrite(logKey, kv, sync, now);
         this.numEntries.incrementAndGet();
       }
@@ -827,7 +826,6 @@ public class HLog implements HConstants, Syncable {
                   logEntries.put(regionName, queue);
                 }
                 HLogEntry hle = new HLogEntry(val, key);
-                System.out.println("REMOVE !! " + hle);
                 queue.push(hle);
                 count++;
                 // Make the key and value new each time; otherwise same instance
