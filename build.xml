@@ -272,6 +272,12 @@
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
     <mkdir dir="${test.build.extraconf}"/>
+    <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
+    <touch millis="0" file="${touch.temp.file}">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <fileset dir="${contrib.dir}" includes="**/*.template"/>
+    </touch>
+    <delete file="${touch.temp.file}"/>
 
     <!-- copy all of the jsp and static files -->
     <copy todir="${build.webapps}">
@@ -286,6 +292,11 @@
         <include name="webapps/**"/>
       </patternset>
     </unzip>
+
+    <copy todir="${conf.dir}" verbose="true">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
 
     <copy todir="${contrib.dir}" verbose="true">
       <fileset dir="${contrib.dir}" includes="**/*.template"/>
