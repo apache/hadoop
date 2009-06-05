@@ -901,6 +901,9 @@ Release 0.20.1 - Unreleased
     happens in MROutputThread after the last call to the map/reduce method, the 
     exception goes undetected. (Amar Kamat via ddas)
 
+    HADOOP-5884. Fixes accounting in capacity scheduler so that high RAM jobs
+    take more slots. (Vinod Kumar Vavilapalli via yhemanth)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
