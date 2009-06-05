@@ -256,6 +256,17 @@
         <include name="webapps/**"/>
       </patternset>
     </unzip>
+
+    <copy todir="${conf.dir}" verbose="true">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
+    <copy todir="${contrib.dir}" verbose="true">
+      <fileset dir="${contrib.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
   </target>
 
   <target name="compile-hdfs-classes" depends="init">
