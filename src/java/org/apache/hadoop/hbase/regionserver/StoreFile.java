@@ -40,10 +40,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Hash;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -58,7 +55,7 @@ import org.apache.hadoop.io.RawComparator;
 public class StoreFile implements HConstants {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
-  public static final String HFILE_CACHE_SIZE_KEY = "hfile.block.cache.size";
+  private static final String HFILE_CACHE_SIZE_KEY = "hfile.block.cache.size";
 
   private static BlockCache hfileBlockCache = null;
   
@@ -100,14 +97,15 @@ public class StoreFile implements HConstants {
   private final HBaseConfiguration conf;
 
   /**
-   * Constructor, loads a reader and it's indices, etc. May allocate a substantial
-   * amount of ram depending on the underlying files (10-20MB?).
+   * Constructor, loads a reader and it's indices, etc. May allocate a 
+   * substantial amount of ram depending on the underlying files (10-20MB?).
    * @param fs
    * @param p
    * @param conf
    * @throws IOException
    */
-  StoreFile(final FileSystem fs, final Path p, final HBaseConfiguration conf) throws IOException {
+  StoreFile(final FileSystem fs, final Path p, final HBaseConfiguration conf) 
+  throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.path = p;
@@ -208,6 +206,11 @@ public class StoreFile implements HConstants {
     return this.sequenceid;
   }
 
+  /**
+   * 
+   * @param conf
+   * @return
+   */
   public static synchronized BlockCache getBlockCache(HBaseConfiguration conf) {
     if (hfileBlockCache != null)
       return hfileBlockCache;
@@ -221,6 +224,9 @@ public class StoreFile implements HConstants {
     return hfileBlockCache;
   }
 
+  /**
+   * @return the blockcache
+   */
   public BlockCache getBlockCache() {
     return getBlockCache(conf);
   }
@@ -237,8 +243,8 @@ public class StoreFile implements HConstants {
       throw new IllegalAccessError("Already open");
     }
     if (isReference()) {
-      this.reader = new HalfHFileReader(this.fs, this.referencePath, getBlockCache(),
-        this.reference);
+      this.reader = new HalfHFileReader(this.fs, this.referencePath, 
+          getBlockCache(), this.reference);
     } else {
       this.reader = new StoreFileReader(this.fs, this.path, getBlockCache());
     }
@@ -276,6 +282,13 @@ public class StoreFile implements HConstants {
    * Override to add some customization on HFile.Reader
    */
   static class StoreFileReader extends HFile.Reader {
+    /**
+     * 
+     * @param fs
+     * @param path
+     * @param cache
+     * @throws IOException
+     */
     public StoreFileReader(FileSystem fs, Path path, BlockCache cache)
         throws IOException {
       super(fs, path, cache);
@@ -296,6 +309,14 @@ public class StoreFile implements HConstants {
    * Override to add some customization on HalfHFileReader.
    */
   static class HalfStoreFileReader extends HalfHFileReader {
+    /**
+     * 
+     * @param fs
+     * @param p
+     * @param c
+     * @param r
+     * @throws IOException
+     */
     public HalfStoreFileReader(FileSystem fs, Path p, BlockCache c, Reference r)
         throws IOException {
       super(fs, p, c, r);
@@ -445,7 +466,6 @@ public class StoreFile implements HConstants {
    * @param dir
    * @param suffix
    * @return Path to a file that doesn't exist at time of this invocation.
-   * @return
    * @throws IOException
    */
   static Path getRandomFilename(final FileSystem fs, final Path dir,
@@ -465,8 +485,8 @@ public class StoreFile implements HConstants {
    * Write file metadata.
    * Call before you call close on the passed <code>w</code> since its written
    * as metadata to that file.
-   *
-   * @param w
+   * 
+   * @param w hfile writer
    * @param maxSequenceId Maximum sequence id.
    * @throws IOException
    */

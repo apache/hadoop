@@ -42,6 +42,7 @@ import org.apache.hadoop.io.WritableComparable;
  * There is one BatchUpdate object per server, so a series of batch operations
  * can result in multiple BatchUpdate objects if the batch contains rows that
  * are served by multiple region servers.
+ * @deprecated As of hbase 0.20.0, replaced by new Get/Put/Delete/Result-based API.
  */
 public class BatchUpdate
 implements WritableComparable<BatchUpdate>, Iterable<BatchOperation>, HeapSize {

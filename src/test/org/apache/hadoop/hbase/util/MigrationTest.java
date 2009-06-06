@@ -35,12 +35,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ResultScanner;
 
 /**
  * Runs migration of filesystem from hbase 0.x to 0.x
@@ -128,9 +131,11 @@ public class MigrationTest extends HBaseTestCase {
       HTable t = new HTable(this.conf, TABLENAME);
       int count = 0;
       LOG.info("OPENING SCANNER");
-      Scanner s = t.getScanner(TABLENAME_COLUMNS);
+      Scan scan = new Scan();
+      scan.addColumns(TABLENAME_COLUMNS);
+      ResultScanner s = t.getScanner(scan);
       try {
-        for (RowResult r: s) {
+        for (Result r: s) {
           if (r == null || r.size() == 0) {
             break;
           }
@@ -168,7 +173,15 @@ public class MigrationTest extends HBaseTestCase {
     long startcode = -1;
     boolean changed = false;
     for (int i = 0; i < retries; i++) {
-      startcode = Writables.cellToLong(m.get(row, HConstants.COL_STARTCODE));
+      Get get = new Get(row);
+      get.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
+      Result res = m.get(get);
+      KeyValue [] kvs = res.raw();
+      if(kvs.length <= 0){
+        return;
+      }
+      byte [] value = kvs[0].getValue();
+      startcode = Bytes.toLong(value);
       if (startcode != oldStartCode) {
         changed = true;
         break;

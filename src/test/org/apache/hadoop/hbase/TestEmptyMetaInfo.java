@@ -23,9 +23,10 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -44,9 +45,10 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
       byte [] regionName = HRegionInfo.createRegionName(tableName,
         Bytes.toBytes(i == 0? "": Integer.toString(i)),
         Long.toString(System.currentTimeMillis()));
-      BatchUpdate b = new BatchUpdate(regionName);
-      b.put(HConstants.COL_SERVER, Bytes.toBytes("localhost:1234"));
-      t.commit(b);
+      Put put = new Put(regionName);
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+          Bytes.toBytes("localhost:1234"));
+      t.put(put);
     }
     long sleepTime =
       conf.getLong("hbase.master.meta.thread.rescanfrequency", 10000);
@@ -59,11 +61,18 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
       } catch (InterruptedException e) {
         // ignore
       }
-      Scanner scanner = t.getScanner(HConstants.ALL_META_COLUMNS, tableName);
+      Scan scan = new Scan();
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
+      ResultScanner scanner = t.getScanner(scan);
       try {
         count = 0;
-        for (RowResult r: scanner) {
-          if (r.size() > 0) {
+        Result r;
+        while((r = scanner.next()) != null) {
+          if (!r.isEmpty()) {
             count += 1;
           }
         }

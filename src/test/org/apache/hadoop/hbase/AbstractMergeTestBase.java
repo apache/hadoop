@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -34,7 +35,7 @@ import org.apache.commons.logging.LogFactory;
 public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
   static final Log LOG =
     LogFactory.getLog(AbstractMergeTestBase.class.getName());
-  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
+  static final byte [] COLUMN_NAME = Bytes.toBytes("contents");
   protected final Random rand = new Random();
   protected HTableDescriptor desc;
   protected ImmutableBytesWritable value;
@@ -126,11 +127,10 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
 
     HRegionIncommon r = new HRegionIncommon(region);
     for(int i = firstRow; i < firstRow + nrows; i++) {
-      BatchUpdate batchUpdate = new BatchUpdate(Bytes.toBytes("row_"
+      Put put = new Put(Bytes.toBytes("row_"
           + String.format("%1$05d", i)));
-
-      batchUpdate.put(COLUMN_NAME, value.get());
-      region.batchUpdate(batchUpdate, null);
+      put.add(COLUMN_NAME, null,  value.get());
+      region.put(put);
       if(i % 10000 == 0) {
         System.out.println("Flushing write #" + i);
         r.flushcache();

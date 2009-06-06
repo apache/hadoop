@@ -62,11 +62,11 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   protected final long globalMemcacheLimit;
   protected final long globalMemcacheLimitLowMark;
   
-  public static final float DEFAULT_UPPER = 0.4f;
-  public static final float DEFAULT_LOWER = 0.25f;
-  public static final String UPPER_KEY =
+  private static final float DEFAULT_UPPER = 0.4f;
+  private static final float DEFAULT_LOWER = 0.25f;
+  private static final String UPPER_KEY =
     "hbase.regionserver.globalMemcache.upperLimit";
-  public static final String LOWER_KEY =
+  private static final String LOWER_KEY =
     "hbase.regionserver.globalMemcache.lowerLimit";
   private long blockingStoreFilesNumber;
   private long blockingWaitTime;

@@ -28,10 +28,16 @@ import java.io.IOException;
 class FailedLogCloseException extends IOException {
   private static final long serialVersionUID = 1759152841462990925L;
 
+  /**
+   * 
+   */
   public FailedLogCloseException() {
     super();
   }
 
+  /**
+   * @param arg0
+   */
   public FailedLogCloseException(String arg0) {
     super(arg0);
   }

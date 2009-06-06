@@ -23,6 +23,7 @@ import java.util.Comparator;
 
 import org.apache.hadoop.io.Writable;
 
-public interface WritableComparator<T> extends Writable, Comparator<T> {
-// No methods, just bring the two interfaces together
-}
+/**
+ * Interface that brings writable and comparable together
+ */
+public interface WritableComparator<T> extends Writable, Comparator<T> {}

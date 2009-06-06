@@ -1,0 +1,124 @@
+/*
+ * Copyright 2009 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hbase.regionserver;
+
+import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.util.Bytes;
+
+/**
+ * Keeps track of the columns for a scan if they are not explicitly specified
+ */
+public class ScanWildcardColumnTracker implements ColumnTracker {
+  private byte [] columnBuffer = null;
+  private int columnOffset = 0;
+  private int columnLength = 0;
+  private int currentCount = 0;
+  private int maxVersions;
+
+  /**
+   * Return maxVersions of every row.
+   * @param maxVersion
+   */
+  public ScanWildcardColumnTracker(int maxVersion) {
+    this.maxVersions = maxVersion;
+  }
+
+  /**
+   * Can only return INCLUDE or SKIP, since returning "NEXT" or
+   * "DONE" would imply we have finished with this row, when
+   * this class can't figure that out.
+   *
+   * @param bytes
+   * @param offset
+   * @param length
+   * @return
+   */
+  @Override
+  public MatchCode checkColumn(byte[] bytes, int offset, int length) {
+    if (columnBuffer == null) {
+      // first iteration.
+      columnBuffer = bytes;
+      columnOffset = offset;
+      columnLength = length;
+      currentCount = 0;
+
+      if (++currentCount > maxVersions)
+        return MatchCode.SKIP;
+      return MatchCode.INCLUDE;
+    }
+    int cmp = Bytes.compareTo(bytes, offset, length,
+        columnBuffer, columnOffset, columnLength);
+    if (cmp == 0) {
+      if (++currentCount > maxVersions)
+        return MatchCode.SKIP; // skip to next col
+      return MatchCode.INCLUDE;
+    }
+
+    // new col > old col
+    if (cmp > 0) {
+      // switched columns, lets do something.x
+      columnBuffer = bytes;
+      columnOffset = offset;
+      columnLength = length;
+      currentCount = 0;
+      
+      if (++currentCount > maxVersions)
+        return MatchCode.SKIP;
+      return MatchCode.INCLUDE;
+    }
+    // new col < oldcol
+    // if (cmp < 0) {
+    throw new RuntimeException("ScanWildcardColumnTracker.checkColumn ran " +
+    		"into a column actually smaller than the previous column!");
+  }
+
+  @Override
+  public void update() {
+    // no-op, shouldn't even be called
+    throw new UnsupportedOperationException(
+        "ScanWildcardColumnTracker.update should never be called!");
+  }
+
+  @Override
+  public void reset() {
+    columnBuffer = null;
+  }
+
+  /**
+   * Used by matcher and scan/get to get a hint of the next column
+   * to seek to after checkColumn() returns SKIP.  Returns the next interesting
+   * column we want, or NULL there is none (wildcard scanner).
+   * @return
+   */
+  public ColumnCount getColumnHint() {
+    return null;
+  }
+
+
+  /**
+   * We can never know a-priori if we are done, so always return false. 
+   * @return false
+   */
+  @Override
+  public boolean done() {
+    return false;
+  }
+}

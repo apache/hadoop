@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,8 +35,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -51,7 +53,8 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 public class HBaseAdmin {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
-  private final HConnection connection;
+//  private final HConnection connection;
+  final HConnection connection;
   private volatile HBaseConfiguration conf;
   private final long pause;
   private final int numRetries;
@@ -121,11 +124,13 @@ public class HBaseAdmin {
     return this.connection.listTables();
   }
 
-  public HTableDescriptor getTableDescriptor(final String tableName)
-  throws IOException {
-    return getTableDescriptor(Bytes.toBytes(tableName));
-  }
   
+  /**
+   * Method for getting the tableDescriptor
+   * @param tableName as a byte []
+   * @return the tableDescriptor
+   * @throws IOException
+   */
   public HTableDescriptor getTableDescriptor(final byte [] tableName)
   throws IOException {
     return this.connection.getHTableDescriptor(tableName);
@@ -238,19 +243,22 @@ public class HBaseAdmin {
     for (int tries = 0; tries < numRetries; tries++) {
       long scannerId = -1L;
       try {
-        scannerId =
-          server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            HConstants.COL_REGIONINFO_ARRAY, tableName,
-            HConstants.LATEST_TIMESTAMP, null);
-        RowResult values = server.next(scannerId);
+        Scan scan = new Scan().addColumn(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
+        
+        scannerId = server.openScanner(
+            firstMetaServer.getRegionInfo().getRegionName(), 
+            scan);
+        Result values = server.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
         boolean found = false;
-        for (Map.Entry<byte [], Cell> e: values.entrySet()) {
-          if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
+        NavigableMap<byte[], byte[]> infoValues = values.getFamilyMap(HConstants.CATALOG_FAMILY);
+        for (Map.Entry<byte [], byte []> e: infoValues.entrySet()) {
+          if (Bytes.equals(e.getKey(), HConstants.REGIONINFO_QUALIFIER)) {
             info = (HRegionInfo) Writables.getWritable(
-              e.getValue().getValue(), info);
+              e.getValue(), info);
             
             if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
               found = true;
@@ -566,7 +574,7 @@ public class HBaseAdmin {
         newargs[i + xtraArgsCount] = args[i];
       }
     }
-    modifyTable(HConstants.META_TABLE_NAME, HConstants.MODIFY_CLOSE_REGION,
+    modifyTable(HConstants.META_TABLE_NAME, HConstants.Modify.CLOSE_REGION,
       newargs);
   }
   
@@ -589,7 +597,7 @@ public class HBaseAdmin {
    * @throws IOException
    */
   public void flush(final byte [] tableNameOrRegionName) throws IOException {
-    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_FLUSH);
+    modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_FLUSH);
   }
 
   /**
@@ -611,7 +619,7 @@ public class HBaseAdmin {
    * @throws IOException
    */
   public void compact(final byte [] tableNameOrRegionName) throws IOException {
-    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_COMPACT);
+    modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_COMPACT);
   }
   
   /**
@@ -635,7 +643,7 @@ public class HBaseAdmin {
    */
   public void majorCompact(final byte [] tableNameOrRegionName)
   throws IOException {
-    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_MAJOR_COMPACT);
+    modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_MAJOR_COMPACT);
   }
 
   /**
@@ -657,7 +665,7 @@ public class HBaseAdmin {
    * @throws IOException
    */
   public void split(final byte [] tableNameOrRegionName) throws IOException {
-    modifyTable(tableNameOrRegionName, HConstants.MODIFY_TABLE_SPLIT);
+    modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_SPLIT);
   }
 
   /*
@@ -667,7 +675,8 @@ public class HBaseAdmin {
    * @param op
    * @throws IOException
    */
-  private void modifyTable(final byte [] tableNameOrRegionName, final int op)
+  private void modifyTable(final byte [] tableNameOrRegionName, 
+      final HConstants.Modify op)
   throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
@@ -689,7 +698,7 @@ public class HBaseAdmin {
    */
   public void modifyTable(final byte [] tableName, HTableDescriptor htd) 
   throws IOException {
-    modifyTable(tableName, HConstants.MODIFY_TABLE_SET_HTD, htd);
+    modifyTable(tableName, HConstants.Modify.TABLE_SET_HTD, htd);
   }
 
   /**
@@ -702,7 +711,8 @@ public class HBaseAdmin {
    * @param args operation specific arguments
    * @throws IOException
    */
-  public void modifyTable(final byte [] tableName, int op, Object... args)
+  public void modifyTable(final byte [] tableName, HConstants.Modify op, 
+      Object... args)
       throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
@@ -715,7 +725,7 @@ public class HBaseAdmin {
     Writable[] arr = null;
     try {
       switch (op) {
-      case HConstants.MODIFY_TABLE_SET_HTD:
+      case TABLE_SET_HTD:
         if (args == null || args.length < 1 || 
             !(args[0] instanceof HTableDescriptor)) {
           throw new IllegalArgumentException("SET_HTD requires a HTableDescriptor");
@@ -725,10 +735,10 @@ public class HBaseAdmin {
         this.master.modifyTable(tableName, op, arr);
         break;
 
-      case HConstants.MODIFY_TABLE_COMPACT:
-      case HConstants.MODIFY_TABLE_SPLIT:
-      case HConstants.MODIFY_TABLE_MAJOR_COMPACT:
-      case HConstants.MODIFY_TABLE_FLUSH:
+      case TABLE_COMPACT:
+      case TABLE_SPLIT:
+      case TABLE_MAJOR_COMPACT:
+      case TABLE_FLUSH:
         if (args != null && args.length > 0) {
           arr = new Writable[1];
           if (args[0] instanceof byte[]) {
@@ -745,7 +755,7 @@ public class HBaseAdmin {
         this.master.modifyTable(tableName, op, arr);
         break;
 
-      case HConstants.MODIFY_CLOSE_REGION:
+      case CLOSE_REGION:
         if (args == null || args.length < 1) {
           throw new IllegalArgumentException("Requires at least a region name");
         }

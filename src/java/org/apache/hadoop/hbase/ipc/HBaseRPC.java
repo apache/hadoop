@@ -390,6 +390,7 @@ public class HBaseRPC {
    * @param addr
    * @param conf
    * @param maxAttempts
+   * @param timeout
    * @return proxy
    * @throws IOException
    */

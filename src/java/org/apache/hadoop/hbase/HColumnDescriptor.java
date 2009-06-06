@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -92,20 +93,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * Default number of versions of a record to keep.
    */
   public static final int DEFAULT_VERSIONS = 3;
-
-  /**
-   * Default maximum cell length.
-   */
-  public static final int DEFAULT_LENGTH = Integer.MAX_VALUE;
-  /** Default maximum cell length as an Integer. */
-  public static final Integer DEFAULT_LENGTH_INTEGER =
-    Integer.valueOf(DEFAULT_LENGTH);
-  
-  /*
-   * Cache here the HCD value.
-   * Question: its OK to cache since when we're reenable, we create a new HCD?
-   */
-  private volatile Integer maxValueLength = null;
 
   /*
    * Cache here the HCD value.
@@ -180,7 +167,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     this (familyName == null || familyName.length <= 0?
       HConstants.EMPTY_BYTE_ARRAY: familyName, DEFAULT_VERSIONS,
       DEFAULT_COMPRESSION, DEFAULT_IN_MEMORY, DEFAULT_BLOCKCACHE,
-      Integer.MAX_VALUE, DEFAULT_TTL, false);
+      DEFAULT_TTL, false);
   }
 
   /**
@@ -219,12 +206,44 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    */
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
-      final boolean blockCacheEnabled, final int maxValueLength,
+      final boolean blockCacheEnabled,
       final int timeToLive, final boolean bloomFilter) {
     this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
-      DEFAULT_BLOCKSIZE, maxValueLength, timeToLive, bloomFilter);
+      DEFAULT_BLOCKSIZE, timeToLive, bloomFilter);
   }
 
+  /**
+   * Backwards compatible Constructor.  Maximum value length is no longer
+   * configurable.
+   * 
+   * @param familyName Column family name. Must be 'printable' -- digit or
+   * letter -- and end in a <code>:<code>
+   * @param maxVersions Maximum number of versions to keep
+   * @param compression Compression type
+   * @param inMemory If true, column data should be kept in an HRegionServer's
+   * cache
+   * @param blockCacheEnabled If true, MapFile blocks should be cached
+   * @param blocksize
+   * @param maxValueLength Restrict values to &lt;= this value (UNSUPPORTED)
+   * @param timeToLive Time-to-live of cell contents, in seconds
+   * (use HConstants.FOREVER for unlimited TTL)
+   * @param bloomFilter Enable the specified bloom filter for this column
+   * 
+   * @throws IllegalArgumentException if passed a family name that is made of 
+   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
+   * end in a <code>:</code>
+   * @throws IllegalArgumentException if the number of versions is &lt;= 0
+   * @deprecated As of hbase 0.20.0, max value length no longer supported
+   */
+//  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
+//      final String compression, final boolean inMemory,
+//      final boolean blockCacheEnabled, final int blocksize,
+//      final int maxValueLength, 
+//      final int timeToLive, final boolean bloomFilter) {
+//    this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
+//        blocksize, timeToLive, bloomFilter);
+//  }
+  
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
@@ -235,7 +254,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * cache
    * @param blockCacheEnabled If true, MapFile blocks should be cached
    * @param blocksize
-   * @param maxValueLength Restrict values to &lt;= this value
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
@@ -248,10 +266,10 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
-      final int maxValueLength,
       final int timeToLive, final boolean bloomFilter) {
-    isLegalFamilyName(familyName);
     this.name = stripColon(familyName);
+    isLegalFamilyName(this.name);
+
     if (maxVersions <= 0) {
       // TODO: Allow maxVersion of 0 to be the way you say "Keep all versions".
       // Until there is support, consider 0 or < 0 -- a configuration error.
@@ -260,7 +278,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     setMaxVersions(maxVersions);
     setInMemory(inMemory);
     setBlockCacheEnabled(blockCacheEnabled);
-    setMaxValueLength(maxValueLength);
     setTimeToLive(timeToLive);
     setCompressionType(Compression.Algorithm.
       valueOf(compression.toUpperCase()));
@@ -269,10 +286,14 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   private static byte [] stripColon(final byte [] n) {
-    byte [] result = new byte [n.length - 1];
-    // Have the stored family name be absent the colon delimiter
-    System.arraycopy(n, 0, result, 0, n.length - 1);
-    return result;
+    byte col = n[n.length-1];
+    if (col == ':') {
+      // strip.
+      byte [] res = new byte[n.length-1];
+      System.arraycopy(n, 0, res, 0, n.length-1);
+      return res;
+    }
+    return n;
   }
 
   /**
@@ -287,18 +308,14 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     if (b == null) {
       return b;
     }
-    if (b[b.length - 1] != ':') {
-      throw new IllegalArgumentException("Family names must end in a colon: " +
-        Bytes.toString(b));
-    }
     if (b[0] == '.') {
       throw new IllegalArgumentException("Family names cannot start with a " +
         "period: " + Bytes.toString(b));
     }
     for (int i = 0; i < (b.length - 1); i++) {
-      if (Character.isISOControl(b[i])) {
+      if (Character.isISOControl(b[i]) || b[i] == ':') {
         throw new IllegalArgumentException("Illegal character <" + b[i] +
-          ">. Family names cannot contain control characters: " +
+          ">. Family names cannot contain control characters or colons: " +
           Bytes.toString(b));
       }
     }
@@ -317,7 +334,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    */
   @TOJSON(fieldName = "name", base64=true)
   public byte [] getNameWithColon() {
-    return HStoreKey.addDelimiter(this.name);
+    return Bytes.add(this.name, new byte[]{':'});
   }
 
   /**
@@ -463,27 +480,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   /**
-   * @return Maximum value length.
-   */
-  @TOJSON
-  public synchronized int getMaxValueLength() {
-    if (this.maxValueLength == null) {
-      String value = getValue(LENGTH);
-      this.maxValueLength = (value != null)?
-        Integer.decode(value): DEFAULT_LENGTH_INTEGER;
-    }
-    return this.maxValueLength.intValue();
-  }
-
-  /**
-   * @param maxLength Maximum value length.
-   */
-  public void setMaxValueLength(int maxLength) {
-    setValue(LENGTH, Integer.toString(maxLength));
-    this.maxValueLength = null;
-  }
-
-  /**
    * @return Time-to-live of cell contents, in seconds.
    */
   @TOJSON
@@ -609,9 +605,10 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
         Text t = new Text();
         t.readFields(in);
         this.name = t.getBytes();
-        if (HStoreKey.getFamilyDelimiterIndex(this.name) > 0) {
-          this.name = stripColon(this.name);
-        }
+//        if(KeyValue.getFamilyDelimiterIndex(this.name, 0, this.name.length) 
+//            > 0) {
+//          this.name = stripColon(this.name);
+//        }
       } else {
         this.name = Bytes.readByteArray(in);
       }
@@ -620,7 +617,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
       int ordinal = in.readInt();
       setCompressionType(Compression.Algorithm.values()[ordinal]);
       setInMemory(in.readBoolean());
-      setMaxValueLength(in.readInt());
       setBloomfilter(in.readBoolean());
       if (isBloomfilter() && version < 5) {
         // If a bloomFilter is enabled and the column descriptor is less than

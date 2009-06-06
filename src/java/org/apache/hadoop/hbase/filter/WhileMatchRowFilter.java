@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.io.Cell;
  * filter(..) methods or filterNotNull(SortedMap<Text, byte[]>), this wrapper's 
  * filterAllRemaining() will return true.  All filtering methods will 
  * thereafter defer to the result of filterAllRemaining().
+ *
+ * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public class WhileMatchRowFilter implements RowFilterInterface {
   private boolean filterAllRemaining = false;

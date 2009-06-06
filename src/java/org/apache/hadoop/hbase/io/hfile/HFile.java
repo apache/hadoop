@@ -104,11 +104,6 @@ import org.apache.hadoop.io.compress.Decompressor;
  * <pre>&lt;fileinfo>&lt;trailer></pre>.  That is, there are not data nor meta
  * blocks present.
  * <p>
- * TODO: Bloomfilters.  Need to add hadoop 0.20. first since it has bug fixes
- * on the hadoop bf package.
- *  * TODO: USE memcmp by default?  Write the keys out in an order that allows
- * my using this -- reverse the timestamp.
- * TODO: Add support for fast-gzip and for lzo.
  * TODO: Do scanners need to be able to take a start and end row?
  * TODO: Should BlockIndex know the name of its file?  Should it have a Path
  * that points at its file say for the case where an index lives apart from
@@ -465,8 +460,12 @@ public class HFile {
      * Add key/value to file.
      * Keys must be added in an order that agrees with the Comparator passed
      * on construction.
-     * @param key Key to add.  Cannot be empty nor null.
-     * @param value Value to add.  Cannot be empty nor null.
+     * @param key
+     * @param koffset
+     * @param klength
+     * @param value
+     * @param voffset
+     * @param vlength
      * @throws IOException
      */
     public void append(final byte [] key, final int koffset, final int klength,
@@ -1039,6 +1038,9 @@ public class HFile {
       }
       
       public KeyValue getKeyValue() {
+        if(this.block == null) {
+          return null;
+        }
         return new KeyValue(this.block.array(),
             this.block.arrayOffset() + this.block.position() - 8);
       }

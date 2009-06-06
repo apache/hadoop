@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -58,7 +59,7 @@ public class ThriftUtilities {
     }
     HColumnDescriptor col = new HColumnDescriptor(in.name,
         in.maxVersions, comp.getName(), in.inMemory, in.blockCacheEnabled,
-        in.maxValueLength, in.timeToLive, bloom);
+        in.timeToLive, bloom);
     return col;
   }
   
@@ -77,7 +78,6 @@ public class ThriftUtilities {
     col.compression = in.getCompression().toString();
     col.inMemory = in.isInMemory();
     col.blockCacheEnabled = in.isBlockCacheEnabled();
-    col.maxValueLength = in.getMaxValueLength();
     col.bloomFilterType = Boolean.toString(in.isBloomfilter());
     return col;
   }
@@ -150,5 +150,38 @@ public class ThriftUtilities {
     return rowResultFromHBase(result);
   }
 
+  /**
+   * This utility method creates a list of Thrift TRowResult "struct" based on
+   * an Hbase RowResult object. The empty list is returned if the input is
+   * null.
+   * 
+   * @param in
+   *          Hbase RowResult object
+   * @return Thrift TRowResult array
+   */
+  static public List<TRowResult> rowResultFromHBase(Result[] in) {
+    List<TRowResult> results = new ArrayList<TRowResult>();
+    for ( Result result_ : in) {
+        if(null == result_) {
+            continue;
+        }
+        RowResult rowResult_ = result_.getRowResult();
+        TRowResult result = new TRowResult();
+        result.row = rowResult_.getRow();
+        result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
+        for (Map.Entry<byte[], Cell> entry : rowResult_.entrySet()){
+            Cell cell = entry.getValue();
+            result.columns.put(entry.getKey(),
+                new TCell(cell.getValue(), cell.getTimestamp()));
+
+        }
+        results.add(result);
+    }
+    return results;
+  }
+  static public List<TRowResult> rowResultFromHBase(Result in) {
+    Result [] result = { in };
+    return rowResultFromHBase(result);
+  }
 }
 

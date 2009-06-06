@@ -21,11 +21,24 @@ package org.apache.hadoop.hbase.io;
 
 /**
  * Implementations can be asked for an estimate of their size in bytes.
+ * <p>
  * Useful for sizing caches.  Its a given that implementation approximations
- * probably do not account for 32 vs 64 bit nor for different VM implemenations.
+ * do not account for 32 vs 64 bit nor for different VM implementations.
+ * <p>
+ * An Object's size is determined by the non-static data members in it,
+ * as well as the fixed {@link OBJECT} overhead.
+ * <p>
+ * For example:
+ * <pre>
+ * public class SampleObject implements HeapSize {
+ *   
+ *   int [] numbers;
+ *   int x;
+ * }
+ * </pre>
  */
 public interface HeapSize {
-  
+
   /** Reference size is 8 bytes on 64-bit, 4 bytes on 32-bit */
   static final int REFERENCE = 8;
   
@@ -49,9 +62,11 @@ public interface HeapSize {
   static final int LONG = 8;
   
   /** Array overhead */
-  static final int BYTE_ARRAY = REFERENCE;
   static final int ARRAY = 3 * REFERENCE;
   static final int MULTI_ARRAY = (4 * REFERENCE) + ARRAY;
+  
+  /** Byte arrays are fixed size below plus its length, 8 byte aligned */
+  static final int BYTE_ARRAY = 3 * REFERENCE;
   
   static final int BLOCK_SIZE_TAX = 8;
 

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -190,6 +189,6 @@ public interface HConnection {
    * @param tableName The name of the table
    * @throws IOException
    */
-  public void processBatchOfRows(ArrayList<BatchUpdate> list, byte[] tableName)
+  public void processBatchOfRows(ArrayList<Put> list, byte[] tableName)
       throws IOException;
 }

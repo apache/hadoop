@@ -75,85 +75,6 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     table = new HTable(conf, desc.getName());
   }
 
-  /**
-   * @throws IOException
-   */
-  public void testBatchUpdate() throws IOException {
-    BatchUpdate bu = new BatchUpdate("row1");
-    bu.put(CONTENTS, value);
-    bu.delete(CONTENTS);
-    table.commit(bu);
-
-    bu = new BatchUpdate("row2");
-    bu.put(CONTENTS, value);
-    byte[][] getColumns = bu.getColumns();
-    assertEquals(getColumns.length, 1);
-    assertTrue(Arrays.equals(getColumns[0], CONTENTS));
-    assertTrue(bu.hasColumn(CONTENTS));
-    assertFalse(bu.hasColumn(new byte[] {}));
-    byte[] getValue = bu.get(getColumns[0]);
-    assertTrue(Arrays.equals(getValue, value));
-    table.commit(bu);
-
-    byte [][] columns = { CONTENTS };
-    Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
-    for (RowResult r : scanner) {
-      for(Map.Entry<byte [], Cell> e: r.entrySet()) {
-        System.out.println(Bytes.toString(r.getRow()) + ": row: " + e.getKey() + " value: " + 
-            new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
-      }
-    }
-  }
-  
-  public void testBatchUpdateMaxLength() {
-    // Test for a single good value
-    BatchUpdate batchUpdate = new BatchUpdate("row1");
-    batchUpdate.put(SMALLFAM, value);
-    try {
-      table.commit(batchUpdate);
-      fail("Value is too long, should throw exception");
-    } catch (IOException e) {
-      // This is expected
-    }
-    // Try to see if it's still inserted
-    try {
-      Cell cell = table.get("row1", SMALLFAM_STR);
-      assertNull(cell);
-    } catch (IOException e) {
-      e.printStackTrace();
-      fail("This is unexpected");
-    }
-    // Try to put a good value
-    batchUpdate = new BatchUpdate("row1");
-    batchUpdate.put(SMALLFAM, smallValue);
-    try {
-      table.commit(batchUpdate);
-    } catch (IOException e) {
-      fail("Value is long enough, should not throw exception");
-    }
-  }
-  
-  public void testRowsBatchUpdate() {
-    ArrayList<BatchUpdate> rowsUpdate = new ArrayList<BatchUpdate>();
-    for(int i = 0; i < NB_BATCH_ROWS; i++) {
-      BatchUpdate batchUpdate = new BatchUpdate("row"+i);
-      batchUpdate.put(CONTENTS, value);
-      rowsUpdate.add(batchUpdate);
-    }
-    try {
-      table.commit(rowsUpdate);  
-    
-      byte [][] columns = { CONTENTS };
-      Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
-      int nbRows = 0;
-      for(@SuppressWarnings("unused") RowResult row : scanner)
-        nbRows++;
-      assertEquals(NB_BATCH_ROWS, nbRows);
-    } catch (IOException e) {
-      fail("This is unexpected : " + e);
-    }
-  }
-  
   public void testRowsBatchUpdateBufferedOneFlush() {
     table.setAutoFlush(false);
     ArrayList<BatchUpdate> rowsUpdate = new ArrayList<BatchUpdate>();
@@ -168,17 +89,15 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       byte [][] columns = { CONTENTS };
       Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
       int nbRows = 0;
-      for(@SuppressWarnings("unused") RowResult row : scanner)
-        nbRows++;
+      for(@SuppressWarnings("unused") RowResult row : scanner) nbRows++;
       assertEquals(0, nbRows);  
       scanner.close();
-      
+
       table.flushCommits();
       
       scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
       nbRows = 0;
-      for(@SuppressWarnings("unused") RowResult row : scanner)
-        nbRows++;
+      for(@SuppressWarnings("unused") RowResult row : scanner) nbRows++;
       assertEquals(NB_BATCH_ROWS*10, nbRows);
     } catch (IOException e) {
       fail("This is unexpected : " + e);
@@ -209,6 +128,55 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       fail("This is unexpected : " + e);
     }
   }
+
+  /**
+   * @throws IOException
+   */
+  public void testBatchUpdate() throws IOException {
+    BatchUpdate bu = new BatchUpdate("row1");
+    bu.put(CONTENTS, value);
+    // Can't do this in 0.20.0 mix and match put and delete -- bu.delete(CONTENTS);
+    table.commit(bu);
+
+    bu = new BatchUpdate("row2");
+    bu.put(CONTENTS, value);
+    byte[][] getColumns = bu.getColumns();
+    assertEquals(getColumns.length, 1);
+    assertTrue(Arrays.equals(getColumns[0], CONTENTS));
+    assertTrue(bu.hasColumn(CONTENTS));
+    assertFalse(bu.hasColumn(new byte[] {}));
+    byte[] getValue = bu.get(getColumns[0]);
+    assertTrue(Arrays.equals(getValue, value));
+    table.commit(bu);
+
+    byte [][] columns = { CONTENTS };
+    Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
+    for (RowResult r : scanner) {
+      for(Map.Entry<byte [], Cell> e: r.entrySet()) {
+        System.out.println(Bytes.toString(r.getRow()) + ": row: " + e.getKey() + " value: " + 
+            new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
+      }
+    }
+  }
   
-  
+  public void testRowsBatchUpdate() {
+    ArrayList<BatchUpdate> rowsUpdate = new ArrayList<BatchUpdate>();
+    for(int i = 0; i < NB_BATCH_ROWS; i++) {
+      BatchUpdate batchUpdate = new BatchUpdate("row"+i);
+      batchUpdate.put(CONTENTS, value);
+      rowsUpdate.add(batchUpdate);
+    }
+    try {
+      table.commit(rowsUpdate);  
+    
+      byte [][] columns = { CONTENTS };
+      Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
+      int nbRows = 0;
+      for(@SuppressWarnings("unused") RowResult row : scanner)
+        nbRows++;
+      assertEquals(NB_BATCH_ROWS, nbRows);
+    } catch (IOException e) {
+      fail("This is unexpected : " + e);
+    }
+  }
 }

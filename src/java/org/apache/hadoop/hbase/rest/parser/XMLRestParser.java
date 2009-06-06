@@ -96,7 +96,6 @@ public class XMLRestParser implements IHBaseRestParser {
     String compression = HColumnDescriptor.DEFAULT_COMPRESSION;
     boolean in_memory = HColumnDescriptor.DEFAULT_IN_MEMORY;
     boolean block_cache = HColumnDescriptor.DEFAULT_BLOCKCACHE;
-    int max_cell_size = HColumnDescriptor.DEFAULT_LENGTH;
     int ttl = HColumnDescriptor.DEFAULT_TTL;
     boolean bloomfilter = HColumnDescriptor.DEFAULT_BLOOMFILTER;
 
@@ -108,7 +107,6 @@ public class XMLRestParser implements IHBaseRestParser {
         // compression = currentCDesp.getCompression();
         in_memory = currentCDesp.isInMemory();
         block_cache = currentCDesp.isBlockCacheEnabled();
-        max_cell_size = currentCDesp.getMaxValueLength();
         ttl = currentCDesp.getTimeToLive();
         bloomfilter = currentCDesp.isBloomfilter();
       }
@@ -141,13 +139,6 @@ public class XMLRestParser implements IHBaseRestParser {
           .getNodeValue());
     }
 
-    NodeList max_cell_size_list = columnfamily
-        .getElementsByTagName("max-cell-size");
-    if (max_cell_size_list.getLength() > 0) {
-      max_cell_size = Integer.valueOf(max_cell_size_list.item(0)
-          .getFirstChild().getNodeValue());
-    }
-
     NodeList ttl_list = columnfamily.getElementsByTagName("time-to-live");
     if (ttl_list.getLength() > 0) {
       ttl = Integer.valueOf(ttl_list.item(0).getFirstChild().getNodeValue());
@@ -162,7 +153,7 @@ public class XMLRestParser implements IHBaseRestParser {
 
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes(colname),
         max_versions, compression, in_memory, block_cache,
-        max_cell_size, ttl, bloomfilter);
+        ttl, bloomfilter);
 
     NodeList metadataList = columnfamily.getElementsByTagName("metadata");
     for (int i = 0; i < metadataList.getLength(); i++) {

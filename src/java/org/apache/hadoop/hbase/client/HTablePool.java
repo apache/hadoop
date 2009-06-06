@@ -47,6 +47,7 @@ public class HTablePool {
 
   /**
    * Get a shared table pool.
+   * @param config
    * @param tableName the table name
    * @return the table pool
    */

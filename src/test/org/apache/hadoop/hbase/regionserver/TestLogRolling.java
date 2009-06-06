@@ -26,11 +26,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -106,16 +108,15 @@ public class TestLogRolling extends HBaseClusterTestCase {
     
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     HTable table = new HTable(conf, tableName);
 
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
-      BatchUpdate b =
-        new BatchUpdate("row" + String.format("%1$04d", i));
-      b.put(HConstants.COLUMN_FAMILY, value);
-      table.commit(b);
+      Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
+      put.add(HConstants.CATALOG_FAMILY, null, value);
+      table.put(put);
 
       if (i % 32 == 0) {
         // After every 32 writes sleep to let the log roller run

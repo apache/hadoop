@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -29,9 +29,10 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.rest.descriptors.ScannerIdentifier;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
 
@@ -49,20 +50,20 @@ public class ScannerModel extends AbstractModel {
   //
   protected static class ScannerMaster {
 
-    protected static final Map<Integer, Scanner> scannerMap = new ConcurrentHashMap<Integer, Scanner>();
+    protected static final Map<Integer, ResultScanner> scannerMap = new ConcurrentHashMap<Integer, ResultScanner>();
     protected static final AtomicInteger nextScannerId = new AtomicInteger(1);
 
-    public Integer addScanner(Scanner scanner) {
+    public Integer addScanner(ResultScanner scanner) {
       Integer i = Integer.valueOf(nextScannerId.getAndIncrement());
       scannerMap.put(i, scanner);
       return i;
     }
 
-    public Scanner getScanner(Integer id) {
+    public ResultScanner getScanner(Integer id) {
       return scannerMap.get(id);
     }
 
-    public Scanner removeScanner(Integer id) {
+    public ResultScanner removeScanner(Integer id) {
       return scannerMap.remove(id);
     }
 
@@ -71,7 +72,7 @@ public class ScannerModel extends AbstractModel {
      *          id of scanner to close
      */
     public void scannerClose(Integer id) {
-      Scanner s = scannerMap.remove(id);
+      ResultScanner s = scannerMap.remove(id);
       s.close();
     }
   }
@@ -79,7 +80,7 @@ public class ScannerModel extends AbstractModel {
   protected static final ScannerMaster scannerMaster = new ScannerMaster();
 
   /**
-   * returns the next numResults RowResults from the Scaner mapped to Integer
+   * returns the next numResults Results from the Scaner mapped to Integer
    * id. If the end of the table is reached, the scanner is closed and all
    * succesfully retrieved rows are returned.
    * 
@@ -90,14 +91,14 @@ public class ScannerModel extends AbstractModel {
    * @return all successfully retrieved rows.
    * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
    */
-  public RowResult[] scannerGet(Integer id, Long numRows)
+  public Result[] scannerGet(Integer id, Long numRows)
       throws HBaseRestException {
     try {
-      ArrayList<RowResult> a;
-      Scanner s;
-      RowResult r;
+      ArrayList<Result> a;
+      ResultScanner s;
+      Result r;
 
-      a = new ArrayList<RowResult>();
+      a = new ArrayList<Result>();
       s = scannerMaster.getScanner(id);
 
       if (s == null) {
@@ -114,7 +115,7 @@ public class ScannerModel extends AbstractModel {
         }
       }
 
-      return a.toArray(new RowResult[0]);
+      return a.toArray(new Result[0]);
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
@@ -129,13 +130,13 @@ public class ScannerModel extends AbstractModel {
    * @return all rows till end of table
    * @throws org.apache.hadoop.hbase.rest.exception.HBaseRestException
    */
-  public RowResult[] scannerGet(Integer id) throws HBaseRestException {
+  public Result[] scannerGet(Integer id) throws HBaseRestException {
     try {
-      ArrayList<RowResult> a;
-      Scanner s;
-      RowResult r;
+      ArrayList<Result> a;
+      ResultScanner s;
+      Result r;
 
-      a = new ArrayList<RowResult>();
+      a = new ArrayList<Result>();
       s = scannerMaster.getScanner(id);
 
       while ((r = s.next()) != null) {
@@ -144,14 +145,14 @@ public class ScannerModel extends AbstractModel {
 
       scannerMaster.scannerClose(id);
 
-      return a.toArray(new RowResult[0]);
+      return a.toArray(new Result[0]);
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
   }
 
   public boolean scannerClose(Integer id) throws HBaseRestException {
-    Scanner s = scannerMaster.removeScanner(id);
+    ResultScanner s = scannerMaster.removeScanner(id);
 
     if (s == null) {
       throw new HBaseRestException("Scanner id: " + id + " does not exist");
@@ -208,8 +209,11 @@ public class ScannerModel extends AbstractModel {
     try {
       HTable table;
       table = new HTable(tableName);
+      Scan scan = new Scan();
+      scan.addColumns(columns);
+      scan.setTimeRange(0, timestamp);
       return new ScannerIdentifier(scannerMaster.addScanner(table.getScanner(
-          columns, HConstants.EMPTY_START_ROW, timestamp)));
+          scan)));
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
@@ -225,8 +229,11 @@ public class ScannerModel extends AbstractModel {
     try {
       HTable table;
       table = new HTable(tableName);
+      Scan scan = new Scan(startRow);
+      scan.addColumns(columns);
+      scan.setTimeRange(0, timestamp);
       return new ScannerIdentifier(scannerMaster.addScanner(table.getScanner(
-          columns, startRow, timestamp)));
+          scan)));
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
@@ -243,8 +250,12 @@ public class ScannerModel extends AbstractModel {
     try {
       HTable table;
       table = new HTable(tableName);
+      Scan scan = new Scan();
+      scan.addColumns(columns);
+      scan.setTimeRange(0, timestamp);
+//      scan.setFilter(filter);
       return new ScannerIdentifier(scannerMaster.addScanner(table.getScanner(
-          columns, HConstants.EMPTY_START_ROW, timestamp, filter)));
+          scan)));
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
@@ -261,8 +272,12 @@ public class ScannerModel extends AbstractModel {
     try {
       HTable table;
       table = new HTable(tableName);
+      Scan scan = new Scan(startRow);
+      scan.addColumns(columns);
+      scan.setTimeRange(0, timestamp);
+//      scan.setFilter(filter);
       return new ScannerIdentifier(scannerMaster.addScanner(table.getScanner(
-          columns, startRow, timestamp, filter)));
+          scan)));
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }

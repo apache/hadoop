@@ -65,10 +65,17 @@ public class Reference implements Writable {
     this(null, Range.bottom);
   }
 
+  /**
+   * 
+   * @return Range
+   */
   public Range getFileRegion() {
     return this.region;
   }
 
+  /**
+   * @return splitKey
+   */
   public byte [] getSplitKey() {
     return splitkey;
   }

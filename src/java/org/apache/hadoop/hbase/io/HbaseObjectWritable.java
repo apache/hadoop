@@ -32,11 +32,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
@@ -47,6 +54,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** 
@@ -89,52 +97,49 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(Float.TYPE, code++);
     addToMap(Double.TYPE, code++);
     addToMap(Void.TYPE, code++);
+    
     // Other java types
     addToMap(String.class, code++);
     addToMap(byte [].class, code++);
     addToMap(byte [][].class, code++);
+    
     // Hadoop types
     addToMap(Text.class, code++);
     addToMap(Writable.class, code++);
     addToMap(Writable [].class, code++);
     addToMap(HbaseMapWritable.class, code++);
     addToMap(NullInstance.class, code++);
-    try {
-      addToMap(Class.forName("[Lorg.apache.hadoop.io.Text;"), code++);
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    }
+
     // Hbase types
-    addToMap(HServerInfo.class, code++);
-    addToMap(HMsg.class, code++);
-    addToMap(HTableDescriptor.class, code++);
     addToMap(HColumnDescriptor.class, code++);
+    addToMap(HConstants.Modify.class, code++);
+    addToMap(HMsg.class, code++);
+    addToMap(HMsg[].class, code++);
     addToMap(RowFilterInterface.class, code++);
     addToMap(RowFilterSet.class, code++);
+    addToMap(HRegion.class, code++);
+    addToMap(HRegion[].class, code++);
     addToMap(HRegionInfo.class, code++);
-    addToMap(BatchUpdate.class, code++);
-    addToMap(HServerAddress.class, code++);
-    try {
-      addToMap(Class.forName("[Lorg.apache.hadoop.hbase.HMsg;"), code++);
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    }
-    addToMap(Cell.class, code++);
-    try {
-      addToMap(Class.forName("[Lorg.apache.hadoop.hbase.io.Cell;"), code++);
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    }
-    addToMap(RowResult.class, code++);
     addToMap(HRegionInfo[].class, code++);
+    addToMap(HServerAddress.class, code++);
+    addToMap(HServerInfo.class, code++);
+    addToMap(HTableDescriptor.class, code++);
     addToMap(MapWritable.class, code++);
-    try {
-      addToMap(Class.forName("[Lorg.apache.hadoop.hbase.io.RowResult;"), code++);
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    }
-    addToMap(BatchUpdate[].class, code++);
+    
+    //
+    // HBASE-880
+    //
     addToMap(ClusterStatus.class, code++);
+    addToMap(Delete.class, code++);
+    addToMap(Get.class, code++);
+    addToMap(KeyValue.class, code++);
+    addToMap(KeyValue[].class, code++);
+    addToMap(Put.class, code++);
+    addToMap(Put[].class, code++);
+    addToMap(Result.class, code++);
+    addToMap(Result[].class, code++);
+    addToMap(Scan.class, code++);
+    
   }
   
   private Class<?> declaredClass;
@@ -228,6 +233,12 @@ public class HbaseObjectWritable implements Writable, Configurable {
     Byte code = CLASS_TO_CODE.get(c);
     if (code == null) {
       LOG.error("Unsupported type " + c);
+      StackTraceElement[] els = new Exception().getStackTrace();
+      for(StackTraceElement elem : els) {
+        LOG.error(elem.getMethodName());
+      }
+//          new Exception().getStackTrace()[0].getMethodName());
+//      throw new IOException(new Exception().getStackTrace()[0].getMethodName());
       throw new UnsupportedOperationException("No code for unexpected " + c);
     }
     out.writeByte(code);
@@ -261,6 +272,8 @@ public class HbaseObjectWritable implements Writable, Configurable {
       // byte-at-a-time we were previously doing.
       if (declClass.equals(byte [].class)) {
         Bytes.writeByteArray(out, (byte [])instanceObj);
+      } else if(declClass.equals(Result [].class)) {
+        Result.writeArray(out, (Result [])instanceObj);
       } else {
         int length = Array.getLength(instanceObj);
         out.writeInt(length);
@@ -363,6 +376,8 @@ public class HbaseObjectWritable implements Writable, Configurable {
     } else if (declaredClass.isArray()) {              // array
       if (declaredClass.equals(byte [].class)) {
         instance = Bytes.readByteArray(in);
+      } else if(declaredClass.equals(Result [].class)) {
+        instance = Result.readArray(in);
       } else {
         int length = in.readInt();
         instance = Array.newInstance(declaredClass.getComponentType(), length);

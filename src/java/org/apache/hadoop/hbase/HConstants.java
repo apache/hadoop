@@ -136,6 +136,9 @@ public interface HConstants {
    *  when log splitting. More means faster but bigger mem consumption  */
   static final int DEFAULT_NUMBER_CONCURRENT_LOG_READS = 10;
   
+  /** Maximum value length, enforced on KeyValue construction */
+  static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE;
+  
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
   
@@ -156,6 +159,11 @@ public interface HConstants {
   // be the first to be reassigned if the server(s) they are being served by
   // should go down.
 
+
+  //
+  // New stuff.  Making a slow transition.
+  //
+  
   /** The root table's name.*/
   static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
 
@@ -165,48 +173,30 @@ public interface HConstants {
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
 
-  // Defines for the column names used in both ROOT and META HBase 'meta' tables.
+  /** The catalog family as a string*/
+  static final String CATALOG_FAMILY_STR = "info";
   
-  /** The ROOT and META column family (string) */
-  static final String COLUMN_FAMILY_STR = "info:";
+  /** The catalog family */
+  static final byte [] CATALOG_FAMILY = Bytes.toBytes(CATALOG_FAMILY_STR);
   
-  /** The META historian column family (string) */
-  static final String COLUMN_FAMILY_HISTORIAN_STR = "historian:";
-
-  /** The ROOT and META column family */
-  static final byte [] COLUMN_FAMILY = Bytes.toBytes(COLUMN_FAMILY_STR);
+  /** The catalog historian family */
+  static final byte [] CATALOG_HISTORIAN_FAMILY = Bytes.toBytes("historian");
   
-  /** The META historian column family */
-  static final byte [] COLUMN_FAMILY_HISTORIAN = Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR);
-
-  /** Array of meta column names */
-  static final byte[][] COLUMN_FAMILY_ARRAY = new byte[][] {COLUMN_FAMILY};
+  /** The regioninfo column qualifier */
+  static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes("regioninfo");
+    
+  /** The server column qualifier */
+  static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
   
-  /** ROOT/META column family member - contains HRegionInfo */
-  static final byte [] COL_REGIONINFO =
-    Bytes.toBytes(COLUMN_FAMILY_STR + "regioninfo");
-
-  /** Array of column - contains HRegionInfo */
-  static final byte[][] COL_REGIONINFO_ARRAY = new byte[][] {COL_REGIONINFO};
+  /** The startcode column qualifier */
+  static final byte [] STARTCODE_QUALIFIER = Bytes.toBytes("serverstartcode");
   
-  /** ROOT/META column family member - contains HServerAddress.toString() */
-  static final byte[] COL_SERVER = Bytes.toBytes(COLUMN_FAMILY_STR + "server");
+  /** The lower-half split region column qualifier */
+  static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");
   
-  /** ROOT/META column family member - contains server start code (a long) */
-  static final byte [] COL_STARTCODE =
-    Bytes.toBytes(COLUMN_FAMILY_STR + "serverstartcode");
-
-  /** the lower half of a split region */
-  static final byte [] COL_SPLITA = Bytes.toBytes(COLUMN_FAMILY_STR + "splitA");
+  /** The upper-half split region column qualifier */
+  static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
   
-  /** the upper half of a split region */
-  static final byte [] COL_SPLITB = Bytes.toBytes(COLUMN_FAMILY_STR + "splitB");
-  
-  /** All the columns in the catalog -ROOT- and .META. tables.
-   */
-  static final byte[][] ALL_META_COLUMNS = {COL_REGIONINFO, COL_SERVER,
-    COL_STARTCODE, COL_SPLITA, COL_SPLITB};
-
   // Other constants
 
   /**
@@ -246,6 +236,11 @@ public interface HConstants {
   static final long LATEST_TIMESTAMP = Long.MAX_VALUE;
 
   /**
+   * LATEST_TIMESTAMP in bytes form
+   */
+  static final byte [] LATEST_TIMESTAMP_BYTES = Bytes.toBytes(LATEST_TIMESTAMP);
+  
+  /**
    * Define for 'return-all-versions'.
    */
   static final int ALL_VERSIONS = Integer.MAX_VALUE;
@@ -253,8 +248,12 @@ public interface HConstants {
   /**
    * Unlimited time-to-live.
    */
-  static final int FOREVER = -1;
+//  static final int FOREVER = -1;
+  static final int FOREVER = Integer.MAX_VALUE;
   
+  /**
+   * Seconds in a week
+   */
   public static final int WEEK_IN_SECONDS = 7 * 24 * 3600;
 
   //TODO: HBASE_CLIENT_RETRIES_NUMBER_KEY is only used by TestMigrate. Move it
@@ -277,15 +276,12 @@ public interface HConstants {
   public static int RETRY_BACKOFF[] = { 1, 1, 1, 2, 2, 4, 4, 8, 16, 32 };
 
   /** modifyTable op for replacing the table descriptor */
-  public static final int MODIFY_TABLE_SET_HTD = 1;
-  /** modifyTable op for forcing a split */
-  public static final int MODIFY_TABLE_SPLIT = 2;
-  /** modifyTable op for forcing a compaction */
-  public static final int MODIFY_TABLE_COMPACT = 3;
-  
-  // Messages client can send master.
-  public static final int MODIFY_CLOSE_REGION = MODIFY_TABLE_COMPACT + 1;
-  
-  public static final int MODIFY_TABLE_FLUSH = MODIFY_CLOSE_REGION + 1;
-  public static final int MODIFY_TABLE_MAJOR_COMPACT = MODIFY_TABLE_FLUSH + 1;
+  public static enum Modify {
+    CLOSE_REGION,
+    TABLE_COMPACT, 
+    TABLE_FLUSH,
+    TABLE_MAJOR_COMPACT,
+    TABLE_SET_HTD, 
+    TABLE_SPLIT
+  }
 }

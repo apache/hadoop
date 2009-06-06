@@ -33,10 +33,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -76,7 +82,7 @@ public class ThriftServer {
 
     // nextScannerId and scannerMap are used to manage scanner state
     protected int nextScannerId = 0;
-    protected HashMap<Integer, Scanner> scannerMap = null;
+    protected HashMap<Integer, ResultScanner> scannerMap = null;
     
     /**
      * Returns a list of all the column families for a given htable.
@@ -115,7 +121,7 @@ public class ThriftServer {
      * @param scanner
      * @return integer scanner id
      */
-    protected synchronized int addScanner(Scanner scanner) {
+    protected synchronized int addScanner(ResultScanner scanner) {
       int id = nextScannerId++;
       scannerMap.put(id, scanner);
       return id;
@@ -127,7 +133,7 @@ public class ThriftServer {
      * @param id
      * @return a Scanner, or null if ID was invalid.
      */
-    protected synchronized Scanner getScanner(int id) {
+    protected synchronized ResultScanner getScanner(int id) {
       return scannerMap.get(id);
     }
     
@@ -138,7 +144,7 @@ public class ThriftServer {
      * @param id
      * @return a Scanner, or null if ID was invalid.
      */
-    protected synchronized Scanner removeScanner(int id) {
+    protected synchronized ResultScanner removeScanner(int id) {
       return scannerMap.remove(id);
     }
     
@@ -150,7 +156,7 @@ public class ThriftServer {
     HBaseHandler() throws MasterNotRunningException {
       conf = new HBaseConfiguration();
       admin = new HBaseAdmin(conf);
-      scannerMap = new HashMap<Integer, Scanner>();
+      scannerMap = new HashMap<Integer, ResultScanner>();
     }
     
     public void enableTable(final byte[] tableName) throws IOError {
@@ -228,35 +234,78 @@ public class ThriftServer {
       }
     }
     
+    @Deprecated
     public List<TCell> get(byte[] tableName, byte[] row, byte[] column)
         throws IOError {
+      byte [][] famAndQf = KeyValue.parseColumn(column);
+      return get(tableName, row, famAndQf[0], famAndQf[1]);
+    }
+
+    public List<TCell> get(byte [] tableName, byte [] row, byte [] family,
+        byte [] qualifier) throws IOError {
       try {
         HTable table = getTable(tableName);
-        Cell cell = table.get(row, column);
+        Get get = new Get(row);
+        if (qualifier == null || qualifier.length == 0) {
+          get.addFamily(family);
+        } else {
+          get.addColumn(family, qualifier);
+        }
+        Result result = table.get(get);
+        Cell cell = result.getCellValue(family, qualifier);
         return ThriftUtilities.cellFromHBase(cell);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
     
+    @Deprecated
     public List<TCell> getVer(byte[] tableName, byte[] row,
         byte[] column, int numVersions) throws IOError {
+      byte [][] famAndQf = KeyValue.parseColumn(column);
+      return getVer(tableName, row, famAndQf[0], famAndQf[1], numVersions);
+    }
+
+    public List<TCell> getVer(byte [] tableName, byte [] row, byte [] family, 
+        byte [] qualifier, int numVersions) throws IOError {
       try {
         HTable table = getTable(tableName);
-        Cell[] cells = 
-          table.get(row, column, numVersions);
-        return ThriftUtilities.cellFromHBase(cells);
+        Get get = new Get(row);
+        get.addColumn(family, qualifier);
+        get.setMaxVersions(numVersions);
+        Result result = table.get(get);
+        List<Cell> cells = new ArrayList<Cell>();
+        for(KeyValue kv : result.sorted()) {
+          cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
+        }
+        return ThriftUtilities.cellFromHBase(cells.toArray(new Cell[0]));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
     
+    @Deprecated
     public List<TCell> getVerTs(byte[] tableName, byte[] row,
         byte[] column, long timestamp, int numVersions) throws IOError {
+      byte [][] famAndQf = KeyValue.parseColumn(column);
+      return getVerTs(tableName, row, famAndQf[0], famAndQf[1], timestamp, 
+          numVersions);
+    }
+
+    public List<TCell> getVerTs(byte [] tableName, byte [] row, byte [] family,
+        byte [] qualifier, long timestamp, int numVersions) throws IOError {
       try {
         HTable table = getTable(tableName);
-        Cell[] cells = table.get(row, column, timestamp, numVersions);
-        return ThriftUtilities.cellFromHBase(cells);
+        Get get = new Get(row);
+        get.addColumn(family, qualifier);
+        get.setTimeStamp(timestamp);
+        get.setMaxVersions(numVersions);
+        Result result = table.get(get);
+        List<Cell> cells = new ArrayList<Cell>();
+        for(KeyValue kv : result.sorted()) {
+          cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
+        }
+        return ThriftUtilities.cellFromHBase(cells.toArray(new Cell[0]));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -285,12 +334,20 @@ public class ThriftServer {
       try {
         HTable table = getTable(tableName);
         if (columns == null) {
-          return ThriftUtilities.rowResultFromHBase(table.getRow(row,
-                                                        timestamp));
+          Get get = new Get(row);
+          get.setTimeStamp(timestamp);
+          Result result = table.get(get);
+          return ThriftUtilities.rowResultFromHBase(result.getRowResult());
         }
         byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
-        return ThriftUtilities.rowResultFromHBase(table.getRow(row,
-                                                      columnArr, timestamp));
+        Get get = new Get(row);
+        for(byte [] column : columnArr) {
+          byte [][] famAndQf = KeyValue.parseColumn(column);
+          get.addColumn(famAndQf[0], famAndQf[1]);
+        }
+        get.setTimeStamp(timestamp);
+        Result result = table.get(get);
+        return ThriftUtilities.rowResultFromHBase(result.getRowResult());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -305,7 +362,15 @@ public class ThriftServer {
         long timestamp) throws IOError {
       try {
         HTable table = getTable(tableName);
-        table.deleteAll(row, column, timestamp);
+        Delete delete  = new Delete(row, timestamp, null);
+        byte [][] famAndQf = KeyValue.parseColumn(column);
+        if(famAndQf[1].length == 0){
+          delete.deleteFamily(famAndQf[0]);
+        } else {
+          delete.deleteColumns(famAndQf[0], famAndQf[1]);
+        }
+        table.delete(delete);
+        
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -319,7 +384,8 @@ public class ThriftServer {
         throws IOError {
       try {
         HTable table = getTable(tableName);
-        table.deleteAll(row, timestamp);
+        Delete delete  = new Delete(row, timestamp, null);
+        table.delete(delete);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -369,15 +435,13 @@ public class ThriftServer {
       HTable table = null;
       try {
         table = getTable(tableName);
-        BatchUpdate batchUpdate = new BatchUpdate(row, timestamp);
+        Put put = new Put(row);
+        put.setTimeStamp(timestamp);
         for (Mutation m : mutations) {
-          if (m.isDelete) {
-            batchUpdate.delete(m.column);
-          } else {
-            batchUpdate.put(m.column, m.value);
-          }
+          byte [][] famAndQf = KeyValue.parseColumn(m.column);
+          put.add(famAndQf[0], famAndQf[1], m.value);
         }
-        table.commit(batchUpdate);
+        table.put(put);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
@@ -392,26 +456,24 @@ public class ThriftServer {
  
     public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp)
         throws IOError, IllegalArgument, TException {
-      List<BatchUpdate> batchUpdates = new ArrayList<BatchUpdate>();
+      List<Put> puts = new ArrayList<Put>();
        
       for (BatchMutation batch : rowBatches) {
         byte[] row = batch.row;
         List<Mutation> mutations = batch.mutations;
-        BatchUpdate batchUpdate = new BatchUpdate(row, timestamp);
+        Put put = new Put(row);
+        put.setTimeStamp(timestamp);
         for (Mutation m : mutations) {
-          if (m.isDelete) {
-            batchUpdate.delete(m.column);
-          } else {
-            batchUpdate.put(m.column, m.value);
-          }
+          byte [][] famAndQf = KeyValue.parseColumn(m.column);
+          put.add(famAndQf[0], famAndQf[1], m.value);
         }
-        batchUpdates.add(batchUpdate);
+        puts.add(put);
       }
 
       HTable table = null;
       try {
         table = getTable(tableName);
-        table.commit(batchUpdates);
+        table.put(puts);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
@@ -419,19 +481,28 @@ public class ThriftServer {
       }
     }
 
-    public long atomicIncrement(byte[] tableName, byte[] row, byte[] column, long amount) throws IOError, IllegalArgument, TException {
+    @Deprecated
+    public long atomicIncrement(byte[] tableName, byte[] row, byte[] column, 
+        long amount) throws IOError, IllegalArgument, TException {
+      byte [][] famAndQf = KeyValue.parseColumn(column);
+      return atomicIncrement(tableName, row, famAndQf[0], famAndQf[1], amount);
+    }
+
+    public long atomicIncrement(byte [] tableName, byte [] row, byte [] family,
+        byte [] qualifier, long amount) 
+    throws IOError, IllegalArgument, TException {
       HTable table;
       try {
         table = getTable(tableName);
-        return table.incrementColumnValue(row, column, amount);
+        return table.incrementColumnValue(row, family, qualifier, amount);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
     }
-
+    
     public void scannerClose(int id) throws IOError, IllegalArgument {
       LOG.debug("scannerClose: id=" + id);
-      Scanner scanner = getScanner(id);
+      ResultScanner scanner = getScanner(id);
       if (scanner == null) {
         throw new IllegalArgument("scanner ID is invalid");
       }
@@ -441,12 +512,12 @@ public class ThriftServer {
     
     public List<TRowResult> scannerGetList(int id,int nbRows) throws IllegalArgument, IOError {
         LOG.debug("scannerGetList: id=" + id);
-        Scanner scanner = getScanner(id);
+        ResultScanner scanner = getScanner(id);
         if (null == scanner) {
             throw new IllegalArgument("scanner ID is invalid");
         }
 
-        RowResult [] results = null;
+        Result [] results = null;
         try {
             results = scanner.next(nbRows);
             if (null == results) {
@@ -470,7 +541,9 @@ public class ThriftServer {
         } else {
           columnsArray = columns.toArray(new byte[0][]);
         }
-        return addScanner(table.getScanner(columnsArray, startRow));
+        Scan scan = new Scan(startRow);
+        scan.addColumns(columnsArray);
+        return addScanner(table.getScanner(scan));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -486,7 +559,9 @@ public class ThriftServer {
         } else {
           columnsArray = columns.toArray(new byte[0][]);
         }
-        return addScanner(table.getScanner(columnsArray, startRow, stopRow));
+        Scan scan = new Scan(startRow, stopRow);
+        scan.addColumns(columnsArray);
+        return addScanner(table.getScanner(scan));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -502,7 +577,10 @@ public class ThriftServer {
         } else {
           columnsArray = columns.toArray(new byte[0][]);
         }
-        return addScanner(table.getScanner(columnsArray, startRow, timestamp));
+        Scan scan = new Scan(startRow);
+        scan.addColumns(columnsArray);
+        scan.setTimeRange(0, timestamp);
+        return addScanner(table.getScanner(scan));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -519,8 +597,10 @@ public class ThriftServer {
         } else {
           columnsArray = columns.toArray(new byte[0][]);
         }
-        return addScanner(table.getScanner(columnsArray, startRow, stopRow,
-            timestamp));
+        Scan scan = new Scan(startRow, stopRow);
+        scan.addColumns(columnsArray);
+        scan.setTimeRange(0, timestamp);
+        return addScanner(table.getScanner(scan));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

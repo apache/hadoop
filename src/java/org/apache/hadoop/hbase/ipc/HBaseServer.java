@@ -86,7 +86,8 @@ public abstract class HBaseServer {
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
 
-  protected static final ThreadLocal<HBaseServer> SERVER = new ThreadLocal<HBaseServer>();
+  protected static final ThreadLocal<HBaseServer> SERVER =
+    new ThreadLocal<HBaseServer>();
 
   /** Returns the server instance called under or null.  May be called under
    * {@link #call(Writable, long)} implementations, and under {@link Writable}
@@ -128,10 +129,11 @@ public abstract class HBaseServer {
   private int handlerCount;                       // number of handler threads
   protected Class<? extends Writable> paramClass; // class of call parameters
   protected int maxIdleTime;                      // the maximum idle time after 
-                                                  // which a client may be disconnected
-  protected int thresholdIdleConnections;         // the number of idle connections
-                                                  // after which we will start
-                                                  // cleaning up idle 
+                                                  // which a client may be
+                                                  // disconnected
+  protected int thresholdIdleConnections;         // the number of idle
+                                                  // connections after which we 
+                                                  // will start cleaning up idle 
                                                   // connections
   int maxConnectionsToNuke;                       // the max number of 
                                                   // connections to nuke
@@ -173,8 +175,9 @@ public abstract class HBaseServer {
     try {
       socket.bind(address, backlog);
     } catch (BindException e) {
-      BindException bindException = new BindException("Problem binding to " + address
-                                                      + " : " + e.getMessage());
+      BindException bindException =
+        new BindException("Problem binding to " + address + " : " + 
+            e.getMessage());
       bindException.initCause(e);
       throw bindException;
     } catch (SocketException e) {
@@ -297,7 +300,6 @@ public abstract class HBaseServer {
     public void run() {
       LOG.info(getName() + ": starting");
       SERVER.set(HBaseServer.this);
-      long lastPurgeTime = 0;   // last check for old calls.
 
       while (running) {
         SelectionKey key = null;

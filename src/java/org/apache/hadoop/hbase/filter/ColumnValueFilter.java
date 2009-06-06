@@ -33,12 +33,15 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.ObjectWritable;
 
 /**
+ * This filter is a no-op in HBase 0.20.  Don't use it.
+ * 
  * This filter is used to filter based on the value of a given column. It takes
  * an operator (equal, greater, not equal, etc) and either a byte [] value or a
  * byte [] comparator. If we have a byte [] value then we just do a
  * lexicographic compare. If this is not sufficient (eg you want to deserialize
  * a long and then compare it to a fixed long value), then you can pass in your
  * own comparator instead.
+ * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public class ColumnValueFilter implements RowFilterInterface {
   /** Comparison operators. */

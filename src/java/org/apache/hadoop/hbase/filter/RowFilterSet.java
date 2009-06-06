@@ -38,6 +38,10 @@ import org.apache.hadoop.io.ObjectWritable;
  * which will be evaluated with a specified boolean operator MUST_PASS_ALL 
  * (!AND) or MUST_PASS_ONE (!OR).  Since you can use RowFilterSets as children 
  * of RowFilterSet, you can create a hierarchy of filters to be evaluated.
+ *
+ * It is highly likely this construct will no longer work!
+ *
+ * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public class RowFilterSet implements RowFilterInterface {
 

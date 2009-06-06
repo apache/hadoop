@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -38,15 +38,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -338,9 +335,9 @@ public class HConnectionManager implements HConstants {
 
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
 
-        public boolean processRow(RowResult rowResult) throws IOException {
+        public boolean processRow(Result result) throws IOException {
           HRegionInfo info = Writables.getHRegionInfo(
-              rowResult.get(COL_REGIONINFO));
+              result.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
 
           // Only examine the rows where the startKey is zero length
           if (info != null && info.getStartKey().length == 0) {
@@ -387,12 +384,13 @@ public class HConnectionManager implements HConstants {
         HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES);
       byte[] endKey = null;
       HRegionInfo currentRegion = null;
+      Scan scan = new Scan(startKey);
+      scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       ScannerCallable s = new ScannerCallable(this, 
           (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
               HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME),
-          HConstants.COL_REGIONINFO_ARRAY, startKey,
-          HConstants.LATEST_TIMESTAMP, null
-      );
+          scan.getStartRow(),
+           scan);
       try {
         // Open scanner
         getRegionServerWithRetries(s);
@@ -402,27 +400,25 @@ public class HConnectionManager implements HConstants {
             startKey = oldRegion.getEndKey();
           }
           currentRegion = s.getHRegionInfo();
-          RowResult r = null;
-          RowResult[] rrs = null;
+          Result r = null;
+          Result [] rrs = null;
           while ((rrs = getRegionServerWithRetries(s)) != null) {
             r = rrs[0];
-            Cell c = r.get(HConstants.COL_REGIONINFO);
-            if (c != null) {
-              byte[] value = c.getValue();
-              if (value != null) {
-                HRegionInfo info = Writables.getHRegionInfoOrNull(value);
-                if (info != null) {
-                  if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
-                    rowsScanned += 1;
-                    rowsOffline += info.isOffline() ? 1 : 0;
-                  }
+            byte [] value = r.getValue(HConstants.CATALOG_FAMILY, 
+                HConstants.REGIONINFO_QUALIFIER);
+            if (value != null) {
+              HRegionInfo info = Writables.getHRegionInfoOrNull(value);
+              if (info != null) {
+                if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+                  rowsScanned += 1;
+                  rowsOffline += info.isOffline() ? 1 : 0;
                 }
               }
             }
           }
           endKey = currentRegion.getEndKey();
-        } while (!(endKey == null || HStoreKey.equalsTwoRowKeys(endKey,
-            HConstants.EMPTY_BYTE_ARRAY)));
+        } while (!(endKey == null || 
+            Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)));
       }
       finally {
         s.setClose();
@@ -440,9 +436,9 @@ public class HConnectionManager implements HConstants {
         protected HTableDescriptorFinder(byte[] tableName) {
           this.tableName = tableName;
         }
-        public boolean processRow(RowResult rowResult) throws IOException {
+        public boolean processRow(Result rowResult) throws IOException {
           HRegionInfo info = Writables.getHRegionInfo(
-            rowResult.get(HConstants.COL_REGIONINFO));
+              rowResult.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
           HTableDescriptor desc = info.getTableDesc();
           if (Bytes.compareTo(desc.getName(), tableName) == 0) {
             result = desc;
@@ -554,21 +550,22 @@ public class HConnectionManager implements HConstants {
             getHRegionConnection(metaLocation.getServerAddress());
 
           // Query the root or meta region for the location of the meta region
-          RowResult regionInfoRow = server.getClosestRowBefore(
+          Result regionInfoRow = server.getClosestRowBefore(
             metaLocation.getRegionInfo().getRegionName(), metaKey,
-            HConstants.COLUMN_FAMILY);
+            HConstants.CATALOG_FAMILY);
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
 
-          Cell value = regionInfoRow.get(COL_REGIONINFO);
-          if (value == null || value.getValue().length == 0) {
+          byte [] value = regionInfoRow.getValue(CATALOG_FAMILY, 
+              REGIONINFO_QUALIFIER);
+          if (value == null || value.length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
               Bytes.toString(parentTable));
           }
           // convert the row result into the HRegionLocation we need!
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
-              value.getValue(), new HRegionInfo());
+              value, new HRegionInfo());
           // possible we got a region of a different table...
           if (!Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
             throw new TableNotFoundException(
@@ -579,8 +576,11 @@ public class HConnectionManager implements HConstants {
               regionInfo.getRegionNameAsString());
           }
           
-          String serverAddress = 
-            Writables.cellToString(regionInfoRow.get(COL_SERVER));
+          value = regionInfoRow.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+          String serverAddress = "";
+          if(value != null) {
+            serverAddress = Bytes.toString(value);
+          }
           if (serverAddress.equals("")) { 
             throw new NoServerForRegionException("No server address listed " +
               "in " + Bytes.toString(parentTable) + " for region " +
@@ -680,8 +680,8 @@ public class HConnectionManager implements HConstants {
           // this one. the exception case is when the endkey is EMPTY_START_ROW,
           // signifying that the region we're checking is actually the last
           // region in the table.
-          if (HStoreKey.equalsTwoRowKeys(endKey, HConstants.EMPTY_END_ROW) ||
-              HStoreKey.getComparator(tableName).compareRows(endKey, row) > 0) {
+          if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
+              KeyValue.getRowComparator(tableName).compare(endKey, row) > 0) {
             return possibleRegion;
           }
         }
@@ -718,7 +718,7 @@ public class HConnectionManager implements HConstants {
 
           // by nature of the map, we know that the start key has to be < 
           // otherwise it wouldn't be in the headMap. 
-          if (HStoreKey.getComparator(tableName).compareRows(endKey, row) <= 0) {
+          if (KeyValue.getRowComparator(tableName).compare(endKey, row) <= 0) {
             // delete any matching entry
             HRegionLocation rl =
               tableLocations.remove(matchingRegions.lastKey());
@@ -978,15 +978,15 @@ public class HConnectionManager implements HConstants {
       return location;
     }
 
-    public void processBatchOfRows(ArrayList<BatchUpdate> list, byte[] tableName)
+    public void processBatchOfRows(ArrayList<Put> list, byte[] tableName)
         throws IOException {
       if (list.isEmpty()) {
         return;
       }
       boolean retryOnlyOne = false;
       int tries = 0;
-      Collections.sort(list);
-      List<BatchUpdate> tempUpdates = new ArrayList<BatchUpdate>();
+      Collections.sort(list); 
+      List<Put> currentPuts = new ArrayList<Put>();
       HRegionLocation location =
         getRegionLocationForRowWithRetries(tableName, list.get(0).getRow(),
             false);
@@ -994,8 +994,8 @@ public class HConnectionManager implements HConstants {
       byte [] region = currentRegion;
       boolean isLastRow = false;
       for (int i = 0; i < list.size() && tries < numRetries; i++) {
-        BatchUpdate batchUpdate = list.get(i);
-        tempUpdates.add(batchUpdate);
+        Put put = list.get(i);
+        currentPuts.add(put);
         isLastRow = (i + 1) == list.size();
         if (!isLastRow) {
           location = getRegionLocationForRowWithRetries(tableName,
@@ -1003,19 +1003,19 @@ public class HConnectionManager implements HConstants {
           region = location.getRegionInfo().getRegionName();
         }
         if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
-          final BatchUpdate[] updates = tempUpdates.toArray(new BatchUpdate[0]);
+          final Put [] puts = currentPuts.toArray(new Put[0]);
           int index = getRegionServerWithRetries(new ServerCallable<Integer>(
-              this, tableName, batchUpdate.getRow()) {
+              this, tableName, put.getRow()) {
             public Integer call() throws IOException {
-              int i = server.batchUpdates(location.getRegionInfo()
-                  .getRegionName(), updates);
+              int i = server.put(location.getRegionInfo()
+                  .getRegionName(), puts);
               return i;
             }
           });
           if (index != -1) {
             if (tries == numRetries - 1) {
               throw new RetriesExhaustedException("Some server",
-                  currentRegion, batchUpdate.getRow(), 
+                  currentRegion, put.getRow(), 
                   tries, new ArrayList<Throwable>());
             }
             long sleepTime = getPauseTime(tries);
@@ -1031,7 +1031,7 @@ public class HConnectionManager implements HConstants {
             } catch (InterruptedException e) {
               // continue
             }
-            i = i - updates.length + index;
+            i = i - puts.length + index;
             retryOnlyOne = true;
             location = getRegionLocationForRowWithRetries(tableName, 
               list.get(i + 1).getRow(), true);
@@ -1041,7 +1041,7 @@ public class HConnectionManager implements HConstants {
             retryOnlyOne = false;
           }
           currentRegion = region;
-          tempUpdates.clear();
+          currentPuts.clear();
         }
       }
     }

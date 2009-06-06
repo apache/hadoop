@@ -56,14 +56,6 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
   }
 
   /**
-   * @see org.apache.hadoop.hbase.HColumnDescriptor#setMaxValueLength(int)
-   */
-  @Override
-  public void setMaxValueLength(int maxLength) {
-    throw new UnsupportedOperationException("HColumnDescriptor is read-only");
-  }
-
-  /**
    * @see org.apache.hadoop.hbase.HColumnDescriptor#setTimeToLive(int)
    */
   @Override

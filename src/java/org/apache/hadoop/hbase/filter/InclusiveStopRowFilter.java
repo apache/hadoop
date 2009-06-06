@@ -24,8 +24,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Subclass of StopRowFilter that filters rows > the stop row,
  * making it include up to the last row but no further.
+ *
+ * @deprecated Use filters that are rooted on @{link Filter} instead
  */
-public class InclusiveStopRowFilter extends StopRowFilter{
+public class InclusiveStopRowFilter extends StopRowFilter {
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -46,12 +48,17 @@ public class InclusiveStopRowFilter extends StopRowFilter{
    */
   @Override
   public boolean filterRowKey(final byte [] rowKey) {
+    return filterRowKey(rowKey, 0, rowKey.length);
+  }
+
+  public boolean filterRowKey(byte []rowKey, int offset, int length) {
     if (rowKey == null) {
       if (getStopRowKey() == null) {
         return true;
       }
       return false;
-    }    
-    return Bytes.compareTo(getStopRowKey(), rowKey) < 0;
+    }
+    return Bytes.compareTo(getStopRowKey(), 0, getStopRowKey().length,
+        rowKey, offset, length) < 0;
   }
 }

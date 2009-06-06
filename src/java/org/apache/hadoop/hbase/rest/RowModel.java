@@ -25,8 +25,13 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.rest.descriptors.TimestampsDescriptor;
@@ -41,44 +46,51 @@ public class RowModel extends AbstractModel {
     super.initialize(conf, admin);
   }
 
+  @Deprecated
   public RowResult get(byte[] tableName, byte[] rowName)
       throws HBaseRestException {
+    return get(tableName, new Get(rowName)).getRowResult();
+  }
+
+  public Result get(byte[] tableName, Get get)
+  throws HBaseRestException {
     try {
       HTable table = new HTable(tableName);
-      return table.getRow(rowName);
+      return table.get(get);
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
   }
-
+  
+  @Deprecated
   public RowResult get(byte[] tableName, byte[] rowName, byte[][] columns)
       throws HBaseRestException {
-    try {
-      HTable table = new HTable(tableName);
-      return table.getRow(rowName, columns);
-    } catch (IOException e) {
-      throw new HBaseRestException(e);
+    Get get = new Get(rowName);
+    for(byte [] column : columns) {
+      byte [][] famAndQf = KeyValue.parseColumn(column);
+      get.addColumn(famAndQf[0], famAndQf[1]);
     }
+    return get(tableName, get).getRowResult();
   }
 
+  @Deprecated
   public RowResult get(byte[] tableName, byte[] rowName, byte[][] columns,
       long timestamp) throws HBaseRestException {
-    try {
-      HTable table = new HTable(tableName);
-      return table.getRow(rowName, columns, timestamp);
-    } catch (IOException e) {
-      throw new HBaseRestException(e);
+    Get get = new Get(rowName);
+    for(byte [] column : columns) {
+      byte [][] famAndQf = KeyValue.parseColumn(column);
+      get.addColumn(famAndQf[0], famAndQf[1]);
     }
+    get.setTimeStamp(timestamp);
+    return get(tableName, get).getRowResult();
   }
-
+  
+  @Deprecated
   public RowResult get(byte[] tableName, byte[] rowName, long timestamp)
       throws HBaseRestException {
-    try {
-      HTable table = new HTable(tableName);
-      return table.getRow(rowName, timestamp);
-    } catch (IOException e) {
-      throw new HBaseRestException(e);
-    }
+    Get get = new Get(rowName);
+    get.setTimeStamp(timestamp);
+    return get(tableName, get).getRowResult();
   }
 
   public TimestampsDescriptor getTimestamps(
@@ -98,41 +110,48 @@ public class RowModel extends AbstractModel {
 
   }
 
-  public void post(byte[] tableName, BatchUpdate b) throws HBaseRestException {
+  public void post(byte[] tableName, Put put) throws HBaseRestException {
     try {
       HTable table = new HTable(tableName);
-      table.commit(b);
+      table.put(put);
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
   }
 
-  public void post(byte[] tableName, List<BatchUpdate> b)
+  public void post(byte[] tableName, List<Put> puts)
       throws HBaseRestException {
     try {
       HTable table = new HTable(tableName);
-      table.commit(b);
+      table.put(puts);
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }
   }
-
+  
+  @Deprecated
   public void delete(byte[] tableName, byte[] rowName)
       throws HBaseRestException {
-    try {
-      HTable table = new HTable(tableName);
-      table.deleteAll(rowName);
-    } catch (IOException e) {
-      throw new HBaseRestException(e);
-    }
+    Delete delete = new Delete(rowName);
+    delete(tableName, delete);
   }
 
-  public void delete(byte[] tableName, byte[] rowName, byte[][] columns) throws HBaseRestException {
+  @Deprecated
+  public void delete(byte[] tableName, byte[] rowName, byte[][] columns)
+  throws HBaseRestException {
+    Delete delete = new Delete(rowName);
+    for(byte [] column : columns) {
+      byte [][] famAndQf = KeyValue.parseColumn(column);
+      delete.deleteColumn(famAndQf[0], famAndQf[1]);
+    }
+    delete(tableName, delete);
+  }
+  
+  public void delete(byte[] tableName, Delete delete)
+  throws HBaseRestException {
     try {
       HTable table = new HTable(tableName);
-      for (byte[] column : columns) {
-        table.deleteAll(rowName, column);
-      }
+      table.delete(delete);
     } catch (IOException e) {
       throw new HBaseRestException(e);
     }

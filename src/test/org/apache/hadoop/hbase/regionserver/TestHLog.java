@@ -170,7 +170,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
         assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
-        assertTrue(Bytes.equals(HLog.METACOLUMN, val.getColumn()));
+        assertTrue(Bytes.equals(HLog.METAFAMILY, val.getFamily()));
         assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
           val.getValue()));
         System.out.println(key + " " + val);

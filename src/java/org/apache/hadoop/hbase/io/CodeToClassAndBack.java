@@ -45,7 +45,7 @@ public interface CodeToClassAndBack {
   /**
    * Class list for supported classes
    */
-  public Class[] classList = {byte[].class, Cell.class};
+  public Class<?>[] classList = {byte[].class, Cell.class};
   
   /**
    * The static loader that is used instead of the static constructor in
@@ -58,8 +58,8 @@ public interface CodeToClassAndBack {
    * Class that loads the static maps with their values. 
    */
   public class InternalStaticLoader{
-    InternalStaticLoader(Class[] classList, Map<Byte, Class<?>> CODE_TO_CLASS,
-    Map<Class<?>, Byte> CLASS_TO_CODE){
+    InternalStaticLoader(Class<?>[] classList,
+        Map<Byte,Class<?>> CODE_TO_CLASS, Map<Class<?>, Byte> CLASS_TO_CODE){
       byte code = 1;
       for(int i=0; i<classList.length; i++){
         CLASS_TO_CODE.put(classList[i], code);

@@ -31,10 +31,10 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Abstract base class for operations that need to examine all HRegionInfo 
@@ -80,26 +80,28 @@ abstract class TableOperation implements HConstants {
       // Open a scanner on the meta region
       byte [] tableNameMetaStart =
           Bytes.toBytes(Bytes.toString(tableName) + ",,");
-
-      long scannerId = server.openScanner(m.getRegionName(),
-          COLUMN_FAMILY_ARRAY, tableNameMetaStart, HConstants.LATEST_TIMESTAMP, null);
+      Scan scan = new Scan(tableNameMetaStart).addFamily(CATALOG_FAMILY);
+      long scannerId = server.openScanner(m.getRegionName(), scan);
 
       List<byte []> emptyRows = new ArrayList<byte []>();
       try {
         while (true) {
-          RowResult values = server.next(scannerId);
-          if(values == null || values.size() == 0) {
+          Result values = server.next(scannerId);
+          if(values == null || values.isEmpty()) {
             break;
           }
           HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
-            LOG.error(Bytes.toString(COL_REGIONINFO) + " not found on " +
+            LOG.error(Bytes.toString(CATALOG_FAMILY) + ":" +
+                Bytes.toString(REGIONINFO_QUALIFIER) + " not found on " +
                       Bytes.toString(values.getRow()));
             continue;
           }
-          String serverAddress = Writables.cellToString(values.get(COL_SERVER));
-          long startCode = Writables.cellToLong(values.get(COL_STARTCODE)); 
+          String serverAddress = 
+            Bytes.toString(values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
+          long startCode = 
+            Bytes.toLong(values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER)); 
           String serverName = null;
           if (serverAddress != null && serverAddress.length() > 0) {
             serverName = HServerInfo.getServerName(serverAddress, startCode);

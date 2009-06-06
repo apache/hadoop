@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -223,9 +224,10 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   throws IOException {
     HRegion region = createNewHRegion(desc, startKey, endKey);
     byte [] keyToWrite = startKey == null ? Bytes.toBytes("row_000") : startKey;
-    BatchUpdate bu = new BatchUpdate(keyToWrite);
-    bu.put(COLUMN_NAME, "test".getBytes());
-    region.batchUpdate(bu, null);
+    Put put = new Put(keyToWrite);
+    byte [][] famAndQf = KeyValue.parseColumn(COLUMN_NAME);
+    put.add(famAndQf[0], famAndQf[1], Bytes.toBytes("test"));
+    region.put(put);
     region.close();
     region.getLog().closeAndDelete();
     return region;

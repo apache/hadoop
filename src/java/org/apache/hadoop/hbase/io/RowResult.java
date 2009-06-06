@@ -32,7 +32,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.rest.descriptors.RestCell;
 import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
@@ -46,11 +45,13 @@ import agilejson.TOJSON;
 
 /**
  * Holds row name and then a map of columns to cells.
+ * @deprecated As of hbase 0.20.0, replaced by new Get/Put/Delete/Result-based API.
  */
 public class RowResult implements Writable, SortedMap<byte [], Cell>,
   Comparable<RowResult>, ISerializable {
   private byte [] row = null;
   private final HbaseMapWritable<byte [], Cell> cells;
+  private final byte [] COL_REGIONINFO = Bytes.toBytes("info:regioninfo");
 
   /** default constructor for writable */
   public RowResult() {
@@ -102,6 +103,11 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
     return cells.containsKey(key);
   }
   
+  /**
+   * Check if the key can be found in this RowResult
+   * @param key
+   * @return true if key id found, false if not
+   */
   public boolean containsKey(String key) {
     return cells.containsKey(Bytes.toBytes(key));
   }
@@ -175,6 +181,16 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
   public Cell get(String key) {
     return get(Bytes.toBytes(key));
   }
+
+  /**
+   * Get a cell using seperate family, columnQualifier arguments.
+   * @param family
+   * @param columnQualifier
+   * @return
+   */
+  public Cell get(byte [] family, byte [] columnQualifier) {
+    return get(Bytes.add(family, KeyValue.COLUMN_FAMILY_DELIM_ARRAY, columnQualifier));
+  }
   
 
   public Comparator<? super byte[]> comparator() {
@@ -245,7 +261,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
       sb.append(Long.toString(e.getValue().getTimestamp()));
       sb.append(", value=");
       byte [] v = e.getValue().getValue();
-      if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
+      if (Bytes.equals(e.getKey(), this.COL_REGIONINFO)) {
         try {
           sb.append(Writables.getHRegionInfo(v).toString());
         } catch (IOException ioe) {

@@ -34,6 +34,10 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -48,24 +52,21 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 public class TestScanner extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   
-  private static final byte [] FIRST_ROW =
-    HConstants.EMPTY_START_ROW;
-  private static final byte [][] COLS = {
-      HConstants.COLUMN_FAMILY
-  };
+  private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
+  private static final byte [][] COLS = { HConstants.CATALOG_FAMILY };
   private static final byte [][] EXPLICIT_COLS = {
-    HConstants.COL_REGIONINFO,
-    HConstants.COL_SERVER,
-    HConstants.COL_STARTCODE
+    HConstants.REGIONINFO_QUALIFIER, HConstants.SERVER_QUALIFIER,
+      // TODO ryan
+      //HConstants.STARTCODE_QUALIFIER
   };
   
   static final HTableDescriptor TESTTABLEDESC =
     new HTableDescriptor("testscanner");
   static {
-    TESTTABLEDESC.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY,
+    TESTTABLEDESC.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY,
       10,  // Ten is arbitrary number.  Keep versions to help debuggging.
       Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-      Integer.MAX_VALUE, HConstants.FOREVER, false));
+      HConstants.FOREVER, false));
   }
   /** HRegionInfo for root region */
   public static final HRegionInfo REGION_INFO =
@@ -99,12 +100,13 @@ public class TestScanner extends HBaseTestCase {
     byte [] stoprow = Bytes.toBytes("ccc");
     try {
       this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
-      addContent(this.r, HConstants.COLUMN_FAMILY);
+      addContent(this.r, HConstants.CATALOG_FAMILY);
       List<KeyValue> results = new ArrayList<KeyValue>();
       // Do simple test of getting one row only first.
-      InternalScanner s = r.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
-          Bytes.toBytes("abc"), HConstants.LATEST_TIMESTAMP,
-          new WhileMatchRowFilter(new StopRowFilter(Bytes.toBytes("abd"))));
+      Scan scan = new Scan(Bytes.toBytes("abc"), Bytes.toBytes("abd"));
+      scan.addFamily(HConstants.CATALOG_FAMILY);
+
+      InternalScanner s = r.getScanner(scan);
       int count = 0;
       while (s.next(results)) {
         count++;
@@ -112,9 +114,10 @@ public class TestScanner extends HBaseTestCase {
       s.close();
       assertEquals(1, count);
       // Now do something a bit more imvolved.
-      s = r.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
-        startrow, HConstants.LATEST_TIMESTAMP,
-        new WhileMatchRowFilter(new StopRowFilter(stoprow)));
+      scan = new Scan(startrow, stoprow);
+      scan.addFamily(HConstants.CATALOG_FAMILY);
+
+      s = r.getScanner(scan);
       count = 0;
       KeyValue kv = null;
       results = new ArrayList<KeyValue>();
@@ -147,14 +150,15 @@ public class TestScanner extends HBaseTestCase {
       
       // Write information to the meta table
 
-      BatchUpdate batchUpdate =
-        new BatchUpdate(ROW_KEY, System.currentTimeMillis());
+      Put put = new Put(ROW_KEY);
+      put.setTimeStamp(System.currentTimeMillis());
 
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteStream);
       REGION_INFO.write(s);
-      batchUpdate.put(HConstants.COL_REGIONINFO, byteStream.toByteArray());
-      region.commit(batchUpdate);
+      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+          byteStream.toByteArray());
+      region.put(put);
 
       // What we just committed is in the memcache. Verify that we can get
       // it back both with scanning and get
@@ -177,13 +181,14 @@ public class TestScanner extends HBaseTestCase {
  
       HServerAddress address = new HServerAddress("foo.bar.com:1234");
 
-      batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
+      put = new Put(ROW_KEY);
+      put.setTimeStamp(System.currentTimeMillis());
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+          Bytes.toBytes(address.toString()));
 
-      batchUpdate.put(HConstants.COL_SERVER,  Bytes.toBytes(address.toString()));
+//      put.add(HConstants.COL_STARTCODE, Bytes.toBytes(START_CODE));
 
-      batchUpdate.put(HConstants.COL_STARTCODE, Bytes.toBytes(START_CODE));
-
-      region.commit(batchUpdate);
+      region.put(put);
       
       // Validate that we can still get the HRegionInfo, even though it is in
       // an older row on disk and there is a newer row in the memcache
@@ -215,12 +220,12 @@ public class TestScanner extends HBaseTestCase {
 
       address = new HServerAddress("bar.foo.com:4321");
       
-      batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
+      put = new Put(ROW_KEY);
+      put.setTimeStamp(System.currentTimeMillis());
 
-      batchUpdate.put(HConstants.COL_SERVER, 
-        Bytes.toBytes(address.toString()));
-
-      region.commit(batchUpdate);
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+          Bytes.toBytes(address.toString()));
+      region.put(put);
       
       // Validate again
       
@@ -273,6 +278,7 @@ public class TestScanner extends HBaseTestCase {
   private void scan(boolean validateStartcode, String serverName)
   throws IOException {  
     InternalScanner scanner = null;
+    Scan scan = null;
     List<KeyValue> results = new ArrayList<KeyValue>();
     byte [][][] scanColumns = {
         COLS,
@@ -281,15 +287,20 @@ public class TestScanner extends HBaseTestCase {
     
     for(int i = 0; i < scanColumns.length; i++) {
       try {
-        scanner = r.getScanner(scanColumns[i], FIRST_ROW,
-            System.currentTimeMillis(), null);
+        scan = new Scan(FIRST_ROW);
+        scan.addColumns(scanColumns[i]);
+        scanner = r.getScanner(scan);
         while (scanner.next(results)) {
-          assertTrue(hasColumn(results, HConstants.COL_REGIONINFO));
-          byte [] val = getColumn(results, HConstants.COL_REGIONINFO).getValue(); 
+          assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, 
+              HConstants.REGIONINFO_QUALIFIER));
+          byte [] val = getColumn(results, HConstants.CATALOG_FAMILY, 
+              HConstants.REGIONINFO_QUALIFIER).getValue();
           validateRegionInfo(val);
           if(validateStartcode) {
-            assertTrue(hasColumn(results, HConstants.COL_STARTCODE));
-            val = getColumn(results, HConstants.COL_STARTCODE).getValue();
+//            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, 
+//                HConstants.STARTCODE_QUALIFIER));
+//            val = getColumn(results, HConstants.CATALOG_FAMILY, 
+//                HConstants.STARTCODE_QUALIFIER).getValue();
             assertNotNull(val);
             assertFalse(val.length == 0);
             long startCode = Bytes.toLong(val);
@@ -297,8 +308,10 @@ public class TestScanner extends HBaseTestCase {
           }
           
           if(serverName != null) {
-            assertTrue(hasColumn(results, HConstants.COL_SERVER));
-            val = getColumn(results, HConstants.COL_SERVER).getValue();
+            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, 
+                HConstants.SERVER_QUALIFIER));
+            val = getColumn(results, HConstants.CATALOG_FAMILY, 
+                HConstants.SERVER_QUALIFIER).getValue();
             assertNotNull(val);
             assertFalse(val.length == 0);
             String server = Bytes.toString(val);
@@ -317,27 +330,33 @@ public class TestScanner extends HBaseTestCase {
     }
   }
 
-  private boolean hasColumn(final List<KeyValue> kvs, final byte [] column) {
+  private boolean hasColumn(final List<KeyValue> kvs, final byte [] family,
+      final byte [] qualifier) {
     for (KeyValue kv: kvs) {
-      if (kv.matchingColumn(column)) {
+      if (kv.matchingFamily(family) && kv.matchingQualifier(qualifier)) {
         return true;
       }
     }
-    return false;
+    return false;    
   }
-
-  private KeyValue getColumn(final List<KeyValue> kvs, final byte [] column) {
+  
+  private KeyValue getColumn(final List<KeyValue> kvs, final byte [] family,
+      final byte [] qualifier) {
     for (KeyValue kv: kvs) {
-      if (kv.matchingColumn(column)) {
+      if (kv.matchingFamily(family) && kv.matchingQualifier(qualifier)) {
         return kv;
       }
     }
     return null;
   }
-
+  
+  
   /** Use get to retrieve the HRegionInfo and validate it */
   private void getRegionInfo() throws IOException {
-    byte [] bytes = region.get(ROW_KEY, HConstants.COL_REGIONINFO).getValue();
+    Get get = new Get(ROW_KEY);
+    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    Result result = region.get(get, null);
+    byte [] bytes = result.value();
     validateRegionInfo(bytes);  
   }
 
@@ -349,8 +368,9 @@ public class TestScanner extends HBaseTestCase {
     this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
     HRegionIncommon hri = new HRegionIncommon(r);
     try {
-      LOG.info("Added: " + 
-        addContent(hri, Bytes.toString(HConstants.COL_REGIONINFO)));
+      String columnString = Bytes.toString(HConstants.CATALOG_FAMILY) + ':' +
+      Bytes.toString(HConstants.REGIONINFO_QUALIFIER);
+      LOG.info("Added: " + addContent(hri, columnString));
       int count = count(hri, -1);
       assertEquals(count, count(hri, 100));
       assertEquals(count, count(hri, 0));
@@ -374,7 +394,7 @@ public class TestScanner extends HBaseTestCase {
   private int count(final HRegionIncommon hri, final int flushIndex)
   throws IOException {
     LOG.info("Taking out counting scan");
-    ScannerIncommon s = hri.getScanner(EXPLICIT_COLS,
+    ScannerIncommon s = hri.getScanner(HConstants.CATALOG_FAMILY, EXPLICIT_COLS,
         HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP);
     List<KeyValue> values = new ArrayList<KeyValue>();
     int count = 0;

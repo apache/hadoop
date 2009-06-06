@@ -30,7 +30,18 @@ import org.apache.hadoop.io.Writable;
  * 
  * Interface used for row-level filters applied to HRegion.HScanner scan
  * results during calls to next().
- * TODO: Make Filters use proper comparator comparing rows.
+ *
+ * In HBase 0.20, not all of the functions will be called, thus filters which depend
+ * on them will not work as advertised!
+ *
+ * Specifically, you can only count on the following methods to be called:
+ * boolean filterRowKey(final byte [] rowKey, final int offset, final int length);
+ * boolean filterAllRemaining();
+ *
+ * Complex filters that depend in more need to be rewritten to work with @{link Filter}
+ *
+ * Write new filters to use the @{link Filter} API instead.
+ * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public interface RowFilterInterface extends Writable {
   /**

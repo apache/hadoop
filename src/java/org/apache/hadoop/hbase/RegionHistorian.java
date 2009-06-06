@@ -29,8 +29,10 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -57,17 +59,17 @@ public class RegionHistorian implements HConstants {
   "EEE, d MMM yyyy HH:mm:ss");
 
   
-  private static enum HistorianColumnKey  {
-    REGION_CREATION ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"creation")),
-    REGION_OPEN ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"open")),
-    REGION_SPLIT ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"split")),
-    REGION_COMPACTION ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"compaction")),
-    REGION_FLUSH ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"flush")),
-    REGION_ASSIGNMENT ( Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR+"assignment"));
+  private static enum HistorianQualifierKey  {
+    REGION_CREATION ( Bytes.toBytes("creation")),
+    REGION_OPEN ( Bytes.toBytes("open")),
+    REGION_SPLIT ( Bytes.toBytes("split")),
+    REGION_COMPACTION ( Bytes.toBytes("compaction")),
+    REGION_FLUSH ( Bytes.toBytes("flush")),
+    REGION_ASSIGNMENT ( Bytes.toBytes("assignment"));
 
-  byte[] key;
+    byte[] key;
 
-    HistorianColumnKey(byte[] key) {
+    HistorianQualifierKey(byte[] key) {
       this.key = key;
     }
   } 
@@ -113,15 +115,17 @@ public class RegionHistorian implements HConstants {
        * moment to retrieve all version and to have the column key information.
        * To be changed when HTable.getRow handles versions.
        */
-      for (HistorianColumnKey keyEnu : HistorianColumnKey.values()) {
+      for (HistorianQualifierKey keyEnu : HistorianQualifierKey.values()) {
         byte[] columnKey = keyEnu.key;
-        Cell[] cells = this.metaTable.get(Bytes.toBytes(regionName),
-            columnKey, ALL_VERSIONS);
-        if (cells != null) {
-          for (Cell cell : cells) {
-            informations.add(historian.new RegionHistoryInformation(cell
-                .getTimestamp(), Bytes.toString(columnKey).split(":")[1], Bytes
-                .toString(cell.getValue())));
+        Get get = new Get(Bytes.toBytes(regionName));
+        get.addColumn(CATALOG_HISTORIAN_FAMILY, columnKey);
+        get.setMaxVersions(ALL_VERSIONS);
+        Result result = this.metaTable.get(get);
+
+        if (result != null) {
+          for(KeyValue kv : result.raw()) {
+            informations.add(historian.new RegionHistoryInformation(
+                kv.getTimestamp(), columnKey, kv.getValue()));
           }
         }
       }
@@ -138,7 +142,7 @@ public class RegionHistorian implements HConstants {
    * @param serverName
    */
   public void addRegionAssignment(HRegionInfo info, String serverName) {
-    add(HistorianColumnKey.REGION_ASSIGNMENT.key, "Region assigned to server "
+    add(HistorianQualifierKey.REGION_ASSIGNMENT.key, "Region assigned to server "
         + serverName, info);
   }
 
@@ -147,7 +151,7 @@ public class RegionHistorian implements HConstants {
    * @param info
    */
   public void addRegionCreation(HRegionInfo info) {
-    add(HistorianColumnKey.REGION_CREATION.key, "Region creation", info);
+    add(HistorianQualifierKey.REGION_CREATION.key, "Region creation", info);
   }
 
   /**
@@ -156,7 +160,7 @@ public class RegionHistorian implements HConstants {
    * @param address
    */
   public void addRegionOpen(HRegionInfo info, HServerAddress address) {
-    add(HistorianColumnKey.REGION_OPEN.key, "Region opened on server : "
+    add(HistorianQualifierKey.REGION_OPEN.key, "Region opened on server : "
         + address.getHostname(), info);
   }
 
@@ -171,7 +175,7 @@ public class RegionHistorian implements HConstants {
      HRegionInfo newInfo2) {
     HRegionInfo[] infos = new HRegionInfo[] { newInfo1, newInfo2 };
     for (HRegionInfo info : infos) {
-      add(HistorianColumnKey.REGION_SPLIT.key, SPLIT_PREFIX +
+      add(HistorianQualifierKey.REGION_SPLIT.key, SPLIT_PREFIX +
         oldInfo.getRegionNameAsString(), info);
     }
   }
@@ -188,7 +192,7 @@ public class RegionHistorian implements HConstants {
     // such danger compacting; compactions are not allowed when
     // Flusher#flushSomeRegions is run.
     if (LOG.isDebugEnabled()) {
-      add(HistorianColumnKey.REGION_COMPACTION.key,
+      add(HistorianQualifierKey.REGION_COMPACTION.key,
         "Region compaction completed in " + timeTaken, info);
     }
   }
@@ -211,9 +215,8 @@ public class RegionHistorian implements HConstants {
    * @param text
    * @param info
    */
-  private void add(byte[] column,
-      String text, HRegionInfo info) {
-    add(column, text, info, LATEST_TIMESTAMP);
+  private void add(byte [] qualifier, String text, HRegionInfo info) {
+    add(qualifier, text, info, LATEST_TIMESTAMP);
   }
 
   /**
@@ -223,18 +226,19 @@ public class RegionHistorian implements HConstants {
    * @param info
    * @param timestamp
    */
-  private void add(byte[] column,
-      String text, HRegionInfo info, long timestamp) {
+  private void add(byte [] qualifier, String text, HRegionInfo info,
+      long timestamp) {
     if (!isOnline()) {
       // Its a noop
       return;
     }
     if (!info.isMetaRegion()) {
-      BatchUpdate batch = new BatchUpdate(info.getRegionName());
-      batch.setTimestamp(timestamp);
-      batch.put(column, Bytes.toBytes(text));
+      Put put = new Put(info.getRegionName());
+      put.setTimeStamp(timestamp);
+      put.add(HConstants.CATALOG_HISTORIAN_FAMILY, qualifier,
+          Bytes.toBytes(text));
       try {
-        this.metaTable.commit(batch);
+        this.metaTable.put(put);
       } catch (IOException ioe) {
         LOG.warn("Unable to '" + text + "'", ioe);
       }
@@ -252,34 +256,35 @@ public class RegionHistorian implements HConstants {
 
     private long timestamp;
 
-    private String event;
+    private byte [] event = null;
 
-    private String description;
+    private byte [] description = null;
 
     /**
      * @param timestamp
      * @param event
      * @param description
      */
-    public RegionHistoryInformation(long timestamp, String event,
-        String description) {
+    public RegionHistoryInformation(long timestamp, byte [] event,
+        byte [] description) {
       this.timestamp = timestamp;
       this.event = event;
       this.description = description;
     }
-
+    
+    
     public int compareTo(RegionHistoryInformation otherInfo) {
       return -1 * Long.valueOf(timestamp).compareTo(otherInfo.getTimestamp());
     }
 
     /** @return the event */
     public String getEvent() {
-      return event;
+      return Bytes.toString(event);
     }
 
     /** @return the description */
     public String getDescription() {
-      return description;
+      return Bytes.toString(description);
     }
 
     /** @return the timestamp */

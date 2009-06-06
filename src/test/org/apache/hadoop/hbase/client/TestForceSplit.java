@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -62,9 +62,10 @@ public class TestForceSplit extends HBaseClusterTestCase {
           k[0] = b1;
           k[1] = b2;
           k[2] = b3;
-          BatchUpdate update = new BatchUpdate(k);
-          update.put(columnName, k);
-          table.commit(update);
+          Put put = new Put(k);
+          byte [][] famAndQf = KeyValue.parseColumn(columnName);
+          put.add(famAndQf[0], famAndQf[1], k);
+          table.put(put);
         }
       }
     }

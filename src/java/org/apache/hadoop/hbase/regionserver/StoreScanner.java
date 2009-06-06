@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -25,288 +25,238 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 
 /**
- * Scanner scans both the memcache and the HStore
+ * Scanner scans both the memcache and the HStore. Coaleace KeyValue stream
+ * into List<KeyValue> for a single row.
  */
-class StoreScanner implements InternalScanner,  ChangedReadersObserver {
+class StoreScanner implements KeyValueScanner, InternalScanner,
+ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
 
-  private InternalScanner [] scanners;
-  private List<KeyValue> [] resultSets;
-  private boolean wildcardMatch = false;
-  private boolean multipleMatchers = false;
-  private RowFilterInterface dataFilter;
   private Store store;
-  private final long timestamp;
-  private final NavigableSet<byte []> columns;
-  
-  // Indices for memcache scanner and hstorefile scanner.
-  private static final int MEMS_INDEX = 0;
-  private static final int HSFS_INDEX = MEMS_INDEX + 1;
-  
+
+  private ScanQueryMatcher matcher;
+
+  private KeyValueHeap heap;
+
   // Used around transition from no storefile to the first.
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
   private final AtomicBoolean closing = new AtomicBoolean(false);
 
-  /** Create an Scanner with a handle on the memcache and HStore files. */
-  @SuppressWarnings("unchecked")
-  StoreScanner(Store store, final NavigableSet<byte []> targetCols,
-    byte [] firstRow, long timestamp, RowFilterInterface filter) 
-  throws IOException {
+  /**
+   * Opens a scanner across memcache, snapshot, and all StoreFiles.
+   */
+  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns) {
     this.store = store;
-    this.dataFilter = filter;
-    if (null != dataFilter) {
-      dataFilter.reset();
+    matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
+        columns, store.ttl, store.comparator.getRawComparator(),
+        store.versionsToReturn(scan.getMaxVersions()));
+
+    List<KeyValueScanner> scanners = getStoreFileScanners();
+    scanners.add(store.memcache.getScanner());
+
+    // Seek all scanners to the initial key
+    for(KeyValueScanner scanner : scanners) {
+      scanner.seek(matcher.getStartKey());
     }
-    this.scanners = new InternalScanner[2];
-    this.resultSets = new List[scanners.length];
-    // Save these args in case we need them later handling change in readers
-    // See updateReaders below.
-    this.timestamp = timestamp;
-    this.columns = targetCols;
-    try {
-      scanners[MEMS_INDEX] =
-        store.memcache.getScanner(timestamp, targetCols, firstRow);
-      scanners[HSFS_INDEX] =
-        new StoreFileScanner(store, timestamp, targetCols, firstRow);
-      for (int i = MEMS_INDEX; i < scanners.length; i++) {
-        checkScannerFlags(i);
-      }
-    } catch (IOException e) {
-      doClose();
-      throw e;
-    }
-    
-    // Advance to the first key in each scanner.
-    // All results will match the required column-set and scanTime.
-    for (int i = MEMS_INDEX; i < scanners.length; i++) {
-      setupScanner(i);
-    }
+
+    // Combine all seeked scanners with a heap
+    heap = new KeyValueHeap(
+        scanners.toArray(new KeyValueScanner[scanners.size()]), store.comparator);
+
     this.store.addChangedReaderObserver(this);
   }
-  
-  /*
-   * @param i Index.
-   */
-  private void checkScannerFlags(final int i) {
-    if (this.scanners[i].isWildcardScanner()) {
-      this.wildcardMatch = true;
+
+  // Constructor for testing.
+  StoreScanner(Scan scan, byte [] colFamily,
+      long ttl, KeyValue.KVComparator comparator,
+      final NavigableSet<byte[]> columns,
+      KeyValueScanner [] scanners) {
+    this.store = null;
+    this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl, 
+        comparator.getRawComparator(), scan.getMaxVersions());
+
+    // Seek all scanners to the initial key
+    for(KeyValueScanner scanner : scanners) {
+      scanner.seek(matcher.getStartKey());
     }
-    if (this.scanners[i].isMultipleMatchScanner()) {
-      this.multipleMatchers = true;
-    }
-  }
-  
-  /*
-   * Do scanner setup.
-   * @param i
-   * @throws IOException
-   */
-  private void setupScanner(final int i) throws IOException {
-    this.resultSets[i] = new ArrayList<KeyValue>();
-    if (this.scanners[i] != null && !this.scanners[i].next(this.resultSets[i])) {
-      closeScanner(i);
-    }
+
+    heap = new KeyValueHeap(
+        scanners, comparator);
   }
 
-  /** @return true if the scanner is a wild card scanner */
-  public boolean isWildcardScanner() {
-    return this.wildcardMatch;
+  public KeyValue peek() {
+    return this.heap.peek();
   }
 
-  /** @return true if the scanner is a multiple match scanner */
-  public boolean isMultipleMatchScanner() {
-    return this.multipleMatchers;
-  }
-
-  public boolean next(List<KeyValue> results)
-  throws IOException {
-    this.lock.readLock().lock();
-    try {
-    // Filtered flag is set by filters.  If a cell has been 'filtered out'
-    // -- i.e. it is not to be returned to the caller -- the flag is 'true'.
-    boolean filtered = true;
-    boolean moreToFollow = true;
-    while (filtered && moreToFollow) {
-      // Find the lowest-possible key.
-      KeyValue chosen = null;
-      long chosenTimestamp = -1;
-      for (int i = 0; i < this.scanners.length; i++) {
-        KeyValue kv = this.resultSets[i] == null || this.resultSets[i].isEmpty()?
-          null: this.resultSets[i].get(0);
-        if (kv == null) {
-          continue;
-        }
-        if (scanners[i] != null &&
-            (chosen == null ||
-              (this.store.comparator.compareRows(kv, chosen) < 0) ||
-              ((this.store.comparator.compareRows(kv, chosen) == 0) &&
-              (kv.getTimestamp() > chosenTimestamp)))) {
-          chosen = kv;
-          chosenTimestamp = chosen.getTimestamp();
-        }
-      }
-
-      // Filter whole row by row key?
-      filtered = dataFilter == null || chosen == null? false:
-        dataFilter.filterRowKey(chosen.getBuffer(), chosen.getRowOffset(),
-          chosen.getRowLength());
-
-      // Store results for each sub-scanner.
-      if (chosenTimestamp >= 0 && !filtered) {
-        NavigableSet<KeyValue> deletes =
-          new TreeSet<KeyValue>(this.store.comparatorIgnoringType);
-        for (int i = 0; i < scanners.length && !filtered; i++) {
-          if ((scanners[i] != null && !filtered && moreToFollow &&
-              this.resultSets[i] != null && !this.resultSets[i].isEmpty())) {
-            // Test this resultset is for the 'chosen' row.
-            KeyValue firstkv = resultSets[i].get(0);
-            if (!this.store.comparator.matchingRows(firstkv, chosen)) {
-              continue;
-            }
-            // Its for the 'chosen' row, work it.
-            for (KeyValue kv: resultSets[i]) {
-              if (kv.isDeleteType()) {
-                deletes.add(kv);
-              } else if ((deletes.isEmpty() || !deletes.contains(kv)) &&
-                  !filtered && moreToFollow && !results.contains(kv)) {
-                if (this.dataFilter != null) {
-                  // Filter whole row by column data?
-                  int rowlength = kv.getRowLength();
-                  int columnoffset = kv.getColumnOffset(rowlength);
-                  filtered = dataFilter.filterColumn(kv.getBuffer(),
-                      kv.getRowOffset(), rowlength,
-                    kv.getBuffer(), columnoffset, kv.getColumnLength(columnoffset),
-                    kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
-                  if (filtered) {
-                    results.clear();
-                    break;
-                  }
-                }
-                results.add(kv);
-                /* REMOVING BECAUSE COULD BE BUNCH OF DELETES IN RESULTS
-                   AND WE WANT TO INCLUDE THEM -- below short-circuit is
-                   probably not wanted.
-                // If we are doing a wild card match or there are multiple
-                // matchers per column, we need to scan all the older versions of 
-                // this row to pick up the rest of the family members
-                if (!wildcardMatch && !multipleMatchers &&
-                    (kv.getTimestamp() != chosenTimestamp)) {
-                  break;
-                }
-                */
-              }
-            }
-            // Move on to next row.
-            resultSets[i].clear();
-            if (!scanners[i].next(resultSets[i])) {
-              closeScanner(i);
-            }
-          }
-        }
-      }
-
-      moreToFollow = chosenTimestamp >= 0;
-      if (dataFilter != null) {
-        if (dataFilter.filterAllRemaining()) {
-          moreToFollow = false;
-        }
-      }
-
-      if (results.isEmpty() && !filtered) {
-        // There were no results found for this row.  Marked it as 
-        // 'filtered'-out otherwise we will not move on to the next row.
-        filtered = true;
-      }
-    }
-    
-    // If we got no results, then there is no more to follow.
-    if (results == null || results.isEmpty()) {
-      moreToFollow = false;
-    }
-    
-    // Make sure scanners closed if no more results
-    if (!moreToFollow) {
-      for (int i = 0; i < scanners.length; i++) {
-        if (null != scanners[i]) {
-          closeScanner(i);
-        }
-      }
-    }
-    
-    return moreToFollow;
-    } finally {
-      this.lock.readLock().unlock();
-    }
-  }
-
-  /** Shut down a single scanner */
-  void closeScanner(int i) {
-    try {
-      try {
-        scanners[i].close();
-      } catch (IOException e) {
-        LOG.warn(Bytes.toString(store.storeName) + " failed closing scanner " +
-          i, e);
-      }
-    } finally {
-      scanners[i] = null;
-      resultSets[i] = null;
-    }
+  public KeyValue next() {
+    // throw runtime exception perhaps?
+    throw new RuntimeException("Never call StoreScanner.next()");
   }
 
   public void close() {
     this.closing.set(true);
-    this.store.deleteChangedReaderObserver(this);
-    doClose();
+    // under test, we dont have a this.store
+    if (this.store != null)
+      this.store.deleteChangedReaderObserver(this);
+    this.heap.close();
   }
-  
-  private void doClose() {
-    for (int i = MEMS_INDEX; i < scanners.length; i++) {
-      if (scanners[i] != null) {
-        closeScanner(i);
+
+  public boolean seek(KeyValue key) {
+
+    return this.heap.seek(key);
+  }
+
+  /**
+   * Get the next row of values from this Store.
+   * @param result
+   * @return true if there are more rows, false if scanner is done
+   */
+  public boolean next(List<KeyValue> result) throws IOException {
+    // this wont get us the next row if the previous round hasn't iterated
+    // past all the cols from the previous row. Potential bug!
+    KeyValue peeked = this.heap.peek();
+    if (peeked == null) {
+      close();
+      return false;
+    }
+    matcher.setRow(peeked.getRow());
+    KeyValue kv;
+    while((kv = this.heap.peek()) != null) {
+      QueryMatcher.MatchCode mc = matcher.match(kv);
+      switch(mc) {
+        case INCLUDE:
+          KeyValue next = this.heap.next();
+          result.add(next);
+          continue;
+        case DONE:
+          // what happens if we have 0 results?
+          if (result.isEmpty()) {
+            // try the next one.
+            matcher.setRow(this.heap.peek().getRow());
+            continue;
+          }
+          if (matcher.filterEntireRow()) {
+            // wow, well, um, reset the result and continue.
+            result.clear();
+            matcher.setRow(heap.peek().getRow());
+            continue;
+          }
+
+          return true;
+
+        case DONE_SCAN:
+          close();
+          return false;
+
+        case SEEK_NEXT_ROW:
+          // TODO see comments in SEEK_NEXT_COL
+          /*
+          KeyValue rowToSeek =
+              new KeyValue(kv.getRow(),
+                  0,
+                  KeyValue.Type.Minimum);
+          heap.seek(rowToSeek);
+           */
+          heap.next();
+          break;
+
+        case SEEK_NEXT_COL:
+          // TODO hfile needs 'hinted' seeking to prevent it from
+          // reseeking from the start of the block on every dang seek.
+          // We need that API and expose it the scanner chain.
+          /*
+          ColumnCount hint = matcher.getSeekColumn();
+          KeyValue colToSeek;
+          if (hint == null) {
+            // seek to the 'last' key on this column, this is defined
+            // as the key with the same row, fam, qualifier,
+            // smallest timestamp, largest type.
+            colToSeek =
+                new KeyValue(kv.getRow(),
+                    kv.getFamily(),
+                    kv.getColumn(),
+                    Long.MIN_VALUE,
+                    KeyValue.Type.Minimum);
+          } else {
+            // This is ugmo.  Move into KeyValue convience method.
+            // First key on a column is:
+            // same row, cf, qualifier, max_timestamp, max_type, no value.
+            colToSeek =
+                new KeyValue(kv.getRow(),
+                    0,
+                    kv.getRow().length,
+
+                    kv.getFamily(),
+                    0,
+                    kv.getFamily().length,
+
+                    hint.getBuffer(),
+                    hint.getOffset(),
+                    hint.getLength(),
+
+                    Long.MAX_VALUE,
+                    KeyValue.Type.Maximum,
+                    null,
+                    0,
+                    0);
+          }
+          heap.seek(colToSeek);
+           */
+
+          heap.next();
+          break;
+
+        case SKIP:
+          this.heap.next();
+          break;
       }
     }
+    if(result.size() > 0) {
+      return true;
+    }
+    // No more keys
+    close();
+    return false;
   }
-  
+
+  private List<KeyValueScanner> getStoreFileScanners() {
+    List<HFileScanner> s =
+      new ArrayList<HFileScanner>(this.store.getStorefilesCount());
+    Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
+    for(StoreFile sf : map.values()) {
+      s.add(sf.getReader().getScanner());
+    }
+    List<KeyValueScanner> scanners =
+      new ArrayList<KeyValueScanner>(s.size()+1);
+    for(HFileScanner hfs : s) {
+      scanners.add(new StoreFileScanner(hfs));
+    }
+    return scanners;
+  }
+
   // Implementation of ChangedReadersObserver
-  
   public void updateReaders() throws IOException {
     if (this.closing.get()) {
       return;
     }
     this.lock.writeLock().lock();
     try {
-      Map<Long, StoreFile> map = this.store.getStorefiles();
-      if (this.scanners[HSFS_INDEX] == null && map != null && map.size() > 0) {
-        // Presume that we went from no readers to at least one -- need to put
-        // a HStoreScanner in place.
-        try {
-          // I think its safe getting key from mem at this stage -- it shouldn't have
-          // been flushed yet
-          // TODO: MAKE SURE WE UPDATE FROM TRUNNK.
-          this.scanners[HSFS_INDEX] = new StoreFileScanner(this.store,
-              this.timestamp, this. columns, this.resultSets[MEMS_INDEX].get(0).getRow());
-          checkScannerFlags(HSFS_INDEX);
-          setupScanner(HSFS_INDEX);
-          LOG.debug("Added a StoreFileScanner to outstanding HStoreScanner");
-        } catch (IOException e) {
-          doClose();
-          throw e;
-        }
-      }
+      // Could do this pretty nicely with KeyValueHeap, but the existing
+      // implementation of this method only updated if no existing storefiles?
+      // Lets discuss.
+      return;
     } finally {
       this.lock.writeLock().unlock();
     }

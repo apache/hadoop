@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,34 +21,32 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+
 import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * Interface for client-side scanning.
  * Go to {@link HTable} to obtain instances.
+ * @deprecated See {@link ResultScanner}
  */
 public interface Scanner extends Closeable, Iterable<RowResult> {
   /**
-   * Grab the next row's worth of values. The scanner will return a RowResult
-   * that contains both the row's key and a map of byte[] column names to Cell 
-   * value objects. The data returned will only contain the most recent data 
-   * value for each row that is not newer than the target time passed when the
-   * scanner was created.
+   * Grab the next row's worth of values.
    * @return RowResult object if there is another row, null if the scanner is
    * exhausted.
    * @throws IOException
    */  
   public RowResult next() throws IOException;
-  
+ 
   /**
    * @param nbRows number of rows to return
-   * @return Between zero and <param>nbRows</param> RowResults
+   * @return Between zero and <param>nbRows</param> Results
    * @throws IOException
    */
   public RowResult [] next(int nbRows) throws IOException;
-  
+ 
   /**
    * Closes the scanner and releases any resources it has allocated
    */
-  public void close();  
+  public void close();
 }

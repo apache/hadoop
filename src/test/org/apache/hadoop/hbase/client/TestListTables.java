@@ -44,7 +44,7 @@ public class TestListTables extends HBaseClusterTestCase {
     super.setUp();
     admin = new HBaseAdmin(conf);
     HColumnDescriptor family =
-      new HColumnDescriptor(HConstants.COLUMN_FAMILY_STR);
+      new HColumnDescriptor(HConstants.CATALOG_FAMILY);
     for (int i = 0; i < TABLES.length; i++) {
       TABLES[i].addFamily(family);
       admin.createTable(TABLES[i]);

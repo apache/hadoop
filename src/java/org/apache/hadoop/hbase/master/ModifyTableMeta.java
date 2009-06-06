@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -50,9 +51,9 @@ class ModifyTableMeta extends TableOperation {
   protected void updateRegionInfo(HRegionInterface server, byte [] regionName,
     HRegionInfo i)
   throws IOException {
-    BatchUpdate b = new BatchUpdate(i.getRegionName());
-    b.put(COL_REGIONINFO, Writables.getBytes(i));
-    server.batchUpdate(regionName, b, -1L);
+    Put put = new Put(i.getRegionName());
+    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(i));
+    server.put(regionName, put);
     LOG.debug("updated HTableDescriptor for region " + i.getRegionNameAsString());
   }
 

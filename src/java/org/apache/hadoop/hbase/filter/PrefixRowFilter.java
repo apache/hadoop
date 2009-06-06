@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * RowFilterInterface that filters everything that does not match a prefix
+ *
+ * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public class PrefixRowFilter implements RowFilterInterface {
   protected byte[] prefix;

@@ -38,8 +38,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -147,16 +148,18 @@ abstract class BaseScanner extends Chore implements HConstants {
 
     // Array to hold list of split parents found.  Scan adds to list.  After
     // scan we go check if parents can be removed.
-    Map<HRegionInfo, RowResult> splitParents =
-      new HashMap<HRegionInfo, RowResult>();
+    Map<HRegionInfo, Result> splitParents =
+      new HashMap<HRegionInfo, Result>();
     List<byte []> emptyRows = new ArrayList<byte []>();
     int rows = 0;
     try {
       regionServer = master.connection.getHRegionConnection(region.getServer());
+      
       scannerId = regionServer.openScanner(region.getRegionName(),
-        COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
+          new Scan().addFamily(HConstants.CATALOG_FAMILY));
       while (true) {
-        RowResult values = regionServer.next(scannerId);
+        Result values = regionServer.next(scannerId);
+        
         if (values == null || values.size() == 0) {
           break;
         }
@@ -165,8 +168,16 @@ abstract class BaseScanner extends Chore implements HConstants {
           emptyRows.add(values.getRow());
           continue;
         }
-        String serverName = Writables.cellToString(values.get(COL_SERVER));
-        long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
+        String serverName = "";
+        byte [] val = values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+        if( val != null) {
+          serverName = Bytes.toString(val);
+        }
+        long startCode = 0L;
+        val = values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER);
+        if(val != null) {
+          startCode = Bytes.toLong(val);
+        }
 
         // Note Region has been assigned.
         checkAssigned(info, serverName, startCode);
@@ -213,7 +224,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     // Take a look at split parents to see if any we can clean up.
     
     if (splitParents.size() > 0) {
-      for (Map.Entry<HRegionInfo, RowResult> e : splitParents.entrySet()) {
+      for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
         HRegionInfo hri = e.getKey();
         cleanupSplits(region.getRegionName(), regionServer, hri, e.getValue());
       }
@@ -250,13 +261,13 @@ abstract class BaseScanner extends Chore implements HConstants {
    */
   private boolean cleanupSplits(final byte [] metaRegionName, 
     final HRegionInterface srvr, final HRegionInfo parent,
-    RowResult rowContent)
+    Result rowContent)
   throws IOException {
     boolean result = false;
     boolean hasReferencesA = hasReferences(metaRegionName, srvr,
-        parent.getRegionName(), rowContent, COL_SPLITA);
+        parent.getRegionName(), rowContent, CATALOG_FAMILY, SPLITA_QUALIFIER);
     boolean hasReferencesB = hasReferences(metaRegionName, srvr,
-        parent.getRegionName(), rowContent, COL_SPLITB);
+        parent.getRegionName(), rowContent, CATALOG_FAMILY, SPLITB_QUALIFIER);
     if (!hasReferencesA && !hasReferencesB) {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " (encoded=" + parent.getEncodedName() +
@@ -283,15 +294,16 @@ abstract class BaseScanner extends Chore implements HConstants {
    */
   private boolean hasReferences(final byte [] metaRegionName, 
     final HRegionInterface srvr, final byte [] parent,
-    RowResult rowContent, final byte [] splitColumn)
+    Result rowContent, final byte [] splitFamily, byte [] splitQualifier)
   throws IOException {
     boolean result = false;
     HRegionInfo split =
-      Writables.getHRegionInfo(rowContent.get(splitColumn));
+      Writables.getHRegionInfo(rowContent.getValue(splitFamily, splitQualifier));
     if (split == null) {
       return result;
     }
-    Path tabledir = new Path(this.master.rootdir, split.getTableDesc().getNameAsString());
+    Path tabledir =
+      new Path(this.master.rootdir, split.getTableDesc().getNameAsString());
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
@@ -320,10 +332,10 @@ abstract class BaseScanner extends Chore implements HConstants {
         " no longer has references to " + Bytes.toString(parent));
     }
     
-    BatchUpdate b = new BatchUpdate(parent);
-    b.delete(splitColumn);
-    srvr.batchUpdate(metaRegionName, b, -1L);
-      
+    Delete delete = new Delete(parent);
+    delete.deleteColumns(splitFamily, splitQualifier);
+    srvr.delete(metaRegionName, delete);
+    
     return result;
   }
 

@@ -36,7 +36,12 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
@@ -188,28 +193,31 @@ public class MetaUtils {
       openRootRegion();
     }
 
-    InternalScanner rootScanner = rootRegion.getScanner(
-        HConstants.COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW,
-        HConstants.LATEST_TIMESTAMP, null);
+    Scan scan = new Scan();
+    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    InternalScanner rootScanner = 
+      rootRegion.getScanner(scan);
 
     try {
       List<KeyValue> results = new ArrayList<KeyValue>();
-      while (rootScanner.next(results)) {
+      boolean hasNext = true;
+      do {
+        hasNext = rootScanner.next(results);
         HRegionInfo info = null;
         for (KeyValue kv: results) {
           info = Writables.getHRegionInfoOrNull(kv.getValue());
           if (info == null) {
             LOG.warn("region info is null for row " +
-              Bytes.toString(kv.getRow()) + " in table " +
+                Bytes.toString(kv.getRow()) + " in table " +
                 HConstants.ROOT_TABLE_NAME);
-            }
-            continue;
           }
-          if (!listener.processRow(info)) {
-            break;
-          }
-          results.clear();
-       }
+          continue;
+        }
+        if (!listener.processRow(info)) {
+          break;
+        }
+        results.clear();
+      } while (hasNext);
     } finally {
       rootScanner.close();
     }
@@ -243,16 +251,19 @@ public class MetaUtils {
    */
   public void scanMetaRegion(final HRegion m, final ScannerListener listener)
   throws IOException {
-    InternalScanner metaScanner = m.getScanner(HConstants.COL_REGIONINFO_ARRAY,
-      HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
+    
+    Scan scan = new Scan();
+    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    InternalScanner metaScanner = 
+      m.getScanner(scan);
+    
     try {
       List<KeyValue> results = new ArrayList<KeyValue>();
       while (metaScanner.next(results)) {
         HRegionInfo info = null;
         for (KeyValue kv: results) {
-          if (KeyValue.META_COMPARATOR.compareColumns(kv,
-            HConstants.COL_REGIONINFO, 0, HConstants.COL_REGIONINFO.length,
-              HConstants.COLUMN_FAMILY_STR.length()) == 0) {
+          if(kv.matchingColumn(HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER)) {
             info = Writables.getHRegionInfoOrNull(kv.getValue());
             if (info == null) {
               LOG.warn("region info is null for row " +
@@ -306,18 +317,30 @@ public class MetaUtils {
       final byte [] row, final boolean onlineOffline)
   throws IOException {
     HTable t = new HTable(c, HConstants.META_TABLE_NAME);
-    Cell cell = t.get(row, HConstants.COL_REGIONINFO);
-    if (cell == null) {
+    Get get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    Result res = t.get(get);
+    KeyValue [] kvs = res.raw();
+    if(kvs.length <= 0) {
       throw new IOException("no information for row " + Bytes.toString(row));
     }
-    // Throws exception if null.
-    HRegionInfo info = Writables.getHRegionInfo(cell);
-    BatchUpdate b = new BatchUpdate(row);
+    byte [] value = kvs[0].getValue();
+    if (value == null) {
+      throw new IOException("no information for row " + Bytes.toString(row));
+    }
+    HRegionInfo info = Writables.getHRegionInfo(value);
+    Put put = new Put(row);
     info.setOffline(onlineOffline);
-    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(info));
-    b.delete(HConstants.COL_SERVER);
-    b.delete(HConstants.COL_STARTCODE);
-    t.commit(b);
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
+        Writables.getBytes(info));
+    t.put(put);
+    
+    Delete delete = new Delete(row);
+    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+    delete.deleteColumns(HConstants.CATALOG_FAMILY,
+        HConstants.STARTCODE_QUALIFIER);
+    
+    t.delete(delete);
   }
   
   /**
@@ -402,21 +425,45 @@ public class MetaUtils {
   public void updateMETARegionInfo(HRegion r, final HRegionInfo hri) 
   throws IOException {
     if (LOG.isDebugEnabled()) {
-      HRegionInfo h = Writables.getHRegionInfoOrNull(
-        r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1).get(0).getValue());
-      LOG.debug("Old " + Bytes.toString(HConstants.COL_REGIONINFO) +
-        " for " + hri.toString() + " in " + r.toString() + " is: " +
-        h.toString());
+      Get get = new Get(hri.getRegionName());
+      get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      Result res = r.get(get, null);
+      KeyValue [] kvs = res.raw();
+      if(kvs.length <= 0) {
+        return;
+      }
+      byte [] value = kvs[0].getValue();
+      if (value == null) {
+        return;
+      }
+      HRegionInfo h = Writables.getHRegionInfoOrNull(value);
+      
+      LOG.debug("Old " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" + 
+          Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " for " +
+          hri.toString() + " in " + r.toString() + " is: " + h.toString());
     }
-    BatchUpdate b = new BatchUpdate(hri.getRegionName());
-    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(hri));
-    r.batchUpdate(b, null);
+    
+    Put put = new Put(hri.getRegionName());
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
+        Writables.getBytes(hri));
+    r.put(put);
+
     if (LOG.isDebugEnabled()) {
-      HRegionInfo h = Writables.getHRegionInfoOrNull(
-          r.get(hri.getRegionName(), HConstants.COL_REGIONINFO, -1, -1).get(0).getValue());
-        LOG.debug("New " + Bytes.toString(HConstants.COL_REGIONINFO) +
-          " for " + hri.toString() + " in " + r.toString() + " is: " +
-          h.toString());
+      Get get = new Get(hri.getRegionName());
+      get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      Result res = r.get(get, null);
+      KeyValue [] kvs = res.raw();
+      if(kvs.length <= 0) {
+        return;
+      }
+      byte [] value = kvs[0].getValue();
+      if (value == null) {
+        return;
+      }
+      HRegionInfo h = Writables.getHRegionInfoOrNull(value);
+        LOG.debug("New " + Bytes.toString(HConstants.CATALOG_FAMILY) + ":" + 
+            Bytes.toString(HConstants.REGIONINFO_QUALIFIER) + " for " + 
+            hri.toString() + " in " + r.toString() + " is: " +  h.toString());
     }
   }
 

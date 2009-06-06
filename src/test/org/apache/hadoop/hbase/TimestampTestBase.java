@@ -19,8 +19,13 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -34,7 +39,7 @@ public class TimestampTestBase extends HBaseTestCase {
   private static final long T1 = 100L;
   private static final long T2 = 200L;
   
-  private static final String COLUMN_NAME = "contents:";
+  private static final String COLUMN_NAME = "contents:contents";
   
   private static final byte [] COLUMN = Bytes.toBytes(COLUMN_NAME);
   private static final byte [] ROW = Bytes.toBytes("row");
@@ -55,6 +60,7 @@ public class TimestampTestBase extends HBaseTestCase {
     put(incommon);
     // Verify that returned versions match passed timestamps.
     assertVersions(incommon, new long [] {HConstants.LATEST_TIMESTAMP, T2, T1});
+
     // If I delete w/o specifying a timestamp, this means I'm deleting the
     // latest.
     delete(incommon);
@@ -74,14 +80,23 @@ public class TimestampTestBase extends HBaseTestCase {
     // Flush everything out to disk and then retry
     flusher.flushcache();
     assertVersions(incommon, new long [] {HConstants.LATEST_TIMESTAMP, T1, T0});
-    
+
     // Now try deleting all from T2 back inclusive (We first need to add T2
     // back into the mix and to make things a little interesting, delete and
     // then readd T1.
     put(incommon, T2);
     delete(incommon, T1);
     put(incommon, T1);
-    incommon.deleteAll(ROW, COLUMN, T2);
+
+    Delete delete = new Delete(ROW);
+    byte [][] famAndQf = KeyValue.parseColumn(COLUMN);
+    if (famAndQf[1].length == 0){
+      delete.deleteFamily(famAndQf[0], T2);
+    } else {
+      delete.deleteColumns(famAndQf[0], famAndQf[1], T2);
+    }
+    incommon.delete(delete, null, true);
+ 
     // Should only be current value in set.  Assert this is so
     assertOnlyLatest(incommon, HConstants.LATEST_TIMESTAMP);
     
@@ -93,12 +108,16 @@ public class TimestampTestBase extends HBaseTestCase {
   private static void assertOnlyLatest(final Incommon incommon,
     final long currentTime)
   throws IOException {
-    Cell [] cellValues = incommon.get(ROW, COLUMN, 3/*Ask for too much*/);
-    assertEquals(1, cellValues.length);
-    long time = Bytes.toLong(cellValues[0].getValue());
+    Get get = null;
+    byte [][] famAndQf = null;
+    get = new Get(ROW);
+    famAndQf = KeyValue.parseColumn(COLUMN);
+    get.addColumn(famAndQf[0], famAndQf[1]);
+    get.setMaxVersions(3);
+    Result result = incommon.get(get);
+    assertEquals(1, result.size());
+    long time = Bytes.toLong(result.sorted()[0].getValue());
     assertEquals(time, currentTime);
-    assertNull(incommon.get(ROW, COLUMN, T1, 3 /*Too many*/));
-    assertTrue(assertScanContentTimestamp(incommon, T1) == 0);
   }
   
   /*
@@ -112,22 +131,49 @@ public class TimestampTestBase extends HBaseTestCase {
   public static void assertVersions(final Incommon incommon, final long [] tss)
   throws IOException {
     // Assert that 'latest' is what we expect.
-    byte [] bytes = incommon.get(ROW, COLUMN).getValue();
-    assertEquals(Bytes.toLong(bytes), tss[0]);
+    Get get = null;
+    byte [][] famAndQf = null;
+    get = new Get(ROW);
+    famAndQf = KeyValue.parseColumn(COLUMN);
+    get.addColumn(famAndQf[0], famAndQf[1]);
+    Result r = incommon.get(get);
+    byte [] bytes = r.getValue(famAndQf[0], famAndQf[1]);
+    long t = Bytes.toLong(bytes);
+    assertEquals(tss[0], t);
+
     // Now assert that if we ask for multiple versions, that they come out in
     // order.
-    Cell[] cellValues = incommon.get(ROW, COLUMN, tss.length);
-    assertEquals(tss.length, cellValues.length);
-    for (int i = 0; i < cellValues.length; i++) {
-      long ts = Bytes.toLong(cellValues[i].getValue());
+    get = new Get(ROW);
+    famAndQf = KeyValue.parseColumn(COLUMN);
+    get.addColumn(famAndQf[0], famAndQf[1]);
+    get.setMaxVersions(tss.length);
+    Result result = incommon.get(get);
+    List<Cell> cells = new ArrayList<Cell>();
+    for(KeyValue kv : result.sorted()) {
+      cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
+    }
+    assertEquals(tss.length, cells.size());
+    for (int i = 0; i < cells.size(); i++) {
+      long ts = Bytes.toLong(cells.get(i).getValue());
       assertEquals(ts, tss[i]);
     }
+    
     // Specify a timestamp get multiple versions.
-    cellValues = incommon.get(ROW, COLUMN, tss[0], cellValues.length - 1);
-    for (int i = 1; i < cellValues.length; i++) {
-      long ts = Bytes.toLong(cellValues[i].getValue());
+    get = new Get(ROW);
+    famAndQf = KeyValue.parseColumn(COLUMN);
+    get.addColumn(famAndQf[0], famAndQf[1]);
+    get.setTimeStamp(tss[0]);
+    get.setMaxVersions(cells.size() - 1);
+    result = incommon.get(get);
+    cells = new ArrayList<Cell>();
+    for(KeyValue kv : result.sorted()) {
+      cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
+    }
+    for (int i = 1; i < cells.size(); i++) {
+      long ts = Bytes.toLong(cells.get(i).getValue());
       assertEquals(ts, tss[i]);
     }
+    
     // Test scanner returns expected version
     assertScanContentTimestamp(incommon, tss[0]);
   }
@@ -211,20 +257,44 @@ public class TimestampTestBase extends HBaseTestCase {
   public static void put(final Incommon loader, final byte [] bytes,
     final long ts)
   throws IOException {
-    BatchUpdate batchUpdate = ts == HConstants.LATEST_TIMESTAMP ? 
-      new BatchUpdate(ROW) : new BatchUpdate(ROW, ts);
-    batchUpdate.put(COLUMN, bytes);
-    loader.commit(batchUpdate);
+    Put put = new Put(ROW);
+    if(ts != HConstants.LATEST_TIMESTAMP) {
+      put.setTimeStamp(ts);
+    }
+    byte [][] famAndQf = KeyValue.parseColumn(COLUMN);
+    put.add(famAndQf[0], famAndQf[1], bytes);
+    loader.put(put);
   }
   
   public static void delete(final Incommon loader) throws IOException {
-    delete(loader, HConstants.LATEST_TIMESTAMP);
+    delete(loader, null);
   }
 
-  public static void delete(final Incommon loader, final long ts) throws IOException {
-    BatchUpdate batchUpdate = ts == HConstants.LATEST_TIMESTAMP ? 
-      new BatchUpdate(ROW) : new BatchUpdate(ROW, ts);
-    batchUpdate.delete(COLUMN);
-    loader.commit(batchUpdate);  
+  public static void delete(final Incommon loader, final byte [] column)
+  throws IOException {
+    delete(loader, column, HConstants.LATEST_TIMESTAMP);
+  }
+
+  public static void delete(final Incommon loader, final long ts)
+  throws IOException {
+    delete(loader, null, ts);
+  }
+
+  public static void delete(final Incommon loader, final byte [] column,
+      final long ts)
+  throws IOException {
+    Delete delete = ts == HConstants.LATEST_TIMESTAMP?
+      new Delete(ROW): new Delete(ROW, ts, null);
+    byte [][] famAndQf = KeyValue.parseColumn(column == null? COLUMN: column);
+    if (famAndQf[1].length == 0) {
+      delete.deleteFamily(famAndQf[0], ts);
+    } else {
+      delete.deleteColumn(famAndQf[0], famAndQf[1], ts);
+    }
+    loader.delete(delete, null, true);
+  }
+
+  public static Result get(final Incommon loader) throws IOException {
+    return loader.get(new Get(ROW));
   }
 }

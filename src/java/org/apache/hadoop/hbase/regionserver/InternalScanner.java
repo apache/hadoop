@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -41,11 +41,9 @@ import org.apache.hadoop.hbase.KeyValue;
  */
 public interface InternalScanner extends Closeable {
   /**
-   * Grab the next row's worth of values. The scanner will return the most
-   * recent data value for each row that is not newer than the target time
-   * passed when the scanner was created.
+   * Grab the next row's worth of values.
    * @param results
-   * @return true if data was returned
+   * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException
    */
   public boolean next(List<KeyValue> results)
@@ -55,11 +53,5 @@ public interface InternalScanner extends Closeable {
    * Closes the scanner and releases any resources it has allocated
    * @throws IOException
    */
-  public void close() throws IOException;  
-  
-  /** @return true if the scanner is matching a column family or regex */
-  public boolean isWildcardScanner();
-  
-  /** @return true if the scanner is matching multiple column family members */
-  public boolean isMultipleMatchScanner();
+  public void close() throws IOException;
 }

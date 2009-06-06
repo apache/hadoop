@@ -45,12 +45,11 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
   private static final TField MAX_VERSIONS_FIELD_DESC = new TField("maxVersions", TType.I32, (short)2);
   private static final TField COMPRESSION_FIELD_DESC = new TField("compression", TType.STRING, (short)3);
   private static final TField IN_MEMORY_FIELD_DESC = new TField("inMemory", TType.BOOL, (short)4);
-  private static final TField MAX_VALUE_LENGTH_FIELD_DESC = new TField("maxValueLength", TType.I32, (short)5);
-  private static final TField BLOOM_FILTER_TYPE_FIELD_DESC = new TField("bloomFilterType", TType.STRING, (short)6);
-  private static final TField BLOOM_FILTER_VECTOR_SIZE_FIELD_DESC = new TField("bloomFilterVectorSize", TType.I32, (short)7);
-  private static final TField BLOOM_FILTER_NB_HASHES_FIELD_DESC = new TField("bloomFilterNbHashes", TType.I32, (short)8);
-  private static final TField BLOCK_CACHE_ENABLED_FIELD_DESC = new TField("blockCacheEnabled", TType.BOOL, (short)9);
-  private static final TField TIME_TO_LIVE_FIELD_DESC = new TField("timeToLive", TType.I32, (short)10);
+  private static final TField BLOOM_FILTER_TYPE_FIELD_DESC = new TField("bloomFilterType", TType.STRING, (short)5);
+  private static final TField BLOOM_FILTER_VECTOR_SIZE_FIELD_DESC = new TField("bloomFilterVectorSize", TType.I32, (short)6);
+  private static final TField BLOOM_FILTER_NB_HASHES_FIELD_DESC = new TField("bloomFilterNbHashes", TType.I32, (short)7);
+  private static final TField BLOCK_CACHE_ENABLED_FIELD_DESC = new TField("blockCacheEnabled", TType.BOOL, (short)8);
+  private static final TField TIME_TO_LIVE_FIELD_DESC = new TField("timeToLive", TType.I32, (short)9);
 
   public byte[] name;
   public static final int NAME = 1;
@@ -60,24 +59,21 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
   public static final int COMPRESSION = 3;
   public boolean inMemory;
   public static final int INMEMORY = 4;
-  public int maxValueLength;
-  public static final int MAXVALUELENGTH = 5;
   public String bloomFilterType;
-  public static final int BLOOMFILTERTYPE = 6;
+  public static final int BLOOMFILTERTYPE = 5;
   public int bloomFilterVectorSize;
-  public static final int BLOOMFILTERVECTORSIZE = 7;
+  public static final int BLOOMFILTERVECTORSIZE = 6;
   public int bloomFilterNbHashes;
-  public static final int BLOOMFILTERNBHASHES = 8;
+  public static final int BLOOMFILTERNBHASHES = 7;
   public boolean blockCacheEnabled;
-  public static final int BLOCKCACHEENABLED = 9;
+  public static final int BLOCKCACHEENABLED = 8;
   public int timeToLive;
-  public static final int TIMETOLIVE = 10;
+  public static final int TIMETOLIVE = 9;
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
     public boolean maxVersions = false;
     public boolean inMemory = false;
-    public boolean maxValueLength = false;
     public boolean bloomFilterVectorSize = false;
     public boolean bloomFilterNbHashes = false;
     public boolean blockCacheEnabled = false;
@@ -93,8 +89,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
         new FieldValueMetaData(TType.STRING)));
     put(INMEMORY, new FieldMetaData("inMemory", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.BOOL)));
-    put(MAXVALUELENGTH, new FieldMetaData("maxValueLength", TFieldRequirementType.DEFAULT, 
-        new FieldValueMetaData(TType.I32)));
     put(BLOOMFILTERTYPE, new FieldMetaData("bloomFilterType", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
     put(BLOOMFILTERVECTORSIZE, new FieldMetaData("bloomFilterVectorSize", TFieldRequirementType.DEFAULT, 
@@ -117,8 +111,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     this.compression = "NONE";
 
     this.inMemory = false;
-
-    this.maxValueLength = 2147483647;
 
     this.bloomFilterType = "NONE";
 
@@ -151,8 +143,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     this.compression = compression;
     this.inMemory = inMemory;
     this.__isset.inMemory = true;
-    this.maxValueLength = maxValueLength;
-    this.__isset.maxValueLength = true;
     this.bloomFilterType = bloomFilterType;
     this.bloomFilterVectorSize = bloomFilterVectorSize;
     this.__isset.bloomFilterVectorSize = true;
@@ -178,8 +168,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     }
     __isset.inMemory = other.__isset.inMemory;
     this.inMemory = other.inMemory;
-    __isset.maxValueLength = other.__isset.maxValueLength;
-    this.maxValueLength = other.maxValueLength;
     if (other.isSetBloomFilterType()) {
       this.bloomFilterType = other.bloomFilterType;
     }
@@ -286,28 +274,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
 
   public void setInMemoryIsSet(boolean value) {
     this.__isset.inMemory = value;
-  }
-
-  public int getMaxValueLength() {
-    return this.maxValueLength;
-  }
-
-  public void setMaxValueLength(int maxValueLength) {
-    this.maxValueLength = maxValueLength;
-    this.__isset.maxValueLength = true;
-  }
-
-  public void unsetMaxValueLength() {
-    this.__isset.maxValueLength = false;
-  }
-
-  // Returns true if field maxValueLength is set (has been asigned a value) and false otherwise
-  public boolean isSetMaxValueLength() {
-    return this.__isset.maxValueLength;
-  }
-
-  public void setMaxValueLengthIsSet(boolean value) {
-    this.__isset.maxValueLength = value;
   }
 
   public String getBloomFilterType() {
@@ -455,14 +421,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
       }
       break;
 
-    case MAXVALUELENGTH:
-      if (value == null) {
-        unsetMaxValueLength();
-      } else {
-        setMaxValueLength((Integer)value);
-      }
-      break;
-
     case BLOOMFILTERTYPE:
       if (value == null) {
         unsetBloomFilterType();
@@ -522,9 +480,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     case INMEMORY:
       return new Boolean(isInMemory());
 
-    case MAXVALUELENGTH:
-      return new Integer(getMaxValueLength());
-
     case BLOOMFILTERTYPE:
       return getBloomFilterType();
 
@@ -556,8 +511,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
       return isSetCompression();
     case INMEMORY:
       return isSetInMemory();
-    case MAXVALUELENGTH:
-      return isSetMaxValueLength();
     case BLOOMFILTERTYPE:
       return isSetBloomFilterType();
     case BLOOMFILTERVECTORSIZE:
@@ -619,15 +572,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
       if (!(this_present_inMemory && that_present_inMemory))
         return false;
       if (this.inMemory != that.inMemory)
-        return false;
-    }
-
-    boolean this_present_maxValueLength = true;
-    boolean that_present_maxValueLength = true;
-    if (this_present_maxValueLength || that_present_maxValueLength) {
-      if (!(this_present_maxValueLength && that_present_maxValueLength))
-        return false;
-      if (this.maxValueLength != that.maxValueLength)
         return false;
     }
 
@@ -725,14 +669,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case MAXVALUELENGTH:
-          if (field.type == TType.I32) {
-            this.maxValueLength = iprot.readI32();
-            this.__isset.maxValueLength = true;
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
         case BLOOMFILTERTYPE:
           if (field.type == TType.STRING) {
             this.bloomFilterType = iprot.readString();
@@ -805,9 +741,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     oprot.writeFieldBegin(IN_MEMORY_FIELD_DESC);
     oprot.writeBool(this.inMemory);
     oprot.writeFieldEnd();
-    oprot.writeFieldBegin(MAX_VALUE_LENGTH_FIELD_DESC);
-    oprot.writeI32(this.maxValueLength);
-    oprot.writeFieldEnd();
     if (this.bloomFilterType != null) {
       oprot.writeFieldBegin(BLOOM_FILTER_TYPE_FIELD_DESC);
       oprot.writeString(this.bloomFilterType);
@@ -856,10 +789,6 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     if (!first) sb.append(", ");
     sb.append("inMemory:");
     sb.append(this.inMemory);
-    first = false;
-    if (!first) sb.append(", ");
-    sb.append("maxValueLength:");
-    sb.append(this.maxValueLength);
     first = false;
     if (!first) sb.append(", ");
     sb.append("bloomFilterType:");

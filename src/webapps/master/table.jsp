@@ -50,18 +50,18 @@
     if (key != null && key.length() > 0) {
       Writable[] arr = new Writable[1];
       arr[0] = new ImmutableBytesWritable(Bytes.toBytes(key));
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.MODIFY_TABLE_SPLIT, arr);
+      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_SPLIT, arr);
     } else {
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.MODIFY_TABLE_SPLIT, null);
+      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_SPLIT, null);
     }
     %> Split request accepted. <%
   } else if (action.equals("compact")) {
     if (key != null && key.length() > 0) {
       Writable[] arr = new Writable[1];
       arr[0] = new ImmutableBytesWritable(Bytes.toBytes(key));
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.MODIFY_TABLE_COMPACT, arr);
+      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_COMPACT, arr);
     } else {
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.MODIFY_TABLE_COMPACT, null);
+      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_COMPACT, null);
     }
     %> Compact request accepted. <%
   }

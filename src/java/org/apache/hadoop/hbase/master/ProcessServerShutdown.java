@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -113,7 +115,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     List<byte []> emptyRows = new ArrayList<byte []>();
     try {
       while (true) {
-        RowResult values = null;
+        Result values = null;
         try {
           values = server.next(scannerId);
         } catch (IOException e) {
@@ -129,8 +131,10 @@ class ProcessServerShutdown extends RegionServerOperation {
         // shutdown server but that would mean that we'd reassign regions that
         // were already out being assigned, ones that were product of a split
         // that happened while the shutdown was being processed.
-        String serverAddress = Writables.cellToString(values.get(COL_SERVER));
-        long startCode = Writables.cellToLong(values.get(COL_STARTCODE)); 
+        String serverAddress = 
+          Bytes.toString(values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
+        long startCode =
+          Bytes.toLong(values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
         String serverName = null;
         if (serverAddress != null && serverAddress.length() > 0) {
           serverName = HServerInfo.getServerName(serverAddress, startCode);
@@ -145,6 +149,7 @@ class ProcessServerShutdown extends RegionServerOperation {
             Bytes.toString(row));
         }
 
+//        HRegionInfo info = master.getHRegionInfo(row, values.rowResult());
         HRegionInfo info = master.getHRegionInfo(row, values);
         if (info == null) {
           emptyRows.add(row);
@@ -221,9 +226,10 @@ class ProcessServerShutdown extends RegionServerOperation {
         LOG.debug("process server shutdown scanning root region on " +
             master.getRootRegionLocation().getBindAddress());
       }
+      Scan scan = new Scan();
+      scan.addFamily(CATALOG_FAMILY);
       long scannerId = server.openScanner(
-          HRegionInfo.ROOT_REGIONINFO.getRegionName(), COLUMN_FAMILY_ARRAY,
-          EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
+          HRegionInfo.ROOT_REGIONINFO.getRegionName(), scan);
       scanMetaRegion(server, scannerId,
           HRegionInfo.ROOT_REGIONINFO.getRegionName());
       return true;
@@ -240,9 +246,10 @@ class ProcessServerShutdown extends RegionServerOperation {
         LOG.debug("process server shutdown scanning " +
           Bytes.toString(m.getRegionName()) + " on " + m.getServer());
       }
-      long scannerId =
-        server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
-        EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
+      Scan scan = new Scan();
+      scan.addFamily(CATALOG_FAMILY);
+      long scannerId = server.openScanner(
+          HRegionInfo.ROOT_REGIONINFO.getRegionName(), scan);
       scanMetaRegion(server, scannerId, m.getRegionName());
       return true;
     }

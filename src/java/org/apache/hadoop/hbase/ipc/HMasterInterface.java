@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Writable;
 
@@ -109,7 +110,7 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @param args
    * @throws IOException
    */
-  public void modifyTable(byte[] tableName, int op, Writable[] args)
+  public void modifyTable(byte[] tableName, HConstants.Modify op, Writable[] args)
     throws IOException;
 
   /**

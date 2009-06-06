@@ -100,7 +100,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 public class HLog implements HConstants, Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
   private static final String HLOG_DATFILE = "hlog.dat.";
-  static final byte [] METACOLUMN = Bytes.toBytes("METACOLUMN:");
+  static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
   private final FileSystem fs;
   private final Path dir;
@@ -701,8 +701,8 @@ public class HLog implements HConstants, Syncable {
   }
 
   private KeyValue completeCacheFlushLogEdit() {
-    return new KeyValue(METAROW, METACOLUMN, System.currentTimeMillis(),
-      COMPLETE_CACHE_FLUSH);
+    return new KeyValue(METAROW, METAFAMILY, null,
+      System.currentTimeMillis(), COMPLETE_CACHE_FLUSH);
   }
 
   /**
@@ -716,11 +716,11 @@ public class HLog implements HConstants, Syncable {
   }
 
   /**
-   * @param column
+   * @param family
    * @return true if the column is a meta column
    */
-  public static boolean isMetaColumn(byte [] column) {
-    return Bytes.equals(METACOLUMN, column);
+  public static boolean isMetaFamily(byte [] family) {
+    return Bytes.equals(METAFAMILY, family);
   }
   
   /**
@@ -870,6 +870,7 @@ public class HLog implements HConstants, Syncable {
           Executors.newFixedThreadPool(DEFAULT_NUMBER_LOG_WRITER_THREAD);
         for (final byte[] key : logEntries.keySet()) {
           Thread thread = new Thread(Bytes.toString(key)) {
+            @Override
             public void run() {
               LinkedList<HLogEntry> entries = logEntries.get(key);
               LOG.debug("Thread got " + entries.size() + " to process");

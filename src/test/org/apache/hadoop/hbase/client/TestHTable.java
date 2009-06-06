@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,17 +20,13 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -38,7 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
   private static final HColumnDescriptor column =
-    new HColumnDescriptor(COLUMN_FAMILY);
+    new HColumnDescriptor(CATALOG_FAMILY);
 
   private static final byte [] nosuchTable = Bytes.toBytes("nosuchTable");
   private static final byte [] tableAname = Bytes.toBytes("tableA");
@@ -50,7 +46,10 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
   private static final byte [] attrValue = Bytes.toBytes("somevalue");
 
 
-  public void testGetRow() {
+  
+  
+  
+  public void testGet() throws IOException {
     HTable table = null;
     try {
       HColumnDescriptor column2 =
@@ -63,41 +62,75 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       admin.createTable(testTableADesc);
       
       table = new HTable(conf, tableAname);
-      BatchUpdate batchUpdate = new BatchUpdate(row);
+      System.out.println("Adding row to table");
+      Put put = new Put(row);
       
-      for(int i = 0; i < 5; i++)
-        batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
+      for(int i = 0; i < 5; i++) {
+        put.add(CATALOG_FAMILY, Bytes.toBytes(Integer.toString(i)), 
+            Bytes.toBytes(i));
+      }
       
-      table.commit(batchUpdate);
+      table.put(put);
+      
+//      Get get = new Get(row);
+//      get.addColumn(CATALOG_FAMILY,Bytes.toBytes(2));
+//      
+//      System.out.println("Getting data from table");
+//      Result res = table.get(get);
+//      System.out.println("Got data from table");
+//      System.out.println(res);
+      
+      
 
-      assertTrue(table.exists(row));
-      for(int i = 0; i < 5; i++)
-        assertTrue(table.exists(row, Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+//      assertTrue(table.exists(row));
+//      for(int i = 0; i < 5; i++)
+//        assertTrue(table.exists(row, Bytes.toBytes(CATALOG_FAMILY_STR + i)));
 
-      RowResult result = null;
-      result = table.getRow(row,  new byte[][] {COLUMN_FAMILY});
-      for(int i = 0; i < 5; i++)
-        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+      Get get = null;
+      Result result = null;
       
-      result = table.getRow(row);
+      get = new Get(row);
+      get.addFamily(CATALOG_FAMILY);
+//      get.addColumn(CATALOG_FAMILY, Bytes.toBytes(Integer.toString(1)));
+      System.out.println("Getting row");
+      long start = System.nanoTime();
+      result = table.get(get);
+      long stop = System.nanoTime();
+      System.out.println("timer " +(stop-start));
+      System.out.println("result " +result);
       for(int i = 0; i < 5; i++)
-        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
+        assertTrue(result.containsColumn(CATALOG_FAMILY, 
+            Bytes.toBytes(Integer.toString(i))));
 
-      batchUpdate = new BatchUpdate(row);
-      batchUpdate.put("info2:a", Bytes.toBytes("a"));
-      table.commit(batchUpdate);
-      
-      result = table.getRow(row, new byte[][] { COLUMN_FAMILY,
-          Bytes.toBytes("info2:a") });
-      for(int i = 0; i < 5; i++)
-        assertTrue(result.containsKey(Bytes.toBytes(COLUMN_FAMILY_STR+i)));
-      assertTrue(result.containsKey(Bytes.toBytes("info2:a")));
+//      get = new Get(row);
+//      result = table.get(get);
+//      for(int i = 0; i < 5; i++)
+//        assertTrue(result.containsColumn(CATALOG_FAMILY, 
+//            Bytes.toBytes(Integer.toString(i))));
+//
+//      byte [] family = Bytes.toBytes("info2");
+//      byte [] qf = Bytes.toBytes("a");
+//      
+//      put = new Put(row);
+//      put.add(family, qf, qf);
+//      table.put(put);
+//      
+//      get = new Get(row);
+//      get.addFamily(CATALOG_FAMILY);
+//      get.addColumn(family, qf);
+//      result = table.get(get);
+//      for(int i = 0; i < 5; i++)
+//        assertTrue(result.containsColumn(CATALOG_FAMILY, 
+//            Bytes.toBytes(Integer.toString(i))));
+//      assertTrue(result.containsColumn(family, qf));
     } catch (IOException e) {
       e.printStackTrace();
       fail("Should not have any exception " +
         e.getClass());
-    }
+    }    
   }
+
+  
 
   /**
    * the test
@@ -138,9 +171,9 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       a.getConnection().getHTableDescriptor(tableAdesc.getName());
     assertTrue(meta.equals(tableAdesc));
     
-    BatchUpdate batchUpdate = new BatchUpdate(row);
-    batchUpdate.put(COLUMN_FAMILY, value);
-    a.commit(batchUpdate);
+    Put put = new Put(row);
+    put.add(CATALOG_FAMILY, null, value);
+    a.put(put);
     
     // open a new connection to A and a connection to b
     
@@ -149,16 +182,18 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
 
     // copy data from A to B
     
-    Scanner s =
-      newA.getScanner(COLUMN_FAMILY_ARRAY, EMPTY_START_ROW);
+    Scan scan = new Scan();
+    scan.addFamily(HConstants.CATALOG_FAMILY);
+
+    ResultScanner s = newA.getScanner(scan);
     
     try {
-      for (RowResult r : s) {
-        batchUpdate = new BatchUpdate(r.getRow());
-        for(Map.Entry<byte [], Cell> e: r.entrySet()) {
-          batchUpdate.put(e.getKey(), e.getValue().getValue());
+      for (Result r : s) {
+        put = new Put(r.getRow());
+        for(KeyValue kv : r.sorted()) {
+          put.add(kv);
         }
-        b.commit(batchUpdate);
+        b.put(put);
       }
     } finally {
       s.close();
@@ -168,7 +203,9 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
 
     try {
       HTable anotherA = new HTable(conf, tableAname);
-      anotherA.get(row, COLUMN_FAMILY);
+      Get get = new Get(row);
+      get.addFamily(CATALOG_FAMILY);
+      anotherA.get(get);
     } catch (Exception e) {
       e.printStackTrace();
       fail();
@@ -191,7 +228,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       for (HColumnDescriptor c: desc.getFamilies())
         c.setValue(attrName, attrValue);
       // update metadata for all regions of this table
-      admin.modifyTable(tableAname, HConstants.MODIFY_TABLE_SET_HTD, desc);
+      admin.modifyTable(tableAname, HConstants.Modify.TABLE_SET_HTD, desc);
       // enable the table
       admin.enableTable(tableAname);
 
@@ -218,144 +255,6 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       e.printStackTrace();
       fail();
     }
-  }
-
-  public void testCheckAndSave() throws IOException {
-    HTable table = null;
-    HColumnDescriptor column2 =
-      new HColumnDescriptor(Bytes.toBytes("info2:"));
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    HTableDescriptor testTableADesc =
-      new HTableDescriptor(tableAname);
-    testTableADesc.addFamily(column);
-    testTableADesc.addFamily(column2);
-    admin.createTable(testTableADesc);
-    
-    table = new HTable(conf, tableAname);
-    BatchUpdate batchUpdate = new BatchUpdate(row);
-    BatchUpdate batchUpdate2 = new BatchUpdate(row);
-    BatchUpdate batchUpdate3 = new BatchUpdate(row);
-
-    // this row doesn't exist when checkAndSave is invoked
-    byte [] row1 = Bytes.toBytes("row1");
-    BatchUpdate batchUpdate4 = new BatchUpdate(row1);
-    
-    // to be used for a checkAndSave for expected empty columns
-    BatchUpdate batchUpdate5 = new BatchUpdate(row);
-
-    HbaseMapWritable<byte[],byte[]> expectedValues =
-      new HbaseMapWritable<byte[],byte[]>();
-    HbaseMapWritable<byte[],byte[]> badExpectedValues =
-      new HbaseMapWritable<byte[],byte[]>();
-    HbaseMapWritable<byte[],byte[]> expectedNoValues =
-      new HbaseMapWritable<byte[],byte[]>();
-    // the columns used here must not be updated on batchupate
-    HbaseMapWritable<byte[],byte[]> expectedNoValues1 =
-      new HbaseMapWritable<byte[],byte[]>();
-
-    for(int i = 0; i < 5; i++) {
-      // This batchupdate is our initial batch update,
-      // As such we also set our expected values to the same values
-      // since we will be comparing the two
-      batchUpdate.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
-      expectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i), Bytes.toBytes(i));
-      
-      badExpectedValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i),
-        Bytes.toBytes(500));
-
-      expectedNoValues.put(Bytes.toBytes(COLUMN_FAMILY_STR+i), new byte[] {});
-      // the columns used here must not be updated on batchupate
-      expectedNoValues1.put(Bytes.toBytes(COLUMN_FAMILY_STR+i+","+i), new byte[] {});
-
-
-      // This is our second batchupdate that we will use to update the initial
-      // batchupdate
-      batchUpdate2.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+1));
-      
-      // This final batch update is to check that our expected values (which
-      // are now wrong)
-      batchUpdate3.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+2));
-
-      // Batch update that will not happen because it is to happen with some 
-      // expected values, but the row doesn't exist
-      batchUpdate4.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i));
-
-      // Batch update will happen: the row exists, but the expected columns don't,
-      // just as the condition
-      batchUpdate5.put(COLUMN_FAMILY_STR+i, Bytes.toBytes(i+3));
-    }
-    
-    // Initialize rows
-    table.commit(batchUpdate);
-    
-    // check if incorrect values are returned false
-    assertFalse(table.checkAndSave(batchUpdate2,badExpectedValues,null));
-    
-    // make sure first expected values are correct
-    assertTrue(table.checkAndSave(batchUpdate2, expectedValues,null));
-        
-    // make sure check and save truly saves the data after checking the expected
-    // values
-    RowResult r = table.getRow(row);
-    byte[][] columns = batchUpdate2.getColumns();
-    for(int i = 0;i < columns.length;i++) {
-      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate2.get(columns[i])));
-    }
-    
-    // make sure that the old expected values fail
-    assertFalse(table.checkAndSave(batchUpdate3, expectedValues,null));
-
-    // row doesn't exist, so doesn't matter the expected 
-    // values (unless they are empty) 
-    assertFalse(table.checkAndSave(batchUpdate4, badExpectedValues, null));
-
-    assertTrue(table.checkAndSave(batchUpdate4, expectedNoValues, null));
-    // make sure check and save saves the data when expected values were empty and the row
-    // didn't exist
-    r = table.getRow(row1);
-    columns = batchUpdate4.getColumns();
-    for(int i = 0; i < columns.length;i++) {
-      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate4.get(columns[i])));
-    }  
-
-    // since the row isn't empty anymore, those expected (empty) values 
-    // are not valid anymore, so check and save method doesn't save. 
-    assertFalse(table.checkAndSave(batchUpdate4, expectedNoValues, null));
-    
-    // the row exists, but the columns don't. since the expected values are 
-    // for columns without value, checkAndSave must be successful. 
-    assertTrue(table.checkAndSave(batchUpdate5, expectedNoValues1, null));
-    // make sure checkAndSave saved values for batchUpdate5.
-    r = table.getRow(row);
-    columns = batchUpdate5.getColumns();
-    for(int i = 0; i < columns.length;i++) {
-      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate5.get(columns[i])));
-    }  
-
-    // since the condition wasn't changed, the following checkAndSave 
-    // must also be successful.
-    assertTrue(table.checkAndSave(batchUpdate, expectedNoValues1, null));
-    // make sure checkAndSave saved values for batchUpdate1
-    r = table.getRow(row);
-    columns = batchUpdate.getColumns();
-    for(int i = 0; i < columns.length;i++) {
-      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate.get(columns[i])));
-    }
-
-    // one failing condition must make the following checkAndSave fail
-    // the failing condition is a column to be empty, however, it has a value.
-    HbaseMapWritable<byte[],byte[]> expectedValues1 =
-      new HbaseMapWritable<byte[],byte[]>();
-    expectedValues1.put(Bytes.toBytes(COLUMN_FAMILY_STR+0), new byte[] {});
-    expectedValues1.put(Bytes.toBytes(COLUMN_FAMILY_STR+"EMPTY+ROW"), new byte[] {});
-    assertFalse(table.checkAndSave(batchUpdate5, expectedValues1, null));
-
-    // assure the values on the row remain the same
-    r = table.getRow(row);
-    columns = batchUpdate.getColumns();
-    for(int i = 0; i < columns.length;i++) {
-      assertTrue(Bytes.equals(r.get(columns[i]).getValue(),batchUpdate.get(columns[i])));
-    }    
   }
 
   /**
@@ -389,43 +288,42 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     byte[] beforeSecondRow = Bytes.toBytes("rov");
     
     HTable table = new HTable(conf, tableAname);
-    BatchUpdate batchUpdate = new BatchUpdate(firstRow);
-    BatchUpdate batchUpdate2 = new BatchUpdate(row);
+    Put put = new Put(firstRow);
+    Put put2 = new Put(row);
     byte[] zero = new byte[]{0};
     byte[] one = new byte[]{1};
-    byte[] columnFamilyBytes = Bytes.toBytes(COLUMN_FAMILY_STR);
     
-    batchUpdate.put(COLUMN_FAMILY_STR,zero);
-    batchUpdate2.put(COLUMN_FAMILY_STR,one);
+    put.add(CATALOG_FAMILY, null, zero);
+    put2.add(CATALOG_FAMILY, null, one);
     
-    table.commit(batchUpdate);
-    table.commit(batchUpdate2);
+    table.put(put);
+    table.put(put2);
     
-    RowResult result = null;
+    Result result = null;
     
     // Test before first that null is returned
-    result = table.getClosestRowBefore(beforeFirstRow, columnFamilyBytes);
+    result = table.getRowOrBefore(beforeFirstRow, CATALOG_FAMILY);
     assertTrue(result == null);
     
     // Test at first that first is returned
-    result = table.getClosestRowBefore(firstRow, columnFamilyBytes);
-    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
-    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), zero));
+    result = table.getRowOrBefore(firstRow, CATALOG_FAMILY);
+    assertTrue(result.containsColumn(CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(CATALOG_FAMILY, null), zero));
     
-    // Test inbetween first and second that first is returned
-    result = table.getClosestRowBefore(beforeSecondRow, columnFamilyBytes);
-    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
-    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), zero));
+    // Test in between first and second that first is returned
+    result = table.getRowOrBefore(beforeSecondRow, CATALOG_FAMILY);
+    assertTrue(result.containsColumn(CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(CATALOG_FAMILY, null), zero));
     
     // Test at second make sure second is returned
-    result = table.getClosestRowBefore(row, columnFamilyBytes);
-    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
-    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), one));
+    result = table.getRowOrBefore(row, CATALOG_FAMILY);
+    assertTrue(result.containsColumn(CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(CATALOG_FAMILY, null), one));
     
     // Test after second, make sure second is returned
-    result = table.getClosestRowBefore(Bytes.add(row,one), columnFamilyBytes);
-    assertTrue(result.containsKey(COLUMN_FAMILY_STR));
-    assertTrue(Bytes.equals(result.get(COLUMN_FAMILY_STR).getValue(), one));
+    result = table.getRowOrBefore(Bytes.add(row,one), CATALOG_FAMILY);
+    assertTrue(result.containsColumn(CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(CATALOG_FAMILY, null), one));
   }
 
   /**

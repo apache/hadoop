@@ -46,6 +46,7 @@ import agilejson.TOJSON;
  * stored with together as a result for get and getRow methods. This promotes
  * the timestamp of a cell to a first-class value, making it easy to take note
  * of temporal data. Cell is used all the way from HStore up to HTable.
+ * @deprecated As of hbase 0.20.0, replaced by new Get/Put/Delete/Result-based API.
  */
 public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
     ISerializable {
@@ -228,7 +229,8 @@ public class Cell implements Writable, Iterable<Map.Entry<Long, byte[]>>,
    * TODO: This is the glue between old way of doing things and the new.
    * Herein we are converting our clean KeyValues to Map of Cells.
    */
-  public static HbaseMapWritable<byte [], Cell> createCells(final List<KeyValue> results) {
+  public static HbaseMapWritable<byte [], Cell> createCells(
+      final List<KeyValue> results) {
     HbaseMapWritable<byte [], Cell> cells =
       new HbaseMapWritable<byte [], Cell>();
     // Walking backward through the list of results though it has no effect

@@ -24,7 +24,9 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.rest.descriptors.RowUpdateDescriptor;
@@ -82,7 +84,6 @@ public class RowController extends AbstractController {
       throws HBaseRestException {
     RowModel innerModel = getModel();
 
-    BatchUpdate b;
     RowUpdateDescriptor rud = parser
         .getRowUpdateDescriptor(input, pathSegments);
 
@@ -92,14 +93,15 @@ public class RowController extends AbstractController {
       return;
     }
 
-    b = new BatchUpdate(rud.getRowName());
+    Put put = new Put(Bytes.toBytes(rud.getRowName()));
 
     for (byte[] key : rud.getColVals().keySet()) {
-      b.put(key, rud.getColVals().get(key));
+      byte [][] famAndQf = KeyValue.parseColumn(key);
+      put.add(famAndQf[0], famAndQf[1], rud.getColVals().get(key));
     }
 
     try {
-      innerModel.post(rud.getTableName().getBytes(), b);
+      innerModel.post(rud.getTableName().getBytes(), put);
       s.setOK();
     } catch (HBaseRestException e) {
       s.setUnsupportedMediaType(e.getMessage());

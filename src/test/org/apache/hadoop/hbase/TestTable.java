@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -57,7 +58,7 @@ public class TestTable extends HBaseClusterTestCase {
     // Try doing a duplicate database create.
     msg = null;
     HTableDescriptor desc = new HTableDescriptor(getName());
-    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
     assertTrue("First table creation completed", admin.listTables().length == 1);
     boolean gotException = false;
@@ -74,7 +75,7 @@ public class TestTable extends HBaseClusterTestCase {
     // Now try and do concurrent creation with a bunch of threads.
     final HTableDescriptor threadDesc =
       new HTableDescriptor("threaded_" + getName());
-    threadDesc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
+    threadDesc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     int count = 10;
     Thread [] threads = new Thread [count];
     final AtomicInteger successes = new AtomicInteger(0);
@@ -140,10 +141,12 @@ public class TestTable extends HBaseClusterTestCase {
     HTable table = new HTable(conf, getName());
     try {
       byte[] value = Bytes.toBytes("somedata");
-      BatchUpdate update = new BatchUpdate();
-      update.put(colName, value);
-      table.commit(update);
-      fail("BatchUpdate on read only table succeeded");  
+      // This used to use an empty row... That must have been a bug
+      Put put = new Put(value);
+      byte [][] famAndQf = KeyValue.parseColumn(colName);
+      put.add(famAndQf[0], famAndQf[1], value);
+      table.put(put);
+      fail("Put on read only table succeeded");  
     } catch (Exception e) {
       // expected
     }

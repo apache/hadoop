@@ -163,10 +163,6 @@ public class SimpleXMLSerializer extends AbstractRestSerializer {
     printer.print("<max-versions>");
     printer.print(column.getMaxVersions());
     printer.print("</max-versions>");
-    // max-length
-    printer.print("<max-length>");
-    printer.print(column.getMaxValueLength());
-    printer.print("</max-length>");
     printer.print("</columnfamily>");
     printer.flush();
   }

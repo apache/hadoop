@@ -39,6 +39,7 @@ import org.apache.hadoop.io.WritableUtils;
  * HashSets, etc.
  */
 public class Bytes {
+  
   /**
    * Size of long in bytes
    */
@@ -81,6 +82,9 @@ public class Bytes {
    * Byte array comparator class.
    */
   public static class ByteArrayComparator implements RawComparator<byte []> {
+    /**
+     * Constructor
+     */
     public ByteArrayComparator() {
       super();
     }
@@ -143,13 +147,19 @@ public class Bytes {
    */
   public static void writeByteArray(final DataOutput out, final byte [] b)
   throws IOException {
-    writeByteArray(out, b, 0, b.length);
+    if(b == null) {
+      WritableUtils.writeVInt(out, 0);
+    } else {
+      writeByteArray(out, b, 0, b.length);
+    }
   }
 
   /**
    * Write byte-array to out with a vint length prefix.
    * @param out
    * @param b
+   * @param offset
+   * @param length
    * @throws IOException
    */
   public static void writeByteArray(final DataOutput out, final byte [] b,
@@ -182,6 +192,8 @@ public class Bytes {
    * @param tgtBytes the byte array
    * @param tgtOffset position in the array
    * @param srcBytes byte to write out
+   * @param srcOffset
+   * @param srcLength
    * @return incremented offset
    */
   public static int putBytes(byte[] tgtBytes, int tgtOffset, byte[] srcBytes,
@@ -219,7 +231,16 @@ public class Bytes {
    * @return String made from <code>b</code>
    */
   public static String toString(final byte [] b) {
+    if(b == null) {
+      return null;
+    }
     return toString(b, 0, b.length);
+  }
+
+  public static String toString(final byte [] b1,
+                                String sep,
+                                final byte [] b2) {
+    return toString(b1, 0, b1.length) + sep + toString(b2, 0, b2.length);
   }
 
   /**
@@ -229,6 +250,12 @@ public class Bytes {
    * @return String made from <code>b</code>
    */
   public static String toString(final byte [] b, int off, int len) {
+    if(b == null) {
+      return null;
+    }
+    if(len == 0) {
+      return "";
+    }
     String result = null;
     try {
       result = new String(b, off, len, HConstants.UTF8_ENCODING);
@@ -382,6 +409,10 @@ public class Bytes {
     return putInt(bytes, offset, i);
   }
 
+  /**
+   * @param f
+   * @return the float represented as byte []
+   */
   public static byte [] toBytes(final float f) {
     // Encode it as int
     int i = Float.floatToRawIntBits(f);
@@ -417,6 +448,10 @@ public class Bytes {
     return putLong(bytes, offset, l);
   }
 
+  /**
+   * @param d
+   * @return the double represented as byte []
+   */
   public static byte [] toBytes(final double d) {
     // Encode it as a long
     long l = Double.doubleToRawLongBits(d);
@@ -521,6 +556,7 @@ public class Bytes {
   /**
    * Converts a byte array to a short value
    * @param bytes
+   * @param offset
    * @return the short value
    */
   public static short toShort(byte[] bytes, int offset) {
@@ -530,6 +566,8 @@ public class Bytes {
   /**
    * Converts a byte array to a short value
    * @param bytes
+   * @param offset
+   * @param lengths
    * @return the short value
    */
   public static short toShort(byte[] bytes, int offset, final int length) {
@@ -899,12 +937,17 @@ public class Bytes {
     
     while (low <= high) {
       int mid = (low+high) >>> 1;
-      int cmp = comparator.compare(arr[mid], 0, arr[mid].length, key, offset,
-        length);
-      if (cmp < 0) 
+      // we have to compare in this order, because the comparator order
+      // has special logic when the 'left side' is a special key.
+      int cmp = comparator.compare(key, offset, length,
+          arr[mid], 0, arr[mid].length);
+      // key lives above the midpoint
+      if (cmp > 0)
         low = mid + 1;
-      else if (cmp > 0)
+      // key lives below the midpoint
+      else if (cmp < 0)
         high = mid - 1;
+      // BAM. how often does this really happen?
       else 
         return mid;
     }

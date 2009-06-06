@@ -1,0 +1,144 @@
+package org.apache.hadoop.hbase.regionserver;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeSet;
+
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.util.Bytes;
+
+
+public class TestExplicitColumnTracker extends HBaseTestCase
+implements HConstants {
+  private boolean PRINT = false; 
+  
+  public void testGet_SingleVersion(){
+    if(PRINT){
+      System.out.println("SingleVersion");
+    }
+    byte [] col1 = Bytes.toBytes("col1");
+    byte [] col2 = Bytes.toBytes("col2");
+    byte [] col3 = Bytes.toBytes("col3");
+    byte [] col4 = Bytes.toBytes("col4");
+    byte [] col5 = Bytes.toBytes("col5");
+    
+    //Create tracker
+    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    //Looking for every other
+    columns.add(col2);
+    columns.add(col4);
+    List<MatchCode> expected = new ArrayList<MatchCode>();
+    expected.add(MatchCode.SKIP);
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.SKIP);
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.DONE);
+    int maxVersions = 1;
+    
+    ColumnTracker exp = new ExplicitColumnTracker(columns, maxVersions);
+        
+    //Create "Scanner"
+    List<byte[]> scanner = new ArrayList<byte[]>();
+    scanner.add(col1);
+    scanner.add(col2);
+    scanner.add(col3);
+    scanner.add(col4);
+    scanner.add(col5);
+    
+    //Initialize result
+    List<MatchCode> result = new ArrayList<MatchCode>(); 
+    
+    //"Match"
+    for(byte [] col : scanner){
+      result.add(exp.checkColumn(col, 0, col.length));
+    }
+    
+    assertEquals(expected.size(), result.size());
+    for(int i=0; i< expected.size(); i++){
+      assertEquals(expected.get(i), result.get(i));
+      if(PRINT){
+        System.out.println("Expected " +expected.get(i) + ", actual " +
+            result.get(i));
+      }
+    }
+  }
+  
+  public void testGet_MultiVersion(){
+    if(PRINT){
+      System.out.println("\nMultiVersion");
+    }
+    byte [] col1 = Bytes.toBytes("col1");
+    byte [] col2 = Bytes.toBytes("col2");
+    byte [] col3 = Bytes.toBytes("col3");
+    byte [] col4 = Bytes.toBytes("col4");
+    byte [] col5 = Bytes.toBytes("col5");
+    
+    //Create tracker
+    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    //Looking for every other
+    columns.add(col2);
+    columns.add(col4);
+    
+    List<MatchCode> expected = new ArrayList<MatchCode>();
+    expected.add(MatchCode.SKIP);
+    expected.add(MatchCode.SKIP);
+    expected.add(MatchCode.SKIP);
+
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.SKIP);
+
+    expected.add(MatchCode.SKIP);
+    expected.add(MatchCode.SKIP);
+    expected.add(MatchCode.SKIP);
+
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.DONE);
+
+    expected.add(MatchCode.DONE);
+    expected.add(MatchCode.DONE);
+    expected.add(MatchCode.DONE);
+    int maxVersions = 2;
+    
+    ColumnTracker exp = new ExplicitColumnTracker(columns, maxVersions);
+        
+    //Create "Scanner"
+    List<byte[]> scanner = new ArrayList<byte[]>();
+    scanner.add(col1);
+    scanner.add(col1);
+    scanner.add(col1);
+    scanner.add(col2);
+    scanner.add(col2);
+    scanner.add(col2);
+    scanner.add(col3);
+    scanner.add(col3);
+    scanner.add(col3);
+    scanner.add(col4);
+    scanner.add(col4);
+    scanner.add(col4);
+    scanner.add(col5);
+    scanner.add(col5);
+    scanner.add(col5);
+    
+    //Initialize result
+    List<MatchCode> result = new ArrayList<MatchCode>(); 
+    
+    //"Match"
+    for(byte [] col : scanner){
+      result.add(exp.checkColumn(col, 0, col.length));
+    }
+    
+    assertEquals(expected.size(), result.size());
+    for(int i=0; i< expected.size(); i++){
+      assertEquals(expected.get(i), result.get(i));
+      if(PRINT){
+        System.out.println("Expected " +expected.get(i) + ", actual " +
+            result.get(i));
+      }
+    }
+  }
+  
+}

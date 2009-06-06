@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
@@ -40,7 +41,7 @@ import org.apache.hadoop.util.Progressable;
  * Convert Map/Reduce output and write it to an HBase table
  */
 public class TableOutputFormat extends
-FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
+FileOutputFormat<ImmutableBytesWritable, Put> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
@@ -51,7 +52,7 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
    * and write to an HBase table
    */
   protected static class TableRecordWriter
-    implements RecordWriter<ImmutableBytesWritable, BatchUpdate> {
+    implements RecordWriter<ImmutableBytesWritable, Put> {
     private HTable m_table;
 
     /**
@@ -69,8 +70,8 @@ FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
     }
 
     public void write(ImmutableBytesWritable key,
-        BatchUpdate value) throws IOException {
-      m_table.commit(new BatchUpdate(value));
+        Put value) throws IOException {
+      m_table.put(new Put(value));
     }
   }
   

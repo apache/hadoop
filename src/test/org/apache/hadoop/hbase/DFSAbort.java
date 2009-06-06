@@ -40,7 +40,7 @@ public class DFSAbort extends HBaseClusterTestCase {
     try {
       super.setUp();
       HTableDescriptor desc = new HTableDescriptor(getName());
-      desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY_STR));
+      desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
       HBaseAdmin admin = new HBaseAdmin(conf);
       admin.createTable(desc);
     } catch (Exception e) {

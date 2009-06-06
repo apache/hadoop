@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.io.Cell;
  * individual HRegions by making sure that the page size is never exceeded
  * locally.
  * </p>
+ *
+ * @deprecated Use filters that are rooted on @{link Filter} instead
  */
 public class PageRowFilter implements RowFilterInterface {
 

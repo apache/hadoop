@@ -30,11 +30,11 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -202,18 +202,21 @@ class CompactSplitThread extends Thread implements HConstants {
     // Inform the HRegionServer that the parent HRegion is no-longer online.
     this.server.removeFromOnlineRegions(oldRegionInfo);
     
-    BatchUpdate update = new BatchUpdate(oldRegionInfo.getRegionName());
-    update.put(COL_REGIONINFO, Writables.getBytes(oldRegionInfo));
-    update.put(COL_SPLITA, Writables.getBytes(newRegions[0].getRegionInfo()));
-    update.put(COL_SPLITB, Writables.getBytes(newRegions[1].getRegionInfo()));
-    t.commit(update);
+    Put put = new Put(oldRegionInfo.getRegionName());
+    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, 
+        Writables.getBytes(oldRegionInfo));
+    put.add(CATALOG_FAMILY, SPLITA_QUALIFIER,
+        Writables.getBytes(newRegions[0].getRegionInfo()));
+    put.add(CATALOG_FAMILY, SPLITB_QUALIFIER,
+        Writables.getBytes(newRegions[0].getRegionInfo()));
+    t.put(put);
     
     // Add new regions to META
     for (int i = 0; i < newRegions.length; i++) {
-      update = new BatchUpdate(newRegions[i].getRegionName());
-      update.put(COL_REGIONINFO, Writables.getBytes(
+      put = new Put(newRegions[i].getRegionName());
+      put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(
         newRegions[i].getRegionInfo()));
-      t.commit(update);
+      t.put(put);
     }
         
     // Now tell the master about the new regions
