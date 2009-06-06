@@ -114,7 +114,7 @@ public class TableMapReduceUtil {
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public void limitNumReduceTasks(String table, JobConf job) 
+  public static void limitNumReduceTasks(String table, JobConf job) 
   throws IOException { 
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();
@@ -130,7 +130,7 @@ public class TableMapReduceUtil {
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public void limitNumMapTasks(String table, JobConf job) 
+  public static void limitNumMapTasks(String table, JobConf job) 
   throws IOException { 
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();
@@ -146,7 +146,7 @@ public class TableMapReduceUtil {
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public void setNumReduceTasks(String table, JobConf job) 
+  public static void setNumReduceTasks(String table, JobConf job) 
   throws IOException { 
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();
@@ -161,7 +161,7 @@ public class TableMapReduceUtil {
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public void setNumMapTasks(String table, JobConf job) 
+  public static void setNumMapTasks(String table, JobConf job) 
   throws IOException { 
     HTable outputTable = new HTable(new HBaseConfiguration(job), table);
     int regions = outputTable.getRegionsInfo().size();

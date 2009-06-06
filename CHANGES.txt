@@ -163,6 +163,8 @@ Release 0.20.0 - Unreleased
    HBASE-1483  HLog split loses track of edits (Clint Morgan via Stack)
    HBASE-1484  commit log split writes files with newest edits first
                (since hbase-1430); should be other way round
+   HBASE-1493  New TableMapReduceUtil methods should be static (Billy Pearson
+               via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
