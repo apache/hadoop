@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Comparator;
 import java.math.BigInteger;
 
@@ -32,6 +33,8 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -263,6 +266,94 @@ public class Bytes {
       e.printStackTrace();
     }
     return result;
+  }
+
+  public static String toStringBinary(final byte []b) {
+    return toStringBinary(b, 0, b.length);
+  }
+
+  public static String toStringBinary(final byte []b, int off, int len) {
+    String result = null;
+    try {
+      String first = new String(b, off, len, "ISO-8859-1");
+      result = "";
+      for (int i = 0; i < first.length() ; ++i ) {
+        int ch = first.charAt(i) & 0xFF;
+        if ( (ch >= '0' && ch <= '9')
+            || (ch >= 'A' && ch <= 'Z')
+            || (ch >= 'a' && ch <= 'z')
+            || ch == ','
+            || ch == '_'
+            || ch == '-'
+            || ch == ':'
+            || ch == '.') {
+          result += first.charAt(i);
+        } else {
+          result += String.format("\\x%02X", ch);
+        }
+      }
+    } catch ( UnsupportedEncodingException e) {
+      e.printStackTrace();
+    }
+    return result;
+  }
+
+  private static boolean isHexDigit(char c) {
+    return
+        (c >= 'A' && c <= 'F') ||
+        (c >= '0' && c <= '9');
+  }
+
+  /**
+   * Takes a ASCII digit in the range A-F0-9 and returns
+   * the corresponding integer/ordinal value.
+   * @param ch
+   * @return
+   */
+  public static byte toBinaryFromHex(byte ch) {
+    if ( ch >= 'A' && ch <= 'F' )
+      return (byte) ((byte)10 + (byte) (ch - 'A'));
+    // else
+    return (byte) (ch - '0');
+  }
+
+  public static byte [] toBytesBinary(String in) {
+    // this may be bigger than we need, but lets be safe.
+    byte [] b = new byte[in.length()];
+    int size = 0;
+    for (int i = 0; i < in.length(); ++i) {
+      char ch = in.charAt(i);
+      if (ch == '\\') {
+        // begin hex escape:
+        char next = in.charAt(i+1);
+        if (next != 'x') {
+          // invalid escape sequence, ignore this one.
+          b[size++] = (byte)ch;
+          continue;
+        }
+        // ok, take next 2 hex digits.
+        char hd1 = in.charAt(i+2);
+        char hd2 = in.charAt(i+3);
+
+        // they need to be A-F0-9:
+        if ( ! isHexDigit(hd1) ||
+            ! isHexDigit(hd2) ) {
+          // bogus escape code, ignore:
+          continue;
+        }
+        // turn hex ASCII digit -> number
+        byte d = (byte) ((toBinaryFromHex((byte)hd1) << 4) + toBinaryFromHex((byte)hd2));
+
+        b[size++] = d;
+        i += 3; // skip 3
+      } else {
+        b[size++] = (byte) ch;
+      }
+    }
+    // resize:
+    byte [] b2 = new byte[size];
+    System.arraycopy(b, 0, b2, 0, size);
+    return b2;
   }
 
   /**

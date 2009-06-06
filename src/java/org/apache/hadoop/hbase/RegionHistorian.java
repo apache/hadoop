@@ -103,7 +103,7 @@ public class RegionHistorian implements HConstants {
    *          Region name as a string
    * @return List of RegionHistoryInformation or null if we're offline.
    */
-  public List<RegionHistoryInformation> getRegionHistory(String regionName) {
+  public List<RegionHistoryInformation> getRegionHistory(byte [] regionName) {
     if (!isOnline()) {
       return null;
     }
@@ -117,7 +117,7 @@ public class RegionHistorian implements HConstants {
        */
       for (HistorianQualifierKey keyEnu : HistorianQualifierKey.values()) {
         byte[] columnKey = keyEnu.key;
-        Get get = new Get(Bytes.toBytes(regionName));
+        Get get = new Get(regionName);
         get.addColumn(CATALOG_HISTORIAN_FAMILY, columnKey);
         get.setMaxVersions(ALL_VERSIONS);
         Result result = this.metaTable.get(get);

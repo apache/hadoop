@@ -540,7 +540,7 @@ public class HConnectionManager implements HConstants {
       for (int tries = 0; true; tries++) {
         if (tries >= numRetries) {
           throw new NoServerForRegionException("Unable to find region for " 
-            + Bytes.toString(row) + " after " + numRetries + " tries.");
+            + Bytes.toStringBinary(row) + " after " + numRetries + " tries.");
         }
 
         try {

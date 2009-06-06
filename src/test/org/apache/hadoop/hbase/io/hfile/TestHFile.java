@@ -114,7 +114,7 @@ public class TestHFile extends HBaseTestCase {
     Path ncTFile = new Path(ROOT_DIR, "basic.hfile");
     FSDataOutputStream fout = createFSOutput(ncTFile);
     Writer writer = new Writer(fout, minBlockSize,
-      Compression.getCompressionAlgorithmByName(codec), null, false);
+      Compression.getCompressionAlgorithmByName(codec), null);
     LOG.info(writer);
     writeRecords(writer);
     fout.close();
@@ -178,7 +178,7 @@ public class TestHFile extends HBaseTestCase {
     Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
     Writer writer = new Writer(fout, minBlockSize,
-      Compression.getCompressionAlgorithmByName(compress), null, false);
+      Compression.getCompressionAlgorithmByName(compress), null);
     someTestingWithMetaBlock(writer);
     writer.close();
     fout.close();
@@ -204,7 +204,7 @@ public class TestHFile extends HBaseTestCase {
     Path mFile = new Path(ROOT_DIR, "nometa.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
     Writer writer = new Writer(fout, minBlockSize,
-        Compression.Algorithm.NONE, null, false);
+        Compression.Algorithm.NONE, null);
     writer.append("foo".getBytes(), "value".getBytes());
     writer.close();
     fout.close();
@@ -226,7 +226,7 @@ public class TestHFile extends HBaseTestCase {
   public void testComparator() throws IOException {
     Path mFile = new Path(ROOT_DIR, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);
-    Writer writer = new Writer(fout, minBlockSize, null,
+    Writer writer = new Writer(fout, minBlockSize, (Compression.Algorithm) null,
       new RawComparator<byte []>() {
         @Override
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2,
@@ -238,7 +238,7 @@ public class TestHFile extends HBaseTestCase {
         public int compare(byte[] o1, byte[] o2) {
           return compare(o1, 0, o1.length, o2, 0, o2.length);
         }
-      }, false);
+      });
     writer.append("3".getBytes(), "0".getBytes());
     writer.append("2".getBytes(), "0".getBytes());
     writer.append("1".getBytes(), "0".getBytes());

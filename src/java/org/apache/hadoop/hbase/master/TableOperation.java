@@ -95,7 +95,7 @@ abstract class TableOperation implements HConstants {
             emptyRows.add(values.getRow());
             LOG.error(Bytes.toString(CATALOG_FAMILY) + ":" +
                 Bytes.toString(REGIONINFO_QUALIFIER) + " not found on " +
-                      Bytes.toString(values.getRow()));
+                      Bytes.toStringBinary(values.getRow()));
             continue;
           }
           String serverAddress = 

@@ -475,8 +475,8 @@ class ServerManager implements HConstants {
       
       // Should we tell it close regions because its overloaded?  If its
       // currently opening regions, leave it alone till all are open.
-      LOG.debug("Process all wells: " + serverInfo + " openingCount: " + openingCount +
-          ", nobalancingCount: " + nobalancingCount);
+//      LOG.debug("Process all wells: " + serverInfo + " openingCount: " + openingCount +
+//          ", nobalancingCount: " + nobalancingCount);
       if ((openingCount < this.nobalancingCount)) {
         this.master.regionManager.assignRegions(serverInfo, mostLoadedRegions,
             returnMsgs);

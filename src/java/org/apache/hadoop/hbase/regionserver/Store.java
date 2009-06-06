@@ -543,7 +543,7 @@ public class Store implements HConstants {
    */
   private HFile.Writer getWriter(final Path basedir) throws IOException {
     return StoreFile.getWriter(this.fs, basedir, this.blocksize,
-        this.compression, this.comparator.getRawComparator(), this.bloomfilter);
+        this.compression, this.comparator.getRawComparator());
   }
 
   /*

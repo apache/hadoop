@@ -45,6 +45,7 @@ class TableDelete extends TableOperation {
   protected void processScanItem(String serverName,
       final HRegionInfo info) throws IOException {
     if (isEnabled(info)) {
+      LOG.debug("Region still enabled: " + info.toString());
       throw new TableNotDisabledException(tableName);
     }
   }

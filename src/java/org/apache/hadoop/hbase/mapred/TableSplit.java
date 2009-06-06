@@ -103,7 +103,7 @@ public class TableSplit implements InputSplit, Comparable<TableSplit> {
   @Override
   public String toString() {
     return m_regionLocation + ":" +
-      Bytes.toString(m_startRow) + "," + Bytes.toString(m_endRow);
+      Bytes.toStringBinary(m_startRow) + "," + Bytes.toStringBinary(m_endRow);
   }
 
   public int compareTo(TableSplit o) {

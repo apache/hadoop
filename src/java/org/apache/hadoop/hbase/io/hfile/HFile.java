@@ -154,7 +154,7 @@ public class HFile {
 
     // Name for this object used when logging or in toString.  Is either
     // the result of a toString on stream or else toString of passed file Path.
-    private String name;
+    protected String name;
 
     // Total uncompressed bytes, maybe calculate a compression ratio later.
     private int totalBytes = 0;
@@ -217,7 +217,7 @@ public class HFile {
      */
     public Writer(FileSystem fs, Path path)
     throws IOException {
-      this(fs, path, DEFAULT_BLOCKSIZE, null, null, false);
+      this(fs, path, DEFAULT_BLOCKSIZE, (Compression.Algorithm) null, null);
     }
 
     /**
@@ -236,7 +236,7 @@ public class HFile {
       this(fs, path, blocksize,
         compress == null? DEFAULT_COMPRESSION_ALGORITHM:
           Compression.getCompressionAlgorithmByName(compress),
-        comparator, false);
+        comparator);
     }
 
     /**
@@ -246,15 +246,13 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param comparator
-     * @param bloomfilter
      * @throws IOException
      */
     public Writer(FileSystem fs, Path path, int blocksize,
       Compression.Algorithm compress,
-      final RawComparator<byte []> comparator,
-      final boolean bloomfilter)
+      final RawComparator<byte []> comparator)
     throws IOException {
-      this(fs.create(path), blocksize, compress, comparator, bloomfilter);
+      this(fs.create(path), blocksize, compress, comparator);
       this.closeOutputStream = true;
       this.name = path.toString();
       this.path = path;
@@ -269,26 +267,22 @@ public class HFile {
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-        final String  compress, final RawComparator<byte []> c)
+      final String  compress, final RawComparator<byte []> c)
     throws IOException {
       this(ostream, blocksize,
-        compress == null? DEFAULT_COMPRESSION_ALGORITHM:
-          Compression.getCompressionAlgorithmByName(compress), c, false);
+        Compression.getCompressionAlgorithmByName(compress), c);
     }
-
+  
     /**
      * Constructor that takes a stream.
      * @param ostream Stream to use.
      * @param blocksize
      * @param compress
      * @param c
-     * @param bloomfilter
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-        final Compression.Algorithm  compress,
-        final RawComparator<byte []> c,
-        final boolean bloomfilter)
+      final Compression.Algorithm  compress, final RawComparator<byte []> c)
     throws IOException {
       this.outputStream = ostream;
       this.closeOutputStream = false;
@@ -726,11 +720,11 @@ public class HFile {
     }
 
     protected String toStringFirstKey() {
-      return Bytes.toString(getFirstKey());
+      return Bytes.toStringBinary(getFirstKey());
     }
 
     protected String toStringLastKey() {
-      return Bytes.toString(getFirstKey());
+      return Bytes.toStringBinary(getFirstKey());
     }
 
     public long length() {
@@ -1189,7 +1183,7 @@ public class HFile {
       }
 
       public String getKeyString() {
-        return Bytes.toString(block.array(), block.arrayOffset() +
+        return Bytes.toStringBinary(block.array(), block.arrayOffset() +
           block.position(), currKeyLen);
       }
 
@@ -1240,6 +1234,10 @@ public class HFile {
         }
       }
     }
+
+    public String getTrailerInfo() {
+      return trailer.toString();
+    }
   }
   /*
    * The RFile has a fixed trailer which contains offsets to other variable
@@ -1267,11 +1265,9 @@ public class HFile {
 
     static int trailerSize() {
       // Keep this up to date...
-      final int intSize = 4;
-      final int longSize = 8;
       return 
-      ( intSize * 5 ) +
-      ( longSize * 4 ) +
+      ( Bytes.SIZEOF_INT * 5 ) +
+      ( Bytes.SIZEOF_LONG * 4 ) +
       TRAILERBLOCKMAGIC.length;
     }
 

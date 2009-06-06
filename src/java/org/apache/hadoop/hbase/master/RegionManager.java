@@ -499,7 +499,7 @@ class RegionManager implements HConstants {
       if (currentRegion.isRootRegion() || currentRegion.isMetaTable()) {
         continue;
       }
-      String regionName = currentRegion.getRegionNameAsString();
+      final String regionName = currentRegion.getRegionNameAsString();
       if (regionIsInTransition(regionName)) {
         skipped++;
         continue;

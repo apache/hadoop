@@ -53,7 +53,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
   @Override
   public String toString() {
     return "ProcessRegionClose of " + this.regionInfo.getRegionNameAsString() +
-      ", " + this.offlineRegion;
+      ", " + this.offlineRegion + ", reassign: " + this.reassignRegion;
   }
 
   @Override
@@ -83,8 +83,12 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
         result = result == null ? true : result;
 
     } else if (reassignRegion) {
+      LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
       // we are reassigning the region eventually, so set it unassigned
       master.regionManager.setUnassigned(regionInfo, false);
+    } else {
+      LOG.info("Region was neither offlined, or asked to be reassigned, what gives: " +
+      regionInfo.getRegionNameAsString());
     }
 
     return result == null ? true : result;

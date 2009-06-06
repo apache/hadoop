@@ -90,7 +90,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.regionId = regionId;
     this.tableDesc = tableDesc;
     this.regionName = createRegionName(tableDesc.getName(), null, regionId);
-    this.regionNameStr = Bytes.toString(this.regionName);
+    this.regionNameStr = Bytes.toStringBinary(this.regionName);
     setHashCode();
   }
 
@@ -151,7 +151,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.offLine = false;
     this.regionId = regionid;
     this.regionName = createRegionName(tableDesc.getName(), startKey, regionId);
-    this.regionNameStr = Bytes.toString(this.regionName);
+    this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = split;
     this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
     this.startKey = startKey == null?
@@ -171,7 +171,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.offLine = other.isOffline();
     this.regionId = other.getRegionId();
     this.regionName = other.getRegionName();
-    this.regionNameStr = Bytes.toString(this.regionName);
+    this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = other.isSplit();
     this.startKey = other.getStartKey();
     this.tableDesc = other.getTableDesc();
@@ -361,8 +361,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     return "REGION => {" + HConstants.NAME + " => '" +
       this.regionNameStr +
       "', STARTKEY => '" +
-      Bytes.toString(this.startKey) + "', ENDKEY => '" +
-      Bytes.toString(this.endKey) + 
+      Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
+      Bytes.toStringBinary(this.endKey) +
       "', ENCODED => " + getEncodedName() + "," +
       (isOffline()? " OFFLINE => true,": "") + 
       (isSplit()? " SPLIT => true,": "") +
@@ -424,7 +424,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.offLine = in.readBoolean();
     this.regionId = in.readLong();
     this.regionName = Bytes.readByteArray(in);
-    this.regionNameStr = Bytes.toString(this.regionName);
+    this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = in.readBoolean();
     this.startKey = Bytes.readByteArray(in);
     this.tableDesc.readFields(in);

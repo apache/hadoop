@@ -19,18 +19,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -41,6 +34,14 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -81,7 +82,7 @@ public class StoreFile implements HConstants {
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
-
+  
   /*
    * Regex that will work for straight filenames and for reference names.
    * If reference, then the regex has more than just one group.  Group 1 is
@@ -275,9 +276,12 @@ public class StoreFile implements HConstants {
         this.majorCompaction.set(mc);
       }
     }
+
+    // TODO read in bloom filter here, ignore if the column family config says
+    // "no bloom filter" even if there is one in the hfile.
     return this.reader;
   }
-  
+
   /**
    * Override to add some customization on HFile.Reader
    */
@@ -405,7 +409,7 @@ public class StoreFile implements HConstants {
    */
   public static HFile.Writer getWriter(final FileSystem fs, final Path dir)
   throws IOException {
-    return getWriter(fs, dir, DEFAULT_BLOCKSIZE_SMALL, null, null, false);
+    return getWriter(fs, dir, DEFAULT_BLOCKSIZE_SMALL, null, null);
   }
 
   /**
@@ -418,13 +422,12 @@ public class StoreFile implements HConstants {
    * @param blocksize
    * @param algorithm Pass null to get default.
    * @param c Pass null to get default.
-   * @param filter BloomFilter
    * @return HFile.Writer
    * @throws IOException
    */
   public static HFile.Writer getWriter(final FileSystem fs, final Path dir,
-    final int blocksize, final Compression.Algorithm algorithm,
-    final KeyValue.KeyComparator c, final boolean filter)
+                                       final int blocksize, final Compression.Algorithm algorithm,
+                                       final KeyValue.KeyComparator c)
   throws IOException {
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
@@ -432,7 +435,7 @@ public class StoreFile implements HConstants {
     Path path = getUniqueFile(fs, dir);
     return new HFile.Writer(fs, path, blocksize,
       algorithm == null? HFile.DEFAULT_COMPRESSION_ALGORITHM: algorithm,
-      c == null? KeyValue.KEY_COMPARATOR: c, filter);
+      c == null? KeyValue.KEY_COMPARATOR: c);
   }
 
   /**

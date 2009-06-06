@@ -48,7 +48,7 @@
         HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
  %>
 <tr><td><%= r.getRegionNameAsString() %></td><td><%= r.getEncodedName() %></td>
-    <td><%= Bytes.toString(r.getStartKey()) %></td><td><%= Bytes.toString(r.getEndKey()) %></td>
+    <td><%= Bytes.toStringBinary(r.getStartKey()) %></td><td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
     <td><%= load.toString() %></td>
     </tr>
 <%   } %>

@@ -620,6 +620,7 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Use for logging.
    * @param b Key portion of a KeyValue.
    * @param o Offset to start of key
    * @param l Length of key.
@@ -627,7 +628,7 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static String keyToString(final byte [] b, final int o, final int l) {
     int rowlength = Bytes.toShort(b, o);
-    String row = Bytes.toString(b, o + Bytes.SIZEOF_SHORT, rowlength);
+    String row = Bytes.toStringBinary(b, o + Bytes.SIZEOF_SHORT, rowlength);
     int columnoffset = o + Bytes.SIZEOF_SHORT + 1 + rowlength;
     int familylength = b[columnoffset - 1];
     int columnlength = l - ((columnoffset - o) + TIMESTAMP_TYPE_SIZE);
@@ -697,6 +698,10 @@ public class KeyValue implements Writable, HeapSize {
    */
   public int getKeyOffset() {
     return this.offset + ROW_OFFSET;
+  }
+
+  public String getKeyString() {
+    return Bytes.toStringBinary(getBuffer(), getKeyOffset(), getKeyLength());
   }
 
   /**

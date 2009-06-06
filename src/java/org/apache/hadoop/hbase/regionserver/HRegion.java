@@ -518,6 +518,11 @@ public class HRegion implements HConstants { // , Writable{
     return this.regionInfo.getRegionName();
   }
 
+  /** @return region name as string for logging */
+  public String getRegionNameAsString() {
+    return this.regionInfo.getRegionNameAsString();
+  }
+
   /** @return HTableDescriptor for this region */
   public HTableDescriptor getTableDesc() {
     return this.regionInfo.getTableDesc();
@@ -1017,6 +1022,7 @@ public class HRegion implements HConstants { // , Writable{
       Store store = getStore(family);
       KeyValue kv = new KeyValue(row, HConstants.LATEST_TIMESTAMP);
       // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
+      LOG.debug("getClosestRowBefore looking for: " + Bytes.toStringBinary(row));
       key = store.getRowKeyAtOrBefore(kv);
       if (key == null) {
         return null;

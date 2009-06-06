@@ -147,7 +147,7 @@ $(document).ready(function(){
      Arrays.sort(serverNames);
      for (String serverName: serverNames) {
        HServerInfo hsi = serverToServerInfos.get(serverName);
-       String hostname = hsi.getName() + ":" + hsi.getInfoPort();
+       String hostname = hsi.getServerAddress().getInetSocketAddress().getAddress().getHostAddress() + ":" + hsi.getInfoPort();
        String url = "http://" + hostname + "/";
        totalRegions += hsi.getLoad().getNumberOfRegions();
        totalRequests += hsi.getLoad().getNumberOfRequests() / interval;

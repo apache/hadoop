@@ -5,10 +5,12 @@
   import="org.apache.hadoop.hbase.RegionHistorian"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.RegionHistorian.RegionHistoryInformation"
-  import="org.apache.hadoop.hbase.HConstants"%><%
-  String regionName = request.getParameter("regionname");
+  import="org.apache.hadoop.hbase.HConstants"%>
+<%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
+<%
+    String regionName = request.getParameter("regionname");
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  List<RegionHistoryInformation> informations = RegionHistorian.getInstance().getRegionHistory(regionName);
+  List<RegionHistoryInformation> informations = RegionHistorian.getInstance().getRegionHistory(Bytes.toBytesBinary(regionName));
   // Pattern used so we can wrap a regionname in an href.
   Pattern pattern = Pattern.compile(RegionHistorian.SPLIT_PREFIX + "(.*)$");
 %><?xml version="1.0" encoding="UTF-8" ?>

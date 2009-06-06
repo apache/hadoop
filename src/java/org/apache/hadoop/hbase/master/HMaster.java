@@ -951,6 +951,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
       // Arguments are regionname and an optional server name.
       byte [] regionname = ((ImmutableBytesWritable)args[0]).get();
+      LOG.debug("Attempting to close region: " + Bytes.toStringBinary(regionname));
       String servername = null;
       if (args.length == 2) {
         servername = Bytes.toString(((ImmutableBytesWritable)args[1]).get());

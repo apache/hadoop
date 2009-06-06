@@ -328,8 +328,9 @@ abstract class BaseScanner extends Chore implements HConstants {
     }
     
     if (LOG.isDebugEnabled()) {
-      LOG.debug(split.getRegionNameAsString() +
-        " no longer has references to " + Bytes.toString(parent));
+      LOG.debug(split.getRegionNameAsString() + "/" + split.getEncodedName()
+          + " no longer has references to " + Bytes.toStringBinary(parent)
+         );
     }
     
     Delete delete = new Delete(parent);

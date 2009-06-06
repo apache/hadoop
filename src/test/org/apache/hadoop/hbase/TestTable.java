@@ -110,8 +110,8 @@ public class TestTable extends HBaseClusterTestCase {
     }
     // All threads are now dead.  Count up how many tables were created and
     // how many failed w/ appropriate exception.
-    assertTrue(successes.get() == 1);
-    assertTrue(failures.get() == (count - 1));
+    assertEquals(1, successes.get());
+    assertEquals(count - 1, failures.get());
   }
   
   /**

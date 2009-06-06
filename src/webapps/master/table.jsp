@@ -15,6 +15,8 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.util.Bytes"
+  import="java.io.IOException"
+  import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
@@ -38,7 +40,6 @@
   if ( action != null ) {
 %>
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-      <meta http-equiv="refresh" content="5; url=/"/>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 <body>
@@ -132,17 +133,17 @@
         hriEntry.getValue()).getInfoPort();
     
     String urlRegionHistorian =
-        "/regionhistorian.jsp?regionname=" + 
-        URLEncoder.encode(hriEntry.getKey().getRegionNameAsString(), "UTF-8");
+        "/regionhistorian.jsp?regionname="+
+                Bytes.toStringBinary(hriEntry.getKey().getRegionName());
 
     String urlRegionServer =
         "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";
 %>
 <tr>
-  <td><a href="<%= urlRegionHistorian %>"><%= hriEntry.getKey().getRegionNameAsString()%></a></td>
+  <td><a href="<%= urlRegionHistorian %>"><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></a></td>
   <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().toString() %></a></td>
-  <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toString(hriEntry.getKey().getStartKey())%></td>
-  <td><%= Bytes.toString(hriEntry.getKey().getEndKey())%></td>
+  <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
+  <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>
 </tr>
 <% } %>
 </table>

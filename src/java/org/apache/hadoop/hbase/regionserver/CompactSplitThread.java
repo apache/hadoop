@@ -114,14 +114,14 @@ class CompactSplitThread extends Thread implements HConstants {
         continue;
       } catch (IOException ex) {
         LOG.error("Compaction/Split failed" +
-            (r != null ? (" for region " + Bytes.toString(r.getRegionName())) : ""),
+            (r != null ? (" for region " + r.getRegionNameAsString()) : ""),
             RemoteExceptionHandler.checkIOException(ex));
         if (!server.checkFileSystem()) {
           break;
         }
       } catch (Exception ex) {
         LOG.error("Compaction failed" +
-            (r != null ? (" for region " + Bytes.toString(r.getRegionName())) : ""),
+            (r != null ? (" for region " + r.getRegionNameAsString()) : ""),
             ex);
         if (!server.checkFileSystem()) {
           break;
@@ -155,7 +155,7 @@ class CompactSplitThread extends Thread implements HConstants {
     r.setForceMajorCompaction(force);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
-        "requested for region " + Bytes.toString(r.getRegionName()) +
+        "requested for region " + r.getRegionNameAsString() +
         "/" + r.getRegionInfo().getEncodedName() +
         (why != null && !why.isEmpty()? " because: " + why: ""));
     }
