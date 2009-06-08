@@ -27,9 +27,9 @@
 <h2><a name="requirements">Requirements</a></h2>
 <ul>
   <li>Java 1.6.x, preferably from <a href="http://www.java.com/en/download/">Sun</a>.
+  Use the latest version available.
   </li>
-  <li><a href="http://hadoop.apache.org/core/releases.html">Hadoop 0.19.x</a>.  This version of HBase will 
-  only run on this version of Hadoop.
+  <li>This version of HBase will only run on <a href="http://hadoop.apache.org/core/releases.html">Hadoop 0.20.x</a>.  
   </li>
   <li>
     ssh must be installed and sshd must be running to use Hadoop's
@@ -42,15 +42,33 @@
   for how to up the limit.  Also, as of 0.18.x hadoop, datanodes have an upper-bound
       on the number of threads they will support (<code>dfs.datanode.max.xcievers</code>).
       Default is 256.  If loading lots of data into hbase, up this limit on your
-      hadoop cluster.  Also consider upping the number of datanode handlers from
-      the default of 3. See <code>dfs.datanode.handler.count</code>.</li>
+      hadoop cluster.
       <li>The clocks on cluster members should be in basic alignments.  Some skew is tolerable but
       wild skew can generate odd behaviors.  Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
       on your cluster, or an equivalent.</li>
+      <li>HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
+      In basic standalone and pseudo-distributed modes, HBase manages a ZooKeeper instance
+      for you but it is required that you run a ZooKeeper Quorum when running HBase
+      fully distributed (More on this below).
+      </li>
+      <li>This is a list of patches we recommend you apply to your running Hadoop cluster:
+      <ul>
+      <li><a hef="https://issues.apache.org/jira/browse/HADOOP-4681">HADOOP-4681 <i>"DFSClient block read failures cause open DFSInputStream to become unusable"</i></a>. This patch will help with the ever-popular, "No live nodes contain current block".
+      The hadoop version bundled with hbase has this patch applied.  Its an HDFS client
+      fix so this should do for usual usage but if your cluster is missing the patch,
+      and in particular if calling hbase from a mapreduce job, you may run into this
+      issue.
+      </li>
+      </ul>
+      </li>
 </ul>
 <h3>Windows</h3>
-If you are running HBase on Windows, you must install <a href="http://cygwin.com/">Cygwin</a>. Additionally, it is <emph>strongly recommended</emph> that you add or append to the following environment variables. If you install Cygwin in a location that is not C:\cygwin you should modify the following appropriately.
+If you are running HBase on Windows, you must install <a href="http://cygwin.com/">Cygwin</a>.
+Additionally, it is <emph>strongly recommended</emph> that you add or append to the following
+environment variables. If you install Cygwin in a location that is not <code>C:\cygwin</code> you
+should modify the following appropriately.
 <p>
+<blockquote>
 <pre>
 HOME=c:\cygwin\home\jim
 ANT_HOME=(wherever you installed ant)
@@ -58,27 +76,33 @@ JAVA_HOME=(wherever you installed java)
 PATH=C:\cygwin\bin;%JAVA_HOME%\bin;%ANT_HOME%\bin; other windows stuff 
 SHELL=/bin/bash
 </pre>
-For additional information, see the <a href="http://hadoop.apache.org/core/docs/current/quickstart.html">Hadoop Quick Start Guide</a>
+</blockquote>
+For additional information, see the
+<a href="http://hadoop.apache.org/core/docs/current/quickstart.html">Hadoop Quick Start Guide</a>
 </p>
 <h2><a name="getting_started" >Getting Started</a></h2>
 <p>
-What follows presumes you have obtained a copy of HBase and are installing
+What follows presumes you have obtained a copy of HBase,
+see <a href="http://hadoop.apache.org/hbase/releases.html">Releases</a>, and are installing
 for the first time. If upgrading your
 HBase instance, see <a href="#upgrading">Upgrading</a>.
+<p>Three modes are described: standalone, pseudo-distributed (where all servers are run on
+a single host), and distributed.  If new to hbase start by following the standalone instruction.
 </p>
 <p>
-Define <code>${HBASE_HOME}</code> to be the location of the root of your HBase installation, e.g. 
+Whatever your mode, define <code>${HBASE_HOME}</code> to be the location of the root of your HBase installation, e.g. 
 <code>/user/local/hbase</code>.  Edit <code>${HBASE_HOME}/conf/hbase-env.sh</code>.  In this file you can
 set the heapsize for HBase, etc.  At a minimum, set <code>JAVA_HOME</code> to point at the root of
 your Java installation.
 </p>
+<h2><a name="standalone">Standalone Mode</a></h2>
 <p>
 If you are running a standalone operation, there should be nothing further to configure; proceed to
 <a href=#runandconfirm>Running and Confirming Your Installation</a>.  If you are running a distributed 
 operation, continue reading.
 </p>
 
-<h2><a name="distributed">Distributed Operation</a></h2>
+<h2><a name="distributed">Distributed Operation: Pseudo- and Fully-Distributed Modes</a></h2>
 <p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS).
 See the Hadoop <a href="http://lucene.apache.org/hadoop/api/overview-summary.html#overview_description">
 requirements and instructions</a> for how to set up a DFS.
@@ -113,13 +137,12 @@ create them if you let it).
 </p>
 
 <h3><a name="fully-distrib">Fully-Distributed Operation</a></h3>
-For running a fully-distributed operation on more than one host, the following
+<p>For running a fully-distributed operation on more than one host, the following
 configurations must be made <i>in addition</i> to those described in the
 <a href="#pseudo-distrib">pseudo-distributed operation</a> section above.
-A Zookeeper cluster is also required to ensure higher availability.
-In <code>hbase-site.xml</code>, you must also configure
-<code>hbase.cluster.distributed</code> to 'true'. 
-</p>
+In this mode, a ZooKeeper cluster is required.</p>  
+<p>In <code>hbase-site.xml</code>, set <code>hbase.cluster.distributed</code> to 'true'. 
+<blockquote>
 <pre>
 &lt;configuration&gt;
   ...
@@ -134,42 +157,59 @@ In <code>hbase-site.xml</code>, you must also configure
   ...
 &lt;/configuration&gt;
 </pre>
-<p>
-Keep in mind that for a fully-distributed operation, you may not want your <code>hbase.rootdir</code> 
-to point to localhost (maybe, as in the configuration above, you will want to use 
-<code>example.org</code>).  In addition to <code>hbase-site.xml</code>, a fully-distributed 
-operation requires that you also modify <code>${HBASE_HOME}/conf/regionservers</code>.  
-<code>regionserver</code> lists all the hosts running HRegionServers, one host per line  (This file 
-in HBase is like the hadoop slaves file at <code>${HADOOP_HOME}/conf/slaves</code>).
+</blockquote>
 </p>
 <p>
-Furthermore, you have to configure a distributed ZooKeeper cluster.
-The ZooKeeper configuration file is stored at <code>${HBASE_HOME}/conf/zoo.cfg</code>.
-See the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html"> Getting Started Guide</a> for information about the format and options of that file.
-Specifically, look at the <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html#sc_RunningReplicatedZooKeeper">Running Replicated ZooKeeper</a> section.
-In <code>${HBASE_HOME}/conf/hbase-env.sh</code>, set the following to tell HBase not to manage its own single instance of ZooKeeper.
+In fully-distributed operation, you probably want to change your <code>hbase.rootdir</code> 
+from localhost to the name of the node running the HDFS namenode.  In addition
+to <code>hbase-site.xml</code> changes, a fully-distributed operation requires that you 
+modify <code>${HBASE_HOME}/conf/regionservers</code>.  
+The <code>regionserver</code> file lists all hosts running HRegionServers, one host per line
+(This file in HBase is like the hadoop slaves file at <code>${HADOOP_HOME}/conf/slaves</code>).
+</p>
+<p>
+A distributed HBase depends on a running ZooKeeper cluster.
+The ZooKeeper configuration file for HBase is stored at <code>${HBASE_HOME}/conf/zoo.cfg</code>.
+See the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html"> Getting Started Guide</a>
+for information about the format and options of that file.  Specifically, look at the 
+<a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html#sc_RunningReplicatedZooKeeper">Running Replicated ZooKeeper</a> section.
+
+
+After configuring <code>zoo.cfg</code>, in <code>${HBASE_HOME}/conf/hbase-env.sh</code>,
+set the following to tell HBase to STOP managing its instance of ZooKeeper.
+<blockquote>
 <pre>
   ...
 # Tell HBase whether it should manage it's own instance of Zookeeper or not.
 export HBASE_MANAGES_ZK=false
 </pre>
+</blockquote>
 </p>
 <p>
-It's still possible to use HBase in order to start a single Zookeeper instance in fully-distributed operation.
-The first thing to do is still to change <code>${HBASE_HOME}/conf/zoo.cfg</code> and set a single node.
-Note that leaving the value "localhost" will make it impossible to start HBase.
+Though not recommended, it can be convenient having HBase continue to manage
+ZooKeeper even when in distributed mode (It can be good when testing or taking
+hbase for a testdrive).  Change <code>${HBASE_HOME}/conf/zoo.cfg</code> and
+set the server.0 property to the IP of the node that will be running ZooKeeper
+(Leaving the default value of "localhost" will make it impossible to start HBase).
 <pre>
   ...
 server.0=example.org:2888:3888
+<blockquote>
 </pre>
 Then on the example.org server do the following <i>before</i> running HBase. 
 <pre>
 ${HBASE_HOME}/bin/hbase-daemon.sh start zookeeper
 </pre>
+</blockquote>
+<p>To stop ZooKeeper, after you've shut down hbase, do:
+<blockquote>
+<pre>
+${HBASE_HOME}/bin/hbase-daemon.sh stop zookeeper
+</pre>
+</blockquote>
 Be aware that this option is only recommanded for testing purposes as a failure
 on that node would render HBase <b>unusable</b>.
 </p>
-
 
 <p>Of note, if you have made <i>HDFS client configuration</i> on your hadoop cluster, HBase will not
 see this configuration unless you do one of the following:
@@ -187,11 +227,15 @@ you do the above to make the configuration available to HBase.
 <p>If you are running in standalone, non-distributed mode, HBase by default uses
 the local filesystem.</p>
 
-<p>If you are running a distributed cluster you will need to start the Hadoop DFS daemons 
-before starting HBase and stop the daemons after HBase has shut down.  Start and 
+<p>If you are running a distributed cluster you will need to start the Hadoop DFS daemons and
+ZooKeeper Quorum
+before starting HBase and stop the daemons after HBase has shut down.</p>
+<p>Start and 
 stop the Hadoop DFS daemons by running <code>${HADOOP_HOME}/bin/start-dfs.sh</code>.
 You can ensure it started properly by testing the put and get of files into the Hadoop filesystem.
 HBase does not normally use the mapreduce daemons.  These do not need to be started.</p>
+
+<p>Start up your ZooKeeper cluster.</p>
 
 <p>Start HBase with the following command:
 </p>
@@ -226,114 +270,9 @@ the HBase version. It does not change your install unless you explicitly ask it 
 </p>
 
 <h2><a name="client_example">Example API Usage</a></h2>
-<p>Once you have a running HBase, you probably want a way to hook your application up to it. 
-  If your application is in Java, then you should use the Java API. Here's an example of what 
-  a simple client might look like.  This example assumes that you've created a table called
-  "myTable" with a column family called "myColumnFamily".
-</p>
+For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summary.html#client_example">org.apache.hadoop.hbase.client</a> documentation.
 
-<div style="background-color: #cccccc; padding: 2px">
-<code><pre>
-import java.io.IOException;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.util.Bytes;
-
-public class MyClient {
-
-  public static void main(String args[]) throws IOException {
-    // You need a configuration object to tell the client where to connect.
-    // But don't worry, the defaults are pulled from the local config file.
-    HBaseConfiguration config = new HBaseConfiguration();
-
-    // This instantiates an HTable object that connects you to the "myTable"
-    // table. 
-    HTable table = new HTable(config, "myTable");
-
-    // To do any sort of update on a row, you use an instance of the BatchUpdate
-    // class. A BatchUpdate takes a row and optionally a timestamp which your
-    // updates will affect.  If no timestamp, the server applies current time
-    // to the edits.
-    BatchUpdate batchUpdate = new BatchUpdate("myRow");
-
-    // The BatchUpdate#put method takes a byte [] (or String) that designates
-    // what cell you want to put a value into, and a byte array that is the
-    // value you want to store. Note that if you want to store Strings, you
-    // have to getBytes() from the String for HBase to store it since HBase is
-    // all about byte arrays. The same goes for primitives like ints and longs
-    // and user-defined classes - you must find a way to reduce it to bytes.
-    // The Bytes class from the hbase util package has utility for going from
-    // String to utf-8 bytes and back again and help for other base types.
-    batchUpdate.put("myColumnFamily:columnQualifier1", 
-      Bytes.toBytes("columnQualifier1 value!"));
-
-    // Deletes are batch operations in HBase as well. 
-    batchUpdate.delete("myColumnFamily:cellIWantDeleted");
-
-    // Once you've done all the puts you want, you need to commit the results.
-    // The HTable#commit method takes the BatchUpdate instance you've been 
-    // building and pushes the batch of changes you made into HBase.
-    table.commit(batchUpdate);
-
-    // Now, to retrieve the data we just wrote. The values that come back are
-    // Cell instances. A Cell is a combination of the value as a byte array and
-    // the timestamp the value was stored with. If you happen to know that the 
-    // value contained is a string and want an actual string, then you must 
-    // convert it yourself.
-    Cell cell = table.get("myRow", "myColumnFamily:columnQualifier1");
-    // This could throw a NullPointerException if there was no value at the cell
-    // location.
-    String valueStr = Bytes.toString(cell.getValue());
-    
-    // Sometimes, you won't know the row you're looking for. In this case, you
-    // use a Scanner. This will give you cursor-like interface to the contents
-    // of the table.
-    Scanner scanner = 
-      // we want to get back only "myColumnFamily:columnQualifier1" when we iterate
-      table.getScanner(new String[]{"myColumnFamily:columnQualifier1"});
-    
-    
-    // Scanners return RowResult instances. A RowResult is like the
-    // row key and the columns all wrapped up in a single Object. 
-    // RowResult#getRow gives you the row key. RowResult also implements 
-    // Map, so you can get to your column results easily. 
-    
-    // Now, for the actual iteration. One way is to use a while loop like so:
-    RowResult rowResult = scanner.next();
-    
-    while (rowResult != null) {
-      // print out the row we found and the columns we were looking for
-      System.out.println("Found row: " + Bytes.toString(rowResult.getRow()) +
-        " with value: " + rowResult.get(Bytes.toBytes("myColumnFamily:columnQualifier1")));
-      rowResult = scanner.next();
-    }
-    
-    // The other approach is to use a foreach loop. Scanners are iterable!
-    for (RowResult result : scanner) {
-      // print out the row we found and the columns we were looking for
-      System.out.println("Found row: " + Bytes.toString(rowResult.getRow()) +
-        " with value: " + rowResult.get(Bytes.toBytes("myColumnFamily:columnQualifier1")));
-    }
-    
-    // Make sure you close your scanners when you are done!
-    // Its probably best to put the iteration into a try/finally with the below
-    // inside the finally clause.
-    scanner.close();
-  }
-}
-</pre></code>
-</div>
-
-<p>There are many other methods for putting data into and getting data out of 
-  HBase, but these examples should get you started. See the HTable javadoc for
-  more methods. Additionally, there are methods for managing tables in the 
-  HBaseAdmin class.</p>
-
-<p>If your client is NOT Java, then you should consider the Thrift or REST 
-  libraries.</p>
+<p>If your client is NOT Java, consider the Thrift or REST libraries.</p>
 
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>
