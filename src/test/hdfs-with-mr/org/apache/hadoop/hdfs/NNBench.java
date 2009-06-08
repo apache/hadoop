@@ -150,8 +150,6 @@ public class NNBench {
         writer = SequenceFile.createWriter(tempFS, config, filePath, Text.class, 
                 LongWritable.class, CompressionType.NONE);
         writer.append(new Text(strFileName), new LongWritable(0l));
-      } catch(Exception e) {
-        throw new IOException(e.getLocalizedMessage());
       } finally {
         if (writer != null) {
           writer.close();
