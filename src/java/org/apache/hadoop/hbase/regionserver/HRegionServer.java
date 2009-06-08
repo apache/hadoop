@@ -669,6 +669,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     join();
 
+    zooKeeperWrapper.close();
+
     if (shutdownHDFS.get()) {
       runThread(this.hdfsShutdownThread,
           this.conf.getLong("hbase.dfs.shutdown.wait", 30000));

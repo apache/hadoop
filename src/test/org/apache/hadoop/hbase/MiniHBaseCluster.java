@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -172,6 +173,7 @@ public class MiniHBaseCluster implements HConstants {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
+    HConnectionManager.deleteAllConnections(false);
   }
 
   /**

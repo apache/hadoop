@@ -113,6 +113,19 @@ public class HConnectionManager implements HConstants {
     }
   }
 
+  /**
+   * Delete information for all connections.
+   * @param stopProxy
+   */
+  public static void deleteAllConnections(boolean stopProxy) {
+    synchronized (HBASE_INSTANCES) {
+      for (TableServers t : HBASE_INSTANCES.values()) {
+        if (t != null) {
+          t.close(stopProxy);
+        }
+      }
+    }
+  }
 
   /* Encapsulates finding the servers for an HBase instance */
   private static class TableServers implements ServerConnection, HConstants, Watcher {
@@ -205,7 +218,10 @@ public class HConnectionManager implements HConstants {
     }
 
     private synchronized void resetZooKeeper() {
-      zooKeeperWrapper = null;
+      if (zooKeeperWrapper != null) {
+        zooKeeperWrapper.close();
+        zooKeeperWrapper = null;
+      }
     }
 
     // Used by master and region servers during safe mode only
@@ -1054,6 +1070,7 @@ public class HConnectionManager implements HConstants {
         master = null;
         masterChecked = false;
       }
+      resetZooKeeper();
       if (stopProxy) {
         synchronized (servers) {
           for (HRegionInterface i: servers.values()) {

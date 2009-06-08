@@ -424,7 +424,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     server.stop();                      // Stop server
     regionManager.stop();
-    
+
+    zooKeeperWrapper.close();
+
     // Join up with all threads
     LOG.info("HMaster main thread exiting");
   }
