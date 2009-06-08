@@ -85,8 +85,7 @@ public class ScanQueryMatcher extends QueryMatcher {
    * - got to the next row (MatchCode.DONE)
    * 
    * @param kv KeyValue to check
-   * @return
-   * @throws IOException
+   * @return The match code instance.
    */
   public MatchCode match(KeyValue kv) {
     if (filter != null && filter.filterAllRemaining()) {
@@ -213,7 +212,8 @@ public class ScanQueryMatcher extends QueryMatcher {
   /**
    * If the row was otherwise going to be included, call this to last-minute
    * check.
-   * @return
+   * 
+   * @return <code>true</code> if the row should be filtered.
    */
   public boolean filterEntireRow() {
     if (filter == null)

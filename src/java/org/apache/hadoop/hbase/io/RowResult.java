@@ -186,7 +186,7 @@ public class RowResult implements Writable, SortedMap<byte [], Cell>,
    * Get a cell using seperate family, columnQualifier arguments.
    * @param family
    * @param columnQualifier
-   * @return
+   * @return The cell.
    */
   public Cell get(byte [] family, byte [] columnQualifier) {
     return get(Bytes.add(family, KeyValue.COLUMN_FAMILY_DELIM_ARRAY, columnQualifier));

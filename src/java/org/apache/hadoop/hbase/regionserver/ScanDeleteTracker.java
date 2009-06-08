@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.KeyValue;
  *
  * <p>
  * This class is utilized through three methods:
- * <ul><li>{@link add} when encountering a Delete or DeleteColumn
- * <li>{@link isDeleted} when checking if a Put KeyValue has been deleted
- * <li>{@link update} when reaching the end of a StoreFile or row for scans
+ * <ul><li>{@link #add} when encountering a Delete or DeleteColumn
+ * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted
+ * <li>{@link #update} when reaching the end of a StoreFile or row for scans
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded 
  */

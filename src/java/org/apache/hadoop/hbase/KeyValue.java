@@ -123,10 +123,12 @@ public class KeyValue implements Writable, HeapSize {
   
   /**
    * Get the appropriate row comparator for the specified table.
+   * 
    * Hopefully we can get rid of this, I added this here because it's replacing
    * something in HSK.  We should move completely off of that.
-   * @param tableName
-   * @return
+   * 
+   * @param tableName  The table name.
+   * @return The comparator.
    */
   public static RawComparator<byte []> getRowComparator(byte [] tableName) {
     if(Bytes.equals(HTableDescriptor.ROOT_TABLEDESC.getName(),tableName)) {
@@ -429,6 +431,7 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * Write KeyValue format into a byte array.
+   * 
    * @param row row key
    * @param roffset row offset
    * @param rlength row length
@@ -443,7 +446,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param value column value
    * @param voffset value offset
    * @param vlength value length
-   * @return
+   * @return The newly created byte array. 
    */
   static byte [] createByteArray(final byte [] row, final int roffset,
       final int rlength, final byte [] family, final int foffset, int flength,
@@ -518,7 +521,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param value
    * @param voffset
    * @param vlength
-   * @return
+   * @return The newly created byte array. 
    */
   static byte [] createByteArray(final byte [] row, final int roffset,
         final int rlength,
@@ -562,9 +565,10 @@ public class KeyValue implements Writable, HeapSize {
   //---------------------------------------------------------------------------
   
   /**
-   * @param timestamp
+   * Clones a row.
+   * 
+   * @param timestamp  The new time stamp for the row.
    * @return Clone of bb's key portion with only the row and timestamp filled in.
-   * @throws IOException
    */
   public KeyValue cloneRow(final long timestamp) {
     return new KeyValue(getBuffer(), getRowOffset(), getRowLength(),
@@ -576,15 +580,14 @@ public class KeyValue implements Writable, HeapSize {
    * @return Clone of bb's key portion with type set to Type.Maximum. Use this
    * doing lookups where you are doing getClosest.  Using Maximum, you'll be
    * sure to trip over all of the other key types since Maximum sorts first.
-   * @throws IOException
    */
   public KeyValue cloneMaximum() {
      return createKey(Type.Maximum);
   }
 
-  /*
-   * Make a clone with the new type.
-   * Does not copy value.
+  /**
+   * Make a clone with the new type. Does not copy value.
+   * 
    * @param newtype New type to set on clone of this key.
    * @return Clone of this key with type set to <code>newtype</code>
    */
@@ -1138,7 +1141,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param roffset
    * @param rlength
    * @param rfamilylength Offset of family delimiter in right column.
-   * @return
+   * @return The result of the comparison.
    */
   static int compareColumns(final byte [] left, final int loffset,
       final int llength, final int lfamilylength,
@@ -1172,10 +1175,9 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * Splits a column in family:qualifier form into separate byte arrays.
-   * <p>
-   * Catches 
-   * @param c
-   * @return
+   * 
+   * @param c  The column.
+   * @return The parsed column.
    */
   public static byte [][] parseColumn(byte [] c) {
     final byte [][] result = new byte [2][];
@@ -1483,7 +1485,6 @@ public class KeyValue implements Writable, HeapSize {
  
     /**
      * @return Comparator that ignores timestamps; useful counting versions.
-     * @throws IOException
      */
     public KVComparator getComparatorIgnoringTimestamps() {
       KVComparator c = null;

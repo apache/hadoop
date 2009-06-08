@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * during the course of a Get operation.
  * <p>
  * This class is utilized through three methods:
- * <ul><li>{@link add} when encountering a Delete
- * <li>{@link isDeleted} when checking if a Put KeyValue has been deleted
- * <li>{@link update} when reaching the end of a StoreFile
+ * <ul><li>{@link #add} when encountering a Delete
+ * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted
+ * <li>{@link #update} when reaching the end of a StoreFile
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded 
  */
@@ -60,9 +60,11 @@ public class GetDeleteTracker implements DeleteTracker {
    * this row operation.
    * <p>
    * This is called when a Delete is encountered in a StoreFile.
-   * @param kv
-   * @param type
+   * @param buffer
+   * @param qualifierOffset
+   * @param qualifierLength
    * @param timestamp
+   * @param type
    */
   @Override
   public void add(byte [] buffer, int qualifierOffset, int qualifierLength,

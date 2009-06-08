@@ -224,8 +224,9 @@ public class Delete implements Writable {
   }
   
   /**
-   * Method for retrieving the delete's lockId
-   * @return
+   * Method for retrieving the delete's lock ID.
+   * 
+   * @return The lock ID.
    */
   public long getLockId() {
 	return this.lockId;

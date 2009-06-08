@@ -77,7 +77,7 @@ public interface Filter extends Writable {
    *
    * @param v the KeyValue in question
    * @return code as described below
-   * @see {@link Filter.ReturnCode}
+   * @see Filter.ReturnCode
    */
   public ReturnCode filterKeyValue(KeyValue v);
 

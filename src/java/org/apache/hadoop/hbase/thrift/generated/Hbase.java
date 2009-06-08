@@ -41,8 +41,6 @@ public class Hbase {
     /**
      * Brings a table on-line (enables it)
      * @param tableName name of the table
-     * 
-     * @param tableName
      */
     public void enableTable(byte[] tableName) throws IOError, TException;
 
@@ -50,16 +48,12 @@ public class Hbase {
      * Disables a table (takes it off-line) If it is being served, the master
      * will tell the servers to stop serving it.
      * @param tableName name of the table
-     * 
-     * @param tableName
      */
     public void disableTable(byte[] tableName) throws IOError, TException;
 
     /**
      * @param tableName name of table to check
      * @return true if table is on-line
-     * 
-     * @param tableName
      */
     public boolean isTableEnabled(byte[] tableName) throws IOError, TException;
 
@@ -77,8 +71,6 @@ public class Hbase {
      * List all the column families assoicated with a table.
      * @param tableName table name
      * @return list of column family descriptors
-     * 
-     * @param tableName
      */
     public Map<byte[],ColumnDescriptor> getColumnDescriptors(byte[] tableName) throws IOError, TException;
 
@@ -86,8 +78,6 @@ public class Hbase {
      * List the regions associated with a table.
      * @param tableName table name
      * @return list of region descriptors
-     * 
-     * @param tableName
      */
     public List<TRegionInfo> getTableRegions(byte[] tableName) throws IOError, TException;
 
@@ -102,9 +92,6 @@ public class Hbase {
      * 
      * @throws IllegalArgument if an input parameter is invalid
      * @throws AlreadyExists if the table name already exists
-     * 
-     * @param tableName
-     * @param columnFamilies
      */
     public void createTable(byte[] tableName, List<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists, TException;
 
@@ -113,8 +100,6 @@ public class Hbase {
      * @param tableName name of table to delete
      * @throws IOError if table doesn't exist on server or there was some other
      * problem
-     * 
-     * @param tableName
      */
     public void deleteTable(byte[] tableName) throws IOError, TException;
 
@@ -126,10 +111,6 @@ public class Hbase {
      * @param row row key
      * @param column column name
      * @return value for specified row/column
-     * 
-     * @param tableName
-     * @param row
-     * @param column
      */
     public List<TCell> get(byte[] tableName, byte[] row, byte[] column) throws IOError, TException;
 
@@ -142,11 +123,6 @@ public class Hbase {
      * @param column column name
      * @param numVersions number of versions to retrieve
      * @return list of cells for specified row/column
-     * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param numVersions
      */
     public List<TCell> getVer(byte[] tableName, byte[] row, byte[] column, int numVersions) throws IOError, TException;
 
@@ -161,12 +137,6 @@ public class Hbase {
      * @param timestamp timestamp
      * @param numVersions number of versions to retrieve
      * @return list of cells for specified row/column
-     * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param timestamp
-     * @param numVersions
      */
     public List<TCell> getVerTs(byte[] tableName, byte[] row, byte[] column, long timestamp, int numVersions) throws IOError, TException;
 
@@ -177,9 +147,6 @@ public class Hbase {
      * @param tableName name of table
      * @param row row key
      * @return TRowResult containing the row and map of columns to TCells
-     * 
-     * @param tableName
-     * @param row
      */
     public List<TRowResult> getRow(byte[] tableName, byte[] row) throws IOError, TException;
 
@@ -191,10 +158,6 @@ public class Hbase {
      * @param row row key
      * @param columns List of columns to return, null for all columns
      * @return TRowResult containing the row and map of columns to TCells
-     * 
-     * @param tableName
-     * @param row
-     * @param columns
      */
     public List<TRowResult> getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, TException;
 
@@ -206,10 +169,6 @@ public class Hbase {
      * @param row row key
      * @param timestamp timestamp
      * @return TRowResult containing the row and map of columns to TCells
-     * 
-     * @param tableName
-     * @param row
-     * @param timestamp
      */
     public List<TRowResult> getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
 
@@ -221,11 +180,6 @@ public class Hbase {
      * @param row row key
      * @param columns List of columns to return, null for all columns
      * @return TRowResult containing the row and map of columns to TCells
-     * 
-     * @param tableName
-     * @param row
-     * @param columns
-     * @param timestamp
      */
     public List<TRowResult> getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException;
 
@@ -238,10 +192,6 @@ public class Hbase {
      * @param tableName name of table
      * @param row row key
      * @param mutations list of mutation commands
-     * 
-     * @param tableName
-     * @param row
-     * @param mutations
      */
     public void mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws IOError, IllegalArgument, TException;
 
@@ -255,11 +205,6 @@ public class Hbase {
      * @param row row key
      * @param mutations list of mutation commands
      * @param timestamp timestamp
-     * 
-     * @param tableName
-     * @param row
-     * @param mutations
-     * @param timestamp
      */
     public void mutateRowTs(byte[] tableName, byte[] row, List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException;
 
@@ -271,9 +216,6 @@ public class Hbase {
      * 
      * @param tableName name of table
      * @param rowBatches list of row batches
-     * 
-     * @param tableName
-     * @param rowBatches
      */
     public void mutateRows(byte[] tableName, List<BatchMutation> rowBatches) throws IOError, IllegalArgument, TException;
 
@@ -286,10 +228,6 @@ public class Hbase {
      * @param tableName name of table
      * @param rowBatches list of row batches
      * @param timestamp timestamp
-     * 
-     * @param tableName
-     * @param rowBatches
-     * @param timestamp
      */
     public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException;
 
@@ -299,11 +237,6 @@ public class Hbase {
      * @param row row to increment
      * @param column name of column
      * @param value amount to increment by
-     * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param value
      */
     public long atomicIncrement(byte[] tableName, byte[] row, byte[] column, long value) throws IOError, IllegalArgument, TException;
 
@@ -313,10 +246,6 @@ public class Hbase {
      * @param tableName name of table
      * @param row Row to update
      * @param column name of column whose value is to be deleted
-     * 
-     * @param tableName
-     * @param row
-     * @param column
      */
     public void deleteAll(byte[] tableName, byte[] row, byte[] column) throws IOError, TException;
 
@@ -328,11 +257,6 @@ public class Hbase {
      * @param row Row to update
      * @param column name of column whose value is to be deleted
      * @param timestamp timestamp
-     * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param timestamp
      */
     public void deleteAllTs(byte[] tableName, byte[] row, byte[] column, long timestamp) throws IOError, TException;
 
@@ -341,9 +265,6 @@ public class Hbase {
      * 
      * @param tableName name of table
      * @param row key of the row to be completely deleted.
-     * 
-     * @param tableName
-     * @param row
      */
     public void deleteAllRow(byte[] tableName, byte[] row) throws IOError, TException;
 
@@ -354,10 +275,6 @@ public class Hbase {
      * @param tableName name of table
      * @param row key of the row to be completely deleted.
      * @param timestamp timestamp
-     * 
-     * @param tableName
-     * @param row
-     * @param timestamp
      */
     public void deleteAllRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
 
@@ -373,10 +290,6 @@ public class Hbase {
      *                 start at the first row.
      * 
      * @return scanner id to be used with other scanner procedures
-     * 
-     * @param tableName
-     * @param startRow
-     * @param columns
      */
     public int scannerOpen(byte[] tableName, byte[] startRow, List<byte[]> columns) throws IOError, TException;
 
@@ -395,11 +308,6 @@ public class Hbase {
      *                scanner's results
      * 
      * @return scanner id to be used with other scanner procedures
-     * 
-     * @param tableName
-     * @param startRow
-     * @param stopRow
-     * @param columns
      */
     public int scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns) throws IOError, TException;
 
@@ -417,11 +325,6 @@ public class Hbase {
      * @param timestamp timestamp
      * 
      * @return scanner id to be used with other scanner procedures
-     * 
-     * @param tableName
-     * @param startRow
-     * @param columns
-     * @param timestamp
      */
     public int scannerOpenTs(byte[] tableName, byte[] startRow, List<byte[]> columns, long timestamp) throws IOError, TException;
 
@@ -442,12 +345,6 @@ public class Hbase {
      * @param timestamp timestamp
      * 
      * @return scanner id to be used with other scanner procedures
-     * 
-     * @param tableName
-     * @param startRow
-     * @param stopRow
-     * @param columns
-     * @param timestamp
      */
     public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns, long timestamp) throws IOError, TException;
 
@@ -461,8 +358,6 @@ public class Hbase {
      * @return a TRowResult containing the current row and a map of the columns to TCells.
      * @throws IllegalArgument if ScannerID is invalid
      * @throws NotFound when the scanner reaches the end
-     * 
-     * @param id
      */
     public List<TRowResult> scannerGet(int id) throws IOError, IllegalArgument, TException;
 
@@ -477,9 +372,6 @@ public class Hbase {
      * @return a TRowResult containing the current row and a map of the columns to TCells.
      * @throws IllegalArgument if ScannerID is invalid
      * @throws NotFound when the scanner reaches the end
-     * 
-     * @param id
-     * @param nbRows
      */
     public List<TRowResult> scannerGetList(int id, int nbRows) throws IOError, IllegalArgument, TException;
 
@@ -488,8 +380,6 @@ public class Hbase {
      * 
      * @param id id of a scanner returned by scannerOpen
      * @throws IllegalArgument if ScannerID is invalid
-     * 
-     * @param id
      */
     public void scannerClose(int id) throws IOError, IllegalArgument, TException;
 

@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * All other query parameters are accessed from the client-specified Get.
  * <p>
- * The primary method used is {@link match} with the current KeyValue.  It will
- * return a {@link MatchCode} 
+ * The primary method used is {@link #match} with the current KeyValue.  It will
+ * return a {@link QueryMatcher.MatchCode} 
  * 
  * , deletes,
  * versions, 
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class QueryMatcher {
   
   /**
-   * {@link match} return codes.  These instruct the scanner moving through
+   * {@link #match} return codes.  These instruct the scanner moving through
    * Memcaches and StoreFiles what to do with the current KeyValue.
    * <p>
    * Additionally, this contains "early-out" language to tell the scanner to
@@ -281,7 +281,7 @@ public class QueryMatcher {
     return (timestamp < oldestStamp);
   }
 
-   /**
+  /**
    * If matcher returns SEEK_NEXT_COL you may be able
    * to get a hint of the next column to seek to - call this.
    * If it returns null, there is no hint.
@@ -320,7 +320,6 @@ public class QueryMatcher {
     this.row = row;
   }
   
-
   /**
    * 
    * @return the start key
@@ -363,9 +362,10 @@ public class QueryMatcher {
   public DeleteTracker getDeleteTracker() {
     return this.deletes;
   }
+  
   /**
    * 
-   * @return
+   * @return <code>true</code> when done.
    */
   public boolean isDone() {
     return this.columns.done();

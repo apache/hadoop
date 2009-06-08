@@ -211,7 +211,6 @@ public class Scan implements Writable {
   /**
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
-   * @throws IOException if invalid number of versions
    */
   public Scan setMaxVersions(int maxVersions) {
     this.maxVersions = maxVersions;
@@ -230,9 +229,10 @@ public class Scan implements Writable {
   /**
    * Set an old-style filter interface to use. Note: not all features of the
    * old style filters are supported.
+   * 
    * @deprecated
    * @param filter
-   * @return
+   * @return The scan instance. 
    */
   public Scan setOldFilter(RowFilterInterface filter) {
     oldFilter = filter;

@@ -138,7 +138,6 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * @param transactionId
    * @param regionName region name
    * @param delete
-   * @param timestamp Delete all entries that have this timestamp or older
    * @throws IOException
    */
   public void delete(long transactionId, byte [] regionName, Delete delete)

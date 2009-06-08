@@ -245,7 +245,6 @@ public class HRegion implements HConstants { // , Writable{
    * @param flushListener an object that implements CacheFlushListener or null
    * making progress to master -- otherwise master might think region deploy
    * failed.  Can be null.
-   * @throws IOException 
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
       HRegionInfo regionInfo, FlushRequester flushListener) {
@@ -1006,7 +1005,6 @@ public class HRegion implements HConstants { // , Writable{
    * 
    * @param row row key
    * @param family
-   * @param columnFamily Must include the column family delimiter character.
    * @return map of values
    * @throws IOException
    */
@@ -1324,7 +1322,7 @@ public class HRegion implements HConstants { // , Writable{
    * to replace LATEST_TIMESTAMP with now.
    * @param keys
    * @param now
-   * @return
+   * @return <code>true</code> when updating the time stamp completed.
    */
   private boolean updateKeys(List<KeyValue> keys, byte [] now) {
     if(keys == null || keys.isEmpty()) {
@@ -1419,9 +1417,9 @@ public class HRegion implements HConstants { // , Writable{
   /** 
    * Add updates first to the hlog (if writeToWal) and then add values to memcache.
    * Warning: Assumption is caller has lock on passed in row.
+   * @param family
+   * @param edits
    * @param writeToWAL if true, then we should write to the log
-   * @param updatesByColumn Cell updates by column
-   * @param now
    * @throws IOException
    */
   private void put(final byte [] family, final List<KeyValue> edits, 
@@ -1577,7 +1575,7 @@ public class HRegion implements HConstants { // , Writable{
   
   /** 
    * Release the row lock!
-   * @param row Name of row whose lock we are to release
+   * @param lockid  The lock ID to release.
    */
   void releaseRowLock(final Integer lockid) {
     synchronized (locksToRows) {
@@ -2256,7 +2254,7 @@ public class HRegion implements HConstants { // , Writable{
    * @param family
    * @param qualifier
    * @param amount
-   * @return
+   * @return The new value.
    * @throws IOException
    */
   public long incrementColumnValue(byte [] row, byte [] family,

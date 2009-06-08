@@ -26,7 +26,7 @@ package org.apache.hadoop.hbase.io;
  * do not account for 32 vs 64 bit nor for different VM implementations.
  * <p>
  * An Object's size is determined by the non-static data members in it,
- * as well as the fixed {@link OBJECT} overhead.
+ * as well as the fixed {@link Object} overhead.
  * <p>
  * For example:
  * <pre>

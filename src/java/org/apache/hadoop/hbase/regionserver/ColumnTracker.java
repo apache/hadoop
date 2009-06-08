@@ -33,10 +33,10 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
  * qualifiers within the family.
  * <p>
  * This class is utilized by {@link QueryMatcher} through two methods:
- * <ul><li>{@link checkColumn} is called when a Put satisfies all other
+ * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
  * conditions of the query.  This method returns a {@link MatchCode} to define
  * what action should be taken.
- * <li>{@link update} is called at the end of every StoreFile or Memcache.
+ * <li>{@link #update} is called at the end of every StoreFile or Memcache.
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded 
  */
@@ -46,20 +46,23 @@ public interface ColumnTracker {
    * @param bytes
    * @param offset
    * @param length
-   * @return
+   * @return The match code instance.
    */
   public MatchCode checkColumn(byte [] bytes, int offset, int length);
+  
   /**
    * Updates internal variables in between files
    */
   public void update();
+  
   /**
    * Resets the Matcher
    */
   public void reset();
+  
   /**
    * 
-   * @return
+   * @return <code>true</code> when done.
    */
   public boolean done();
 

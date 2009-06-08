@@ -92,8 +92,9 @@ public class Result implements Writable {
   }
 
   /**
-   * Return a sorted list of the KeyValues in this result.
-   * @return
+   * Return a sorted list of the KeyValue's in this result.
+   * 
+   * @return The sorted list of KeyValue's.
    */
   public List<KeyValue> list() {
     return Arrays.asList(sorted());

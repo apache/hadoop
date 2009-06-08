@@ -24,7 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Comparator;
 import java.math.BigInteger;
 
@@ -33,8 +32,6 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -307,8 +304,8 @@ public class Bytes {
   /**
    * Takes a ASCII digit in the range A-F0-9 and returns
    * the corresponding integer/ordinal value.
-   * @param ch
-   * @return
+   * @param ch  The hex digit.
+   * @return The converted hex value as a byte.
    */
   public static byte toBinaryFromHex(byte ch) {
     if ( ch >= 'A' && ch <= 'F' )
@@ -658,7 +655,7 @@ public class Bytes {
    * Converts a byte array to a short value
    * @param bytes
    * @param offset
-   * @param lengths
+   * @param length
    * @return the short value
    */
   public static short toShort(byte[] bytes, int offset, final int length) {

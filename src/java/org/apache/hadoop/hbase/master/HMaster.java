@@ -881,7 +881,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /**
    * Get row from meta table.
    * @param row
-   * @param columns
+   * @param family
    * @return Result
    * @throws IOException
    */

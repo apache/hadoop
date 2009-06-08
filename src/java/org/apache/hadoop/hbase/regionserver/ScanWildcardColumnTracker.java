@@ -49,7 +49,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * @param bytes
    * @param offset
    * @param length
-   * @return
+   * @return The match code instance.
    */
   @Override
   public MatchCode checkColumn(byte[] bytes, int offset, int length) {
@@ -106,7 +106,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * Used by matcher and scan/get to get a hint of the next column
    * to seek to after checkColumn() returns SKIP.  Returns the next interesting
    * column we want, or NULL there is none (wildcard scanner).
-   * @return
+   * 
+   * @return The column count.
    */
   public ColumnCount getColumnHint() {
     return null;

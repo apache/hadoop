@@ -1353,8 +1353,6 @@ public class Store implements HConstants {
 
   /**
    * @return The size of the store file indexes, in bytes.
-   * @throws IOException if there was a problem getting file sizes from the
-   * filesystem
    */
   long getStorefilesIndexSize() {
     long size = 0;
@@ -1490,7 +1488,7 @@ public class Store implements HConstants {
    * @param family
    * @param qualifier
    * @param amount
-   * @return
+   * @return The new value.
    * @throws IOException
    */
   public long incrementColumnValue(byte [] row, byte [] family,

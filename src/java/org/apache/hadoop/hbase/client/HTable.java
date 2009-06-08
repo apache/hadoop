@@ -323,7 +323,6 @@ public class HTable {
    * Return the row that matches <i>row</i> exactly, 
    * or the one that immediately preceeds it.
    * 
-   * @param regionName region name
    * @param row row key
    * @param family Column family to look for row in.
    * @return map of values
@@ -345,13 +344,12 @@ public class HTable {
   * Return the row that matches <i>row</i> exactly, 
   * or the one that immediately preceeds it.
   * 
-  * @param regionName region name
   * @param row row key
   * @param family Column family to look for row in.
   * @return map of values
   * @throws IOException
-   * @deprecated As of hbase 0.20.0, replaced by {@link #getRowOrBefore(byte[], byte[]}
-   */
+  * @deprecated As of hbase 0.20.0, replaced by {@link #getRowOrBefore(byte[], byte[])}
+  */
   public RowResult getClosestRowBefore(final byte[] row, final byte[] family)
   throws IOException {
     Result r = getRowOrBefore(row, family);
@@ -374,8 +372,8 @@ public class HTable {
   /**
    * Get a scanner on the current table as specified by the {@link Scan} object
    * 
-   * @param family
-   * @return
+   * @param family  The column family to scan.
+   * @return The scanner.
    * @throws IOException
    * @since 0.20.0
    */
@@ -388,9 +386,9 @@ public class HTable {
   /**
    * Get a scanner on the current table as specified by the {@link Scan} object
    * 
-   * @param family
-   * @param qualifier
-   * @return
+   * @param family  The column family to scan.
+   * @param qualifier  The column qualifier to scan.
+   * @return The scanner.
    * @throws IOException
    * @since 0.20.0
    */
@@ -481,7 +479,7 @@ public class HTable {
    * @param family
    * @param qualifier
    * @param amount
-   * @return
+   * @return The new value.
    * @throws IOException
    */
   public long incrementColumnValue(final byte [] row, final byte [] family, 
@@ -563,9 +561,9 @@ public class HTable {
   
   /**
    * Utility method that verifies Put is well formed.
+   * 
    * @param put
    * @throws IllegalArgumentException
-   * @throws IOException
    */
   private void validatePut(final Put put) throws IllegalArgumentException{
     if(put.isEmpty()) {
@@ -1653,7 +1651,7 @@ public class HTable {
    * @param batchUpdate
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)} or
-   * {@link #put(Put)
+   * {@link #put(Put)}
    */ 
   public synchronized void commit(final BatchUpdate batchUpdate) 
   throws IOException {
@@ -1667,7 +1665,7 @@ public class HTable {
    * @param rl Existing row lock
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)} or
-   * {@link #put(Put)
+   * {@link #put(Put)}
    */ 
   public synchronized void commit(final BatchUpdate batchUpdate,
       final RowLock rl) 
@@ -1685,8 +1683,8 @@ public class HTable {
    * If autoFlush is false, the updates are buffered
    * @param batchUpdates
    * @throws IOException
-   * @deprecated As of hbase 0.20.0, replaced by {@link #delete(List<Delete>)} or
-   * {@link #put(List<Put>)
+   * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)} or
+   * {@link #put(List)}
    */ 
   public synchronized void commit(final List<BatchUpdate> batchUpdates)
       throws IOException {

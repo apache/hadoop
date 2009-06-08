@@ -41,9 +41,6 @@ public class TableInputFormat extends TableInputFormatBase implements
 
   /**
    * space delimited list of columns
-   *
-   * @see org.apache.hadoop.hbase.regionserver.HAbstractScanner for column name
-   *      wildcards
    */
   public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
 

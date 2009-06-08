@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.HalfHFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -213,9 +212,10 @@ public class StoreFile implements HConstants {
   }
 
   /**
+   * Returns the block cache or <code>null</code> in case none should be used.
    * 
-   * @param conf
-   * @return
+   * @param conf  The current configuration.
+   * @return The block cache or <code>null</code>.
    */
   public static synchronized BlockCache getBlockCache(HBaseConfiguration conf) {
     if (hfileBlockCache != null)
