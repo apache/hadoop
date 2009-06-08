@@ -165,6 +165,7 @@ Release 0.20.0 - Unreleased
                (since hbase-1430); should be other way round
    HBASE-1493  New TableMapReduceUtil methods should be static (Billy Pearson
                via Andrew Purtell)
+   HBASE-1486  BLOCKCACHE always on even when disabled (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

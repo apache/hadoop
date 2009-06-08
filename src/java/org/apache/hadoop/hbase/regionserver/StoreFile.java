@@ -71,7 +71,9 @@ public class StoreFile implements HConstants {
   private Reference reference;
   // If this StoreFile references another, this is the other files path.
   private Path referencePath;
-
+  // Should the block cache be used or not.
+  private boolean blockcache;
+  
   // Keys for metadata stored in backing HFile.
   private static final byte [] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
   // Set when we obtain a Reader.
@@ -100,22 +102,25 @@ public class StoreFile implements HConstants {
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a 
    * substantial amount of ram depending on the underlying files (10-20MB?).
-   * @param fs
-   * @param p
-   * @param conf
-   * @throws IOException
+   * 
+   * @param fs  The current file system to use.
+   * @param p  The path of the file.
+   * @param blockcache  <code>true</code> if the block cache is enabled.
+   * @param conf  The current configuration.
+   * @throws IOException When opening the reader fails.
    */
-  StoreFile(final FileSystem fs, final Path p, final HBaseConfiguration conf) 
+  StoreFile(final FileSystem fs, final Path p, final boolean blockcache, 
+      final HBaseConfiguration conf) 
   throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.path = p;
+    this.blockcache = blockcache;
     if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
     }
     this.reader = open();
-
   }
 
   /**
@@ -229,7 +234,7 @@ public class StoreFile implements HConstants {
    * @return the blockcache
    */
   public BlockCache getBlockCache() {
-    return getBlockCache(conf);
+    return blockcache ? getBlockCache(conf) : null;
   }
 
   /**

@@ -108,7 +108,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * Default setting for whether to use a block cache or not.
    */
-  public static final boolean DEFAULT_BLOCKCACHE = false;
+  public static final boolean DEFAULT_BLOCKCACHE = true;
 
   /**
    * Default size of blocks in files store to the filesytem.  Use smaller for
