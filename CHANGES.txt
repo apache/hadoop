@@ -435,6 +435,9 @@ Trunk (unreleased changes)
     HADOOP-5961. DataNode process understand generic hadoop command line
     options (like -Ddfs.property=value). (Raghu Angadi)
 
+    HADOOP-5694. Change org.apache.hadoop.examples.dancing to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
