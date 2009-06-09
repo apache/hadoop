@@ -1876,7 +1876,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
           break;
         }
       }
-      LOG.debug("Result[]next time: " + (System.currentTimeMillis()-start) + " (ms)");
       return results.toArray(new Result[0]);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));

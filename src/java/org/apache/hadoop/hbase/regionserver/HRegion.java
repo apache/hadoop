@@ -1020,7 +1020,6 @@ public class HRegion implements HConstants { // , Writable{
       Store store = getStore(family);
       KeyValue kv = new KeyValue(row, HConstants.LATEST_TIMESTAMP);
       // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
-      LOG.debug("getClosestRowBefore looking for: " + Bytes.toStringBinary(row));
       key = store.getRowKeyAtOrBefore(kv);
       if (key == null) {
         return null;

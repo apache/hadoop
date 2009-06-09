@@ -168,6 +168,7 @@ Release 0.20.0 - Unreleased
    HBASE-1486  BLOCKCACHE always on even when disabled (Lars George via Stack)
    HBASE-1491  ZooKeeper errors: "Client has seen zxid 0xe our last zxid is 0xd"
    HBASE-1499  Fix javadoc warnings after HBASE-1304 commit (Lars George via Stack)
+   HBASE-1504  Remove left-over debug from 1304 commit
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

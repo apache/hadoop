@@ -1276,9 +1276,6 @@ class RegionManager implements HConstants {
    * @param returnMsgs
    */
   public void applyActions(HServerInfo serverInfo, ArrayList<HMsg> returnMsgs) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Applying operation in tasklists to region");
-    }
     applyActions(serverInfo, returnMsgs, this.regionsToCompact,
         HMsg.Type.MSG_REGION_COMPACT);
     applyActions(serverInfo, returnMsgs, this.regionsToSplit,
