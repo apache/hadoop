@@ -96,7 +96,7 @@ public class TestMiniMRDFSSort extends TestCase {
     // Run Sort
     Sort sort = new Sort();
     assertEquals(ToolRunner.run(job, sort, sortArgs), 0);
-    Counters counters = sort.getResult().getCounters();
+    org.apache.hadoop.mapreduce.Counters counters = sort.getResult().getCounters();
     long mapInput = counters.findCounter(
       org.apache.hadoop.mapreduce.lib.input.FileInputFormat.COUNTER_GROUP,
       org.apache.hadoop.mapreduce.lib.input.FileInputFormat.BYTES_READ).
@@ -106,7 +106,7 @@ public class TestMiniMRDFSSort extends TestCase {
     // the hdfs read should be between 100% and 110% of the map input bytes
     assertTrue("map input = " + mapInput + ", hdfs read = " + hdfsRead,
                (hdfsRead < (mapInput * 1.1)) &&
-               (hdfsRead > mapInput));  
+               (hdfsRead >= mapInput));  
   }
   
   private static void runSortValidator(JobConf job, 

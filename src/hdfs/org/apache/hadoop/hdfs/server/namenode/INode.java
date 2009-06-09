@@ -309,15 +309,11 @@ abstract class INode implements Comparable<byte[]> {
 
   /**
    * Breaks file path into components.
-   * @param path an absolute path on the file system
+   * @param path
    * @return array of byte arrays each of which represents 
    * a single path component.
    */
   static byte[][] getPathComponents(String path) {
-    if (!path.startsWith("/")) {
-      throw new IllegalArgumentException(
-        "Must pass an absolute path to getPathComponents");
-    }
     return getPathComponents(getPathNames(path));
   }
 

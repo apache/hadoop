@@ -25,6 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
@@ -32,11 +34,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
- * Class to test mapred task's temp directory
+ * Class to test mapred task's 
+ *   - temp directory
+ *   - child env
  */
-public class TestMiniMRTaskTempDir extends TestCase {
+public class TestMiniMRChildTask extends TestCase {
   private static final Log LOG =
-    LogFactory.getLog(TestMiniMRTaskTempDir.class.getName());
+    LogFactory.getLog(TestMiniMRChildTask.class.getName());
 
   private MiniMRCluster mr;
   private MiniDFSCluster dfs;
@@ -79,20 +83,9 @@ public class TestMiniMRTaskTempDir extends TestCase {
      }
   }
 
-  /**
-   * Launch tests 
-   * @param conf Configuration of the mapreduce job.
-   * @param inDir input path
-   * @param outDir output path
-   * @param input Input text
-   * @throws IOException
-   */
-  public void launchTest(JobConf conf,
-                         Path inDir,
-                         Path outDir,
-                         String input)
+  // configure a job
+  private void configure(JobConf conf, Path inDir, Path outDir, String input) 
   throws IOException {
-
     // set up the input file system and write input text.
     FileSystem inFs = inDir.getFileSystem(conf);
     FileSystem outFs = outDir.getFileSystem(conf);
@@ -118,7 +111,25 @@ public class TestMiniMRTaskTempDir extends TestCase {
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
                                       "/tmp")).toString().replace(' ', '+');
     conf.set("test.build.data", TEST_ROOT_DIR);
+  }
 
+  /**
+   * Launch tests 
+   * @param conf Configuration of the mapreduce job.
+   * @param inDir input path
+   * @param outDir output path
+   * @param input Input text
+   * @throws IOException
+   */
+  public void launchTest(JobConf conf,
+                         Path inDir,
+                         Path outDir,
+                         String input)
+  throws IOException {
+    configure(conf, inDir, outDir, input);
+
+    FileSystem outFs = outDir.getFileSystem(conf);
+    
     // Launch job with default option for temp dir. 
     // i.e. temp dir is ./tmp 
     JobClient.runJob(conf);
@@ -135,6 +146,74 @@ public class TestMiniMRTaskTempDir extends TestCase {
     outFs.delete(outDir, true);
   }
 
+  // Mappers that simply checks if the desired user env are present or not
+  static class EnvCheckMapper extends MapReduceBase implements
+      Mapper<WritableComparable, Writable, WritableComparable, Writable> {
+    public void map(WritableComparable key, Writable value,
+        OutputCollector<WritableComparable, Writable> out, Reporter reporter)
+        throws IOException {
+      // check if X=$X:/abc works
+      checkEnv("LD_LIBRARY_PATH", "/tmp", "append");
+      // check if X=/tmp works for an already existing parameter
+      checkEnv("HOME", "/tmp", "noappend");
+      // check if my_path=/tmp for a new env variable
+      checkEnv("MY_PATH", "/tmp", "noappend");
+      // check if new_path=$new_path:/tmp works and results into :/tmp
+      checkEnv("NEW_PATH", ":/tmp", "noappend");
+    }
+
+    private void checkEnv(String envName, String expValue, String mode) 
+    throws IOException {
+      String envValue = System.getenv(envName).trim();
+      if ("append".equals(mode)) {
+        if (envValue == null || !envValue.contains(":")) {
+          throw new  IOException("Missing env variable");
+        } else {
+          String parts[] = envValue.split(":");
+          // check if the value is appended
+          if (!parts[parts.length - 1].equals(expValue)) {
+            throw new  IOException("Wrong env variable in append mode");
+          }
+        }
+      } else {
+        if (envValue == null || !envValue.equals(expValue)) {
+          throw new  IOException("Wrong env variable in noappend mode");
+        }
+      }
+    }
+  }
+
+  @Override
+  public void setUp() {
+    try {
+      // create configuration, dfs, file system and mapred cluster 
+      dfs = new MiniDFSCluster(new Configuration(), 1, true, null);
+      fileSys = dfs.getFileSystem();
+      mr = new MiniMRCluster(2, fileSys.getUri().toString(), 1);
+    } catch (IOException ioe) {
+      tearDown();
+    }
+  }
+
+  @Override
+  public void tearDown() {
+    // close file system and shut down dfs and mapred cluster
+    try {
+      if (fileSys != null) {
+        fileSys.close();
+      }
+      if (dfs != null) {
+        dfs.shutdown();
+      }
+      if (mr != null) {
+        mr.shutdown();
+      }
+    } catch (IOException ioe) {
+      LOG.info("IO exception in closing file system)" );
+      ioe.printStackTrace();           
+    }
+  }
+  
   /**
    * Tests task's temp directory.
    * 
@@ -146,11 +225,6 @@ public class TestMiniMRTaskTempDir extends TestCase {
    */
   public void testTaskTempDir(){
     try {
-      
-      // create configuration, dfs, file system and mapred cluster 
-      dfs = new MiniDFSCluster(new Configuration(), 1, true, null);
-      fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(2, fileSys.getUri().toString(), 1);
       JobConf conf = mr.createJobConf();
       
       // intialize input, output directories
@@ -163,26 +237,39 @@ public class TestMiniMRTaskTempDir extends TestCase {
     } catch(Exception e) {
       e.printStackTrace();
       fail("Exception in testing temp dir");
-      // close file system and shut down dfs and mapred cluster
-      try {
-        if (fileSys != null) {
-          fileSys.close();
-        }
-        if (dfs != null) {
-          dfs.shutdown();
-        }
-        if (mr != null) {
-          mr.shutdown();
-        }
-      } catch (IOException ioe) {
-        LOG.info("IO exception in closing file system)" );
-        ioe.printStackTrace();        			
-      }
+      tearDown();
     }
   }
 
-  public static void main(String args[]){
-    TestMiniMRTaskTempDir test = new TestMiniMRTaskTempDir();
-    test.testTaskTempDir();
+  /**
+   * Test to test if the user set env variables reflect in the child
+   * processes. Mainly
+   *   - x=y (x can be a already existing env variable or a new variable)
+   *   - x=$x:y (replace $x with the current value of x)
+   */
+  public void testTaskEnv(){
+    try {
+      JobConf conf = mr.createJobConf();
+      
+      // initialize input, output directories
+      Path inDir = new Path("testing/wc/input1");
+      Path outDir = new Path("testing/wc/output1");
+      String input = "The input";
+      
+      configure(conf, inDir, outDir, input);
+
+      FileSystem outFs = outDir.getFileSystem(conf);
+      
+      conf.set("mapred.child.env", 
+               "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp,"
+               + "NEW_PATH=$NEW_PATH:/tmp");
+
+      JobClient.runJob(conf);
+      outFs.delete(outDir, true);
+    } catch(Exception e) {
+      e.printStackTrace();
+      fail("Exception in testing child env");
+      tearDown();
+    }
   }
 }

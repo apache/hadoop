@@ -346,7 +346,10 @@ class DataBlockScanner implements Runnable {
     info.lastLogTime = now;
     LogFileHandler log = verificationLog;
     if (log != null) {
-      log.appendLine(LogEntry.newEnry(block, now));
+      log.appendLine("date=\"" + dateFormat.format(new Date(now)) + "\"\t " +
+          "time=\"" + now + "\"\t " +
+          "genstamp=\"" + block.getGenerationStamp() + "\"\t " +
+          "id=\"" + block.getBlockId() +"\"");
     }
   }
   
@@ -380,13 +383,6 @@ class DataBlockScanner implements Runnable {
      */
     private static Pattern entryPattern = 
       Pattern.compile("\\G\\s*([^=\\p{Space}]+)=\"(.*?)\"\\s*");
-    
-    static String newEnry(Block block, long time) {
-      return "date=\"" + dateFormat.format(new Date(time)) + "\"\t " +
-             "time=\"" + time + "\"\t " +
-             "genstamp=\"" + block.getGenerationStamp() + "\"\t " +
-             "id=\"" + block.getBlockId() +"\"";
-    }
     
     static LogEntry parseEntry(String line) {
       LogEntry entry = new LogEntry();

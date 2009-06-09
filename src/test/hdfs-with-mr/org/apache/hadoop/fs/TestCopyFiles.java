@@ -295,6 +295,37 @@ public class TestCopyFiles extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
+
+  /** copy empty directory on dfs file system */
+  public void testEmptyDir() throws Exception {
+    String namenode = null;
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      final FileSystem hdfs = cluster.getFileSystem();
+      namenode = FileSystem.getDefaultUri(conf).toString();
+      if (namenode.startsWith("hdfs://")) {
+        
+        FileSystem fs = FileSystem.get(URI.create(namenode), new Configuration());
+        fs.mkdirs(new Path("/empty"));
+
+        ToolRunner.run(new DistCp(conf), new String[] {
+                                         "-log",
+                                         namenode+"/logs",
+                                         namenode+"/empty",
+                                         namenode+"/dest"});
+        fs = FileSystem.get(URI.create(namenode+"/destdat"), conf);
+        assertTrue("Destination directory does not exist.",
+                   fs.exists(new Path(namenode+"/dest")));
+        deldir(hdfs, "/dest");
+        deldir(hdfs, "/empty");
+        deldir(hdfs, "/logs");
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
   
   /** copy files from local file system to dfs file system */
   public void testCopyFromLocalToDfs() throws Exception {
@@ -380,7 +411,7 @@ public class TestCopyFiles extends TestCase {
         deldir(hdfs, "/logs");
 
         ToolRunner.run(new DistCp(conf), new String[] {
-                                         "-p",
+                                         "-prbugp", // no t to avoid preserving mod. times
                                          "-update",
                                          "-log",
                                          namenode+"/logs",
@@ -393,7 +424,7 @@ public class TestCopyFiles extends TestCase {
 
         deldir(hdfs, "/logs");
         ToolRunner.run(new DistCp(conf), new String[] {
-                                         "-p",
+                                         "-prbugp", // no t to avoid preserving mod. times
                                          "-overwrite",
                                          "-log",
                                          namenode+"/logs",
@@ -548,6 +579,32 @@ public class TestCopyFiles extends TestCase {
         for(int i = 0; i < dststat.length; i++) {
           assertEquals("i=" + i, permissions[i], dststat[i].getPermission());
         }
+        deldir(fs, "/destdat");
+        deldir(fs, "/srcdat");
+      }
+
+      {//test preserving times
+        MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
+        fs.mkdirs(new Path("/srcdat/tmpf1"));
+        fs.mkdirs(new Path("/srcdat/tmpf2"));
+        FileStatus[] srcstat = getFileStatus(fs, "/srcdat", files);
+        FsPermission[] permissions = new FsPermission[srcstat.length];
+        for(int i = 0; i < srcstat.length; i++) {
+          fs.setTimes(srcstat[i].getPath(), 40, 50);
+        }
+
+        ToolRunner.run(new DistCp(conf),
+            new String[]{"-pt", nnUri+"/srcdat", nnUri+"/destdat"});
+
+        FileStatus[] dststat = getFileStatus(fs, "/destdat", files);
+        for(int i = 0; i < dststat.length; i++) {
+          assertEquals("Modif. Time i=" + i, 40, dststat[i].getModificationTime());
+          assertEquals("Access Time i=" + i+ srcstat[i].getPath() + "-" + dststat[i].getPath(), 50, dststat[i].getAccessTime());
+        }
+        
+        assertTrue("Source and destination directories do not match.",
+                   checkFiles(fs, "/destdat", files));
+  
         deldir(fs, "/destdat");
         deldir(fs, "/srcdat");
       }

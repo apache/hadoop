@@ -114,12 +114,17 @@ if [ -d "$HDFSPROXY_HOME/../../" ]; then
     CLASSPATH=${CLASSPATH}:$f;
   done
 fi
-
 if [ -d "$HDFSPROXY_HOME/../../lib" ]; then
 	for f in $HDFSPROXY_HOME/../../lib/*.jar; do
     CLASSPATH=${CLASSPATH}:$f;
   done
 fi
+if [ -d "$HDFSPROXY_HOME/../../lib/jsp-2.1" ]; then
+	for f in $HDFSPROXY_HOME/../../lib/jsp-2.1/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+fi
+
 
 # add user-specified CLASSPATH last
 if [ "$HDFSPROXY_CLASSPATH" != "" ]; then

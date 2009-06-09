@@ -92,6 +92,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -1379,6 +1380,10 @@ public class DataNode extends Service
                                       Configuration conf) throws IOException {
     if (conf == null)
       conf = new Configuration();
+    // parse generic hadoop options
+    GenericOptionsParser hParser = new GenericOptionsParser(conf, args);
+    args = hParser.getRemainingArgs();
+    
     if (!parseArguments(args, conf)) {
       printUsage();
       return null;

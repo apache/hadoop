@@ -613,7 +613,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       for (String tmpjars: libjarsArr) {
         Path tmp = new Path(tmpjars);
         Path newPath = copyRemoteFiles(fs, libjarsDir, tmp, job, replication);
-        DistributedCache.addArchiveToClassPath(newPath, job);
+        DistributedCache.addFileToClassPath(newPath, job);
       }
     }
     
@@ -936,19 +936,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   throws IOException {
     FileStatus[] contents = fs.listStatus(jobDirPath);
     int matchCount = 0;
-    if (contents != null && contents.length >=3) {
+    if (contents != null && contents.length >=2) {
       for (FileStatus status : contents) {
         if ("job.xml".equals(status.getPath().getName())) {
-          ++matchCount;
-        }
-        if ("job.jar".equals(status.getPath().getName())) {
           ++matchCount;
         }
         if ("job.split".equals(status.getPath().getName())) {
           ++matchCount;
         }
       }
-      if (matchCount == 3) {
+      if (matchCount == 2) {
         return true;
       }
     }

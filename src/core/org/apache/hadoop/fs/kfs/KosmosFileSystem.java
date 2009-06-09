@@ -122,7 +122,6 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     @Override
-    @Deprecated
     public boolean isDirectory(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
@@ -133,7 +132,6 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     @Override
-    @Deprecated
     public boolean isFile(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();

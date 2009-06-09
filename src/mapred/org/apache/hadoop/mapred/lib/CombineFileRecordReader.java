@@ -19,11 +19,9 @@
 package org.apache.hadoop.mapred.lib;
 
 import java.io.*;
-import java.util.*;
 import java.lang.reflect.*;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.conf.Configuration;
@@ -35,8 +33,10 @@ import org.apache.hadoop.conf.Configuration;
  * This class allows using different RecordReaders for processing
  * these data chunks from different files.
  * @see CombineFileSplit
+ * @deprecated Use
+ * {@link org.apache.hadoop.mapreduce.lib.input.CombineFileRecordReader}
  */
-
+@Deprecated
 public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
 
   static final Class [] constructorSignature = new Class [] 

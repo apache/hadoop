@@ -280,7 +280,13 @@ public class SecondaryNameNode implements Runnable {
     if (!FSConstants.HDFS_URI_SCHEME.equalsIgnoreCase(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
-    return conf.get("dfs.http.address", "0.0.0.0:50070");
+    String configuredAddress = conf.get("dfs.http.address", "0.0.0.0:50070");
+    InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
+    if (sockAddr.getAddress().isAnyLocalAddress()) {
+      return fsName.getHost() + ":" + sockAddr.getPort();
+    } else {
+      return configuredAddress;
+    }
   }
 
   /**

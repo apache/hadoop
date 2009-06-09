@@ -406,6 +406,16 @@
 </property>
 
 <property>
+  <name>mapred.child.env</name>
+  <value></value>
+  <description>User added environment variables for the task tracker child 
+  processes. Example :
+  1) A=foo  This will set the env variable A to foo
+  2) B=$B:c This is inherit tasktracker's B env variable.  
+  </description>
+</property>
+
+<property>
   <name>mapred.child.ulimit</name>
   <value></value>
   <description>The maximum virtual memory, in KB, of a process launched by the 
@@ -652,6 +662,15 @@
   should be excluded by the jobtracker.  If the value is empty, no
   hosts are excluded.</description>
 </property>
+
+<property>
+  <name>mapred.heartbeats.in.second</name>
+  <value>100</value>
+  <description>Expert: Approximate number of heart-beats that could arrive 
+               JobTracker in a second. Assuming each RPC can be processed 
+               in 10msec, the default value is made 100 RPCs in a second.
+  </description>
+</property> 
 
 <property>
   <name>mapred.max.tracker.blacklists</name>
@@ -930,6 +949,34 @@
   <value>org.apache.hadoop.mapred.DefaultTaskController</value>
   <description>TaskController which is used to launch and manage task execution 
   </description>
+</property>
+
+<property>
+  <name>mapred.max.maps.per.node</name>
+  <value>-1</value>
+  <description>Per-node limit on running map tasks for the job. A value
+    of -1 signifies no limit.</description>
+</property>
+
+<property>
+  <name>mapred.max.reduces.per.node</name>
+  <value>-1</value>
+  <description>Per-node limit on running reduce tasks for the job. A value
+    of -1 signifies no limit.</description>
+</property>
+
+<property>
+  <name>mapred.running.map.limit</name>
+  <value>-1</value>
+  <description>Cluster-wide limit on running map tasks for the job. A value
+    of -1 signifies no limit.</description>
+</property>
+
+<property>
+  <name>mapred.running.reduce.limit</name>
+  <value>-1</value>
+  <description>Cluster-wide limit on running reduce tasks for the job. A value
+    of -1 signifies no limit.</description>
 </property>
 
 </configuration>

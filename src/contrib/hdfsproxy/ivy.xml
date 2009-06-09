@@ -22,6 +22,10 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
+    <dependency org="commons-cli"
+      name="commons-cli"
+      rev="${commons-cli.version}"
+      conf="common->default"/>
     <dependency org="log4j"
       name="log4j"
       rev="${log4j.version}"

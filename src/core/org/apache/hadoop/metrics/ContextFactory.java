@@ -188,16 +188,19 @@ public class ContextFactory {
   private void setAttributes() throws IOException {
     InputStream is = getClass().getResourceAsStream(PROPERTIES_FILE);
     if (is != null) {
-      Properties properties = new Properties();
-      properties.load(is);
-      //for (Object propertyNameObj : properties.keySet()) {
-      Iterator it = properties.keySet().iterator();
-      while (it.hasNext()) {
-        String propertyName = (String) it.next();
-        String propertyValue = properties.getProperty(propertyName);
-        setAttribute(propertyName, propertyValue);
+      try {
+        Properties properties = new Properties();
+        properties.load(is);
+        //for (Object propertyNameObj : properties.keySet()) {
+        Iterator it = properties.keySet().iterator();
+        while (it.hasNext()) {
+          String propertyName = (String) it.next();
+          String propertyValue = properties.getProperty(propertyName);
+          setAttribute(propertyName, propertyValue);
+        }
+      } finally {
+        is.close();
       }
-      is.close();
     }
   }
     

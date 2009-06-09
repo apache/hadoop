@@ -164,10 +164,10 @@ class CapacitySchedulerConf {
    * Sets the capacity of the given queue.
    * 
    * @param queue name of the queue
-   * @param gc percent of the cluster for the queue.
+   * @param capacity percent of the cluster for the queue.
    */
-  public void setCapacity(String queue,float gc) {
-    rmConf.setFloat(toFullPropertyName(queue, "capacity"),gc);
+  public void setCapacity(String queue,float capacity) {
+    rmConf.setFloat(toFullPropertyName(queue, "capacity"),capacity);
   }
   
   /**

@@ -92,6 +92,9 @@ public class ImportOptions {
   private String driverClassName;
   private String warehouseDir;
   private FileLayout layout;
+  private boolean local; // if true and conn is mysql, use mysqldump.
+
+  private String tmpDir; // where temp data goes; usually /tmp
 
   private static final String DEFAULT_CONFIG_FILE = "sqoop.properties";
 
@@ -136,6 +139,10 @@ public class ImportOptions {
       this.driverClassName = props.getProperty("jdbc.driver", this.driverClassName);
       this.warehouseDir = props.getProperty("hdfs.warehouse.dir", this.warehouseDir);
 
+      String localImport = props.getProperty("local.import",
+          Boolean.toString(this.local)).toLowerCase();
+      this.local = "true".equals(localImport) || "yes".equals(localImport)
+          || "1".equals(localImport);
     } catch (IOException ioe) {
       LOG.error("Could not read properties file " + DEFAULT_CONFIG_FILE + ": " + ioe.toString());
     } finally {
@@ -156,11 +163,12 @@ public class ImportOptions {
     this.hadoopHome = System.getenv("HADOOP_HOME");
     this.codeOutputDir = System.getProperty("sqoop.src.dir", ".");
 
-    String tmpDir = System.getProperty("test.build.data", "/tmp/");
-    if (!tmpDir.endsWith(File.separator)) {
-      tmpDir = tmpDir + File.separator;
+    String myTmpDir = System.getProperty("test.build.data", "/tmp/");
+    if (!myTmpDir.endsWith(File.separator)) {
+      myTmpDir = myTmpDir + File.separator;
     }
 
+    this.tmpDir = myTmpDir;
     this.jarOutputDir = tmpDir + "sqoop/compile";
     this.layout = FileLayout.TextFile;
 
@@ -178,6 +186,7 @@ public class ImportOptions {
     System.out.println("--driver (class-name)        Manually specify JDBC driver class to use");
     System.out.println("--username (username)        Set authentication username");
     System.out.println("--password (password)        Set authentication password");
+    System.out.println("--local                      Use local import fast path (mysql only)");
     System.out.println("");
     System.out.println("Import control options:");
     System.out.println("--table (tablename)          Table to read");
@@ -232,6 +241,8 @@ public class ImportOptions {
           this.action = ControlAction.ListTables;
         } else if (args[i].equals("--all-tables")) {
           this.allTables = true;
+        } else if (args[i].equals("--local")) {
+          this.local = true;
         } else if (args[i].equals("--username")) {
           this.username = args[++i];
           if (null == this.password) {
@@ -300,6 +311,13 @@ public class ImportOptions {
     }
   }
 
+  /** get the temporary directory; guaranteed to end in File.separator
+   * (e.g., '/')
+   */
+  public String getTmpDir() {
+    return tmpDir;
+  }
+
   public String getConnectString() {
     return connectString;
   }
@@ -334,6 +352,10 @@ public class ImportOptions {
 
   public String getPassword() {
     return password;
+  }
+
+  public boolean isLocal() {
+    return local;
   }
 
   /**
@@ -392,5 +414,9 @@ public class ImportOptions {
    */
   public FileLayout getFileLayout() {
     return this.layout;
+  }
+
+  public void setUsername(String name) {
+    this.username = name;
   }
 }

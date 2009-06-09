@@ -130,6 +130,15 @@ public class CompilationManager {
       }
     }
 
+    // find sqoop jar for compilation classpath
+    String sqoopJar = findThisJar();
+    if (null != sqoopJar) {
+      sqoopJar = File.pathSeparator + sqoopJar;
+    } else {
+      LOG.warn("Could not find sqoop jar; child compilation may fail");
+      sqoopJar = "";
+    }
+
     String curClasspath = System.getProperty("java.class.path");
 
     args.add("-sourcepath");
@@ -140,7 +149,7 @@ public class CompilationManager {
     args.add(jarOutDir);
 
     args.add("-classpath");
-    args.add(curClasspath + File.pathSeparator + coreJar);
+    args.add(curClasspath + File.pathSeparator + coreJar + sqoopJar);
 
     // add all the source files
     for (String srcfile : sources) {

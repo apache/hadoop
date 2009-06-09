@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.sqoop;
 
+import org.apache.hadoop.sqoop.manager.LocalMySQLTest;
 import org.apache.hadoop.sqoop.manager.TestHsqldbManager;
 import org.apache.hadoop.sqoop.manager.TestSqlManager;
 import org.apache.hadoop.sqoop.orm.TestClassWriter;
@@ -44,6 +45,7 @@ public final class AllTests  {
     suite.addTestSuite(TestColumnTypes.class);
     suite.addTestSuite(TestMultiCols.class);
     suite.addTestSuite(TestOrderBy.class);
+    suite.addTestSuite(LocalMySQLTest.class);
 
     return suite;
   }

@@ -131,6 +131,12 @@ Trunk (unreleased changes)
     HADOOP-4861. Add disk usage with human-readable size (-duh).
     (Todd Lipcon via tomwhite)
 
+    HADOOP-5844. Use mysqldump when connecting to local mysql instance in Sqoop.
+    (Aaron Kimball via tomwhite)
+
+    HADOOP-5170. Allows jobs to set max maps/reduces per-node and per-cluster.
+    (Matei Zaharia via ddas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
@@ -349,8 +355,6 @@ Trunk (unreleased changes)
 
     HADOOP-5780. Improve per block message prited by "-metaSave" in HDFS.
     (Raghu Angadi)
-   
-    HADOOP-5792. To resolve jsp-2.1 jars through ivy (Giridharan Kesavan) 
 
     HADOOP-5823. Added a new class DeprecatedUTF8 to help with removing
     UTF8 related javac warnings. These warnings are removed in 
@@ -392,11 +396,47 @@ Trunk (unreleased changes)
     TestNameEditsConfig, TestStartup and TestStorageRestore.
     (Jakob Homan via shv)
 
-    HADOOP-5438. Provide a single FileSystem method to create or open-for-append 
+    HADOOP-5438. Provide a single FileSystem method to create or open-for-append
     to a file.  (He Yongqiang via dhruba)
 
     HADOOP-5472. Change DistCp to support globbing of input paths.  (Dhruba
     Borthakur and Rodrigo Schmidt via szetszwo)
+
+    HADOOP-5175. Don't unpack libjars on classpath. (Todd Lipcon via tomwhite)
+
+    HADOOP-5620. Add an option to DistCp for preserving modification and access
+    times.  (Rodrigo Schmidt via szetszwo)
+
+    HADOOP-5664. Change map serialization so a lock is obtained only where
+    contention is possible, rather than for each write. (cdouglas)
+
+    HADOOP-5896. Remove the dependency of GenericOptionsParser on 
+    Option.withArgPattern. (Giridharan Kesavan and Sharad Agarwal via 
+    sharad)
+
+    HADOOP-5698. Change org.apache.hadoop.examples.MultiFileWordCount to 
+    use new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5696. Change org.apache.hadoop.examples.Sort to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5784. Makes the number of heartbeats that should arrive a second
+    at the JobTracker configurable. (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-5955. Changes TestFileOuputFormat so that is uses LOCAL_MR
+    instead of CLUSTER_MR. (Jothi Padmanabhan via das)
+
+    HADOOP-5948. Changes TestJavaSerialization to use LocalJobRunner 
+    instead of MiniMR/DFS cluster. (Jothi Padmanabhan via das)
+
+    HADOOP-2838. Add mapred.child.env to pass environment variables to 
+    tasktracker's child processes. (Amar Kamat via sharad)
+
+    HADOOP-5961. DataNode process understand generic hadoop command line
+    options (like -Ddfs.property=value). (Raghu Angadi)
+
+    HADOOP-5694. Change org.apache.hadoop.examples.dancing to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
 
   OPTIMIZATIONS
 
@@ -695,8 +735,68 @@ Trunk (unreleased changes)
     HADOOP-5635. Change distributed cache to work with other distributed file
     systems. (Andrew Hitchcock via tomwhite)
 
-    HADOOP-5700. INode.getPathComponents throws NPE when given a non-absolute
-    path. (Todd Lipcon via tomwhite)
+    HADOOP-5856. Fix "unsafe multithreaded use of DateFormat" findbugs warning
+    in DataBlockScanner.  (Kan Zhang via szetszwo)
+
+    HADOOP-4864. Fixes a problem to do with -libjars with multiple jars when
+    client and cluster reside on different OSs. (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-5623. Fixes a problem to do with status messages getting overwritten
+    in streaming jobs. (Rick Cox and Jothi Padmanabhan via ddas)
+
+    HADOOP-5895. Fixes computation of count of merged bytes for logging.
+    (Ravi Gummadi via ddas)
+
+    HADOOP-5805. problem using top level s3 buckets as input/output directories.
+    (Ian Nowland via tomwhite)
+   
+    HADOOP-5940. trunk eclipse-plugin build fails while trying to copy 
+    commons-cli jar from the lib dir (Giridharan Kesavan via gkesavan)
+
+    HADOOP-5864. Fix DMI and OBL findbugs in packages hdfs and metrics.
+    (hairong)
+
+    HADOOP-5935. Fix Hudson's release audit warnings link is broken. 
+    (Giridharan Kesavan via gkesavan)
+
+    HADOOP-5947. Delete empty TestCombineFileInputFormat.java
+
+    HADOOP-5899. Move a log message in FSEditLog to the right place for
+    avoiding unnecessary log.  (Suresh Srinivas via szetszwo)
+
+    HADOOP-5944. Add Apache license header to BlockManager.java.  (Suresh
+    Srinivas via szetszwo)
+
+    HADOOP-5891. SecondaryNamenode is able to converse with the NameNode 
+    even when the default value of dfs.http.address is not overridden.
+    (Todd Lipcon via dhruba)
+
+    HADOOP-5953. The isDirectory(..) and isFile(..) methods in KosmosFileSystem
+    should not be deprecated.  (szetszwo)
+
+    HADOOP-5954. Fix javac warnings in TestFileCreation, TestSmallBlock,
+    TestFileStatus, TestDFSShellGenericOptions, TestSeekBug and
+    TestDFSStartupVersions.  (szetszwo)
+
+    HADOOP-5956. Fix ivy dependency in hdfsproxy and capacity-scheduler.
+    (Giridharan Kesavan via szetszwo)
+
+    HADOOP-5836. Bug in S3N handling of directory markers using an object with
+    a trailing "/" causes jobs to fail. (Ian Nowland via tomwhite)
+
+    HADOOP-5861. s3n files are not getting split by default. (tomwhite)
+
+    HADOOP-5762. Fix a problem that DistCp does not copy empty directory.
+    (Rodrigo Schmidt via szetszwo)
+
+    HADOOP-5859. Fix "wait() or sleep() with locks held" findbugs warnings in
+    DFSClient.  (Kan Zhang via szetszwo)
+   
+    HADOOP-5457. Fix to continue to run builds even if contrib test fails
+    (Giridharan Kesavan via gkesavan)
+
+    HADOOP-5963. Remove an unnecessary exception catch in NNBench.  (Boris
+    Shkolnik via szetszwo)
 
 Release 0.20.1 - Unreleased
 
@@ -779,6 +879,42 @@ Release 0.20.1 - Unreleased
 
     HADOOP-5850. Fixes a problem to do with not being able to jobs with
     0 maps/reduces. (Vinod K V via ddas)
+
+    HADOOP-4626. Correct the API links in hdfs forrest doc so that they
+    point to the same version of hadoop.  (szetszwo)
+
+    HADOOP-5883. Fixed tasktracker memory monitoring to account for
+    momentary spurts in memory usage due to java's fork() model.
+    (yhemanth)
+
+    HADOOP-5539. Fixes a problem to do with not preserving intermediate
+    output compression for merged data.
+    (Jothi Padmanabhan and Billy Pearson via ddas)
+
+    HADOOP-5932. Fixes a problem in capacity scheduler in computing
+    available memory on a tasktracker.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+    HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
+    via szetszwo)
+
+    HADOOP-5908. Fixes a problem to do with ArithmeticException in the 
+    JobTracker when there are jobs with 0 maps. (Amar Kamat via ddas)
+
+    HADOOP-5924. Fixes a corner case problem to do with job recovery with
+    empty history files. Also, after a JT restart, sends KillTaskAction to 
+    tasks that report back but the corresponding job hasn't been initialized
+    yet. (Amar Kamat via ddas)
+
+    HADOOP-5882. Fixes a reducer progress update problem for new mapreduce
+    api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5746. Fixes a corner case problem in Streaming, where if an exception
+    happens in MROutputThread after the last call to the map/reduce method, the 
+    exception goes undetected. (Amar Kamat via ddas)
+
+    HADOOP-5884. Fixes accounting in capacity scheduler so that high RAM jobs
+    take more slots. (Vinod Kumar Vavilapalli via yhemanth)
 
 Release 0.20.0 - 2009-04-15
 
@@ -1544,7 +1680,7 @@ Release 0.20.0 - 2009-04-15
     (Rahul Kumar Singh via yhemanth)
 
     HADOOP-5328. Fixes a problem in the renaming of job history files during 
-    job recovery. Amar Kamat via ddas)
+    job recovery. (Amar Kamat via ddas)
 
     HADOOP-5417. Don't ignore InterruptedExceptions that happen when calling 
     into rpc. (omalley)
@@ -1657,7 +1793,7 @@ Release 0.19.2 - Unreleased
     (ddas)
 
     HADOOP-5392. Fixes a problem to do with JT crashing during recovery when
-    the job files are garbled. (Amar Kamat vi ddas)
+    the job files are garbled. (Amar Kamat via ddas)
 
     HADOOP-5332. Appending to files is not allowed (by default) unless
     dfs.support.append is set to true. (dhruba)
@@ -1717,6 +1853,9 @@ Release 0.19.2 - Unreleased
 
     HADOOP-5816. Fixes a problem in the KeyFieldBasedComparator to do with
     ArrayIndexOutOfBounds exception. (He Yongqiang via ddas)
+
+    HADOOP-5951. Add Apache license header to StorageInfo.java.  (Suresh
+    Srinivas via szetszwo)
 
 Release 0.19.1 - 2009-02-23 
 
@@ -2361,7 +2500,7 @@ Release 0.19.0 - 2008-11-18
     (Lohit Vijayarenu via mahadev)
 
     HADOOP-3778. DFSInputStream.seek() did not retry in case of some errors.
-    (LN via rangadi)
+    (Luo Ning via rangadi)
 
     HADOOP-3661. The handling of moving files deleted through fuse-dfs to
     Trash made similar to the behaviour from dfs shell.
