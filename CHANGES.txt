@@ -798,6 +798,8 @@ Trunk (unreleased changes)
     HADOOP-5963. Remove an unnecessary exception catch in NNBench.  (Boris
     Shkolnik via szetszwo)
 
+    HADOOP-5989. Fix streaming test failure.  (gkesavan)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
