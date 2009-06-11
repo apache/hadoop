@@ -125,6 +125,10 @@ Release 0.20.1 - Unreleased
     HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
     via szetszwo)
 
+    HADOOP-5869. Fix bug in assignment of setup / cleanup task that was
+    causing TestQueueCapacities to fail.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

@@ -917,18 +917,19 @@ class TaskInProgress {
                              boolean taskCleanup) {
     // create the task
     Task t = null;
-    if (isMapTask() && !jobSetup && !jobCleanup) {
+    if (isMapTask()) {
       LOG.debug("attempt " + numTaskFailures + " sending skippedRecords "
           + failedRanges.getIndicesCount());
-
-      t =
-          new MapTask(jobFile, taskid, partition, rawSplit.getClassName(),
-              rawSplit.getBytes());
-
-    } else if (jobSetup || jobCleanup) {
-      t = new MapTask(jobFile, taskid, partition, null, new BytesWritable());
-    }
-    else {
+      String splitClass = null;
+      BytesWritable split;
+      if (!jobSetup && !jobCleanup) {
+        splitClass = rawSplit.getClassName();
+        split = rawSplit.getBytes();
+      } else {
+        split = new BytesWritable();
+      }
+      t = new MapTask(jobFile, taskid, partition, splitClass, split);
+    } else {
       t = new ReduceTask(jobFile, taskid, partition, numMaps);
     }
     if (jobCleanup) {
