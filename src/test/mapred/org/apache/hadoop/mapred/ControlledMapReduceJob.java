@@ -416,6 +416,8 @@ class ControlledMapReduceJob extends Configured implements Tool,
     conf.setInputFormat(ControlledMapReduceJob.class);
     FileInputFormat.addInputPath(conf, new Path("ignored"));
     conf.setOutputFormat(NullOutputFormat.class);
+    conf.setMapSpeculativeExecution(false);
+    conf.setReduceSpeculativeExecution(false);
 
     // Set the following for reduce tasks to be able to be started running
     // immediately along with maps.
