@@ -800,6 +800,9 @@ Trunk (unreleased changes)
 
     HADOOP-5989. Fix streaming test failure.  (gkesavan)
 
+    HADOOP-5981. Fix a bug in HADOOP-2838 in parsing mapred.child.env.
+    (Amar Kamat via sharad)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
