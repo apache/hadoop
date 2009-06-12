@@ -23,118 +23,39 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.StringUtils;
 
 /**
- * A OutputFormat that sends the reduce output to a SQL table.
- * <p> 
- * {@link DBOutputFormat} accepts &lt;key,value&gt; pairs, where 
- * key has a type extending DBWritable. Returned {@link RecordWriter} 
- * writes <b>only the key</b> to the database with a batch SQL query.  
- * 
+ * @deprecated Use org.apache.hadoop.mapreduce.lib.db.DBOutputFormat instead
  */
+@Deprecated
 public class DBOutputFormat<K  extends DBWritable, V> 
-implements OutputFormat<K,V> {
-
-  private static final Log LOG = LogFactory.getLog(DBOutputFormat.class);
+    extends org.apache.hadoop.mapreduce.lib.db.DBOutputFormat<K, V>
+    implements OutputFormat<K, V> {
 
   /**
    * A RecordWriter that writes the reduce output to a SQL table
    */
-  protected class DBRecordWriter 
-  implements RecordWriter<K, V> {
+  protected class DBRecordWriter extends 
+      org.apache.hadoop.mapreduce.lib.db.DBOutputFormat<K, V>.DBRecordWriter
+      implements RecordWriter<K, V> {
 
-    private Connection connection;
-    private PreparedStatement statement;
-
-    protected DBRecordWriter(Connection connection
-        , PreparedStatement statement) throws SQLException {
-      this.connection = connection;
-      this.statement = statement;
-      this.connection.setAutoCommit(false);
+    protected DBRecordWriter(Connection connection, 
+      PreparedStatement statement) throws SQLException {
+      super(connection, statement);
     }
 
     /** {@inheritDoc} */
     public void close(Reporter reporter) throws IOException {
-      try {
-        statement.executeBatch();
-        connection.commit();
-      } catch (SQLException e) {
-        try {
-          connection.rollback();
-        }
-        catch (SQLException ex) {
-          LOG.warn(StringUtils.stringifyException(ex));
-        }
-        throw new IOException(e.getMessage());
-      } finally {
-        try {
-          statement.close();
-          connection.close();
-        }
-        catch (SQLException ex) {
-          throw new IOException(ex.getMessage());
-        }
-      }
+      super.close(null);
     }
-
-    /** {@inheritDoc} */
-    public void write(K key, V value) throws IOException {
-      try {
-        key.write(statement);
-        statement.addBatch();
-      } catch (SQLException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-
-  /**
-   * Constructs the query used as the prepared statement to insert data.
-   * 
-   * @param table
-   *          the table to insert into
-   * @param fieldNames
-   *          the fields to insert into. If field names are unknown, supply an
-   *          array of nulls.
-   */
-  protected String constructQuery(String table, String[] fieldNames) {
-    if(fieldNames == null) {
-      throw new IllegalArgumentException("Field names may not be null");
-    }
-
-    StringBuilder query = new StringBuilder();
-    query.append("INSERT INTO ").append(table);
-
-    if (fieldNames.length > 0 && fieldNames[0] != null) {
-      query.append(" (");
-      for (int i = 0; i < fieldNames.length; i++) {
-        query.append(fieldNames[i]);
-        if (i != fieldNames.length - 1) {
-          query.append(",");
-        }
-      }
-      query.append(")");
-    }
-    query.append(" VALUES (");
-
-    for (int i = 0; i < fieldNames.length; i++) {
-      query.append("?");
-      if(i != fieldNames.length - 1) {
-        query.append(",");
-      }
-    }
-    query.append(");");
-
-    return query.toString();
   }
 
   /** {@inheritDoc} */
@@ -146,24 +67,15 @@ implements OutputFormat<K,V> {
   /** {@inheritDoc} */
   public RecordWriter<K, V> getRecordWriter(FileSystem filesystem,
       JobConf job, String name, Progressable progress) throws IOException {
-
-    DBConfiguration dbConf = new DBConfiguration(job);
-    String tableName = dbConf.getOutputTableName();
-    String[] fieldNames = dbConf.getOutputFieldNames();
-    
-    if(fieldNames == null) {
-      fieldNames = new String[dbConf.getOutputFieldCount()];
-    }
-    
+    org.apache.hadoop.mapreduce.RecordWriter<K, V> w = super.getRecordWriter(
+      new TaskAttemptContext(job, 
+            TaskAttemptID.forName(job.get("mapred.task.id"))));
+    org.apache.hadoop.mapreduce.lib.db.DBOutputFormat.DBRecordWriter writer = 
+     (org.apache.hadoop.mapreduce.lib.db.DBOutputFormat.DBRecordWriter) w;
     try {
-      Connection connection = dbConf.getConnection();
-      PreparedStatement statement = null;
-  
-      statement = connection.prepareStatement(constructQuery(tableName, fieldNames));
-      return new DBRecordWriter(connection, statement);
-    }
-    catch (Exception ex) {
-      throw new IOException(ex.getMessage());
+      return new DBRecordWriter(writer.getConnection(), writer.getStatement());
+    } catch(SQLException se) {
+      throw new IOException(se);
     }
   }
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib.db;
+package org.apache.hadoop.mapreduce.lib.db;
 
 import java.io.IOException;
 
@@ -28,15 +28,12 @@ import org.apache.hadoop.util.ToolRunner;
 public class TestDBJob extends HadoopTestCase {
 
   public TestDBJob() throws IOException {
-    super(CLUSTER_MR, DFS_FS, 3, 1);
+    super(LOCAL_MR, LOCAL_FS, 3, 1);
   }
   
   public void testRun() throws Exception {
-    
     DBCountPageView testDriver = new DBCountPageView();
-    
     ToolRunner.run(createJobConf(), testDriver, new String[0]);
-    
   }
   
 }

@@ -141,6 +141,17 @@
        <Method name="getSplits" />
        <Bug pattern="DLS_DEAD_LOCAL_STORE" />
      </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.db.DBWritable" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.db.DBInputFormat$DBRecordReader" />
+       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
+     
     <!--
       This is a spurious warning. Just ignore
     -->

@@ -56,6 +56,9 @@ Trunk (unreleased changes)
     HADOOP-4359. Support for data access authorization checking on Datanodes.
     (Kan Zhang via rangadi)
 
+    HADOOP-5690. Change org.apache.hadoop.examples.DBCountPageView to use 
+    new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

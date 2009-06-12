@@ -32,23 +32,20 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.lib.LongSumReducer;
-import org.apache.hadoop.mapred.lib.db.DBConfiguration;
-import org.apache.hadoop.mapred.lib.db.DBInputFormat;
-import org.apache.hadoop.mapred.lib.db.DBOutputFormat;
-import org.apache.hadoop.mapred.lib.db.DBWritable;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.db.DBConfiguration;
+import org.apache.hadoop.mapreduce.lib.db.DBInputFormat;
+import org.apache.hadoop.mapreduce.lib.db.DBOutputFormat;
+import org.apache.hadoop.mapreduce.lib.db.DBWritable;
+import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -79,7 +76,8 @@ public class DBCountPageView extends Configured implements Tool {
   private static final String[] AccessFieldNames = {"url", "referrer", "time"};
   private static final String[] PageviewFieldNames = {"url", "pageview"};
   
-  private static final String DB_URL = "jdbc:hsqldb:hsql://localhost/URLAccess";
+  private static final String DB_URL = 
+    "jdbc:hsqldb:hsql://localhost/URLAccess";
   private static final String DRIVER_CLASS = "org.hsqldb.jdbcDriver";
   
   private Server server;
@@ -87,7 +85,7 @@ public class DBCountPageView extends Configured implements Tool {
   private void startHsqldbServer() {
     server = new Server();
     server.setDatabasePath(0, 
-        System.getProperty("test.build.data",".") + "/URLAccess");
+        System.getProperty("test.build.data", "/tmp") + "/URLAccess");
     server.setDatabaseName(0, "URLAccess");
     server.start();
   }
@@ -193,10 +191,11 @@ public class DBCountPageView extends Configured implements Tool {
 
 
       //Pages in the site :
-      String[] pages = {"/a", "/b", "/c", "/d", "/e", "/f", "/g", "/h", "/i", "/j"};
+      String[] pages = {"/a", "/b", "/c", "/d", "/e", 
+                        "/f", "/g", "/h", "/i", "/j"};
       //linkMatrix[i] is the array of pages(indexes) that page_i links to.  
-      int[][] linkMatrix = {{1,5,7}, {0,7,4,6,}, {0,1,7,8}, {0,2,4,6,7,9}, {0,1},
-          {0,3,5,9}, {0}, {0,1,3}, {0,2,6}, {0,2,6}};
+      int[][] linkMatrix = {{1,5,7}, {0,7,4,6,}, {0,1,7,8}, 
+        {0,2,4,6,7,9}, {0,1}, {0,3,5,9}, {0}, {0,1,3}, {0,2,6}, {0,2,6}};
 
       //a mini model of user browsing a la pagerank
       int currentPage = random.nextInt(pages.length); 
@@ -211,7 +210,8 @@ public class DBCountPageView extends Configured implements Tool {
 
         int action = random.nextInt(PROBABILITY_PRECISION);
 
-        //go to a new page with probability NEW_PAGE_PROBABILITY / PROBABILITY_PRECISION
+        // go to a new page with probability 
+        // NEW_PAGE_PROBABILITY / PROBABILITY_PRECISION
         if(action < NEW_PAGE_PROBABILITY) { 
           currentPage = random.nextInt(pages.length); // a random page
           referrer = null;
@@ -337,17 +337,15 @@ public class DBCountPageView extends Configured implements Tool {
    * Mapper extracts URLs from the AccessRecord (tuples from db), 
    * and emits a &lt;url,1&gt; pair for each access record. 
    */
-  static class PageviewMapper extends MapReduceBase 
-    implements Mapper<LongWritable, AccessRecord, Text, LongWritable> {
+  static class PageviewMapper extends 
+      Mapper<LongWritable, AccessRecord, Text, LongWritable> {
     
     LongWritable ONE = new LongWritable(1L);
     @Override
-    public void map(LongWritable key, AccessRecord value,
-        OutputCollector<Text, LongWritable> output, Reporter reporter)
-        throws IOException {
-      
+    public void map(LongWritable key, AccessRecord value, Context context)
+        throws IOException, InterruptedException {
       Text oKey = new Text(value.url);
-      output.collect(oKey, ONE);
+      context.write(oKey, ONE);
     }
   }
   
@@ -355,20 +353,19 @@ public class DBCountPageView extends Configured implements Tool {
    * Reducer sums up the pageviews and emits a PageviewRecord, 
    * which will correspond to one tuple in the db.
    */
-  static class PageviewReducer extends MapReduceBase 
-    implements Reducer<Text, LongWritable, PageviewRecord, NullWritable> {
+  static class PageviewReducer extends 
+      Reducer<Text, LongWritable, PageviewRecord, NullWritable> {
     
     NullWritable n = NullWritable.get();
     @Override
-    public void reduce(Text key, Iterator<LongWritable> values,
-        OutputCollector<PageviewRecord, NullWritable> output, Reporter reporter)
-        throws IOException {
+    public void reduce(Text key, Iterable<LongWritable> values, 
+        Context context) throws IOException, InterruptedException {
       
       long sum = 0L;
-      while(values.hasNext()) {
-        sum += values.next().get();
+      for(LongWritable value: values) {
+        sum += value.get();
       }
-      output.collect(new PageviewRecord(key.toString(), sum), n);
+      context.write(new PageviewRecord(key.toString(), sum), n);
     }
   }
   
@@ -385,17 +382,18 @@ public class DBCountPageView extends Configured implements Tool {
     }
     
     initialize(driverClassName, url);
+    Configuration conf = getConf();
 
-    JobConf job = new JobConf(getConf(), DBCountPageView.class);
+    DBConfiguration.configureDB(conf, driverClassName, url);
+
+    Job job = new Job(conf);
         
     job.setJobName("Count Pageviews of URLs");
-
+    job.setJarByClass(DBCountPageView.class);
     job.setMapperClass(PageviewMapper.class);
     job.setCombinerClass(LongSumReducer.class);
     job.setReducerClass(PageviewReducer.class);
 
-    DBConfiguration.configureDB(job, driverClassName, url);
-    
     DBInputFormat.setInput(job, AccessRecord.class, "Access"
         , null, "url", AccessFieldNames);
 
@@ -406,10 +404,9 @@ public class DBCountPageView extends Configured implements Tool {
 
     job.setOutputKeyClass(PageviewRecord.class);
     job.setOutputValueClass(NullWritable.class);
-
+    int ret;
     try {
-      JobClient.runJob(job);
-      
+      ret = job.waitForCompletion(true) ? 0 : 1;
       boolean correct = verify();
       if(!correct) {
         throw new RuntimeException("Evaluation was not correct!");
@@ -417,7 +414,7 @@ public class DBCountPageView extends Configured implements Tool {
     } finally {
       shutdown();    
     }
-    return 0;
+    return ret;
   }
 
   public static void main(String[] args) throws Exception {
