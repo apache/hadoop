@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -1542,5 +1543,67 @@ public class HFile {
     // Expecting the size() of a block not exceeding 4GB. Assuming the
     // size() will wrap to negative integer if it exceeds 2GB (From tfile).
     return (int)(l & 0x00000000ffffffffL);
+  }
+
+
+  public static void main(String []args) throws IOException {
+    if (args.length < 1) {
+      System.out.println("usage: <filename> -- dumps hfile stats");
+      return;
+    }
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+
+    FileSystem fs = FileSystem.get(conf);
+
+    Path path = new Path(args[0]);
+
+    if (!fs.exists(path)) {
+      System.out.println("File doesnt exist: " + path);
+      return;
+    }
+
+    HFile.Reader reader = new HFile.Reader(fs, path, null);
+    Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
+
+    // scan thru and count the # of unique rows.
+//    HashSet<Integer> rows = new HashSet<Integer>(reader.getEntries()/4);
+//    long start = System.currentTimeMillis();
+//    HFileScanner scanner = reader.getScanner();
+//    HStoreKey hsk;
+//    scanner.seekTo();
+//    do {
+//      hsk = new HStoreKey(scanner.getKey());
+//      rows.add(Bytes.hashCode(hsk.getRow()));
+//    } while (scanner.next());
+//    long end = System.currentTimeMillis();
+
+
+    HFileScanner scanner = reader.getScanner();
+    scanner.seekTo();
+    KeyValue kv;
+    do {
+      kv = scanner.getKeyValue();
+        System.out.println("K: " + Bytes.toStringBinary(kv.getKey()) +
+            " V: " + Bytes.toStringBinary(kv.getValue()));
+    } while (scanner.next());
+
+    System.out.println("Block index size as per heapsize: " + reader.indexSize());
+    System.out.println(reader.toString());
+    System.out.println(reader.getTrailerInfo());
+    System.out.println("Fileinfo:");
+    for ( Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
+      System.out.print(Bytes.toString(e.getKey()) + " = " );
+
+      if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY"))==0) {
+        long seqid = Bytes.toLong(e.getValue());
+        System.out.println(seqid);
+      } else {
+        System.out.println(Bytes.toStringBinary(e.getValue()));
+      }
+
+    }
+
+    reader.close();
   }
 }
