@@ -319,6 +319,7 @@ Release 0.20.0 - Unreleased
    HBASE-1489  Basic git ignores for people who use git and eclipse
    HBASE-1453  Add HADOOP-4681 to our bundled hadoop, add to 'gettting started'
                recommendation that hbase users backport 
+   HBASE-1507  iCMS as default JVM
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

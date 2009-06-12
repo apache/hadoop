@@ -30,8 +30,10 @@
 # The maximum amount of heap to use, in MB. Default is 1000.
 # export HBASE_HEAPSIZE=1000
 
-# Extra Java runtime options.  Empty by default.
-# export HBASE_OPTS=-server
+# Extra Java runtime options.
+# Below are what we set by default.  For more on why as well as other possible
+# settings, see http://wiki.apache.org/hadoop/PerformanceTuning
+# export HBASE_OPTS="$HBASE_OPTS -XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode"
 
 # File naming hosts on which HRegionServers will run.  $HBASE_HOME/conf/regionservers by default.
 # export HBASE_REGIONSERVERS=${HBASE_HOME}/conf/regionservers

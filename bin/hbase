@@ -206,7 +206,7 @@ fi
 # and are named like the following: java_pid21612.hprof. Apparently it doesn't
 # 'cost' to have this flag enabled. Its a 1.6 flag only. See:
 # http://blogs.sun.com/alanb/entry/outofmemoryerror_looks_a_bit_better
-HBASE_OPTS="$HBASE_OPTS -XX:+HeapDumpOnOutOfMemoryError"
+HBASE_OPTS="$HBASE_OPTS -XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.log.dir=$HBASE_LOG_DIR"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.log.file=$HBASE_LOGFILE"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
