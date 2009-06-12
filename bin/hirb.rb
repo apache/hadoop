@@ -258,6 +258,17 @@ the '=>' character combination.  Usually keys are predefined constants such as
 NAME, VERSIONS, COMPRESSION, etc.  Constants do not need to be quoted.  Type
 'Object.constants' to see a (messy) list of all constants in the environment.
 
+In case you are using binary keys or values and need to enter them into the 
+shell then use double-quotes to make use of hexadecimal or octal notations, 
+for example:
+
+  hbase> get 't1', "key\\x03\\x3f\\xcd"
+  hbase> get 't1', "key\\003\\023\\011"
+  hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
+
+Using the double-quote notation you can directly use the values output by the
+shell for example during a "scan" call.
+
 This HBase shell is the JRuby IRB with the above HBase-specific commands added.
 For more on the HBase Shell, see http://wiki.apache.org/hadoop/Hbase/Shell
 HERE

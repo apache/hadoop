@@ -320,6 +320,8 @@ Release 0.20.0 - Unreleased
    HBASE-1453  Add HADOOP-4681 to our bundled hadoop, add to 'gettting started'
                recommendation that hbase users backport 
    HBASE-1507  iCMS as default JVM
+   HBASE-1509  Add explanation to shell "help" command on how to use binarykeys
+               (Lars George via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
