@@ -25,15 +25,16 @@ int main(int argc, char **argv) {
   const char * task_id = NULL;
   const char * tt_root = NULL;
   int exit_code = 0;
+  const char * task_pid = NULL;
   const char* const short_options = "l:";
   const struct option long_options[] = { { "log", 1, NULL, 'l' }, { NULL, 0,
       NULL, 0 } };
 
   const char* log_file = NULL;
 
-  // when we support additional commands without ttroot, this check
-  // may become command specific.
-  if (argc < 6) {
+  //Minimum number of arguments required to run the task-controller
+  //command-name user command tt-root
+  if (argc < 3) {
     display_usage(stderr);
     return INVALID_ARGUMENT_NUMBER;
   }
@@ -44,7 +45,6 @@ int main(int argc, char **argv) {
   strncpy(hadoop_conf_dir,argv[0],(strlen(argv[0]) - strlen(EXEC_PATTERN)));
   hadoop_conf_dir[(strlen(argv[0]) - strlen(EXEC_PATTERN))] = '\0';
 #endif
-
   do {
     next_option = getopt_long(argc, argv, short_options, long_options, NULL);
     switch (next_option) {
@@ -88,24 +88,25 @@ int main(int argc, char **argv) {
   }
   optind = optind + 1;
   command = atoi(argv[optind++]);
-  job_id = argv[optind++];
-  task_id = argv[optind++];
-
 #ifdef DEBUG
   fprintf(LOGFILE, "main : command provided %d\n",command);
   fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
-  fprintf(LOGFILE, "main : job id %s \n", job_id);
-  fprintf(LOGFILE, "main : task id %s \n", task_id);
 #endif
   switch (command) {
-  case RUN_TASK:
-    tt_root = argv[optind];
+  case LAUNCH_TASK_JVM:
+    tt_root = argv[optind++];
+    job_id = argv[optind++];
+    task_id = argv[optind++];
     exit_code
         = run_task_as_user(user_detail->pw_name, job_id, task_id, tt_root);
     break;
-  case KILL_TASK:
-    tt_root = argv[optind];
-    exit_code = kill_user_task(user_detail->pw_name, job_id, task_id, tt_root);
+  case TERMINATE_TASK_JVM:
+    task_pid = argv[optind++];
+    exit_code = kill_user_task(user_detail->pw_name, task_pid, SIGTERM);
+    break;
+  case KILL_TASK_JVM:
+    task_pid = argv[optind++];
+    exit_code = kill_user_task(user_detail->pw_name, task_pid, SIGKILL);
     break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;

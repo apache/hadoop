@@ -438,7 +438,7 @@ class JvmManager {
                 .getLong("mapred.tasktracker.tasks.sleeptime-before-sigkill",
                     ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
 
-            controller.killTaskJVM(initalContext);
+            controller.destroyTaskJVM(initalContext);
           } else {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId
                 .toString()));

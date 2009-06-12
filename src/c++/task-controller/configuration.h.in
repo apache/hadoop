@@ -57,3 +57,6 @@ const char * get_value(char* key);
 //method to free allocated configuration
 void free_configurations();
 
+//function to return array of values pointing to the key. Values are
+//comma seperated strings.
+const char ** get_values(char* key);
