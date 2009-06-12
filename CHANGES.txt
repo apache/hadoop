@@ -59,6 +59,15 @@ Trunk (unreleased changes)
     HADOOP-5690. Change org.apache.hadoop.examples.DBCountPageView to use 
     new mapreduce api. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5694. Change org.apache.hadoop.examples.dancing to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5696. Change org.apache.hadoop.examples.Sort to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5698. Change org.apache.hadoop.examples.MultiFileWordCount to 
+    use new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
@@ -417,12 +426,6 @@ Trunk (unreleased changes)
     Option.withArgPattern. (Giridharan Kesavan and Sharad Agarwal via 
     sharad)
 
-    HADOOP-5698. Change org.apache.hadoop.examples.MultiFileWordCount to 
-    use new mapreduce api. (Amareshwari Sriramadasu via sharad)
-
-    HADOOP-5696. Change org.apache.hadoop.examples.Sort to use new 
-    mapreduce api. (Amareshwari Sriramadasu via sharad)
-
     HADOOP-5784. Makes the number of heartbeats that should arrive a second
     at the JobTracker configurable. (Amareshwari Sriramadasu via ddas)
 
@@ -437,9 +440,6 @@ Trunk (unreleased changes)
 
     HADOOP-5961. DataNode process understand generic hadoop command line
     options (like -Ddfs.property=value). (Raghu Angadi)
-
-    HADOOP-5694. Change org.apache.hadoop.examples.dancing to use new 
-    mapreduce api. (Amareshwari Sriramadasu via sharad)
 
   OPTIMIZATIONS
 
