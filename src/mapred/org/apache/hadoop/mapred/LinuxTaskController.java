@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -128,9 +129,21 @@ class LinuxTaskController extends TaskController {
       TaskLog.buildCommandLine(env.setup, env.vargs, env.stdout, env.stderr,
           env.logSize, true);
 
+    StringBuffer sb = new StringBuffer();
+    //export out all the environment variable before child command as
+    //the setuid/setgid binaries would not be getting, any environmental
+    //variables which begin with LD_*.
+    for(Entry<String, String> entry : env.env.entrySet()) {
+      sb.append("export ");
+      sb.append(entry.getKey());
+      sb.append("=");
+      sb.append(entry.getValue());
+      sb.append("\n");
+    }
+    sb.append(cmdLine);
     // write the command to a file in the
     // task specific cache directory
-    writeCommand(cmdLine, getTaskCacheDirectory(context));
+    writeCommand(sb.toString(), getTaskCacheDirectory(context));
     
     // Call the taskcontroller with the right parameters.
     List<String> launchTaskJVMArgs = buildLaunchTaskArgs(context);

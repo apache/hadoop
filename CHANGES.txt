@@ -813,6 +813,10 @@ Trunk (unreleased changes)
     HADOOP-6031. Remove @author tags from Java source files.  (Ravi Phulari
     via szetszwo)
 
+    HADOOP-5980. Fix LinuxTaskController so tasks get passed 
+    LD_LIBRARY_PATH and other environment variables.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
