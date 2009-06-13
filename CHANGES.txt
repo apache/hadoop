@@ -810,6 +810,9 @@ Trunk (unreleased changes)
     groups they are launched with.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-6031. Remove @author tags from Java source files.  (Ravi Phulari
+    via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
