@@ -130,7 +130,7 @@ public class QueryMatcher {
     this.tr = get.getTimeRange();
     this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;
-    this.deletes =  new GetDeleteTracker(rowComparator);
+    this.deletes =  new GetDeleteTracker();
     this.startKey = KeyValue.createFirstOnRow(row);
     // Single branch to deal with two types of Gets (columns vs all in family)
     if(columns == null || columns.size() == 0) {

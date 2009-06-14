@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class is responsible for the tracking and enforcement of Deletes
@@ -78,7 +79,7 @@ public class ScanDeleteTracker implements DeleteTracker {
 
       if(deleteBuffer != null && type < deleteType) {
         // same column, so ignore less specific delete
-        if(comparator.compareRows(deleteBuffer, deleteOffset, deleteLength,
+        if(Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
             buffer, qualifierOffset, qualifierLength) == 0){
           return;
         }
@@ -112,7 +113,7 @@ public class ScanDeleteTracker implements DeleteTracker {
     
     if(deleteBuffer != null) {
       // TODO ryan use a specific comparator
-      int ret = comparator.compareRows(deleteBuffer, deleteOffset, deleteLength,
+      int ret = Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
           buffer, qualifierOffset, qualifierLength);
 
       if(ret == 0) {

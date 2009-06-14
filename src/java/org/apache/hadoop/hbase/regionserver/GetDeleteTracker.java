@@ -45,15 +45,11 @@ public class GetDeleteTracker implements DeleteTracker {
   private Iterator<Delete> iterator;
   private Delete delete = null;
 
-  private KeyValue.KeyComparator comparator;
-
   /**
    * Constructor
    * @param comparator
    */
-  public GetDeleteTracker(KeyValue.KeyComparator comparator) {
-    this.comparator = comparator;
-  }
+  public GetDeleteTracker() {}
 
   /**
    * Add the specified KeyValue to the list of deletes to check against for
@@ -105,7 +101,7 @@ public class GetDeleteTracker implements DeleteTracker {
     }
 
     // Check column
-    int ret = comparator.compareRows(buffer, qualifierOffset, qualifierLength,
+    int ret = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
         this.delete.buffer, this.delete.qualifierOffset, 
         this.delete.qualifierLength);
     if(ret <= -1) {

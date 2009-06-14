@@ -68,7 +68,7 @@ public class TestGetDeleteTracker extends HBaseTestCase implements HConstants {
   private byte delFam = KeyValue.Type.DeleteFamily.getCode();
 
   protected void setUp() throws Exception {
-    dt = new GetDeleteTracker(KeyValue.KEY_COMPARATOR);
+    dt = new GetDeleteTracker();
     col1 = "col".getBytes();
     col2 = "col2".getBytes();
     col1Len = col1.length;
