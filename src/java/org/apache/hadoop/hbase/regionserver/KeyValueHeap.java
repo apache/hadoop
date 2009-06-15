@@ -38,16 +38,13 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
  * <p>
  * In the Region case, we also need InternalScanner.next(List), so this class
  * also implements InternalScanner.  WARNING: As is, if you try to use this
- * as an InternalScanner at the Store level, you will get runtime exceptions. 
+ * as an InternalScanner at the Store level, you will get runtime exceptions.
  */
 public class KeyValueHeap implements KeyValueScanner, InternalScanner {
-  
   private PriorityQueue<KeyValueScanner> heap;
-  
   private KeyValueScanner current = null;
-  
   private KVScannerComparator comparator;
-  
+
   /**
    * Constructor
    * @param scanners
@@ -91,7 +88,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     }
     return kvReturn;
   }
-  
+
   /**
    * Gets the next row of keys from the top-most scanner.
    * <p>

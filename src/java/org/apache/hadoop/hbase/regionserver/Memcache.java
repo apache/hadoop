@@ -539,12 +539,18 @@ class Memcache {
   }
 
   /**
-   * @return a scanner over the keys in the Memcache
+   * @return scanner on memcache and snapshot in this order (if snapshot is
+   * empty, returns only memcache scanner).
    */
-  KeyValueScanner getScanner() {
+  KeyValueScanner [] getScanners() {
     this.lock.readLock().lock();
     try {
-      return new MemcacheScanner();
+      boolean noss = this.snapshot == null || this.snapshot.isEmpty();
+      KeyValueScanner [] scanners =
+        new KeyValueScanner[noss? 1: 2];
+      scanners[0] = new MemcacheScanner(this.memcache);
+      if (!noss) scanners[1] = new MemcacheScanner(this.snapshot);
+      return scanners;
     } finally {
       this.lock.readLock().unlock();
     }
@@ -553,7 +559,7 @@ class Memcache {
   //
   // HBASE-880/1249/1304
   //
-  
+
   /**
    * Perform a single-row Get on the memcache and snapshot, placing results
    * into the specified KV list.
@@ -618,71 +624,78 @@ class Memcache {
     return false;
   }
   
-  //////////////////////////////////////////////////////////////////////////////
-  // MemcacheScanner implements the KeyValueScanner.
-  // It lets the caller scan the contents of the Memcache.
-  // This behaves as if it were a real scanner but does not maintain position
-  // in the Memcache tree.
-  //////////////////////////////////////////////////////////////////////////////
 
+  /*
+   * MemcacheScanner implements the KeyValueScanner.
+   * It lets the caller scan the contents of a memcache.
+   * This behaves as if it were a real scanner but does not maintain position
+   * in the passed memcache tree.
+   */
   protected class MemcacheScanner implements KeyValueScanner {
+    private final NavigableSet<KeyValue> mc;
     private KeyValue current = null;
     private List<KeyValue> result = new ArrayList<KeyValue>();
     private int idx = 0;
-    
-    MemcacheScanner() {}
-    
+
+    MemcacheScanner(final NavigableSet<KeyValue> mc) {
+      this.mc = mc;
+    }
+
     public boolean seek(KeyValue key) {
       try {
-        if(key == null) {
+        if (key == null) {
           close();
           return false;
         }
-        current = key;
+        this.current = key;
         return cacheNextRow();
       } catch(Exception e) {
         close();
         return false;
       }
     }
-    
+
     public KeyValue peek() {
-      if(idx >= result.size()) {
-        if(!cacheNextRow()) {
+      if (idx >= this.result.size()) {
+        if (!cacheNextRow()) {
           return null;
         }
         return peek();
       }
       return result.get(idx);
     }
-    
+
     public KeyValue next() {
-      if(idx >= result.size()) {
-        if(!cacheNextRow()) {
+      if (idx >= result.size()) {
+        if (!cacheNextRow()) {
           return null;
         }
         return next();
       }
-      return result.get(idx++);
+      return this.result.get(idx++);
     }
-    
+
+    /**
+     * @return True if we successfully cached a NavigableSet aligned on
+     * next row.
+     */
     boolean cacheNextRow() {
-      NavigableSet<KeyValue> keys;
+      SortedSet<KeyValue> keys;
       try {
-        keys = memcache.tailSet(current);
-      } catch(Exception e) {
+        keys = this.mc.tailSet(this.current);
+      } catch (Exception e) {
         close();
         return false;
       }
-      if(keys == null || keys.isEmpty()) {
+      if (keys == null || keys.isEmpty()) {
         close();
         return false;
       }
-      current = null;
+      this.current = null;
       byte [] row = keys.first().getRow();
-      for(KeyValue key : keys) {
-        if(comparator.compareRows(key, row) != 0) {
-          current = key;
+      for (KeyValue key: keys) {
+        if (comparator.compareRows(key, row) != 0) {
+          this.current = key;
           break;
         }
         result.add(key);
@@ -693,7 +706,7 @@ class Memcache {
     public void close() {
       current = null;
       idx = 0;
-      if(!result.isEmpty()) {
+      if (!result.isEmpty()) {
         result.clear();
       }
     }

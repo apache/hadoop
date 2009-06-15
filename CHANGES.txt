@@ -186,6 +186,8 @@ Release 0.20.0 - Unreleased
    HBASE-1523  NPE in BaseScanner
    HBASE-1525  HTable.incrementColumnValue hangs()
    HBASE-1526  mapreduce fixup
+   HBASE-1503  hbase-1304 dropped updating list of store files on flush
+               (jgray via stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

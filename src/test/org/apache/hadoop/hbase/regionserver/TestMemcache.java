@@ -218,7 +218,7 @@ public class TestMemcache extends TestCase {
       InternalScanner scanner =
           new StoreScanner(new Scan(Bytes.toBytes(startRowId)), FAMILY,
               Integer.MAX_VALUE, this.memcache.comparator, null,
-              new KeyValueScanner[]{memcache.getScanner()});
+              new KeyValueScanner[]{memcache.getScanners()[0]});
       List<KeyValue> results = new ArrayList<KeyValue>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;

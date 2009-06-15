@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,18 +37,11 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
  * Scanner scans both the memcache and the HStore. Coaleace KeyValue stream
  * into List<KeyValue> for a single row.
  */
-class StoreScanner implements KeyValueScanner, InternalScanner,
-ChangedReadersObserver {
+class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
-
   private Store store;
-
   private ScanQueryMatcher matcher;
-
   private KeyValueHeap heap;
-
-  // Used around transition from no storefile to the first.
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
   private final AtomicBoolean closing = new AtomicBoolean(false);
@@ -63,8 +55,7 @@ ChangedReadersObserver {
         columns, store.ttl, store.comparator.getRawComparator(),
         store.versionsToReturn(scan.getMaxVersions()));
 
-    List<KeyValueScanner> scanners = getStoreFileScanners();
-    scanners.add(store.memcache.getScanner());
+    List<KeyValueScanner> scanners = getScanners();
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -96,7 +87,19 @@ ChangedReadersObserver {
         scanners, comparator);
   }
 
-  public KeyValue peek() {
+  /*
+   * @return List of scanners ordered properly.
+   */
+  private List<KeyValueScanner> getScanners() {
+    List<KeyValueScanner> scanners = getStoreFileScanners();
+    KeyValueScanner [] memcachescanners = this.store.memcache.getScanners();
+    for (int i = memcachescanners.length - 1; i >= 0; i--) {
+      scanners.add(memcachescanners[i]);
+    }
+    return scanners;
+  }
+
+  public synchronized KeyValue peek() {
     return this.heap.peek();
   }
 
@@ -105,7 +108,7 @@ ChangedReadersObserver {
     throw new RuntimeException("Never call StoreScanner.next()");
   }
 
-  public void close() {
+  public synchronized void close() {
     this.closing.set(true);
     // under test, we dont have a this.store
     if (this.store != null)
@@ -113,8 +116,7 @@ ChangedReadersObserver {
     this.heap.close();
   }
 
-  public boolean seek(KeyValue key) {
-
+  public synchronized boolean seek(KeyValue key) {
     return this.heap.seek(key);
   }
 
@@ -123,7 +125,7 @@ ChangedReadersObserver {
    * @param result
    * @return true if there are more rows, false if scanner is done
    */
-  public boolean next(List<KeyValue> result) throws IOException {
+  public synchronized boolean next(List<KeyValue> result) throws IOException {
     KeyValue peeked = this.heap.peek();
     if (peeked == null) {
       close();
@@ -138,6 +140,7 @@ ChangedReadersObserver {
           KeyValue next = this.heap.next();
           result.add(next);
           continue;
+          
         case DONE:
           // what happens if we have 0 results?
           if (result.isEmpty()) {
@@ -159,14 +162,6 @@ ChangedReadersObserver {
           return false;
 
         case SEEK_NEXT_ROW:
-          // TODO see comments in SEEK_NEXT_COL
-          /*
-          KeyValue rowToSeek =
-              new KeyValue(kv.getRow(),
-                  0,
-                  KeyValue.Type.Minimum);
-          heap.seek(rowToSeek);
-           */
           heap.next();
           break;
 
@@ -174,45 +169,6 @@ ChangedReadersObserver {
           // TODO hfile needs 'hinted' seeking to prevent it from
           // reseeking from the start of the block on every dang seek.
           // We need that API and expose it the scanner chain.
-          /*
-          ColumnCount hint = matcher.getSeekColumn();
-          KeyValue colToSeek;
-          if (hint == null) {
-            // seek to the 'last' key on this column, this is defined
-            // as the key with the same row, fam, qualifier,
-            // smallest timestamp, largest type.
-            colToSeek =
-                new KeyValue(kv.getRow(),
-                    kv.getFamily(),
-                    kv.getColumn(),
-                    Long.MIN_VALUE,
-                    KeyValue.Type.Minimum);
-          } else {
-            // This is ugmo.  Move into KeyValue convience method.
-            // First key on a column is:
-            // same row, cf, qualifier, max_timestamp, max_type, no value.
-            colToSeek =
-                new KeyValue(kv.getRow(),
-                    0,
-                    kv.getRow().length,
-
-                    kv.getFamily(),
-                    0,
-                    kv.getFamily().length,
-
-                    hint.getBuffer(),
-                    hint.getOffset(),
-                    hint.getLength(),
-
-                    Long.MAX_VALUE,
-                    KeyValue.Type.Maximum,
-                    null,
-                    0,
-                    0);
-          }
-          heap.seek(colToSeek);
-           */
-
           heap.next();
           break;
 
@@ -245,18 +201,24 @@ ChangedReadersObserver {
   }
 
   // Implementation of ChangedReadersObserver
-  public void updateReaders() throws IOException {
-    if (this.closing.get()) {
-      return;
+  public synchronized void updateReaders() throws IOException {
+    if (this.closing.get()) return;
+    KeyValue topKey = this.peek();
+    if (topKey == null) return;
+
+    List<KeyValueScanner> scanners = getScanners();
+
+    // Seek all scanners to the initial key
+    for(KeyValueScanner scanner : scanners) {
+      scanner.seek(topKey);
     }
-    this.lock.writeLock().lock();
-    try {
-      // Could do this pretty nicely with KeyValueHeap, but the existing
-      // implementation of this method only updated if no existing storefiles?
-      // Lets discuss.
-      return;
-    } finally {
-      this.lock.writeLock().unlock();
-    }
+
+    // Combine all seeked scanners with a heap
+    heap = new KeyValueHeap(
+        scanners.toArray(new KeyValueScanner[scanners.size()]), store.comparator);
+
+    // Reset the state of the Query Matcher and set to top row
+    matcher.reset();
+    matcher.setRow(heap.peek().getRow());
   }
 }
