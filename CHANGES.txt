@@ -129,6 +129,12 @@ Release 0.20.1 - Unreleased
     causing TestQueueCapacities to fail.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-5921. Fixes a problem in the JobTracker where it sometimes never used
+    to come up due to a system file creation on JobTracker's system-dir failing. 
+    This problem would sometimes show up only when the FS for the system-dir 
+    (usually HDFS) is started at nearly the same time as the JobTracker. 
+    (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
