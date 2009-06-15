@@ -208,7 +208,7 @@ class CompactSplitThread extends Thread implements HConstants {
     put.add(CATALOG_FAMILY, SPLITA_QUALIFIER,
         Writables.getBytes(newRegions[0].getRegionInfo()));
     put.add(CATALOG_FAMILY, SPLITB_QUALIFIER,
-        Writables.getBytes(newRegions[0].getRegionInfo()));
+        Writables.getBytes(newRegions[1].getRegionInfo()));
     t.put(put);
     
     // Add new regions to META

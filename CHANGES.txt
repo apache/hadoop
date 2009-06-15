@@ -176,6 +176,7 @@ Release 0.20.0 - Unreleased
    HBASE-1516  Investigate if StoreScanner will not return the next row if 
                earlied-out of previous row (Jon Gray)
    HBASE-1520  StoreFileScanner catches and ignore IOExceptions from HFile
+   HBASE-1522  We delete splits before their time occasionally
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
