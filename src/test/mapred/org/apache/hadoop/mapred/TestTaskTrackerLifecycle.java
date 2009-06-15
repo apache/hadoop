@@ -50,6 +50,8 @@ public class TestTaskTrackerLifecycle extends TestCase {
    */
   private JobConf createJobConf() {
     JobConf config = new JobConf();
+    //extra fast timeout
+    config.set("mapred.task.tracker.connect.timeout","10");
     String dataDir = System.getProperty("test.build.data");
     File hdfsDir = new File(dataDir, "dfs");
     config.set("dfs.name.dir", new File(hdfsDir, "name1").getPath());
@@ -60,10 +62,19 @@ public class TestTaskTrackerLifecycle extends TestCase {
     return config;
   }
 
-  private void assertConnectionRefused(IOException e) throws Throwable {
-    if(!e.getMessage().contains("Connection refused")) {
-      LOG.error("Wrong exception",e);
-      throw e;
+  /**
+   * Assert that the throwable is some kind of IOException, 
+   * containing the string "Connection refused"
+   * @param thrown what was thrown
+   * @throws Throwable the exception, rethrown, if it is not what was expected
+   */
+  private void assertConnectionRefused(Throwable thrown) throws Throwable {
+    assertNotNull("Null Exception", thrown);
+    if (!(thrown instanceof IOException)) {
+      throw thrown;
+    }
+    if (!thrown.getMessage().contains("Connection refused")) {
+      throw thrown;
     }
   }
 
@@ -73,7 +84,6 @@ public class TestTaskTrackerLifecycle extends TestCase {
    */
   public void testTerminateUnstartedTracker() throws Throwable {
     tracker = new TaskTracker(createJobConf(), false);
-    tracker.ping();
     tracker.close();
   }
 
@@ -106,9 +116,9 @@ public class TestTaskTrackerLifecycle extends TestCase {
       assertConnectionRefused(e);
       assertEquals(Service.ServiceState.CLOSED, tracker.getServiceState());
     }
-    tracker.ping();
+    assertConnectionRefused(tracker.getFailureCause());
     tracker.close();
-    tracker.ping();
+    assertConnectionRefused(tracker.getFailureCause());
   }
 
 }
