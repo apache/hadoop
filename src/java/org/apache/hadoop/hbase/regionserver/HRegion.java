@@ -2268,9 +2268,7 @@ public class HRegion implements HConstants { // , Writable{
       Store store = stores.get(family);
       result = store.incrementColumnValue(row, family, qualifier, amount);
     } finally {
-      if(lid == null) {
-        releaseRowLock(lid);
-      }
+      releaseRowLock(lid);
     }
     return result;
   }
