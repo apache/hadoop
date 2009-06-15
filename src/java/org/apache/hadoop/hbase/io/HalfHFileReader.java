@@ -51,7 +51,7 @@ public class HalfHFileReader extends HFile.Reader {
   final boolean top;
   // This is the key we split around.  Its the first possible entry on a row:
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
-  final byte [] splitkey;
+  protected final byte [] splitkey;
 
   /**
    * @param fs
@@ -83,36 +83,50 @@ public class HalfHFileReader extends HFile.Reader {
     final HFileScanner s = super.getScanner();
     return new HFileScanner() {
       final HFileScanner delegate = s;
+      public boolean atEnd = false;
 
       public ByteBuffer getKey() {
+        if (atEnd) return null;
         return delegate.getKey();
       }
 
       public String getKeyString() {
+        if (atEnd) return null;
+
         return delegate.getKeyString();
       }
 
       public ByteBuffer getValue() {
+        if (atEnd) return null;
+
         return delegate.getValue();
       }
 
       public String getValueString() {
+        if (atEnd) return null;
+
         return delegate.getValueString();
       }
 
       public KeyValue getKeyValue() {
+        if (atEnd) return null;
+
         return delegate.getKeyValue();
       }
 
       public boolean next() throws IOException {
+        if (atEnd) return false;
+        
         boolean b = delegate.next();
         if (!b) {
           return b;
         }
+        // constrain the bottom.
         if (!top) {
           ByteBuffer bb = getKey();
           if (getComparator().compare(bb.array(), bb.arrayOffset(), bb.limit(),
               splitkey, 0, splitkey.length) >= 0) {
+            atEnd = true;
             return false;
           }
         }
@@ -151,7 +165,7 @@ public class HalfHFileReader extends HFile.Reader {
           }
           return true;
         }
-        
+
         boolean b = delegate.seekTo();
         if (!b) {
           return b;

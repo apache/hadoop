@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -221,6 +222,7 @@ public class TestHRegion extends HBaseTestCase {
     List<KeyValue> kvs  = new ArrayList<KeyValue>();
     kvs.add(new KeyValue(row1, fam4, null, null));
 
+
     //testing existing family
     byte [] family = fam2;
     try {
@@ -238,6 +240,55 @@ public class TestHRegion extends HBaseTestCase {
       ok = true;
     }
     assertEquals("Family " +new String(family)+ " does exist", true, ok);
+  }
+
+  public void testDelete_mixed() throws IOException {
+    byte [] tableName = Bytes.toBytes("testtable");
+    byte [] fam = Bytes.toBytes("info");
+    byte [][] families = {fam};
+    String method = this.getName();
+    initHRegion(tableName, method, families);
+
+    byte [] row = Bytes.toBytes("table_name");
+    // column names
+    byte [] serverinfo = Bytes.toBytes("serverinfo");
+    byte [] splitA = Bytes.toBytes("splitA");
+    byte [] splitB = Bytes.toBytes("splitB");
+
+    // add some data:
+    Put put = new Put(row);
+    put.add(fam, splitA, Bytes.toBytes("reference_A"));
+    region.put(put);
+
+    put = new Put(row);
+    put.add(fam, splitB, Bytes.toBytes("reference_B"));
+    region.put(put);
+
+    put = new Put(row);
+    put.add(fam, serverinfo, Bytes.toBytes("ip_address"));
+    region.put(put);
+
+    // ok now delete a split:
+    Delete delete = new Delete(row);
+    delete.deleteColumns(fam, splitA);
+    region.delete(delete, null, true);
+
+    // assert some things:
+    Get get = new Get(row).addColumn(fam, serverinfo);
+    Result result = region.get(get, null);
+    assertEquals(1, result.size());
+
+    get = new Get(row).addColumn(fam, splitA);
+    result = region.get(get, null);
+    assertEquals(0, result.size());
+
+    get = new Get(row).addColumn(fam, splitB);
+    result = region.get(get, null);
+    assertEquals(1, result.size());
+
+    
+
+    
   }
   
   //Visual test, since the method doesn't return anything

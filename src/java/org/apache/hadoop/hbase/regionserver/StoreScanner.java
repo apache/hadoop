@@ -124,8 +124,6 @@ ChangedReadersObserver {
    * @return true if there are more rows, false if scanner is done
    */
   public boolean next(List<KeyValue> result) throws IOException {
-    // this wont get us the next row if the previous round hasn't iterated
-    // past all the cols from the previous row. Potential bug!
     KeyValue peeked = this.heap.peek();
     if (peeked == null) {
       close();

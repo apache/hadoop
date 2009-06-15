@@ -171,6 +171,11 @@ Release 0.20.0 - Unreleased
    HBASE-1504  Remove left-over debug from 1304 commit
    HBASE-1518  Delete Trackers using compareRow, should just use raw
                binary comparator (Jon Gray via Stack)
+   HBASE-1500  KeyValue$KeyComparator array overrun
+   HBASE-1513  Compactions too slow
+   HBASE-1516  Investigate if StoreScanner will not return the next row if 
+               earlied-out of previous row (Jon Gray)
+   HBASE-1520  StoreFileScanner catches and ignore IOExceptions from HFile
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

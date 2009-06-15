@@ -333,7 +333,8 @@ public class StoreFile implements HConstants {
 
     @Override
     public String toString() {
-      return super.toString() + (isTop()? ", half=top": ", half=bottom");
+      return super.toString() + (isTop()? ", half=top": ", half=bottom") +
+          " splitKey: " + KeyValue.keyToString(splitkey);
     }
 
     @Override

@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.List;
@@ -33,22 +35,18 @@ import java.io.IOException;
  * and optionally the memcache-snapshot.
  */
 public class MinorCompactingStoreScanner implements KeyValueScanner, InternalScanner {
-  private QueryMatcher matcher;
 
   private KeyValueHeap heap;
-
+  private ScanDeleteTracker deleteTracker;
+  private KeyValue.KVComparator comparator;
 
   MinorCompactingStoreScanner(Store store,
                               KeyValueScanner [] scanners) {
-    Scan scan = new Scan();
-
-    // No max version, no ttl matching, start at first row, all columns.
-    matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
-        null, Long.MAX_VALUE, store.comparator.getRawComparator(),
-        store.versionsToReturn(Integer.MAX_VALUE));
-
+    comparator = store.comparator;
+    deleteTracker = new ScanDeleteTracker(store.comparator.getRawComparator());
+    KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);
     for (KeyValueScanner scanner : scanners ) {
-      scanner.seek(matcher.getStartKey());
+      scanner.seek(firstKv);
     }
 
     heap = new KeyValueHeap(scanners, store.comparator);
@@ -56,13 +54,12 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
 
   MinorCompactingStoreScanner(String cfName, KeyValue.KVComparator comparator,
                               KeyValueScanner [] scanners) {
-    Scan scan = new Scan();
-    matcher = new ScanQueryMatcher(scan, Bytes.toBytes(cfName),
-        null, Long.MAX_VALUE, comparator.getRawComparator(),
-        Integer.MAX_VALUE);
+    this.comparator = comparator;
+    deleteTracker = new ScanDeleteTracker(comparator.getRawComparator());
 
+    KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);
     for (KeyValueScanner scanner : scanners ) {
-      scanner.seek(matcher.getStartKey());
+      scanner.seek(firstKv);
     }
 
     heap = new KeyValueHeap(scanners, comparator);
@@ -82,32 +79,94 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
     throw new UnsupportedOperationException("Can't seek a MinorCompactingStoreScanner");
   }
 
-  @Override
-  public boolean next(List<KeyValue> results) throws IOException {
-    KeyValue peeked = heap.peek();
-    if (peeked == null) {
+  /**
+   * High performance merge scan.
+   * @param writer
+   * @return
+   * @throws IOException
+   */
+  public boolean next(HFile.Writer writer) throws IOException {
+    KeyValue row = heap.peek();
+    if (row == null) {
       close();
       return false;
     }
-    matcher.setRow(peeked.getRow());
+    // between rows.
+    deleteTracker.reset();
+
     KeyValue kv;
     while ((kv = heap.peek()) != null) {
-      // if delete type, output no matter what:
-      if (kv.getType() != KeyValue.Type.Put.getCode())
-        results.add(kv);
-
-      switch (matcher.match(kv)) {
-        case INCLUDE:
-          results.add(heap.next());
-          continue;
-        case DONE:
-          if (results.isEmpty()) {
-            matcher.setRow(heap.peek().getRow());
-            continue;
-          }
-          return true;
+      // check to see if this is a different row
+      if (comparator.compareRows(row, kv) != 0) {
+        // reached next row
+        return true;
       }
-      heap.next();
+
+      // if delete type, output no matter what:
+      if (kv.getType() != KeyValue.Type.Put.getCode()) {
+        deleteTracker.add(kv.getBuffer(),
+            kv.getQualifierOffset(),
+            kv.getQualifierLength(),
+            kv.getTimestamp(),
+            kv.getType());
+
+        writer.append(heap.next());
+        continue;
+      }
+
+      if (deleteTracker.isDeleted(kv.getBuffer(),
+          kv.getQualifierOffset(),
+          kv.getQualifierLength(),
+          kv.getTimestamp())) {
+        heap.next();
+        continue;
+      }
+
+      writer.append(heap.next());
+    }
+    close();
+    return false;
+  }
+
+  @Override
+  public boolean next(List<KeyValue> results) throws IOException {
+    KeyValue row = heap.peek();
+    if (row == null) {
+      close();
+      return false;
+    }
+    // between rows.
+    deleteTracker.reset();
+
+    KeyValue kv;
+    while ((kv = heap.peek()) != null) {
+      // check to see if this is a different row
+      if (comparator.compareRows(row, kv) != 0) {
+        // reached next row
+        return true;
+      }
+
+      // if delete type, output no matter what:
+      if (kv.getType() != KeyValue.Type.Put.getCode()) {
+        deleteTracker.add(kv.getBuffer(),
+            kv.getQualifierOffset(),
+            kv.getQualifierLength(),
+            kv.getTimestamp(),
+            kv.getType());
+
+        results.add(heap.next());
+        continue;
+      }
+
+      if (deleteTracker.isDeleted(kv.getBuffer(),
+          kv.getQualifierOffset(),
+          kv.getQualifierLength(),
+          kv.getTimestamp())) {
+        heap.next();
+        continue;
+      }
+
+      results.add(heap.next());
     }
     close();
     return false;

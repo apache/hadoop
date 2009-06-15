@@ -834,30 +834,43 @@ public class Store implements HConstants {
       scanners[i] = new StoreFileScanner(filesToCompact.get(i).getReader().getScanner());
     }
 
-    InternalScanner scanner;
     if (majorCompaction) {
-      Scan scan = new Scan();
-      scan.setMaxVersions(family.getMaxVersions());
-      // TODO pass in the scanners/store files.
-      scanner = new StoreScanner(this, scan, null);
-    } else {
-      scanner = new MinorCompactingStoreScanner(this, scanners);
-    }
+      InternalScanner scanner = null;
 
-    // since scanner.next() can return 'false' but still be delivering data,
-    // we have to use a do/while loop.
-    ArrayList<KeyValue> row = new ArrayList<KeyValue>();
-    boolean more = true;
-    while ( more ) {
-      more = scanner.next(row);
-      // output to writer:
-      for (KeyValue kv : row) {
-        writer.append(kv);
+      try {
+        Scan scan = new Scan();
+        scan.setMaxVersions(family.getMaxVersions());
+        // TODO pass in the scanners/store files.
+        scanner = new StoreScanner(this, scan, null);
+
+        // since scanner.next() can return 'false' but still be delivering data,
+        // we have to use a do/while loop.
+        ArrayList<KeyValue> row = new ArrayList<KeyValue>();
+        boolean more = true;
+        while ( more ) {
+          more = scanner.next(row);
+          // output to writer:
+          for (KeyValue kv : row) {
+            writer.append(kv);
+          }
+          row.clear();
+        }
+      } finally {
+        if (scanner != null)
+          scanner.close();
       }
-      row.clear();
+    } else {
+      MinorCompactingStoreScanner scanner = null;
+      try {
+        scanner = new MinorCompactingStoreScanner(this, scanners);
+
+        while ( scanner.next(writer) ) { }
+      } finally {
+        if (scanner != null)
+          scanner.close();
+      }
     }
 
-    scanner.close();
   }
 
   /*

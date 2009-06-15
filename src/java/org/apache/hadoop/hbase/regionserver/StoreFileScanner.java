@@ -40,6 +40,10 @@ class StoreFileScanner implements KeyValueScanner {
   public StoreFileScanner(HFileScanner hfs) {
     this.hfs = hfs;
   }
+
+  public String toString() {
+    return "StoreFileScanner[" + hfs.toString() + ", cur=" + cur + "]";
+  }
   
   public KeyValue peek() {
     return cur;
@@ -49,10 +53,12 @@ class StoreFileScanner implements KeyValueScanner {
     KeyValue retKey = cur;
     cur = hfs.getKeyValue();
     try {
-      hfs.next();
+      // only seek if we arent at the end. cur == null implies 'end'.
+      if (cur != null)
+        hfs.next();
     } catch(IOException e) {
-      // Only occurs if the scanner is not seeked, this is never the case
-      // as we seek immediately after construction in StoreScanner
+      // Turn checked exception into runtime exception.
+      throw new RuntimeException(e);
     }
     return retKey;
   }

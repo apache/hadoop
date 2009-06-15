@@ -697,7 +697,8 @@ public class HConnectionManager implements HConstants {
           // signifying that the region we're checking is actually the last
           // region in the table.
           if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-              KeyValue.getRowComparator(tableName).compare(endKey, row) > 0) {
+              KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
+                  row, 0, row.length) > 0) {
             return possibleRegion;
           }
         }
@@ -734,7 +735,8 @@ public class HConnectionManager implements HConstants {
 
           // by nature of the map, we know that the start key has to be < 
           // otherwise it wouldn't be in the headMap. 
-          if (KeyValue.getRowComparator(tableName).compare(endKey, row) <= 0) {
+          if (KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
+              row, 0, row.length) <= 0) {
             // delete any matching entry
             HRegionLocation rl =
               tableLocations.remove(matchingRegions.lastKey());

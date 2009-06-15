@@ -54,7 +54,6 @@ public class ScanQueryMatcher extends QueryMatcher {
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, long ttl, 
       KeyValue.KeyComparator rowComparator, int maxVersions) {
-    this.row = row;
     this.tr = scan.getTimeRange();
     this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;

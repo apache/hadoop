@@ -130,7 +130,7 @@ public class KeyValue implements Writable, HeapSize {
    * @param tableName  The table name.
    * @return The comparator.
    */
-  public static RawComparator<byte []> getRowComparator(byte [] tableName) {
+  public static KeyComparator getRowComparator(byte [] tableName) {
     if(Bytes.equals(HTableDescriptor.ROOT_TABLEDESC.getName(),tableName)) {
       return ROOT_COMPARATOR.getRawComparator();
     }
