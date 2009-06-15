@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.DeprecatedUTF8;
+import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -262,13 +262,12 @@ public class FSEditLog {
       ArrayList<EditLogOutputStream> errorStreams,
       boolean propagate) {
     
-    String lsd = fsimage.listStorageDirectories();
-    FSNamesystem.LOG.info("current list of storage dirs:" + lsd);
-    
     if (errorStreams == null || errorStreams.size() == 0) {
       return;                       // nothing to do
     }
 
+    String lsd = fsimage.listStorageDirectories();
+    FSNamesystem.LOG.info("current list of storage dirs:" + lsd);
     //EditLogOutputStream
     if (editStreams == null || editStreams.size() <= 1) {
       FSNamesystem.LOG.fatal(
@@ -853,7 +852,7 @@ public class FSEditLog {
     if (lastPrintTime + 60000 > now && !force) {
       return;
     }
-    if (editStreams == null) {
+    if (editStreams == null || editStreams.size()==0) {
       return;
     }
     lastPrintTime = now;

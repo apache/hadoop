@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.common;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -39,13 +38,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessToken;
 import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 
 public class JspHelper {
@@ -176,59 +172,6 @@ public class JspHelper {
   }
   public static void addTableFooter(JspWriter out) throws IOException {
     out.print("</tbody></table>");
-  }
-
-  public static String getSafeModeText(FSNamesystem fsn) {
-    if (!fsn.isInSafeMode())
-      return "";
-    return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
-  }
-
-  public static String getWarningText(FSNamesystem fsn) {
-    // Ideally this should be displayed in RED
-    long missingBlocks = fsn.getMissingBlocksCount();
-    if (missingBlocks > 0) {
-      return "<br> WARNING :" + 
-             " There are about " + missingBlocks +
-             " missing blocks. Please check the log or run fsck. <br><br>";
-    }
-    return "";
-  }
-  
-  public static String getInodeLimitText(FSNamesystem fsn) {
-    long inodes = fsn.dir.totalInodes();
-    long blocks = fsn.getBlocksTotal();
-    long maxobjects = fsn.getMaxObjects();
-    long totalMemory = Runtime.getRuntime().totalMemory();   
-    long maxMemory = Runtime.getRuntime().maxMemory();   
-
-    long used = (totalMemory * 100)/maxMemory;
- 
-    String str = inodes + " files and directories, " +
-                 blocks + " blocks = " +
-                 (inodes + blocks) + " total";
-    if (maxobjects != 0) {
-      long pct = ((inodes + blocks) * 100)/maxobjects;
-      str += " / " + maxobjects + " (" + pct + "%)";
-    }
-    str += ".  Heap Size is " + StringUtils.byteDesc(totalMemory) + " / " + 
-           StringUtils.byteDesc(maxMemory) + 
-           " (" + used + "%) <br>";
-    return str;
-  }
-
-  public static String getUpgradeStatusText(FSNamesystem fsn) {
-    String statusText = "";
-    try {
-      UpgradeStatusReport status = 
-        fsn.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
-      statusText = (status == null ? 
-          "There are no upgrades in progress." :
-            status.getStatusText(false));
-    } catch(IOException e) {
-      statusText = "Upgrade status unknown.";
-    }
-    return statusText;
   }
 
   public static void sortNodeList(ArrayList<DatanodeDescriptor> nodes,
@@ -375,16 +318,6 @@ public class JspHelper {
   public static int string2ChunkSizeToView(String s) {
     int n = s == null? 0: Integer.parseInt(s);
     return n > 0? n: defaultChunkSizeToView;
-  }
-
-  /** Return a table containing version information. */
-  public static String getVersionTable(FSNamesystem fsn) {
-    return "<div id='dfstable'><table>"       
-        + "\n  <tr><td id='col1'>Started:</td><td>" + fsn.getStartTime() + "</td></tr>\n"
-        + "\n  <tr><td id='col1'>Version:</td><td>" + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
-        + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
-        + "\n  <tr><td id='col1'>Upgrades:</td><td>" + getUpgradeStatusText(fsn)
-        + "\n</table></div>";
   }
 
   /** Return a table containing version information. */

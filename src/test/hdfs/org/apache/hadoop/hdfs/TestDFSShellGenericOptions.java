@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 public class TestDFSShellGenericOptions extends TestCase {
@@ -101,8 +100,8 @@ public class TestDFSShellGenericOptions extends TestCase {
     FileSystem fs=null;
     try {
       ToolRunner.run(shell, args);
-      fs = new DistributedFileSystem(NameNode.getAddress(namenode), 
-                                     shell.getConf());
+      fs = FileSystem.get(NameNode.getUri(NameNode.getAddress(namenode)),
+          shell.getConf());
       assertTrue("Directory does not get created", 
                  fs.isDirectory(new Path("/data")));
       fs.delete(new Path("/data"), true);

@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
@@ -815,10 +816,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   void startFile(String src, PermissionStatus permissions,
                  String holder, String clientMachine,
-                 boolean overwrite, short replication, long blockSize
+                 EnumSet<CreateFlag> flag, short replication, long blockSize
                 ) throws IOException {
-    startFileInternal(src, permissions, holder, clientMachine, overwrite, false,
-                      replication, blockSize);
+    startFileInternal(src, permissions, holder, clientMachine, flag,
+        replication, blockSize);
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
@@ -832,11 +833,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                               PermissionStatus permissions,
                                               String holder, 
                                               String clientMachine, 
-                                              boolean overwrite,
-                                              boolean append,
+                                              EnumSet<CreateFlag> flag,
                                               short replication,
                                               long blockSize
                                               ) throws IOException {
+    boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
+    boolean append = flag.contains(CreateFlag.APPEND);
+    boolean create = flag.contains(CreateFlag.CREATE);
+
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: src=" + src
           + ", holder=" + holder
@@ -918,8 +922,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       if (append) {
         if (myFile == null) {
-          throw new FileNotFoundException("failed to append to non-existent file "
+          if(!create)
+            throw new FileNotFoundException("failed to append to non-existent file "
               + src + " on client " + clientMachine);
+          else {
+            //append & create a nonexist file equals to overwrite
+            this.startFileInternal(src, permissions, holder, clientMachine,
+                EnumSet.of(CreateFlag.OVERWRITE), replication, blockSize);
+            return;
+          }
         } else if (myFile.isDirectory()) {
           throw new IOException("failed to append to directory " + src 
                                 +" on client " + clientMachine);
@@ -992,7 +1003,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new IOException("Append to hdfs not supported." +
                             " Please refer to dfs.support.append configuration parameter.");
     }
-    startFileInternal(src, null, holder, clientMachine, false, true, 
+    startFileInternal(src, null, holder, clientMachine, EnumSet.of(CreateFlag.APPEND), 
                       (short)blockManager.maxReplication, (long)0);
     getEditLog().logSync();
 
@@ -2842,43 +2853,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     return node;
   }
-    
-  /** Stop at and return the datanode at index (used for content browsing)*/
-  @Deprecated
-  private DatanodeDescriptor getDatanodeByIndex(int index) {
-    int i = 0;
-    for (DatanodeDescriptor node : datanodeMap.values()) {
-      if (i == index) {
-        return node;
-      }
-      i++;
-    }
-    return null;
-  }
-    
-  @Deprecated
-  public String randomDataNode() {
-    int size = datanodeMap.size();
-    int index = 0;
-    if (size != 0) {
-      index = r.nextInt(size);
-      for(int i=0; i<size; i++) {
-        DatanodeDescriptor d = getDatanodeByIndex(index);
-        if (d != null && !d.isDecommissioned() && !isDatanodeDead(d) &&
-            !d.isDecommissionInProgress()) {
-          return d.getHost() + ":" + d.getInfoPort();
-        }
-        index = (index + 1) % size;
-      }
-    }
-    return null;
-  }
 
   /** Choose a random datanode
    * 
    * @return a randomly chosen datanode
    */
-  public DatanodeDescriptor getRandomDatanode() {
+  DatanodeDescriptor getRandomDatanode() {
     return (DatanodeDescriptor)clusterMap.chooseRandom(NodeBase.ROOT);
   }
 
@@ -3131,7 +3111,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           return leaveMsg + " upon completion of " + 
             "the distributed upgrade: upgrade progress = " + 
             getDistributedUpgradeStatus() + "%";
-        leaveMsg = "Use \"hadoop dfs -safemode leave\" to turn safe mode off";
+        leaveMsg = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off";
       }
       if(blockTotal < 0)
         return leaveMsg + ".";

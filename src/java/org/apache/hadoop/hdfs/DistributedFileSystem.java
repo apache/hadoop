@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.*;
 import java.net.*;
+import java.util.EnumSet;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
@@ -79,7 +81,7 @@ public class DistributedFileSystem extends FileSystem {
 
     InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
     this.dfs = new DFSClient(namenode, conf, statistics);
-    this.uri = URI.create("hdfs://" + uri.getAuthority());
+    this.uri = URI.create(FSConstants.HDFS_URI_SCHEME + "://" + uri.getAuthority());
     this.workingDir = getHomeDirectory();
   }
 
@@ -198,13 +200,12 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-    boolean overwrite,
-    int bufferSize, short replication, long blockSize,
+    EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
 
     return new FSDataOutputStream
        (dfs.create(getPathName(f), permission,
-                   overwrite, replication, blockSize, progress, bufferSize),
+                   flag, replication, blockSize, progress, bufferSize),
         statistics);
   }
 
@@ -439,7 +440,11 @@ public class DistributedFileSystem extends FileSystem {
   public boolean reportChecksumFailure(Path f, 
     FSDataInputStream in, long inPos, 
     FSDataInputStream sums, long sumsPos) {
-
+    
+    if(!(in instanceof DFSDataInputStream && sums instanceof DFSDataInputStream))
+      throw new IllegalArgumentException("Input streams must be types " +
+                                         "of DFSDataInputStream");
+    
     LocatedBlock lblocks[] = new LocatedBlock[2];
 
     // Find block in data stream.

@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
@@ -276,10 +277,16 @@ public class SecondaryNameNode implements Runnable {
    */
   private String getInfoServer() throws IOException {
     URI fsName = FileSystem.getDefaultUri(conf);
-    if (!"hdfs".equals(fsName.getScheme())) {
+    if (!FSConstants.HDFS_URI_SCHEME.equalsIgnoreCase(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
-    return conf.get("dfs.http.address", "0.0.0.0:50070");
+    String configuredAddress = conf.get("dfs.http.address", "0.0.0.0:50070");
+    InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
+    if (sockAddr.getAddress().isAnyLocalAddress()) {
+      return fsName.getHost() + ":" + sockAddr.getPort();
+    } else {
+      return configuredAddress;
+    }
   }
 
   /**

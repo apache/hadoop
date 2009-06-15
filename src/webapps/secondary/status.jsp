@@ -19,7 +19,12 @@
 %>
 <%@ page
   contentType="text/html; charset=UTF-8"
-  import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.hdfs.server.common.JspHelper"
+  import="org.apache.hadoop.util.ServletUtil"
+%>
+<%!
+  //for java.io.Serializable
+  private static final long serialVersionUID = 1L;
 %>
 
 <html>

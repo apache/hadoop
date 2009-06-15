@@ -35,10 +35,6 @@ public class TestFileStatus extends TestCase {
   static final int blockSize = 8192;
   static final int fileSize = 16384;
 
-  private static String TEST_ROOT_DIR =
-    new Path(System.getProperty("test.build.data","/tmp"))
-    .toString().replace(' ', '+');
-  
   private void writeFile(FileSystem fileSys, Path name, int repl,
                          int fileSize, int blockSize)
     throws IOException {
@@ -99,7 +95,6 @@ public class TestFileStatus extends TestCase {
 
       // create an empty directory
       //
-      Path parentDir = new Path("/test");
       Path dir = new Path("/test/mkdirs");
       assertTrue(fs.mkdirs(dir));
       assertTrue(fs.exists(dir));

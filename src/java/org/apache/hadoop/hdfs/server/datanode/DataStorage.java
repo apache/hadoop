@@ -363,8 +363,17 @@ public class DataStorage extends Storage {
   static void linkBlocks(File from, File to, int oldLV) throws IOException {
     if (!from.isDirectory()) {
       if (from.getName().startsWith(COPY_FILE_PREFIX)) {
-        IOUtils.copyBytes(new FileInputStream(from), 
-                          new FileOutputStream(to), 16*1024, true);
+        FileInputStream in = new FileInputStream(from);
+        try {
+          FileOutputStream out = new FileOutputStream(to);
+          try {
+            IOUtils.copyBytes(in, out, 16*1024);
+          } finally {
+            out.close();
+          }
+        } finally {
+          in.close();
+        }
       } else {
         
         //check if we are upgrading from pre-generation stamp version.

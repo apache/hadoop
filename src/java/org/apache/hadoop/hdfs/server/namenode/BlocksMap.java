@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 
@@ -32,11 +36,11 @@ class BlocksMap {
    * Internal class for block metadata.
    */
   static class BlockInfo extends Block {
-    private INodeFile          inode;
+    private INodeFile inode;
 
     /**
      * This array contains triplets of references.
-     * For each i-th data-node the block belongs to
+     * For each i-th datanode the block belongs to
      * triplets[3*i] is the reference to the DatanodeDescriptor
      * and triplets[3*i+1] and triplets[3*i+2] are references 
      * to the previous and the next blocks, respectively, in the 
@@ -217,7 +221,7 @@ class BlocksMap {
      * If this block is the head of the list then return the next block as 
      * the new head.
      * @return the new head of the list or null if the list becomes
-     * empy after deletion.
+     * empty after deletion.
      */
     BlockInfo listRemove(BlockInfo head, DatanodeDescriptor dn) {
       if(head == null)
@@ -265,6 +269,18 @@ class BlocksMap {
         count++;
       }
       return true;
+    }
+
+    @Override
+    public int hashCode() {
+      // Super implementation is sufficient
+      return super.hashCode();
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+      // Sufficient to rely on super's implementation
+      return (this == obj) || super.equals(obj);
     }
   }
 

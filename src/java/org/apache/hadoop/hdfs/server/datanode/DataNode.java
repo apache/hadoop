@@ -93,6 +93,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -632,6 +633,7 @@ public class DataNode extends Configured
 
       // wait for all data receiver threads to exit
       if (this.threadGroup != null) {
+        int sleepMs = 2;
         while (true) {
           this.threadGroup.interrupt();
           LOG.info("Waiting for threadgroup to exit, active threads is " +
@@ -640,8 +642,12 @@ public class DataNode extends Configured
             break;
           }
           try {
-            Thread.sleep(1000);
+            Thread.sleep(sleepMs);
           } catch (InterruptedException e) {}
+          sleepMs = sleepMs * 3 / 2; // exponential backoff
+          if (sleepMs > 1000) {
+            sleepMs = 1000;
+          }
         }
       }
       // wait for dataXceiveServer to terminate
@@ -1304,6 +1310,10 @@ public class DataNode extends Configured
                                       Configuration conf) throws IOException {
     if (conf == null)
       conf = new Configuration();
+    // parse generic hadoop options
+    GenericOptionsParser hParser = new GenericOptionsParser(conf, args);
+    args = hParser.getRemainingArgs();
+    
     if (!parseArguments(args, conf)) {
       printUsage();
       return null;

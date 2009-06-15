@@ -151,7 +151,7 @@
         <include name="slf4j-api-${slf4j-api.version}.jar"/>
         <include name="slf4j-log4j12-${slf4j-log4j12.version}.jar"/>
         <include name="xmlenc-${xmlenc.version}.jar"/>
-        <include name="core-${core.version}.jar"/> 
+        <include name="core-${core.vesion}.jar"/> 
 	    </lib>
 	    <classes dir="${proxy.conf.dir}" excludes="**/*.example **/*.template **/*.sh hadoop-site.xml"/>
 	    <classes dir="${build.classes}"/>
@@ -355,10 +355,12 @@
         <include name="jetty-util-${jetty-util.version}.jar"/>
         <include name="jetty-${jetty.version}.jar"/>
         <include name="servlet-api-2.5-${servlet-api-2.5.version}.jar"/>
-        <include name="core-${core.version}.jar"/> 
-        <include name="jsp-${jsp.version}-${jetty.version}.jar"/> 
-        <include name="jsp-api-${jsp.version}-${jetty.version}.jar"/> 
-		       </fileset>
+        <include name="core-${core.vesion}.jar"/> 
+                       </fileset>
+		       <fileset dir="${hadoop.root}/lib/jsp-${jsp.version}">
+        <include name="jsp-${jsp.version}.jar"/> 
+        <include name="jsp-api-${jsp.version}.jar"/> 
+			</fileset>
 		</copy>
 
 		<copy todir="${build.dir}/${final.name}/lib" includeEmptyDirs="false">

@@ -83,6 +83,7 @@ public class TestStartup extends TestCase {
    * start MiniDFScluster, create a file (to create edits) and do a checkpoint  
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   public void createCheckPoint() throws IOException {
     LOG.info("--starting mini cluster");
     // manage dirs parameter set to false 
@@ -248,6 +249,7 @@ public class TestStartup extends TestCase {
    * secondary node copies fsimage and edits into correct separate directories.
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   public void testSNNStartup() throws IOException{
     //setUpConfig();
     LOG.info("--starting SecondNN startup test");

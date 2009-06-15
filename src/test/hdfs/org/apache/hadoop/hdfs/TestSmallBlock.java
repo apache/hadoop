@@ -52,7 +52,7 @@ public class TestSmallBlock extends TestCase {
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
+      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                         expected[from+idx]+" actual "+actual[idx],
                         actual[idx], expected[from+idx]);
       actual[idx] = 0;

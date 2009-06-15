@@ -160,7 +160,8 @@ class INodeDirectory extends INode {
    */
   int getExistingPathINodes(byte[][] components, INode[] existing) {
     assert compareBytes(this.name, components[0]) == 0 :
-      "Incorrect name " + getLocalName() + " expected " + components[0];
+      "Incorrect name " + getLocalName() + " expected " + 
+      bytes2String(components[0]);
 
     INode curNode = this;
     int count = 0;

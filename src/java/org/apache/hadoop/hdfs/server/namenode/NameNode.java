@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -189,13 +191,28 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   public static InetSocketAddress getAddress(Configuration conf) {
-    return getAddress(FileSystem.getDefaultUri(conf).getAuthority());
+    URI filesystemURI = FileSystem.getDefaultUri(conf);
+    String authority = filesystemURI.getAuthority();
+    if (authority == null) {
+      throw new IllegalArgumentException(String.format(
+          "Invalid URI for NameNode address (check %s): %s has no authority.",
+          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString()));
+    }
+    if (!FSConstants.HDFS_URI_SCHEME.equalsIgnoreCase(
+        filesystemURI.getScheme())) {
+      throw new IllegalArgumentException(String.format(
+          "Invalid URI for NameNode address (check %s): %s is not of scheme '%s'.",
+          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString(),
+          FSConstants.HDFS_URI_SCHEME));
+    }
+    return getAddress(authority);
   }
 
   public static URI getUri(InetSocketAddress namenode) {
     int port = namenode.getPort();
     String portString = port == DEFAULT_PORT ? "" : (":"+port);
-    return URI.create("hdfs://"+ namenode.getHostName()+portString);
+    return URI.create(FSConstants.HDFS_URI_SCHEME + "://" 
+        + namenode.getHostName()+portString);
   }
 
   /**
@@ -532,7 +549,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public void create(String src, 
                      FsPermission masked,
                              String clientName, 
-                             boolean overwrite,
+                             EnumSetWritable<CreateFlag> flag,
                              short replication,
                              long blockSize
                              ) throws IOException {
@@ -548,7 +565,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.startFile(src,
         new PermissionStatus(UserGroupInformation.getCurrentUGI().getUserName(),
             null, masked),
-        clientName, clientMachine, overwrite, replication, blockSize);
+        clientName, clientMachine, flag.get(), replication, blockSize);
     myMetrics.numFilesCreated.inc();
     myMetrics.numCreateFileOps.inc();
   }
