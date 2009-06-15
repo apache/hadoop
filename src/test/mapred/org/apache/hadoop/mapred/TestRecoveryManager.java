@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobTracker.RecoveryManager;
 import org.apache.hadoop.mapred.MiniMRCluster.JobTrackerRunner;
 import org.apache.hadoop.mapred.TestJobInProgressListener.MyScheduler;
@@ -310,7 +311,7 @@ public class TestRecoveryManager extends TestCase {
     fs.delete(rFile,false);
     
     // start the jobtracker
-    LOG.info("Stopping jobtracker with system files deleted");
+    LOG.info("Starting jobtracker with system files deleted");
     mr.startJobTracker();
     
     UtilsForTests.waitForJobTracker(jc);
@@ -394,8 +395,58 @@ public class TestRecoveryManager extends TestCase {
     LOG.info("Starting jobtracker with fs errors");
     mr.startJobTracker();
     JobTrackerRunner runner = mr.getJobTrackerRunner();
-    assertFalse("Restart count for new job is incorrect", runner.isActive());
+    assertFalse("JobTracker is still alive", runner.isActive());
 
     mr.shutdown();
   } 
+
+  /**
+   * Test if the jobtracker waits for the info file to be created before 
+   * starting.
+   */
+  public void testJobTrackerInfoCreation() throws Exception {
+    LOG.info("Testing jobtracker.info file");
+    MiniDFSCluster dfs = new MiniDFSCluster(new Configuration(), 1, true, null);
+    String namenode = (dfs.getFileSystem()).getUri().getHost() + ":"
+                      + (dfs.getFileSystem()).getUri().getPort();
+    // shut down the data nodes
+    dfs.shutdownDataNodes();
+
+    // start the jobtracker
+    JobConf conf = new JobConf();
+    FileSystem.setDefaultUri(conf, namenode);
+    conf.set("mapred.job.tracker", "localhost:0");
+    conf.set("mapred.job.tracker.http.address", "127.0.0.1:0");
+
+    JobTracker jobtracker = new JobTracker(conf);
+
+    // now check if the update restart count works fine or not
+    boolean failed = false;
+    try {
+      jobtracker.recoveryManager.updateRestartCount();
+    } catch (IOException ioe) {
+      failed = true;
+    }
+    assertTrue("JobTracker created info files without datanodes!!!", failed);
+
+    Path restartFile = jobtracker.recoveryManager.getRestartCountFile();
+    Path tmpRestartFile = jobtracker.recoveryManager.getTempRestartCountFile();
+    FileSystem fs = dfs.getFileSystem();
+    assertFalse("Info file exists after update failure", 
+                fs.exists(restartFile));
+    assertFalse("Temporary restart-file exists after update failure", 
+                fs.exists(restartFile));
+
+    // start 1 data node
+    dfs.startDataNodes(conf, 1, true, null, null, null, null);
+    dfs.waitActive();
+
+    failed = false;
+    try {
+      jobtracker.recoveryManager.updateRestartCount();
+    } catch (IOException ioe) {
+      failed = true;
+    }
+    assertFalse("JobTracker failed to create info files with datanodes!!!", failed);
+  }
 }
