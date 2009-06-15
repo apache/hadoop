@@ -42,7 +42,9 @@ fi
 
 # Finding Hadoop image
 AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HADOOP_VERSION | grep $ARCH |grep available | awk '{print $2}'`
-MASTER_HOST=`cat $MASTER_PRIVATE_IP_PATH`
+# to use private master hostname, substitute below with:
+# MASTER_HOST=`cat $MASTER_PRIVATE_IP_PATH`
+MASTER_HOST=`cat $MASTER_IP_PATH`
 MASTER_ZONE=`cat $MASTER_ZONE_PATH`
 
 # Substituting master hostname

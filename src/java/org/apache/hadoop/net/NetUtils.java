@@ -132,6 +132,9 @@ public class NetUtils {
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort) {
+    if (target == null) {
+      throw new IllegalArgumentException("Target address cannot be null.");
+    }
     int colonIndex = target.indexOf(':');
     if (colonIndex < 0 && defaultPort == -1) {
       throw new RuntimeException("Not a host:port pair: " + target);

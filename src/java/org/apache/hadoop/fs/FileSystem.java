@@ -24,7 +24,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -65,12 +67,12 @@ import org.apache.hadoop.util.ReflectionUtils;
  * implementation is DistributedFileSystem.
  *****************************************************************/
 public abstract class FileSystem extends Configured implements Closeable {
-  private static final String FS_DEFAULT_NAME_KEY = "fs.default.name";
+  public static final String FS_DEFAULT_NAME_KEY = "fs.default.name";
 
   public static final Log LOG = LogFactory.getLog(FileSystem.class);
 
   /** FileSystem cache */
-  private static final Cache CACHE = new Cache();
+  static final Cache CACHE = new Cache();
 
   /** The key this instance is stored under in the cache. */
   private Cache.Key key;
@@ -223,17 +225,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     throws IOException {
     return (LocalFileSystem)newInstance(LocalFileSystem.NAME, conf);
   }
-
-  private static class ClientFinalizer extends Thread {
-    public synchronized void run() {
-      try {
-        FileSystem.closeAll();
-      } catch (IOException e) {
-        LOG.info("FileSystem.closeAll() threw an exception:\n" + e);
-      }
-    }
-  }
-  private static final ClientFinalizer clientFinalizer = new ClientFinalizer();
 
   /**
    * Close all cached filesystems. Be sure those filesystems are not
@@ -516,6 +507,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Opens an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
+   * @deprecated Consider using {@link #create(Path, FsPermission, EnumSet, int, short, long, Progressable)} instead.
    * @param f the file name to open
    * @param permission
    * @param overwrite if a file with this name already exists, then if true,
@@ -527,13 +519,36 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
-  public abstract FSDataOutputStream create(Path f,
+  public FSDataOutputStream create(Path f,
       FsPermission permission,
       boolean overwrite,
       int bufferSize,
       short replication,
       long blockSize,
-      Progressable progress) throws IOException;
+      Progressable progress) throws IOException{
+    return create(f, permission, overwrite ? EnumSet.of(CreateFlag.OVERWRITE)
+        : EnumSet.of(CreateFlag.CREATE), bufferSize, replication, blockSize,
+        progress);
+  }
+  
+  /**
+   * Opens an FSDataOutputStream at the indicated Path with write-progress
+   * reporting.
+   * @param f the file name to open.
+   * @param permission
+   * @param flag determines the semantic of this create.
+   * @param bufferSize the size of the buffer to be used.
+   * @param replication required block replication for the file.
+   * @param blockSize
+   * @param progress
+   * @throws IOException
+   * @see #setPermission(Path, FsPermission)
+   * @see CreateFlag
+   */
+  public abstract FSDataOutputStream create(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException ;
+  
 
   /**
    * Creates the given Path as a brand-new zero-length file.  If
@@ -1409,7 +1424,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** Caching FileSystem objects */
   static class Cache {
+    private final ClientFinalizer clientFinalizer = new ClientFinalizer();
+
     private final Map<Key, FileSystem> map = new HashMap<Key, FileSystem>();
+    private final Set<Key> toAutoClose = new HashSet<Key>();
 
     /** A variable that makes all objects in the cache unique */
     private static AtomicLong unique = new AtomicLong(1);
@@ -1434,6 +1452,10 @@ public abstract class FileSystem extends Configured implements Closeable {
         }
         fs.key = key;
         map.put(key, fs);
+
+        if (conf.getBoolean("fs.automatic.close", true)) {
+          toAutoClose.add(key);
+        }
       }
       return fs;
     }
@@ -1441,6 +1463,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     synchronized void remove(Key key, FileSystem fs) {
       if (map.containsKey(key) && fs == map.get(key)) {
         map.remove(key);
+        toAutoClose.remove(key);
         if (map.isEmpty() && !clientFinalizer.isAlive()) {
           if (!Runtime.getRuntime().removeShutdownHook(clientFinalizer)) {
             LOG.info("Could not cancel cleanup thread, though no " +
@@ -1451,11 +1474,27 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     synchronized void closeAll() throws IOException {
+      closeAll(false);
+    }
+
+    /**
+     * Close all FileSystem instances in the Cache.
+     * @param onlyAutomatic only close those that are marked for automatic closing
+     */
+    synchronized void closeAll(boolean onlyAutomatic) throws IOException {
       List<IOException> exceptions = new ArrayList<IOException>();
-      for(; !map.isEmpty(); ) {
-        Map.Entry<Key, FileSystem> e = map.entrySet().iterator().next();
-        final Key key = e.getKey();
-        final FileSystem fs = e.getValue();
+
+      // Make a copy of the keys in the map since we'll be modifying
+      // the map while iterating over it, which isn't safe.
+      List<Key> keys = new ArrayList<Key>();
+      keys.addAll(map.keySet());
+
+      for (Key key : keys) {
+        final FileSystem fs = map.get(key);
+
+        if (onlyAutomatic && !toAutoClose.contains(key)) {
+          continue;
+        }
 
         //remove from cache
         remove(key, fs);
@@ -1472,6 +1511,16 @@ public abstract class FileSystem extends Configured implements Closeable {
 
       if (!exceptions.isEmpty()) {
         throw MultipleIOException.createIOException(exceptions);
+      }
+    }
+
+    private class ClientFinalizer extends Thread {
+      public synchronized void run() {
+        try {
+          closeAll(true);
+        } catch (IOException e) {
+          LOG.info("FileSystem.Cache.closeAll() threw an exception:\n" + e);
+        }
       }
     }
 

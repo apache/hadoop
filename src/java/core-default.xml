@@ -248,6 +248,23 @@
 
 
 <property>
+  <name>fs.automatic.close</name>
+  <value>true</value>
+  <description>By default, FileSystem instances are automatically closed at program
+  exit using a JVM shutdown hook. Setting this property to false disables this
+  behavior. This is an advanced option that should only be used by server applications
+  requiring a more carefully orchestrated shutdown sequence.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3n.block.size</name>
+  <value>67108864</value>
+  <description>Block size to use when reading files using the native S3
+  filesystem (s3n: URIs).</description>
+</property>
+
+<property>
   <name>local.cache.size</name>
   <value>10737418240</value>
   <description>The limit on the size of cache you want to keep, set by default

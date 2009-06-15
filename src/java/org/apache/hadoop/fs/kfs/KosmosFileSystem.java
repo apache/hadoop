@@ -12,7 +12,6 @@
  * implied. See the License for the specific language governing
  * permissions and limitations under the License.
  *
- * @author: Sriram Rao (Kosmix Corp.)
  * 
  * Implements the Hadoop FS interfaces to allow applications to store
  *files in Kosmos File System (KFS).
@@ -23,9 +22,11 @@ package org.apache.hadoop.fs.kfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -120,7 +121,6 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     @Override
-    @Deprecated
     public boolean isDirectory(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
@@ -131,7 +131,6 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     @Override
-    @Deprecated
     public boolean isFile(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
@@ -186,16 +185,25 @@ public class KosmosFileSystem extends FileSystem {
 
     @Override
     public FSDataOutputStream create(Path file, FsPermission permission,
-                                     boolean overwrite, int bufferSize,
+                                     EnumSet<CreateFlag> flag, int bufferSize,
 				     short replication, long blockSize, Progressable progress)
 	throws IOException {
 
+      boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
+      boolean create = flag.contains(CreateFlag.CREATE);
+      boolean append= flag.contains(CreateFlag.APPEND);
+      
         if (exists(file)) {
             if (overwrite) {
                 delete(file, true);
+            } else if (append){
+             return append(file, bufferSize, progress);
             } else {
                 throw new IOException("File already exists: " + file);
             }
+        } else {
+          if(append && !create)
+            throw new FileNotFoundException("File does not exist: "+ file);
         }
 
 	Path parent = file.getParent();
