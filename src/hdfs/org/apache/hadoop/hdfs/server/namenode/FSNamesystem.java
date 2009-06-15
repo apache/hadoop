@@ -2146,7 +2146,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   void unprotectedRemoveDatanode(DatanodeDescriptor nodeDescr) {
     nodeDescr.resetBlocks();
-    blockManager.removeFromInvalidates(nodeDescr);
+    blockManager.removeFromInvalidates(nodeDescr.getStorageID());
     NameNode.stateChangeLog.debug(
                                   "BLOCK* NameSystem.unprotectedRemoveDatanode: "
                                   + nodeDescr.getName() + " is out of service now.");
@@ -2419,7 +2419,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       return new long[] {this.capacityTotal, this.capacityUsed, 
                          this.capacityRemaining,
                          getUnderReplicatedBlocks(),
-                         getCorruptReplicaBlocksCount(),
+                         getCorruptReplicaBlocks(),
                          getMissingBlocksCount()};
     }
   }
@@ -3469,12 +3469,24 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /** Returns number of blocks with corrupt replicas */
-  public long getCorruptReplicaBlocksCount() {
+  public long getCorruptReplicaBlocks() {
     return blockManager.corruptReplicaBlocksCount;
   }
 
   public long getScheduledReplicationBlocks() {
     return blockManager.scheduledReplicationBlocksCount;
+  }
+
+  public long getPendingDeletionBlocks() {
+    return blockManager.pendingDeletionBlocksCount;
+  }
+
+  public long getExcessBlocks() {
+    return blockManager.excessBlocksCount;
+  }
+  
+  public int getBlockCapacity() {
+    return blockManager.getCapacity();
   }
 
   public String getFSState() {

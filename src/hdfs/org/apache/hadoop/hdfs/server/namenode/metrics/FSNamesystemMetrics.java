@@ -43,19 +43,22 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 public class FSNamesystemMetrics implements Updater {
   private static Log log = LogFactory.getLog(FSNamesystemMetrics.class);
   private final MetricsRecord metricsRecord;
-  private final MetricsRegistry registry = new MetricsRegistry();
-
+  final MetricsRegistry registry = new MetricsRegistry();
    
-  private final MetricsIntValue filesTotal = new MetricsIntValue("FilesTotal", registry);
-  private final MetricsLongValue blocksTotal = new MetricsLongValue("BlocksTotal", registry);
-  private final MetricsIntValue capacityTotalGB = new MetricsIntValue("CapacityTotalGB", registry);
-  private final MetricsIntValue capacityUsedGB = new MetricsIntValue("CapacityUsedGB", registry);
-  private final MetricsIntValue capacityRemainingGB = new MetricsIntValue("CapacityRemainingGB", registry);
-  private final MetricsIntValue totalLoad = new MetricsIntValue("TotalLoad", registry);
-  private final MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks", registry);
-  private final MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks", registry);
-  private final MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks", registry);
-  private final MetricsIntValue missingBlocks = new MetricsIntValue("MissingBlocks", registry);    
+  final MetricsIntValue filesTotal = new MetricsIntValue("FilesTotal", registry);
+  final MetricsLongValue blocksTotal = new MetricsLongValue("BlocksTotal", registry);
+  final MetricsIntValue capacityTotalGB = new MetricsIntValue("CapacityTotalGB", registry);
+  final MetricsIntValue capacityUsedGB = new MetricsIntValue("CapacityUsedGB", registry);
+  final MetricsIntValue capacityRemainingGB = new MetricsIntValue("CapacityRemainingGB", registry);
+  final MetricsIntValue totalLoad = new MetricsIntValue("TotalLoad", registry);
+  final MetricsIntValue pendingDeletionBlocks = new MetricsIntValue("PendingDeletionBlocks", registry);
+  final MetricsIntValue corruptBlocks = new MetricsIntValue("CorruptBlocks", registry);
+  final MetricsIntValue excessBlocks = new MetricsIntValue("ExcessBlocks", registry);
+  final MetricsIntValue pendingReplicationBlocks = new MetricsIntValue("PendingReplicationBlocks", registry);
+  final MetricsIntValue underReplicatedBlocks = new MetricsIntValue("UnderReplicatedBlocks", registry);
+  final MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks", registry);
+  final MetricsIntValue missingBlocks = new MetricsIntValue("MissingBlocks", registry);    
+  final MetricsIntValue blockCapacity = new MetricsIntValue("BlockCapacity", registry);
 
   private final FSNamesystem fsNameSystem;
 
@@ -103,12 +106,16 @@ public class FSNamesystemMetrics implements Updater {
       capacityRemainingGB.set(roundBytesToGBytes(fsNameSystem.
                                                getCapacityRemaining()));
       totalLoad.set(fsNameSystem.getTotalLoad());
+      corruptBlocks.set((int)fsNameSystem.getCorruptReplicaBlocks());
+      excessBlocks.set((int)fsNameSystem.getExcessBlocks());
+      pendingDeletionBlocks.set((int)fsNameSystem.getPendingDeletionBlocks());
       pendingReplicationBlocks.set((int)fsNameSystem.
                                    getPendingReplicationBlocks());
       underReplicatedBlocks.set((int)fsNameSystem.getUnderReplicatedBlocks());
       scheduledReplicationBlocks.set((int)fsNameSystem.
                                       getScheduledReplicationBlocks());
       missingBlocks.set((int)fsNameSystem.getMissingBlocksCount());
+      blockCapacity.set(fsNameSystem.getBlockCapacity());
 
       for (MetricsBase m : registry.getMetricsList()) {
         m.pushMetric(metricsRecord);

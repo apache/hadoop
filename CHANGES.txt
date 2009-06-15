@@ -149,6 +149,9 @@ Trunk (unreleased changes)
     HADOOP-5170. Allows jobs to set max maps/reduces per-node and per-cluster.
     (Matei Zaharia via ddas)
 
+    HADOOP-5897. Add name-node metrics to capture java heap usage.
+    (Suresh Srinivas via shv)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
