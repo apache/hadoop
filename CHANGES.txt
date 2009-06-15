@@ -88,7 +88,9 @@ Release 0.20.0 - Unreleased
    HBASE-1310  Off by one error in Bytes.vintToBytes
    HBASE-1202  getRow does not always work when specifying number of versions
    HBASE-1324  hbase-1234 broke testget2 unit test (and broke the build)
-   HBASE-1321  hbase-1234 broke TestCompaction; fix and reenable HBASE-1330  binary keys broken on trunk (Ryan Rawson via Stack) HBASE-1332  regionserver carrying .META. starts sucking all cpu, drives load
+   HBASE-1321  hbase-1234 broke TestCompaction; fix and reenable
+   HBASE-1330  binary keys broken on trunk (Ryan Rawson via Stack)
+   HBASE-1332  regionserver carrying .META. starts sucking all cpu, drives load
                up - infinite loop? (Ryan Rawson via Stack)
    HBASE-1334  .META. region running into hfile errors (Ryan Rawson via Stack)
    HBASE-1338  lost use of compaction.dir; we were compacting into live store
@@ -168,8 +170,10 @@ Release 0.20.0 - Unreleased
    HBASE-1493  New TableMapReduceUtil methods should be static (Billy Pearson
                via Andrew Purtell)
    HBASE-1486  BLOCKCACHE always on even when disabled (Lars George via Stack)
-   HBASE-1491  ZooKeeper errors: "Client has seen zxid 0xe our last zxid is 0xd"
-   HBASE-1499  Fix javadoc warnings after HBASE-1304 commit (Lars George via Stack)
+   HBASE-1491  ZooKeeper errors: "Client has seen zxid 0xe our last zxid
+               is 0xd"
+   HBASE-1499  Fix javadoc warnings after HBASE-1304 commit (Lars George via
+               Stack)
    HBASE-1504  Remove left-over debug from 1304 commit
    HBASE-1518  Delete Trackers using compareRow, should just use raw
                binary comparator (Jon Gray via Stack)
@@ -181,7 +185,7 @@ Release 0.20.0 - Unreleased
    HBASE-1522  We delete splits before their time occasionally
    HBASE-1523  NPE in BaseScanner
    HBASE-1525  HTable.incrementColumnValue hangs()
-
+   HBASE-1526  mapreduce fixup
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

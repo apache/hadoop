@@ -75,7 +75,7 @@ import org.apache.hadoop.util.StringUtils;
  * </pre>
  */
 public abstract class TableInputFormatBase
-implements InputFormat<ImmutableBytesWritable, Result> {
+implements InputFormat<ImmutableBytesWritable, RowResult> {
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
   private byte [][] inputColumns;
   private HTable table;
@@ -86,7 +86,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * Iterate over an HBase table data, return (Text, RowResult) pairs
    */
   protected class TableRecordReader
-  implements RecordReader<ImmutableBytesWritable, Result> {
+  implements RecordReader<ImmutableBytesWritable, RowResult> {
     private byte [] startRow;
     private byte [] endRow;
     private byte [] lastRow;
@@ -189,8 +189,8 @@ implements InputFormat<ImmutableBytesWritable, Result> {
      *
      * @see org.apache.hadoop.mapred.RecordReader#createValue()
      */
-    public Result createValue() {
-      return new Result();
+    public RowResult createValue() {
+      return new RowResult();
     }
 
     public long getPos() {
@@ -210,7 +210,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
      * @return true if there was more data
      * @throws IOException
      */
-    public boolean next(ImmutableBytesWritable key, Result value)
+    public boolean next(ImmutableBytesWritable key, RowResult value)
     throws IOException {
       Result result;
       try {
@@ -225,7 +225,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       if (result != null && result.size() > 0) {
         key.set(result.getRow());
         lastRow = key.get();
-        Writables.copyWritable(result, value);
+        Writables.copyWritable(result.getRowResult(), value);
         return true;
       }
       return false;
@@ -239,7 +239,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
    *      JobConf, Reporter)
    */
-  public RecordReader<ImmutableBytesWritable, Result> getRecordReader(
+  public RecordReader<ImmutableBytesWritable, RowResult> getRecordReader(
       InputSplit split, JobConf job, Reporter reporter)
   throws IOException {
     TableSplit tSplit = (TableSplit) split;
