@@ -21,6 +21,8 @@ Release 0.20.0 - Unreleased
    HBASE-1411  Remove HLogEdit.
    HBASE-1357  If one sets the hbase.master to 0.0.0.0 non local regionservers
                can't find the master
+   HBASE-1304  New client server implementation of how gets and puts are handled
+               (holstad, jgray, rawson, stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
@@ -333,6 +335,7 @@ Release 0.20.0 - Unreleased
    HBASE-1507  iCMS as default JVM
    HBASE-1509  Add explanation to shell "help" command on how to use binarykeys
                (Lars George via Stack)
+   HBASE-1514  hfile inspection tool
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
