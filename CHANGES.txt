@@ -56,6 +56,18 @@ Trunk (unreleased changes)
     HADOOP-4359. Support for data access authorization checking on Datanodes.
     (Kan Zhang via rangadi)
 
+    HADOOP-5690. Change org.apache.hadoop.examples.DBCountPageView to use 
+    new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5694. Change org.apache.hadoop.examples.dancing to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5696. Change org.apache.hadoop.examples.Sort to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    HADOOP-5698. Change org.apache.hadoop.examples.MultiFileWordCount to 
+    use new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
@@ -414,12 +426,6 @@ Trunk (unreleased changes)
     Option.withArgPattern. (Giridharan Kesavan and Sharad Agarwal via 
     sharad)
 
-    HADOOP-5698. Change org.apache.hadoop.examples.MultiFileWordCount to 
-    use new mapreduce api. (Amareshwari Sriramadasu via sharad)
-
-    HADOOP-5696. Change org.apache.hadoop.examples.Sort to use new 
-    mapreduce api. (Amareshwari Sriramadasu via sharad)
-
     HADOOP-5784. Makes the number of heartbeats that should arrive a second
     at the JobTracker configurable. (Amareshwari Sriramadasu via ddas)
 
@@ -435,8 +441,8 @@ Trunk (unreleased changes)
     HADOOP-5961. DataNode process understand generic hadoop command line
     options (like -Ddfs.property=value). (Raghu Angadi)
 
-    HADOOP-5694. Change org.apache.hadoop.examples.dancing to use new 
-    mapreduce api. (Amareshwari Sriramadasu via sharad)
+    HADOOP-5938. Change org.apache.hadoop.mapred.jobcontrol to use new
+    api. (Amareshwari Sriramadasu via sharad)
 
   OPTIMIZATIONS
 
@@ -803,6 +809,17 @@ Trunk (unreleased changes)
     HADOOP-5981. Fix a bug in HADOOP-2838 in parsing mapred.child.env.
     (Amar Kamat via sharad)
 
+    HADOOP-5420. Fix LinuxTaskController to kill tasks using the process
+    groups they are launched with.
+    (Sreekanth Ramakrishnan via yhemanth)
+
+    HADOOP-6031. Remove @author tags from Java source files.  (Ravi Phulari
+    via szetszwo)
+
+    HADOOP-5980. Fix LinuxTaskController so tasks get passed 
+    LD_LIBRARY_PATH and other environment variables.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -924,6 +941,12 @@ Release 0.20.1 - Unreleased
     HADOOP-5869. Fix bug in assignment of setup / cleanup task that was
     causing TestQueueCapacities to fail.
     (Sreekanth Ramakrishnan via yhemanth)
+
+    HADOOP-5921. Fixes a problem in the JobTracker where it sometimes never used
+    to come up due to a system file creation on JobTracker's system-dir failing. 
+    This problem would sometimes show up only when the FS for the system-dir 
+    (usually HDFS) is started at nearly the same time as the JobTracker. 
+    (Amar Kamat via ddas)
 
 Release 0.20.0 - 2009-04-15
 

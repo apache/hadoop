@@ -123,7 +123,7 @@ public class JobTracker extends Service
   private int NUM_HEARTBEATS_IN_SECOND = 100;
   public static enum State { INITIALIZING, RUNNING }
   State state = State.INITIALIZING;
-  private static final int SYSTEM_DIR_CLEANUP_RETRY_PERIOD = 10000;
+  private static final int FS_ACCESS_RETRY_PERIOD = 10000;
   /**
    * Time in milliseconds to sleep while trying to start the job tracker:
    * {@value}
@@ -1205,17 +1205,38 @@ public class JobTracker extends Service
         shouldRecover = false;
 
         // write the jobtracker.info file
-        FSDataOutputStream out = FileSystem.create(fs, restartFile, filePerm);
-        out.writeInt(0);
-        out.close();
+        try {
+          FSDataOutputStream out = FileSystem.create(fs, restartFile, 
+                                                     filePerm);
+          out.writeInt(0);
+          out.close();
+        } catch (IOException ioe) {
+          LOG.warn("Writing to file " + restartFile + " failed!");
+          LOG.warn("FileSystem is not ready yet!");
+          fs.delete(restartFile, false);
+          throw ioe;
+        }
         return;
       }
 
       FSDataInputStream in = fs.open(restartFile);
-      // read the old count
-      restartCount = in.readInt();
-      ++restartCount; // increment the restart count
-      in.close();
+      try {
+        // read the old count
+        restartCount = in.readInt();
+        ++restartCount; // increment the restart count
+      } catch (IOException ioe) {
+        LOG.warn("System directory is garbled. Failed to read file " 
+                 + restartFile);
+        LOG.warn("Jobtracker recovery is not possible with garbled"
+                 + " system directory! Please delete the system directory and"
+                 + " restart the jobtracker. Note that deleting the system" 
+                 + " directory will result in loss of all the running jobs.");
+        throw new RuntimeException(ioe);
+      } finally {
+        if (in != null) {
+          in.close();
+        }
+      }
 
       // Write back the new restart count and rename the old info file
       //TODO This is similar to jobhistory recovery, maybe this common code
@@ -1762,28 +1783,11 @@ public class JobTracker extends Service
                 ie);
       }
       try {
-        Thread.sleep(SYSTEM_DIR_CLEANUP_RETRY_PERIOD);
+        Thread.sleep(FS_ACCESS_RETRY_PERIOD);
       } catch (InterruptedException e) {
         throw new IOException("Interrupted during system directory cleanup ",
                 e);
       }
-    }
-
-    // Prepare for recovery. This is done irrespective of the status of restart
-    // flag.
-    try {
-      recoveryManager.updateRestartCount();
-    } catch (IOException ioe) {
-      LOG.warn("Failed to initialize recovery manager. The Recovery manager "
-               + "failed to access the system files in the system dir (" 
-               + getSystemDir() + ")."); 
-      LOG.warn("It might be because the JobTracker failed to read/write system"
-               + " files (" + recoveryManager.getRestartCountFile() + " / " 
-               + recoveryManager.getTempRestartCountFile() + ") or the system "
-               + " file " + recoveryManager.getRestartCountFile() 
-               + " is missing!");
-      LOG.warn("Bailing out...");
-      throw ioe;
     }
     
     // Same with 'localDir' except it's always on the local disk.
@@ -1912,6 +1916,20 @@ public class JobTracker extends Service
       //catch re-entrancy by returning early
       return;
     };
+    // Prepare for recovery. This is done irrespective of the status of restart
+    // flag.
+    while (true) {
+      try {
+        recoveryManager.updateRestartCount();
+        break;
+      } catch (IOException ioe) {
+        LOG.warn("Failed to initialize recovery manager. ", ioe);
+        // wait for some time
+        Thread.sleep(FS_ACCESS_RETRY_PERIOD);
+        LOG.warn("Retrying...");
+      }
+    }
+
     taskScheduler.start();
     
     //  Start the recovery after starting the scheduler

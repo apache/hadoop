@@ -19,10 +19,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
@@ -37,6 +39,8 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 abstract class TaskController implements Configurable {
   
   private Configuration conf;
+  
+  public static final Log LOG = LogFactory.getLog(TaskController.class);
   
   public Configuration getConf() {
     return conf;
@@ -63,13 +67,29 @@ abstract class TaskController implements Configurable {
                                       throws IOException;
   
   /**
-   * Kill a task JVM
+   * Top level cleanup a task JVM method.
+   *
+   * The current implementation does the following.
+   * <ol>
+   * <li>Sends a graceful terminate signal to task JVM allowing its sub-process
+   * to cleanup.</li>
+   * <li>Waits for stipulated period</li>
+   * <li>Sends a forceful kill signal to task JVM, terminating all its
+   * sub-process forcefully.</li>
+   * </ol>
    * 
-   * This method defines how a JVM launched to execute one or more
-   * tasks will be killed.
-   * @param context
+   * @param context the task for which kill signal has to be sent.
    */
-  abstract void killTaskJVM(TaskControllerContext context);
+  final void destroyTaskJVM(TaskControllerContext context) {
+    terminateTask(context);
+    try {
+      Thread.sleep(context.sleeptimeBeforeSigkill);
+    } catch (InterruptedException e) {
+      LOG.warn("Sleep interrupted : " + 
+          StringUtils.stringifyException(e));
+    }
+    killTask(context);
+  }
   
   /**
    * Perform initializing actions required before a task can run.
@@ -110,4 +130,20 @@ abstract class TaskController implements Configurable {
    * @param tip  Task of job for which localization happens.
    */
   abstract void initializeJob(JobID jobId);
+  
+  /**
+   * Sends a graceful terminate signal to taskJVM and it sub-processes. 
+   *   
+   * @param context task context
+   */
+  abstract void terminateTask(TaskControllerContext context);
+  
+  /**
+   * Sends a KILL signal to forcefully terminate the taskJVM and its
+   * sub-processes.
+   * 
+   * @param context task context
+   */
+  
+  abstract void killTask(TaskControllerContext context);
 }

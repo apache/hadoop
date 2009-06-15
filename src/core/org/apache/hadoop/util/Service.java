@@ -208,7 +208,7 @@ public abstract class Service extends Configured implements Closeable {
    * @throws IOException           for any ping failure
    * @throws ServiceStateException if the component is in a wrong state.
    */
-  public ServiceStatus ping() throws IOException {
+  protected ServiceStatus ping() throws IOException {
     ServiceStatus status = new ServiceStatus(this);
     ServiceState state = status.getState();
     if (state == ServiceState.LIVE) {

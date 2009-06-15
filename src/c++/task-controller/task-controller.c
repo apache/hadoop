@@ -23,9 +23,6 @@ struct passwd *user_detail = NULL;
 //LOGFILE
 FILE *LOGFILE;
 
-//hadoop temp dir root which is configured in secure configuration
-const char *mapred_local_dir;
-
 //placeholder for global cleanup operations
 void cleanup() {
   free_configurations();
@@ -36,10 +33,14 @@ int change_user(const char * user) {
   if (get_user_details(user) < 0) {
     return -1;
   }
-#ifdef DEBUG
-  fprintf(LOGFILE,"change_user : setting user as %s ", user_detail->pw_name);
-#endif
+
+  if(initgroups(user_detail->pw_name, user_detail->pw_gid) != 0) {
+	  cleanup();
+	  return SETUID_OPER_FAILED;
+  }
+
   errno = 0;
+
   setgid(user_detail->pw_gid);
   if (errno != 0) {
     fprintf(LOGFILE, "unable to setgid : %s\n", strerror(errno));
@@ -70,90 +71,61 @@ int change_user(const char * user) {
   return 0;
 }
 
-//Function to set the hadoop.temp.dir key from configuration.
-//would return -1 if the configuration is not proper.
-
-int get_mapred_local_dir() {
-
-  if (mapred_local_dir == NULL) {
-    mapred_local_dir = get_value(TT_SYS_DIR_KEY);
-  }
-
-  //after the call it should not be null
-  if (mapred_local_dir == NULL) {
-    return -1;
-  } else {
-    return 0;
-  }
-
-}
 // function to check if the passed tt_root is present in hadoop.tmp.dir
 int check_tt_root(const char *tt_root) {
-  char *token;
+  char ** mapred_local_dir;
   int found = -1;
 
   if (tt_root == NULL) {
     return -1;
   }
 
+  mapred_local_dir = (char **)get_values(TT_SYS_DIR_KEY);
+
   if (mapred_local_dir == NULL) {
-    if (get_mapred_local_dir() < 0) {
-      return -1;
-    }
+    return -1;
   }
 
-  token = strtok((char *) mapred_local_dir, ",");
-  if (token == NULL && mapred_local_dir != NULL) {
-    token = (char *)mapred_local_dir;
-  }
-
-  while (1) {
-    if (strcmp(tt_root, token) == 0) {
+  while(*mapred_local_dir != NULL) {
+    if(strcmp(*mapred_local_dir,tt_root) == 0) {
       found = 0;
       break;
     }
-    token = strtok(NULL, ",");
-    if (token == NULL) {
-      break;
-    }
   }
-
+  free(mapred_local_dir);
   return found;
-
 }
 
-/*
- *d function which would return .pid file path which is used while running
- * and killing of the tasks by the user.
- *
- * check TT_SYS_DIR for pattern
+/**
+ * Function to check if the constructed path and absolute
+ * path resolve to one and same.
  */
-void get_pid_path(const char * jobid, const char * taskid, const char *tt_root,
-    char ** pid_path) {
 
-  int str_len = strlen(TT_SYS_DIR) + strlen(jobid) + strlen(taskid) + strlen(
-      tt_root);
-  *pid_path = NULL;
-
-  if (mapred_local_dir == NULL) {
-    if (get_mapred_local_dir() < 0) {
-      return;
-    }
+int check_path(char *path) {
+  char * resolved_path = (char *) canonicalize_file_name(path);
+  if(resolved_path == NULL) {
+    return ERROR_RESOLVING_FILE_PATH;
   }
-
-  *pid_path = (char *) malloc(sizeof(char) * (str_len + 1));
-
-  if (*pid_path == NULL) {
-    fprintf(LOGFILE, "unable to allocate memory for pid path\n");
-    return;
+  if(strcmp(resolved_path, path) !=0) {
+    free(resolved_path);
+    return RELATIVE_PATH_COMPONENTS_IN_FILE_PATH;
   }
-  memset(*pid_path,'\0',str_len+1);
-  snprintf(*pid_path, str_len, TT_SYS_DIR, tt_root, jobid, taskid);
-#ifdef DEBUG
-  fprintf(LOGFILE, "get_pid_path : pid path = %s\n", *pid_path);
-  fflush(LOGFILE);
-#endif
-
+  free(resolved_path);
+  return 0;
+}
+/**
+ * Function to check if a user actually owns the file.
+ */
+int check_owner(uid_t uid, char *path) {
+  struct stat filestat;
+  if(stat(path, &filestat)!=0) {
+    return UNABLE_TO_STAT_FILE;
+  }
+  //check owner.
+  if(uid != filestat.st_uid){
+    return FILE_NOT_OWNED_BY_TASKTRACKER;
+  }
+  return 0;
 }
 
 /*
@@ -163,19 +135,19 @@ void get_pid_path(const char * jobid, const char * taskid, const char *tt_root,
  */
 void get_task_file_path(const char * jobid, const char * taskid,
     const char * tt_root, char **task_script_path) {
+  const char ** mapred_local_dir = get_values(TT_SYS_DIR_KEY);
   *task_script_path = NULL;
   int str_len = strlen(TT_LOCAL_TASK_SCRIPT_PATTERN) + strlen(jobid) + (strlen(
       taskid)) + strlen(tt_root);
 
   if (mapred_local_dir == NULL) {
-    if (get_mapred_local_dir() < 0) {
-      return;
-    }
+    return;
   }
 
   *task_script_path = (char *) malloc(sizeof(char) * (str_len + 1));
   if (*task_script_path == NULL) {
     fprintf(LOGFILE, "Unable to allocate memory for task_script_path \n");
+    free(mapred_local_dir);
     return;
   }
 
@@ -186,13 +158,13 @@ void get_task_file_path(const char * jobid, const char * taskid,
   fprintf(LOGFILE, "get_task_file_path : task script path = %s\n", *task_script_path);
   fflush(LOGFILE);
 #endif
-
+  free(mapred_local_dir);
 }
 
 //end of private functions
 void display_usage(FILE *stream) {
   fprintf(stream,
-      "Usage: task-controller [-l logile] user command command-args\n");
+      "Usage: task-controller [-l logfile] user command command-args\n");
 }
 
 //function used to populate and user_details structure.
@@ -212,28 +184,20 @@ int get_user_details(const char *user) {
  *Function used to launch a task as the provided user.
  * First the function checks if the tt_root passed is found in
  * hadoop.temp.dir
- *
- *Then gets the path to which the task has to write its pid from
- *get_pid_path.
- *
- * THen writes its pid into the file.
- *
- * Then changes the permission of the pid file into 777
- *
- * Then uses get_task_file_path to fetch the task script file path.
- *
+ * Uses get_task_file_path to fetch the task script file path.
  * Does an execlp on the same in order to replace the current image with
  * task image.
- *
  */
 
 int run_task_as_user(const char * user, const char *jobid, const char *taskid,
     const char *tt_root) {
   char *task_script_path = NULL;
-  char *pid_path = NULL;
-  FILE *file_handle = NULL;
   int exit_code = 0;
-  int i = 0;
+  uid_t uid = getuid();
+
+  if(jobid == NULL || taskid == NULL) {
+    return INVALID_ARGUMENT_NUMBER;
+  }
 
 #ifdef DEBUG
   fprintf(LOGFILE,"run_task_as_user : Job id : %s \n", jobid);
@@ -241,7 +205,8 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
   fprintf(LOGFILE,"run_task_as_user : tt_root : %s \n", tt_root);
   fflush(LOGFILE);
 #endif
-
+  //Check tt_root before switching the user, as reading configuration
+  //file requires privileged access.
   if (check_tt_root(tt_root) < 0) {
     fprintf(LOGFILE, "invalid tt root passed %s\n", tt_root);
     cleanup();
@@ -257,43 +222,20 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
     return SETUID_OPER_FAILED;
   }
 
-  get_pid_path(jobid, taskid, tt_root, &pid_path);
-
-  if (pid_path == NULL) {
-    cleanup();
-    return INVALID_PID_PATH;
-  }
-
-  errno = 0;
-  file_handle = fopen(pid_path, "w");
-
-  if (file_handle == NULL) {
-    exit_code = UNABLE_TO_OPEN_PID_FILE_WRITE_MODE;
-    goto cleanup;
-  }
-
-  errno = 0;
-  if (fprintf(file_handle, "%d\n", getpid()) < 0) {
-    exit_code = UNABLE_TO_WRITE_TO_PID_FILE;
-    goto cleanup;
-  }
-
-  fflush(file_handle);
-  fclose(file_handle);
-  //set file handle to null after closing so it would not be double closed
-  //in cleanup label
-  file_handle = NULL;
-  //change the permissions of the file
-  errno = 0;
-  //free pid_t path which is allocated
-  free(pid_path);
-  pid_path = NULL;
-
   get_task_file_path(jobid, taskid, tt_root, &task_script_path);
-
   if (task_script_path == NULL) {
     cleanup();
     return INVALID_TASK_SCRIPT_PATH;
+  }
+  errno = 0;
+  exit_code = check_path(task_script_path);
+  if(exit_code != 0) {
+    goto cleanup;
+  }
+  errno = 0;
+  exit_code = check_owner(uid, task_script_path);
+  if(exit_code != 0) {
+    goto cleanup;
   }
   errno = 0;
   cleanup();
@@ -306,83 +248,53 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
   return exit_code;
 
 cleanup:
-  if (pid_path != NULL) {
-    free(pid_path);
-  }
   if (task_script_path != NULL) {
     free(task_script_path);
-  }
-  if (file_handle != NULL) {
-    fclose(file_handle);
   }
   // free configurations
   cleanup();
   return exit_code;
 }
+
 /**
- * Function used to terminate a task launched by the user.
- *
- * The function first checks if the passed tt-root is found in
- * configured hadoop.temp.dir (which is a list of tt_roots).
- *
- * Then gets the task-pid path using function get_pid_path.
- *
- * reads the task-pid from the file which is mentioned by get_pid_path
- *
- * kills the task by sending SIGTERM to that particular process.
- *
+ * Function used to terminate/kill a task launched by the user.
+ * The function sends appropriate signal to the process group
+ * specified by the task_pid.
  */
 
-int kill_user_task(const char *user, const char *jobid, const char *taskid,
-    const char *tt_root) {
+int kill_user_task(const char *user, const char *task_pid, int sig) {
   int pid = 0;
-  int i = 0;
-  char *pid_path = NULL;
-  FILE *file_handle = NULL;
-#ifdef DEBUG
-  fprintf(LOGFILE,"kill_user_task : Job id : %s \n", jobid);
-  fprintf(LOGFILE,"kill_user_task : task id : %s \n", taskid);
-  fprintf(LOGFILE,"kill_user_task : tt_root : %s \n", tt_root);
-  fflush(LOGFILE);
-#endif
 
-  if (check_tt_root(tt_root) < 0) {
-    fprintf(LOGFILE, "invalid tt root passed %s\n", tt_root);
-    cleanup();
-    return INVALID_TT_ROOT;
+  if(task_pid == NULL) {
+    return INVALID_ARGUMENT_NUMBER;
   }
+  pid = atoi(task_pid);
 
+  if(pid <= 0) {
+    return INVALID_TASK_PID;
+  }
   fclose(LOGFILE);
   fcloseall();
-
   if (change_user(user) != 0) {
     cleanup();
     return SETUID_OPER_FAILED;
   }
 
-  get_pid_path(jobid, taskid, tt_root, &pid_path);
-  if (pid_path == NULL) {
-    cleanup();
-    return INVALID_PID_PATH;
+  //Don't continue if the process-group is not alive anymore.
+  if(kill(-pid,0) < 0) {
+    errno = 0;
+    return 0;
   }
-  file_handle = fopen(pid_path, "r");
-  if (file_handle == NULL) {
-    free(pid_path);
-    cleanup();
-    return UNABLE_TO_OPEN_PID_FILE_READ_MODE;
-  }
-  fscanf(file_handle, "%d", &pid);
-  fclose(file_handle);
-  free(pid_path);
-  if (pid == 0) {
-    cleanup();
-    return UNABLE_TO_READ_PID;
-  }
-  if (kill(pid, SIGTERM) < 0) {
-    fprintf(LOGFILE, "%s\n", strerror(errno));
-    cleanup();
-    return UNABLE_TO_KILL_TASK;
+
+  if (kill(-pid, sig) < 0) {
+    if(errno != ESRCH) {
+      fprintf(LOGFILE, "Error is %s\n", strerror(errno));
+      cleanup();
+      return UNABLE_TO_KILL_TASK;
+    }
+    errno = 0;
   }
   cleanup();
   return 0;
 }
+

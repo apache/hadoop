@@ -264,52 +264,55 @@ ${build.ivy.report.dir}
   <target name="svn-merge" depends="svn-init"
     description="merge in the trunk"  >
     <svn>
-      <arg line="merge ${trunk}"/>
+      <arg value="merge"/>
+      <arg value="${trunk}"/>
+      <arg value="--accept"/>
+      <arg value="postpone"/>
     </svn>
   </target>
   
   <target name="svn-diff" depends="svn-init"
     description="diff the local code against the branch"  >
     <svn>
-      <arg line="diff"/>
+      <arg value="diff"/>
     </svn>
   </target>
 
   <target name="svn-resolved" depends="svn-init"
     description="mark the tree as resolved"  >
     <svn>
-      <arg line="resolve"/>
+      <arg value="resolve"/>
     </svn>
   </target>
 
   <!--
   svn diff \
-  https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2\
-  https://svn.apache.org/repos/asf/hadoop/core/trunk
+  https://svn.apache.org/repos/asf/hadoop/core/trunk \
+  https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2
   -->
   <target name="svn-diff-trunk" depends="svn-init"
-    description="diff against trunk"  >
+      description="diff against trunk"  >
     <svn>
       <arg value="diff" />
-      <arg value="https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2"/>
       <arg value="https://svn.apache.org/repos/asf/hadoop/core/trunk"/>
+      <arg value="https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2"/>
     </svn>
   </target>
-    
-  
+
+
   <target name="svn-create-changelist" depends="svn-init"
-    description="Create a changelist of everything we want in the big patch"  >
+      description="Create a changelist of everything we want in the big patch"  >
     <property name="core/hadoop" value="src/core/org/apache/hadoop" />
-    <property name="hdfs/server" 
+    <property name="hdfs/server"
         value="src/hdfs/org/apache/hadoop/hdfs/server" />
     <property name="hadoop/mapred"
-        value="src/mapred/org/apache/hadoop/mapred/" />
-    <property name="test/core" 
+        value="src/mapred/org/apache/hadoop/mapred" />
+    <property name="test/core"
         value="src/test/org/apache/hadoop" />
-    <property name="test/hdfs/" 
+    <property name="test/hdfs"
         value="src/test/hdfs/org/apache/hadoop/hdfs" />
-    <property name="test/mapred" 
-        value="src/test/mapred/org/apache/hadoop/mapred/" />
+    <property name="test/mapred"
+        value="src/test/mapred/org/apache/hadoop/mapred" />
 
     <svn>
       <arg value="changelist"/>
@@ -321,13 +324,13 @@ ${build.ivy.report.dir}
       <arg value="${core/hadoop}/security/authorize/ConfiguredPolicy.java" />
       -->
       <arg value="${core/hadoop}/http/HttpServer.java" />
-      <arg value="${core/hadoop}/http/io/ThrowableWritable.java" />
+      <arg value="${core/hadoop}/io/ThrowableWritable.java" />
       <arg value="${core/hadoop}/util/Service.java" />
       <arg value="${core/hadoop}/util/MockService.java" />
-      
+
       <arg value="${hdfs/server}/datanode/DataNode.java" />
       <arg value="${hdfs/server}/datanode/FSDataset.java" />
-      <arg value="${hdfs/server}/namenode/BackupNode" />
+      <arg value="${hdfs/server}/namenode/BackupNode.java" />
       <arg value="${hdfs/server}/namenode/FSNamesystem.java" />
       <arg value="${hdfs/server}/namenode/NameNode.java" />
       <arg value="${hdfs/server}/namenode/PendingReplicationBlocks.java" />
@@ -342,20 +345,7 @@ ${build.ivy.report.dir}
       <arg value="${test/mapred}/TestTaskTrackerLifecycle.java" />
     </svn>
   </target>
-  
-  
-  <!--
-  svn diff \
-  https://svn.apache.org/repos/asf/hadoop/core/trunk \
-  https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2
-  -->
-  <target name="svn-diff-trunk" depends="svn-init"
-    description="diff against trunk"  >
-    <svn>
-      <arg value="diff" />
-      <arg value="https://svn.apache.org/repos/asf/hadoop/core/trunk"/>
-      <arg value="https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2"/>
-    </svn>
-  </target>                                                            
-  
+
+
+
 </project>

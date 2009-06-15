@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FileStatus;
 
 /**
  * This class tests the decommissioning of nodes.
- * @author Dhruba Borthakur
  */
 public class TestModTime extends TestCase {
   static final long seed = 0xDEADBEEFL;

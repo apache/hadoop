@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -40,5 +43,29 @@ public class TestJobExecutionAsDifferentUser extends
         UtilsForTests.runJobSucceed(getClusterConf(), inDir, outDir);
     assertTrue("Job failed", job.isSuccessful());
     assertOwnerShip(outDir);
+  }
+  
+  public void testEnvironment() throws IOException {
+    if (!shouldRun()) {
+      return;
+    }
+    startCluster();
+    TestMiniMRChildTask childTask = new TestMiniMRChildTask();
+    Path inDir = new Path("input1");
+    Path outDir = new Path("output1");
+    try {
+      childTask.runTestTaskEnv(getClusterConf(), inDir, outDir);
+    } catch (IOException e) {
+      fail("IOException thrown while running enviroment test."
+          + e.getMessage());
+    } finally {
+      FileSystem outFs = outDir.getFileSystem(getClusterConf());
+      if (outFs.exists(outDir)) {
+        assertOwnerShip(outDir);
+        outFs.delete(outDir, true);
+      } else {
+        fail("Output directory does not exist" + outDir.toString());
+      }
+    }
   }
 }
