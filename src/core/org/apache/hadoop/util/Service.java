@@ -668,12 +668,18 @@ public abstract class Service extends Configured implements Closeable {
       service.closeQuietly();
       throw e;
     } catch (Throwable t) {
-        //mark as failed
-        service.enterFailedState(t);
-        //we assume that the service really does know how to terminate
-        service.closeQuietly();
-        //and wrap the exception in an IOException that is rethrown
+      //mark as failed
+      service.enterFailedState(t);
+      //we assume that the service really does know how to terminate
+      service.closeQuietly();
+      
+      if (t instanceof IOException) {
+        //rethrow any IOException
+        throw (IOException) t;
+      } else {
+        //and wrap any other exception in an IOException that is rethrown
         throw (IOException) new IOException(t.toString()).initCause(t);
+      }
     }
   }
 

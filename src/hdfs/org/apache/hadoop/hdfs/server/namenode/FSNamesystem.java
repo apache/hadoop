@@ -106,7 +106,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
   };
 
-  private static void logAuditEvent(UserGroupInformation ugi,
+  private static final void logAuditEvent(UserGroupInformation ugi,
       InetAddress addr, String cmd, String src, String dst,
       FileStatus stat) {
     final Formatter fmt = auditFormatter.get();
