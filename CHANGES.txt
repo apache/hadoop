@@ -188,6 +188,8 @@ Release 0.20.0 - Unreleased
    HBASE-1526  mapreduce fixup
    HBASE-1503  hbase-1304 dropped updating list of store files on flush
                (jgray via stack)
+   HBASE-1480  compaction file not cleaned up after a crash/OOME server
+               (Evgeny Ryabitskiy via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

@@ -126,7 +126,7 @@ public class Store implements HConstants {
   // reflected in the TreeMaps).
   private volatile long maxSeqId = -1;
 
-  private final Path compactionDir;
+  private final Path regionCompactionDir;
   private final Object compactLock = new Object();
   private final int compactionThreshold;
   private final int blocksize;
@@ -180,7 +180,8 @@ public class Store implements HConstants {
       this.ttl *= 1000;
     }
     this.memcache = new Memcache(this.ttl, this.comparator);
-    this.compactionDir = HRegion.getCompactionDir(basedir);
+    this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir), 
+        Integer.toString(info.getEncodedName()));
     this.storeName = this.family.getName();
     this.storeNameStr = Bytes.toString(this.storeName);
 
@@ -653,8 +654,8 @@ public class Store implements HConstants {
           (forceSplit || (filesToCompact.size() < compactionThreshold))) {
         return checkSplit(forceSplit);
       }
-      if (!fs.exists(this.compactionDir) && !fs.mkdirs(this.compactionDir)) {
-        LOG.warn("Mkdir on " + this.compactionDir.toString() + " failed");
+      if (!fs.exists(this.regionCompactionDir) && !fs.mkdirs(this.regionCompactionDir)) {
+        LOG.warn("Mkdir on " + this.regionCompactionDir.toString() + " failed");
         return checkSplit(forceSplit);
       }
 
@@ -707,7 +708,7 @@ public class Store implements HConstants {
       }
  
       // Step through them, writing to the brand-new file
-      HFile.Writer writer = getWriter(this.compactionDir);
+      HFile.Writer writer = getWriter(this.regionCompactionDir);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started compaction of " + filesToCompact.size() + " file(s)" +
           (references? ", hasReferences=true,": " ") + " into " +
