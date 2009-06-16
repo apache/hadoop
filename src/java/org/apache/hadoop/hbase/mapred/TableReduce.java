@@ -31,6 +31,7 @@ import org.apache.hadoop.mapred.Reducer;
  * @param <K> key class
  * @param <V> value class
  */
+@Deprecated
 @SuppressWarnings("unchecked")
 public interface TableReduce<K extends WritableComparable, V extends Writable>
 extends Reducer<K, V, ImmutableBytesWritable, BatchUpdate> {

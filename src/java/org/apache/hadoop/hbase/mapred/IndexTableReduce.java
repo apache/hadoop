@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
  * Construct a Lucene document per row, which is consumed by IndexOutputFormat
  * to build a Lucene index
  */
+@Deprecated
 public class IndexTableReduce extends MapReduceBase implements
     Reducer<ImmutableBytesWritable, RowResult, ImmutableBytesWritable, LuceneDocumentWrapper> {
   private static final Log LOG = LogFactory.getLog(IndexTableReduce.class);

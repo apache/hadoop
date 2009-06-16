@@ -50,6 +50,7 @@ import org.apache.hadoop.mapred.JobConf;
  * column content, etc.</li>
  * </ul>
  */
+@Deprecated
 public class BuildTableIndex {
   private static final String USAGE = "Usage: BuildTableIndex " +
     "-m <numMapTasks> -r <numReduceTasks>\n  -indexConf <iconfFile> " +

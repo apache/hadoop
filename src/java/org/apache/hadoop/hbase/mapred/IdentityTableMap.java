@@ -31,6 +31,7 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Pass the given key and record as-is to reduce
  */
+@Deprecated
 public class IdentityTableMap
 extends MapReduceBase
 implements TableMap<ImmutableBytesWritable, RowResult> {

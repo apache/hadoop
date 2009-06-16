@@ -39,6 +39,7 @@ import org.apache.hadoop.util.Progressable;
 /**
  * Convert Map/Reduce output and write it to an HBase table
  */
+@Deprecated
 public class TableOutputFormat extends
 FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
 

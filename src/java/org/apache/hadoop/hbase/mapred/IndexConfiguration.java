@@ -46,6 +46,7 @@ import org.w3c.dom.Text;
 /**
  * Configuration parameters for building a Lucene index
  */
+@Deprecated
 public class IndexConfiguration extends Configuration {
   private static final Log LOG = LogFactory.getLog(IndexConfiguration.class);
 

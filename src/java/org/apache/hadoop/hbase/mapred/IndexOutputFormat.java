@@ -41,6 +41,7 @@ import org.apache.lucene.search.Similarity;
  * Create a local index, unwrap Lucene documents created by reduce, add them to
  * the index, and copy the index to the destination.
  */
+@Deprecated
 public class IndexOutputFormat extends
     FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
   static final Log LOG = LogFactory.getLog(IndexOutputFormat.class);

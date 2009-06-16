@@ -39,6 +39,7 @@ import org.apache.hadoop.mapred.Partitioner;
  * @param <K2>
  * @param <V2>
  */
+@Deprecated
 public class HRegionPartitioner<K2,V2> 
 implements Partitioner<ImmutableBytesWritable, V2> {
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);

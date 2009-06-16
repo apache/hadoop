@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.JobConf;
 /**
  * Utility for {@link TableMap} and {@link TableReduce}
  */
+@Deprecated
 @SuppressWarnings("unchecked")
 public class TableMapReduceUtil {
   

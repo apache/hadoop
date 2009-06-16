@@ -32,6 +32,7 @@ import org.apache.hadoop.mapred.Mapper;
  * @param <K> WritableComparable key class
  * @param <V> Writable value class
  */
+@Deprecated
 public interface TableMap<K extends WritableComparable<K>, V extends Writable>
 extends Mapper<ImmutableBytesWritable, RowResult, K, V> {
 

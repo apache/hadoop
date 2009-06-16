@@ -51,9 +51,9 @@ import org.apache.hadoop.mapred.Reporter;
  * on our tables is simple - take every row in the table, reverse the value of
  * a particular cell, and write it back to the table.
  */
-public class DisabledTestTableMapReduce extends MultiRegionTable {
+public class TestTableMapReduce extends MultiRegionTable {
   private static final Log LOG =
-    LogFactory.getLog(DisabledTestTableMapReduce.class.getName());
+    LogFactory.getLog(TestTableMapReduce.class.getName());
 
   static final String MULTI_REGION_TABLE_NAME = "mrtest";
   static final String INPUT_COLUMN = "contents:";
@@ -65,7 +65,7 @@ public class DisabledTestTableMapReduce extends MultiRegionTable {
   };
 
   /** constructor */
-  public DisabledTestTableMapReduce() {
+  public TestTableMapReduce() {
     super(INPUT_COLUMN);
     desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
@@ -93,10 +93,10 @@ public class DisabledTestTableMapReduce extends MultiRegionTable {
       if (value.size() != 1) {
         throw new IOException("There should only be one input column");
       }
-      byte [][] keys = value.keySet().toArray(new byte [value.size()][]);
+      byte [][] keys = value.keySet().toArray(new byte[value.size()][]);
       if(!Bytes.equals(keys[0], Bytes.toBytes(INPUT_COLUMN))) {
-        throw new IOException("Wrong input column. Expected: " + INPUT_COLUMN
-            + " but got: " + keys[0]);
+        throw new IOException("Wrong input column. Expected: '" + INPUT_COLUMN
+          + "' but got: '" + Bytes.toString(keys[0]) + "'");
       }
 
       // Get the original value and reverse it
@@ -130,7 +130,7 @@ public class DisabledTestTableMapReduce extends MultiRegionTable {
     JobConf jobConf = null;
     try {
       LOG.info("Before map/reduce startup");
-      jobConf = new JobConf(conf, DisabledTestTableMapReduce.class);
+      jobConf = new JobConf(conf, TestTableMapReduce.class);
       jobConf.setJobName("process column contents");
       jobConf.setNumReduceTasks(1);
       TableMapReduceUtil.initTableMapJob(Bytes.toString(table.getTableName()),

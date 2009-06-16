@@ -38,6 +38,7 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Extract grouping columns from input record
  */
+@Deprecated
 public class GroupingTableMap
 extends MapReduceBase
 implements TableMap<ImmutableBytesWritable,RowResult> {

@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Write to table each key, record pair
  */
+@Deprecated
 public class IdentityTableReduce
 extends MapReduceBase
 implements TableReduce<ImmutableBytesWritable, BatchUpdate> {

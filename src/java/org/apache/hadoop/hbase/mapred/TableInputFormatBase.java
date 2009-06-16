@@ -74,6 +74,8 @@ import org.apache.hadoop.util.StringUtils;
  *  }
  * </pre>
  */
+
+@Deprecated
 public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, RowResult> {
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);

@@ -25,6 +25,7 @@ import org.apache.hadoop.util.ProgramDriver;
  * Driver for hbase mapreduce jobs. Select which to run by passing
  * name of job to this main.
  */
+@Deprecated
 public class Driver {
   /**
    * @param args
