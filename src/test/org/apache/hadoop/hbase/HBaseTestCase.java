@@ -58,9 +58,9 @@ public abstract class HBaseTestCase extends TestCase {
   /** configuration parameter name for test directory */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
 
-  protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
-  protected final static byte [] fam2 = Bytes.toBytes("colfamily2");
-  protected final static byte [] fam3 = Bytes.toBytes("colfamily3");
+  protected final static byte [] fam1 = Bytes.toBytes("colfamily1:");
+  protected final static byte [] fam2 = Bytes.toBytes("colfamily2:");
+  protected final static byte [] fam3 = Bytes.toBytes("colfamily3:");
   protected static final byte [][] COLUMNS = {fam1,
     fam2, fam3};
 
