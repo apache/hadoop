@@ -447,6 +447,12 @@ Trunk (unreleased changes)
     HADOOP-5938. Change org.apache.hadoop.mapred.jobcontrol to use new
     api. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-2141. Improves the speculative execution heuristic. The heuristic
+    is currently based on the progress-rates of tasks and the expected time
+    to complete. Also, statistics about trackers are collected, and speculative
+    tasks are not given to the ones deduced to be slow. 
+    (Andy Konwinski and ddas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

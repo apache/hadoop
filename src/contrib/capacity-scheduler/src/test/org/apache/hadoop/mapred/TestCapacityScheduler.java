@@ -164,7 +164,7 @@ public class TestCapacityScheduler extends TestCase {
     private int speculativeReduceTaskCounter = 0;
     public FakeJobInProgress(JobID jId, JobConf jobConf,
         FakeTaskTrackerManager taskTrackerManager, String user) {
-      super(jId, jobConf);
+      super(jId, jobConf, null);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
       this.status = new JobStatus(jId, 0f, 0f, JobStatus.PREP);
@@ -381,7 +381,7 @@ public class TestCapacityScheduler extends TestCase {
      *hasSpeculativeMap and hasSpeculativeReduce is reset by FakeJobInProgress
      *after the speculative tip has been scheduled.
      */
-    boolean hasSpeculativeTask(long currentTime, double averageProgress) {
+    boolean canBeSpeculated(long currentTime) {
       if(isMap && hasSpeculativeMap) {
         return fakeJob.getJobConf().getMapSpeculativeExecution();
       } 

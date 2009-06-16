@@ -192,6 +192,12 @@ class TaskTrackerStatus implements Writable {
     taskReports = new ArrayList<TaskStatus>();
     resStatus = new ResourceStatus();
   }
+  
+  public TaskTrackerStatus(String trackerName, String host) {
+    this();
+    this.trackerName = trackerName;
+    this.host = host;
+  }
 
   /**
    */

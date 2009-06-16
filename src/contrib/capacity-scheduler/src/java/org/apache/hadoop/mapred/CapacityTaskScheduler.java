@@ -585,7 +585,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       for(TaskInProgress tip : tips)  {
         if(tip.isRunning() 
             && !(tip.hasRunOnMachine(tts.getHost(), tts.getTrackerName())) 
-            && tip.hasSpeculativeTask(currentTime, progress)) {
+            && tip.canBeSpeculated(currentTime)) {
           return true;
         }
       }

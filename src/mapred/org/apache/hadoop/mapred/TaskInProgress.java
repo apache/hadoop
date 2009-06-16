@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.mapred.JobInProgress.DataStatistics;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.net.Node;
@@ -52,9 +53,8 @@ import org.apache.hadoop.net.Node;
  * **************************************************************
  */
 class TaskInProgress {
-  static final int MAX_TASK_EXECS = 1;
+  static final int MAX_TASK_EXECS = 1; //max # nonspec tasks to run concurrently  
   int maxTaskAttempts = 4;    
-  static final double SPECULATIVE_GAP = 0.2;
   static final long SPECULATIVE_LAG = 60 * 1000;
   private static final int NUM_ATTEMPTS_PER_RESTART = 1000;
 
@@ -74,9 +74,10 @@ class TaskInProgress {
   private int numTaskFailures = 0;
   private int numKilledTasks = 0;
   private double progress = 0;
+  private double oldProgressRate;
   private String state = "";
-  private long startTime = 0;
-  private long execStartTime = 0;
+  private long dispatchTime = 0;   // most recent time task attempt given to TT
+  private long execStartTime = 0;  // when we started first task-attempt
   private long execFinishTime = 0;
   private int completes = 0;
   private boolean failed = false;
@@ -220,7 +221,6 @@ class TaskInProgress {
    * Initialization common to Map and Reduce
    */
   void init(JobID jobId) {
-    this.startTime = System.currentTimeMillis();
     this.id = new TaskID(jobId, isMapTask() ? TaskType.MAP : TaskType.REDUCE,
         partition);
     this.skipping = startSkipping();
@@ -229,12 +229,19 @@ class TaskInProgress {
   ////////////////////////////////////
   // Accessors, info, profiles, etc.
   ////////////////////////////////////
-
+  
   /**
-   * Return the start time
+   * Return the dispatch time
    */
-  public long getStartTime() {
-    return startTime;
+  public long getDispatchTime(){
+    return this.dispatchTime;
+  }
+  
+  /**
+   * Set the dispatch time
+   */
+  public void setDispatchTime(long disTime){
+    this.dispatchTime = disTime;
   }
   
   /**
@@ -399,9 +406,15 @@ class TaskInProgress {
                !tasksReportedClosed.contains(taskid)) {
       tasksReportedClosed.add(taskid);
       close = true; 
+      if (isComplete() && !isComplete(taskid)) {
+        addDiagnosticInfo(taskid, "Another (possibly speculative) attempt" +
+            " already SUCCEEDED");
+      }      
     } else if (isCommitPending(taskid) && !shouldCommit(taskid) &&
                !tasksReportedClosed.contains(taskid)) {
       tasksReportedClosed.add(taskid);
+      addDiagnosticInfo(taskid, "Another (possibly speculative) attempt" +
+           " went to COMMIT_PENDING state earlier");
       close = true; 
     } else {
       close = tasksToKill.keySet().contains(taskid);
@@ -562,6 +575,17 @@ class TaskInProgress {
     // but finishTime has to be updated.
     if (!isCleanupAttempt(taskid)) {
       taskStatuses.put(taskid, status);
+      if ((isMapTask() && job.hasSpeculativeMaps()) || 
+          (!isMapTask() && job.hasSpeculativeReduces())) {
+        long now = jobtracker.getClock().getTime();
+        double oldProgRate = getOldProgressRate();
+        double currProgRate = getCurrentProgressRate(now);
+        job.updateStatistics(oldProgRate, currProgRate, isMapTask());
+        //we need to store the current progress rate, so that we can
+        //update statistics accurately the next time we invoke
+        //updateStatistics
+        setProgressRate(currProgRate);
+      }
     } else {
       taskStatuses.get(taskid).statusUpdate(status.getRunState(),
         status.getProgress(), status.getStateString(), status.getPhase(),
@@ -619,7 +643,7 @@ class TaskInProgress {
 
       // tasktracker went down and failed time was not reported. 
       if (0 == status.getFinishTime()){
-        status.setFinishTime(System.currentTimeMillis());
+        status.setFinishTime(jobtracker.getClock().getTime());
       }
     }
 
@@ -723,7 +747,7 @@ class TaskInProgress {
     //
 
     this.completes++;
-    this.execFinishTime = System.currentTimeMillis();
+    this.execFinishTime = jobtracker.getClock().getTime();
     recomputeProgress();
     
   }
@@ -762,7 +786,7 @@ class TaskInProgress {
     }
     this.failed = true;
     killed = true;
-    this.execFinishTime = System.currentTimeMillis();
+    this.execFinishTime = jobtracker.getClock().getTime();
     recomputeProgress();
   }
 
@@ -860,35 +884,39 @@ class TaskInProgress {
   }
     
   /**
-   * Return whether the TIP has a speculative task to run.  We
-   * only launch a speculative task if the current TIP is really
-   * far behind, and has been behind for a non-trivial amount of 
-   * time.
+   * Can this task be speculated? This requires that it isn't done or almost
+   * done and that it isn't already being speculatively executed.
+   * 
+   * Added for use by queue scheduling algorithms.
+   * @param currentTime 
    */
-  boolean hasSpeculativeTask(long currentTime, double averageProgress) {
-    //
-    // REMIND - mjc - these constants should be examined
-    // in more depth eventually...
-    //
-      
-    if (!skipping && activeTasks.size() <= MAX_TASK_EXECS &&
-        (averageProgress - progress >= SPECULATIVE_GAP) &&
-        (currentTime - startTime >= SPECULATIVE_LAG) 
-        && completes == 0 && !isOnlyCommitPending()) {
-      return true;
+  boolean canBeSpeculated(long currentTime) {
+    DataStatistics taskStats = job.getRunningTaskStatistics(isMapTask());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("activeTasks.size(): " + activeTasks.size() + " "
+          + activeTasks.firstKey() + " task's progressrate: " + 
+          getCurrentProgressRate(currentTime) + 
+          " taskStats : " + taskStats);
     }
-    return false;
+    return (!skipping && isRunnable() && isRunning() &&
+        activeTasks.size() <= MAX_TASK_EXECS &&
+        currentTime - dispatchTime >= SPECULATIVE_LAG &&
+        completes == 0 && !isOnlyCommitPending() &&
+        (taskStats.mean() - getCurrentProgressRate(currentTime) >
+              taskStats.std() * job.getSlowTaskThreshold()));
   }
-    
+  
+  /**
+   * Is the task currently speculating?
+   */
+  boolean isSpeculating() {
+   return (activeTasks.size() > MAX_TASK_EXECS);
+  }
+  
   /**
    * Return a Task that can be sent to a TaskTracker for execution.
    */
-  public Task getTaskToRun(String taskTracker) throws IOException {
-    if (0 == execStartTime){
-      // assume task starts running now
-      execStartTime = System.currentTimeMillis();
-    }
-
+  public Task getTaskToRun(String taskTracker) throws IOException {   
     // Create the 'taskid'; do not count the 'killed' tasks against the job!
     TaskAttemptID taskid = null;
     if (nextTaskId < (MAX_TASK_EXECS + maxTaskAttempts + numKilledTasks)) {
@@ -903,6 +931,16 @@ class TaskInProgress {
       return null;
     }
 
+    //keep track of the last time we started an attempt at this TIP
+    //used to calculate the progress rate of this TIP
+    setDispatchTime(jobtracker.getClock().getTime());
+ 
+    //set this the first time we run a taskAttempt in this TIP
+    //each Task attempt has its own TaskStatus, which tracks that
+    //attempts execStartTime, thus this startTime is TIP wide.
+    if (0 == execStartTime){
+      setExecStartTime(dispatchTime);
+    }
     return addRunningTask(taskid, taskTracker);
   }
   
@@ -1083,6 +1121,34 @@ class TaskInProgress {
     rawSplit.clearBytes();
   }
   
+  /**
+   * Compare most recent task attempts dispatch time to current system time so
+   * that task progress rate will slow down as time proceeds even if no progress
+   * is reported for the task. This allows speculative tasks to be launched for
+   * tasks on slow/dead TT's before we realize the TT is dead/slow. Skew isn't
+   * an issue since both times are from the JobTrackers perspective.
+   * @return the progress rate from the active task that is doing best
+   */
+  public double getCurrentProgressRate(long currentTime) {
+    double bestProgressRate = 0;
+    for (TaskStatus ts : taskStatuses.values()){
+      double progressRate = ts.getProgress()/Math.max(1,
+          currentTime - dispatchTime);
+      if ((ts.getRunState() == TaskStatus.State.RUNNING  || 
+          ts.getRunState() == TaskStatus.State.SUCCEEDED) &&
+          progressRate > bestProgressRate){
+        bestProgressRate = progressRate;
+      }
+    }
+    return bestProgressRate;
+  }
+  
+  private void setProgressRate(double rate) {
+    oldProgressRate = rate;
+  }
+  private double getOldProgressRate() {
+    return oldProgressRate;
+  }
   /**
    * This class keeps the records to be skipped during further executions 
    * based on failed records from all the previous attempts.

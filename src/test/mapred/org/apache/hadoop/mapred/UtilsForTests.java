@@ -24,9 +24,6 @@ import java.io.DataOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.FileNotFoundException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -35,7 +32,6 @@ import java.util.Properties;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.RandomWriter;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -650,7 +646,18 @@ public class UtilsForTests {
 
     return job;
   }
+  static class FakeClock extends Clock {
+    long time = 0;
+    
+    public void advance(long millis) {
+      time += millis;
+    }
 
+    @Override
+    long getTime() {
+      return time;
+    }
+  }
   // Mapper that fails
   static class FailMapper extends MapReduceBase implements
       Mapper<WritableComparable, Writable, WritableComparable, Writable> {
