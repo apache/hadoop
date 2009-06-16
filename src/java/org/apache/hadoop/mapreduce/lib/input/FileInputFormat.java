@@ -49,6 +49,9 @@ import org.apache.hadoop.util.StringUtils;
  * not split-up and are processed as a whole by {@link Mapper}s.
  */
 public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
+  public static final String COUNTER_GROUP = 
+                                "FileInputFormatCounters";
+  public static final String BYTES_READ = "BYTES_READ";
 
   private static final Log LOG = LogFactory.getLog(FileInputFormat.class);
 

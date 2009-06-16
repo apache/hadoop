@@ -148,6 +148,24 @@ abstract class TaskStatus implements Writable, Cloneable {
   void setShuffleFinishTime(long shuffleFinishTime) {}
 
   /**
+   * Get map phase finish time for the task. If map finsh time was
+   * not set due to sort phase ending within same heartbeat interval,
+   * it is set to finish time of next phase i.e. sort phase
+   * when it is set.
+   * @return 0 if mapFinishTime, sortFinishTime are not set. else 
+   * it returns approximate map finish time.
+   */
+  public long getMapFinishTime() {
+    return 0;
+  }
+  
+  /**
+   * Set map phase finish time. 
+   * @param mapFinishTime 
+   */
+  void setMapFinishTime(long mapFinishTime) {}
+
+  /**
    * Get sort finish time for the task,. If sort finish time was not set 
    * due to sort and reduce phase finishing in same heartebat interval, it is 
    * set to finish time, when finish time is set. 
@@ -197,12 +215,17 @@ abstract class TaskStatus implements Writable, Cloneable {
     if (oldPhase != phase){
       // sort phase started
       if (phase == TaskStatus.Phase.SORT){
-        setShuffleFinishTime(System.currentTimeMillis());
+        if (oldPhase == TaskStatus.Phase.MAP) {
+          setMapFinishTime(System.currentTimeMillis());
+        }
+        else {
+          setShuffleFinishTime(System.currentTimeMillis());
+        }
       }else if (phase == TaskStatus.Phase.REDUCE){
         setSortFinishTime(System.currentTimeMillis());
       }
+      this.phase = phase;
     }
-    this.phase = phase; 
   }
 
   boolean inTaskCleanupPhase() {

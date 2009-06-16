@@ -88,6 +88,18 @@ class ReduceTaskStatus extends TaskStatus {
   }
 
   @Override
+  public long getMapFinishTime() {
+    throw new UnsupportedOperationException(
+        "getMapFinishTime() not supported for ReduceTask");
+  }
+
+  @Override
+  void setMapFinishTime(long shuffleFinishTime) {
+    throw new UnsupportedOperationException(
+        "setMapFinishTime() not supported for ReduceTask");
+  }
+
+  @Override
   public List<TaskAttemptID> getFetchFailedMaps() {
     return failedFetchTasks;
   }

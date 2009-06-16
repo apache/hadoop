@@ -51,19 +51,26 @@ class TaskMemoryManagerThread extends Thread {
   private List<TaskAttemptID> tasksToBeRemoved;
 
   public TaskMemoryManagerThread(TaskTracker taskTracker) {
+    this(taskTracker.getTotalMemoryAllottedForTasksOnTT() * 1024 * 1024L,
+            taskTracker.getJobConf().getLong(
+                "mapred.tasktracker.taskmemorymanager.monitoring-interval", 
+                5000L));         
     this.taskTracker = taskTracker;
+  }
+
+  // mainly for test purposes. note that the tasktracker variable is
+  // not set here.
+  TaskMemoryManagerThread(long maxMemoryAllowedForAllTasks,
+                            long monitoringInterval) {
     setName(this.getClass().getName());
 
     processTreeInfoMap = new HashMap<TaskAttemptID, ProcessTreeInfo>();
     tasksToBeAdded = new HashMap<TaskAttemptID, ProcessTreeInfo>();
     tasksToBeRemoved = new ArrayList<TaskAttemptID>();
 
-    maxMemoryAllowedForAllTasks =
-        taskTracker.getTotalVirtualMemoryOnTT()
-            - taskTracker.getReservedVirtualMemory();
+    this.maxMemoryAllowedForAllTasks = maxMemoryAllowedForAllTasks;
 
-    monitoringInterval = taskTracker.getJobConf().getLong(
-        "mapred.tasktracker.taskmemorymanager.monitoring-interval", 5000L);
+    this.monitoringInterval = monitoringInterval;
   }
 
   public void addTask(TaskAttemptID tid, long memLimit) {
@@ -198,23 +205,15 @@ class TaskMemoryManagerThread extends Thread {
           ptInfo.setProcessTree(pTree); // update ptInfo with proces-tree of
                                         // updated state
           long currentMemUsage = pTree.getCumulativeVmem();
+          // as processes begin with an age 1, we want to see if there 
+          // are processes more than 1 iteration old.
+          long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
           long limit = ptInfo.getMemLimit();
           LOG.info("Memory usage of ProcessTree " + pId + " :"
               + currentMemUsage + "bytes. Limit : " + limit + "bytes");
 
-          if (limit > taskTracker.getLimitMaxVMemPerTask()) {
-            // TODO: With monitoring enabled and no scheduling based on
-            // memory,users can seriously hijack the system by specifying memory
-            // requirements well above the cluster wide limit. Ideally these
-            // jobs should have been rejected by JT/scheduler. Because we can't
-            // do that, in the minimum we should fail the tasks and hence the
-            // job.
-            LOG.warn("Task " + tid
-                + " 's maxVmemPerTask is greater than TT's limitMaxVmPerTask");
-          }
-
-          if (limit != JobConf.DISABLED_MEMORY_LIMIT
-              && currentMemUsage > limit) {
+          if (isProcessTreeOverLimit(tid.toString(), currentMemUsage, 
+                                      curMemUsageOfAgedProcesses, limit)) {
             // Task (the root process) is still alive and overflowing memory.
             // Clean up.
             String msg =
@@ -242,12 +241,11 @@ class TaskMemoryManagerThread extends Thread {
         }
       }
 
-      LOG.debug("Memory still in usage across all tasks : " + memoryStillInUsage
-          + "bytes. Total limit : " + maxMemoryAllowedForAllTasks);
-
       if (memoryStillInUsage > maxMemoryAllowedForAllTasks) {
-        LOG.warn("The total memory usage is still overflowing TTs limits."
-            + " Trying to kill a few tasks with the least progress.");
+        LOG.warn("The total memory in usage " + memoryStillInUsage
+            + " is still overflowing TTs limits "
+            + maxMemoryAllowedForAllTasks
+            + ". Trying to kill a few tasks with the least progress.");
         killTasksWithLeastProgress(memoryStillInUsage);
       }
     
@@ -262,6 +260,65 @@ class TaskMemoryManagerThread extends Thread {
         return;
       }
     }
+  }
+
+  /**
+   * Check whether a task's process tree's current memory usage is over limit.
+   * 
+   * When a java process exec's a program, it could momentarily account for
+   * double the size of it's memory, because the JVM does a fork()+exec()
+   * which at fork time creates a copy of the parent's memory. If the 
+   * monitoring thread detects the memory used by the task tree at the same
+   * instance, it could assume it is over limit and kill the tree, for no
+   * fault of the process itself.
+   * 
+   * We counter this problem by employing a heuristic check:
+   * - if a process tree exceeds the memory limit by more than twice, 
+   * it is killed immediately
+   * - if a process tree has processes older than the monitoring interval
+   * exceeding the memory limit by even 1 time, it is killed. Else it is given
+   * the benefit of doubt to lie around for one more iteration.
+   * 
+   * @param tId Task Id for the task tree
+   * @param currentMemUsage Memory usage of a task tree
+   * @param curMemUsageOfAgedProcesses Memory usage of processes older than
+   *                                    an iteration in a task tree
+   * @param limit The limit specified for the task
+   * @return true if the memory usage is more than twice the specified limit,
+   *              or if processes in the tree, older than this thread's 
+   *              monitoring interval, exceed the memory limit. False, 
+   *              otherwise.
+   */
+  boolean isProcessTreeOverLimit(String tId, 
+                                  long currentMemUsage, 
+                                  long curMemUsageOfAgedProcesses, 
+                                  long limit) {
+    boolean isOverLimit = false;
+    
+    if (currentMemUsage > (2*limit)) {
+      LOG.warn("Process tree for task: " + tId + " running over twice " +
+                "the configured limit. Limit=" + limit + 
+                ", current usage = " + currentMemUsage);
+      isOverLimit = true;
+    } else if (curMemUsageOfAgedProcesses > limit) {
+      LOG.warn("Process tree for task: " + tId + " has processes older than 1 " +
+          "iteration running over the configured limit. Limit=" + limit + 
+          ", current usage = " + curMemUsageOfAgedProcesses);
+      isOverLimit = true;
+    }
+
+    return isOverLimit; 
+  }
+
+  // method provided just for easy testing purposes
+  boolean isProcessTreeOverLimit(ProcfsBasedProcessTree pTree, 
+                                    String tId, long limit) {
+    long currentMemUsage = pTree.getCumulativeVmem();
+    // as processes begin with an age 1, we want to see if there are processes
+    // more than 1 iteration old.
+    long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
+    return isProcessTreeOverLimit(tId, currentMemUsage, 
+                                  curMemUsageOfAgedProcesses, limit);
   }
 
   private void killTasksWithLeastProgress(long memoryStillInUsage) {

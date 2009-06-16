@@ -56,34 +56,6 @@
       account in scheduling decisions by default in a job queue.
     </description>
   </property>
-
-  <property>
-    <name>mapred.capacity-scheduler.task.default-pmem-percentage-in-vmem</name>
-    <value>-1</value>
-    <description>A percentage (float) of the default VM limit for jobs
-   	  (mapred.task.default.maxvm). This is the default RAM task-limit 
-   	  associated with a task. Unless overridden by a job's setting, this 
-   	  number defines the RAM task-limit.
-
-      If this property is missing, or set to an invalid value, scheduling 
-      based on physical memory, RAM, is disabled.  
-    </description>
-  </property>
-
-  <property>
-    <name>mapred.capacity-scheduler.task.limit.maxpmem</name>
-    <value>-1</value>
-    <description>Configuration that provides an upper limit on the maximum
-      physical memory that can be specified by a job. The job configuration
-      mapred.task.maxpmem should be less than this value. If not, the job will
-      be rejected by the scheduler.
-      
-      If it is set to -1, scheduler will not consider physical memory for
-      scheduling even if virtual memory based scheduling is enabled(by setting
-      valid values for both mapred.task.default.maxvmem and
-      mapred.task.limit.maxvmem).
-    </description>
-  </property>
   
   <property>
     <name>mapred.capacity-scheduler.default-minimum-user-limit-percent</name>

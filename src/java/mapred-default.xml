@@ -186,42 +186,6 @@
 </property>
 
 <property>
-  <name>mapred.tasktracker.pmem.reserved</name>
-  <value>-1</value>
-  <description>Configuration property to specify the amount of physical memory
-    that has to be reserved by the TaskTracker for system usage (OS, TT etc).
-    The reserved physical memory should be a part of the total physical memory
-    available on the TaskTracker.
-
-    The reserved physical memory and the total physical memory values are
-    reported by the TaskTracker as part of heart-beat so that they can
-    considered by a scheduler. Please refer to the documentation of the
-    configured scheduler to see how this property is used.
-  </description>
-</property>
-
-<property>
-  <name>mapred.task.default.maxvmem</name>
-  <value>-1</value>
-  <description>
-    Cluster-wide configuration in bytes to be set by the administrators that
-    provides default amount of maximum virtual memory for job's tasks. This has
-    to be set on both the JobTracker node for the sake of scheduling decisions
-    and on the TaskTracker nodes for the sake of memory management.
-
-    If a job doesn't specify its virtual memory requirement by setting
-    mapred.task.maxvmem to -1, tasks are assured a memory limit set
-    to this property. This property is set to -1 by default.
-
-    This value should in general be less than the cluster-wide
-    configuration mapred.task.limit.maxvmem. If not or if it is not set,
-    TaskTracker's memory management will be disabled and a scheduler's memory
-    based scheduling decisions may be affected. Please refer to the
-    documentation of the configured scheduler to see how this property is used.
-  </description>
-</property>
-
-<property>
   <name>mapred.task.limit.maxvmem</name>
   <value>-1</value>
   <description>
@@ -268,23 +232,6 @@
     memory requirements. Please refer to the documentation of the scheduler
     being configured to see if it does memory based scheduling and if it does,
     how this property is used by that scheduler.
-  </description>
-</property>
-
-<property>
-  <name>mapred.task.maxpmem</name>name>
-  <value>-1</value>
-  <description>
-   The maximum amount of physical memory any task of a job will use in bytes.
-
-   This value may be used by schedulers that support scheduling based on job's
-   memory requirements. In general, a task of this job will be scheduled on a
-   TaskTracker, only if the amount of physical memory still unoccupied on the
-   TaskTracker is greater than or equal to this value. Different schedulers can
-   take different decisions, some might just ignore this value. Please refer to
-   the documentation of the scheduler being configured to see if it does
-   memory based scheduling and if it does, how this variable is used by that
-   scheduler.
   </description>
 </property>
 
@@ -455,6 +402,16 @@
   
   The configuration variable mapred.child.ulimit can be used to control the
   maximum virtual memory of the child processes. 
+  </description>
+</property>
+
+<property>
+  <name>mapred.child.env</name>
+  <value></value>
+  <description>User added environment variables for the task tracker child 
+  processes. Example :
+  1) A=foo  This will set the env variable A to foo
+  2) B=$B:c This is inherit tasktracker's B env variable.  
   </description>
 </property>
 
@@ -705,6 +662,15 @@
   should be excluded by the jobtracker.  If the value is empty, no
   hosts are excluded.</description>
 </property>
+
+<property>
+  <name>mapred.heartbeats.in.second</name>
+  <value>100</value>
+  <description>Expert: Approximate number of heart-beats that could arrive 
+               JobTracker in a second. Assuming each RPC can be processed 
+               in 10msec, the default value is made 100 RPCs in a second.
+  </description>
+</property> 
 
 <property>
   <name>mapred.max.tracker.blacklists</name>
@@ -983,6 +949,34 @@
   <value>org.apache.hadoop.mapred.DefaultTaskController</value>
   <description>TaskController which is used to launch and manage task execution 
   </description>
+</property>
+
+<property>
+  <name>mapred.max.maps.per.node</name>
+  <value>-1</value>
+  <description>Per-node limit on running map tasks for the job. A value
+    of -1 signifies no limit.</description>
+</property>
+
+<property>
+  <name>mapred.max.reduces.per.node</name>
+  <value>-1</value>
+  <description>Per-node limit on running reduce tasks for the job. A value
+    of -1 signifies no limit.</description>
+</property>
+
+<property>
+  <name>mapred.running.map.limit</name>
+  <value>-1</value>
+  <description>Cluster-wide limit on running map tasks for the job. A value
+    of -1 signifies no limit.</description>
+</property>
+
+<property>
+  <name>mapred.running.reduce.limit</name>
+  <value>-1</value>
+  <description>Cluster-wide limit on running reduce tasks for the job. A value
+    of -1 signifies no limit.</description>
 </property>
 
 </configuration>

@@ -18,70 +18,71 @@
 
 package org.apache.hadoop.mapred.lib.db;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.lib.db.DBInputFormat.NullDBWritable;
 
 /**
- * A container for configuration property names for jobs with DB input/output. 
- * <br>
- * The job can be configured using the static methods in this class, 
- * {@link DBInputFormat}, and {@link DBOutputFormat}. 
- * <p> 
- * Alternatively, the properties can be set in the configuration with proper
- * values. 
- *   
- * @see DBConfiguration#configureDB(JobConf, String, String, String, String)
- * @see DBInputFormat#setInput(JobConf, Class, String, String)
- * @see DBInputFormat#setInput(JobConf, Class, String, String, String, String...)
- * @see DBOutputFormat#setOutput(JobConf, String, String...)
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.db.DBConfiguration} instead 
  */
-public class DBConfiguration {
-
+@Deprecated
+public class DBConfiguration extends 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration {
   /** The JDBC Driver class name */
-  public static final String DRIVER_CLASS_PROPERTY = "mapred.jdbc.driver.class";
+  public static final String DRIVER_CLASS_PROPERTY = 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration.DRIVER_CLASS_PROPERTY;
   
   /** JDBC Database access URL */
-  public static final String URL_PROPERTY = "mapred.jdbc.url";
+  public static final String URL_PROPERTY = 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration.URL_PROPERTY;
 
   /** User name to access the database */
-  public static final String USERNAME_PROPERTY = "mapred.jdbc.username";
+  public static final String USERNAME_PROPERTY = 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration.USERNAME_PROPERTY;
   
   /** Password to access the database */
-  public static final String PASSWORD_PROPERTY = "mapred.jdbc.password";
+  public static final String PASSWORD_PROPERTY = 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration.PASSWORD_PROPERTY;
 
   /** Input table name */
-  public static final String INPUT_TABLE_NAME_PROPERTY = "mapred.jdbc.input.table.name";
+  public static final String INPUT_TABLE_NAME_PROPERTY = org.apache.hadoop.
+    mapreduce.lib.db.DBConfiguration.INPUT_TABLE_NAME_PROPERTY;
 
   /** Field names in the Input table */
-  public static final String INPUT_FIELD_NAMES_PROPERTY = "mapred.jdbc.input.field.names";
+  public static final String INPUT_FIELD_NAMES_PROPERTY = org.apache.hadoop.
+    mapreduce.lib.db.DBConfiguration.INPUT_FIELD_NAMES_PROPERTY;
 
   /** WHERE clause in the input SELECT statement */
-  public static final String INPUT_CONDITIONS_PROPERTY = "mapred.jdbc.input.conditions";
+  public static final String INPUT_CONDITIONS_PROPERTY = org.apache.hadoop.
+    mapreduce.lib.db.DBConfiguration.INPUT_CONDITIONS_PROPERTY;
   
   /** ORDER BY clause in the input SELECT statement */
-  public static final String INPUT_ORDER_BY_PROPERTY = "mapred.jdbc.input.orderby";
+  public static final String INPUT_ORDER_BY_PROPERTY = org.apache.hadoop.
+    mapreduce.lib.db.DBConfiguration.INPUT_ORDER_BY_PROPERTY;
   
   /** Whole input query, exluding LIMIT...OFFSET */
-  public static final String INPUT_QUERY = "mapred.jdbc.input.query";
+  public static final String INPUT_QUERY = 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration.INPUT_QUERY;
   
   /** Input query to get the count of records */
-  public static final String INPUT_COUNT_QUERY = "mapred.jdbc.input.count.query";
+  public static final String INPUT_COUNT_QUERY = 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration.INPUT_COUNT_QUERY;
   
   /** Class name implementing DBWritable which will hold input tuples */
-  public static final String INPUT_CLASS_PROPERTY = "mapred.jdbc.input.class";
+  public static final String INPUT_CLASS_PROPERTY = 
+    org.apache.hadoop.mapreduce.lib.db.DBConfiguration.INPUT_CLASS_PROPERTY;
 
   /** Output table name */
-  public static final String OUTPUT_TABLE_NAME_PROPERTY = "mapred.jdbc.output.table.name";
+  public static final String OUTPUT_TABLE_NAME_PROPERTY = org.apache.hadoop.
+    mapreduce.lib.db.DBConfiguration.OUTPUT_TABLE_NAME_PROPERTY;
 
   /** Field names in the Output table */
-  public static final String OUTPUT_FIELD_NAMES_PROPERTY = "mapred.jdbc.output.field.names";  
+  public static final String OUTPUT_FIELD_NAMES_PROPERTY = org.apache.hadoop.
+    mapreduce.lib.db.DBConfiguration.OUTPUT_FIELD_NAMES_PROPERTY;  
 
   /** Number of fields in the Output table */
-  public static final String OUTPUT_FIELD_COUNT_PROPERTY = "mapred.jdbc.output.field.count";  
+  public static final String OUTPUT_FIELD_COUNT_PROPERTY = org.apache.hadoop.
+    mapreduce.lib.db.DBConfiguration.OUTPUT_FIELD_COUNT_PROPERTY;
+
   
   /**
    * Sets the DB access related fields in the JobConf.  
@@ -112,115 +113,8 @@ public class DBConfiguration {
     configureDB(job, driverClass, dbUrl, null, null);
   }
 
-  private JobConf job;
-
   DBConfiguration(JobConf job) {
-    this.job = job;
-  }
-
-  /** Returns a connection object o the DB 
-   * @throws ClassNotFoundException 
-   * @throws SQLException */
-  Connection getConnection() throws ClassNotFoundException, SQLException{
-
-    Class.forName(job.get(DBConfiguration.DRIVER_CLASS_PROPERTY));
-
-    if(job.get(DBConfiguration.USERNAME_PROPERTY) == null) {
-      return DriverManager.getConnection(job.get(DBConfiguration.URL_PROPERTY));
-    } else {
-      return DriverManager.getConnection(
-          job.get(DBConfiguration.URL_PROPERTY), 
-          job.get(DBConfiguration.USERNAME_PROPERTY), 
-          job.get(DBConfiguration.PASSWORD_PROPERTY));
-    }
-  }
-
-  String getInputTableName() {
-    return job.get(DBConfiguration.INPUT_TABLE_NAME_PROPERTY);
-  }
-
-  void setInputTableName(String tableName) {
-    job.set(DBConfiguration.INPUT_TABLE_NAME_PROPERTY, tableName);
-  }
-
-  String[] getInputFieldNames() {
-    return job.getStrings(DBConfiguration.INPUT_FIELD_NAMES_PROPERTY);
-  }
-
-  void setInputFieldNames(String... fieldNames) {
-    job.setStrings(DBConfiguration.INPUT_FIELD_NAMES_PROPERTY, fieldNames);
-  }
-
-  String getInputConditions() {
-    return job.get(DBConfiguration.INPUT_CONDITIONS_PROPERTY);
-  }
-
-  void setInputConditions(String conditions) {
-    if (conditions != null && conditions.length() > 0)
-      job.set(DBConfiguration.INPUT_CONDITIONS_PROPERTY, conditions);
-  }
-
-  String getInputOrderBy() {
-    return job.get(DBConfiguration.INPUT_ORDER_BY_PROPERTY);
-  }
-  
-  void setInputOrderBy(String orderby) {
-    if(orderby != null && orderby.length() >0) {
-      job.set(DBConfiguration.INPUT_ORDER_BY_PROPERTY, orderby);
-    }
-  }
-  
-  String getInputQuery() {
-    return job.get(DBConfiguration.INPUT_QUERY);
-  }
-  
-  void setInputQuery(String query) {
-    if(query != null && query.length() >0) {
-      job.set(DBConfiguration.INPUT_QUERY, query);
-    }
-  }
-  
-  String getInputCountQuery() {
-    return job.get(DBConfiguration.INPUT_COUNT_QUERY);
-  }
-  
-  void setInputCountQuery(String query) {
-    if(query != null && query.length() >0) {
-      job.set(DBConfiguration.INPUT_COUNT_QUERY, query);
-    }
-  }
-  
-  
-  Class<?> getInputClass() {
-    return job.getClass(DBConfiguration.INPUT_CLASS_PROPERTY, NullDBWritable.class);
-  }
-
-  void setInputClass(Class<? extends DBWritable> inputClass) {
-    job.setClass(DBConfiguration.INPUT_CLASS_PROPERTY, inputClass, DBWritable.class);
-  }
-
-  String getOutputTableName() {
-    return job.get(DBConfiguration.OUTPUT_TABLE_NAME_PROPERTY);
-  }
-
-  void setOutputTableName(String tableName) {
-    job.set(DBConfiguration.OUTPUT_TABLE_NAME_PROPERTY, tableName);
-  }
-
-  String[] getOutputFieldNames() {
-    return job.getStrings(DBConfiguration.OUTPUT_FIELD_NAMES_PROPERTY);
-  }
-
-  void setOutputFieldNames(String... fieldNames) {
-    job.setStrings(DBConfiguration.OUTPUT_FIELD_NAMES_PROPERTY, fieldNames);
-  }
-
-  void setOutputFieldCount(int fieldCount) {
-    job.setInt(DBConfiguration.OUTPUT_FIELD_COUNT_PROPERTY, fieldCount);
-  }
-  
-  int getOutputFieldCount() {
-    return job.getInt(OUTPUT_FIELD_COUNT_PROPERTY, 0);
+    super(job);
   }
   
 }

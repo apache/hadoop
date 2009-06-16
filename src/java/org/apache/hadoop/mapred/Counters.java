@@ -36,6 +36,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -398,6 +399,13 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @return the counter for that name
    */
   public synchronized Counter findCounter(String group, String name) {
+    if (name.equals("MAP_INPUT_BYTES")) {
+      group = FileInputFormat.COUNTER_GROUP; 
+      name = FileInputFormat.BYTES_READ; 
+      LOG.warn("Counter name MAP_INPUT_BYTES is deprecated. " +
+               "Use FileInputFormatCounters as group name and " +
+               " BYTES_READ as counter name instead");
+    }
     return getGroup(group).getCounterForName(name);
   }
 
@@ -411,7 +419,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    */
   @Deprecated
   public synchronized Counter findCounter(String group, int id, String name) {
-    return getGroup(group).getCounterForName(name);
+    return findCounter(group, name);
   }
 
   /**
@@ -432,7 +440,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @param amount amount by which counter is to be incremented
    */
   public synchronized void incrCounter(String group, String counter, long amount) {
-    getGroup(group).getCounterForName(counter).increment(amount);
+    findCounter(group, counter).increment(amount);
   }
   
   /**

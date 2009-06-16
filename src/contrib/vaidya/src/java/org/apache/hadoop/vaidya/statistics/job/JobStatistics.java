@@ -417,8 +417,6 @@ public class JobStatistics implements JobStatisticsInterface {
           mapTask.setValue(MapTaskKeys.INPUT_RECORDS, parts[1]);
         } else if (parts[0].equals("Map-Reduce Framework.Map output records")) {
           mapTask.setValue(MapTaskKeys.OUTPUT_RECORDS, parts[1]);
-        } else if (parts[0].equals("Map-Reduce Framework.Map input bytes")) {
-          mapTask.setValue(MapTaskKeys.INPUT_BYTES, parts[1]);
         } else if (parts[0].equals("Map-Reduce Framework.Map output bytes")) {
           mapTask.setValue(MapTaskKeys.OUTPUT_BYTES, parts[1]);
         } else if (parts[0].equals("Map-Reduce Framework.Combine input records")) {
@@ -427,6 +425,8 @@ public class JobStatistics implements JobStatisticsInterface {
           mapTask.setValue(MapTaskKeys.COMBINE_OUTPUT_RECORDS, parts[1]);
         } else if (parts[0].equals("Map-Reduce Framework.Spilled Records")) {
           mapTask.setValue(MapTaskKeys.SPILLED_RECORDS, parts[1]);
+        } else if (parts[0].equals("FileInputFormatCounters.BYTES_READ")) {
+          mapTask.setValue(MapTaskKeys.INPUT_BYTES, parts[1]);
         } else {
           System.out.println("MapCounterKey:<"+parts[0]+"> ==> NOT INCLUDED IN PERFORMANCE ADVISOR MAP TASK");
         }

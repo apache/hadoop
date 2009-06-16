@@ -116,9 +116,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // The maximum number of blacklists for a tracker after which the 
   // tracker could be blacklisted across all jobs
   private int MAX_BLACKLISTS_PER_TRACKER = 4;
+  // Approximate number of heartbeats that could arrive JobTracker
+  // in a second
+  private int NUM_HEARTBEATS_IN_SECOND = 100;
   public static enum State { INITIALIZING, RUNNING }
   State state = State.INITIALIZING;
-  private static final int SYSTEM_DIR_CLEANUP_RETRY_PERIOD = 10000;
+  private static final int FS_ACCESS_RETRY_PERIOD = 10000;
 
   private DNSToSwitchMapping dnsToSwitchMapping;
   private NetworkTopology clusterMap = new NetworkTopology();
@@ -1086,6 +1089,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         taskStatus.setShuffleFinishTime(shuffleTime);
         taskStatus.setSortFinishTime(sortTime);
       }
+      else if (type.equals(Values.MAP.name())) {
+        taskStatus.setMapFinishTime(
+            Long.parseLong(attempt.get(Keys.MAP_FINISHED)));
+      }
 
       // Add the counters
       String counterString = attempt.get(Keys.COUNTERS);
@@ -1187,17 +1194,38 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         shouldRecover = false;
 
         // write the jobtracker.info file
-        FSDataOutputStream out = FileSystem.create(fs, restartFile, filePerm);
-        out.writeInt(0);
-        out.close();
+        try {
+          FSDataOutputStream out = FileSystem.create(fs, restartFile, 
+                                                     filePerm);
+          out.writeInt(0);
+          out.close();
+        } catch (IOException ioe) {
+          LOG.warn("Writing to file " + restartFile + " failed!");
+          LOG.warn("FileSystem is not ready yet!");
+          fs.delete(restartFile, false);
+          throw ioe;
+        }
         return;
       }
 
       FSDataInputStream in = fs.open(restartFile);
-      // read the old count
-      restartCount = in.readInt();
-      ++restartCount; // increment the restart count
-      in.close();
+      try {
+        // read the old count
+        restartCount = in.readInt();
+        ++restartCount; // increment the restart count
+      } catch (IOException ioe) {
+        LOG.warn("System directory is garbled. Failed to read file " 
+                 + restartFile);
+        LOG.warn("Jobtracker recovery is not possible with garbled"
+                 + " system directory! Please delete the system directory and"
+                 + " restart the jobtracker. Note that deleting the system" 
+                 + " directory will result in loss of all the running jobs.");
+        throw new RuntimeException(ioe);
+      } finally {
+        if (in != null) {
+          in.close();
+        }
+      }
 
       // Write back the new restart count and rename the old info file
       //TODO This is similar to jobhistory recovery, maybe this common code
@@ -1432,6 +1460,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   Map<String, Set<JobID>> trackerToJobsToCleanup = 
     new HashMap<String, Set<JobID>>();
   
+  // (trackerID --> list of tasks to cleanup)
+  Map<String, Set<TaskAttemptID>> trackerToTasksToCleanup = 
+    new HashMap<String, Set<TaskAttemptID>>();
+  
   // All the known TaskInProgress items, mapped to by taskids (taskid->TIP)
   Map<TaskAttemptID, TaskInProgress> taskidToTIPMap =
     new TreeMap<TaskAttemptID, TaskInProgress>();
@@ -1526,6 +1558,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private final UserGroupInformation mrOwner;
   private final String supergroup;
 
+  long limitMaxMemForMapTasks;
+  long limitMaxMemForReduceTasks;
+  long memSizeForMapSlotOnJT;
+  long memSizeForReduceSlotOnJT;
+
   private QueueManager queueManager;
 
   /**
@@ -1552,6 +1589,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
     MAX_BLACKLISTS_PER_TRACKER = 
         conf.getInt("mapred.max.tracker.blacklists", 4);
+    NUM_HEARTBEATS_IN_SECOND = 
+        conf.getInt("mapred.heartbeats.in.second", 100);
 
     //This configuration is there solely for tuning purposes and 
     //once this feature has been tested in real clusters and an appropriate
@@ -1563,6 +1602,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // on startup, and can delete any files that we're done with
     this.conf = conf;
     JobConf jobConf = new JobConf(conf);
+
+    initializeTaskMemoryRelatedConfig();
 
     // Read the hosts/exclude files to restrict access to the jobtracker.
     this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
@@ -1705,24 +1746,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
         LOG.info("problem cleaning system directory: " + systemDir, ie);
       }
-      Thread.sleep(SYSTEM_DIR_CLEANUP_RETRY_PERIOD);
-    }
-
-    // Prepare for recovery. This is done irrespective of the status of restart
-    // flag.
-    try {
-      recoveryManager.updateRestartCount();
-    } catch (IOException ioe) {
-      LOG.warn("Failed to initialize recovery manager. The Recovery manager "
-               + "failed to access the system files in the system dir (" 
-               + getSystemDir() + ")."); 
-      LOG.warn("It might be because the JobTracker failed to read/write system"
-               + " files (" + recoveryManager.getRestartCountFile() + " / " 
-               + recoveryManager.getTempRestartCountFile() + ") or the system "
-               + " file " + recoveryManager.getRestartCountFile() 
-               + " is missing!");
-      LOG.warn("Bailing out...");
-      throw ioe;
+      Thread.sleep(FS_ACCESS_RETRY_PERIOD);
     }
     
     // Same with 'localDir' except it's always on the local disk.
@@ -1840,6 +1864,20 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Run forever
    */
   public void offerService() throws InterruptedException, IOException {
+    // Prepare for recovery. This is done irrespective of the status of restart
+    // flag.
+    while (true) {
+      try {
+        recoveryManager.updateRestartCount();
+        break;
+      } catch (IOException ioe) {
+        LOG.warn("Failed to initialize recovery manager. ", ioe);
+        // wait for some time
+        Thread.sleep(FS_ACCESS_RETRY_PERIOD);
+        LOG.warn("Retrying...");
+      }
+    }
+
     taskScheduler.start();
     
     //  Start the recovery after starting the scheduler
@@ -1848,6 +1886,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     } catch (Throwable t) {
       LOG.warn("Recovery manager crashed! Ignoring.", t);
     }
+    // refresh the node list as the recovery manager might have added 
+    // disallowed trackers
+    refreshHosts();
     
     this.expireTrackersThread = new Thread(this.expireTrackers,
                                           "expireTrackers");
@@ -2660,7 +2701,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     int clusterSize = getClusterStatus().getTaskTrackers();
     int heartbeatInterval =  Math.max(
                                 (int)(1000 * Math.ceil((double)clusterSize / 
-                                                       CLUSTER_INCREMENT)),
+                                                       NUM_HEARTBEATS_IN_SECOND)),
                                 HEARTBEAT_INTERVAL_MIN) ;
     return heartbeatInterval;
   }
@@ -2804,8 +2845,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                                               String taskTracker) {
     
     Set<TaskAttemptID> taskIds = trackerToTaskMap.get(taskTracker);
+    List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
     if (taskIds != null) {
-      List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
       for (TaskAttemptID killTaskId : taskIds) {
         TaskInProgress tip = taskidToTIPMap.get(killTaskId);
         if (tip == null) {
@@ -2823,10 +2864,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           }
         }
       }
-            
-      return killList;
     }
-    return null;
+    
+    // add the stray attempts for uninited jobs
+    synchronized (trackerToTasksToCleanup) {
+      Set<TaskAttemptID> set = trackerToTasksToCleanup.remove(taskTracker);
+      if (set != null) {
+        for (TaskAttemptID id : set) {
+          killList.add(new KillTaskAction(id));
+        }
+      }
+    }
+    return killList;
   }
 
   /**
@@ -3029,6 +3078,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     } catch (IOException ioe) {
        LOG.warn("Access denied for user " + job.getJobConf().getUser() 
                 + ". Ignoring job " + jobId, ioe);
+      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
+      throw ioe;
+    }
+
+    // Check the job if it cannot run in the cluster because of invalid memory
+    // requirements.
+    try {
+      checkMemoryRequirements(job);
+    } catch (IOException ioe) {
       new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
       throw ioe;
     }
@@ -3296,6 +3354,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
   
   TaskCompletionEvent[] EMPTY_EVENTS = new TaskCompletionEvent[0];
+
+  static final String MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY =
+      "mapred.cluster.map.memory.mb";
+  static final String MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY =
+      "mapred.cluster.reduce.memory.mb";
+
+  static final String MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY =
+      "mapred.cluster.max.map.memory.mb";
+  static final String MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY =
+      "mapred.cluster.max.reduce.memory.mb";
   
   /* 
    * Returns a list of TaskCompletionEvent for the given job, 
@@ -3483,6 +3551,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         continue;
       }
       
+      if (!job.inited()) {
+        // if job is not yet initialized ... kill the attempt
+        synchronized (trackerToTasksToCleanup) {
+          Set<TaskAttemptID> tasks = trackerToTasksToCleanup.get(trackerName);
+          if (tasks == null) {
+            tasks = new HashSet<TaskAttemptID>();
+            trackerToTasksToCleanup.put(trackerName, tasks);
+          }
+          tasks.add(taskId);
+        }
+        continue;
+      }
+
       TaskInProgress tip = taskidToTIPMap.get(taskId);
       // Check if the tip is known to the jobtracker. In case of a restarted
       // jt, some tasks might join in later
@@ -3545,6 +3626,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // remove the tracker from the local structures
     synchronized (trackerToJobsToCleanup) {
       trackerToJobsToCleanup.remove(trackerName);
+    }
+    
+    synchronized (trackerToTasksToCleanup) {
+      trackerToTasksToCleanup.remove(trackerName);
     }
     
     // Inform the recovery manager
@@ -3610,7 +3695,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized void refreshNodes() throws IOException {
     // check access
     PermissionChecker.checkSuperuserPrivilege(mrOwner, supergroup);
-
+    
+    // call the actual api
+    refreshHosts();
+  }
+  
+  private synchronized void refreshHosts() throws IOException {
     // Reread the config to get mapred.hosts and mapred.hosts.exclude filenames.
     // Update the file names and refresh internal includes and excludes list
     LOG.info("Refreshing hosts information");
@@ -3761,5 +3851,82 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     LOG.info("Refreshing queue acls. requested by : " + 
         UserGroupInformation.getCurrentUGI().getUserName());
     this.queueManager.refreshAcls(new Configuration(this.conf));
+  }
+
+  private void initializeTaskMemoryRelatedConfig() {
+    memSizeForMapSlotOnJT =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    memSizeForReduceSlotOnJT =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    limitMaxMemForMapTasks =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(conf.getLong(
+            JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+    LOG.info(new StringBuilder().append("Scheduler configured with ").append(
+        "(memSizeForMapSlotOnJT, memSizeForReduceSlotOnJT,").append(
+        " limitMaxMemForMapTasks, limitMaxMemForReduceTasks) (").append(
+        memSizeForMapSlotOnJT).append(", ").append(memSizeForReduceSlotOnJT)
+        .append(", ").append(limitMaxMemForMapTasks).append(", ").append(
+            limitMaxMemForReduceTasks).append(")"));
+  }
+
+  private boolean perTaskMemoryConfigurationSetOnJT() {
+    if (limitMaxMemForMapTasks == JobConf.DISABLED_MEMORY_LIMIT
+        || limitMaxMemForReduceTasks == JobConf.DISABLED_MEMORY_LIMIT
+        || memSizeForMapSlotOnJT == JobConf.DISABLED_MEMORY_LIMIT
+        || memSizeForReduceSlotOnJT == JobConf.DISABLED_MEMORY_LIMIT) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Check the job if it has invalid requirements and throw and IOException if does have.
+   * 
+   * @param job
+   * @throws IOException 
+   */
+  private void checkMemoryRequirements(JobInProgress job)
+      throws IOException {
+    if (!perTaskMemoryConfigurationSetOnJT()) {
+      LOG.debug("Per-Task memory configuration is not set on JT. "
+          + "Not checking the job for invalid memory requirements.");
+      return;
+    }
+
+    boolean invalidJob = false;
+    String msg = "";
+    long maxMemForMapTask = job.getJobConf().getMemoryForMapTask();
+    long maxMemForReduceTask = job.getJobConf().getMemoryForReduceTask();
+
+    if (maxMemForMapTask == JobConf.DISABLED_MEMORY_LIMIT
+        || maxMemForReduceTask == JobConf.DISABLED_MEMORY_LIMIT) {
+      invalidJob = true;
+      msg = "Invalid job requirements.";
+    }
+
+    if (maxMemForMapTask > limitMaxMemForMapTasks
+        || maxMemForReduceTask > limitMaxMemForReduceTasks) {
+      invalidJob = true;
+      msg = "Exceeds the cluster's max-memory-limit.";
+    }
+
+    if (invalidJob) {
+      StringBuilder jobStr =
+          new StringBuilder().append(job.getJobID().toString()).append("(")
+              .append(maxMemForMapTask).append(" memForMapTasks ").append(
+                  maxMemForReduceTask).append(" memForReduceTasks): ");
+      LOG.warn(jobStr.toString() + msg);
+
+      throw new IOException(jobStr.toString() + msg);
+    }
   }
 }

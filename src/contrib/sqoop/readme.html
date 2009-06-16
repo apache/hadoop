@@ -1,0 +1,186 @@
+<html>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+  
+       http://www.apache.org/licenses/LICENSE-2.0
+    
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<head>
+<title>Sqoop User's Guide</title>
+</head>
+<body>
+    <h1><a name="SqoopUsersGuide-Sqoop"></a>Sqoop</h1>
+
+<h2><a name="SqoopUsersGuide-Overview"></a>Overview</h2>
+
+<p>Sqoop is a tool designed to help users of large data import existing relational databases into their Hadoop clusters. Sqoop uses JDBC to connect to a database, examine the schema for tables, and auto-generate the necessary classes to import data into HDFS. It then instantiates a MapReduce job to read the table from the database via the DBInputFormat (JDBC-based InputFormat). The table is read into a set of files loaded into HDFS. Both SequenceFile and text-based targets are supported.</p>
+
+<p>Longer term, Sqoop will support automatic connectivity to Hive, with the ability to load data files directly into the Hive warehouse directory, and also to inject the appropriate table definition into the metastore.</p>
+
+<h2><a name="SqoopUsersGuide-GettingStarted"></a>Getting Started</h2>
+
+<p><b>Getting Sqoop</b> Sqoop is distributed as a "contrib" jar with Hadoop. It is built in the <tt>contrib/sqoop/</tt> directory.</p>
+
+<p>You can run Sqoop by running:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop (options)
+</pre>
+</div></div>
+
+
+<p>This does nothing of interest without any options. The <tt>&#45;&#45;help</tt> option displays the full usage instructions.</p>
+
+<h3><a name="SqoopUsersGuide-ConnectingtoaDatabaseServer"></a>Connecting to a Database Server</h3>
+
+<p>Sqoop is designed to import tables from a database into HDFS. As such, it requires a <em>connect string</em> that describes how to connect to the database. The <em>connect string</em> looks like a URL, and is communicated to Sqoop with the <tt>&#45;&#45;connect</tt> argument. This describes the server and database to connect to; it may also specify the port. e.g.: </p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/employees</span>
+</pre>
+</div></div>
+
+<p>This string will connect to a MySQL database named <tt>employees</tt> on the host <tt>database.example.com</tt>. It's important that you <b>do not</b> use the URL <tt>localhost</tt> if you intend to use Sqoop with a distributed Hadoop cluster. The connect string you supply will be used on all the TaskTracker nodes in your MapReduce cluster; if they're told to connect to the literal name <tt>localhost</tt>, they'll each reach a different database (or more likely, no database at all)! Instead, you should use the full DNS or IP address of the database host that can be seen by all your remote nodes.</p>
+
+<p>You may need to authenticate against the database before you can access it. The <tt>&#45;&#45;username</tt> and <tt>&#45;&#45;password</tt> parameters can be used to supply a username and a password to the database. (Note: password access currently requires passing the password on the command-line, which is insecure.) e.g.:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/employees --username aaron --password 12345</span>
+</pre>
+</div></div>
+
+<p>Sqoop automatically supports <span class="nobr"><a href="http://www.mysql.com" rel="nofollow">MySQL</a></span> and <span class="nobr"><a href="http://hsqldb.org/" rel="nofollow">HSQLDB</a></span>. Connect strings beginning with <tt>jdbc:mysql://</tt> and <tt>jdbc:hsqldb:hsql://</tt> automatically inform Sqoop of the correct JDBC driver class to load. HSQLDB's JDBC driver is bundled with Hadoop, and so will work "out of the box." If you install <a href="http://dev.mysql.com/downloads/connector/j/5.1.html">MySQL's Connector/J driver</a> in Hadoop's <tt>lib/</tt> directory, Sqoop will also automatically take advantage of this for any <tt>jdbc:mysql://</tt> connect strings you use. You can use Sqoop with any other JDBC-compliant database as well. First, download the appropriate JDBC driver for the database you want to import from, and install the <tt>.jar</tt> file in the <tt>$HADOOP_HOME/lib</tt> directory on all machines in your Hadoop cluster, or some other directory which is in the classpath on all nodes. Each driver jar also has a specific <em>driver class</em> which defines the entry-point to the driver. For example, MySQL's Connector/J library has a driver class of <tt>com.mysql.jdbc.Driver</tt>. Refer to your database vendor-specific documentation to determine the main driver class. This class must be provided as an argument to Sqoop with <tt>&#45;&#45;driver</tt>.</p>
+
+<p>For example, to connect to a postgres database, first download the driver from <span class="nobr"><a href="http://jdbc.postgresql.org" rel="nofollow">http://jdbc.postgresql.org</a></span> and install it in your Hadoop lib path. Then run Sqoop with something like:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:postgresql:<span class="code-comment">//postgres-server.example.com/employees --driver org.postgresql.Driver</span>
+</pre>
+</div></div>
+
+<p>Note: Sqoop uses the JDBC specification to connect to databases; this should provide a versatile client that interoperates with many different databases. That having been said, we have only thoroughly tested this tool with HSQLDB and MySQL.</p>
+
+<h3><a name="SqoopUsersGuide-ListingAvailableDatabases"></a>Listing Available Databases</h3>
+
+<p>Once connected to a database server, you can list the available databases with the <tt>&#45;&#45;list-databases</tt> parameter. This currently is supported only by HSQLDB and MySQL. Note that in this case, the connect string does not include a database name, just a server address.</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/ --list-databases
+</span>information_schema
+employees
+</pre>
+</div></div>
+
+<p><em>This only works with HSQLDB and MySQL. A vendor-agnostic implementation of this function has not yet been implemented.</em></p>
+
+<h3><a name="SqoopUsersGuide-ListingAvailableTables"></a>Listing Available Tables</h3>
+
+<p>Within a database, you can list the tables available for import with the <tt>&#45;&#45;list-tables</tt> command. The following example shows four tables available within the "employees" example database:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/employees --list-tables
+
+</span>employee_names
+payroll_checks
+job_descriptions
+office_supplies
+</pre>
+</div></div>
+
+<h2><a name="SqoopUsersGuide-AutomaticFulldatabaseImport"></a>Automatic Full-database Import</h2>
+
+<p>If you want to import all the tables in a database, you can use the <tt>&#45;&#45;all-tables</tt> command to do so:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/employees --all-tables</span>
+
+</pre>
+</div></div>
+
+<p>This will query the database for the available tables, generate an ORM class for each table, and run a MapReduce job to import each one. Hadoop uses the <span class="nobr"><a href="http://issues.apache.org/jira/browse/HADOOP-2536" rel="nofollow">DBInputFormat</a></span> to read from a database into a Mapper instance. To read a table into a MapReduce program requires creating a class to hold the fields of one row of the table. One of the benefits of Sqoop is that it generates this class definition for you, based on the table definition in the database. </p>
+
+<p>The generated <tt>.java</tt> files are, by default, placed in the current directory. You can supply a different directory with the <tt>&#45;&#45;outdir</tt> parameter. These are then compiled into <tt>.class</tt> and <tt>.jar</tt> files for use by the MapReduce job that it launches. These files are created in a temporary directory. You can redirect this target with <tt>&#45;&#45;bindir</tt>.</p>
+
+<p>Each table will be imported into a separate directory in HDFS, with the same name as the table. For instance, if my Hadoop username is <tt>aaron</tt>, the above command would have generated the following directories in HDFS:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+/user/aaron/employee_names
+/user/aaron/payroll_checks
+/user/aaron/job_descriptions
+/user/aaron/office_supplies
+</pre>
+</div></div>
+
+<p>You can change the base directory under which the tables are loaded with the <tt>&#45;&#45;warehouse-dir</tt> parameter. For example:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/employees --all-tables --warehouse-dir /common/warehouse</span>
+</pre>
+</div></div>
+
+<p>This would create the following directories instead:</p>
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+/common/warehouse/employee_names
+/common/warehouse/payroll_checks
+/common/warehouse/job_descriptions
+/common/warehouse/office_supplies
+</pre>
+</div></div>
+
+<p>By default the data will be read into text files in HDFS. Each of the columns will be represented as comma-delimited text. Each row is terminated by a newline. There is currently no mechanism to quote or escape commas or newlines inside of <tt>CHAR</tt> or <tt>VARCHAR</tt> columns of the database. Applications which depend on comma-delimited parsing of the output files must be careful if commas or newlines may be present in the database. </p>
+
+<p>If you expect commas or newlines to appear in text columns of the database, or you want to leverage compression and binary file formats, the <tt>&#45;&#45;as-sequencefile</tt> argument to Sqoop will import the table to a set of SequenceFiles instead. As this uses a separate object for each field of each database record, no quoting or escaping of values is necessary. This representation is also likely to be higher performance when used as an input to subsequent MapReduce programs. For completeness, Sqoop provides an <tt>&#45;&#45;as-textfile</tt> option, which is implied by default. An <tt>&#45;&#45;as-textfile</tt> on the command-line will override a previous <tt>&#45;&#45;as-sequencefile</tt> argument.</p>
+
+<p>The SequenceFile format will embed the records from the database as objects using the code generated by Sqoop. It is important that you retain the <tt>.java file</tt> for this class, as you will need to be able to instantiate the same type to read the objects back later, in other user-defined applications.</p>
+
+<h2><a name="SqoopUsersGuide-ImportingIndividualTables"></a>Importing Individual Tables</h2>
+
+<p>In addition to full-database imports, Sqoop will allow you to import individual tables. Instead of using <tt>&#45;&#45;all-tables</tt>, specify the name of a particular table with the <tt>&#45;&#45;table</tt> argument:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/employees --table employee_names </span>
+</pre>
+</div></div>
+
+<p>You can further specify a subset of the columns in a table by using the <tt>&#45;&#45;columns</tt> argument. This takes a list of column names, delimited by commas, with no spaces in between. e.g.:</p>
+
+<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">
+<pre class="code-java">
+
+$ hadoop jar /path/to/sqoop.jar org.apache.hadoop.sqoop.Sqoop --connect jdbc:mysql:<span class="code-comment">//database.example.com/employees --table employee_names --columns employee_id,first_name,last_name,dept_id</span>
+</pre>
+</div></div>
+
+<p>Sqoop will use a MapReduce job to read sections of the table in parallel. For the MapReduce tasks to divide the table space, the results returned by the database must be orderable. Sqoop will automatically detect the primary key for a table and use that to order the results. If no primary key is available, or (less likely) you want to order the results along a different column, you can specify the column name with <tt>&#45;&#45;order-by</tt>. <b>Important:</b> To guarantee correctness of your input, you must select an ordering column for which each row has a unique value. If duplicate values appear in the ordering column, the results of the import are undefined, and Sqoop will not be able to detect the error.</p>
+
+<p>The <tt>&#45;&#45;columns</tt> and <tt>&#45;&#45;order-by</tt> arguments are incompatible with <tt>&#45;&#45;all-tables</tt>. If you require special handling for some of the tables, then you must manually run a separate import job for each table.</p>
+
+<h2><a name="SqoopUsersGuide-MiscellaneousAdditionalArguments"></a>Miscellaneous Additional Arguments</h2>
+
+<p>If you want to generate the Java classes to represent tables without actually performing an import, supply a connect string and (optionally) credentials as above, as well as <tt>&#45;&#45;all-tables</tt> or <tt>&#45;&#45;table</tt>, but also use the <b><tt>&#45;&#45;generate-only</tt></b> argument. This will generate the classes and cease further operation.</p>
+
+<p>You can override the <tt>$HADOOP_HOME</tt> environment variable within Sqoop with the <tt>&#45;&#45;hadoop-home</tt> argument. </p>
+
+</body></html>

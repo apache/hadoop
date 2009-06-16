@@ -70,7 +70,7 @@ public class TestCounters extends TestCase {
   }
   
   public void testCounters() throws IOException {
-    Enum[] keysWithResource = {TaskCounter.MAP_INPUT_BYTES, 
+    Enum[] keysWithResource = {TaskCounter.MAP_INPUT_RECORDS, 
                                TaskCounter.MAP_OUTPUT_BYTES};
     
     Enum[] keysWithoutResource = {myCounters.TEST1, myCounters.TEST2};

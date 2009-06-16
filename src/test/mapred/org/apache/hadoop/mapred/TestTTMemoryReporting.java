@@ -22,10 +22,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.SleepJob;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.LinuxMemoryCalculatorPlugin;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ToolRunner;
@@ -46,7 +43,6 @@ public class TestTTMemoryReporting extends TestCase {
 
   static final Log LOG = LogFactory.getLog(TestTTMemoryReporting.class);
   
-  private MiniDFSCluster miniDFSCluster;
   private MiniMRCluster miniMRCluster;
 
   /**
@@ -77,41 +73,42 @@ public class TestTTMemoryReporting extends TestCase {
           getConf().getLong("totalVmemOnTT", JobConf.DISABLED_MEMORY_LIMIT);
       long totalPhysicalMemoryOnTT =
           getConf().getLong("totalPmemOnTT", JobConf.DISABLED_MEMORY_LIMIT);
-      long virtualMemoryReservedOnTT =
-          getConf().getLong("reservedVmemOnTT", JobConf.DISABLED_MEMORY_LIMIT);
-      long physicalMemoryReservedOnTT =
-          getConf().getLong("reservedPmemOnTT", JobConf.DISABLED_MEMORY_LIMIT);
+      long mapSlotMemorySize =
+          getConf().getLong("mapSlotMemorySize", JobConf.DISABLED_MEMORY_LIMIT);
+      long reduceSlotMemorySize =
+          getConf()
+              .getLong("reduceSlotMemorySize", JobConf.DISABLED_MEMORY_LIMIT);
 
       long reportedTotalVirtualMemoryOnTT =
           status.getResourceStatus().getTotalVirtualMemory();
       long reportedTotalPhysicalMemoryOnTT =
           status.getResourceStatus().getTotalPhysicalMemory();
-      long reportedVirtualMemoryReservedOnTT =
-          status.getResourceStatus().getReservedTotalMemory();
-      long reportedPhysicalMemoryReservedOnTT =
-          status.getResourceStatus().getReservedPhysicalMemory();
+      long reportedMapSlotMemorySize =
+          status.getResourceStatus().getMapSlotMemorySizeOnTT();
+      long reportedReduceSlotMemorySize =
+          status.getResourceStatus().getReduceSlotMemorySizeOnTT();
 
       message =
           "expected memory values : (totalVirtualMemoryOnTT, totalPhysicalMemoryOnTT, "
-              + "virtualMemoryReservedOnTT, physicalMemoryReservedOnTT) = ("
-              + totalVirtualMemoryOnTT + ", " + totalPhysicalMemoryOnTT + ", "
-              + virtualMemoryReservedOnTT + ", " + physicalMemoryReservedOnTT
-              + ")";
+              + "mapSlotMemSize, reduceSlotMemorySize) = ("
+              + totalVirtualMemoryOnTT + ", " + totalPhysicalMemoryOnTT + ","
+              + mapSlotMemorySize + "," + reduceSlotMemorySize + ")";
       message +=
           "\nreported memory values : (totalVirtualMemoryOnTT, totalPhysicalMemoryOnTT, "
-              + "virtualMemoryReservedOnTT, physicalMemoryReservedOnTT) = ("
+              + "reportedMapSlotMemorySize, reportedReduceSlotMemorySize) = ("
               + reportedTotalVirtualMemoryOnTT
               + ", "
               + reportedTotalPhysicalMemoryOnTT
-              + ", "
-              + reportedVirtualMemoryReservedOnTT
-              + ", "
-              + reportedPhysicalMemoryReservedOnTT + ")";
+              + ","
+              + reportedMapSlotMemorySize
+              + ","
+              + reportedReduceSlotMemorySize
+              + ")";
       LOG.info(message);
       if (totalVirtualMemoryOnTT != reportedTotalVirtualMemoryOnTT
           || totalPhysicalMemoryOnTT != reportedTotalPhysicalMemoryOnTT
-          || virtualMemoryReservedOnTT != reportedVirtualMemoryReservedOnTT
-          || physicalMemoryReservedOnTT != reportedPhysicalMemoryReservedOnTT) {
+          || mapSlotMemorySize != reportedMapSlotMemorySize
+          || reduceSlotMemorySize != reportedReduceSlotMemorySize) {
         hasPassed = false;
       }
       return super.assignTasks(status);
@@ -132,7 +129,7 @@ public class TestTTMemoryReporting extends TestCase {
           TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
           DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
       setUpCluster(conf);
-      runSleepJob();
+      runSleepJob(miniMRCluster.createJobConf());
       verifyTestResults();
     } finally {
       tearDownCluster();
@@ -149,8 +146,9 @@ public class TestTTMemoryReporting extends TestCase {
     JobConf conf = new JobConf();
     conf.setLong("totalVmemOnTT", 4 * 1024 * 1024 * 1024L);
     conf.setLong("totalPmemOnTT", 2 * 1024 * 1024 * 1024L);
-    conf.setLong("reservedVmemOnTT", 1 * 1024 * 1024 * 1024L);
-    conf.setLong("reservedPmemOnTT", 512 * 1024 * 1024L);
+    conf.setLong("mapSlotMemorySize", 1 * 512L);
+    conf.setLong("reduceSlotMemorySize", 1 * 1024L);
+
     conf.setClass(
         TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
         DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
@@ -158,15 +156,17 @@ public class TestTTMemoryReporting extends TestCase {
         4 * 1024 * 1024 * 1024L);
     conf.setLong(DummyMemoryCalculatorPlugin.MAXPMEM_TESTING_PROPERTY,
         2 * 1024 * 1024 * 1024L);
+    conf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+        512L);
     conf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY,
-        1 * 1024 * 1024 * 1024L);
-    conf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY,
-        512 * 1024 * 1024L);
+        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY, 1024L);
+    
     try {
       setUpCluster(conf);
-      runSleepJob();
+      JobConf jobConf = miniMRCluster.createJobConf();
+      jobConf.setMemoryForMapTask(1 * 1024L);
+      jobConf.setMemoryForReduceTask(2 * 1024L);
+      runSleepJob(jobConf);
       verifyTestResults();
     } finally {
       tearDownCluster();
@@ -189,17 +189,10 @@ public class TestTTMemoryReporting extends TestCase {
     LinuxMemoryCalculatorPlugin plugin = new LinuxMemoryCalculatorPlugin();
     conf.setLong("totalVmemOnTT", plugin.getVirtualMemorySize());
     conf.setLong("totalPmemOnTT", plugin.getPhysicalMemorySize());
-    conf.setLong("reservedVmemOnTT", 1 * 1024 * 1024 * 1024L);
-    conf.setLong("reservedPmemOnTT", 512 * 1024 * 1024L);
-    conf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY,
-        1 * 1024 * 1024 * 1024L);
-    conf.setLong(
-        TaskTracker.MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY,
-        512 * 1024 * 1024L);
+
     try {
       setUpCluster(conf);
-      runSleepJob();
+      runSleepJob(miniMRCluster.createJobConf());
       verifyTestResults();
     } finally {
       tearDownCluster();
@@ -208,22 +201,15 @@ public class TestTTMemoryReporting extends TestCase {
 
   private void setUpCluster(JobConf conf)
                                 throws Exception {
-    conf.setClass("mapred.jobtracker.taskScheduler", 
-        TestTTMemoryReporting.FakeTaskScheduler.class,
-        TaskScheduler.class);
-    miniDFSCluster = new MiniDFSCluster(conf, 1, true, null);
-    FileSystem fileSys = miniDFSCluster.getFileSystem();
-    String namenode = fileSys.getUri().toString();
-    miniMRCluster = new MiniMRCluster(1, namenode, 3, 
-                      null, null, conf);    
+    conf.setClass("mapred.jobtracker.taskScheduler",
+        TestTTMemoryReporting.FakeTaskScheduler.class, TaskScheduler.class);
+    conf.set("mapred.job.tracker.handler.count", "1");
+    miniMRCluster = new MiniMRCluster(1, "file:///", 3, null, null, conf);
   }
   
-  private void runSleepJob() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set("mapred.job.tracker", "localhost:"
-                              + miniMRCluster.getJobTrackerPort());
+  private void runSleepJob(JobConf conf) throws Exception {
     String[] args = { "-m", "1", "-r", "1",
-                      "-mt", "1000", "-rt", "1000" };
+                      "-mt", "10", "-rt", "10" };
     ToolRunner.run(conf, new SleepJob(), args);
   }
 
@@ -235,7 +221,8 @@ public class TestTTMemoryReporting extends TestCase {
   }
   
   private void tearDownCluster() {
-    if (miniMRCluster != null) { miniMRCluster.shutdown(); }
-    if (miniDFSCluster != null) { miniDFSCluster.shutdown(); }
+    if (miniMRCluster != null) {
+      miniMRCluster.shutdown();
+    }
   }
 }

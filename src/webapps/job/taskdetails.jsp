@@ -126,7 +126,12 @@
 <table border=2 cellpadding="5" cellspacing="2">
 <tr><td align="center">Task Attempts</td><td>Machine</td><td>Status</td><td>Progress</td><td>Start Time</td> 
   <%
-   if (!ts[0].getIsMap() && !isCleanupOrSetup) {
+   if (ts[0].getIsMap()) {
+  %>
+<td>Map Phase Finished</td>
+  <%
+   }
+   else if(!isCleanupOrSetup) {
    %>
 <td>Shuffle Finished</td><td>Sort Finished</td>
   <%
@@ -181,7 +186,12 @@
         out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getStartTime(), 0) + "</td>");
-        if (!ts[i].getIsMap() && !isCleanupOrSetup) {
+        if (ts[i].getIsMap()) {
+          out.print("<td>"
+          + StringUtils.getFormattedTimeWithDiff(dateFormat, status
+          .getMapFinishTime(), status.getStartTime()) + "</td>");
+        }
+        else if (!isCleanupOrSetup) {
           out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getShuffleFinishTime(), status.getStartTime()) + "</td>");
@@ -268,7 +278,7 @@
 </center>
 
 <%
-      if (ts[0].getIsMap()) {
+      if (ts[0].getIsMap() && !isCleanupOrSetup) {
 %>
 <h3>Input Split Locations</h3>
 <table border=2 cellpadding="5" cellspacing="2">

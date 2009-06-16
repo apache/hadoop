@@ -123,111 +123,11 @@ public class JobConf extends Configuration {
    */
   public static final String DEFAULT_QUEUE_NAME = "default";
 
-  /**
-   * Cluster-wide configuration to be set by the administrators that provides
-   * default amount of maximum virtual memory for job's tasks. This has to be
-   * set on both the JobTracker node for the sake of scheduling decisions and on
-   * the TaskTracker nodes for the sake of memory management.
-   * 
-   * <p>
-   * 
-   * If a job doesn't specify its virtual memory requirement by setting
-   * {@link #MAPRED_TASK_MAXVMEM_PROPERTY} to {@link #DISABLED_MEMORY_LIMIT},
-   * tasks are assured a memory limit set to this property. This property is
-   * disabled by default, and if not explicitly set to a valid value by the
-   * administrators and if a job doesn't specify its virtual memory
-   * requirements, the job's tasks will not be assured anything and may be
-   * killed by a TT that intends to control the total memory usage of the tasks
-   * via memory management functionality.
-   * 
-   * <p>
-   * 
-   * This value should in general be less than the cluster-wide configuration
-   * {@link #UPPER_LIMIT_ON_TASK_VMEM_PROPERTY} . If not or if it not set,
-   * TaskTracker's memory management may be disabled and a scheduler's memory
-   * based scheduling decisions will be affected. Please refer to the
-   * documentation of the configured scheduler to see how this property is used.
-   */
-  public static final String MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY =
-      "mapred.task.default.maxvmem";
+  static final String MAPRED_JOB_MAP_MEMORY_MB_PROPERTY =
+      "mapred.job.map.memory.mb";
 
-  /**
-   * The maximum amount of memory any task of this job will use.
-   * 
-   * <p>
-   * 
-   * This value will be used by TaskTrackers for monitoring the memory usage of
-   * tasks of this jobs. If a TaskTracker's memory management functionality is
-   * enabled, each task of this job will be allowed to use a maximum virtual
-   * memory specified by this property. If the task's memory usage goes over
-   * this value, the task will be failed by the TT. If not set, the cluster-wide
-   * configuration {@link #MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY} is used as the
-   * default value for memory requirements. If this property cascaded with
-   * {@link #MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY} becomes equal to -1, job's
-   * tasks will not be assured anything and may be killed by a TT that intends
-   * to control the total memory usage of the tasks via memory management
-   * functionality. If the memory management functionality is disabled on a TT,
-   * this value is ignored.
-   * 
-   * <p>
-   * 
-   * This value should also be not more than the cluster-wide configuration
-   * {@link #UPPER_LIMIT_ON_TASK_VMEM_PROPERTY} which has to be set by the site
-   * administrators.
-   * 
-   * <p>
-   * 
-   * This value may be used by schedulers that support scheduling based on job's
-   * memory requirements. In general, a task of this job will be scheduled on a
-   * TaskTracker only if the amount of virtual memory still unoccupied on the
-   * TaskTracker is greater than or equal to this value. But different
-   * schedulers can take different decisions. Please refer to the documentation
-   * of the scheduler being configured to see if it does memory based scheduling
-   * and if it does, how this property is used by that scheduler.
-   * 
-   * @see #setMaxVirtualMemoryForTask(long)
-   * @see #getMaxVirtualMemoryForTask()
-   */
-  public static final String MAPRED_TASK_MAXVMEM_PROPERTY =
-      "mapred.task.maxvmem";
-
-  /**
-   * The maximum amount of physical memory any task of a job will use.
-   * 
-   * <p>
-   * 
-   * This value may be used by schedulers that support scheduling based on job's
-   * memory requirements. In general, a task of this job will be scheduled on a
-   * TaskTracker, only if the amount of physical memory still unoccupied on the
-   * TaskTracker is greater than or equal to this value. But different
-   * schedulers can take different decisions. Please refer to the documentation
-   * of the scheduler being configured to see how it does memory based
-   * scheduling and how this variable is used by that scheduler.
-   * 
-   * @see #setMaxPhysicalMemoryForTask(long)
-   * @see #getMaxPhysicalMemoryForTask()
-   */
-  public static final String MAPRED_TASK_MAXPMEM_PROPERTY =
-      "mapred.task.maxpmem";
-
-  /**
-   * Cluster-wide configuration to be set by the site administrators that
-   * provides an upper limit on the maximum virtual memory that can be specified
-   * by a job. The job configuration {@link #MAPRED_TASK_MAXVMEM_PROPERTY} and
-   * the cluster-wide configuration
-   * {@link #MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY} should, by definition, be
-   * less than this value. If the job configuration
-   * {@link #MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY} is more than this value,
-   * depending on the scheduler being configured, the job may be rejected or the
-   * job configuration may just be ignored.
-   * 
-   * <p>
-   * 
-   * If it is not set on a TaskTracker, TaskTracker's memory management will be
-   * disabled.
-   */
-  public static final String UPPER_LIMIT_ON_TASK_VMEM_PROPERTY =
-      "mapred.task.limit.maxvmem";
+  static final String MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY =
+      "mapred.job.reduce.memory.mb";
 
   /**
    * Construct a map/reduce job configuration.
@@ -1491,53 +1391,23 @@ public class JobConf extends Configuration {
   public String getJobLocalDir() {
     return get("job.local.dir");
   }
-  
-  /**
-   * The maximum amount of memory any task of this job will use. See
-   * {@link #MAPRED_TASK_MAXVMEM_PROPERTY}
-   * 
-   * @return The maximum amount of memory any task of this job will use, in
-   *         bytes.
-   * @see #setMaxVirtualMemoryForTask(long)
-   */
-  public long getMaxVirtualMemoryForTask() {
-    return getLong(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
+
+  long getMemoryForMapTask() {
+    return getLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY,
+        DISABLED_MEMORY_LIMIT);
   }
 
-  /**
-   * Set the maximum amount of memory any task of this job can use. See
-   * {@link #MAPRED_TASK_MAXVMEM_PROPERTY}
-   * 
-   * @param vmem Maximum amount of virtual memory in bytes any task of this job
-   *          can use.
-   * @see #getMaxVirtualMemoryForTask()
-   */
-  public void setMaxVirtualMemoryForTask(long vmem) {
-    setLong(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, vmem);
+  void setMemoryForMapTask(long mem) {
+    setLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, mem);
   }
 
-  /**
-   * The maximum amount of physical memory any task of this job will use. See
-   * {@link #MAPRED_TASK_MAXPMEM_PROPERTY}
-   * 
-   * @return The maximum amount of physical memory any task of this job will
-   *         use, in bytes.
-   * @see #setMaxPhysicalMemoryForTask(long)
-   */
-  public long getMaxPhysicalMemoryForTask() {
-    return getLong(JobConf.MAPRED_TASK_MAXPMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
+  long getMemoryForReduceTask() {
+    return getLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
+        DISABLED_MEMORY_LIMIT);
   }
 
-  /**
-   * Set the maximum amount of physical memory any task of this job can use. See
-   * {@link #MAPRED_TASK_MAXPMEM_PROPERTY}
-   * 
-   * @param pmem Maximum amount of physical memory in bytes any task of this job
-   *          can use.
-   * @see #getMaxPhysicalMemoryForTask()
-   */
-  public void setMaxPhysicalMemoryForTask(long pmem) {
-    setLong(JobConf.MAPRED_TASK_MAXPMEM_PROPERTY, pmem);
+  void setMemoryForReduceTask(long mem) {
+    setLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, mem);
   }
 
   /**
@@ -1559,6 +1429,91 @@ public class JobConf extends Configuration {
     set("mapred.job.queue.name", queueName);
   }
   
+  /**
+   * Get the per-node limit on running maps for the job
+   * 
+   * @return per-node running map limit
+   */
+  public int getMaxMapsPerNode() {
+    return getInt("mapred.max.maps.per.node", -1);
+  }
+  
+  /**
+   * Set the per-node limit on running maps for the job
+   * 
+   * @param limit per-node running map limit
+   */
+  public void setMaxMapsPerNode(int limit) {
+    setInt("mapred.max.maps.per.node", limit);
+  }
+  
+  /**
+   * Get the per-node limit on running reduces for the job
+   * 
+   * @return per-node running reduce limit
+   */
+  public int getMaxReducesPerNode() {
+    return getInt("mapred.max.reduces.per.node", -1);
+  }
+  
+  /**
+   * Set the per-node limit on running reduces for the job
+   * 
+   * @param limit per-node running reduce limit
+   */
+  public void setMaxReducesPerNode(int limit) {
+    setInt("mapred.max.reduces.per.node", limit);
+  }
+  
+  /**
+   * Get the cluster-wide limit on running maps for the job
+   * 
+   * @return cluster-wide running map limit
+   */
+  public int getRunningMapLimit() {
+    return getInt("mapred.running.map.limit", -1);
+  }
+  
+  /**
+   * Set the cluster-wide limit on running maps for the job
+   * 
+   * @param limit cluster-wide running map limit
+   */
+  public void setRunningMapLimit(int limit) {
+    setInt("mapred.running.map.limit", limit);
+  }
+  
+  /**
+   * Get the cluster-wide limit on running reduces for the job
+   * 
+   * @return cluster-wide running reduce limit
+   */
+  public int getRunningReduceLimit() {
+    return getInt("mapred.running.reduce.limit", -1);
+  }
+  
+  /**
+   * Set the cluster-wide limit on running reduces for the job
+   * 
+   * @param limit cluster-wide running reduce limit
+   */
+  public void setRunningReduceLimit(int limit) {
+    setInt("mapred.running.reduce.limit", limit);
+  }
+  
+  /**
+   * Normalize the negative values in configuration
+   * 
+   * @param val
+   * @return normalized value
+   */
+  public static long normalizeMemoryConfigValue(long val) {
+    if (val < 0) {
+      val = DISABLED_MEMORY_LIMIT;
+    }
+    return val;
+  }
+
   /** 
    * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
