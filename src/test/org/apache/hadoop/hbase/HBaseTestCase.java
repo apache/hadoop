@@ -212,11 +212,11 @@ public abstract class HBaseTestCase extends TestCase {
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
    * @param r
-   * @param column
+   * @param columnFamily
    * @throws IOException
    * @return count of what we added.
    */
-  protected static long addContent(final HRegion r, final byte [] column)
+  protected static long addContent(final HRegion r, final byte [] columnFamily)
   throws IOException {
     byte [] startKey = r.getRegionInfo().getStartKey();
     byte [] endKey = r.getRegionInfo().getEndKey();
@@ -224,7 +224,7 @@ public abstract class HBaseTestCase extends TestCase {
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    return addContent(new HRegionIncommon(r), Bytes.toString(column),
+    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily),
         null,
       startKeyBytes, endKey, -1);
   }
@@ -234,13 +234,13 @@ public abstract class HBaseTestCase extends TestCase {
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
    * @param updater  An instance of {@link Incommon}.
-   * @param column
+   * @param columnFamily
    * @throws IOException
    * @return count of what we added.
    */
   protected static long addContent(final Incommon updater,
-                                   final String column) throws IOException {
-    return addContent(updater, column, START_KEY_BYTES, null);
+                                   final String columnFamily) throws IOException {
+    return addContent(updater, columnFamily, START_KEY_BYTES, null);
   }
 
   protected static long addContent(final Incommon updater, final String family,
@@ -253,16 +253,16 @@ public abstract class HBaseTestCase extends TestCase {
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
    * @param updater  An instance of {@link Incommon}.
-   * @param column
+   * @param columnFamily
    * @param startKeyBytes Where to start the rows inserted
    * @param endKey Where to stop inserting rows.
    * @return count of what we added.
    * @throws IOException
    */
-  protected static long addContent(final Incommon updater, final String column,
+  protected static long addContent(final Incommon updater, final String columnFamily,
       final byte [] startKeyBytes, final byte [] endKey)
   throws IOException {
-    return addContent(updater, column, null, startKeyBytes, endKey, -1);
+    return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1);
   }
   
   protected static long addContent(final Incommon updater, final String family,
@@ -283,7 +283,8 @@ public abstract class HBaseTestCase extends TestCase {
    * @return count of what we added.
    * @throws IOException
    */
-  protected static long addContent(final Incommon updater, final String columnFamily,
+  protected static long addContent(final Incommon updater,
+                                   final String columnFamily,
                                    final String column,
       final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {
@@ -308,8 +309,9 @@ public abstract class HBaseTestCase extends TestCase {
               put.setTimeStamp(ts);
             }
             try {
-              byte[][] split = KeyValue.parseColumn(Bytes.toBytes(column));
-              put.add(split[0], split[1], t);
+              put.add(Bytes.toBytes(columnFamily),
+                  (column == null ? null : Bytes.toBytes(column)),
+                  t);
               updater.put(put);
               count++;
             } catch (RuntimeException ex) {
