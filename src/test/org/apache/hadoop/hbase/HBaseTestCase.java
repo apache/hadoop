@@ -295,7 +295,8 @@ public abstract class HBaseTestCase extends TestCase {
               put.setTimeStamp(ts);
             }
             try {
-              put.add(Bytes.toBytes(column), null, t);
+              byte[][] split = KeyValue.parseColumn(Bytes.toBytes(column));
+              put.add(split[0], split[1], t);
               updater.put(put);
               count++;
             } catch (RuntimeException ex) {
