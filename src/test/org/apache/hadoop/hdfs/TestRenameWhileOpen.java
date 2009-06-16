@@ -82,6 +82,17 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       fs.mkdirs(dir3);
       fs.rename(dir1, dir3);
 
+      // create file3
+      Path file3 = new Path(dir3, "file3");
+      FSDataOutputStream stm3 = TestFileCreation.createFile(fs, file3, 1);
+      TestFileCreation.writeFile(stm3);
+      // rename file3 to some bad name
+      try {
+        fs.rename(file3, new Path(dir3, "$ "));
+      } catch(Exception e) {
+        e.printStackTrace();
+      }
+      
       // restart cluster with the same namenode port as before.
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
