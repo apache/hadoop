@@ -92,9 +92,8 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1 /user/dir3
    */
   public void testWhileOpenRenameParent() throws IOException {
-    /* XXX This test is temporarily disabled since sync() is not supported in
-     * 0.18.3. This is a 0.18.3 only change. */
-    if (true) return;
+    /* XXX parts of This test are temporarily disabled since sync() is not
+     * supported in 0.18.3. This is a 0.18.3 only change. */
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
@@ -111,6 +110,8 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       fs = cluster.getFileSystem();
       final int nnport = cluster.getNameNodePort();
 
+      Path dir3 = new Path("/user/dir3");
+      if (false) {// Removed in 0.18
       // create file1.
       Path dir1 = new Path("/user/a+b/dir1");
       Path file1 = new Path(dir1, "file1");
@@ -130,10 +131,24 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       stm2.sync();
 
       // move dir1 while file1 is open
-      Path dir3 = new Path("/user/dir3");
       fs.mkdirs(dir3);
       fs.rename(dir1, dir3);
-
+      }
+      
+      // create file3
+      Path file3 = new Path(dir3, "file3");
+      FSDataOutputStream stm3 = TestFileCreation.createFile(fs, file3, 1);
+      writeFile(stm3);
+      // rename file3 to some bad name
+      try {
+        fs.rename(file3, new Path(dir3, "$ "));
+      } catch(Exception e) {
+        e.printStackTrace();
+      }
+      try { // ignore the io excpeiton while closing.
+        stm3.close();
+      } catch (IOException ignored) {}
+      
       // restart cluster with the same namenode port as before.
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
@@ -151,11 +166,13 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
+      /* XXX Removed in 0.18
       Path newfile = new Path("/user/dir3/dir1", "file1");
       assertTrue(!fs.exists(file1));
       assertTrue(fs.exists(file2));
       assertTrue(fs.exists(newfile));
       checkFullFile(fs, newfile);
+      */
     } finally {
       fs.close();
       cluster.shutdown();
