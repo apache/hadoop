@@ -43,6 +43,7 @@
       fully distributed (More on this below). The Zookeeper addition changes
       how some core HBase configuration is done.
       </li>
+  <li>Hosts must be able to resolve the fully-qualified domain name of the master.</li>
   <li>HBase currently is a file handle hog.  The usual default of
   1024 on *nix systems is insufficient if you are loading any significant
   amount of data into regionservers.  See the
@@ -89,8 +90,6 @@ What follows presumes you have obtained a copy of HBase,
 see <a href="http://hadoop.apache.org/hbase/releases.html">Releases</a>, and are installing
 for the first time. If upgrading your
 HBase instance, see <a href="#upgrading">Upgrading</a>.
-If you have used HBase in the past,
-please read carefully.  Some core configuration has changed in 0.20.x HBase.
 </p>
 <p>Three modes are described: standalone, pseudo-distributed (where all servers are run on
 a single host), and distributed.  If new to hbase start by following the standalone instruction.
