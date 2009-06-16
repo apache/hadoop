@@ -252,15 +252,24 @@ ${build.ivy.report.dir}
 
   <target name="tested" depends="junit,junitreport" />
 
-  <target name="svn-init" >
-   <presetdef name="svn" >
-    <exec executable="svn" failonerror="true">
-    </exec>
-   </presetdef>
-   <property name="trunk" 
-    value="https://svn.apache.org/repos/asf/hadoop/core/trunk"/>
+  <target name="svn-init">
+    <presetdef name="svn">
+      <exec executable="svn" failonerror="true">
+      </exec>
+    </presetdef>
+    <property name="issue" value="HADOOP-3628"/>
+    <property name="hadoop-svn"
+        value="https://svn.apache.org/repos/asf/hadoop/core"/>
+    <property name="trunk"
+        value="${hadoop-svn}/trunk"/>
+    <property name="branch"
+        value="${hadoop-svn}/branches/${issue}-2"/>
+    <property name="patches.dir" location="../outgoing"/>
+    <mkdir dir="${patches.dir}" />
+    <property name="patch.version" value="1" />
+    <property name="patch.file" location="${patches.dir}/${issue}-${patch.version}.patch" />
   </target>
-  
+
   <target name="svn-merge" depends="svn-init"
     description="merge in the trunk"  >
     <svn>
@@ -294,8 +303,8 @@ ${build.ivy.report.dir}
       description="diff against trunk"  >
     <svn>
       <arg value="diff" />
-      <arg value="https://svn.apache.org/repos/asf/hadoop/core/trunk"/>
-      <arg value="https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2"/>
+      <arg value="${trunk}"/>
+      <arg value="${branch}"/>
     </svn>
   </target>
 
@@ -313,10 +322,9 @@ ${build.ivy.report.dir}
         value="src/test/hdfs/org/apache/hadoop/hdfs" />
     <property name="test/mapred"
         value="src/test/mapred/org/apache/hadoop/mapred" />
-
     <svn>
       <arg value="changelist"/>
-      <arg value="HADOOP-3628"/>
+      <arg value="${issue}"/>
       <!-- core -->
       <arg value="${core/hadoop}/http/HttpServer.java" />
       <!-- question this one -->
@@ -347,5 +355,19 @@ ${build.ivy.report.dir}
   </target>
 
 
+  <!--
+  
+  -->
+  <target name="svn-diff-src" depends="svn-init"
+      description="diff against trunk"  >
+    <echo> Writing to ${patch.file}</echo>
+    <svn output="${patch.file}" >
+      <arg value="diff" />
+      <arg value="${trunk}/src" />
+      <arg value="${branch}/src" />
+      <arg value="--changelist" />
+      <arg value="${issue}"/>
+    </svn>
+  </target>
 
 </project>
