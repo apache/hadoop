@@ -21,8 +21,8 @@ Release 0.20.0 - Unreleased
    HBASE-1411  Remove HLogEdit.
    HBASE-1357  If one sets the hbase.master to 0.0.0.0 non local regionservers
                can't find the master
-   HBASE-1304  New client server implementation of how gets and puts are handled
-               (holstad, jgray, rawson, stack)
+   HBASE-1304  New client server implementation of how gets and puts are
+               handled (holstad, jgray, rawson, stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
@@ -190,6 +190,8 @@ Release 0.20.0 - Unreleased
                (jgray via stack)
    HBASE-1480  compaction file not cleaned up after a crash/OOME server
                (Evgeny Ryabitskiy via Stack)
+   HBASE-1529  familyMap not invalidated when a Result is (re)read as a
+               Writable
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
