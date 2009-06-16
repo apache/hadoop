@@ -539,17 +539,14 @@ class Memcache {
   }
 
   /**
-   * @return scanner on memcache and snapshot in this order (if snapshot is
-   * empty, returns only memcache scanner).
+   * @return scanner on memcache and snapshot in this order.
    */
   KeyValueScanner [] getScanners() {
     this.lock.readLock().lock();
     try {
-      boolean noss = this.snapshot == null || this.snapshot.isEmpty();
-      KeyValueScanner [] scanners =
-        new KeyValueScanner[noss? 1: 2];
+      KeyValueScanner [] scanners = new KeyValueScanner[2];
       scanners[0] = new MemcacheScanner(this.memcache);
-      if (!noss) scanners[1] = new MemcacheScanner(this.snapshot);
+      scanners[1] = new MemcacheScanner(this.snapshot);
       return scanners;
     } finally {
       this.lock.readLock().unlock();

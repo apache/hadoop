@@ -159,7 +159,7 @@ public class HRegion implements HConstants { // , Writable{
     volatile boolean writesEnabled = true;
     // Set if region is read-only
     volatile boolean readOnly = false;
-    
+
     /**
      * Set flags that make this region read-only.
      */

@@ -1857,7 +1857,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     List<Result> results = new ArrayList<Result>();
     try {
-	long start = System.currentTimeMillis();
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = scanners.get(scannerName);
       if (s == null) {
@@ -1881,10 +1880,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
   } 
-  
-  
-  
-  
+
   public void close(final long scannerId) throws IOException {
     try {
       checkOpen();

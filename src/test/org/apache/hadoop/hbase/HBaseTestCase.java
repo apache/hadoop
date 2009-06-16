@@ -225,6 +225,7 @@ public abstract class HBaseTestCase extends TestCase {
       startKeyBytes = START_KEY_BYTES;
     }
     return addContent(new HRegionIncommon(r), Bytes.toString(column),
+        null,
       startKeyBytes, endKey, -1);
   }
 
@@ -237,9 +238,14 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    * @return count of what we added.
    */
-  protected static long addContent(final Incommon updater, final String column)
-  throws IOException {
+  protected static long addContent(final Incommon updater,
+                                   final String column) throws IOException {
     return addContent(updater, column, START_KEY_BYTES, null);
+  }
+
+  protected static long addContent(final Incommon updater, final String family,
+                                   final String column) throws IOException {
+    return addContent(updater, family, column, START_KEY_BYTES, null);
   }
 
   /**
@@ -256,7 +262,13 @@ public abstract class HBaseTestCase extends TestCase {
   protected static long addContent(final Incommon updater, final String column,
       final byte [] startKeyBytes, final byte [] endKey)
   throws IOException {
-    return addContent(updater, column, startKeyBytes, endKey, -1);
+    return addContent(updater, column, null, startKeyBytes, endKey, -1);
+  }
+  
+  protected static long addContent(final Incommon updater, final String family,
+                                   final String column, final byte [] startKeyBytes,
+                                   final byte [] endKey) throws IOException {
+    return addContent(updater, family, column, startKeyBytes, endKey, -1);
   }
   
   /**
@@ -271,7 +283,8 @@ public abstract class HBaseTestCase extends TestCase {
    * @return count of what we added.
    * @throws IOException
    */
-  protected static long addContent(final Incommon updater, final String column,
+  protected static long addContent(final Incommon updater, final String columnFamily,
+                                   final String column,
       final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {
     long count = 0;

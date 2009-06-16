@@ -949,8 +949,7 @@ public class KeyValue implements Writable, HeapSize {
     byte [] result = new byte[fl + 1 + ql];
     System.arraycopy(this.bytes, fo, result, 0, fl);
     result[fl] = COLUMN_FAMILY_DELIMITER;
-    System.arraycopy(this.bytes, fo + fl, result,
-      fl + 1, ql);
+    System.arraycopy(this.bytes, fo + fl, result, fl + 1, ql);
     return result;
   }
 

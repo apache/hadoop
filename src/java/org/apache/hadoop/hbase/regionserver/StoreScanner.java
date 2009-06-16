@@ -70,10 +70,10 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   }
 
   // Constructor for testing.
-  StoreScanner(Scan scan, byte [] colFamily,
-      long ttl, KeyValue.KVComparator comparator,
+  StoreScanner(final Scan scan, final byte [] colFamily, final long ttl,
+      final KeyValue.KVComparator comparator,
       final NavigableSet<byte[]> columns,
-      KeyValueScanner [] scanners) {
+      final KeyValueScanner [] scanners) {
     this.store = null;
     this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl, 
         comparator.getRawComparator(), scan.getMaxVersions());
@@ -82,9 +82,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     for(KeyValueScanner scanner : scanners) {
       scanner.seek(matcher.getStartKey());
     }
-
-    heap = new KeyValueHeap(
-        scanners, comparator);
+    heap = new KeyValueHeap(scanners, comparator);
   }
 
   /*
@@ -134,8 +132,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     matcher.setRow(peeked.getRow());
     KeyValue kv;
     while((kv = this.heap.peek()) != null) {
-      QueryMatcher.MatchCode mc = matcher.match(kv);
-      switch(mc) {
+      QueryMatcher.MatchCode qcode = matcher.match(kv);
+      switch(qcode) {
         case INCLUDE:
           KeyValue next = this.heap.next();
           result.add(next);
@@ -175,6 +173,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
         case SKIP:
           this.heap.next();
           break;
+          
+        default:
+          throw new RuntimeException("UNEXPECTED");
       }
     }
     if(result.size() > 0) {
@@ -205,7 +206,6 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     if (this.closing.get()) return;
     KeyValue topKey = this.peek();
     if (topKey == null) return;
-
     List<KeyValueScanner> scanners = getScanners();
 
     // Seek all scanners to the initial key

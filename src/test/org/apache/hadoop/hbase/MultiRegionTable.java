@@ -56,7 +56,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
     Bytes.toBytes("yyy")
   };
   
-  protected final byte [] columnName;
+  protected final byte [] columnFamily;
   protected HTableDescriptor desc;
 
   /**
@@ -64,7 +64,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
    */
   public MultiRegionTable(final String columnName) {
     super();
-    this.columnName = Bytes.toBytes(columnName);
+    this.columnFamily = Bytes.toBytes(columnName);
     // These are needed for the new and improved Map/Reduce framework
     System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
@@ -101,7 +101,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
 
   private HRegion createARegion(byte [] startKey, byte [] endKey) throws IOException {
     HRegion region = createNewHRegion(desc, startKey, endKey);
-    addContent(region, this.columnName);
+    addContent(region, this.columnFamily);
     closeRegionAndDeleteLog(region);
     return region;
   }

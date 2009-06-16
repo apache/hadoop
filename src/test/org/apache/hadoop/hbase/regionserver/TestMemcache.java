@@ -27,37 +27,90 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
+import junit.framework.TestCase;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import junit.framework.TestCase;
 
 /** memcache test case */
 public class TestMemcache extends TestCase {
-  
+  private final Log LOG = LogFactory.getLog(this.getClass());
   private Memcache memcache;
-
   private static final int ROW_COUNT = 10;
-
   private static final int QUALIFIER_COUNT = 10;
-  
   private static final byte [] FAMILY = Bytes.toBytes("column");
-
-  private static final int FIRST_ROW = 1;
-  private static final int NUM_VALS = 1000;
   private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
   private static final String CONTENTSTR = "contentstr";
-  private static final String ANCHORNUM = "anchor:anchornum-";
-  private static final String ANCHORSTR = "anchorstr";
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
     this.memcache = new Memcache();
+  }
+
+  /** 
+   * Test memcache snapshot happening while scanning.
+   * @throws IOException
+   */
+  public void testScanAcrossSnapshot() throws IOException {
+    int rowCount = addRows(this.memcache);
+    KeyValueScanner [] memcachescanners = this.memcache.getScanners();
+    Scan scan = new Scan();
+    List<KeyValue> result = new ArrayList<KeyValue>();
+    StoreScanner s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
+      this.memcache.comparator, null, memcachescanners);
+    int count = 0;
+    try {
+      while (s.next(result)) {
+        LOG.info(result);
+        count++;
+        result.clear();
+      }
+    } finally {
+      s.close();
+    }
+    assertEquals(rowCount, count);
+    // Now assert can count same number even if a snapshot mid-scan.
+    s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
+      this.memcache.comparator, null, memcachescanners);
+    count = 0;
+    try {
+      while (s.next(result)) {
+        LOG.info(result);
+        // Assert the stuff is coming out in right order.
+        assertTrue(Bytes.compareTo(Bytes.toBytes(count), result.get(0).getRow()) == 0);
+        count++;
+        if (count == 2) {
+          this.memcache.snapshot();
+          LOG.info("Snapshotted");
+        }
+        result.clear();
+      }
+    } finally {
+      s.close();
+    }
+    assertEquals(rowCount, count);
+  }
+
+  /** 
+   * Test memcache snapshots
+   * @throws IOException
+   */
+  public void testSnapshotting() throws IOException {
+    final int snapshotCount = 5;
+    // Add some rows, run a snapshot. Do it a few times.
+    for (int i = 0; i < snapshotCount; i++) {
+      addRows(this.memcache);
+      runSnapshot(this.memcache);
+      Set<KeyValue> ss = this.memcache.getSnapshot();
+      assertEquals("History not being cleared", 0, ss.size());
+    }
   }
 
   public void testMultipleVersionsSimple() throws Exception {
@@ -112,23 +165,6 @@ public class TestMemcache extends TestCase {
     }
   }
 
-
-  /** 
-   * Test memcache snapshots
-   * @throws IOException
-   */
-  public void testSnapshotting() throws IOException {
-    final int snapshotCount = 5;
-    // Add some rows, run a snapshot. Do it a few times.
-    for (int i = 0; i < snapshotCount; i++) {
-      addRows(this.memcache);
-      runSnapshot(this.memcache);
-      Set<KeyValue> ss = this.memcache.getSnapshot();
-      assertEquals("History not being cleared", 0, ss.size());
-    }
-  }  
-  
-  
   //////////////////////////////////////////////////////////////////////////////
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
@@ -550,9 +586,10 @@ public class TestMemcache extends TestCase {
   /**
    * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
    * @param hmc Instance to add rows to.
+   * @return How many rows we added.
    * @throws IOException 
    */
-  private void addRows(final Memcache hmc) {
+  private int addRows(final Memcache hmc) {
     for (int i = 0; i < ROW_COUNT; i++) {
       long timestamp = System.currentTimeMillis();
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
@@ -561,6 +598,7 @@ public class TestMemcache extends TestCase {
         hmc.add(new KeyValue(row, FAMILY, qf, timestamp, qf));
       }
     }
+    return ROW_COUNT;
   }
 
   private void runSnapshot(final Memcache hmc) throws UnexpectedException {

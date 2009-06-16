@@ -361,20 +361,19 @@ public class TestScanner extends HBaseTestCase {
   }
 
   /**
+   * Tests to do a sync flush during the middle of a scan. This is testing the StoreScanner
+   * update readers code essentially.  This is not highly concurrent, since its all 1 thread.
    * HBase-910.
    * @throws Exception
    */
-  public void testScanAndConcurrentFlush() throws Exception {
+  public void testScanAndSyncFlush() throws Exception {
     this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
     HRegionIncommon hri = new HRegionIncommon(r);
     try {
-      String columnString = Bytes.toString(HConstants.CATALOG_FAMILY) + ':' +
-      Bytes.toString(HConstants.REGIONINFO_QUALIFIER);
-      LOG.info("Added: " + addContent(hri, columnString));
-      int count = count(hri, -1);
-      assertEquals(count, count(hri, 100));
-      assertEquals(count, count(hri, 0));
-      assertEquals(count, count(hri, count - 1));
+        LOG.info("Added: " + addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+            Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      int count = count(hri, -1, false);
+      assertEquals(count, count(hri, 100, false)); // do a sync flush.
     } catch (Exception e) {
       LOG.error("Failed", e);
       throw e;
@@ -384,26 +383,73 @@ public class TestScanner extends HBaseTestCase {
       shutdownDfs(cluster);
     }
   }
+
+  /**
+   * Tests to do a concurrent flush (using a 2nd thread) while scanning.  This tests both
+   * the StoreScanner update readers and the transition from memcache -> snapshot -> store file.
+   *
+   * @throws Exception
+   */
+  public void testScanAndRealConcurrentFlush() throws Exception {
+    this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
+    HRegionIncommon hri = new HRegionIncommon(r);
+    try {
+        LOG.info("Added: " + addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+            Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      int count = count(hri, -1, false);
+      assertEquals(count, count(hri, 100, true)); // do a true concurrent background thread flush
+    } catch (Exception e) {
+      LOG.error("Failed", e);
+      throw e;
+    } finally {
+      this.r.close();
+      this.r.getLog().closeAndDelete();
+      shutdownDfs(cluster);
+    }
+  }
+
  
   /*
    * @param hri Region
    * @param flushIndex At what row we start the flush.
+   * @param concurrent if the flush should be concurrent or sync.
    * @return Count of rows found.
    * @throws IOException
    */
-  private int count(final HRegionIncommon hri, final int flushIndex)
+  private int count(final HRegionIncommon hri, final int flushIndex,
+                    boolean concurrent)
   throws IOException {
     LOG.info("Taking out counting scan");
     ScannerIncommon s = hri.getScanner(HConstants.CATALOG_FAMILY, EXPLICIT_COLS,
         HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP);
     List<KeyValue> values = new ArrayList<KeyValue>();
     int count = 0;
+    boolean justFlushed = false;
     while (s.next(values)) {
+      if (justFlushed) {
+        LOG.info("after next() just after next flush");
+        justFlushed=false;
+      }
       count++;
       if (flushIndex == count) {
         LOG.info("Starting flush at flush index " + flushIndex);
-        hri.flushcache();
-        LOG.info("Finishing flush");
+        Thread t = new Thread() {
+          public void run() {
+            try {
+              hri.flushcache();
+              LOG.info("Finishing flush");
+            } catch (IOException e) {
+              LOG.info("Failed flush cache");
+            }
+          }
+        };
+        if (concurrent) {
+          t.start(); // concurrently flush.
+        } else {
+          t.run(); // sync flush
+        }
+        LOG.info("Continuing on after kicking off background flush");
+        justFlushed = true;
       }
     }
     s.close();
