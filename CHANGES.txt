@@ -2187,6 +2187,10 @@ Release 0.18.4 - Unreleased
 
     HADOOP-5644. Namenode is stuck in safe mode. (suresh Srinivas via hairong)
 
+    HADOOP-6017. Lease Manager in NameNode does not handle certain characters
+    in filenames. This results in fatal errors in Secondary NameNode and while
+    restrating NameNode. (Tsz Wo (Nicholas), SZE via rangadi)
+
 Release 0.18.3 - 2009-01-27
 
   IMPROVEMENTS
