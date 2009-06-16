@@ -823,6 +823,9 @@ Trunk (unreleased changes)
     LD_LIBRARY_PATH and other environment variables.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-4041. IsolationRunner does not work as documented.
+    (Philip Zeyliger via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

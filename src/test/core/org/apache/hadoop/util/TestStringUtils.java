@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import junit.framework.TestCase;
 
 public class TestStringUtils extends TestCase {
@@ -117,5 +120,16 @@ public class TestStringUtils extends TestCase {
     assertEquals(0L, StringUtils.TraditionalBinaryPrefix.string2long("0"));
     assertEquals(-1259520L, StringUtils.TraditionalBinaryPrefix.string2long("-1230k"));
     assertEquals(956703965184L, StringUtils.TraditionalBinaryPrefix.string2long("891g"));
+  }
+
+  public void testJoin() {
+    List<String> s = new ArrayList<String>();
+    s.add("a");
+    s.add("b");
+    s.add("c");
+    assertEquals("", StringUtils.join(":", s.subList(0, 0)));
+    assertEquals("a", StringUtils.join(":", s.subList(0, 1)));
+    assertEquals("a:b", StringUtils.join(":", s.subList(0, 2)));
+    assertEquals("a:b:c", StringUtils.join(":", s.subList(0, 3)));
   }
 }
