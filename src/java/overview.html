@@ -35,6 +35,14 @@
     ssh must be installed and sshd must be running to use Hadoop's
     scripts to manage remote Hadoop daemons.
   </li>
+      <li>HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
+      Clients and Servers now must know where their ZooKeeper Quorum locations before
+      they can do anything else.
+      In basic standalone and pseudo-distributed modes, HBase manages a ZooKeeper instance
+      for you but it is required that you run a ZooKeeper Quorum when running HBase
+      fully distributed (More on this below). The Zookeeper addition changes
+      how some core HBase configuration is done.
+      </li>
   <li>HBase currently is a file handle hog.  The usual default of
   1024 on *nix systems is insufficient if you are loading any significant
   amount of data into regionservers.  See the
@@ -46,11 +54,6 @@
       <li>The clocks on cluster members should be in basic alignments.  Some skew is tolerable but
       wild skew can generate odd behaviors.  Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
       on your cluster, or an equivalent.</li>
-      <li>HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
-      In basic standalone and pseudo-distributed modes, HBase manages a ZooKeeper instance
-      for you but it is required that you run a ZooKeeper Quorum when running HBase
-      fully distributed (More on this below).
-      </li>
       <li>This is a list of patches we recommend you apply to your running Hadoop cluster:
       <ul>
       <li><a hef="https://issues.apache.org/jira/browse/HADOOP-4681">HADOOP-4681 <i>"DFSClient block read failures cause open DFSInputStream to become unusable"</i></a>. This patch will help with the ever-popular, "No live nodes contain current block".
@@ -86,6 +89,9 @@ What follows presumes you have obtained a copy of HBase,
 see <a href="http://hadoop.apache.org/hbase/releases.html">Releases</a>, and are installing
 for the first time. If upgrading your
 HBase instance, see <a href="#upgrading">Upgrading</a>.
+If you have used HBase in the past,
+please read carefully.  Some core configuration has changed in 0.20.x HBase.
+</p>
 <p>Three modes are described: standalone, pseudo-distributed (where all servers are run on
 a single host), and distributed.  If new to hbase start by following the standalone instruction.
 </p>

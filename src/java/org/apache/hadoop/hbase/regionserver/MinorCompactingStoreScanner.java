@@ -82,7 +82,7 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
   /**
    * High performance merge scan.
    * @param writer
-   * @return
+   * @return True if more.
    * @throws IOException
    */
   public boolean next(HFile.Writer writer) throws IOException {

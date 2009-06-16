@@ -142,7 +142,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     }
 
     /**
-     * @param inputColumns the columns to be placed in {@link RowResult}.
+     * @param inputColumns the columns to be placed in {@link Result}.
      */
     public void setInputColumns(final byte [][] inputColumns) {
       this.trrInputColumns = inputColumns;
@@ -304,7 +304,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
-   * @param inputColumns to be passed in {@link RowResult} to the map task.
+   * @param inputColumns to be passed in {@link Result} to the map task.
    */
   protected void setInputColumns(byte [][] inputColumns) {
     this.inputColumns = inputColumns;

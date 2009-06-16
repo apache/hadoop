@@ -193,6 +193,8 @@ Release 0.20.0 - Unreleased
    HBASE-1529  familyMap not invalidated when a Result is (re)read as a
                Writable
    HBASE-1528  Ensure scanners work across memcache snapshot
+   HBASE-1447  Take last version of the hbase-1249 design doc. and make
+               documentation out of it
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

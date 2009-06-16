@@ -47,7 +47,6 @@ public class GetDeleteTracker implements DeleteTracker {
 
   /**
    * Constructor
-   * @param comparator
    */
   public GetDeleteTracker() {}
 
