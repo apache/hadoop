@@ -373,6 +373,7 @@
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data30bytes" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data60bytes" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data120bytes" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data1k" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV18" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV19" todir="${test.cache.data}"/>
   </target>

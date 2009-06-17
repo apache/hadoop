@@ -48,16 +48,24 @@ import org.apache.hadoop.security.AccessTokenHandler;
  * methods to be called with lock held on {@link FSNamesystem}.
  */
 public class BlockManager {
+  // Default initial capacity and load factor of map
+  public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;
+  public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
+
   private final FSNamesystem namesystem;
 
-  long pendingReplicationBlocksCount = 0L, corruptReplicaBlocksCount,
-  underReplicatedBlocksCount = 0L, scheduledReplicationBlocksCount = 0L;
+  volatile long pendingReplicationBlocksCount = 0L;
+  volatile long corruptReplicaBlocksCount = 0L;
+  volatile long underReplicatedBlocksCount = 0L;
+  volatile long scheduledReplicationBlocksCount = 0L;
+  volatile long excessBlocksCount = 0L;
+  volatile long pendingDeletionBlocksCount = 0L;
 
   //
   // Mapping: Block -> { INode, datanodes, self ref }
   // Updated only in response to client-sent information.
   //
-  BlocksMap blocksMap = new BlocksMap();
+  final BlocksMap blocksMap;
 
   //
   // Store blocks-->datanodedescriptor(s) map of corrupt replicas
@@ -110,11 +118,17 @@ public class BlockManager {
   ReplicationTargetChooser replicator;
 
   BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
+    this(fsn, conf, DEFAULT_INITIAL_MAP_CAPACITY);
+  }
+  
+  BlockManager(FSNamesystem fsn, Configuration conf, int capacity)
+      throws IOException {
     namesystem = fsn;
     pendingReplications = new PendingReplicationBlocks(
         conf.getInt("dfs.replication.pending.timeout.sec",
                     -1) * 1000L);
     setConfigurationParameters(conf);
+    blocksMap = new BlocksMap(capacity, DEFAULT_MAP_LOAD_FACTOR);
   }
 
   void setConfigurationParameters(Configuration conf) throws IOException {
@@ -324,8 +338,11 @@ public class BlockManager {
 
   void removeFromInvalidates(String datanodeId, Block block) {
     Collection<Block> v = recentInvalidateSets.get(datanodeId);
-    if (v != null && v.remove(block) && v.isEmpty()) {
-      recentInvalidateSets.remove(datanodeId);
+    if (v != null && v.remove(block)) {
+      pendingDeletionBlocksCount--;
+      if (v.isEmpty()) {
+        recentInvalidateSets.remove(datanodeId);
+      }
     }
   }
 
@@ -344,6 +361,7 @@ public class BlockManager {
       recentInvalidateSets.put(dn.getStorageID(), invalidateSet);
     }
     if (invalidateSet.add(b)) {
+      pendingDeletionBlocksCount++;
       NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
           + b.getBlockName() + " is added to invalidSet of " + dn.getName());
     }
@@ -366,7 +384,8 @@ public class BlockManager {
    */
   private void dumpRecentInvalidateSets(PrintWriter out) {
     int size = recentInvalidateSets.values().size();
-    out.println("Metasave: Blocks waiting deletion from "+size+" datanodes.");
+    out.println("Metasave: Blocks " + pendingDeletionBlocksCount 
+        + " waiting deletion from " + size + " datanodes.");
     if (size == 0) {
       return;
     }
@@ -1101,10 +1120,12 @@ public class BlockManager {
       excessBlocks = new TreeSet<Block>();
       excessReplicateMap.put(dn.getStorageID(), excessBlocks);
     }
-    excessBlocks.add(block);
-    NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates: "
-        + "(" + dn.getName() + ", " + block
-        + ") is added to excessReplicateMap");
+    if (excessBlocks.add(block)) {
+      excessBlocksCount++;
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates:"
+          + " (" + dn.getName() + ", " + block
+          + ") is added to excessReplicateMap");
+    }
   }
 
   /**
@@ -1140,11 +1161,13 @@ public class BlockManager {
       Collection<Block> excessBlocks = excessReplicateMap.get(node
           .getStorageID());
       if (excessBlocks != null) {
-        excessBlocks.remove(block);
-        NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
-            + block + " is removed from excessBlocks");
-        if (excessBlocks.size() == 0) {
-          excessReplicateMap.remove(node.getStorageID());
+        if (excessBlocks.remove(block)) {
+          excessBlocksCount--;
+          NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
+              + block + " is removed from excessBlocks");
+          if (excessBlocks.size() == 0) {
+            excessReplicateMap.remove(node.getStorageID());
+          }
         }
       }
 
@@ -1243,12 +1266,7 @@ public class BlockManager {
   }
 
   int getActiveBlockCount() {
-    int activeBlocks = blocksMap.size();
-    for(Iterator<Collection<Block>> it =
-          recentInvalidateSets.values().iterator(); it.hasNext();) {
-      activeBlocks -= it.next().size();
-    }
-    return activeBlocks;
+    return blocksMap.size() - (int)pendingDeletionBlocksCount;
   }
 
   DatanodeDescriptor[] getNodes(Block block) {
@@ -1312,8 +1330,11 @@ public class BlockManager {
    * Remove a datanode from the invalidatesSet
    * @param n datanode
    */
-  void removeFromInvalidates(DatanodeInfo n) {
-    recentInvalidateSets.remove(n.getStorageID());
+  void removeFromInvalidates(String storageID) {
+    Collection<Block> blocks = recentInvalidateSets.remove(storageID);
+    if (blocks != null) {
+      pendingDeletionBlocksCount -= blocks.size();
+    }
   }
 
   /**
@@ -1331,7 +1352,7 @@ public class BlockManager {
       assert nodeId != null;
       DatanodeDescriptor dn = namesystem.getDatanode(nodeId);
       if (dn == null) {
-        recentInvalidateSets.remove(nodeId);
+        removeFromInvalidates(nodeId);
         return 0;
       }
 
@@ -1351,8 +1372,9 @@ public class BlockManager {
       }
 
       // If we send everything in this message, remove this node entry
-      if (!it.hasNext())
-        recentInvalidateSets.remove(nodeId);
+      if (!it.hasNext()) {
+        removeFromInvalidates(nodeId);
+      }
 
       dn.addBlocksToBeInvalidated(blocksToInvalidate);
 
@@ -1396,5 +1418,15 @@ public class BlockManager {
 
   void removeBlockFromMap(BlockInfo blockInfo) {
     blocksMap.removeBlock(blockInfo);
+  }
+  
+  public int getCapacity() {
+    synchronized(namesystem) {
+      return blocksMap.getCapacity();
+    }
+  }
+  
+  public float getLoadFactor() {
+    return blocksMap.getLoadFactor();
   }
 }
