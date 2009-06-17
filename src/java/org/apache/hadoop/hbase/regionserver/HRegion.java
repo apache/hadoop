@@ -1176,7 +1176,7 @@ public class HRegion implements HConstants { // , Writable{
    * @throws IOException
    */
   public void put(Put put) throws IOException {
-    this.put(put, null, true);
+    this.put(put, null, put.writeToWAL());
   }
   
   /**
@@ -1194,7 +1194,7 @@ public class HRegion implements HConstants { // , Writable{
    * @throws IOException
    */
   public void put(Put put, Integer lockid) throws IOException {
-    this.put(put, lockid, true);
+    this.put(put, lockid, put.writeToWAL());
   }
 
   /**

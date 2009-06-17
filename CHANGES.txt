@@ -361,6 +361,8 @@ Release 0.20.0 - Unreleased
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
+   HBASE-1535  Add client ability to perform mutations without the WAL
+               (Jon Gray via Stack)
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES

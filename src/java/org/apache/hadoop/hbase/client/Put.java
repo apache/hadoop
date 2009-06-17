@@ -46,6 +46,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   private byte [] row = null;
   private long timestamp = HConstants.LATEST_TIMESTAMP;
   private long lockId = -1L;
+  private boolean writeToWAL = true;
   private Map<byte [], List<KeyValue>> familyMap =
     new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
   
@@ -207,6 +208,21 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   }
   
   /**
+   * @return true if edits should be applied to WAL, false if not
+   */
+  public boolean writeToWAL() {
+    return this.writeToWAL;
+  }
+  
+  /**
+   * Set whether this Put should be written to the WAL or not.
+   * @param writeToWAL true if edits should be written to WAL, false if not
+   */
+  public void writeToWAL(boolean writeToWAL) {
+    this.writeToWAL = writeToWAL;
+  }
+  
+  /**
    * @return String 
    */
   @Override
@@ -261,6 +277,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     this.row = Bytes.readByteArray(in);
     this.timestamp = in.readLong();
     this.lockId = in.readLong();
+    this.writeToWAL = in.readBoolean();
     int numFamilies = in.readInt();
     this.familyMap = 
       new TreeMap<byte [],List<KeyValue>>(Bytes.BYTES_COMPARATOR);
@@ -286,6 +303,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.timestamp);
     out.writeLong(this.lockId);
+    out.writeBoolean(this.writeToWAL);
     out.writeInt(familyMap.size());
     for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
