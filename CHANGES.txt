@@ -960,6 +960,9 @@ Release 0.20.1 - Unreleased
     (usually HDFS) is started at nearly the same time as the JobTracker. 
     (Amar Kamat via ddas)
 
+    HADOOP-5920. Fixes a testcase failure for TestJobHistory. 
+    (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
