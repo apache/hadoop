@@ -249,7 +249,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       Scan scan = new Scan();
       scan.addFamily(CATALOG_FAMILY);
       long scannerId = server.openScanner(
-          HRegionInfo.ROOT_REGIONINFO.getRegionName(), scan);
+          m.getRegionName(), scan);
       scanMetaRegion(server, scannerId, m.getRegionName());
       return true;
     }

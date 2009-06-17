@@ -196,6 +196,8 @@ Release 0.20.0 - Unreleased
    HBASE-1447  Take last version of the hbase-1249 design doc. and make
                documentation out of it
    HBASE-1206  Scanner spins when there are concurrent inserts to column family
+   HBASE-1536  Controlled crash of regionserver not hosting meta/root leaves master 
+               in spinning state, regions not reassigned
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
