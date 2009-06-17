@@ -753,7 +753,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
         TaskID id = TaskID.forName(taskId);
         TaskInProgress tip = getTip(id);
-        
+
         updateTip(tip, task);
       }
 
@@ -766,7 +766,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
         // Check if the transaction for this attempt can be committed
         String taskStatus = attempt.get(Keys.TASK_STATUS);
-        
+
         if (taskStatus.length() > 0) {
           // This means this is an update event
           if (taskStatus.equals(Values.SUCCESS.name())) {
@@ -1282,7 +1282,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
           // check the access
           try {
-            checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB, ugi);
+            checkAccess(job, Queue.QueueOperation.SUBMIT_JOB, ugi);
           } catch (Throwable t) {
             LOG.warn("Access denied for user " + ugi.getUserName() 
                      + " in groups : [" 
@@ -3081,10 +3081,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
       throw new IOException("Queue \"" + queue + "\" does not exist");        
     }
-
+    
+    //check if queue is RUNNING
+    if(!queueManager.isRunning(queue)) {
+      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));      
+      throw new IOException("Queue \"" + queue + "\" is not running");
+    }
     // check for access
     try {
-      checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB);
+      checkAccess(job, Queue.QueueOperation.SUBMIT_JOB);
     } catch (IOException ioe) {
        LOG.warn("Access denied for user " + job.getJobConf().getUser() 
                 + ". Ignoring job " + jobId, ioe);
@@ -3132,7 +3137,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Check whether the specified operation can be performed
   // related to the job.
   private void checkAccess(JobInProgress job, 
-                                QueueManager.QueueOperation oper) 
+                                Queue.QueueOperation oper) 
                                   throws IOException {
     // get the user group info
     UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
@@ -3140,7 +3145,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   // use the passed ugi for checking the access
-  private void checkAccess(JobInProgress job, QueueManager.QueueOperation oper,
+  private void checkAccess(JobInProgress job, Queue.QueueOperation oper,
                            UserGroupInformation ugi) throws IOException {
     // get the queue
     String queue = job.getProfile().getQueueName();
@@ -3202,7 +3207,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
         
     JobStatus prevStatus = (JobStatus)job.getStatus().clone();
-    checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
+    checkAccess(job, Queue.QueueOperation.ADMINISTER_JOBS);
     job.kill();
     
     // Inform the listeners if the job is killed
@@ -3235,7 +3240,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             + " is not a valid job");
         return;
     }
-    checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
+    checkAccess(job, Queue.QueueOperation.ADMINISTER_JOBS);
     JobPriority newPriority = JobPriority.valueOf(priority);
     setJobPriority(jobid, newPriority);
   }
@@ -3460,7 +3465,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized boolean killTask(TaskAttemptID taskid, boolean shouldFail) throws IOException{
     TaskInProgress tip = taskidToTIPMap.get(taskid);
     if(tip != null) {
-      checkAccess(tip.getJob(), QueueManager.QueueOperation.ADMINISTER_JOBS);
+      checkAccess(tip.getJob(), Queue.QueueOperation.ADMINISTER_JOBS);
       return tip.killTask(taskid, shouldFail);
     }
     else {
@@ -3857,10 +3862,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   @Override
-  public void refreshQueueAcls() throws IOException{
-    LOG.info("Refreshing queue acls. requested by : " + 
+  public void refreshQueues() throws IOException{
+    LOG.info("Refreshing queue information. requested by : " + 
         UserGroupInformation.getCurrentUGI().getUserName());
-    this.queueManager.refreshAcls(new Configuration(this.conf));
+    this.queueManager.refreshQueues(new Configuration(this.conf));
   }
 
   private void initializeTaskMemoryRelatedConfig() {

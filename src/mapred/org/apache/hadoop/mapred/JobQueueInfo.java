@@ -37,6 +37,7 @@ public class JobQueueInfo implements Writable {
   //Once the scheduling information is set there is no way to recover it.
   private String schedulingInfo; 
   
+  private String queueState;
   
   /**
    * Default constructor for Job Queue Info.
@@ -56,6 +57,8 @@ public class JobQueueInfo implements Writable {
   public JobQueueInfo(String queueName, String schedulingInfo) {
     this.queueName = queueName;
     this.schedulingInfo = schedulingInfo;
+    // make it running by default.
+    this.queueState = Queue.QueueState.RUNNING.getStateName();
   }
   
   
@@ -100,15 +103,33 @@ public class JobQueueInfo implements Writable {
     }
   }
   
+  /**
+   * Set the state of the queue
+   * @param state state of the queue.
+   */
+  public void setQueueState(String state) {
+    queueState = state;
+  }
+  
+  /**
+   * Return the queue state
+   * @return the queue state.
+   */
+  public String getQueueState() {
+    return queueState;
+  }
+  
   @Override
   public void readFields(DataInput in) throws IOException {
     queueName = Text.readString(in);
+    queueState = Text.readString(in);
     schedulingInfo = Text.readString(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, queueName);
+    Text.writeString(out, queueState);
     if(schedulingInfo!= null) {
       Text.writeString(out, schedulingInfo);
     }else {

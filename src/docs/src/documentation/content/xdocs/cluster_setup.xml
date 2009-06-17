@@ -271,6 +271,16 @@
 		        TaskTrackers.
 		      </td>
   		    </tr>
+		  </table>
+      
+      <p><br/><code> conf/mapred-queues.xml</code></p>
+      
+      <table>
+       <tr>
+          <th>Parameter</th>
+          <th>Value</th> 
+          <th>Notes</th>
+       </tr>
         <tr>
           <td>mapred.queue.names</td>
           <td>Comma separated list of queues to which jobs can be submitted.</td>
@@ -303,16 +313,6 @@
             <em>mapred.queue.queue-name.acl-name</em>, defined below.
           </td>
         </tr>
-		  </table>
-      
-      <p><br/><code> conf/mapred-queue-acls.xml</code></p>
-      
-      <table>
-       <tr>
-          <th>Parameter</th>
-          <th>Value</th> 
-          <th>Notes</th>
-       </tr>
         <tr>
           <td>mapred.queue.<em>queue-name</em>.acl-submit-job</td>
           <td>List of users and groups that can submit jobs to the
@@ -338,6 +338,15 @@
             a blank at the beginning of the value. Note that an
             owner of a job can always change the priority or kill
             his/her own job, irrespective of the ACLs.
+          </td>
+        </tr>
+        <tr>
+          <td>mapred.queue.<em>queue-name</em>.state</td>
+          <td>Specifies whether <em>queue-name</em> is running or stopped</td> 
+          <td>
+            Jobs can be submitted to a queue only if it is in the 
+            <em>running</em> state. However, jobs which are already running
+            when a queue is stopped will be allowed to finish.
           </td>
         </tr>
       </table>

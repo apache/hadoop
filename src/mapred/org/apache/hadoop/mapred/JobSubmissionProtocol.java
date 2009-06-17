@@ -61,8 +61,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 21: Modified TaskID to be aware of the new TaskTypes                                 
    * Version 22: Added method getQueueAclsForCurrentUser to get queue acls info
    *             for a user
+   * Version 23: Modified the JobQueueInfo class to inlucde queue state.
+   *             Part of HADOOP-5913.            
    */
-  public static final long versionID = 22L;
+  public static final long versionID = 23L;
 
   /**
    * Allocate a name for the job.

@@ -32,8 +32,8 @@ public class TestQueueAclsForCurrentUser extends TestCase {
   private QueueManager queueManager;
   private JobConf conf = null;
   UserGroupInformation currentUGI = null;
-  String submitAcl = QueueManager.QueueOperation.SUBMIT_JOB.getAclName();
-  String adminAcl  = QueueManager.QueueOperation.ADMINISTER_JOBS.getAclName();
+  String submitAcl = Queue.QueueOperation.SUBMIT_JOB.getAclName();
+  String adminAcl  = Queue.QueueOperation.ADMINISTER_JOBS.getAclName();
 
   private void setupConfForNoAccess() throws IOException,LoginException {
     currentUGI = UnixUserGroupInformation.login();

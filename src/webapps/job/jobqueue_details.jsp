@@ -56,6 +56,7 @@ private static final long serialVersionUID = 526456771152222127L;
   <a href="jobtracker.jsp"><%=trackerName%></a>
 </h1>
 <div>
+State : <%= schedInfo.getQueueState() %> <br/>
 Scheduling Information : <%= schedulingInfoString.replaceAll("\n","<br/>") %>
 </div>
 <hr/>

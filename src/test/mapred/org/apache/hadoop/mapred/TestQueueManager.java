@@ -222,7 +222,7 @@ public class TestQueueManager extends TestCase {
     String queueConfigPath =
         System.getProperty("test.build.extraconf", "build/test/extraconf");
     File queueConfigFile =
-        new File(queueConfigPath, QueueManager.QUEUE_ACLS_FILE_NAME);
+        new File(queueConfigPath, QueueManager.QUEUE_CONF_FILE_NAME);
     File hadoopConfigFile = new File(queueConfigPath, "mapred-site.xml");
     try {
       //Setting up default mapred-site.xml
@@ -248,13 +248,13 @@ public class TestQueueManager extends TestCase {
       UserGroupInformation ugi = UnixUserGroupInformation.getCurrentUGI();
       //Job Submission should fail because ugi to be used is set to blank.
       assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
+          queueManager.hasAccess("default", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
+          queueManager.hasAccess("q1", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
+          queueManager.hasAccess("q2", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       
       //Test job submission as alternate user.
@@ -263,7 +263,7 @@ public class TestQueueManager extends TestCase {
       UserGroupInformation alternateUgi = 
         UserGroupInformation.readFrom(alternateUserConfig);
       assertTrue("Alternate User Job Submission failed before refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
+          queueManager.hasAccess("q2", Queue.QueueOperation.
               SUBMIT_JOB, alternateUgi));
       
       //Set acl for the current user.
@@ -273,19 +273,19 @@ public class TestQueueManager extends TestCase {
       //write out queue-acls.xml.
       UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
       //refresh configuration
-      queueManager.refreshAcls(conf);
+      queueManager.refreshQueues(conf);
       //Submission should succeed
       assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
+          queueManager.hasAccess("default", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
+          queueManager.hasAccess("q1", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
+          queueManager.hasAccess("q2", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertFalse("Alternate User Job Submission succeeded after refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
+          queueManager.hasAccess("q2", Queue.QueueOperation.
               SUBMIT_JOB, alternateUgi));
       //delete the ACL file.
       queueConfigFile.delete();
@@ -294,9 +294,9 @@ public class TestQueueManager extends TestCase {
       hadoopConfProps.put("mapred.acls.enabled", "true");
       hadoopConfProps.put("mapred.queue.default.acl-submit-job", ugi.getUserName());
       UtilsForTests.setUpConfigFile(hadoopConfProps, hadoopConfigFile);
-      queueManager.refreshAcls(conf);
+      queueManager.refreshQueues(conf);
       assertTrue("User Job Submission failed after refresh and no queue acls file.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
+          queueManager.hasAccess("default", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
     } finally{
       if(queueConfigFile.exists()) {
@@ -308,11 +308,98 @@ public class TestQueueManager extends TestCase {
     }
   }
 
+
+
+  /**
+   * Test to verify refreshing of queue properties by using MRAdmin tool.
+   *
+   * @throws Exception
+   */
+  public void testStateRefresh() throws Exception {
+    String queueConfigPath =
+        System.getProperty("test.build.extraconf", "build/test/extraconf");
+    File queueConfigFile =
+        new File(queueConfigPath, QueueManager.QUEUE_CONF_FILE_NAME);
+    try {
+      //Setting up default mapred-site.xml
+      Properties queueConfProps = new Properties();
+      //these properties should be retained.
+      queueConfProps.put("mapred.queue.names", "default,qu1");
+      queueConfProps.put("mapred.acls.enabled", "true");
+      //These property should always be overridden
+      queueConfProps.put("mapred.queue.default.state", "running");
+      queueConfProps.put("mapred.queue.qu1.state", "stopped");
+      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
+
+      //Create a new configuration to be used with QueueManager
+      JobConf conf = new JobConf();
+      setUpCluster(conf);
+      QueueManager queueManager = 
+        this.miniMRCluster.getJobTrackerRunner().getJobTracker().getQueueManager();
+
+      try{
+        Job job = submitSleepJob(10, 2, 10, 10, true,null, "default" );
+        assert(job.isSuccessful());
+      }catch(Exception e){
+        fail("submit job in default queue should be sucessful ");
+      }
+
+      try{
+        submitSleepJob(10, 2, 10, 10, true,null, "qu1" );
+        fail("submit job in default queue should be failed ");
+      }catch(Exception e){
+        assert(e.getMessage().contains("Queue \"" + "qu1" + "\" is not running"));
+      }
+
+      // verify state of queues before refresh
+      JobQueueInfo queueInfo = queueManager.getJobQueueInfo("default");
+      assertEquals(Queue.QueueState.RUNNING.getStateName(), 
+                    queueInfo.getQueueState());
+      queueInfo = queueManager.getJobQueueInfo("qu1");
+      assertEquals(Queue.QueueState.STOPPED.getStateName(),
+                    queueInfo.getQueueState());
+
+      queueConfProps.put("mapred.queue.default.state", "stopped");
+      queueConfProps.put("mapred.queue.qu1.state", "running");
+      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
+
+      //refresh configuration
+      queueManager.refreshQueues(conf);
+
+      //Job Submission should pass now because ugi to be used is set to blank.
+      try{
+        submitSleepJob(10, 2, 10, 10, true,null,"qu1");
+      }catch(Exception e){
+        fail("submit job in qu1 queue should be sucessful ");
+      }
+
+      try{
+        submitSleepJob(10, 2, 10, 10, true,null, "default" );
+        fail("submit job in default queue should be failed ");
+      }catch(Exception e){
+        assert(e.getMessage().contains("Queue \"" + "default" + "\" is not running"));
+      }
+      
+      // verify state of queues after refresh
+      queueInfo = queueManager.getJobQueueInfo("default");
+      assertEquals(Queue.QueueState.STOPPED.getStateName(), 
+                    queueInfo.getQueueState());
+      queueInfo = queueManager.getJobQueueInfo("qu1");
+      assertEquals(Queue.QueueState.RUNNING.getStateName(),
+                    queueInfo.getQueueState());
+    } finally{
+      if(queueConfigFile.exists()) {
+        queueConfigFile.delete();
+      }
+      this.tearDownCluster();
+    }
+  }
+
   public void testQueueAclRefreshWithInvalidConfFile() throws IOException {
     String queueConfigPath =
       System.getProperty("test.build.extraconf", "build/test/extraconf");
     File queueConfigFile =
-      new File(queueConfigPath, QueueManager.QUEUE_ACLS_FILE_NAME);
+      new File(queueConfigPath, QueueManager.QUEUE_CONF_FILE_NAME);
     File hadoopConfigFile = new File(queueConfigPath, "hadoop-site.xml");
     try {
       // queue properties with which the cluster is started.
@@ -333,13 +420,13 @@ public class TestQueueManager extends TestCase {
       QueueManager queueManager = new QueueManager(conf);
       //Testing access to queue.
       assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
+          queueManager.hasAccess("default", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
+          queueManager.hasAccess("q1", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
+          queueManager.hasAccess("q2", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       
       //Write out a new incomplete invalid configuration file.
@@ -351,18 +438,18 @@ public class TestQueueManager extends TestCase {
       try {
         //Exception to be thrown by queue manager because configuration passed
         //is invalid.
-        queueManager.refreshAcls(conf);
+        queueManager.refreshQueues(conf);
         fail("Refresh of ACLs should have failed with invalid conf file.");
       } catch (Exception e) {
       }
       assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
+          queueManager.hasAccess("default", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
+          queueManager.hasAccess("q1", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
+          queueManager.hasAccess("q2", Queue.QueueOperation.
               SUBMIT_JOB, ugi));
     } finally {
       //Cleanup the configuration files in all cases

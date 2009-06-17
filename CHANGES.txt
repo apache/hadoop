@@ -68,6 +68,9 @@ Trunk (unreleased changes)
     HADOOP-5698. Change org.apache.hadoop.examples.MultiFileWordCount to 
     use new mapreduce api. (Amareshwari Sriramadasu via sharad)
 
+    HADOOP-5913. Provide ability to an administrator to stop and start
+    job queues. (Rahul Kumar Singh and Hemanth Yamijala via yhemanth)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
