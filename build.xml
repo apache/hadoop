@@ -165,6 +165,7 @@
     <jar jarfile="${jarfile}"
         basedir="${build.classes}" >
       <fileset file="${basedir}/conf/hbase-default.xml"/>
+      <fileset file="${basedir}/conf/zoo.cfg"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
    		<manifest>
             <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapred/Driver" />

@@ -357,6 +357,7 @@ Release 0.20.0 - Unreleased
                come up (Jonathan Gray via Stack)
    HBASE-1538  Up zookeeper timeout from 10 seconds to 30 seconds to cut down
                on hbase-user traffic
+   HBASE-1539  prevent aborts due to missing zoo.cfg
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
