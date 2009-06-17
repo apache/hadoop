@@ -18,7 +18,7 @@
 -->
 
 <project name="hbase" default="jar">
-  <property name="version" value="0.20.0-alpha"/>
+  <property name="version" value="0.20.0-dev"/>
   <property name="Name" value="HBase"/>
   <property name="final.name" value="hbase-${version}"/>
   <property name="year" value="2009"/>
