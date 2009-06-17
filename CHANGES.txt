@@ -350,6 +350,7 @@ Release 0.20.0 - Unreleased
    HBASE-1509  Add explanation to shell "help" command on how to use binarykeys
                (Lars George via Stack)
    HBASE-1514  hfile inspection tool
+   HBASE-1329  Visibility into ZooKeeper
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
