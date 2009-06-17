@@ -355,6 +355,8 @@ Release 0.20.0 - Unreleased
    HBASE-1329  Visibility into ZooKeeper
    HBASE-867   If millions of columns in a column family, hbase scanner won't
                come up (Jonathan Gray via Stack)
+   HBASE-1538  Up zookeeper timeout from 10 seconds to 30 seconds to cut down
+               on hbase-user traffic
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
