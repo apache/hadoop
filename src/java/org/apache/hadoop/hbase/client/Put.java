@@ -216,6 +216,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   
   /**
    * Set whether this Put should be written to the WAL or not.
+   * Not writing the WAL means you may lose edits on server crash.
    * @param writeToWAL true if edits should be written to WAL, false if not
    */
   public void writeToWAL(boolean writeToWAL) {
