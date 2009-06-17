@@ -125,6 +125,11 @@ HBASE SURGERY TOOLS:
 
  split           Split table or pass a region row to split individual region
 
+ zk              Low level ZooKeeper surgery tools. Type "zk 'help'" for more
+                 information (Yes, you must quote 'help').
+
+ zk_dump         Dump status of HBase cluster as seen by ZooKeeper.
+
 Above commands are for 'experts'-only as misuse can damage an install
 HERE
   puts h
@@ -350,6 +355,14 @@ end
 
 def status(format = 'summary')
   admin().status(format)
+end
+
+def zk(*args)
+  admin().zk(args)
+end
+
+def zk_dump
+  admin().zk_dump
 end
 
 # CRUD

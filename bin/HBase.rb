@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.HTableDescriptor
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.util.Writables
 import org.apache.hadoop.hbase.HRegionInfo
+import org.apache.zookeeper.ZooKeeper
+import org.apache.zookeeper.ZooKeeperMain
 
 module HBase
   COLUMN = "COLUMN"
@@ -43,6 +45,10 @@ module HBase
   class Admin
     def initialize(configuration, formatter)
       @admin = HBaseAdmin.new(configuration)
+      connection = @admin.getConnection()
+      @zkWrapper = connection.getZooKeeperWrapper()
+      zk = @zkWrapper.getZooKeeper()
+      @zkMain = ZooKeeperMain.new(zk)
       @formatter = formatter
     end
    
@@ -313,6 +319,16 @@ module HBase
         arg[HColumnDescriptor::BLOCKSIZE]? JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE]): HColumnDescriptor::DEFAULT_BLOCKSIZE,
         arg[HColumnDescriptor::TTL]? JInteger.new(arg[HColumnDescriptor::TTL]): HColumnDescriptor::DEFAULT_TTL,
         arg[HColumnDescriptor::BLOOMFILTER]? JBoolean.valueOf(arg[HColumnDescriptor::BLOOMFILTER]): HColumnDescriptor::DEFAULT_BLOOMFILTER)
+    end
+
+    def zk(args)
+      line = args.join(' ')
+      line = 'help' if line.empty?
+      @zkMain.executeLine(line)
+    end
+
+    def zk_dump
+      puts @zkWrapper.dump
     end
   end
 

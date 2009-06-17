@@ -64,6 +64,7 @@ public class ZooKeeperWrapper implements HConstants {
   private final ZooKeeper zooKeeper;
   private final WatcherWrapper watcher;
 
+  private final String parentZNode;
   public final String rootRegionZNode;
   public final String outOfSafeModeZNode;
   public final String rsZNode;
@@ -101,7 +102,7 @@ public class ZooKeeperWrapper implements HConstants {
       throw new IOException(e);
     }
 
-    String parentZNode = conf.get("zookeeper.znode.parent", "/hbase");
+    parentZNode = conf.get("zookeeper.znode.parent", "/hbase");
 
     String rootServerZNodeName = conf.get("zookeeper.znode.rootserver",
                                           "root-region-server");
@@ -118,6 +119,36 @@ public class ZooKeeperWrapper implements HConstants {
     rsZNode = getZNode(parentZNode, rsZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode = getZNode(parentZNode, stateZNodeName);
+  }
+
+  /** @return String dump of everything in ZooKeeper. */
+  public String dump() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
+    sb.append("\n  Cluster up? ").append(exists(clusterStateZNode));
+    sb.append("\n  In safe mode? ").append(!checkOutOfSafeMode());
+    sb.append("\n  Master address: ").append(readMasterAddress(null));
+    sb.append("\n  Region server holding ROOT: ").append(readRootRegionLocation());
+    sb.append("\n  Region servers:");
+    for (HServerAddress address : scanRSDirectory()) {
+      sb.append("\n    - ").append(address);
+    }
+    return sb.toString();
+  }
+
+  private boolean exists(String znode) {
+    try {
+      return zooKeeper.exists(znode, null) != null;
+    } catch (KeeperException e) {
+      return false;
+    } catch (InterruptedException e) {
+      return false;
+    }
+  }
+
+  /** @return ZooKeeper used by this wrapper. */
+  public ZooKeeper getZooKeeper() {
+    return zooKeeper;
   }
 
   /**
