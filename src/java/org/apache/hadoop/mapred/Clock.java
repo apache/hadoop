@@ -18,32 +18,11 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
-
-import org.apache.hadoop.ipc.VersionedProtocol;
-
 /**
- * Protocol for admin operations. This is a framework-public interface and is
- * NOT_TO_BE_USED_BY_USERS_DIRECTLY.
+ * A clock class - can be mocked out for testing.
  */
-public interface AdminOperationsProtocol extends VersionedProtocol {
-  
-  /**
-   * Version 1: Initial version. Added refreshQueueAcls.
-   * Version 2: Added node refresh facility
-   * Version 3: Changed refreshQueueAcls to refreshQueues
-   */
-  public static final long versionID = 3L;
-
-  /**
-   * Refresh the queues used by the jobtracker and scheduler.
-   * 
-   * Access control lists and queue states are refreshed.
-   */
-  void refreshQueues() throws IOException;
-  
-  /**
-   * Refresh the node list at the {@link JobTracker} 
-   */
-  void refreshNodes() throws IOException;
+class Clock {
+  long getTime() {
+    return System.currentTimeMillis();
+  }
 }

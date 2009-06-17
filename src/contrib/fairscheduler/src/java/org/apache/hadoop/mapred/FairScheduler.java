@@ -87,15 +87,6 @@ public class FairScheduler extends TaskScheduler {
     double reduceFairShare = 0; // Fair share of reduce slots at last update
   }
   
-  /**
-   * A clock class - can be mocked out for testing.
-   */
-  static class Clock {
-    long getTime() {
-      return System.currentTimeMillis();
-    }
-  }
-  
   public FairScheduler() {
     this(new Clock(), true);
   }

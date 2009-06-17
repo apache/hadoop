@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -813,6 +814,7 @@ public class TestJobHistory extends TestCase {
 
     } finally {
       if (mr != null) {
+        cleanupLocalFiles(mr);
         mr.shutdown();
       }
     }
@@ -855,7 +857,7 @@ public class TestJobHistory extends TestCase {
       assertTrue("User log file " + logFile + " does not exist",
                  fileSys.exists(logFile));
     }
-    else if (conf.get("hadoop.job.history.user.location") == "none") {
+    else if ("none".equals(conf.get("hadoop.job.history.user.location"))) {
       // history file should not exist in the output path
       assertFalse("Unexpected. User log file exists in output dir when " +
                  "hadoop.job.history.user.location is set to \"none\"",
@@ -920,9 +922,22 @@ public class TestJobHistory extends TestCase {
 
     } finally {
       if (mr != null) {
+        cleanupLocalFiles(mr);
         mr.shutdown();
       }
     }
+  }
+
+  private void cleanupLocalFiles(MiniMRCluster mr) 
+  throws IOException {
+    Configuration conf = mr.createJobConf();
+    JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
+    Path sysDir = new Path(jt.getSystemDir());
+    FileSystem fs = sysDir.getFileSystem(conf);
+    fs.delete(sysDir, true);
+    Path jobHistoryDir = JobHistory.getJobHistoryLocation();
+    fs = jobHistoryDir.getFileSystem(conf);
+    fs.delete(jobHistoryDir, true);
   }
 
   /**
@@ -1001,6 +1016,7 @@ public class TestJobHistory extends TestCase {
       
     } finally {
       if (mr != null) {
+        cleanupLocalFiles(mr);
         mr.shutdown();
       }
     }

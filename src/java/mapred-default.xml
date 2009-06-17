@@ -501,6 +501,31 @@
   <description>If true, then multiple instances of some reduce tasks 
                may be executed in parallel.</description>
 </property>
+<property>
+  <name>mapred.speculative.execution.speculativeCap</name>
+  <value>0.1</value>
+  <description>The max percent (0-1) of running tasks that
+  can be speculatively re-executed at any time.</description>
+</property>
+ 
+<property>
+  <name>mapred.speculative.execution.slowTaskThreshold</name>
+  <value>1.0</value>The number of standard deviations by which a task's 
+  ave progress-rates must be lower than the average of all running tasks'
+  for the task to be considered too slow.
+  <description>
+  </description>
+</property>
+
+<property>
+  <name>mapred.speculative.execution.slowNodeThreshold</name>
+  <value>1.0</value>
+  <description>The number of standard deviations by which a Task 
+  Tracker's ave map and reduce progress-rates (finishTime-dispatchTime)
+  must be lower than the average of all successful map/reduce task's for
+  the TT to be considered too slow to give a speculative task to.
+  </description>
+</property>
 
 <property>
   <name>mapred.job.reuse.jvm.num.tasks</name>

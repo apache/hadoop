@@ -516,6 +516,27 @@ class CapacityTaskScheduler extends TaskScheduler {
       LOG.debug(s);
     }
     
+    /**
+     * Check if one of the tasks have a speculative task to execute on the 
+     * particular task tracker.
+     * 
+     * @param tips tasks of a job
+     * @param progress percentage progress of the job
+     * @param tts task tracker status for which we are asking speculative tip
+     * @return true if job has a speculative task to run on particular TT.
+     */
+    boolean hasSpeculativeTask(TaskInProgress[] tips, float progress, 
+        TaskTrackerStatus tts) {
+      long currentTime = System.currentTimeMillis();
+      for(TaskInProgress tip : tips)  {
+        if(tip.isRunning() 
+            && !(tip.hasRunOnMachine(tts.getHost(), tts.getTrackerName())) 
+            && tip.canBeSpeculated(currentTime)) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 
   /**

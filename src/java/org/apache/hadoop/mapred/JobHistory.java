@@ -398,6 +398,13 @@ public class JobHistory {
   }
   
   /**
+   * Get the history location
+   */
+  static Path getJobHistoryLocation() {
+    return new Path(LOG_DIR);
+  } 
+  
+  /**
    * Base class contais utility stuff to manage types key value pairs with enums. 
    */
   static class KeyValuePair{

@@ -50,7 +50,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   private String stateString;
   private String taskTracker;
     
-  private long startTime; 
+  private long startTime; //in ms
   private long finishTime; 
   private long outputSize;
     
@@ -81,7 +81,9 @@ abstract class TaskStatus implements Writable, Cloneable {
   public TaskAttemptID getTaskID() { return taskid; }
   public abstract boolean getIsMap();
   public float getProgress() { return progress; }
-  public void setProgress(float progress) { this.progress = progress; } 
+  public void setProgress(float progress) {
+    this.progress = progress;
+  } 
   public State getRunState() { return runState; }
   public String getTaskTracker() {return taskTracker;}
   public void setTaskTracker(String tracker) { this.taskTracker = tracker;}
@@ -279,7 +281,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   public List<TaskAttemptID> getFetchFailedMaps() {
     return null;
   }
-  
+
   /**
    * Add to the list of maps from which output-fetches failed.
    *  
@@ -310,7 +312,7 @@ abstract class TaskStatus implements Writable, Cloneable {
    * @param status updated status
    */
   synchronized void statusUpdate(TaskStatus status) {
-    this.progress = status.getProgress();
+    setProgress (status.getProgress());
     this.runState = status.getRunState();
     this.stateString = status.getStateString();
     this.nextRecordRange = status.getNextRecordRange();
@@ -397,7 +399,7 @@ abstract class TaskStatus implements Writable, Cloneable {
 
   public void readFields(DataInput in) throws IOException {
     this.taskid.readFields(in);
-    this.progress = in.readFloat();
+    setProgress(in.readFloat());
     this.runState = WritableUtils.readEnum(in, State.class);
     this.diagnosticInfo = Text.readString(in);
     this.stateString = Text.readString(in);

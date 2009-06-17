@@ -45,7 +45,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     
     public FakeJobInProgress(JobConf jobConf,
         FakeTaskTrackerManager taskTrackerManager) throws IOException {
-      super(new JobID("test", ++jobCounter), jobConf);
+      super(new JobID("test", ++jobCounter), jobConf, null);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
       this.status = new JobStatus(getJobID(), 0f, 0f, JobStatus.PREP);

@@ -42,7 +42,7 @@ public class TestParallelInitialization extends TestCase {
    
     public FakeJobInProgress(JobConf jobConf,
         FakeTaskTrackerManager taskTrackerManager) throws IOException {
-      super(new JobID("test", ++jobCounter), jobConf);
+      super(new JobID("test", ++jobCounter), jobConf, null);
       this.startTime = System.currentTimeMillis();
       this.status = new JobStatus(getJobID(), 0f, 0f, JobStatus.PREP);
       this.status.setJobPriority(JobPriority.NORMAL);

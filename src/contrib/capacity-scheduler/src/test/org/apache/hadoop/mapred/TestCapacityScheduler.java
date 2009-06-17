@@ -38,6 +38,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil.AccessControlList;
 
 
 public class TestCapacityScheduler extends TestCase {
@@ -158,7 +159,7 @@ public class TestCapacityScheduler extends TestCase {
     
     public FakeJobInProgress(JobID jId, JobConf jobConf,
         FakeTaskTrackerManager taskTrackerManager, String user) {
-      super(jId, jobConf);
+      super(jId, jobConf, null);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
       this.status = new JobStatus(jId, 0f, 0f, JobStatus.PREP);
@@ -307,18 +308,58 @@ public class TestCapacityScheduler extends TestCase {
       }
       return true;
     }
+    
+    @Override
+    /*
+     *hasSpeculativeMap and hasSpeculativeReduce is reset by FakeJobInProgress
+     *after the speculative tip has been scheduled.
+     */
+    boolean canBeSpeculated(long currentTime) {
+      if(isMap && hasSpeculativeMap) {
+        return fakeJob.getJobConf().getMapSpeculativeExecution();
+      } 
+      if (!isMap && hasSpeculativeReduce) {
+        return fakeJob.getJobConf().getReduceSpeculativeExecution();
+      }
+      return false;
+    }
+    
+    @Override
+    public boolean isRunning() {
+      return !activeTasks.isEmpty();
+    }
+    
   }
   
   static class FakeQueueManager extends QueueManager {
-    private Set<String> queues = null;
+    private Set<String> queueNames = null;
+    private static final AccessControlList allEnabledAcl = new AccessControlList("*");
+    
     FakeQueueManager() {
       super(new Configuration());
     }
-    void setQueues(Set<String> queues) {
-      this.queues = queues;
+    
+    void setQueues(Set<String> queueNames) {
+      this.queueNames = queueNames;
+      
+      // sync up queues with the parent class.
+      Queue[] queues = new Queue[queueNames.size()];
+      int i = 0;
+      for (String queueName : queueNames) {
+        HashMap<String, AccessControlList> aclsMap 
+          = new HashMap<String, AccessControlList>();
+        for (Queue.QueueOperation oper : Queue.QueueOperation.values()) {
+          String key = QueueManager.toFullPropertyName(queueName,
+                                                        oper.getAclName());
+          aclsMap.put(key, allEnabledAcl);
+        }
+        queues[i++] = new Queue(queueName, aclsMap, Queue.QueueState.RUNNING);
+      }
+      super.setQueues(queues);
     }
+    
     public synchronized Set<String> getQueues() {
-      return queues;
+      return queueNames;
     }
   }
   

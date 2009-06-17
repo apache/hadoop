@@ -112,12 +112,11 @@ class JobQueueClient extends Configured implements  Tool {
    */
 
   private void displayQueueInfo(String queue, boolean showJobs) throws IOException {
-    JobQueueInfo schedInfo = jc.getQueueInfo(queue);
-    if (schedInfo == null) {
+    JobQueueInfo jobQueueInfo = jc.getQueueInfo(queue);
+    if (jobQueueInfo == null) {
       System.out.printf("Queue Name : %s has no scheduling information \n", queue);
     } else {
-      System.out.printf("Queue Name : %s \n", schedInfo.getQueueName());
-      System.out.printf("Scheduling Info : %s \n",schedInfo.getSchedulingInfo());
+      printJobQueueInfo(jobQueueInfo);
     }
     if (showJobs) {
       System.out.printf("Job List\n");
@@ -126,6 +125,13 @@ class JobQueueClient extends Configured implements  Tool {
         jobs = new JobStatus[0];
       jc.displayJobList(jobs);
     }
+  }
+
+  // format and print information about the passed in job queue.
+  private void printJobQueueInfo(JobQueueInfo jobQueueInfo) {
+    System.out.printf("Queue Name : %s \n", jobQueueInfo.getQueueName()); 
+    System.out.printf("Queue State : %s \n", jobQueueInfo.getQueueState());
+    System.out.printf("Scheduling Info : %s \n",jobQueueInfo.getSchedulingInfo());
   }
 
   /**
@@ -141,8 +147,7 @@ class JobQueueClient extends Configured implements  Tool {
       if(schedInfo.trim().equals("")){
         schedInfo = "N/A";
       }
-      System.out.printf("Queue Name : %s \n", queue.getQueueName());
-      System.out.printf("Scheduling Info : %s \n",queue.getSchedulingInfo());
+      printJobQueueInfo(queue);
     }
   }
 

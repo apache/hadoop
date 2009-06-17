@@ -21,6 +21,10 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -103,7 +107,7 @@ class JobInProgress {
   private volatile boolean jobFailed = false;
 
   JobPriority priority = JobPriority.NORMAL;
-  final JobTracker jobtracker;
+  protected JobTracker jobtracker;
 
   // NetworkTopology Node to the set of TIPs
   Map<Node, List<TaskInProgress>> nonRunningMapCache;
@@ -129,14 +133,14 @@ class JobInProgress {
   // A list of cleanup tasks for the reduce task attempts, to be launched
   List<TaskAttemptID> reduceCleanupTasks = new LinkedList<TaskAttemptID>();
 
-  private final int maxLevel;
+  private int maxLevel;
 
   /**
    * A special value indicating that 
    * {@link #findNewMapTask(TaskTrackerStatus, int, int, int, double)} should
    * schedule any available map tasks for this job, including speculative tasks.
    */
-  private final int anyCacheLevel;
+  private int anyCacheLevel;
   
   /**
    * A special value indicating that 
@@ -189,9 +193,13 @@ class JobInProgress {
   
   private MetricsRecord jobMetrics;
   
-  // Maximum no. of fetch-failure notifications after which
-  // the map task is killed
+  // Maximum no. of fetch-failure notifications after which map task is killed
   private static final int MAX_FETCH_FAILURES_NOTIFICATIONS = 3;
+
+  // Don't lower speculativeCap below one TT's worth (for small clusters)
+  private static final int MIN_SPEC_CAP = 10;
+  
+  private static final float MIN_SLOTS_CAP = 0.01f;
   
   // Map of mapTaskId -> no. of fetch failures
   private Map<TaskAttemptID, Integer> mapTaskIdToFetchFailuresMap =
@@ -199,19 +207,65 @@ class JobInProgress {
 
   private Object schedulingInfo;
 
-  
+  //thresholds for speculative execution
+  private float slowTaskThreshold;
+  private float speculativeCap;
+  private float slowNodeThreshold; //standard deviations
+
+  //Statistics are maintained for a couple of things
+  //mapTaskStats is used for maintaining statistics about
+  //the completion time of map tasks on the trackers. On a per
+  //tracker basis, the mean time for task completion is maintained
+  private DataStatistics mapTaskStats = new DataStatistics();
+  //reduceTaskStats is used for maintaining statistics about
+  //the completion time of reduce tasks on the trackers. On a per
+  //tracker basis, the mean time for task completion is maintained
+  private DataStatistics reduceTaskStats = new DataStatistics();
+  //trackerMapStats used to maintain a mapping from the tracker to the
+  //the statistics about completion time of map tasks
+  private Map<String,DataStatistics> trackerMapStats = 
+    new HashMap<String,DataStatistics>();
+  //trackerReduceStats used to maintain a mapping from the tracker to the
+  //the statistics about completion time of reduce tasks
+  private Map<String,DataStatistics> trackerReduceStats = 
+    new HashMap<String,DataStatistics>();
+  //runningMapStats used to maintain the RUNNING map tasks' statistics 
+  private DataStatistics runningMapTaskStats = new DataStatistics();
+  //runningReduceStats used to maintain the RUNNING reduce tasks' statistics
+  private DataStatistics runningReduceTaskStats = new DataStatistics();
+ 
   /**
    * Create an almost empty JobInProgress, which can be used only for tests
    */
-  protected JobInProgress(JobID jobid, JobConf conf) {
+  protected JobInProgress(JobID jobid, JobConf conf, JobTracker tracker) {
     this.conf = conf;
     this.jobId = jobid;
     this.numMapTasks = conf.getNumMapTasks();
     this.numReduceTasks = conf.getNumReduceTasks();
     this.maxLevel = NetworkTopology.DEFAULT_HOST_LEVEL;
     this.anyCacheLevel = this.maxLevel+1;
-    this.jobtracker = null;
+    this.jobtracker = tracker;
     this.restartCount = 0;
+    
+    hasSpeculativeMaps = conf.getMapSpeculativeExecution();
+    hasSpeculativeReduces = conf.getReduceSpeculativeExecution();
+    this.nonLocalMaps = new LinkedList<TaskInProgress>();
+    this.nonLocalRunningMaps = new LinkedHashSet<TaskInProgress>();
+    this.runningMapCache = new IdentityHashMap<Node, Set<TaskInProgress>>();
+    this.nonRunningReduces = new LinkedList<TaskInProgress>();    
+    this.runningReduces = new LinkedHashSet<TaskInProgress>();
+    this.resourceEstimator = new ResourceEstimator(this);
+    this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
+    this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
+    (numMapTasks + numReduceTasks + 10);
+    
+    this.slowTaskThreshold = Math.max(0.0f,
+        conf.getFloat("mapred.speculative.execution.slowTaskThreshold",1.0f));
+    this.speculativeCap = conf.getFloat(
+        "mapred.speculative.execution.speculativeCap",0.1f);
+    this.slowNodeThreshold = conf.getFloat(
+        "mapred.speculative.execution.slowNodeThreshold",1.0f);
+
   }
   
   /**
@@ -285,6 +339,19 @@ class JobInProgress {
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
+    
+    this.nonLocalMaps = new LinkedList<TaskInProgress>();
+    this.nonLocalRunningMaps = new LinkedHashSet<TaskInProgress>();
+    this.runningMapCache = new IdentityHashMap<Node, Set<TaskInProgress>>();
+    this.nonRunningReduces = new LinkedList<TaskInProgress>();    
+    this.runningReduces = new LinkedHashSet<TaskInProgress>();
+    this.slowTaskThreshold = Math.max(0.0f,
+        conf.getFloat("mapred.speculative.execution.slowTaskThreshold",1.0f));
+    this.speculativeCap = conf.getFloat(
+        "mapred.speculative.execution.speculativeCap",0.1f);
+    this.slowNodeThreshold = conf.getFloat(
+        "mapred.speculative.execution.slowNodeThreshold",1.0f);
+
   }
 
   /**
@@ -443,7 +510,7 @@ class JobInProgress {
     }
         
     // set the launch time
-    this.launchTime = System.currentTimeMillis();
+    this.launchTime = jobtracker.getClock().getTime();
 
     //
     // Create reduce tasks
@@ -939,9 +1006,9 @@ class JobInProgress {
       LOG.info("Cannot create task split for " + profile.getJobID());
       return null;
     }
-        
-    int target = findNewMapTask(tts, clusterSize, numUniqueHosts, anyCacheLevel,
-                                status.mapProgress());
+       
+    int target = findNewMapTask(tts, clusterSize, numUniqueHosts,
+        anyCacheLevel);
     if (target == -1) {
       return null;
     }
@@ -1001,8 +1068,7 @@ class JobInProgress {
       return null;
     }
 
-    int target = findNewMapTask(tts, clusterSize, numUniqueHosts, maxLevel, 
-                                status.mapProgress());
+    int target = findNewMapTask(tts, clusterSize, numUniqueHosts, maxLevel);
     if (target == -1) {
       return null;
     }
@@ -1025,7 +1091,7 @@ class JobInProgress {
     }
 
     int target = findNewMapTask(tts, clusterSize, numUniqueHosts, 
-                                NON_LOCAL_CACHE_LEVEL, status.mapProgress());
+                                NON_LOCAL_CACHE_LEVEL);
     if (target == -1) {
       return null;
     }
@@ -1203,8 +1269,7 @@ class JobInProgress {
       return null;
     }
 
-    int  target = findNewReduceTask(tts, clusterSize, numUniqueHosts, 
-                                    status.reduceProgress());
+    int  target = findNewReduceTask(tts, clusterSize, numUniqueHosts);
     if (target == -1) {
       return null;
     }
@@ -1267,15 +1332,21 @@ class JobInProgress {
       name = Values.MAP.name();
       counter = JobCounter.TOTAL_LAUNCHED_MAPS;
       splits = tip.getSplitNodes();
-      if (tip.getActiveTasks().size() > 1)
+      if (tip.isSpeculating()) {
         speculativeMapTasks++;
+        LOG.debug("Chosen speculative task, current speculativeMap task count: "
+            + speculativeMapTasks);
+      }
       metrics.launchMap(id);
     } else {
       ++runningReduceTasks;
       name = Values.REDUCE.name();
       counter = JobCounter.TOTAL_LAUNCHED_REDUCES;
-      if (tip.getActiveTasks().size() > 1)
+      if (tip.isSpeculating()) {
         speculativeReduceTasks++;
+        LOG.debug("Chosen speculative task, current speculativeReduce task count: "
+          + speculativeReduceTasks);
+      }
       metrics.launchReduce(id);
     }
     // Note that the logs are for the scheduled tasks only. Tasks that join on 
@@ -1433,7 +1504,7 @@ class JobInProgress {
     String[] splitLocations = tip.getSplitLocations();
 
     // Remove the TIP from the list for running non-local maps
-    if (splitLocations.length == 0) {
+    if (splitLocations == null || splitLocations.length == 0) {
       nonLocalRunningMaps.remove(tip);
       return;
     }
@@ -1473,8 +1544,9 @@ class JobInProgress {
    * Adds a map tip to the list of running maps.
    * @param tip the tip that needs to be scheduled as running
    */
-  private synchronized void scheduleMap(TaskInProgress tip) {
+  protected synchronized void scheduleMap(TaskInProgress tip) {
     
+    runningMapTaskStats.add(0.0f);
     if (runningMapCache == null) {
       LOG.warn("Running cache for maps is missing!! " 
                + "Job details are missing.");
@@ -1483,7 +1555,7 @@ class JobInProgress {
     String[] splitLocations = tip.getSplitLocations();
 
     // Add the TIP to the list of non-local running TIPs
-    if (splitLocations.length == 0) {
+    if (splitLocations == null || splitLocations.length == 0) {
       nonLocalRunningMaps.add(tip);
       return;
     }
@@ -1508,7 +1580,8 @@ class JobInProgress {
    * Adds a reduce tip to the list of running reduces
    * @param tip the tip that needs to be scheduled as running
    */
-  private synchronized void scheduleReduce(TaskInProgress tip) {
+  protected synchronized void scheduleReduce(TaskInProgress tip) {
+    runningReduceTaskStats.add(0.0f);
     if (runningReduces == null) {
       LOG.warn("Running cache for reducers missing!! "
                + "Job details are missing.");
@@ -1612,57 +1685,71 @@ class JobInProgress {
     return null;
   }
   
-  /**
-   * Find a speculative task
-   * @param list a list of tips
-   * @param taskTracker the tracker that has requested a tip
-   * @param avgProgress the average progress for speculation
-   * @param currentTime current time in milliseconds
-   * @param shouldRemove whether to remove the tips
-   * @return a tip that can be speculated on the tracker
-   */
-  private synchronized TaskInProgress findSpeculativeTask(
-      Collection<TaskInProgress> list, TaskTrackerStatus ttStatus,
-      double avgProgress, long currentTime, boolean shouldRemove) {
-    
-    Iterator<TaskInProgress> iter = list.iterator();
+  public boolean hasSpeculativeMaps() {
+    return hasSpeculativeMaps;
+  }
 
+  public boolean hasSpeculativeReduces() {
+    return hasSpeculativeReduces;
+  }
+
+  /**
+   * Retrieve a task for speculation.
+   * If a task slot becomes available and there are less than SpeculativeCap
+   * speculative tasks running: 
+   *  1)Ignore the request if the TT's progressRate is < SlowNodeThreshold
+   *  2)Choose candidate tasks - those tasks whose progress rate is below
+   *    slowTaskThreshold * mean(progress-rates)
+   *  3)Speculate task that's expected to complete last
+   * @param list pool of tasks to choose from
+   * @param taskTrackerName the name of the TaskTracker asking for a task
+   * @param taskTrackerHost the hostname of the TaskTracker asking for a task
+   * @return the TIP to speculatively re-execute
+   */
+  protected synchronized TaskInProgress findSpeculativeTask(
+      Collection<TaskInProgress> list, String taskTrackerName, 
+      String taskTrackerHost) {
+    if (list.isEmpty()) {
+      return null;
+    }
+    long now = jobtracker.getClock().getTime();
+    if (isSlowTracker(taskTrackerName) || atSpeculativeCap(list)) {
+      return null;
+    }
+    // List of speculatable candidates, start with all, and chop it down
+    ArrayList<TaskInProgress> candidates = new ArrayList<TaskInProgress>(list);
+    
+    Iterator<TaskInProgress> iter = candidates.iterator();
     while (iter.hasNext()) {
       TaskInProgress tip = iter.next();
-      // should never be true! (since we delete completed/failed tasks)
-      if (!tip.isRunning()) {
-        iter.remove();
-        continue;
-      }
-
-      if (!tip.hasRunOnMachine(ttStatus.getHost(), 
-                               ttStatus.getTrackerName())) {
-        if (tip.hasSpeculativeTask(currentTime, avgProgress)) {
-          // In case of shared list we don't remove it. Since the TIP failed 
-          // on this tracker can be scheduled on some other tracker.
-          if (shouldRemove) {
-            iter.remove(); //this tracker is never going to run it again
-          }
-          return tip;
-        } 
-      } else {
-        // Check if this tip can be removed from the list.
-        // If the list is shared then we should not remove.
-        if (shouldRemove) {
-          // This tracker will never speculate this tip
+      if (tip.hasRunOnMachine(taskTrackerHost, taskTrackerName) ||
+          !tip.canBeSpeculated(now)) {
+          //remove it from candidates
           iter.remove();
-        }
       }
     }
-    return null;
+    //resort according to expected time till completion
+    Comparator<TaskInProgress> LateComparator = 
+      new EstimatedTimeLeftComparator(now);
+    Collections.sort(candidates, LateComparator);
+    if (candidates.size() > 0 ) {
+      TaskInProgress tip = candidates.get(0);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Chose task " + tip.getTIPId() + ". Statistics: Task's : " +
+            tip.getCurrentProgressRate(now) + " Job's : " + 
+            (tip.isMapTask() ? runningMapTaskStats : runningReduceTaskStats));
+      }
+      return tip;
+    } else {
+      return null;
+    }
   }
-  
+
   /**
    * Find new map task
    * @param tts The task tracker that is asking for a task
    * @param clusterSize The number of task trackers in the cluster
    * @param numUniqueHosts The number of hosts that run task trackers
-   * @param avgProgress The average progress of this kind of task in this job
    * @param maxCacheLevel The maximum topology level until which to schedule
    *                      maps. 
    *                      A value of {@link #anyCacheLevel} implies any 
@@ -1675,14 +1762,14 @@ class JobInProgress {
   private synchronized int findNewMapTask(final TaskTrackerStatus tts, 
                                           final int clusterSize,
                                           final int numUniqueHosts,
-                                          final int maxCacheLevel,
-                                          final double avgProgress) {
+                                          final int maxCacheLevel) {
+    String taskTrackerName = tts.getTrackerName();
+    String taskTrackerHost = tts.getHost();
     if (numMapTasks == 0) {
       LOG.info("No maps to schedule for " + profile.getJobID());
       return -1;
     }
 
-    String taskTracker = tts.getTrackerName();
     TaskInProgress tip = null;
     
     //
@@ -1694,7 +1781,7 @@ class JobInProgress {
       return -1;
     }
     
-    if (!shouldRunOnTaskTracker(taskTracker)) {
+    if (!shouldRunOnTaskTracker(taskTrackerName)) {
       return -1;
     }
 
@@ -1821,82 +1908,61 @@ class JobInProgress {
     // 
  
     if (hasSpeculativeMaps) {
-      long currentTime = System.currentTimeMillis();
-
-      // 1. Check bottom up for speculative tasks from the running cache
-      if (node != null) {
-        Node key = node;
-        for (int level = 0; level < maxLevel; ++level) {
-          Set<TaskInProgress> cacheForLevel = runningMapCache.get(key);
-          if (cacheForLevel != null) {
-            tip = findSpeculativeTask(cacheForLevel, tts, 
-                                      avgProgress, currentTime, level == 0);
-            if (tip != null) {
-              if (cacheForLevel.size() == 0) {
-                runningMapCache.remove(key);
-              }
-              return tip.getIdWithinJob();
-            }
-          }
-          key = key.getParent();
-        }
-      }
-
-      // 2. Check breadth-wise for speculative tasks
-      
-      for (Node parent : nodesAtMaxLevel) {
-        // ignore the parent which is already scanned
-        if (parent == nodeParentAtMaxLevel) {
-          continue;
-        }
-
-        Set<TaskInProgress> cache = runningMapCache.get(parent);
-        if (cache != null) {
-          tip = findSpeculativeTask(cache, tts, avgProgress, 
-                                    currentTime, false);
-          if (tip != null) {
-            // remove empty cache entries
-            if (cache.size() == 0) {
-              runningMapCache.remove(parent);
-            }
-            LOG.info("Choosing a non-local task " + tip.getTIPId() 
-                     + " for speculation");
-            return tip.getIdWithinJob();
-          }
-        }
-      }
-
-      // 3. Check non-local tips for speculation
-      tip = findSpeculativeTask(nonLocalRunningMaps, tts, avgProgress, 
-                                currentTime, false);
+      tip = getSpeculativeMap(taskTrackerName, taskTrackerHost);
       if (tip != null) {
-        LOG.info("Choosing a non-local task " + tip.getTIPId() 
-                 + " for speculation");
         return tip.getIdWithinJob();
       }
     }
-    
-    return -1;
+   return -1;
   }
 
+  private synchronized TaskInProgress getSpeculativeMap(String taskTrackerName, 
+      String taskTrackerHost) {
+
+    //////// Populate allTips with all TaskInProgress
+    Set<TaskInProgress> allTips = new HashSet<TaskInProgress>();
+    
+    // collection of node at max level in the cache structure
+    Collection<Node> nodesAtMaxLevel = jobtracker.getNodesAtMaxLevel();
+    // Add all tasks from max-level nodes breadth-wise
+    for (Node parent : nodesAtMaxLevel) {
+      Set<TaskInProgress> cache = runningMapCache.get(parent);
+      if (cache != null) {
+        allTips.addAll(cache);
+      }
+    }
+    // Add all non-local TIPs
+    allTips.addAll(nonLocalRunningMaps);
+    
+    ///////// Select a TIP to run on
+    TaskInProgress tip = findSpeculativeTask(allTips, taskTrackerName, 
+        taskTrackerHost);
+    
+    if (tip != null) {
+      LOG.info("Choosing map task " + tip.getTIPId() + 
+          " for speculative execution");
+    } else {
+      LOG.debug("No speculative map task found for tracker " + taskTrackerName);
+    }
+    return tip;
+  }
+  
   /**
    * Find new reduce task
    * @param tts The task tracker that is asking for a task
    * @param clusterSize The number of task trackers in the cluster
    * @param numUniqueHosts The number of hosts that run task trackers
-   * @param avgProgress The average progress of this kind of task in this job
    * @return the index in tasks of the selected task (or -1 for no task)
    */
   private synchronized int findNewReduceTask(TaskTrackerStatus tts, 
                                              int clusterSize,
-                                             int numUniqueHosts,
-                                             double avgProgress) {
+                                             int numUniqueHosts) {
+    String taskTrackerName = tts.getTrackerName();
+    String taskTrackerHost = tts.getHost();
     if (numReduceTasks == 0) {
       LOG.info("No reduces to schedule for " + profile.getJobID());
       return -1;
     }
-
-    String taskTracker = tts.getTrackerName();
     TaskInProgress tip = null;
 
     // Update the last-known clusterSize
@@ -1906,14 +1972,14 @@ class JobInProgress {
       return -1;
     }
 
-    if (!shouldRunOnTaskTracker(taskTracker)) {
+    if (!shouldRunOnTaskTracker(taskTrackerName)) {
       return -1;
     }
 
     long outSize = resourceEstimator.getEstimatedReduceInputSize();
     long availSpace = tts.getResourceStatus().getAvailableSpace();
     if(availSpace < outSize) {
-      LOG.warn("No room for reduce task. Node " + taskTracker + " has " +
+      LOG.warn("No room for reduce task. Node " + taskTrackerName + " has " +
                 availSpace + 
                " bytes free; but we expect reduce input to take " + outSize);
 
@@ -1930,15 +1996,186 @@ class JobInProgress {
 
     // 2. check for a reduce tip to be speculated
     if (hasSpeculativeReduces) {
-      tip = findSpeculativeTask(runningReduces, tts, avgProgress, 
-                                System.currentTimeMillis(), false);
+      tip = getSpeculativeReduce(taskTrackerName, taskTrackerHost);
       if (tip != null) {
-        scheduleReduce(tip);
         return tip.getIdWithinJob();
       }
     }
 
     return -1;
+  }
+
+  private synchronized TaskInProgress getSpeculativeReduce(
+      String taskTrackerName, String taskTrackerHost) {
+    TaskInProgress tip = findSpeculativeTask(
+        runningReduces, taskTrackerName, taskTrackerHost);
+    if (tip != null) {
+      LOG.info("Choosing reduce task " + tip.getTIPId() + 
+          " for speculative execution");
+    }else {
+      LOG.debug("No speculative map task found for tracker " + taskTrackerHost);
+    }
+    return tip;
+  }
+
+    /**
+     * Check to see if the maximum number of speculative tasks are
+     * already being executed currently.
+     * @param tasks the set of tasks to test
+     * @return has the cap been reached?
+     */
+   private boolean atSpeculativeCap(Collection<TaskInProgress> tasks) {
+     float numTasks = tasks.size();
+     if (numTasks == 0){
+       return true; // avoid divide by zero
+     }
+
+     //return true if totalSpecTask < max(10, 0.01 * total-slots, 
+     //                                   0.1 * total-running-tasks)
+
+     if (speculativeMapTasks + speculativeReduceTasks < MIN_SPEC_CAP) {
+       return false; // at least one slow tracker's worth of slots(default=10)
+     }
+     ClusterStatus c = jobtracker.getClusterStatus(false); 
+     int numSlots = c.getMaxMapTasks() + c.getMaxReduceTasks();
+     if ((float)(speculativeMapTasks + speculativeReduceTasks) < 
+       numSlots * MIN_SLOTS_CAP) {
+       return false;
+     }
+     boolean atCap = (((float)(speculativeMapTasks+
+         speculativeReduceTasks)/numTasks) >= speculativeCap);
+     if (LOG.isDebugEnabled()) {
+       LOG.debug("SpeculativeCap is "+speculativeCap+", specTasks/numTasks is " +
+           ((float)(speculativeMapTasks+speculativeReduceTasks)/numTasks)+
+           ", so atSpecCap() is returning "+atCap);
+     }
+     return atCap;
+   }
+  
+  /**
+   * A class for comparing the estimated time to completion of two tasks
+   */
+  private static class EstimatedTimeLeftComparator 
+  implements Comparator<TaskInProgress> {
+    private long time;
+    public EstimatedTimeLeftComparator(long now) {
+      this.time = now;
+    }
+    /**
+     * Estimated time to completion is measured as:
+     *   % of task left to complete (1 - progress) / progress rate of the task.
+     * 
+     * This assumes that tasks are linear in their progress, which is 
+     * often wrong, especially since progress for reducers is currently
+     * calculated by evenly weighting their three stages (shuffle, sort, map)
+     * which rarely account for 1/3 each. This should be fixed in the future
+     * by calculating progressRate more intelligently or splitting these
+     * multi-phase tasks into individual tasks.
+     * 
+     * The ordering this comparator defines is: task1 < task2 if task1 is
+     * estimated to finish farther in the future => compare(t1,t2) returns -1
+     */
+    public int compare(TaskInProgress tip1, TaskInProgress tip2) {
+      //we have to use the Math.max in the denominator to avoid divide by zero
+      //error because prog and progRate can both be zero (if one is zero,
+      //the other one will be 0 too).
+      //We use inverse of time_reminaing=[(1- prog) / progRate]
+      //so that (1-prog) is in denom. because tasks can have arbitrarily 
+      //low progRates in practice (e.g. a task that is half done after 1000
+      //seconds will have progRate of 0.0000005) so we would rather 
+      //use Math.maxnon (1-prog) by putting it in the denominator 
+      //which will cause tasks with prog=1 look 99.99% done instead of 100%
+      //which is okay
+      double t1 = tip1.getCurrentProgressRate(time) / Math.max(0.0001, 
+          1.0 - tip1.getProgress());
+      double t2 = tip2.getCurrentProgressRate(time) / Math.max(0.0001, 
+          1.0 - tip2.getProgress());
+      if (t1 < t2) return -1;
+      else if (t2 < t1) return 1;
+      else return 0;
+    }
+  }
+  
+  /**
+   * Compares the ave progressRate of tasks that have finished on this 
+   * taskTracker to the ave of all succesfull tasks thus far to see if this 
+   * TT one is too slow for speculating.
+   * slowNodeThreshold is used to determine the number of standard deviations
+   * @param taskTracker the name of the TaskTracker we are checking
+   * @return is this TaskTracker slow
+   */
+  protected boolean isSlowTracker(String taskTracker) {
+    if (trackerMapStats.get(taskTracker) != null &&
+        trackerMapStats.get(taskTracker).mean() -
+        mapTaskStats.mean() > mapTaskStats.std()*slowNodeThreshold) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Tracker " + taskTracker + 
+            " declared slow. trackerMapStats.get(taskTracker).mean() :" + trackerMapStats.get(taskTracker).mean() +
+            " mapTaskStats :" + mapTaskStats);
+      }
+      return true;
+    }
+    if (trackerReduceStats.get(taskTracker) != null && 
+        trackerReduceStats.get(taskTracker).mean() -
+        reduceTaskStats.mean() > reduceTaskStats.std()*slowNodeThreshold) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Tracker " + taskTracker + 
+            " declared slow. trackerReduceStats.get(taskTracker).mean() :" + trackerReduceStats.get(taskTracker).mean() +
+            " reduceTaskStats :" + reduceTaskStats);
+      }
+      return true;
+    }
+    return false;
+  }
+  
+  static class DataStatistics{
+    private int count = 0;
+    private double sum = 0;
+    private double sumSquares = 0;
+    
+    public DataStatistics() {
+    }
+    
+    public DataStatistics(double initNum) {
+      this.count = 1;
+      this.sum = initNum;
+      this.sumSquares = initNum * initNum;
+    }
+    
+    public void add(double newNum) {
+      this.count++;
+      this.sum += newNum;
+      this.sumSquares += newNum * newNum;
+    }
+
+    public void updateStatistics(double old, double update) {
+      sub(old);
+      add(update);
+    }
+    private void sub(double oldNum) {
+      this.count--;
+      this.sum -= oldNum;
+      this.sumSquares -= oldNum * oldNum;
+    }
+    
+    public double mean() {
+      return sum/count;      
+    }
+  
+    public double var() {
+      // E(X^2) - E(X)^2
+      return (sumSquares/count) - mean() * mean();
+    }
+    
+    public double std() {
+      return Math.sqrt(this.var());
+    }
+    
+    public String toString() {
+      return "DataStatistics: count is " + count + ", sum is " + sum + 
+      ", sumSquares is " + sumSquares + " mean is " + mean() + " std() is " + std();
+    }
+    
   }
   
   private boolean shouldRunOnTaskTracker(String taskTracker) {
@@ -2002,7 +2239,6 @@ class JobInProgress {
                                             TaskStatus status)
   {
     TaskAttemptID taskid = status.getTaskID();
-    int oldNumAttempts = tip.getActiveTasks().size();
     final JobTrackerInstrumentation metrics = jobtracker.getInstrumentation();
         
     // Sanity check: is the TIP already complete? 
@@ -2018,10 +2254,9 @@ class JobInProgress {
       }
       return false;
     } 
-
+    boolean wasSpeculating = tip.isSpeculating(); //store this fact
     LOG.info("Task '" + taskid + "' has completed " + tip.getTIPId() + 
              " successfully.");          
-
     // Mark the TIP as complete
     tip.completed(taskid);
     resourceEstimator.updateWithCompletedTask(status, tip);
@@ -2059,7 +2294,6 @@ class JobInProgress {
                                 tip.getExecFinishTime(),
                                 status.getCounters()); 
         
-    int newNumAttempts = tip.getActiveTasks().size();
     if (tip.isJobSetupTask()) {
       // setup task has finished. kill the extra setup tip
       killSetupTip(!tip.isMapTask());
@@ -2096,12 +2330,11 @@ class JobInProgress {
       jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
     } else if (tip.isMapTask()) {
       runningMapTasks -= 1;
-      // check if this was a sepculative task
-      if (oldNumAttempts > 1) {
-        speculativeMapTasks -= (oldNumAttempts - newNumAttempts);
-      }
       finishedMapTasks += 1;
       metrics.completeMap(taskid);
+      if (hasSpeculativeMaps) {
+        updateTaskTrackerStats(tip,ttStatus,trackerMapStats,mapTaskStats);
+      }
       // remove the completed map from the resp running caches
       retireMap(tip);
       if ((finishedMapTasks + failedMapTIPs) == (numMapTasks)) {
@@ -2109,21 +2342,66 @@ class JobInProgress {
       }
     } else {
       runningReduceTasks -= 1;
-      if (oldNumAttempts > 1) {
-        speculativeReduceTasks -= (oldNumAttempts - newNumAttempts);
-      }
       finishedReduceTasks += 1;
       metrics.completeReduce(taskid);
+      if (hasSpeculativeReduces) {
+        updateTaskTrackerStats(tip,ttStatus,trackerReduceStats,reduceTaskStats);
+      }
       // remove the completed reduces from the running reducers set
       retireReduce(tip);
       if ((finishedReduceTasks + failedReduceTIPs) == (numReduceTasks)) {
         this.status.setReduceProgress(1.0f);
       }
     }
-    
+    decrementSpeculativeCount(wasSpeculating, tip);
     return true;
   }
-
+  
+  private void updateTaskTrackerStats(TaskInProgress tip, TaskTrackerStatus ttStatus, 
+      Map<String,DataStatistics> trackerStats, DataStatistics overallStats) {
+    float tipDuration = tip.getExecFinishTime()-tip.getDispatchTime();
+    DataStatistics ttStats = 
+      trackerStats.get(ttStatus.getTrackerName());
+    double oldMean = 0.0d;
+    //We maintain the mean of TaskTrackers' means. That way, we get a single
+    //data-point for every tracker (used in the evaluation in isSlowTracker)
+    if (ttStats != null) {
+      oldMean = ttStats.mean();
+      ttStats.add(tipDuration);
+      overallStats.updateStatistics(oldMean, ttStats.mean());
+    } else {
+      trackerStats.put(ttStatus.getTrackerName(),
+          (ttStats = new DataStatistics(tipDuration)));
+      overallStats.add(tipDuration);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Added mean of " +ttStats.mean() + " to trackerStats of type "+
+          (tip.isMapTask() ? "Map" : "Reduce") +
+          " on "+ttStatus.getTrackerName()+". DataStatistics is now: " +
+          trackerStats.get(ttStatus.getTrackerName()));
+    }
+  }
+  
+  public void updateStatistics(double oldProg, double newProg, boolean isMap) {
+    if (isMap) {   
+      runningMapTaskStats.updateStatistics(oldProg, newProg);
+    } else {
+      runningReduceTaskStats.updateStatistics(oldProg, newProg);
+    }
+  }
+  
+  public DataStatistics getRunningTaskStatistics(boolean isMap) {
+    if (isMap) {
+      return runningMapTaskStats;
+    } else {
+      return runningReduceTaskStats;
+    }
+  }
+  
+  public float getSlowTaskThreshold() {
+    return slowTaskThreshold;
+  }
+  
   /**
    * The job is done since all it's component tasks are either
    * successful or have failed.
@@ -2142,7 +2420,7 @@ class JobInProgress {
       if (reduces.length == 0) {
         this.status.setReduceProgress(1.0f);
       }
-      this.finishTime = System.currentTimeMillis();
+      this.finishTime = jobtracker.getClock().getTime();
       LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
       JobHistory.JobInfo.logFinished(this.status.getJobID(), finishTime, 
@@ -2164,7 +2442,7 @@ class JobInProgress {
         this.status = new JobStatus(status.getJobID(),
                                     1.0f, 1.0f, 1.0f, JobStatus.FAILED,
                                     status.getJobPriority());
-        this.finishTime = System.currentTimeMillis();
+        this.finishTime = jobtracker.getClock().getTime();
         JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks);
@@ -2172,7 +2450,7 @@ class JobInProgress {
         this.status = new JobStatus(status.getJobID(),
                                     1.0f, 1.0f, 1.0f, JobStatus.KILLED,
                                     status.getJobPriority());
-        this.finishTime = System.currentTimeMillis();
+        this.finishTime = jobtracker.getClock().getTime();
         JobHistory.JobInfo.logKilled(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks);
@@ -2273,6 +2551,21 @@ class JobInProgress {
     terminate(JobStatus.FAILED);
   }
   
+  private void decrementSpeculativeCount(boolean wasSpeculating, 
+      TaskInProgress tip) {
+    if (wasSpeculating) {
+      if (tip.isMapTask()) {
+        speculativeMapTasks--;
+        LOG.debug("Decrement count. Current speculativeMap task count: " +
+            speculativeMapTasks);
+      } else {
+        speculativeReduceTasks--;
+        LOG.debug("Decremented count. Current speculativeReduce task count: " + 
+            speculativeReduceTasks);
+      }
+    }
+  }
+  
   /**
    * A task assigned to this JobInProgress has reported in as failed.
    * Most of the time, we'll just reschedule execution.  However, after
@@ -2292,9 +2585,11 @@ class JobInProgress {
     final JobTrackerInstrumentation metrics = jobtracker.getInstrumentation();
     // check if the TIP is already failed
     boolean wasFailed = tip.isFailed();
+    boolean wasSpeculating = tip.isSpeculating();
 
     // Mark the taskid as FAILED or KILLED
     tip.incompleteSubTask(taskid, this.status);
+    decrementSpeculativeCount(wasSpeculating, tip);
    
     boolean isRunning = tip.isRunning();
     boolean isComplete = tip.isComplete();
@@ -2477,8 +2772,8 @@ class JobInProgress {
    * @param reason The reason that the task failed
    * @param trackerName The task tracker the task failed on
    */
-  public void failedTask(TaskInProgress tip, TaskAttemptID taskid, String reason, 
-                         TaskStatus.Phase phase, TaskStatus.State state, 
+  public synchronized void failedTask(TaskInProgress tip, TaskAttemptID taskid,
+      String reason, TaskStatus.Phase phase, TaskStatus.State state, 
                          String trackerName) {
     TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), 
                                                     taskid,
@@ -2491,10 +2786,10 @@ class JobInProgress {
     // update the actual start-time of the attempt
     TaskStatus oldStatus = tip.getTaskStatus(taskid); 
     long startTime = oldStatus == null
-                     ? System.currentTimeMillis()
+                     ? jobtracker.getClock().getTime()
                      : oldStatus.getStartTime();
     status.setStartTime(startTime);
-    status.setFinishTime(System.currentTimeMillis());
+    status.setFinishTime(jobtracker.getClock().getTime());
     boolean wasComplete = tip.isComplete();
     updateTaskStatus(tip, status);
     boolean isComplete = tip.isComplete();

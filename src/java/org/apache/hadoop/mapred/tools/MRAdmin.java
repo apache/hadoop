@@ -30,7 +30,6 @@ import org.apache.hadoop.mapred.AdminOperationsProtocol;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -54,15 +53,15 @@ public class MRAdmin extends Configured implements Tool {
   private static void printHelp(String cmd) {
     String summary = "hadoop mradmin is the command to execute Map-Reduce administrative commands.\n" +
     "The full syntax is: \n\n" +
-    "hadoop mradmin [-refreshServiceAcl] [-refreshQueueAcls] [-help [cmd]] "
+    "hadoop mradmin [-refreshServiceAcl] [-refreshQueues] [-help [cmd]] "
     + "[-refreshNodes]\n"; 
 
   String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
     "\t\tJobtracker will reload the authorization policy file.\n";
 
-  String refreshQueueAcls =
-        "-refreshQueueAcls: Reload the queue acls\n"
-            + "\t\tJobTracker will reload the mapred-queue-acls.xml file.\n";
+  String refreshQueues =
+        "-refreshQueues: Reload the queue acls and state.\n"
+            + "\t\tJobTracker will reload the mapred-queues.xml file.\n";
 
   String refreshNodes =
     "-refreshNodes: Refresh the hosts information at the jobtracker.\n";
@@ -72,8 +71,8 @@ public class MRAdmin extends Configured implements Tool {
 
   if ("refreshServiceAcl".equals(cmd)) {
     System.out.println(refreshServiceAcl);
-  } else if ("refreshQueueAcls".equals(cmd)) {
-    System.out.println(refreshQueueAcls);
+  } else if ("refreshQueues".equals(cmd)) {
+    System.out.println(refreshQueues);
   }  else if ("refreshNodes".equals(cmd)) {
     System.out.println(refreshNodes);
   } else if ("help".equals(cmd)) {
@@ -81,7 +80,7 @@ public class MRAdmin extends Configured implements Tool {
   } else {
     System.out.println(summary);
     System.out.println(refreshServiceAcl);
-    System.out.println(refreshQueueAcls);
+    System.out.println(refreshQueues);
     System.out.println(refreshNodes);
     System.out.println(help);
     System.out.println();
@@ -97,14 +96,14 @@ public class MRAdmin extends Configured implements Tool {
   private static void printUsage(String cmd) {
     if ("-refreshServiceAcl".equals(cmd)) {
       System.err.println("Usage: java MRAdmin" + " [-refreshServiceAcl]");
-    } else if ("-refreshQueueAcls".equals(cmd)) {
-      System.err.println("Usage: java MRAdmin" + " [-refreshQueueAcls]");
+    } else if ("-refreshQueues".equals(cmd)) {
+      System.err.println("Usage: java MRAdmin" + " [-refreshQueues]");
     } else if ("-refreshNodes".equals(cmd)) {
       System.err.println("Usage: java MRAdmin" + " [-refreshNodes]");
     } else {
       System.err.println("Usage: java MRAdmin");
       System.err.println("           [-refreshServiceAcl]");
-      System.err.println("           [-refreshQueueAcls]");
+      System.err.println("           [-refreshQueues]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
@@ -143,7 +142,7 @@ public class MRAdmin extends Configured implements Tool {
     return 0;
   }
 
-  private int refreshQueueAcls() throws IOException {
+  private int refreshQueues() throws IOException {
     // Get the current configuration
     Configuration conf = getConf();
     
@@ -157,7 +156,7 @@ public class MRAdmin extends Configured implements Tool {
                                              AdminOperationsProtocol.class));
     
     // Refresh the queue properties
-    adminOperationsProtocol.refreshQueueAcls();
+    adminOperationsProtocol.refreshQueues();
     
     return 0;
   }
@@ -201,7 +200,7 @@ public class MRAdmin extends Configured implements Tool {
     //
     // verify that we have enough command line parameters
     //
-    if ("-refreshServiceAcl".equals(cmd) || "-refreshQueueAcls".equals(cmd)
+    if ("-refreshServiceAcl".equals(cmd) || "-refreshQueues".equals(cmd)
         || "-refreshNodes".equals(cmd)) {
       if (args.length != 1) {
         printUsage(cmd);
@@ -213,8 +212,8 @@ public class MRAdmin extends Configured implements Tool {
     try {
       if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshAuthorizationPolicy();
-      } else if ("-refreshQueueAcls".equals(cmd)) {
-        exitCode = refreshQueueAcls();
+      } else if ("-refreshQueues".equals(cmd)) {
+        exitCode = refreshQueues();
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = refreshNodes();
       } else if ("-help".equals(cmd)) {

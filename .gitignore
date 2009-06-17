@@ -27,6 +27,8 @@ conf/mapred-site.xml
 conf/hadoop-policy.xml
 conf/capacity-scheduler.xml
 conf/mapred-queue-acls.xml
+conf/mapred-queue-acls.xml.template
+conf/mapred-queues.xml
 docs/api/
 logs/
 src/contrib/index/conf/index-config.xml

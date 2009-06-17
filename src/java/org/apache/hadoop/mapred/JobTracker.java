@@ -138,6 +138,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // system files should have 700 permission
   final static FsPermission SYSTEM_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0700); // rwx------
+  
+  private Clock clock;
 
   /**
    * A client tried to submit a job before the Job Tracker was ready.
@@ -165,6 +167,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
   public static final Log LOG = LogFactory.getLog(JobTracker.class);
     
+  public Clock getClock() {
+    return clock;
+  }
+  
   /**
    * Start the JobTracker with given configuration.
    * 
@@ -181,7 +187,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     JobTracker result = null;
     while (true) {
       try {
-        result = new JobTracker(conf);
+        result = new JobTracker(conf, new Clock());
         result.taskScheduler.setTaskTrackerManager(result);
         break;
       } catch (VersionMismatch e) {
@@ -242,7 +248,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         try {
           // Every 3 minutes check for any tasks that are overdue
           Thread.sleep(tasktrackerExpiryInterval/3);
-          long now = System.currentTimeMillis();
+          long now = clock.getTime();
           LOG.debug("Starting launching task sweep");
           synchronized (JobTracker.this) {
             synchronized (launchingTasks) {
@@ -295,7 +301,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     public void addNewTask(TaskAttemptID taskName) {
       synchronized (launchingTasks) {
         launchingTasks.put(taskName, 
-                           System.currentTimeMillis());
+                           clock.getTime());
       }
     }
       
@@ -339,7 +345,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           synchronized (JobTracker.this) {
             synchronized (taskTrackers) {
               synchronized (trackerExpiryQueue) {
-                long now = System.currentTimeMillis();
+                long now = clock.getTime();
                 TaskTrackerStatus leastRecent = null;
                 while ((trackerExpiryQueue.size() > 0) &&
                        ((leastRecent = trackerExpiryQueue.first()) != null) &&
@@ -405,7 +411,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         try {
           Thread.sleep(retireJobCheckInterval);
           List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
-          long now = System.currentTimeMillis();
+          long now = clock.getTime();
           long retireBefore = now - retireJobInterval;
 
           synchronized (jobs) {
@@ -465,9 +471,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     long lastUpdated;
     boolean blacklisted; 
 
-    FaultInfo() {
+    FaultInfo(long time) {
       numFaults = 0;
-      lastUpdated = System.currentTimeMillis();
+      lastUpdated = time;
       blacklisted = false;
     }
 
@@ -517,14 +523,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     void incrementFaults(String hostName) {
       synchronized (potentiallyFaultyTrackers) {
         FaultInfo fi = potentiallyFaultyTrackers.get(hostName);
+        long now = clock.getTime();
         if (fi == null) {
-          fi = new FaultInfo();
+          fi = new FaultInfo(now);
           potentiallyFaultyTrackers.put(hostName, fi);
         }
         int numFaults = fi.getFaultCount();
         ++numFaults;
         fi.setFaultCount(numFaults);
-        fi.setLastUpdated(System.currentTimeMillis());
+        fi.setLastUpdated(now);
         if (!fi.isBlacklisted()) {
           if (shouldBlacklist(hostName, numFaults)) {
             LOG.info("Adding " + hostName + " to the blacklist" +
@@ -746,7 +753,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
         TaskID id = TaskID.forName(taskId);
         TaskInProgress tip = getTip(id);
-        
+
         updateTip(tip, task);
       }
 
@@ -759,7 +766,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
         // Check if the transaction for this attempt can be committed
         String taskStatus = attempt.get(Keys.TASK_STATUS);
-        
+
         if (taskStatus.length() > 0) {
           // This means this is an update event
           if (taskStatus.equals(Values.SUCCESS.name())) {
@@ -1028,7 +1035,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       TaskTrackerStatus ttStatus = 
         new TaskTrackerStatus(trackerName, trackerHostName, port, ttStatusList, 
                               0 , 0, 0);
-      ttStatus.setLastSeen(System.currentTimeMillis());
+      ttStatus.setLastSeen(clock.getTime());
 
       synchronized (JobTracker.this) {
         synchronized (taskTrackers) {
@@ -1244,7 +1251,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     public void recover() {
-      long recoveryProcessStartTime = System.currentTimeMillis();
+      long recoveryProcessStartTime = clock.getTime();
       if (!shouldRecover()) {
         // clean up jobs structure
         jobsToRecover.clear();
@@ -1275,7 +1282,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
           // check the access
           try {
-            checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB, ugi);
+            checkAccess(job, Queue.QueueOperation.SUBMIT_JOB, ugi);
           } catch (Throwable t) {
             LOG.warn("Access denied for user " + ugi.getUserName() 
                      + " in groups : [" 
@@ -1312,13 +1319,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           continue;
         }
       }
-
+      long now = clock.getTime();
       LOG.info("Took a total of " 
-               + StringUtils.formatTime(System.currentTimeMillis() 
+               + StringUtils.formatTime(now 
                                         - recoveryProcessStartTime) 
                + " for recovering filenames of all the jobs from history.");
 
-      long recoveryStartTime = System.currentTimeMillis();
 
       // II. Recover each job
       idIter = jobsToRecover.iterator();
@@ -1375,10 +1381,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
 
-      long recoveryProcessEndTime = System.currentTimeMillis();
+      long recoveryProcessEndTime = clock.getTime();
       LOG.info("Took a total of " 
                + StringUtils.formatTime(recoveryProcessEndTime
-                                        - recoveryStartTime) 
+                                        - now) 
                + " for parsing and recovering all the jobs from history.");
 
       recoveryDuration = recoveryProcessEndTime - recoveryProcessStartTime;
@@ -1565,11 +1571,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
   private QueueManager queueManager;
 
+  JobTracker(JobConf conf) throws IOException,InterruptedException{
+    this(conf, new Clock());
+  }
   /**
    * Start the JobTracker process, listen on the indicated port
    */
-  JobTracker(JobConf conf) throws IOException, InterruptedException {
+  JobTracker(JobConf conf, Clock clock) throws IOException, InterruptedException {
     // find the owner of the process
+    this.clock = clock;
     try {
       mrOwner = UnixUserGroupInformation.login(conf);
     } catch (LoginException e) {
@@ -1649,7 +1659,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         conf.get("mapred.job.tracker.http.address", "0.0.0.0:50030"));
     String infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
-    this.startTime = System.currentTimeMillis();
+    this.startTime = clock.getTime();
     infoServer = new HttpServer("job", infoBindAddress, tmpInfoPort, 
         tmpInfoPort == 0, conf);
     infoServer.setAttribute("job.tracker", this);
@@ -2152,7 +2162,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     final JobTrackerInstrumentation metrics = getInstrumentation();
     metrics.finalizeJob(conf, id);
     
-    long now = System.currentTimeMillis();
+    long now = clock.getTime();
     
     // mark the job for cleanup at all the trackers
     addJobForCleanup(id);
@@ -2568,7 +2578,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
     // First check if the last heartbeat response got through
     String trackerName = status.getTrackerName();
-    long now = System.currentTimeMillis();
+    long now = clock.getTime();
     boolean isBlacklisted = false;
     if (restarted) {
       faultyTrackers.markTrackerHealthy(status.getHost());
@@ -3071,10 +3081,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
       throw new IOException("Queue \"" + queue + "\" does not exist");        
     }
-
+    
+    //check if queue is RUNNING
+    if(!queueManager.isRunning(queue)) {
+      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));      
+      throw new IOException("Queue \"" + queue + "\" is not running");
+    }
     // check for access
     try {
-      checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB);
+      checkAccess(job, Queue.QueueOperation.SUBMIT_JOB);
     } catch (IOException ioe) {
        LOG.warn("Access denied for user " + job.getJobConf().getUser() 
                 + ". Ignoring job " + jobId, ioe);
@@ -3122,7 +3137,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Check whether the specified operation can be performed
   // related to the job.
   private void checkAccess(JobInProgress job, 
-                                QueueManager.QueueOperation oper) 
+                                Queue.QueueOperation oper) 
                                   throws IOException {
     // get the user group info
     UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
@@ -3130,7 +3145,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   // use the passed ugi for checking the access
-  private void checkAccess(JobInProgress job, QueueManager.QueueOperation oper,
+  private void checkAccess(JobInProgress job, Queue.QueueOperation oper,
                            UserGroupInformation ugi) throws IOException {
     // get the queue
     String queue = job.getProfile().getQueueName();
@@ -3192,7 +3207,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
         
     JobStatus prevStatus = (JobStatus)job.getStatus().clone();
-    checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
+    checkAccess(job, Queue.QueueOperation.ADMINISTER_JOBS);
     job.kill();
     
     // Inform the listeners if the job is killed
@@ -3225,7 +3240,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             + " is not a valid job");
         return;
     }
-    checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
+    checkAccess(job, Queue.QueueOperation.ADMINISTER_JOBS);
     JobPriority newPriority = JobPriority.valueOf(priority);
     setJobPriority(jobid, newPriority);
   }
@@ -3450,7 +3465,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized boolean killTask(TaskAttemptID taskid, boolean shouldFail) throws IOException{
     TaskInProgress tip = taskidToTIPMap.get(taskid);
     if(tip != null) {
-      checkAccess(tip.getJob(), QueueManager.QueueOperation.ADMINISTER_JOBS);
+      checkAccess(tip.getJob(), Queue.QueueOperation.ADMINISTER_JOBS);
       return tip.killTask(taskid, shouldFail);
     }
     else {
@@ -3847,10 +3862,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   @Override
-  public void refreshQueueAcls() throws IOException{
-    LOG.info("Refreshing queue acls. requested by : " + 
+  public void refreshQueues() throws IOException{
+    LOG.info("Refreshing queue information. requested by : " + 
         UserGroupInformation.getCurrentUGI().getUserName());
-    this.queueManager.refreshAcls(new Configuration(this.conf));
+    this.queueManager.refreshQueues(new Configuration(this.conf));
   }
 
   private void initializeTaskMemoryRelatedConfig() {
