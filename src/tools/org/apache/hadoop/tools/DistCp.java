@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Stack;
@@ -85,7 +86,8 @@ public class DistCp implements Tool {
     "\n                       u: user" + 
     "\n                       g: group" +
     "\n                       p: permission" +
-    "\n                       -p alone is equivalent to -prbugp" +
+    "\n                       t: modification and access times" +
+    "\n                       -p alone is equivalent to -prbugpt" +
     "\n-i                     Ignore failures" +
     "\n-log <logdir>          Write logs to <logdir>" +
     "\n-m <num_maps>          Maximum number of simultaneous copies" +
@@ -145,7 +147,7 @@ public class DistCp implements Tool {
     }
   }
   static enum FileAttribute {
-    BLOCK_SIZE, REPLICATION, USER, GROUP, PERMISSION;
+    BLOCK_SIZE, REPLICATION, USER, GROUP, PERMISSION, TIMES;
 
     final char symbol;
 
@@ -459,7 +461,7 @@ public class DistCp implements Tool {
               + ") but expected " + bytesString(srcstat.getLen()) 
               + " from " + srcstat.getPath());        
         } 
-        updatePermissions(srcstat, dststat);
+        updateDestStatus(srcstat, dststat);
       }
 
       // report at least once for each file
@@ -485,10 +487,10 @@ public class DistCp implements Tool {
       }
     }
 
-    private void updatePermissions(FileStatus src, FileStatus dst
+    private void updateDestStatus(FileStatus src, FileStatus dst
         ) throws IOException {
       if (preserve_status) {
-        DistCp.updatePermissions(src, dst, preseved, destFileSys);
+        DistCp.updateDestStatus(src, dst, preseved, destFileSys);
       }
     }
 
@@ -616,15 +618,24 @@ public class DistCp implements Tool {
   private static void checkSrcPath(Configuration conf, List<Path> srcPaths
       ) throws IOException {
     List<IOException> rslt = new ArrayList<IOException>();
+    List<Path> unglobbed = new LinkedList<Path>(); 
     for (Path p : srcPaths) {
       FileSystem fs = p.getFileSystem(conf);
-      if (!fs.exists(p)) {
+      FileStatus[] inputs = fs.globStatus(p);
+      
+      if(inputs.length > 0) {
+        for (FileStatus onePath: inputs) {
+          unglobbed.add(onePath.getPath());
+        }
+      } else {
         rslt.add(new IOException("Input source " + p + " does not exist."));
       }
     }
     if (!rslt.isEmpty()) {
       throw new InvalidInputException(rslt);
     }
+    srcPaths.clear();
+    srcPaths.addAll(unglobbed);
   }
 
   /**
@@ -659,7 +670,7 @@ public class DistCp implements Tool {
     }
   }
 
-  private static void updatePermissions(FileStatus src, FileStatus dst,
+  private static void updateDestStatus(FileStatus src, FileStatus dst,
       EnumSet<FileAttribute> preseved, FileSystem destFileSys
       ) throws IOException {
     String owner = null;
@@ -678,6 +689,9 @@ public class DistCp implements Tool {
     if (preseved.contains(FileAttribute.PERMISSION)
         && !src.getPermission().equals(dst.getPermission())) {
       destFileSys.setPermission(dst.getPath(), src.getPermission());
+    }
+    if (preseved.contains(FileAttribute.TIMES)) {
+      destFileSys.setTimes(dst.getPath(), src.getModificationTime(), src.getAccessTime());
     }
   }
 
@@ -703,7 +717,7 @@ public class DistCp implements Tool {
       FilePair pair = new FilePair(); 
       for(; in.next(dsttext, pair); ) {
         Path absdst = new Path(destPath, pair.output);
-        updatePermissions(pair.input, dstfs.getFileStatus(absdst),
+        updateDestStatus(pair.input, dstfs.getFileStatus(absdst),
             preseved, dstfs);
       }
     } finally {
@@ -1040,7 +1054,7 @@ public class DistCp implements Tool {
     final boolean special =
       (args.srcs.size() == 1 && !dstExists) || update || overwrite;
     int srcCount = 0, cnsyncf = 0, dirsyn = 0;
-    long fileCount = 0L, byteCount = 0L, cbsyncs = 0L;
+    long fileCount = 0L, dirCount = 0L, byteCount = 0L, cbsyncs = 0L;
     try {
       for(Iterator<Path> srcItr = args.srcs.iterator(); srcItr.hasNext(); ) {
         final Path src = srcItr.next();
@@ -1049,6 +1063,10 @@ public class DistCp implements Tool {
         Path root = special && srcfilestat.isDir()? src: src.getParent();
         if (srcfilestat.isDir()) {
           ++srcCount;
+          ++dirCount;
+          final String dst = makeRelative(root,src);
+          src_writer.append(new LongWritable(0), new FilePair(srcfilestat, dst));
+          dst_writer.append(new Text(dst), new Text(src.toString()));
         }
 
         Stack<FileStatus> pathstack = new Stack<FileStatus>();
@@ -1063,6 +1081,7 @@ public class DistCp implements Tool {
 
             if (child.isDir()) {
               pathstack.push(child);
+              ++dirCount;
             }
             else {
               //skip file if the src and the dst files are the same.
@@ -1147,7 +1166,7 @@ public class DistCp implements Tool {
     jobConf.setInt(SRC_COUNT_LABEL, srcCount);
     jobConf.setLong(TOTAL_SIZE_LABEL, byteCount);
     setMapCount(byteCount, jobConf);
-    return fileCount > 0;
+    return (fileCount + dirCount) > 0;
   }
 
   /**
