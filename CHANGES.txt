@@ -841,6 +841,9 @@ Trunk (unreleased changes)
     HADOOP-6004. Fixes BlockLocation deserialization.  (Jakob Homan via
     szetszwo)
 
+    HADOOP-6079. Serialize proxySource as DatanodeInfo in DataTransferProtocol.
+    (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

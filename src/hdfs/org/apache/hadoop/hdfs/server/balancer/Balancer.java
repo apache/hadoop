@@ -372,7 +372,7 @@ public class Balancer implements Tool {
       out.writeLong(block.getBlock().getBlockId());
       out.writeLong(block.getBlock().getGenerationStamp());
       Text.writeString(out, source.getStorageID());
-      proxySource.write(out);
+      proxySource.getDatanode().write(out);
       AccessToken accessToken = AccessToken.DUMMY_TOKEN;
       if (isAccessTokenEnabled) {
         accessToken = accessTokenHandler.generateToken(null, block.getBlock()
@@ -496,7 +496,7 @@ public class Balancer implements Tool {
   }
   
   /* A class that keeps track of a datanode in Balancer */
-  private static class BalancerDatanode implements Writable {
+  private static class BalancerDatanode {
     final private static long MAX_SIZE_TO_MOVE = 10*1024*1024*1024L; //10GB
     protected DatanodeInfo datanode;
     private double utilization;
@@ -583,17 +583,6 @@ public class Balancer implements Tool {
     private synchronized boolean  removePendingBlock(
         PendingBlockMove pendingBlock) {
       return pendingBlocks.remove(pendingBlock);
-    }
-
-    /** The following two methods support the Writable interface */
-    /** Deserialize */
-    public void readFields(DataInput in) throws IOException {
-      datanode.readFields(in);
-    }
-
-    /** Serialize */
-    public void write(DataOutput out) throws IOException {
-      datanode.write(out);
     }
   }
   
