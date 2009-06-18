@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultiRegionTable;
@@ -59,8 +58,8 @@ import org.apache.lucene.search.TermQuery;
 /**
  * Test Map/Reduce job to build index over HBase table
  */
-public class DisabledTestTableIndex extends MultiRegionTable {
-  private static final Log LOG = LogFactory.getLog(DisabledTestTableIndex.class);
+public class TestTableIndex extends MultiRegionTable {
+  private static final Log LOG = LogFactory.getLog(TestTableIndex.class);
 
   static final String TABLE_NAME = "moretest";
   static final String INPUT_COLUMN = "contents:";
@@ -77,14 +76,14 @@ public class DisabledTestTableIndex extends MultiRegionTable {
   private JobConf jobConf = null;
 
   /** default constructor */
-  public DisabledTestTableIndex() {
+  public TestTableIndex() {
     super(INPUT_COLUMN);
     desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
     desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
   }
 
-  @Override
+    @Override
   public void tearDown() throws Exception {
     if (jobConf != null) {
       FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));
@@ -109,7 +108,7 @@ public class DisabledTestTableIndex extends MultiRegionTable {
     conf.set("hbase.index.conf", createIndexConfContent());
 
     try {
-      jobConf = new JobConf(conf, DisabledTestTableIndex.class);
+      jobConf = new JobConf(conf, TestTableIndex.class);
       jobConf.setJobName("index column contents");
       jobConf.setNumMapTasks(2);
       // number of indexes to partition into
@@ -261,6 +260,6 @@ public class DisabledTestTableIndex extends MultiRegionTable {
    * @param args unused
    */
   public static void main(String[] args) {
-    TestRunner.run(new TestSuite(DisabledTestTableIndex.class));
+    TestRunner.run(new TestSuite(TestTableIndex.class));
   }
 }
