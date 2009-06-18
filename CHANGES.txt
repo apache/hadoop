@@ -838,6 +838,9 @@ Trunk (unreleased changes)
     HADOOP-6076. Fix a broken compilation of Forrest documentation due to
     misplaced tags in commands_manual.xml. (yhemanth)
 
+    HADOOP-6004. Fixes BlockLocation deserialization.  (Jakob Homan via
+    szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -935,9 +938,6 @@ Release 0.20.1 - Unreleased
     available memory on a tasktracker.
     (Vinod Kumar Vavilapalli via yhemanth)
 
-    HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
-    via szetszwo)
-
     HADOOP-5908. Fixes a problem to do with ArithmeticException in the 
     JobTracker when there are jobs with 0 maps. (Amar Kamat via ddas)
 
@@ -955,6 +955,9 @@ Release 0.20.1 - Unreleased
 
     HADOOP-5884. Fixes accounting in capacity scheduler so that high RAM jobs
     take more slots. (Vinod Kumar Vavilapalli via yhemanth)
+
+    HADOOP-5937. Correct a safemode message in FSNamesystem.  (Ravi Phulari
+    via szetszwo)
 
     HADOOP-5869. Fix bug in assignment of setup / cleanup task that was
     causing TestQueueCapacities to fail.

@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-import java.io.*;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
 /*
  * A BlockLocation lists hosts, offset and length
@@ -213,15 +218,19 @@ public class BlockLocation implements Writable {
       name.readFields(in);
       names[i] = name.toString();
     }
+    
     int numHosts = in.readInt();
+    this.hosts = new String[numHosts];
     for (int i = 0; i < numHosts; i++) {
       Text host = new Text();
       host.readFields(in);
       hosts[i] = host.toString();
     }
+    
     int numTops = in.readInt();
-    Text path = new Text();
+    topologyPaths = new String[numTops];
     for (int i = 0; i < numTops; i++) {
+      Text path = new Text();
       path.readFields(in);
       topologyPaths[i] = path.toString();
     }
