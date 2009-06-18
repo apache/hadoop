@@ -835,6 +835,9 @@ Trunk (unreleased changes)
     HADOOP-4041. IsolationRunner does not work as documented.
     (Philip Zeyliger via tomwhite)
 
+    HADOOP-6076. Fix a broken compilation of Forrest documentation due to
+    misplaced tags in commands_manual.xml. (yhemanth)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -589,7 +589,7 @@
         <code>mapred-queues.xml</code>. If the file is malformed, then the
         existing properties are not disturbed. New operations on jobs in the
         queues will be subjected to checks against the refreshed ACLs. Likewise,
-        new jobs will be accepted to queues only if the queue state is running.
+        new jobs will be accepted to queues only if the queue state is running.</td>
         </tr>
         </table>
       </section>
