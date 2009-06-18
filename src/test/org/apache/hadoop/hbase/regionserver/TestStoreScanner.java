@@ -140,8 +140,13 @@ public class TestStoreScanner extends TestCase {
     
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
+    assertEquals(0, results.size());
+
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[2], results.get(0));
+
+    assertEquals(false, scan.next(results));
   }
 
   public void testDeleteVersionMaskingMultiplePuts() throws IOException {
@@ -272,8 +277,12 @@ public class TestStoreScanner extends TestCase {
             null, scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
+    assertEquals(0, results.size());
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[kvs.length-1], results.get(0));
+
+    assertEquals(false, scan.next(results));
   }
 
   public void testDeleteColumn() throws IOException {

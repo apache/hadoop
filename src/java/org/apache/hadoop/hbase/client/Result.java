@@ -235,6 +235,8 @@ public class Result implements Writable {
 
   public Cell getCellValue(byte[] family, byte[] qualifier) {
     Map.Entry<Long,byte[]> val = getKeyValue(family, qualifier);
+    if (val == null)
+      return null;
     return new Cell(val.getValue(), val.getKey());
   }
 

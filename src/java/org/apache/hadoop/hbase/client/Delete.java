@@ -105,6 +105,14 @@ public class Delete implements Writable {
   }
 
   /**
+   * Method to check if the familyMap is empty
+   * @return true if empty, false otherwise
+   */
+  public boolean isEmpty() {
+    return familyMap.isEmpty();
+  }
+
+  /**
    * Delete all versions of all columns of the specified family.
    * <p>
    * Overrides previous calls to deleteColumn and deleteColumns for the

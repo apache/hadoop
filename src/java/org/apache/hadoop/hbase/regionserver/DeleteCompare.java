@@ -89,8 +89,8 @@ public class DeleteCompare {
     int timeRes = Bytes.compareTo(memBuffer, tsOffset, Bytes.SIZEOF_LONG,
         deleteBuffer, deleteTimeOffset, Bytes.SIZEOF_LONG);
 
-    if(deleteType == KeyValue.Type.DeleteFamily.getCode()) {
-      if(timeRes <= 0){
+    if (deleteType == KeyValue.Type.DeleteFamily.getCode()) {
+      if (timeRes <= 0) {
         return DeleteCode.DELETE;
       }
       return DeleteCode.SKIP;
@@ -99,16 +99,16 @@ public class DeleteCompare {
     //Compare columns
     res = Bytes.compareTo(memBuffer, memOffset, memQualifierLen,
         deleteBuffer, deleteQualifierOffset, deleteQualifierLength);
-    if(res < 0) {
+    if (res < 0) {
       return DeleteCode.SKIP;
     } else if(res > 0) {
       return DeleteCode.DONE;
     }
     // same column, compare the time.
-    if(timeRes == 0) {
+    if (timeRes == 0) {
       return DeleteCode.DELETE;
     } else if (timeRes < 0) {
-      if(deleteType == KeyValue.Type.DeleteColumn.getCode()) {
+      if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
         return DeleteCode.DELETE;
       }
       return DeleteCode.DONE;

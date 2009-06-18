@@ -506,9 +506,12 @@ public class TestMemcache extends TestCase {
     KeyValue put1 = new KeyValue(row, fam, qf1, ts, val);
     KeyValue put2 = new KeyValue(row, fam, qf2, ts, val);
     KeyValue put3 = new KeyValue(row, fam, qf3, ts, val);
+    KeyValue put4 = new KeyValue(row, fam, qf3, ts+1, val);
+
     memcache.add(put1);
     memcache.add(put2);
     memcache.add(put3);
+    memcache.add(put4);
     
     KeyValue del = 
       new KeyValue(row, fam, null, ts, KeyValue.Type.DeleteFamily, val);
@@ -516,8 +519,9 @@ public class TestMemcache extends TestCase {
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(del);
+    expected.add(put4);
     
-    assertEquals(1, memcache.memcache.size());
+    assertEquals(2, memcache.memcache.size());
     int i=0;
     for(KeyValue actual : memcache.memcache) {
       assertEquals(expected.get(i++), actual);

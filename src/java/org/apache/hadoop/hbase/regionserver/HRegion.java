@@ -1710,7 +1710,7 @@ public class HRegion implements HConstants { // , Writable{
       if(stopRow != null &&
           comparator.compareRows(stopRow, 0, stopRow.length, 
               currentRow, 0, currentRow.length)
-          <= 0){
+          <= 0) {
         return false;
       }
       this.storeHeap.next(results);
@@ -1721,6 +1721,21 @@ public class HRegion implements HConstants { // , Writable{
         }
         byte [] row = kv.getRow();
         if(!Bytes.equals(currentRow, row)) {
+          // Next row:
+
+          // what happens if there are _no_ results:
+          if (results.isEmpty()) {
+            // Continue on the next row:
+            currentRow = row;
+
+            // But did we pass the stop row?
+            if (stopRow != null &&
+                comparator.compareRows(stopRow, 0, stopRow.length,
+                    currentRow, 0, currentRow.length) <= 0) {
+              return false;
+            }
+            continue;
+          }
           return true;
         }
         this.storeHeap.next(results);

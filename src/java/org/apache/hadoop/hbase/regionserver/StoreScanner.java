@@ -123,7 +123,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param result
    * @return true if there are more rows, false if scanner is done
    */
-  public synchronized boolean next(List<KeyValue> result) throws IOException {
+  public synchronized boolean next(List<KeyValue> outResult) throws IOException {
+    List<KeyValue> results = new ArrayList<KeyValue>();
     KeyValue peeked = this.heap.peek();
     if (peeked == null) {
       close();
@@ -136,27 +137,25 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       switch(qcode) {
         case INCLUDE:
           KeyValue next = this.heap.next();
-          result.add(next);
+          results.add(next);
           continue;
           
         case DONE:
-          // what happens if we have 0 results?
-          if (result.isEmpty()) {
-            // try the next one.
-            matcher.setRow(this.heap.peek().getRow());
-            continue;
-          }
           if (matcher.filterEntireRow()) {
-            // wow, well, um, reset the result and continue.
-            result.clear();
-            matcher.setRow(heap.peek().getRow());
-            continue;
+            // nuke all results, and then return.
+            results.clear();
           }
 
+          // copy jazz
+          outResult.addAll(results);
           return true;
 
         case DONE_SCAN:
           close();
+
+          // copy jazz
+          outResult.addAll(results);
+
           return false;
 
         case SEEK_NEXT_ROW:
@@ -178,9 +177,14 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
           throw new RuntimeException("UNEXPECTED");
       }
     }
-    if(result.size() > 0) {
+
+    if (!results.isEmpty()) {
+      // copy jazz
+      outResult.addAll(results);
+
       return true;
     }
+
     // No more keys
     close();
     return false;

@@ -251,13 +251,13 @@ class Memcache {
       byte deleteType = deleteBuffer[deleteOffset];
       
       //Comparing with tail from memcache
-      for(KeyValue mem : tailSet) {
+      for (KeyValue mem : tailSet) {
         
         DeleteCode res = DeleteCompare.deleteCompare(mem, deleteBuffer, 
             deleteRowOffset, deleteRowLen, deleteQualifierOffset, 
             deleteQualifierLen, deleteTimestampOffset, deleteType,
             comparator.getRawComparator());
-        if(res == DeleteCode.DONE) {
+        if (res == DeleteCode.DONE) {
           break;
         } else if (res == DeleteCode.DELETE) {
           deletes.add(mem);
