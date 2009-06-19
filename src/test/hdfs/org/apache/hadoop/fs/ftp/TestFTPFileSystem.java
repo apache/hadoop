@@ -17,16 +17,19 @@
  */
 package org.apache.hadoop.fs.ftp;
 
+import java.io.File;
 import java.net.URI;
 import junit.framework.TestCase;
 
-import org.apache.ftpserver.DefaultFtpServerContext;
 import org.apache.ftpserver.FtpServer;
+import org.apache.ftpserver.FtpServerFactory;
+import org.apache.ftpserver.listener.Listener;
+import org.apache.ftpserver.listener.ListenerFactory;
 import org.apache.ftpserver.ftplet.Authority;
 import org.apache.ftpserver.ftplet.UserManager;
-import org.apache.ftpserver.listener.nio.NioListener;
-import org.apache.ftpserver.usermanager.BaseUser;
-import org.apache.ftpserver.usermanager.WritePermission;
+import org.apache.ftpserver.usermanager.ClearTextPasswordEncryptor;
+import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
+import org.apache.ftpserver.usermanager.UserManagerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,36 +47,30 @@ public class TestFTPFileSystem extends TestCase {
   private FtpServer server = null;
   private FileSystem localFs = null;
   private FileSystem ftpFs = null;
+  private Listener listener = null;
 
-  private Path workDir = new Path(new Path(System.getProperty(
-      "test.build.data", "."), "data"), "TestFTPFileSystem");
+  private Path workDir = new Path(System.getProperty("test.build.data", "."));
+  private File userFile = new File(System.getProperty("test.src.dir"), "ftp.user.properties");
 
-  Path ftpServerRoot = new Path(workDir, "FTPServer");
-  Path ftpServerConfig = null;
+  Path ftpServerRoot = new Path(workDir, "ftp-server");
 
   private void startServer() {
     try {
-      DefaultFtpServerContext context = new DefaultFtpServerContext(false);
-      NioListener listener = new NioListener();
-      // Set port to 0 for OS to give a free port
-      listener.setPort(0);
-      context.setListener("default", listener);
-
-      // Create a test user.
-      UserManager userManager = context.getUserManager();
-      BaseUser adminUser = new BaseUser();
-      adminUser.setName("admin");
-      adminUser.setPassword("admin");
-      adminUser.setEnabled(true);
-      adminUser.setAuthorities(new Authority[] { new WritePermission() });
-
-      Path adminUserHome = new Path(ftpServerRoot, "user/admin");
-      adminUser.setHomeDirectory(adminUserHome.toUri().getPath());
-      adminUser.setMaxIdleTime(0);
-      userManager.save(adminUser);
+      FtpServerFactory serverFactory = new FtpServerFactory();
+      ListenerFactory factory = new ListenerFactory();
+      factory.setPort(0);
+      listener = factory.createListener();
+      serverFactory.addListener("default", listener);
+      // Create a test user
+      PropertiesUserManagerFactory userFactory = new PropertiesUserManagerFactory();
+      userFactory.setFile(userFile);
+      userFactory.setPasswordEncryptor(new ClearTextPasswordEncryptor());
+      UserManager userManager = userFactory.createUserManager();
+      serverFactory.setUserManager(userManager);
 
       // Initialize the server and start.
-      server = new FtpServer(context);
+      
+      server = serverFactory.createServer();
       server.start();
 
     } catch (Exception e) {
@@ -92,9 +89,7 @@ public class TestFTPFileSystem extends TestCase {
     startServer();
     defaultConf = new Configuration();
     localFs = FileSystem.getLocal(defaultConf);
-    ftpServerConfig = new Path(localFs.getWorkingDirectory(), "res");
-    NioListener listener = (NioListener) server.getServerContext()
-        .getListener("default");
+    localFs.mkdirs(ftpServerRoot);
     int serverPort = listener.getPort();
     ftpFs = FileSystem.get(URI.create("ftp://admin:admin@localhost:"
         + serverPort), defaultConf);
@@ -103,7 +98,6 @@ public class TestFTPFileSystem extends TestCase {
   @Override
   public void tearDown() throws Exception {
     localFs.delete(ftpServerRoot, true);
-    localFs.delete(ftpServerConfig, true);
     localFs.close();
     ftpFs.close();
     stopServer();

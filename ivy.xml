@@ -219,10 +219,6 @@
       name="ftpserver-core"
       rev="${ftpserver-core.version}"
       conf="test->default"/>
-    <dependency org="org.apache.ftpserver"
-      name="ftpserver-deprecated"
-      rev="${ftpserver-deprecated.version}"
-      conf="test->default"/>
 
     <dependency org="junit"
       name="junit"
