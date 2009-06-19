@@ -363,6 +363,8 @@ Release 0.20.0 - Unreleased
    HBASE-1488  Fix TestThriftServer and re-enable it
    HBASE-1541  Scanning multiple column families in the presence of deleted 
                families results in bad scans
+   HBASE-1540  Client delete unit test, define behavior
+               (Jonathan Gray via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
