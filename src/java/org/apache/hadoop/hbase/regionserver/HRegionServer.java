@@ -1311,9 +1311,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * Run initialization using parameters passed us by the master.
    */
   private MapWritable reportForDuty() {
-    if (!getMaster()) {
-      return null;
+    while (!getMaster()) {
+      sleeper.sleep();
+      LOG.warn("Unable to get master for initialization");
     }
+
     MapWritable result = null;
     long lastMsg = 0;
     while(!stopRequested.get()) {
