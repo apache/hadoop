@@ -535,6 +535,27 @@ public class HTable {
       ).booleanValue();
   }
   
+  /**
+   * Test for the existence of columns in the table, as specified in the Get.<p>
+   * 
+   * This will return true if the Get matches one or more keys, false if not.<p>
+   * 
+   * This is a server-side call so it prevents any data from being transfered
+   * to the client.
+   * @param get
+   * @return true if the specified Get matches one or more keys, false if not
+   * @throws IOException
+   */
+  public boolean exists(final Get get) throws IOException {
+    return connection.getRegionServerWithRetries(
+      new ServerCallable<Boolean>(connection, tableName, get.getRow()) {
+        public Boolean call() throws IOException {
+          return Boolean.valueOf(server.
+            exists(location.getRegionInfo().getRegionName(), get));
+        }
+      }
+    ).booleanValue();
+  }
   
   /**
    * Commit to the table the buffer of BatchUpdate.
@@ -821,6 +842,7 @@ public class HTable {
    * @param ts timestamp
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
   public RowResult getRow(final String row, final long ts) 
   throws IOException {
@@ -841,6 +863,17 @@ public class HTable {
     return getRow(row,null,ts);
   }
   
+  /** 
+   * Get more than one version of all columns for the specified row
+   * at a specified timestamp
+   * 
+   * @param row row key
+   * @param timestamp timestamp
+   * @param numVersions number of versions to return
+   * @return RowResult is <code>null</code> if row does not exist.
+   * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
+   */
   public RowResult getRow(final String row, final long ts,
       final int numVersions) throws IOException {
     return getRow(Bytes.toBytes(row), null, ts, numVersions, null);
@@ -953,13 +986,24 @@ public class HTable {
     return getRow(row,columns,ts,1,null);
   }
   
+  /** 
+   * Get more than one version of selected columns for the specified row,
+   * using an existing row lock.
+   * 
+   * @param row row key
+   * @param columns Array of column names and families you want to retrieve.
+   * @param numVersions number of versions to return
+   * @param rowLock previously acquired row lock
+   * @return RowResult is <code>null</code> if row does not exist.
+   * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
+   */
   public RowResult getRow(final String row, final String[] columns,
       final long timestamp, final int numVersions, final RowLock rowLock)
   throws IOException {
     return getRow(Bytes.toBytes(row), Bytes.toByteArrays(columns), timestamp,
                   numVersions, rowLock);
   }
-  
 
   /** 
    * Get selected columns for the specified row at a specified timestamp
@@ -1255,6 +1299,7 @@ public class HTable {
    *
    * @param row Key of the row you want to completely delete.
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
   public void deleteAll(final byte [] row) throws IOException {
     deleteAll(row, null);
@@ -1265,6 +1310,7 @@ public class HTable {
    *
    * @param row Key of the row you want to completely delete.
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
   public void deleteAll(final String row) throws IOException {
     deleteAll(row, null);
@@ -1378,7 +1424,7 @@ public class HTable {
    */
   public void deleteAllByRegex(final String row, final String colRegex)
   throws IOException {
-    deleteAll(row, colRegex, HConstants.LATEST_TIMESTAMP);
+    deleteAllByRegex(row, colRegex, HConstants.LATEST_TIMESTAMP);
   }
 
   /** 
@@ -1588,6 +1634,7 @@ public class HTable {
    * @param row The row
    * @return true if the row exists, false otherwise
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #exists(Get)}
    */
   public boolean exists(final byte [] row) throws IOException {
     return exists(row, null, HConstants.LATEST_TIMESTAMP, null);
@@ -1600,6 +1647,7 @@ public class HTable {
    * @param column The column
    * @return true if the row exists, false otherwise
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #exists(Get)}
    */
   public boolean exists(final byte [] row, final byte[] column)
   throws IOException {
@@ -1614,6 +1662,7 @@ public class HTable {
    * @param timestamp The timestamp
    * @return true if the specified coordinate exists
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #exists(Get)}
    */
   public boolean exists(final byte [] row, final byte [] column,
       long timestamp) throws IOException {
@@ -1629,20 +1678,14 @@ public class HTable {
    * @param rl Existing row lock
    * @return true if the specified coordinate exists
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #exists(Get)}
    */
   public boolean exists(final byte [] row, final byte [] column,
       final long timestamp, final RowLock rl) throws IOException {
     final Get g = new Get(row, rl);
     g.addColumn(column);
     g.setTimeStamp(timestamp);
-    return connection.getRegionServerWithRetries(
-      new ServerCallable<Boolean>(connection, tableName, row) {
-        public Boolean call() throws IOException {
-          return Boolean.valueOf(server.
-            exists(location.getRegionInfo().getRegionName(), g));
-        }
-      }
-    ).booleanValue();
+    return exists(g);
   }
 
   /**
@@ -1695,18 +1738,20 @@ public class HTable {
   }
   
   /**
-   * Atomically checks if a row's values match
-   * the expectedValues. If it does, it uses the
-   * batchUpdate to update the row.
+   * Atomically checks if a row's values match the expectedValues. 
+   * If it does, it uses the batchUpdate to update the row.<p>
+   * 
+   * This operation is not currently supported, use {@link #checkAndPut}
    * @param batchUpdate batchupdate to apply if check is successful
    * @param expectedValues values to check
    * @param rl rowlock
    * @throws IOException
+   * @deprecated As of hbase 0.20.0, replaced by {@link #checkAndPut}
    */
   public synchronized boolean checkAndSave(final BatchUpdate batchUpdate,
     final HbaseMapWritable<byte[],byte[]> expectedValues, final RowLock rl)
   throws IOException {
-    throw new UnsupportedOperationException("TODO: Not yet implemented");
+    throw new UnsupportedOperationException("Replaced by checkAndPut");
   }
 
   /**

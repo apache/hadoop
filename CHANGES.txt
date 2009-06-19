@@ -199,6 +199,7 @@ Release 0.20.0 - Unreleased
    HBASE-1536  Controlled crash of regionserver not hosting meta/root leaves master 
                in spinning state, regions not reassigned
    HBASE-1543  Unnecessary toString during scanning costs us some CPU
+   HBASE-1544  Cleanup HTable (Jonathan Gray via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
