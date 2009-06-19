@@ -203,6 +203,7 @@ Release 0.20.0 - Unreleased
    HBASE-1488  After 1304 goes in, fix and reenable test of thrift, mr indexer,
                and merge tool
    HBASE-1531  Change new Get to use new filter API
+   HBASE-1549  in zookeeper.sh, use localhost instead of 127.0.0.1
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
