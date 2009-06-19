@@ -24,7 +24,7 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
-   <dependency org="commons-cli"
+    <dependency org="commons-cli"
       name="commons-cli"
       rev="${commons-cli.version}"
       conf="common->default"/>
