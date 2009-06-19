@@ -370,6 +370,8 @@ Release 0.20.0 - Unreleased
    HBASE-1540  Client delete unit test, define behavior
                (Jonathan Gray via Stack)
    HBASE-1552  provide version running on cluster via getClusterStatus
+   HBASE-1550  hbase-daemon.sh stop should provide more information when stop
+               command fails
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
