@@ -200,6 +200,8 @@ Release 0.20.0 - Unreleased
                in spinning state, regions not reassigned
    HBASE-1543  Unnecessary toString during scanning costs us some CPU
    HBASE-1544  Cleanup HTable (Jonathan Gray via Stack)
+   HBASE-1488  After 1304 goes in, fix and reenable test of thrift, mr indexer,
+               and merge tool
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

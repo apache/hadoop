@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.util.ToolRunner;
 
 /** Test stand alone merge tool that can merge arbitrary regions */
-public class DisabledTestMergeTool extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(DisabledTestMergeTool.class);
+public class TestMergeTool extends HBaseTestCase {
+  static final Log LOG = LogFactory.getLog(TestMergeTool.class);
 //  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   static final byte [] FAMILY = Bytes.toBytes("contents");
   static final byte [] QUALIFIER = Bytes.toBytes("dc");
@@ -194,13 +194,17 @@ public class DisabledTestMergeTool extends HBaseTestCase {
     Scan scan = new Scan();
     scan.addFamily(FAMILY);
     InternalScanner scanner = merged.getScanner(scan);
+    try {
     List<KeyValue> testRes = null;
-    while(true) {
-      testRes = new ArrayList<KeyValue>();
-      boolean hasNext = scanner.next(testRes);
-      if(!hasNext) {
-        break;
+      while (true) {
+        testRes = new ArrayList<KeyValue>();
+        boolean hasNext = scanner.next(testRes);
+        if (!hasNext) {
+          break;
+        }
       }
+    } finally {
+      scanner.close();
     }
     
     //!Test
