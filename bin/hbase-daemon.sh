@@ -153,10 +153,11 @@ case $startStop in
         done
         echo
       else
-        echo no $command to stop
+        retval=$?
+        echo no $command to stop because kill of pid `cat $pid` failed with status $retval
       fi
     else
-      echo no $command to stop
+      echo no $command to stop because no pid file $pid
     fi
     ;;
 
