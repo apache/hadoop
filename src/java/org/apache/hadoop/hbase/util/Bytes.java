@@ -41,34 +41,45 @@ import org.apache.hadoop.io.WritableUtils;
 public class Bytes {
   
   /**
-   * Size of long in bytes
+   * Size of boolean in bytes
    */
-  public static final int SIZEOF_LONG = Long.SIZE/Byte.SIZE;
-
+  public static final int SIZEOF_BOOLEAN = Byte.SIZE/Byte.SIZE;
+  
+  /**
+   * Size of byte in bytes
+   */
+  public static final int SIZEOF_BYTE = SIZEOF_BOOLEAN;
+  
+  /**
+   * Size of char in bytes
+   */
+  public static final int SIZEOF_CHAR = Character.SIZE/Byte.SIZE;
+  
+  /**
+   * Size of double in bytes
+   */
+  public static final int SIZEOF_DOUBLE = Double.SIZE/Byte.SIZE;
+  
+  /**
+   * Size of float in bytes
+   */
+  public static final int SIZEOF_FLOAT = Float.SIZE/Byte.SIZE;
+  
   /**
    * Size of int in bytes
    */
   public static final int SIZEOF_INT = Integer.SIZE/Byte.SIZE;
   
   /**
+   * Size of long in bytes
+   */
+  public static final int SIZEOF_LONG = Long.SIZE/Byte.SIZE;
+
+  /**
    * Size of short in bytes
    */
   public static final int SIZEOF_SHORT = Short.SIZE/Byte.SIZE;
 
-  /**
-   * Size of float in bytes
-   */
-  public static final int SIZEOF_FLOAT = Float.SIZE/Byte.SIZE;
-
-  /**
-   * Size of double in bytes
-   */
-  public static final int SIZEOF_DOUBLE = Double.SIZE/Byte.SIZE;
-
-  /**
-   * Size of byte in bytes
-   */
-  public static final int SIZEOF_BYTE = 1;
   
   /**
    * Estimate of size cost to pay beyond payload in jvm for instance of byte [].
@@ -265,11 +276,11 @@ public class Bytes {
     return result;
   }
 
-  public static String toStringBinary(final byte []b) {
+  public static String toStringBinary(final byte [] b) {
     return toStringBinary(b, 0, b.length);
   }
 
-  public static String toStringBinary(final byte []b, int off, int len) {
+  public static String toStringBinary(final byte [] b, int off, int len) {
     String result = null;
     try {
       String first = new String(b, off, len, "ISO-8859-1");
@@ -1126,4 +1137,5 @@ public class Bytes {
     }
     return value;
   }
+  
 }

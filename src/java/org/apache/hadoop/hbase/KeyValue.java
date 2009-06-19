@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
@@ -1783,9 +1784,8 @@ public class KeyValue implements Writable, HeapSize {
   
   // HeapSize
   public long heapSize() {
-    int dataLen = bytes.length + (bytes.length % 8);
-    return HeapSize.OBJECT + HeapSize.BYTE_ARRAY + dataLen +
-      (2 * HeapSize.INT);
+    return ClassSize.alignSize(HeapSize.OBJECT + HeapSize.REFERENCE + 
+        HeapSize.BYTE_ARRAY + length + (2 * Bytes.SIZEOF_INT));
   }
   
   // Writable

@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -63,10 +65,6 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
   /** The default load factor to use */
   public static final float DEFAULT_LOAD_FACTOR = 0.75f;
   
-  /** Memory overhead of this Object (for HeapSize) */
-  private static final int OVERHEAD = 5 * HeapSize.LONG + 2 * HeapSize.INT +
-    2 * HeapSize.FLOAT + 3 * HeapSize.REFERENCE + 1 * HeapSize.ARRAY;
-  
   /** Load factor allowed (usually 75%) */
   private final float loadFactor;
   /** Number of key/vals in the map */
@@ -91,6 +89,11 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
   /** Number of unsuccessful (not found) get() calls */
   private long missCount = 0;
 
+  /** Memory overhead of this Object (for HeapSize) */
+  private static final int OVERHEAD = (int)ClassSize.alignSize(HeapSize.OBJECT +
+      1 * Bytes.SIZEOF_FLOAT + 2 * Bytes.SIZEOF_INT + 1 * HeapSize.ARRAY + 
+      3 * HeapSize.REFERENCE + 4 * Bytes.SIZEOF_LONG);
+  
   /**
    * Constructs a new, empty map with the specified initial capacity,
    * load factor, and maximum memory usage.
@@ -266,8 +269,7 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
    * @return hit ratio (double between 0 and 1)
    */
   public double getHitRatio() {
-    return (double)((double)hitCount/
-      ((double)(hitCount+missCount)));
+    return ((double)hitCount) / ((double)(hitCount+missCount));
   }
   
   /**
@@ -955,10 +957,6 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
    */
   protected static class Entry
   implements Map.Entry<String,ByteBuffer>, HeapSize {
-    /** The baseline overhead memory usage of this class */
-    static final int OVERHEAD = 1 * HeapSize.LONG + 5 * HeapSize.REFERENCE + 
-      2 * HeapSize.INT;
-    
     /** The key */
     protected final String key;
     /** The value */
@@ -976,6 +974,10 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
     /** The precomputed heap size of this entry */
     protected long heapSize;
 
+    /** The baseline overhead memory usage of this class */
+    static final int OVERHEAD = HeapSize.OBJECT + 5 * HeapSize.REFERENCE + 
+      1 * Bytes.SIZEOF_INT + 1 * Bytes.SIZEOF_LONG;
+    
     /**
      * Create a new entry.
      *
@@ -1137,7 +1139,8 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
      * @return size of String in bytes
      */
     private long heapSize(String s) {
-      return HeapSize.OBJECT + alignSize(s.length()*2);
+      return HeapSize.STRING_SIZE + 
+        ClassSize.alignSize(s.length() * Bytes.SIZEOF_CHAR);
     }
     
     /**
@@ -1145,18 +1148,9 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
      * @return size of ByteBuffer in bytes
      */
     private long heapSize(ByteBuffer b) {
-      return HeapSize.BYTE_BUFFER + alignSize(b.capacity());
+      return HeapSize.BYTE_BUFFER + ClassSize.alignSize(b.capacity());
     }
     
-    /**
-     * Aligns a number to 8.
-     * @param num number to align to 8
-     * @return smallest number >= input that is a multiple of 8
-     */
-    private long alignSize(long num) {
-      if(num % 8 == 0) return num;
-      return (num + (8 - (num % 8)));
-    }
   }
 }
 

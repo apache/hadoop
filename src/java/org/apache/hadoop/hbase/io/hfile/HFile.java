@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -1333,11 +1334,15 @@ public class HFile {
     long [] blockOffsets;
     int [] blockDataSizes;
     int size = 0;
-  
+
     /* Needed doing lookup on blocks.
      */
     final RawComparator<byte []> comparator;
   
+    static final int OVERHEAD = (int)ClassSize.alignSize(HeapSize.OBJECT + 
+        2 * Bytes.SIZEOF_INT + 1 * HeapSize.MULTI_ARRAY +  2 * HeapSize.ARRAY + 
+        4 * HeapSize.REFERENCE);
+    
     /*
      * Shutdown default constructor
      */
@@ -1493,8 +1498,25 @@ public class HFile {
     }
 
     public long heapSize() {
-      return this.size;
+      long size = OVERHEAD;
+      
+      //Calculating the size of blockKeys 
+      if(blockKeys != null) {
+        for(byte [] bs : blockKeys) {
+          size += HeapSize.MULTI_ARRAY;
+          size += ClassSize.alignSize(bs.length);
+        }
+      }
+      if(blockOffsets != null) {
+        size += blockOffsets.length * Bytes.SIZEOF_LONG;
+      }
+      if(blockDataSizes != null) {
+        size += blockDataSizes.length * Bytes.SIZEOF_INT;
+      }
+      
+      return size;
     }
+    
   }
 
   /*

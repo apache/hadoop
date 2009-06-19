@@ -43,7 +43,7 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
   // Time at which this edit was written.
   private long writeTime;
   private int HEAP_TAX = HeapSize.OBJECT + (2 * HeapSize.BYTE_ARRAY) +
-    (2 * HeapSize.LONG);
+    (2 * Bytes.SIZEOF_LONG);
 
   /** Writable Consructor -- Do not use. */
   public HLogKey() {

@@ -206,6 +206,8 @@ Release 0.20.0 - Unreleased
    HBASE-1549  in zookeeper.sh, use localhost instead of 127.0.0.1
    HBASE-1534  Got ZooKeeper event, state: Disconnected on HRS and then NPE on
                reinit
+   HBASE-1387  Before release verify all object sizes using Ryans' instrumented
+               JVM trick (Erik Holstad via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

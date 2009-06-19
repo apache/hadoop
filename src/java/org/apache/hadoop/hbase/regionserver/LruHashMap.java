@@ -19,17 +19,21 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.io.HeapSize;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.Bytes;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+
+
 
 /**
  * The LruHashMap is a memory-aware HashMap with a configurable maximum
@@ -62,8 +66,9 @@ implements HeapSize, Map<K,V> {
   private static final float DEFAULT_LOAD_FACTOR = 0.75f;
   
   /** Memory overhead of this Object (for HeapSize) */
-  private static final int OVERHEAD = 5 * HeapSize.LONG + 2 * HeapSize.INT +
-    2 * HeapSize.FLOAT + 3 * HeapSize.REFERENCE + 1 * HeapSize.ARRAY;
+  private static final int OVERHEAD = 5 * Bytes.SIZEOF_LONG + 
+    2 * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_FLOAT + 3 * HeapSize.REFERENCE + 
+    1 * HeapSize.ARRAY;
   
   /** Load factor allowed (usually 75%) */
   private final float loadFactor;
@@ -922,8 +927,8 @@ implements HeapSize, Map<K,V> {
   protected static class Entry<K extends HeapSize, V extends HeapSize>
   implements Map.Entry<K,V>, HeapSize {
     /** The baseline overhead memory usage of this class */
-    static final int OVERHEAD = 1 * HeapSize.LONG + 5 * HeapSize.REFERENCE + 
-      2 * HeapSize.INT;
+    static final int OVERHEAD = 1 * Bytes.SIZEOF_LONG + 5 * HeapSize.REFERENCE + 
+      2 * Bytes.SIZEOF_INT;
     
     /** The key */
     protected final K key;

@@ -85,7 +85,6 @@ public class Scan implements Writable {
   public Scan(byte [] startRow, Filter filter) {
     this(startRow);
     this.filter = filter;
-
   }
   
   /**
@@ -118,7 +117,6 @@ public class Scan implements Writable {
   public Scan addFamily(byte [] family) {
     familyMap.remove(family);
     familyMap.put(family, null);
-
     return this;
   }
   
@@ -204,7 +202,7 @@ public class Scan implements Writable {
    * Get all available versions.
    */
   public Scan setMaxVersions() {
-  	this.maxVersions = Integer.MAX_VALUE;
+    this.maxVersions = Integer.MAX_VALUE;
     return this;
   }
 
@@ -236,7 +234,6 @@ public class Scan implements Writable {
    */
   public Scan setOldFilter(RowFilterInterface filter) {
     oldFilter = filter;
-
     return this;
   }
   
@@ -246,7 +243,6 @@ public class Scan implements Writable {
    */
   public Scan setFamilyMap(Map<byte [], NavigableSet<byte []>> familyMap) {
     this.familyMap = familyMap;
-
     return this;
   }
   

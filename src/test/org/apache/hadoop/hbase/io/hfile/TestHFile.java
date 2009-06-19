@@ -29,9 +29,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.HFile.BlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 
 /**
@@ -244,4 +247,31 @@ public class TestHFile extends HBaseTestCase {
     writer.append("1".getBytes(), "0".getBytes());
     writer.close();
   }
+  
+  /**
+   * Checks if the HeapSize calculator is within reason
+   */
+  public void testHeapSizeForBlockIndex() {
+    ClassSize cs = null;
+    Class cl = null;
+    long expected = 0L;
+    long actual = 0L;
+    try {
+      cs = new ClassSize();
+    } catch(Exception e) {}
+    
+    //KeyValue
+    cl = BlockIndex.class;
+    expected = cs.estimateBase(cl, false);
+    BlockIndex bi = new BlockIndex(Bytes.BYTES_RAWCOMPARATOR);
+    actual = bi.heapSize();
+    //Since we have a [[]] in BlockIndex and the checker only sees the [] we 
+    // miss a MULTI_ARRAY which is 4*Reference = 32 B
+    actual -= 32;
+    if(expected != actual) {
+      cs.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+  }
+  
 }

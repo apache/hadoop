@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 
 /** 
@@ -47,10 +48,15 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   private long timestamp = HConstants.LATEST_TIMESTAMP;
   private long lockId = -1L;
   private boolean writeToWAL = true;
+  
   private Map<byte [], List<KeyValue>> familyMap =
     new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
   
-  /** Constructor for Writable.  DO NOT USE */
+  private static final long OVERHEAD = ClassSize.alignSize(HeapSize.OBJECT + 
+      1 * HeapSize.REFERENCE + 1 * HeapSize.ARRAY + 2 * Bytes.SIZEOF_LONG + 
+      1 * Bytes.SIZEOF_BOOLEAN + 1 * HeapSize.REFERENCE + HeapSize.TREEMAP_SIZE);
+  
+  /** Constructor for Writable. DO NOT USE */
   public Put() {}
   
   /**
@@ -124,7 +130,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   public void add(byte [] family, byte [] qualifier, long ts, byte [] value) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
-      list = new ArrayList<KeyValue>();
+      list = new ArrayList<KeyValue>(0);
     }
     KeyValue kv = new KeyValue(this.row, family, qualifier, ts, 
       KeyValue.Type.Put, value); 
@@ -263,13 +269,29 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   
   //HeapSize
   public long heapSize() {
-  	long totalSize = 0;
-  	for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-  	  for(KeyValue kv : entry.getValue()) {
-  		totalSize += kv.heapSize();
-  	  }
-  	}
-    return totalSize;
+    long heapsize = OVERHEAD;
+    heapsize += ClassSize.alignSize(this.row.length);
+
+    
+    for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+      //Adding entry overhead
+      heapsize += HeapSize.MAP_ENTRY_SIZE;
+      
+      //Adding key overhead
+      heapsize += HeapSize.REFERENCE + HeapSize.ARRAY + 
+        ClassSize.alignSize(entry.getKey().length);
+      
+      //This part is kinds tricky since the JVM can reuse references if you
+      //store the same value, but have a good match with SizeOf at the moment
+      //Adding value overhead
+      heapsize += HeapSize.REFERENCE + HeapSize.ARRAYLIST_SIZE;
+      int size = entry.getValue().size();
+      heapsize += size * HeapSize.REFERENCE;
+      for(KeyValue kv : entry.getValue()) {
+        heapsize += kv.heapSize();
+      }
+    }
+    return heapsize;
   }
   
   //Writable

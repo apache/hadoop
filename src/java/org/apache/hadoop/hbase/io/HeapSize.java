@@ -45,36 +45,35 @@ public interface HeapSize {
   /** Object overhead is minimum 2 * reference size (8 bytes on 64-bit) */
   static final int OBJECT = 2 * REFERENCE;
   
-  /**
-   * The following types are always allocated in blocks of 8 bytes (on 64bit)
-   * For example, if you have two ints in a class, it will use 8 bytes.
-   * If you have three ints in a class, it will use 16 bytes.
-   */
-  static final int SHORT = 4;
-  static final int INT = 4;
-  static final int FLOAT = 4;
-  static final int BOOLEAN = 4;
-  static final int CHAR = 4;
-  static final int BYTE = 1;
-  
-  /** These types are always 8 bytes */
-  static final int DOUBLE = 8;
-  static final int LONG = 8;
-  
   /** Array overhead */
   static final int ARRAY = 3 * REFERENCE;
+
+  /** OverHead for nested arrays */
   static final int MULTI_ARRAY = (4 * REFERENCE) + ARRAY;
   
   /** Byte arrays are fixed size below plus its length, 8 byte aligned */
   static final int BYTE_ARRAY = 3 * REFERENCE;
   
-  static final int BLOCK_SIZE_TAX = 8;
-
+  /** Overhead for ByteBuffer */
   static final int BYTE_BUFFER = 56;
-
+  
+  /** String overhead */
+  static final int STRING_SIZE = 64;
+  
+  /** Overhead for ArrayList(0) */
+  static final int ARRAYLIST_SIZE = 64;
+  
+  /** Overhead for TreeMap */
+  static final int TREEMAP_SIZE = 80;
+  
+  /** Overhead for entry in map */
+  static final int MAP_ENTRY_SIZE = 64;
+  
+  
   /**
    * @return Approximate 'exclusive deep size' of implementing object.  Includes
    * count of payload and hosting object sizings.
   */
   public long heapSize();
+  
 }
