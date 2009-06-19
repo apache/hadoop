@@ -296,7 +296,7 @@ public class TestMemcache extends TestCase {
     long ttl = Long.MAX_VALUE;
 
     QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     List<KeyValue> result = new ArrayList<KeyValue>();
     boolean res = memcache.get(matcher, result);
@@ -324,7 +324,7 @@ public class TestMemcache extends TestCase {
     long ttl = Long.MAX_VALUE;
 
     QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     List<KeyValue> result = new ArrayList<KeyValue>();
     boolean res = memcache.get(matcher, result);
@@ -349,7 +349,7 @@ public class TestMemcache extends TestCase {
     long ttl = Long.MAX_VALUE;
 
     QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     //Setting up memcache
     memcache.add(new KeyValue(row, fam ,qf1, val));
@@ -390,8 +390,8 @@ public class TestMemcache extends TestCase {
     columns.add(qf3);
     long ttl = Long.MAX_VALUE;
 
-    QueryMatcher matcher =
-      new QueryMatcher(get, row, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
+    QueryMatcher matcher = new QueryMatcher(get, fam, columns, ttl,
+      KeyValue.KEY_COMPARATOR, 1);
     
     //Setting up expected
     List<KeyValue> expected = new ArrayList<KeyValue>();

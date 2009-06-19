@@ -98,7 +98,7 @@ public interface Filter extends Writable {
      * still be called.
      */
     NEXT_ROW,
-  };
+  }
 
   /**
    * Last chance to veto row based on previous {@link #filterKeyValue(KeyValue)}

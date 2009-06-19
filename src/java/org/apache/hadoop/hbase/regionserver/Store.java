@@ -1468,9 +1468,8 @@ public class Store implements HConstants {
     KeyComparator keyComparator = this.comparator.getRawComparator();
 
     // Column matching and version enforcement
-    QueryMatcher matcher = new QueryMatcher(get, get.getRow(), 
-        this.family.getName(), columns, this.ttl, keyComparator,
-        versionsToReturn(get.getMaxVersions()));
+    QueryMatcher matcher = new QueryMatcher(get, this.family.getName(), columns,
+      this.ttl, keyComparator, versionsToReturn(get.getMaxVersions()));
     
     // Read from Memcache
     if(this.memcache.get(matcher, result)) {
@@ -1516,8 +1515,8 @@ public class Store implements HConstants {
     NavigableSet<byte[]> qualifiers = 
       new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     qualifiers.add(qualifier);
-    QueryMatcher matcher = new QueryMatcher(get, row, family, qualifiers,
-        this.ttl, keyComparator, 1);
+    QueryMatcher matcher = new QueryMatcher(get, family, qualifiers, this.ttl,
+      keyComparator, 1);
     
     // Read from Memcache
     if(this.memcache.get(matcher, result)) {

@@ -97,7 +97,7 @@ implements HConstants {
     expected.add(MatchCode.INCLUDE);
     expected.add(MatchCode.DONE);
 
-    QueryMatcher qm = new QueryMatcher(get, get.getRow(), fam2,
+    QueryMatcher qm = new QueryMatcher(get, fam2,
         get.getFamilyMap().get(fam2), ttl, rowComparator, 1);
 
     List<KeyValue> memCache = new ArrayList<KeyValue>();
@@ -140,8 +140,7 @@ implements HConstants {
     expected.add(MatchCode.INCLUDE);
     expected.add(MatchCode.NEXT);
 
-    QueryMatcher qm = new QueryMatcher(get, get.getRow(), fam2, null,
-        ttl, rowComparator, 1);
+    QueryMatcher qm = new QueryMatcher(get, fam2, null, ttl, rowComparator, 1);
 
     List<KeyValue> memCache = new ArrayList<KeyValue>();
     memCache.add(new KeyValue(row1, fam2, col1, data));

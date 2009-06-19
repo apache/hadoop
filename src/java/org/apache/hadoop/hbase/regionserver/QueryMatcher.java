@@ -21,9 +21,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.NavigableSet;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -45,7 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * versions, 
  */
 public class QueryMatcher {
-  
   /**
    * {@link #match} return codes.  These instruct the scanner moving through
    * Memcaches and StoreFiles what to do with the current KeyValue.
@@ -113,27 +114,29 @@ public class QueryMatcher {
   
   /** Oldest allowed version stamp for TTL enforcement */
   protected long oldestStamp;
-  
+
+  protected Filter filter;
+
   /**
    * Constructs a QueryMatcher for a Get.
    * @param get
-   * @param row
    * @param family
    * @param columns
    * @param ttl
    * @param rowComparator
    */
-  public QueryMatcher(Get get, byte [] row, byte [] family, 
+  public QueryMatcher(Get get, byte [] family, 
       NavigableSet<byte[]> columns, long ttl, KeyComparator rowComparator,
       int maxVersions) {
-    this.row = row;
+    this.row = get.getRow();
+    this.filter = get.getFilter();
     this.tr = get.getTimeRange();
     this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;
     this.deletes =  new GetDeleteTracker();
     this.startKey = KeyValue.createFirstOnRow(row);
     // Single branch to deal with two types of Gets (columns vs all in family)
-    if(columns == null || columns.size() == 0) {
+    if (columns == null || columns.size() == 0) {
       this.columns = new WildcardColumnTracker(maxVersions);
     } else {
       this.columns = new ExplicitColumnTracker(columns, maxVersions);
@@ -142,6 +145,7 @@ public class QueryMatcher {
 
   // For the subclasses.
   protected QueryMatcher() {
+    super();
   }
 
   /**
@@ -151,6 +155,7 @@ public class QueryMatcher {
    */
   public QueryMatcher(QueryMatcher matcher, byte [] row) {
     this.row = row;
+    this.filter = matcher.filter;
     this.tr = matcher.getTimeRange();
     this.oldestStamp = matcher.getOldestStamp();
     this.rowComparator = matcher.getRowComparator();
@@ -181,10 +186,12 @@ public class QueryMatcher {
    * @return MatchCode: include, skip, next, done
    */
   public MatchCode match(KeyValue kv) {
-    if(this.columns.done()) {
+    if (this.columns.done()) {
       return MatchCode.DONE;  // done_row
     }
-    
+    if (this.filter != null && this.filter.filterAllRemaining()) {
+      return MatchCode.DONE;
+    }
     // Directly act on KV buffer
     byte [] bytes = kv.getBuffer();
     int offset = kv.getOffset();
@@ -203,15 +210,14 @@ public class QueryMatcher {
      */ 
     int ret = this.rowComparator.compareRows(row, 0, row.length,
         bytes, offset, rowLength);
-    if(ret <= -1) {
+    if (ret <= -1) {
       // Have reached the next row
       return MatchCode.NEXT;  // got_to_next_row (end)
-    } else if(ret >= 1) {
+    } else if (ret >= 1) {
       // At a previous row
       return MatchCode.SKIP;  // skip_to_cur_row
     }
     offset += rowLength;
-    
     byte familyLength = bytes[offset];
     offset += Bytes.SIZEOF_BYTE + familyLength;
     
@@ -219,7 +225,7 @@ public class QueryMatcher {
       (offset - kv.getOffset()) - KeyValue.TIMESTAMP_TYPE_SIZE;
     int columnOffset = offset;
     offset += columnLength;
-    
+
     /* Check TTL
      * If expired, go to next KeyValue
      */
@@ -229,7 +235,7 @@ public class QueryMatcher {
       return MatchCode.NEXT;  // done_row
     }
     offset += Bytes.SIZEOF_LONG;
-    
+
     /* Check TYPE
      * If a delete within (or after) time range, add to deletes
      * Move to next KeyValue
@@ -237,8 +243,8 @@ public class QueryMatcher {
     byte type = bytes[offset];
     // if delete type == delete family, return done_row
     
-    if(isDelete(type)) {
-      if(tr.withinOrAfterTimeRange(timestamp)) {
+    if (isDelete(type)) {
+      if (tr.withinOrAfterTimeRange(timestamp)) {
         this.deletes.add(bytes, columnOffset, columnLength, timestamp, type);
       }
       return MatchCode.SKIP;  // skip the delete cell.
@@ -247,29 +253,38 @@ public class QueryMatcher {
     /* Check TimeRange
      * If outside of range, move to next KeyValue
      */
-    if(!tr.withinTimeRange(timestamp)) {
+    if (!tr.withinTimeRange(timestamp)) {
       return MatchCode.SKIP;  // optimization chances here.
     }
-    
+
     /* Check Deletes
      * If deleted, move to next KeyValue 
      */
-    if(!deletes.isEmpty() && deletes.isDeleted(bytes, columnOffset,
+    if (!deletes.isEmpty() && deletes.isDeleted(bytes, columnOffset,
         columnLength, timestamp)) {
       // 2 types of deletes:
       // affects 1 cell or 1 column, so just skip the keyvalues.
       // - delete family, so just skip to the next row.
       return MatchCode.SKIP;
     }
-    
+
     /* Check Column and Versions
      * Returns a MatchCode directly, identical language
      * If matched column without enough versions, include
      * If enough versions of this column or does not match, skip
      * If have moved past 
      * If enough versions of everything, 
+     * TODO: No mapping from Filter.ReturnCode to MatchCode.
      */
-    return columns.checkColumn(bytes, columnOffset, columnLength);
+    MatchCode mc = columns.checkColumn(bytes, columnOffset, columnLength);
+    if (mc == MatchCode.INCLUDE && this.filter != null) {
+      switch(this.filter.filterKeyValue(kv)) {
+      case INCLUDE: return MatchCode.INCLUDE;
+      case SKIP: return MatchCode.SKIP;
+      default: return MatchCode.DONE;
+      }
+    }
+    return mc;
   }
 
   // should be in KeyValue.
@@ -310,6 +325,7 @@ public class QueryMatcher {
   public void reset() {
     this.deletes.reset();
     this.columns.reset();
+    if (this.filter != null) this.filter.reset();
   }
 
   /**

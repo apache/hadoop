@@ -105,12 +105,12 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * its version to this Put operation.
    * @param column Old style column name with family and qualifier put together
    * with a colon.
-   * @param timestamp version timestamp
+   * @param ts version timestamp
    * @param value column value
    */
-  public void add(byte [] column, long timestamp, byte [] value) {
+  public void add(byte [] column, long ts, byte [] value) {
     byte [][] parts = KeyValue.parseColumn(column);
-    add(parts[0], parts[1], timestamp, value);
+    add(parts[0], parts[1], ts, value);
   }
 
   /**
@@ -118,15 +118,15 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * its version to this Put operation.
    * @param family family name
    * @param qualifier column qualifier
-   * @param timestamp version timestamp
+   * @param ts version timestamp
    * @param value column value
    */
-  public void add(byte [] family, byte [] qualifier, long timestamp, byte [] value) {
+  public void add(byte [] family, byte [] qualifier, long ts, byte [] value) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<KeyValue>();
     }
-    KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, 
+    KeyValue kv = new KeyValue(this.row, family, qualifier, ts, 
       KeyValue.Type.Put, value); 
     list.add(kv);
     familyMap.put(family, list);
@@ -217,10 +217,10 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   /**
    * Set whether this Put should be written to the WAL or not.
    * Not writing the WAL means you may lose edits on server crash.
-   * @param writeToWAL true if edits should be written to WAL, false if not
+   * @param write true if edits should be written to WAL, false if not
    */
-  public void writeToWAL(boolean writeToWAL) {
-    this.writeToWAL = writeToWAL;
+  public void writeToWAL(boolean write) {
+    this.writeToWAL = write;
   }
   
   /**

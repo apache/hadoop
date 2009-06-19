@@ -17,11 +17,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**Provides row-level filters applied to HRegion scan results during calls to {@link org.apache.hadoop.hbase.client.ResultScanner#next()}. 
+/**Provides row-level filters applied to HRegion scan results during calls to
+ * {@link org.apache.hadoop.hbase.client.ResultScanner#next()}. 
 
-<p>Use {@link org.apache.hadoop.hbase.filter.StopRowFilter} to stop the scan once rows exceed the supplied row key.
-Filters will not stop the scan unless hosted inside of a {@link org.apache.hadoop.hbase.filter.WhileMatchRowFilter}.
-Supply a set of filters to apply using {@link org.apache.hadoop.hbase.filter.RowFilterSet}.  
+<p>Since HBase 0.20.0, {@link Filter} is the new Interface used filtering.
+It replaces the deprecated {@link RowFilterInterface}.
+Filters run the extent of a table unless you wrap your filter in a
+{@link RowWhileMatchFilter}.  The latter returns as soon as the filter
+stops matching.
 </p>
 */
 package org.apache.hadoop.hbase.filter;

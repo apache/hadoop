@@ -54,6 +54,10 @@ public class TestRowPrefixFilter extends TestCase {
     prefixRowTests(mainFilter);
   }
 
+  public void testPrefixOnRowInsideWhileMatchRow() throws Exception {
+    prefixRowTests(new RowWhileMatchFilter(this.mainFilter), true);
+  }
+
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -72,20 +76,25 @@ public class TestRowPrefixFilter extends TestCase {
   }
 
   private void prefixRowTests(Filter filter) throws Exception {
+    prefixRowTests(filter, false);
+  }
+
+  private void prefixRowTests(Filter filter, boolean lastFilterAllRemaining)
+  throws Exception {
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
       byte [] t = createRow(c);
-      assertFalse("Failed with characer " + c, filter.filterRowKey(t, 0, t.length));
+      assertFalse("Failed with character " + c,
+        filter.filterRowKey(t, 0, t.length));
+      assertFalse(filter.filterAllRemaining());
     }
     String yahooSite = "com.yahoo.www";
     byte [] yahooSiteBytes = Bytes.toBytes(yahooSite);
     assertTrue("Failed with character " +
       yahooSite, filter.filterRowKey(yahooSiteBytes, 0, yahooSiteBytes.length));
+    assertEquals(filter.filterAllRemaining(), lastFilterAllRemaining);
   }
 
   private byte [] createRow(final char c) {
     return Bytes.toBytes(HOST_PREFIX + Character.toString(c));
   }
-
-
-
 }

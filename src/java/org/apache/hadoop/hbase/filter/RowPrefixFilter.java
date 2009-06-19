@@ -27,30 +27,35 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
 
+/**
+ * Pass results that have same row prefix.
+ */
 public class RowPrefixFilter implements Filter {
-
-  protected byte [] prefix;
+  protected byte [] prefix = null;
 
   public RowPrefixFilter(final byte [] prefix) {
     this.prefix = prefix;
   }
 
   public RowPrefixFilter() {
+    super();
   }
 
   @Override
   public void reset() {
+    // Noop
   }
 
   @Override
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    if (buffer == null)
+    if (buffer == null || this.prefix == null)
       return true;
     if (length < prefix.length)
       return true;
     // if they are equal, return false => pass row
     // else return true, filter row
-    return Bytes.compareTo(buffer, offset, prefix.length, prefix, 0, prefix.length) != 0;
+    return Bytes.compareTo(buffer, offset, this.prefix.length, this.prefix, 0,
+      this.prefix.length) != 0;
   }
 
   @Override
@@ -70,11 +75,11 @@ public class RowPrefixFilter implements Filter {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, prefix);
+    Bytes.writeByteArray(out, this.prefix);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    prefix = Bytes.readByteArray(in);
+    this.prefix = Bytes.readByteArray(in);
   }
 }

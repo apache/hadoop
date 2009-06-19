@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -71,8 +72,7 @@ public class TestHRegion extends HBaseTestCase {
   // individual code pieces in the HRegion. Putting files locally in
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
-  
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // checkAndPut tests
   //////////////////////////////////////////////////////////////////////////////
@@ -375,7 +375,7 @@ public class TestHRegion extends HBaseTestCase {
     }
     assertFalse(true);
   }
-  
+
   public void testGet_Basic() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -398,7 +398,7 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam1, col4, null);
     put.add(fam1, col5, null);
     region.put(put);
-    
+
     Get get = new Get(row1);
     get.addColumn(fam1, col2);
     get.addColumn(fam1, col4);
@@ -406,10 +406,9 @@ public class TestHRegion extends HBaseTestCase {
     KeyValue kv1 = new KeyValue(row1, fam1, col2);
     KeyValue kv2 = new KeyValue(row1, fam1, col4);
     KeyValue [] expected = {kv1, kv2};
-    
+
     //Test
     Result res = region.get(get, null);
-    
     assertEquals(expected.length, res.size());
     for(int i=0; i<res.size(); i++){
       assertEquals(0,
@@ -420,8 +419,15 @@ public class TestHRegion extends HBaseTestCase {
           Bytes.compareTo(
               expected[i].getQualifier(), res.raw()[i].getQualifier()));
     }
+
+    // Test using a filter on a Get
+    Get g = new Get(row1);
+    final int count = 2;
+    g.setFilter(new ColumnCountGetFilter(count));
+    res = region.get(g, null);
+    assertEquals(count, res.size());
   }
-  
+
   public void testGet_Empty() throws IOException {
     byte [] tableName = Bytes.toBytes("emptytable");
     byte [] row = Bytes.toBytes("row");

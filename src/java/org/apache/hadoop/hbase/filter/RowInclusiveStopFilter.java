@@ -28,8 +28,8 @@ import java.io.IOException;
 import java.io.DataInput;
 
 /**
- * A Filter that stops after the given row.  There is no "RowStopFilter" because the Scan
- * spec allows you to specify a stop row.
+ * A Filter that stops after the given row.  There is no "RowStopFilter" because
+ * the Scan spec allows you to specify a stop row.
  *
  * Use this filter to include the stop row, eg: [A,Z].
  */

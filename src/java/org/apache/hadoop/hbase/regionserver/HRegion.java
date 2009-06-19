@@ -2233,12 +2233,12 @@ public class HRegion implements HConstants { // , Writable{
    */
   public Result get(final Get get, final Integer lockid) throws IOException {
     // Verify families are all valid
-    if(get.hasFamilies()) {
-      for(byte [] family : get.familySet()) {
+    if (get.hasFamilies()) {
+      for (byte [] family: get.familySet()) {
         checkFamily(family);
       }
     } else { // Adding all families to scanner
-      for(byte[] family: regionInfo.getTableDesc().getFamiliesKeys()){
+      for (byte[] family: regionInfo.getTableDesc().getFamiliesKeys()) {
         get.addFamily(family);
       }
     }
@@ -2246,7 +2246,7 @@ public class HRegion implements HConstants { // , Writable{
     Integer lid = getLock(lockid, get.getRow()); 
     List<KeyValue> result = new ArrayList<KeyValue>();
     try {
-      for(Map.Entry<byte[],NavigableSet<byte[]>> entry:
+      for (Map.Entry<byte[],NavigableSet<byte[]>> entry:
           get.getFamilyMap().entrySet()) {
         get(this.stores.get(entry.getKey()), get, entry.getValue(), result);
       }

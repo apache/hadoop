@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A query matcher that is specifically designed for the scan case.
  */
 public class ScanQueryMatcher extends QueryMatcher {
-
-  private Filter filter;
   // have to support old style filter for now.
   private RowFilterInterface oldFilter;
   // Optimization so we can skip lots of compares when we decide to skip

@@ -29,7 +29,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,7 +63,7 @@ public class Get implements Writable {
   private byte [] row = null;
   private long lockId = -1L;
   private int maxVersions = 1;
-  private RowFilterInterface filter = null;
+  private Filter filter = null;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap = 
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
@@ -204,14 +204,23 @@ public class Get implements Writable {
 
   /**
    * Apply the specified server-side filter when performing the Get.
+   * Only {@link Filter#filterKeyValue(KeyValue)} is called AFTER all tests
+   * for ttl, column match, deletes and max versions have been run.
    * @param filter filter to run on the server
    */
-  public Get setFilter(RowFilterInterface filter) {
+  public Get setFilter(Filter filter) {
     this.filter = filter;
     return this;
   }
 
-  /** Accessors */
+  /* Accessors */
+
+  /**
+   * @return Filter
+   */
+  public Filter getFilter() {
+    return this.filter;
+  }
 
   /**
    * Method for retrieving the get's row
@@ -341,9 +350,8 @@ public class Get implements Writable {
     this.lockId = in.readLong();
     this.maxVersions = in.readInt();
     boolean hasFilter = in.readBoolean();
-    if(hasFilter) {
-      this.filter = 
-        (RowFilterInterface)HbaseObjectWritable.readObject(in, null);
+    if (hasFilter) {
+      this.filter = (Filter)HbaseObjectWritable.readObject(in, null);
     }
     this.tr = new TimeRange();
     tr.readFields(in);
@@ -375,8 +383,7 @@ public class Get implements Writable {
       out.writeBoolean(false);
     } else {
       out.writeBoolean(true);
-      HbaseObjectWritable.writeObject(out, this.filter, 
-          RowFilterInterface.class, null);
+      HbaseObjectWritable.writeObject(out, this.filter, Filter.class, null);
     }
     tr.write(out);
     out.writeInt(familyMap.size());
