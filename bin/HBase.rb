@@ -262,6 +262,7 @@ module HBase
     def status(format)
       status = @admin.getClusterStatus()
       if format != nil and format == "detailed"
+        puts("version %s" % [ status.getHBaseVersion() ])
         puts("%d live servers" % [ status.getServers() ])
         for server in status.getServerInfo()
           puts("    %s:%d %d" % \

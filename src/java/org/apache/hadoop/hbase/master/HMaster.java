@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -985,6 +986,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public ClusterStatus getClusterStatus() {
     ClusterStatus status = new ClusterStatus();
+    status.setHBaseVersion(VersionInfo.getVersion());
     status.setServerInfo(serverManager.serversToServerInfo.values());
     status.setDeadServers(serverManager.deadServers);
     return status;

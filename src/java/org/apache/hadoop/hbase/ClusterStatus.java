@@ -45,6 +45,8 @@ import org.apache.hadoop.io.VersionedWritable;
  */
 public class ClusterStatus extends VersionedWritable {
   private static final byte VERSION = 0;
+
+  private String hbaseVersion;
   private Collection<HServerInfo> liveServerInfo;
   private Collection<String> deadServers;
 
@@ -120,6 +122,20 @@ public class ClusterStatus extends VersionedWritable {
   }
 
   /**
+   * @return the HBase version string as reported by the HMaster
+   */
+  public String getHBaseVersion() {
+    return hbaseVersion;
+  }
+
+  /**
+   * @param version the HBase version string
+   */
+  public void setHBaseVersion(String version) {
+    hbaseVersion = version;
+  }
+
+  /**
    * @see java.lang.Object#equals(java.lang.Object)
    */
   public boolean equals(Object o) {
@@ -130,6 +146,7 @@ public class ClusterStatus extends VersionedWritable {
       return false;
     }
     return (getVersion() == ((ClusterStatus)o).getVersion()) &&
+      getHBaseVersion().equals(((ClusterStatus)o).getHBaseVersion()) &&
       liveServerInfo.equals(((ClusterStatus)o).liveServerInfo) &&
       deadServers.equals(((ClusterStatus)o).deadServers);
   }
@@ -138,7 +155,8 @@ public class ClusterStatus extends VersionedWritable {
    * @see java.lang.Object#hashCode()
    */
   public int hashCode() {
-    return VERSION + liveServerInfo.hashCode() + deadServers.hashCode();
+    return VERSION + hbaseVersion.hashCode() + liveServerInfo.hashCode() +
+      deadServers.hashCode();
   }
 
   /** @return the object version number */
@@ -179,6 +197,7 @@ public class ClusterStatus extends VersionedWritable {
 
   public void write(DataOutput out) throws IOException {
     super.write(out);
+    out.writeUTF(hbaseVersion);
     out.writeInt(liveServerInfo.size());
     for (HServerInfo server: liveServerInfo) {
       server.write(out);
@@ -191,6 +210,7 @@ public class ClusterStatus extends VersionedWritable {
 
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
+    hbaseVersion = in.readUTF();
     int count = in.readInt();
     liveServerInfo = new ArrayList<HServerInfo>(count);
     for (int i = 0; i < count; i++) {

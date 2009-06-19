@@ -196,8 +196,8 @@ Release 0.20.0 - Unreleased
    HBASE-1447  Take last version of the hbase-1249 design doc. and make
                documentation out of it
    HBASE-1206  Scanner spins when there are concurrent inserts to column family
-   HBASE-1536  Controlled crash of regionserver not hosting meta/root leaves master 
-               in spinning state, regions not reassigned
+   HBASE-1536  Controlled crash of regionserver not hosting meta/root leaves
+               master in spinning state, regions not reassigned
    HBASE-1543  Unnecessary toString during scanning costs us some CPU
    HBASE-1544  Cleanup HTable (Jonathan Gray via Stack)
    HBASE-1488  After 1304 goes in, fix and reenable test of thrift, mr indexer,
@@ -367,6 +367,7 @@ Release 0.20.0 - Unreleased
                families results in bad scans
    HBASE-1540  Client delete unit test, define behavior
                (Jonathan Gray via Stack)
+   HBASE-1552  provide version running on cluster via getClusterStatus
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
