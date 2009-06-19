@@ -210,6 +210,7 @@ Release 0.20.0 - Unreleased
                JVM trick (Erik Holstad via Stack)
    HBASE-1545  atomicIncrements creating new values with Long.MAX_VALUE
    HBASE-1547  atomicIncrement doesnt increase hregion.memcacheSize
+   HBASE-1553  ClassSize missing in trunk
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
