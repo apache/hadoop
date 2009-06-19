@@ -1505,7 +1505,7 @@ public class Store implements HConstants {
    * @throws IOException
    */
   public long incrementColumnValue(byte [] row, byte [] family,
-      byte [] qualifier, long amount) throws IOException{
+      byte [] qualifier, long amount) throws IOException {
     long value = 0;
     List<KeyValue> result = new ArrayList<KeyValue>();
     KeyComparator keyComparator = this.comparator.getRawComparator();
@@ -1555,7 +1555,9 @@ public class Store implements HConstants {
   private long addNewKeyValue(byte [] row, byte [] family, byte [] qualifier, 
       long value, long amount) {
     long newValue = value + amount;
-    KeyValue newKv = new KeyValue(row, family, qualifier, Bytes.toBytes(newValue));
+    KeyValue newKv = new KeyValue(row, family, qualifier,
+        System.currentTimeMillis(),
+        Bytes.toBytes(newValue));
     add(newKv);
     return newValue;
   }
