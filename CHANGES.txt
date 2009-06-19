@@ -209,6 +209,7 @@ Release 0.20.0 - Unreleased
    HBASE-1387  Before release verify all object sizes using Ryans' instrumented
                JVM trick (Erik Holstad via Stack)
    HBASE-1545  atomicIncrements creating new values with Long.MAX_VALUE
+   HBASE-1547  atomicIncrement doesnt increase hregion.memcacheSize
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

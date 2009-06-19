@@ -2275,16 +2275,29 @@ public class HRegion implements HConstants { // , Writable{
       byte [] qualifier, long amount)
   throws IOException {
     checkRow(row);
-    
+
+    boolean flush = false;
     // Lock row
     Integer lid = obtainRowLock(row);
     long result = 0L;
     try {
       Store store = stores.get(family);
-      result = store.incrementColumnValue(row, family, qualifier, amount);
+
+      Store.ValueAndSize vas =
+          store.incrementColumnValue(row, family, qualifier, amount);
+
+      result = vas.value;
+      long size = this.memcacheSize.addAndGet(vas.sizeAdded);
+      flush = isFlushSize(size);
     } finally {
       releaseRowLock(lid);
     }
+
+    if (flush) {
+      // Request a cache flush.  Do it outside update lock.
+      requestFlush();
+    }
+
     return result;
   }
     
