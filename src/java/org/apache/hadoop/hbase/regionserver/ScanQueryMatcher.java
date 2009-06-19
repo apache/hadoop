@@ -20,15 +20,14 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.NavigableSet;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
-
-import java.io.IOException;
-import java.util.NavigableSet;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A query matcher that is specifically designed for the scan case.
@@ -94,11 +93,9 @@ public class ScanQueryMatcher extends QueryMatcher {
       return MatchCode.DONE_SCAN;
     }
 
-    String kvStr = kv.toString();
     byte [] bytes = kv.getBuffer();
     int offset = kv.getOffset();
     int initialOffset = offset; 
-    int kvLength = kv.getLength();
 
     int keyLength = Bytes.toInt(bytes, offset, Bytes.SIZEOF_INT);
     offset += KeyValue.ROW_OFFSET;
@@ -171,13 +168,11 @@ public class ScanQueryMatcher extends QueryMatcher {
       return MatchCode.SKIP;
     }
 
-    if (deletes.isDeleted(bytes, offset,
-        qualLength, timestamp)) {
+    if (deletes.isDeleted(bytes, offset, qualLength, timestamp)) {
       return MatchCode.SKIP;
     }
-    
-    MatchCode colChecker =
-        columns.checkColumn(bytes, offset, qualLength);
+
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength);
 
     // if SKIP -> SEEK_NEXT_COL
     // if (NEXT,DONE) -> SEEK_NEXT_ROW
@@ -202,8 +197,7 @@ public class ScanQueryMatcher extends QueryMatcher {
     if (filterResponse == ReturnCode.SKIP)
       return MatchCode.SKIP;
 
-    // else
-    //if (filterResponse == ReturnCode.NEXT_ROW)
+    // else if (filterResponse == ReturnCode.NEXT_ROW)
     stickyNextRow = true;
     return MatchCode.SEEK_NEXT_ROW;
   }
@@ -215,9 +209,7 @@ public class ScanQueryMatcher extends QueryMatcher {
    * @return <code>true</code> if the row should be filtered.
    */
   public boolean filterEntireRow() {
-    if (filter == null)
-      return false;
-    return filter.filterRow();
+    return filter == null? false: filter.filterRow();
   }
 
   /**
@@ -229,11 +221,10 @@ public class ScanQueryMatcher extends QueryMatcher {
     this.row = row;
     reset();
   }
-  
+
   @Override
   public void reset() {
     super.reset();
-
     stickyNextRow = false;
     if (filter != null)
       filter.reset();
