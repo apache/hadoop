@@ -178,18 +178,9 @@ The ZooKeeper configuration file for HBase is stored at <code>${HBASE_HOME}/conf
 See the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html"> Getting Started Guide</a>
 for information about the format and options of that file.  Specifically, look at the 
 <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html#sc_RunningReplicatedZooKeeper">Running Replicated ZooKeeper</a> section.
-
-
-After configuring <code>zoo.cfg</code>, in <code>${HBASE_HOME}/conf/hbase-env.sh</code>,
-set the following to tell HBase to STOP managing its instance of ZooKeeper.
-<blockquote>
-<pre>
-  ...
-# Tell HBase whether it should manage it's own instance of Zookeeper or not.
-export HBASE_MANAGES_ZK=false
-</pre>
-</blockquote>
 </p>
+
+
 <p>
 Though not recommended, it can be convenient having HBase continue to manage
 ZooKeeper even when in distributed mode (It can be good when testing or taking
@@ -214,6 +205,20 @@ ${HBASE_HOME}/bin/hbase-daemon.sh stop zookeeper
 </blockquote>
 Be aware that this option is only recommanded for testing purposes as a failure
 on that node would render HBase <b>unusable</b>.
+</p>
+
+<p>
+To tell HBase to stop managing a ZooKeeper instance, after configuring
+<code>zoo.cfg</code> to point at the ZooKeeper Quorum you'd like HBase to
+use, in <code>${HBASE_HOME}/conf/hbase-env.sh</code>,
+set the following to tell HBase to STOP managing its instance of ZooKeeper.
+<blockquote>
+<pre>
+  ...
+# Tell HBase whether it should manage it's own instance of Zookeeper or not.
+export HBASE_MANAGES_ZK=false
+</pre>
+</blockquote>
 </p>
 
 <p>Of note, if you have made <i>HDFS client configuration</i> on your hadoop cluster, HBase will not
