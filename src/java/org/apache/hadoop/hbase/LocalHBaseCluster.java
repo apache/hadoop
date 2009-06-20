@@ -95,7 +95,7 @@ public class LocalHBaseCluster implements HConstants {
     // Start the HRegionServers.  Always have region servers come up on
     // port '0' so there won't be clashes over default port as unit tests
     // start/stop ports at different times during the life of the test.
-    conf.set(REGIONSERVER_ADDRESS, DEFAULT_HOST + ":0");
+    conf.set(REGIONSERVER_PORT, "0");
     this.regionThreads = new ArrayList<RegionServerThread>();
     regionServerClass = (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
     for (int i = 0; i < noRegionServers; i++) {

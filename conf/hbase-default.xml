@@ -87,9 +87,9 @@
     period.</description>
   </property>
   <property>
-    <name>hbase.regionserver</name>
-    <value>0.0.0.0:60020</value>
-    <description>The host and port a HBase region server runs at.
+    <name>hbase.regionserver.port</name>
+    <value>60020</value>
+    <description>The port an HBase region server binds to.
     </description>
   </property>
   <property>

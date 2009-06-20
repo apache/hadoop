@@ -66,6 +66,9 @@ public interface HConstants {
   /** default host address */
   static final String DEFAULT_HOST = "0.0.0.0";
 
+  /** Parameter name for port master listens on. */
+  static final String MASTER_PORT = "hbase.master.port";
+
   /** default port that the master listens on */
   static final int DEFAULT_MASTER_PORT = 60000;
 
@@ -85,11 +88,11 @@ public interface HConstants {
   /** Default ZooKeeper pause value. In milliseconds. */
   static final int DEFAULT_ZOOKEEPER_PAUSE = 2 * 1000;
 
-  /** Parameter name for hbase.regionserver address. */
-  static final String REGIONSERVER_ADDRESS = "hbase.regionserver";
-  
-  /** Default region server address */
-  static final String DEFAULT_REGIONSERVER_ADDRESS = DEFAULT_HOST + ":60020";
+  /** Parameter name for port region server listens on. */
+  static final String REGIONSERVER_PORT = "hbase.regionserver.port";
+
+  /** Default port region server listens on. */
+  static final int DEFAULT_REGIONSERVER_PORT = 60020;
 
   /** default port for region server web api */
   static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;

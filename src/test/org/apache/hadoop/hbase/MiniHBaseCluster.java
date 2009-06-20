@@ -62,10 +62,10 @@ public class MiniHBaseCluster implements HConstants {
           hbaseCluster.startup();
         } catch (BindException e) {
           //this port is already in use. try to use another (for multiple testing)
-          int port = conf.getInt("hbase.master.port", DEFAULT_MASTER_PORT);
+          int port = conf.getInt(MASTER_PORT, DEFAULT_MASTER_PORT);
           LOG.info("Failed binding Master to port: " + port, e);
           port++;
-          conf.setInt("hbase.master.port", port);
+          conf.setInt(MASTER_PORT, port);
           continue;
         }
         break;

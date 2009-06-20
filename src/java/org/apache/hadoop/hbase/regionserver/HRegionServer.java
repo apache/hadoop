@@ -234,25 +234,22 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // doing a restart() to prevent closing of HDFS.
   private final AtomicBoolean shutdownHDFS = new AtomicBoolean(true);
 
+  private final String machineName;
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
    * @throws IOException
    */
   public HRegionServer(HBaseConfiguration conf) throws IOException {
-    this(new HServerAddress(conf.get(REGIONSERVER_ADDRESS,
-        DEFAULT_REGIONSERVER_ADDRESS)), conf);
-  }
-  
-  /**
-   * Starts a HRegionServer at the specified location
-   * @param address
-   * @param conf
-   * @throws IOException
-   */
-  public HRegionServer(HServerAddress address, HBaseConfiguration conf)
-  throws IOException {
-    this.address = address;
+    machineName = DNS.getDefaultHost(
+        conf.get("hbase.regionserver.dns.interface","default"),
+        conf.get("hbase.regionserver.dns.nameserver","default"));
+    String addressStr = machineName + ":" + 
+      conf.get(REGIONSERVER_PORT, Integer.toString(DEFAULT_REGIONSERVER_PORT));
+    this.address = new HServerAddress(addressStr);
+    LOG.info("My address is " + address);
+
     this.abortRequested = false;
     this.fsOk = true;
     this.conf = conf;
@@ -295,9 +292,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
     this.server.setErrorHandler(this);
-    String machineName = DNS.getDefaultHost(
-        conf.get("hbase.regionserver.dns.interface","default"),
-        conf.get("hbase.regionserver.dns.nameserver","default"));
     // Address is givin a default IP for the moment. Will be changed after
     // calling the master.
     this.serverInfo = new HServerInfo(new HServerAddress(
@@ -2340,8 +2334,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if (message != null) {
       System.err.println(message);
     }
-    System.err.println("Usage: java " +
-        "org.apache.hbase.HRegionServer [--bind=hostname:port] start");
+    System.err.println("Usage: java org.apache.hbase.HRegionServer start|stop");
     System.exit(0);
   }
   
@@ -2359,13 +2352,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
-    final String addressArgKey = "--bind=";
     for (String cmd: args) {
-      if (cmd.startsWith(addressArgKey)) {
-        conf.set(REGIONSERVER_ADDRESS, cmd.substring(addressArgKey.length()));
-        continue;
-      }
-      
       if (cmd.equals("start")) {
         try {
           // If 'local', don't start a region server here.  Defer to

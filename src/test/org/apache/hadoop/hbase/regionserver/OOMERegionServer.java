@@ -40,11 +40,6 @@ public class OOMERegionServer extends HRegionServer {
   public OOMERegionServer(HBaseConfiguration conf) throws IOException {
     super(conf);
   }
-
-  public OOMERegionServer(HServerAddress address, HBaseConfiguration conf)
-  throws IOException {
-    super(address, conf);
-  }
   
   public void put(byte [] regionName, Put put)
   throws IOException {
