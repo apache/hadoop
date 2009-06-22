@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
@@ -77,6 +77,7 @@ public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, Result> {
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
   private byte [][] inputColumns;
+  private long minStamp, maxStamp;
   private HTable table;
   private TableRecordReader tableRecordReader;
   private RowFilterInterface rowFilter;
@@ -93,7 +94,8 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     private ResultScanner scanner;
     private HTable htable;
     private byte [][] trrInputColumns;
-
+    private long minStamp, maxStamp;
+    
     /**
      * Restart from survivable exceptions by creating a new scanner.
      *
@@ -101,28 +103,33 @@ implements InputFormat<ImmutableBytesWritable, Result> {
      * @throws IOException
      */
     public void restart(byte[] firstRow) throws IOException {
+      Scan scan = null;
       if ((endRow != null) && (endRow.length > 0)) {
         if (trrRowFilter != null) {
           final Set<RowFilterInterface> rowFiltersSet =
             new HashSet<RowFilterInterface>();
           rowFiltersSet.add(new WhileMatchRowFilter(new StopRowFilter(endRow)));
           rowFiltersSet.add(trrRowFilter);
-          Scan scan = new Scan(startRow);
-          scan.addColumns(trrInputColumns);
+          scan = new Scan(startRow);
 //          scan.setFilter(new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
 //              rowFiltersSet));
           this.scanner = this.htable.getScanner(scan);
         } else {
-          Scan scan = new Scan(firstRow, endRow);
-          scan.addColumns(trrInputColumns);
-          this.scanner = this.htable.getScanner(scan);
+          scan = new Scan(firstRow, endRow);
+
         }
       } else {
-        Scan scan = new Scan(firstRow);
-        scan.addColumns(trrInputColumns);
+        scan = new Scan(firstRow);
 //        scan.setFilter(trrRowFilter);
-        this.scanner = this.htable.getScanner(scan);
       }
+      scan.addColumns(trrInputColumns);
+      
+      if (minStamp !=0 && maxStamp !=0) { // if timestamps are ungiven.
+        scan.setTimeRange(minStamp, maxStamp);
+        scan.setMaxVersions();
+      }
+     
+      this.scanner = this.htable.getScanner(scan);
     }
 
     /**
@@ -146,6 +153,11 @@ implements InputFormat<ImmutableBytesWritable, Result> {
      */
     public void setInputColumns(final byte [][] inputColumns) {
       this.trrInputColumns = inputColumns;
+    }
+    
+    public void setTimeRange(long minStamp, long maxStamp) {
+      this.minStamp = minStamp;
+      this.maxStamp = maxStamp;
     }
 
     /**
@@ -251,6 +263,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     trr.setEndRow(tSplit.getEndRow());
     trr.setHTable(this.table);
     trr.setInputColumns(this.inputColumns);
+    trr.setTimeRange(this.minStamp, this.maxStamp);
     trr.setRowFilter(this.rowFilter);
     trr.init();
     return trr;
@@ -310,6 +323,16 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     this.inputColumns = inputColumns;
   }
 
+
+  /**
+   * @param minStamp
+   * @param maxStam
+   */
+  protected void setTimeRange(long minStamp, long maxStamp) {
+  	this.minStamp = minStamp;
+  	this.maxStamp = maxStamp;
+  }
+  
   /**
    * Allows subclasses to get the {@link HTable}.
    */
@@ -344,4 +367,5 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   protected void setRowFilter(RowFilterInterface rowFilter) {
     this.rowFilter = rowFilter;
   }
+
 }

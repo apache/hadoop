@@ -212,6 +212,8 @@ Release 0.20.0 - Unreleased
    HBASE-1547  atomicIncrement doesnt increase hregion.memcacheSize
    HBASE-1553  ClassSize missing in trunk
    HBASE-1561  HTable Mismatch between javadoc and what it actually does
+   HBASE-1558  deletes use 'HConstants.LATEST_TIMESTAMP' but no one translates
+               that into 'now'
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

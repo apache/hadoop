@@ -29,6 +29,7 @@ import java.util.NavigableMap;
 import java.util.SortedMap;
 
 import junit.framework.TestCase;
+import junit.framework.AssertionFailedError;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -656,6 +657,15 @@ public abstract class HBaseTestCase extends TestCase {
     if (root != null) {
       root.close();
       root.getLog().closeAndDelete();
+    }
+  }
+
+  public void assertByteEquals(byte[] expected,
+                               byte[] actual) {
+    if (Bytes.compareTo(expected, actual) != 0) {
+      throw new AssertionFailedError("expected:<" +
+      Bytes.toString(expected) + "> but was:<" +
+      Bytes.toString(actual) + ">");
     }
   }
 }

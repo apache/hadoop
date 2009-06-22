@@ -1128,8 +1128,10 @@ public class HRegion implements HConstants { // , Writable{
   public void delete(byte [] family, List<KeyValue> kvs, boolean writeToWAL)
   throws IOException {
     long now = System.currentTimeMillis();
+    byte [] byteNow = Bytes.toBytes(now);
     boolean flush = false;
     this.updatesLock.readLock().lock();
+
     try {
       if (writeToWAL) {
         this.log.append(regionInfo.getRegionName(),
@@ -1158,7 +1160,10 @@ public class HRegion implements HConstants { // , Writable{
           KeyValue getkv = result.get(0);
           Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
             getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
+        } else {
+          kv.updateLatestStamp(byteNow);
         }
+
         size = this.memcacheSize.addAndGet(store.delete(kv));
       }
       flush = isFlushSize(size);
