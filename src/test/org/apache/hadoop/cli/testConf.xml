@@ -3214,7 +3214,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>The quota of /test is exceeded</expected-output>
+          <expected-output>The NameSpace quota (directories and files) of directory /test is exceeded</expected-output>
         </comparator>
       </comparators>
     </test>

@@ -488,7 +488,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(FileNotFoundException.class,
                                      AccessControlException.class,
-                                     QuotaExceededException.class);
+                                     NSQuotaExceededException.class,
+                                     DSQuotaExceededException.class);
     }
     OutputStream result = new DFSOutputStream(src, buffersize, progress,
         lastBlock, stat, conf.getInt("io.bytes.per.checksum", 512));
@@ -511,7 +512,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return namenode.setReplication(src, replication);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     QuotaExceededException.class);
+                                     NSQuotaExceededException.class,
+                                     DSQuotaExceededException.class);
     }
   }
 
@@ -525,7 +527,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return namenode.rename(src, dst);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     QuotaExceededException.class);
+                                     NSQuotaExceededException.class,
+                                     DSQuotaExceededException.class);
     }
   }
 
@@ -880,7 +883,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return namenode.mkdirs(src, masked);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     QuotaExceededException.class);
+                                     NSQuotaExceededException.class,
+                                     DSQuotaExceededException.class);
     }
   }
 
@@ -915,7 +919,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
-                                     QuotaExceededException.class);
+                                     NSQuotaExceededException.class,
+                                     DSQuotaExceededException.class);
     }
   }
 
@@ -2645,7 +2650,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             src, masked, clientName, overwrite, replication, blockSize);
       } catch(RemoteException re) {
         throw re.unwrapRemoteException(AccessControlException.class,
-                                       QuotaExceededException.class);
+                                       NSQuotaExceededException.class,
+                                       DSQuotaExceededException.class);
       }
       streamer.start();
     }
@@ -2875,7 +2881,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             IOException ue = 
               e.unwrapRemoteException(FileNotFoundException.class,
                                       AccessControlException.class,
-                                      QuotaExceededException.class);
+                                      NSQuotaExceededException.class,
+                                      DSQuotaExceededException.class);
             if (ue != e) { 
               throw ue; // no need to retry these exceptions
             }

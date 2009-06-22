@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 
 /**
@@ -84,18 +86,9 @@ class INodeDirectoryWithQuota extends INodeDirectory {
    * 
    * @param nsQuota Namespace quota to be set
    * @param dsQuota diskspace quota to be set
-   * @throws QuotaExceededException if quota is modified and the modified quota
-   *         is too low.
    *                                
    */
   void setQuota(long newNsQuota, long newDsQuota) throws QuotaExceededException {
-    // if a quota is not chaged, ignore that in verification.
-    if ((newNsQuota >=0 && newNsQuota != nsQuota && newNsQuota < nsCount)  ||
-        (newDsQuota >=0 && newDsQuota != dsQuota && newDsQuota < diskspace)) {
-      throw new QuotaExceededException(newNsQuota, nsCount, 
-                                       newDsQuota, diskspace);
-    }
-
     nsQuota = newNsQuota;
     dsQuota = newDsQuota;
   }
@@ -156,9 +149,11 @@ class INodeDirectoryWithQuota extends INodeDirectory {
   private static void verifyQuota(long nsQuota, long nsCount, 
                                   long dsQuota, long diskspace)
                                   throws QuotaExceededException {
-    if ((nsQuota >= 0 && nsQuota < nsCount) || 
-        (dsQuota >= 0 && dsQuota < diskspace)) {
-      throw new QuotaExceededException(nsQuota, nsCount, dsQuota, diskspace);
+    if (nsQuota >= 0 && nsQuota < nsCount) {
+      throw new NSQuotaExceededException(nsQuota, nsCount);
+    }
+    if (dsQuota >= 0 && dsQuota < diskspace) {
+      throw new DSQuotaExceededException(dsQuota, diskspace);
     }
   }
 }

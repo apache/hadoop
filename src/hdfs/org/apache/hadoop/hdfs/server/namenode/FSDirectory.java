@@ -1114,7 +1114,7 @@ class FSDirectory implements FSConstants, Closeable {
           path.append(n.getLocalName());
         }
         
-        NameNode.LOG.warn("Unexpected quota violation in image for " + path + 
+        NameNode.LOG.warn("Quota violation in image for " + path + 
                           " (Namespace quota : " + dir.getNsQuota() +
                           " consumed : " + counts.nsCount + ")" +
                           " (Diskspace quota : " + dir.getDsQuota() +

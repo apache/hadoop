@@ -117,9 +117,8 @@ public class DFSAdmin extends FsShell {
       "\t\tBest effort for the directory, with faults reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
-      "\t\t3. the directory does not exist or is a file, or\n" +
-      "\t\t4. the directory would immediately exceed the new quota.";
-    
+      "\t\t3. the directory does not exist or is a file, or\n";
+
     private final long quota; // the quota to be set
     
     /** Constructor */
@@ -204,9 +203,8 @@ public class DFSAdmin extends FsShell {
       "\t\tBest effort for the directory, with faults reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
-      "\t\t3. the directory does not exist or is a file, or\n" +
-      "\t\t4. the directory would immediately exceed the new space quota.";
-    
+      "\t\t3. the directory does not exist or is a file, or\n";
+
     private long quota; // the quota to be set
     
     /** Constructor */
