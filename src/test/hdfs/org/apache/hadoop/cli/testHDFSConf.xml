@@ -16020,10 +16020,6 @@
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*3. the directory does not exist or is a file, or( )*</expected-output>
         </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*4. the directory would immediately exceed the new quota.( )*</expected-output>
-        </comparator>
       </comparators>
     </test>
 
@@ -16206,7 +16202,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>The quota of /test is exceeded</expected-output>
+          <expected-output>The NameSpace quota (directories and files) of directory /test is exceeded</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16274,7 +16270,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>put:( )*org.apache.hadoop.hdfs.protocol.QuotaExceededException:( )*The( )*quota( )*of( )*/dir1( )*is( )*exceeded:( )*namespace( )*quota=-1( )*file( )*count=[0-9],( )*diskspace( )*quota=1024( )*diskspace=[0-9]+</expected-output>
+          <expected-output>put: org.apache.hadoop.hdfs.protocol.DSQuotaExceededException: The DiskSpace quota of /dir1 is exceeded: quota=1024 diskspace consumed=[0-9.]+[kmg]*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16294,7 +16290,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>mkdir: org.apache.hadoop.hdfs.protocol.QuotaExceededException: The quota of /dir1 is exceeded: namespace quota=1 file count=2, diskspace quota=-1 diskspace=0</expected-output>
+          <expected-output>mkdir: org.apache.hadoop.hdfs.protocol.NSQuotaExceededException: The NameSpace quota (directories and files) of directory /dir1 is exceeded: quota=1 file count=2</expected-output>
         </comparator>
       </comparators>
     </test>

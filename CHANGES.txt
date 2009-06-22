@@ -1,0 +1,10 @@
+Hadoop HDFS Change Log
+
+Trunk (unreleased changes)
+
+    HDFS-76. Better error message to users when commands fail because of 
+    lack of quota. Allow quota to be set even if the limit is lower than
+    current consumption. (Boris Shkolnik via rangadi)
+
+    HADOOP-4687. HDFS is split from Hadoop Core. It is a subproject under 
+    Hadoop (Owen O'Malley)

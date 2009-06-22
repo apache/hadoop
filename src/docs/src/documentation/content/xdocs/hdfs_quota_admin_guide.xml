@@ -32,7 +32,7 @@ implementation of the two types of quotas are closely parallel. </p>
 
  <p> The name quota is a hard limit on the number of file and directory names in the tree rooted at that directory. File and
 directory creations fail if the quota would be exceeded. Quotas stick with renamed directories; the rename operation fails if
-operation would result in a quota violation. The attempt to set a quota fails if the directory would be in violation of the new
+operation would result in a quota violation. The attempt to set a quota will still succeed even if the directory would be in violation of the new
 quota. A newly created directory has no associated quota. The largest quota is <code>Long.Max_Value</code>. A quota of one
 forces a directory to remain empty. (Yes, a directory counts against its own quota!) </p>
 
@@ -44,8 +44,7 @@ a warning is printed for each of such violations. Setting or removing a quota cr
 
  <p> The space quota is a hard limit on the number of bytes used by files in the tree rooted at that directory. Block
 allocations fail if the quota would not allow a full block to be written. Each replica of a block counts against the quota. Quotas
-stick with renamed directories; the rename operation fails if the operation would result in a quota violation. The attempt to
-set a quota fails if the directory would be in violation of the new quota. A newly created directory has no associated quota.
+stick with renamed directories; the rename operation fails if the operation would result in a quota violation. A newly created directory has no associated quota.
 The largest quota is <code>Long.Max_Value</code>. A quota of zero still permits files to be created, but no blocks can be added to the files.
 Directories don't use host file system space and don't count against the space quota. The host file system space used to save
 the file meta data is not counted against the quota. Quotas are charged at the intended replication factor for the file;

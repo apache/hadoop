@@ -23,11 +23,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 
 import junit.framework.TestCase;
 
@@ -167,9 +170,10 @@ public class TestQuota extends TestCase {
       DFSTestUtil.createFile(dfs, childFile1, fileLen, replication, 0);
       
       // 11: set the quota of /test to be 1
+      // HADOOP-5872 - we can set quota even if it is immediately violated 
       args = new String[]{"-setQuota", "1", parent.toString()};
-      runCommand(admin, args, true);
-      runCommand(admin, true, "-setSpaceQuota",  // for space quota
+      runCommand(admin, args, false);
+      runCommand(admin, false, "-setSpaceQuota",  // for space quota
                  Integer.toString(fileLen), args[2]);
       
       // 12: set the quota of /test/data0 to be 1
@@ -303,7 +307,7 @@ public class TestQuota extends TestCase {
       boolean hasException = false;
       try {
         assertFalse(dfs.mkdirs(tempPath));
-      } catch (QuotaExceededException e) {
+      } catch (NSQuotaExceededException e) {
         hasException = true;
       }
       assertTrue(hasException);
@@ -326,7 +330,7 @@ public class TestQuota extends TestCase {
       hasException = false;
       try {
         assertFalse(dfs.mkdirs(tempPath));
-      } catch (QuotaExceededException e) {
+      } catch (NSQuotaExceededException e) {
         hasException = true;
       }
       assertTrue(hasException);
@@ -345,7 +349,7 @@ public class TestQuota extends TestCase {
       hasException = false;
       try {
         assertFalse(dfs.rename(tempPath, quotaDir3));
-      } catch (QuotaExceededException e) {
+      } catch (NSQuotaExceededException e) {
         hasException = true;
       }
       assertTrue(hasException);
@@ -379,7 +383,7 @@ public class TestQuota extends TestCase {
       hasException = false;
       try {
         assertFalse(dfs.rename(new Path("/nqdir0/nqdir30"), tempPath));
-      } catch (QuotaExceededException e) {
+      } catch (NSQuotaExceededException e) {
         hasException = true;
       }
       assertTrue(hasException);
@@ -480,7 +484,7 @@ public class TestQuota extends TestCase {
       try {
         DFSTestUtil.createFile(dfs, new Path(quotaDir21, "nqdir33/file2"), 
                                2*fileLen, replication, 0);
-      } catch (QuotaExceededException e) {
+      } catch (DSQuotaExceededException e) {
         hasException = true;
       }
       assertTrue(hasException);
@@ -523,7 +527,7 @@ public class TestQuota extends TestCase {
       hasException = false;
       try {
         assertFalse(dfs.rename(dstPath, srcPath));
-      } catch (QuotaExceededException e) {
+      } catch (DSQuotaExceededException e) {
         hasException = true;
       }
       assertTrue(hasException);
@@ -569,7 +573,7 @@ public class TestQuota extends TestCase {
         out.write(new byte[fileLen + 1024]);
         out.flush();
         out.close();
-      } catch (QuotaExceededException e) {
+      } catch (DSQuotaExceededException e) {
         hasException = true;
         IOUtils.closeStream(out);
       }
@@ -594,7 +598,7 @@ public class TestQuota extends TestCase {
       hasException = false;
       try {
         dfs.setReplication(file2, (short)(replication+1));
-      } catch (QuotaExceededException e) {
+      } catch (DSQuotaExceededException e) {
         hasException = true;
       }
       assertTrue(hasException);

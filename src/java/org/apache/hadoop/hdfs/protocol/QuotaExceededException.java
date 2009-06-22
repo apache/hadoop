@@ -27,26 +27,24 @@ import java.io.IOException;
  * taken by all the file under the directory tree). <br> <br>
  * 
  * The message for the exception specifies the directory where the quota
- * was violated and actual quotas.
+ * was violated and actual quotas. Specific message is generated in the 
+ * corresponding Exception class: 
+ *  DSQuotaExceededException or
+ *  NSQuotaExceededException
  */
-public final class QuotaExceededException extends IOException {
-  private static final long serialVersionUID = 1L;
-  private String pathName;
-  private long nsQuota;
-  private long nsCount;
-  private long dsQuota;
-  private long diskspace;
+public class QuotaExceededException extends IOException {
+  protected static final long serialVersionUID = 1L;
+  protected String pathName=null;
+  protected long quota; // quota
+  protected long count; // actual value
   
-  public QuotaExceededException(String msg) {
+  protected QuotaExceededException(String msg) {
     super(msg);
   }
   
-  public QuotaExceededException(long nsQuota, long nsCount,
-                                long dsQuota, long diskspace) {
-    this.nsQuota = nsQuota;
-    this.nsCount = nsCount;
-    this.dsQuota = dsQuota;
-    this.diskspace = diskspace;
+  protected QuotaExceededException(long quota, long count) {
+    this.quota = quota;
+    this.count = count;
   }
   
   public void setPathName(String path) {
@@ -54,14 +52,6 @@ public final class QuotaExceededException extends IOException {
   }
   
   public String getMessage() {
-    String msg = super.getMessage();
-    if (msg == null) {
-      return "The quota" + (pathName==null?"":(" of " + pathName)) + 
-          " is exceeded: namespace quota=" + nsQuota + " file count=" + 
-          nsCount + ", diskspace quota=" + dsQuota + 
-          " diskspace=" + diskspace; 
-    } else {
-      return msg;
-    }
+    return super.getMessage();
   }
 }
