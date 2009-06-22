@@ -43,9 +43,6 @@ public class TableInputFormat extends TableInputFormatBase implements
    * space delimited list of columns
    */
   public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
-  
-  public static final String TIME_RANGE_MAX = "hbase.mapred.timerange.max";
-  public static final String TIME_RANGE_MIN = "hbase.mapred.timerange.min";
 
   public void configure(JobConf job) {
     Path[] tableNames = FileInputFormat.getInputPaths(job);
@@ -56,11 +53,6 @@ public class TableInputFormat extends TableInputFormatBase implements
       m_cols[i] = Bytes.toBytes(colNames[i]);
     }
     setInputColumns(m_cols);
-    
-    String minArg = job.get(TIME_RANGE_MIN);
-    String maxArg = job.get(TIME_RANGE_MAX);
-    setTimeRange(Long.parseLong(minArg), Long.parseLong(maxArg));
-    
     try {
       setHTable(new HTable(new HBaseConfiguration(job), tableNames[0].getName()));
     } catch (Exception e) {
@@ -86,15 +78,5 @@ public class TableInputFormat extends TableInputFormatBase implements
     if (colArg == null || colArg.length() == 0) {
       throw new IOException("expecting at least one column");
     }
-    
-    // maxStamp must be higher then minStamp
-    String minArg = job.get(TIME_RANGE_MIN);
-    String maxArg = job.get(TIME_RANGE_MAX);
-    if (minArg == null || minArg.length() == 0 
-        || maxArg == null || maxArg.length() == 0
-        || Long.parseLong(maxArg) <= Long.parseLong(minArg)) {
-        throw new IOException("invalid time stamp values"); 
-    }
-    
   }
 }

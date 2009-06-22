@@ -51,39 +51,13 @@ public class TableMapReduceUtil {
     Class<? extends TableMap> mapper, 
     Class<? extends WritableComparable> outputKeyClass, 
     Class<? extends Writable> outputValueClass, JobConf job) {
-    
-    initTableMapJob(table, columns, mapper, outputKeyClass,
-      outputValueClass, job, 0, 0);
-  }
-  
-  /**
-   * Use this before submitting a TableMap job. It will
-   * appropriately set up the JocConf.
-   * 
-   * @param table  The table name to read from.
-   * @param columns  The columns to scan.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
-   * @param outputValueClass  The class of the output value.
-   * @param job  The current job configuration to adjust.
-   * @param minStamp  the minimum timestamp, inclusive
-   * @param maxStamp  the maximum timestamp, exclusive
-   */
-  public static void initTableMapJob(String table, String columns,
-    Class<? extends TableMap> mapper, 
-    Class<? extends WritableComparable> outputKeyClass, 
-    Class<? extends Writable> outputValueClass, JobConf job,
-    long minStamp,
-    long maxStamp) {
-		      
+      
     job.setInputFormat(TableInputFormat.class);
     job.setMapOutputValueClass(outputValueClass);
     job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
     FileInputFormat.addInputPaths(job, table);
     job.set(TableInputFormat.COLUMN_LIST, columns);
-    job.setLong(TableInputFormat.TIME_RANGE_MIN, minStamp);
-    job.setLong(TableInputFormat.TIME_RANGE_MAX, maxStamp);	    
   }
   
   /**
