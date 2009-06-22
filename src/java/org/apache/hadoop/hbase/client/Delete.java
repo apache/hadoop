@@ -87,13 +87,16 @@ public class Delete implements Writable {
 
   /**
    * Create a Delete operation for the specified row and timestamp, using
-   * an optional row lock.
-   * <p>
+   * an optional row lock.<p>
+   * 
    * If no further operations are done, this will delete all columns in all
    * families of the specified row with a timestamp less than or equal to the 
-   * specified timestamp.
+   * specified timestamp.<p>
+   * 
+   * This timestamp is ONLY used for a delete row operation.  If specifying 
+   * families or columns, you must specify each timestamp individually.
    * @param row row key
-   * @param timestamp maximum version timestamp
+   * @param timestamp maximum version timestamp (only for delete row)
    * @param rowLock previously acquired row lock, or null
    */
   public Delete(byte [] row, long timestamp, RowLock rowLock) {
@@ -167,6 +170,18 @@ public class Delete implements Writable {
     list.add(new KeyValue(this.row, family, qualifier, timestamp,
       KeyValue.Type.DeleteColumn));
     familyMap.put(family, list);
+  }
+  
+  /**
+   * Delete all versions of the specified column, given in 
+   * <code>family:qualifier</code> notation, and with a timestamp less than
+   * or equal to the specified timestamp. 
+   * @param column colon-delimited family and qualifier
+   * @param timestamp maximum version timestamp 
+   */
+  public void deleteColumns(byte [] column, long timestamp) {
+    byte [][] parts = KeyValue.parseColumn(column);
+    this.deleteColumns(parts[0], parts[1], timestamp);
   }
   
   /**

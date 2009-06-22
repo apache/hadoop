@@ -57,7 +57,7 @@ import org.apache.hadoop.io.Writable;
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
  * <p>
- * To add a filter, execute {@link #setFilter(RowFilterInterface) setFilter}.
+ * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
 public class Get implements Writable {
   private byte [] row = null;
