@@ -383,6 +383,7 @@ Release 0.20.0 - Unreleased
    HBASE-1550  hbase-daemon.sh stop should provide more information when stop
                command fails
    HBASE-1515  Address part of config option hbase.regionserver unnecessary
+   HBASE-1532  UI Visibility into ZooKeeper
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
