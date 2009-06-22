@@ -547,11 +547,10 @@ public class BlockManager {
     // initialize data structure for the return value
     List<List<Block>> blocksToReplicate = new ArrayList<List<Block>>(
         UnderReplicatedBlocks.LEVEL);
+    for (int i = 0; i < UnderReplicatedBlocks.LEVEL; i++) {
+      blocksToReplicate.add(new ArrayList<Block>());
+    }
     synchronized (namesystem) {
-      for (int i = 0; i < UnderReplicatedBlocks.LEVEL; i++) {
-        blocksToReplicate.add(new ArrayList<Block>());
-      }
-
       synchronized (neededReplications) {
         if (neededReplications.size() == 0) {
           missingBlocksInCurIter = 0;
@@ -1284,9 +1283,9 @@ public class BlockManager {
   }
 
   void removeBlock(Block block) {
-    blocksMap.removeINode(block);
-    corruptReplicas.removeFromCorruptReplicasMap(block);
     addToInvalidates(block);
+    corruptReplicas.removeFromCorruptReplicasMap(block);
+    blocksMap.removeBlock(block);
   }
 
   BlockInfo getStoredBlock(Block block) {
@@ -1400,10 +1399,6 @@ public class BlockManager {
     return blocksMap.addINode(block, iNode);
   }
 
-  void removeINode(Block block) {
-    blocksMap.removeINode(block);
-  }
-
   INodeFile getINode(Block b) {
     return blocksMap.getINode(b);
   }
@@ -1416,8 +1411,8 @@ public class BlockManager {
     return corruptReplicas.numCorruptReplicas(block);
   }
 
-  void removeBlockFromMap(BlockInfo blockInfo) {
-    blocksMap.removeBlock(blockInfo);
+  void removeBlockFromMap(Block block) {
+    blocksMap.removeBlock(block);
   }
   
   public int getCapacity() {

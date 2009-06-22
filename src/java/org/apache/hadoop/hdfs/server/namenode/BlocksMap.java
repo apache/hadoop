@@ -347,36 +347,22 @@ class BlocksMap {
   }
 
   /**
-   * Remove INode reference from block b.
-   * If it does not belong to any file and data-nodes,
-   * then remove the block from the block map.
-   */
-  void removeINode(Block b) {
-    BlockInfo info = map.get(b);
-    if (info != null) {
-      info.inode = null;
-      if (info.getDatanode(0) == null) {  // no datanodes left
-        map.remove(b);  // remove block from the map
-      }
-    }
-  }
-
-  /**
    * Remove the block from the block map;
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.
    */
-  void removeBlock(BlockInfo blockInfo) {
+  void removeBlock(Block block) {
+    BlockInfo blockInfo = map.remove(block);
     if (blockInfo == null)
       return;
+
     blockInfo.inode = null;
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       dn.removeBlock(blockInfo); // remove from the list and wipe the location
     }
-    map.remove(blockInfo);  // remove block from the map
   }
-
+  
   /** Returns the block object it it exists in the map. */
   BlockInfo getStoredBlock(Block b) {
     return map.get(b);

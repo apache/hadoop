@@ -284,7 +284,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.blockreport.intervalMsec</name>
-  <value>3600000</value>
+  <value>21600000</value>
   <description>Determines block reporting interval in milliseconds.</description>
 </property>
 

@@ -328,7 +328,7 @@ class FSDirectory implements Closeable {
     synchronized (rootDir) {
       // modify file-> block and blocksMap
       fileNode.removeBlock(block);
-      getBlockManager().removeINode(block);
+      getBlockManager().removeBlockFromMap(block);
       // If block is removed from blocksMap remove it from corruptReplicasMap
       getBlockManager().removeFromCorruptReplicasMap(block);
 
