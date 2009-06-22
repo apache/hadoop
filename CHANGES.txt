@@ -214,6 +214,8 @@ Release 0.20.0 - Unreleased
    HBASE-1561  HTable Mismatch between javadoc and what it actually does
    HBASE-1558  deletes use 'HConstants.LATEST_TIMESTAMP' but no one translates
                that into 'now'
+   HBASE-1508  Shell "close_region" reveals a Master<>HRS problem, regions are
+               not reassigned
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
