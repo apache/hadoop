@@ -19,9 +19,7 @@ package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -67,8 +65,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -367,20 +363,15 @@ public class Balancer implements Tool {
     
     /* Send a block replace request to the output stream*/
     private void sendRequest(DataOutputStream out) throws IOException {
-      out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
-      out.writeByte(DataTransferProtocol.OP_REPLACE_BLOCK);
-      out.writeLong(block.getBlock().getBlockId());
-      out.writeLong(block.getBlock().getGenerationStamp());
-      Text.writeString(out, source.getStorageID());
-      proxySource.getDatanode().write(out);
       AccessToken accessToken = AccessToken.DUMMY_TOKEN;
       if (isAccessTokenEnabled) {
         accessToken = accessTokenHandler.generateToken(null, block.getBlock()
             .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.REPLACE,
             AccessTokenHandler.AccessMode.COPY));
       }
-      accessToken.write(out);
-      out.flush();
+      DataTransferProtocol.Sender.opReplaceBlock(out,
+          block.getBlock().getBlockId(), block.getBlock().getGenerationStamp(),
+          source.getStorageID(), proxySource.getDatanode(), accessToken);
     }
     
     /* Receive a block copy response from the input stream */ 

@@ -14,3 +14,6 @@ Trunk (unreleased changes)
 
     HADOOP-4687. HDFS is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)
+
+    HDFS-377. Separate codes which implement DataTransferProtocol.
+    (szetszwo)

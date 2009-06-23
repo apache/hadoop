@@ -47,7 +47,8 @@ import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FOR
 /**
  * Thread for processing incoming/outgoing data stream.
  */
-class DataXceiver implements Runnable, FSConstants {
+class DataXceiver extends DataTransferProtocol.Receiver
+    implements Runnable, FSConstants {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
@@ -78,12 +79,8 @@ class DataXceiver implements Runnable, FSConstants {
       in = new DataInputStream(
           new BufferedInputStream(NetUtils.getInputStream(s), 
                                   SMALL_BUFFER_SIZE));
-      short version = in.readShort();
-      if ( version != DataTransferProtocol.DATA_TRANSFER_VERSION ) {
-        throw new IOException( "Version Mismatch" );
-      }
+      final byte op = op(in);
       boolean local = s.getInetAddress().equals(s.getLocalAddress());
-      byte op = in.readByte();
       // Make sure the xciver count is not exceeded
       int curXceiverCount = datanode.getXceiverCount();
       if (curXceiverCount > dataXceiverServer.maxXceiverCount) {
@@ -94,7 +91,7 @@ class DataXceiver implements Runnable, FSConstants {
       long startTime = DataNode.now();
       switch ( op ) {
       case DataTransferProtocol.OP_READ_BLOCK:
-        readBlock( in );
+        opReadBlock(in);
         datanode.myMetrics.readBlockOp.inc(DataNode.now() - startTime);
         if (local)
           datanode.myMetrics.readsFromLocalClient.inc();
@@ -102,7 +99,7 @@ class DataXceiver implements Runnable, FSConstants {
           datanode.myMetrics.readsFromRemoteClient.inc();
         break;
       case DataTransferProtocol.OP_WRITE_BLOCK:
-        writeBlock( in );
+        opWriteBlock(in);
         datanode.myMetrics.writeBlockOp.inc(DataNode.now() - startTime);
         if (local)
           datanode.myMetrics.writesFromLocalClient.inc();
@@ -110,16 +107,16 @@ class DataXceiver implements Runnable, FSConstants {
           datanode.myMetrics.writesFromRemoteClient.inc();
         break;
       case DataTransferProtocol.OP_REPLACE_BLOCK: // for balancing purpose; send to a destination
-        replaceBlock(in);
+        opReplaceBlock(in);
         datanode.myMetrics.replaceBlockOp.inc(DataNode.now() - startTime);
         break;
       case DataTransferProtocol.OP_COPY_BLOCK:
             // for balancing purpose; send to a proxy source
-        copyBlock(in);
+        opCopyBlock(in);
         datanode.myMetrics.copyBlockOp.inc(DataNode.now() - startTime);
         break;
       case DataTransferProtocol.OP_BLOCK_CHECKSUM: //get the checksum of a block
-        getBlockChecksum(in);
+        opBlockChecksum(in);
         datanode.myMetrics.blockChecksumOp.inc(DataNode.now() - startTime);
         break;
       default:
@@ -138,21 +135,12 @@ class DataXceiver implements Runnable, FSConstants {
 
   /**
    * Read a block from the disk.
-   * @param in The stream to read from
-   * @throws IOException
    */
-  private void readBlock(DataInputStream in) throws IOException {
-    //
-    // Read in the header
-    //
-    long blockId = in.readLong();          
-    Block block = new Block( blockId, 0 , in.readLong());
-
-    long startOffset = in.readLong();
-    long length = in.readLong();
-    String clientName = Text.readString(in);
-    AccessToken accessToken = new AccessToken();
-    accessToken.readFields(in);
+  @Override
+  public void opReadBlock(DataInputStream in,
+      long blockId, long blockGs, long startOffset, long length,
+      String clientName, AccessToken accessToken) throws IOException {
+    final Block block = new Block(blockId, 0 , blockGs);
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(
@@ -224,42 +212,24 @@ class DataXceiver implements Runnable, FSConstants {
 
   /**
    * Write a block to disk.
-   * 
-   * @param in The stream to read from
-   * @throws IOException
    */
-  private void writeBlock(DataInputStream in) throws IOException {
-    DatanodeInfo srcDataNode = null;
-    LOG.debug("writeBlock receive buf size " + s.getReceiveBufferSize() +
-              " tcp no delay " + s.getTcpNoDelay());
-    //
-    // Read in the header
-    //
-    Block block = new Block(in.readLong(), 
-        dataXceiverServer.estimateBlockSize, in.readLong());
+  @Override
+  public void opWriteBlock(DataInputStream in, long blockId, long blockGs,
+      int pipelineSize, boolean isRecovery,
+      String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
+      AccessToken accessToken) throws IOException {
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("writeBlock receive buf size " + s.getReceiveBufferSize() +
+                " tcp no delay " + s.getTcpNoDelay());
+    }
+
+    final Block block = new Block(blockId, dataXceiverServer.estimateBlockSize,
+        blockGs);
     LOG.info("Receiving block " + block + 
              " src: " + remoteAddress +
              " dest: " + localAddress);
-    int pipelineSize = in.readInt(); // num of datanodes in entire pipeline
-    boolean isRecovery = in.readBoolean(); // is this part of recovery?
-    String client = Text.readString(in); // working on behalf of this client
-    boolean hasSrcDataNode = in.readBoolean(); // is src node info present
-    if (hasSrcDataNode) {
-      srcDataNode = new DatanodeInfo();
-      srcDataNode.readFields(in);
-    }
-    int numTargets = in.readInt();
-    if (numTargets < 0) {
-      throw new IOException("Mislabelled incoming datastream.");
-    }
-    DatanodeInfo targets[] = new DatanodeInfo[numTargets];
-    for (int i = 0; i < targets.length; i++) {
-      DatanodeInfo tmp = new DatanodeInfo();
-      tmp.readFields(in);
-      targets[i] = tmp;
-    }
-    AccessToken accessToken = new AccessToken();
-    accessToken.readFields(in);
+
     DataOutputStream replyOut = null;   // stream to prev target
     replyOut = new DataOutputStream(
                    NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
@@ -302,9 +272,9 @@ class DataXceiver implements Runnable, FSConstants {
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
-          int timeoutValue = numTargets * datanode.socketTimeout;
+          int timeoutValue = targets.length * datanode.socketTimeout;
           int writeTimeout = datanode.socketWriteTimeout + 
-                             (HdfsConstants.WRITE_TIMEOUT_EXTENSION * numTargets);
+                      (HdfsConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
           mirrorSock.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
@@ -315,22 +285,9 @@ class DataXceiver implements Runnable, FSConstants {
           mirrorIn = new DataInputStream(NetUtils.getInputStream(mirrorSock));
 
           // Write header: Copied from DFSClient.java!
-          mirrorOut.writeShort( DataTransferProtocol.DATA_TRANSFER_VERSION );
-          mirrorOut.write( DataTransferProtocol.OP_WRITE_BLOCK );
-          mirrorOut.writeLong( block.getBlockId() );
-          mirrorOut.writeLong( block.getGenerationStamp() );
-          mirrorOut.writeInt( pipelineSize );
-          mirrorOut.writeBoolean( isRecovery );
-          Text.writeString( mirrorOut, client );
-          mirrorOut.writeBoolean(hasSrcDataNode);
-          if (hasSrcDataNode) { // pass src node information
-            srcDataNode.write(mirrorOut);
-          }
-          mirrorOut.writeInt( targets.length - 1 );
-          for ( int i = 1; i < targets.length; i++ ) {
-            targets[i].write( mirrorOut );
-          }
-          accessToken.write(mirrorOut);
+          DataTransferProtocol.Sender.opWriteBlock(mirrorOut,
+              block.getBlockId(), block.getGenerationStamp(), pipelineSize,
+              isRecovery, client, srcDataNode, targets, accessToken);
 
           blockReceiver.writeChecksumHeader(mirrorOut);
           mirrorOut.flush();
@@ -414,12 +371,11 @@ class DataXceiver implements Runnable, FSConstants {
 
   /**
    * Get block checksum (MD5 of CRC32).
-   * @param in
    */
-  void getBlockChecksum(DataInputStream in) throws IOException {
-    final Block block = new Block(in.readLong(), 0 , in.readLong());
-    AccessToken accessToken = new AccessToken();
-    accessToken.readFields(in);
+  @Override
+  public void opBlockChecksum(DataInputStream in,
+      long blockId, long blockGs, AccessToken accessToken) throws IOException {
+    final Block block = new Block(blockId, 0 , blockGs);
     DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
         datanode.socketWriteTimeout));
     if (datanode.isAccessTokenEnabled
@@ -471,16 +427,12 @@ class DataXceiver implements Runnable, FSConstants {
 
   /**
    * Read a block from the disk and then sends it to a destination.
-   * 
-   * @param in The stream to read from
-   * @throws IOException
    */
-  private void copyBlock(DataInputStream in) throws IOException {
+  @Override
+  public void opCopyBlock(DataInputStream in,
+      long blockId, long blockGs, AccessToken accessToken) throws IOException {
     // Read in the header
-    long blockId = in.readLong(); // read block id
-    Block block = new Block(blockId, 0, in.readLong());
-    AccessToken accessToken = new AccessToken();
-    accessToken.readFields(in);
+    Block block = new Block(blockId, 0, blockGs);
     if (datanode.isAccessTokenEnabled
         && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
             AccessTokenHandler.AccessMode.COPY)) {
@@ -545,20 +497,14 @@ class DataXceiver implements Runnable, FSConstants {
   /**
    * Receive a block and write it to disk, it then notifies the namenode to
    * remove the copy from the source.
-   * 
-   * @param in The stream to read from
-   * @throws IOException
    */
-  private void replaceBlock(DataInputStream in) throws IOException {
+  @Override
+  public void opReplaceBlock(DataInputStream in,
+      long blockId, long blockGs, String sourceID, DatanodeInfo proxySource,
+      AccessToken accessToken) throws IOException {
     /* read header */
-    long blockId = in.readLong();
-    Block block = new Block(blockId, dataXceiverServer.estimateBlockSize,
-        in.readLong()); // block id & generation stamp
-    String sourceID = Text.readString(in); // read del hint
-    DatanodeInfo proxySource = new DatanodeInfo(); // read proxy source
-    proxySource.readFields(in);
-    AccessToken accessToken = new AccessToken();
-    accessToken.readFields(in);
+    final Block block = new Block(blockId, dataXceiverServer.estimateBlockSize,
+        blockGs);
     if (datanode.isAccessTokenEnabled
         && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
             AccessTokenHandler.AccessMode.REPLACE)) {
@@ -597,12 +543,8 @@ class DataXceiver implements Runnable, FSConstants {
                      new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
 
       /* send request to the proxy */
-      proxyOut.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION); // transfer version
-      proxyOut.writeByte(DataTransferProtocol.OP_COPY_BLOCK); // op code
-      proxyOut.writeLong(block.getBlockId()); // block id
-      proxyOut.writeLong(block.getGenerationStamp()); // block id
-      accessToken.write(proxyOut);
-      proxyOut.flush();
+      DataTransferProtocol.Sender.opCopyBlock(proxyOut, block.getBlockId(),
+          block.getGenerationStamp(), accessToken);
 
       // receive the response from the proxy
       proxyReply = new DataInputStream(new BufferedInputStream(

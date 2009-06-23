@@ -343,6 +343,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
     setAdminState(WritableUtils.readEnum(in, AdminStates.class));
   }
 
+  /** Read a DatanodeInfo */
+  public static DatanodeInfo read(DataInput in) throws IOException {
+    final DatanodeInfo d = new DatanodeInfo();
+    d.readFields(in);
+    return d;
+  }
+
   @Override
   public int hashCode() {
     // Super implementation is sufficient

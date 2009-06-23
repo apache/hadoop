@@ -616,13 +616,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 + DataTransferProtocol.OP_BLOCK_CHECKSUM +
                 ", block=" + block);
           }
-          out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
-          out.write(DataTransferProtocol.OP_BLOCK_CHECKSUM);
-          out.writeLong(block.getBlockId());
-          out.writeLong(block.getGenerationStamp());
-          lb.getAccessToken().write(out);
-          out.flush();
-         
+          DataTransferProtocol.Sender.opBlockChecksum(out, block.getBlockId(),
+              block.getGenerationStamp(), lb.getAccessToken());
+
           final short reply = in.readShort();
           if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {
             if (reply == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN
@@ -1307,19 +1303,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                        String clientName)
                                        throws IOException {
       // in and out will be closed when sock is closed (by the caller)
-      DataOutputStream out = new DataOutputStream(
-        new BufferedOutputStream(NetUtils.getOutputStream(sock,HdfsConstants.WRITE_TIMEOUT)));
-
-      //write the header.
-      out.writeShort( DataTransferProtocol.DATA_TRANSFER_VERSION );
-      out.write( DataTransferProtocol.OP_READ_BLOCK );
-      out.writeLong( blockId );
-      out.writeLong( genStamp );
-      out.writeLong( startOffset );
-      out.writeLong( len );
-      Text.writeString(out, clientName);
-      accessToken.write(out);
-      out.flush();
+      DataTransferProtocol.Sender.opReadBlock(
+          new DataOutputStream(new BufferedOutputStream(
+              NetUtils.getOutputStream(sock,HdfsConstants.WRITE_TIMEOUT))),
+          blockId, genStamp, startOffset, len, clientName, accessToken);
       
       //
       // Get bytes in block, set streams
@@ -2731,19 +2718,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               DataNode.SMALL_BUFFER_SIZE));
           blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
-          out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
-          out.write(DataTransferProtocol.OP_WRITE_BLOCK);
-          out.writeLong(block.getBlockId());
-          out.writeLong(block.getGenerationStamp());
-          out.writeInt(nodes.length);
-          out.writeBoolean(recoveryFlag); // recovery flag
-          Text.writeString(out, client);
-          out.writeBoolean(false); // Not sending src node information
-          out.writeInt(nodes.length - 1);
-          for (int i = 1; i < nodes.length; i++) {
-            nodes[i].write(out);
-          }
-          accessToken.write(out);
+          DataTransferProtocol.Sender.opWriteBlock(out,
+              block.getBlockId(), block.getGenerationStamp(), nodes.length,
+              recoveryFlag, client, null, nodes, accessToken);
           checksum.writeHeader(out);
           out.flush();
 
