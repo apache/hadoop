@@ -25,3 +25,6 @@ Trunk (unreleased changes)
 
     HADOOP-6096. Fix Eclipse project and classpath files following project
     split. (tomwhite)
+
+    HDFS-195. Handle expired tokens when write pipeline is restablished.
+    (Kan Zhang via rangadi)

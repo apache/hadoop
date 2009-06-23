@@ -238,6 +238,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
             .getBlockId(), AccessTokenHandler.AccessMode.WRITE)) {
       try {
         if (client.length() != 0) {
+          replyOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
           Text.writeString(replyOut, datanode.dnRegistration.getName());
           replyOut.flush();
         }
@@ -254,6 +255,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     BlockReceiver blockReceiver = null; // responsible for data handling
     String mirrorNode = null;           // the name:port of next target
     String firstBadLink = "";           // first datanode that failed in connection setup
+    short mirrorInStatus = (short)DataTransferProtocol.OP_STATUS_SUCCESS;
     try {
       // open a block receiver and check if the block does not exist
       blockReceiver = new BlockReceiver(block, in, 
@@ -294,8 +296,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
           // read connect ack (only for clients, not for replication req)
           if (client.length() != 0) {
+            mirrorInStatus = mirrorIn.readShort();
             firstBadLink = Text.readString(mirrorIn);
-            if (LOG.isDebugEnabled() || firstBadLink.length() > 0) {
+            if (LOG.isDebugEnabled() || mirrorInStatus != DataTransferProtocol.OP_STATUS_SUCCESS) {
               LOG.info("Datanode " + targets.length +
                        " got response for connect ack " +
                        " from downstream datanode with firstbadlink as " +
@@ -305,6 +308,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
         } catch (IOException e) {
           if (client.length() != 0) {
+            replyOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);
             Text.writeString(replyOut, mirrorNode);
             replyOut.flush();
           }
@@ -327,11 +331,12 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
       // send connect ack back to source (only for clients)
       if (client.length() != 0) {
-        if (LOG.isDebugEnabled() || firstBadLink.length() > 0) {
+        if (LOG.isDebugEnabled() || mirrorInStatus != DataTransferProtocol.OP_STATUS_SUCCESS) {
           LOG.info("Datanode " + targets.length +
                    " forwarding connect ack to upstream firstbadlink is " +
                    firstBadLink);
         }
+        replyOut.writeShort(mirrorInStatus);
         Text.writeString(replyOut, firstBadLink);
         replyOut.flush();
       }
