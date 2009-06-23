@@ -232,7 +232,8 @@ checkTests () {
     JIRA_COMMENT="$JIRA_COMMENT
 
     -1 tests included.  The patch doesn't appear to include any new or modified tests.
-                        Please justify why no tests are needed for this patch."
+                        Please justify why no new tests are needed for this patch.
+                        Also please list what manual steps were performed to verify this patch."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
