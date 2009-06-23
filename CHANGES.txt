@@ -216,6 +216,8 @@ Release 0.20.0 - Unreleased
                that into 'now'
    HBASE-1508  Shell "close_region" reveals a Master<>HRS problem, regions are
                not reassigned
+   HBASE-1568  Client doesnt consult old row filter interface in
+               filterSaysStop() - could result in NPE or excessive scanning
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

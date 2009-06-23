@@ -1866,9 +1866,16 @@ public class HTable {
       if(!scan.hasFilter()) {
         return false;
       }
-      // Let the filter see current row.
-      scan.getFilter().filterRowKey(endKey, 0, endKey.length);
-      return scan.getFilter().filterAllRemaining();
+      if (scan.getFilter() != null) {
+        // Let the filter see current row.
+        scan.getFilter().filterRowKey(endKey, 0, endKey.length);
+        return scan.getFilter().filterAllRemaining();
+      }
+      if (scan.getOldFilter() != null) {
+        scan.getOldFilter().filterRowKey(endKey, 0, endKey.length);
+        return scan.getOldFilter().filterAllRemaining();
+      }
+      return false; //unlikely.
     }
 
     public Result next() throws IOException {
