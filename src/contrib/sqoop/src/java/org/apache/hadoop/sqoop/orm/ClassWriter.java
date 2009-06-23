@@ -20,6 +20,7 @@ package org.apache.hadoop.sqoop.orm;
 
 import org.apache.hadoop.sqoop.ImportOptions;
 import org.apache.hadoop.sqoop.manager.ConnManager;
+import org.apache.hadoop.sqoop.manager.SqlManager;
 import org.apache.hadoop.sqoop.lib.BigDecimalSerializer;
 import org.apache.hadoop.sqoop.lib.JdbcWritableBridge;
 
@@ -247,7 +248,7 @@ public class ClassWriter {
 
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = connManager.toJavaType(sqlType);
+      String javaType = SqlManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("Cannot resolve SQL type " + sqlType);
         continue;
@@ -277,7 +278,7 @@ public class ClassWriter {
       fieldNum++;
 
       int sqlType = columnTypes.get(col);
-      String javaType = connManager.toJavaType(sqlType);
+      String javaType = SqlManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -314,7 +315,7 @@ public class ClassWriter {
       fieldNum++;
 
       int sqlType = columnTypes.get(col);
-      String javaType = connManager.toJavaType(sqlType);
+      String javaType = SqlManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -347,7 +348,7 @@ public class ClassWriter {
 
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = connManager.toJavaType(sqlType);
+      String javaType = SqlManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -380,7 +381,7 @@ public class ClassWriter {
     boolean first = true;
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = connManager.toJavaType(sqlType);
+      String javaType = SqlManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -420,7 +421,7 @@ public class ClassWriter {
 
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = connManager.toJavaType(sqlType);
+      String javaType = SqlManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;

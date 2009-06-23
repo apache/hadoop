@@ -261,7 +261,12 @@ public abstract class SqlManager implements ConnManager {
     // Or must statement.close() be called too?
   }
 
-  public String toJavaType(int sqlType) {
+  /**
+   * Resolve a database-specific type to the Java type that should contain it.
+   * @param sqlType
+   * @return the name of a Java type to hold the sql datatype, or null if none.
+   */
+  public static String toJavaType(int sqlType) {
     // mappings from http://java.sun.com/j2se/1.3/docs/guide/jdbc/getstart/mapping.html
     if (sqlType == Types.INTEGER) {
       return "Integer";

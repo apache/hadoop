@@ -70,6 +70,12 @@ to call at top-level: ant deploy-contrib compile-core-test
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
       <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/>
 
+      <!-- we have a mock "hive" shell instance in our testdata directory
+           for testing hive integration. Set this property here to ensure
+           that the unit tests pick it up.
+      -->
+      <sysproperty key="hive.home" value="${basedir}/testdata/hive" />
+
       <!-- tools.jar from Sun JDK also required to invoke javac. -->
       <classpath>
         <path refid="test.classpath"/>

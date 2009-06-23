@@ -93,8 +93,9 @@ public class ImportOptions {
   private String warehouseDir;
   private FileLayout layout;
   private boolean local; // if true and conn is mysql, use mysqldump.
-
   private String tmpDir; // where temp data goes; usually /tmp
+  private String hiveHome;
+  private boolean hiveImport;
 
   private static final String DEFAULT_CONFIG_FILE = "sqoop.properties";
 
@@ -138,11 +139,17 @@ public class ImportOptions {
       this.orderByCol = props.getProperty("db.sort.column", this.orderByCol);
       this.driverClassName = props.getProperty("jdbc.driver", this.driverClassName);
       this.warehouseDir = props.getProperty("hdfs.warehouse.dir", this.warehouseDir);
+      this.hiveHome = props.getProperty("hive.home", this.hiveHome);
 
       String localImport = props.getProperty("local.import",
           Boolean.toString(this.local)).toLowerCase();
       this.local = "true".equals(localImport) || "yes".equals(localImport)
           || "1".equals(localImport);
+
+      String hiveImportStr = props.getProperty("hive.import",
+          Boolean.toString(this.hiveImport)).toLowerCase();
+      this.hiveImport = "true".equals(hiveImportStr) || "yes".equals(hiveImportStr)
+          || "1".equals(hiveImportStr);
     } catch (IOException ioe) {
       LOG.error("Could not read properties file " + DEFAULT_CONFIG_FILE + ": " + ioe.toString());
     } finally {
@@ -156,11 +163,25 @@ public class ImportOptions {
     }
   }
 
+  /**
+   * @return the temp directory to use; this is guaranteed to end with
+   * the file separator character (e.g., '/')
+   */
+  public String getTempDir() {
+    return this.tmpDir;
+  }
+
   private void initDefaults() {
     // first, set the true defaults if nothing else happens.
     // default action is to run the full pipeline.
     this.action = ControlAction.FullImport;
     this.hadoopHome = System.getenv("HADOOP_HOME");
+
+    // Set this with $HIVE_HOME, but -Dhive.home can override.
+    this.hiveHome = System.getenv("HIVE_HOME");
+    this.hiveHome = System.getProperty("hive.home", this.hiveHome);
+
+    // Set this to cwd, but -Dsqoop.src.dir can override.
     this.codeOutputDir = System.getProperty("sqoop.src.dir", ".");
 
     String myTmpDir = System.getProperty("test.build.data", "/tmp/");
@@ -193,11 +214,13 @@ public class ImportOptions {
     System.out.println("--columns (col,col,col...)   Columns to export from table");
     System.out.println("--order-by (column-name)     Column of the table used to order results");
     System.out.println("--hadoop-home (dir)          Override $HADOOP_HOME");
+    System.out.println("--hive-home (dir)            Override $HIVE_HOME");
     System.out.println("--warehouse-dir (dir)        HDFS path for table destination");
     System.out.println("--as-sequencefile            Imports data to SequenceFiles");
     System.out.println("--as-textfile                Imports data as plain text (default)");
     System.out.println("--all-tables                 Import all tables in database");
     System.out.println("                             (Ignores --table, --columns and --order-by)");
+    System.out.println("--hive-import                If set, then import the table into Hive");
     System.out.println("");
     System.out.println("Code generation options:");
     System.out.println("--outdir (dir)               Output directory for generated code");
@@ -254,6 +277,10 @@ public class ImportOptions {
           this.password = args[++i];
         } else if (args[i].equals("--hadoop-home")) {
           this.hadoopHome = args[++i];
+        } else if (args[i].equals("--hive-home")) {
+          this.hiveHome = args[++i];
+        } else if (args[i].equals("--hive-import")) {
+          this.hiveImport = true;
         } else if (args[i].equals("--outdir")) {
           this.codeOutputDir = args[++i];
         } else if (args[i].equals("--as-sequencefile")) {
@@ -356,6 +383,15 @@ public class ImportOptions {
 
   public boolean isLocal() {
     return local;
+  }
+
+  public String getHiveHome() {
+    return hiveHome;
+  }
+
+  /** @return true if we should import the table into Hive */
+  public boolean doHiveImport() {
+    return hiveImport;
   }
 
   /**

@@ -4,10 +4,13 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-5887. Sqoop should create tables in Hive metastore after importing
+    to HDFS. (Aaron Kimball via tomwhite)
+
   IMPROVEMENTS
 
   BUG FIXES
-    HADOOP-4687. HDFS is split from Hadoop Core. It is a subproject under 
+    HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)
 
     HADOOP-6096. Fix Eclipse project and classpath files following project

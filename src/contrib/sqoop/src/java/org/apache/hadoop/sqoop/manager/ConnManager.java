@@ -76,13 +76,6 @@ public interface ConnManager {
   Connection getConnection() throws SQLException;
 
   /**
-   * Resolve a database-specific type to the Java type that should contain it.
-   * @param sqlType
-   * @return the name of a Java type to hold the sql datatype, or null if none.
-   */
-  String toJavaType(int sqlType);
-
-  /**
    * @return a string identifying the driver class to load for this JDBC connection type.
    */
   String getDriverClass();

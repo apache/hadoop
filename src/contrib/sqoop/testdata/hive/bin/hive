@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This is a mock "Hive" shell that validates whether various test imports
+# succeeded. It accepts commands of the form 'hive -f scriptname'
+# and validates that the script contents match those of an expected script.
+# The filename to that expected script is set via the environment variable
+# EXPECTED_SCRIPT.
+
+# The script will contain a pathname as part of the LOAD DATA INPATH statement;
+# depending on where you run the tests from, this can change. So the expected
+# script file actually contains the marker string "BASEPATH" which is replaced
+# by this script with the contents of $TMPDIR, which is set to 'test.build.data'.
+
+if [ -z "$EXPECTED_SCRIPT" ]; then
+  echo "No expected script set"
+  exit 1
+elif [ -z "$TMPDIR" ]; then
+  TMPDIR=/tmp
+elif [ "$1" != "-f" ]; then
+  echo "Misunderstood argument: $1"
+  echo "Expected '-f'."
+  exit 1
+elif [ -z "$2" ]; then
+  echo "Expected: hive -f filename"
+  exit 1
+else
+  GENERATED_SCRIPT=$2
+fi
+
+# Normalize this to an absolute path
+TMPDIR=`cd $TMPDIR && pwd`
+
+# Copy the expected script into the tmpdir and replace the marker.
+cp "$EXPECTED_SCRIPT" "$TMPDIR"
+SCRIPT_BASE=`basename $EXPECTED_SCRIPT`
+COPIED_SCRIPT="$TMPDIR/$SCRIPT_BASE"
+sed -i -e "s|BASEPATH|$TMPDIR|" $COPIED_SCRIPT
+
+# Actually check to see that the input we got matches up.
+diff --ignore-all-space --ignore-blank-lines "$COPIED_SCRIPT" "$GENERATED_SCRIPT"
+ret=$?
+
+exit $ret
+

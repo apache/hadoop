@@ -46,9 +46,6 @@ import junit.framework.TestCase;
 /**
  * Class that implements common methods required for tests which import data
  * from SQL into HDFS and verify correct import.
- *
- * 
- *
  */
 public class ImportJobTestCase extends TestCase {
 
@@ -71,6 +68,13 @@ public class ImportJobTestCase extends TestCase {
     LOCAL_WAREHOUSE_DIR = TEMP_BASE_DIR + "sqoop/warehouse";
   }
 
+  // Used if a test manually sets the table name to be used.
+  private String curTableName;
+
+  protected void setCurTableName(String curName) {
+    this.curTableName = curName;
+  }
+
   /**
    * Because of how classloading works, we don't actually want to name
    * all the tables the same thing -- they'll actually just use the same
@@ -83,7 +87,11 @@ public class ImportJobTestCase extends TestCase {
   static final String TABLE_NAME = "IMPORT_TABLE_";
 
   protected String getTableName() {
-    return TABLE_NAME + Integer.toString(tableNum);
+    if (null != curTableName) {
+      return curTableName;
+    } else {
+      return TABLE_NAME + Integer.toString(tableNum);
+    }
   }
 
   protected String getWarehouseDir() {
@@ -140,12 +148,15 @@ public class ImportJobTestCase extends TestCase {
 
   @After
   public void tearDown() {
+    setCurTableName(null); // clear user-override table name.
+
     try {
       manager.close();
     } catch (SQLException sqlE) {
       LOG.error("Got SQLException: " + sqlE.toString());
       fail("Got SQLException: " + sqlE.toString());
     }
+
   }
 
   static final String BASE_COL_NAME = "DATA_COL";
@@ -385,7 +396,9 @@ public class ImportJobTestCase extends TestCase {
     }
 
     // expect a successful return.
-    assertEquals("Failure during job", 0, ret);
+    if (0 != ret) {
+      throw new IOException("Failure during job; return status " + ret);
+    }
   }
 
 }

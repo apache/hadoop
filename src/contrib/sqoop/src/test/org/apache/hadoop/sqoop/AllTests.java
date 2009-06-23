@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.sqoop;
 
+import org.apache.hadoop.sqoop.hive.TestHiveImport;
 import org.apache.hadoop.sqoop.manager.LocalMySQLTest;
 import org.apache.hadoop.sqoop.manager.TestHsqldbManager;
 import org.apache.hadoop.sqoop.manager.TestSqlManager;
@@ -46,6 +47,7 @@ public final class AllTests  {
     suite.addTestSuite(TestMultiCols.class);
     suite.addTestSuite(TestOrderBy.class);
     suite.addTestSuite(LocalMySQLTest.class);
+    suite.addTestSuite(TestHiveImport.class);
 
     return suite;
   }

@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.apache.hadoop.sqoop.hive.HiveImport;
 import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.orm.ClassWriter;
 import org.apache.hadoop.sqoop.orm.CompilationManager;
@@ -42,6 +43,7 @@ public class Sqoop extends Configured implements Tool {
 
   private ImportOptions options;
   private ConnManager manager;
+  private HiveImport hiveImport;
 
   public Sqoop() {
   }
@@ -69,12 +71,18 @@ public class Sqoop extends Configured implements Tool {
     String jarFile = null;
 
     // Generate the ORM code for the tables.
-    // TODO(aaron): Allow this to be bypassed if the user has already generated code
+    // TODO(aaron): Allow this to be bypassed if the user has already generated code,
+    // or if they're using a non-MapReduce import method (e.g., mysqldump).
     jarFile = generateORM(tableName);
 
     if (options.getAction() == ImportOptions.ControlAction.FullImport) {
       // Proceed onward to do the import.
       manager.importTable(tableName, jarFile, getConf());
+
+      // If the user wants this table to be in Hive, perform that post-load.
+      if (options.doHiveImport()) {
+        hiveImport.importTable(tableName);
+      }
     }
   }
 
@@ -99,6 +107,10 @@ public class Sqoop extends Configured implements Tool {
     } catch (Exception e) {
       LOG.error("Got error creating database manager: " + e.toString());
       return 1;
+    }
+
+    if (options.doHiveImport()) {
+      hiveImport = new HiveImport(options, manager, getConf());
     }
 
     ImportOptions.ControlAction action = options.getAction();
