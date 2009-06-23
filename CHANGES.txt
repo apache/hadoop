@@ -844,6 +844,9 @@ Trunk (unreleased changes)
     HADOOP-6079. Serialize proxySource as DatanodeInfo in DataTransferProtocol.
     (szetszwo)
 
+    HADOOP-6096. Fix Eclipse project and classpath files following project
+    split. (tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
