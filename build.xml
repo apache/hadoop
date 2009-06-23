@@ -315,6 +315,31 @@
     </copy>
   </target>
 
+  <!-- Weaving aspects in place 
+  	Later on one can run 'ant jar' to create Hadoop jar file with instrumented classes
+  -->
+  <target name="injectfaults" depends="compile" description="Weaves aspects into precomplied HDFS classes">
+    <!-- AspectJ task definition -->
+    <taskdef resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
+      <classpath>
+        <pathelement location="${common.ivy.lib.dir}/aspectjtools-1.6.4.jar"/>
+      </classpath>
+    </taskdef>
+    <echo message="Start weaving aspects in place"/>
+    <iajc
+      encoding="${build.encoding}" 
+      srcdir="${hdfs.src.dir};${build.src};${test.src.dir}/aop" 
+      includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
+      destDir="${build.classes}"
+      debug="${javac.debug}"
+      target="${javac.version}"
+      source="${javac.version}"
+      deprecation="${javac.deprecation}">
+        <classpath refid="classpath" />
+    </iajc>
+    <echo message="Weaving of aspects is finished"/>
+  </target>
+
   <target name="compile-core" depends="clover, compile-hdfs-classes" description="Compile"/> 
 
   <target name="compile-contrib" depends="compile-core">
@@ -449,6 +474,8 @@
     <mkdir dir="${test.log.dir}"/>
     <copy file="${test.src.dir}/hadoop-policy.xml" 
       todir="${test.build.extraconf}" />
+    <copy file="${test.src.dir}/fi-site.xml"
+      todir="${test.build.extraconf}" />
     <junit showoutput="${test.output}"
       printsummary="${test.junit.printsummary}"
       haltonfailure="${test.junit.haltonfailure}"
@@ -465,6 +492,10 @@
       <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
       <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
       <classpath refid="test.classpath"/>
+      <!-- Pass probability specifications to the spawn JVM -->
+      <syspropertyset id="FaultProbabilityProperties">
+        <propertyref regex="fi.*"/>
+      </syspropertyset>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.src.dir}/hdfs"
@@ -485,6 +516,8 @@
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
     <copy file="${test.src.dir}/hadoop-policy.xml" 
+      todir="${test.build.extraconf}" />
+    <copy file="${test.src.dir}/fi-site.xml"
       todir="${test.build.extraconf}" />
     <junit showoutput="${test.output}"
       printsummary="${test.junit.printsummary}"
