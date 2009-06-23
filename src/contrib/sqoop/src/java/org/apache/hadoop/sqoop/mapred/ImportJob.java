@@ -110,6 +110,7 @@ public class ImportJob {
       }
 
       job.setNumReduceTasks(0);
+      job.setNumMapTasks(1);
       job.setInputFormat(DBInputFormat.class);
 
       FileOutputFormat.setOutputPath(job, outputPath);
