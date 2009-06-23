@@ -69,6 +69,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.DataOutputStream;
 import java.net.InetAddress;
+import java.net.URI;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -301,11 +302,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
   }
 
-  public static Collection<File> getNamespaceDirs(Configuration conf) {
+  public static Collection<URI> getNamespaceDirs(Configuration conf) {
     return getStorageDirs(conf, "dfs.name.dir");
   }
 
-  public static Collection<File> getStorageDirs(Configuration conf,
+  public static Collection<URI> getStorageDirs(Configuration conf,
                                                 String propertyName) {
     Collection<String> dirNames = conf.getStringCollection(propertyName);
     StartupOption startOpt = NameNode.getStartupOption(conf);
@@ -331,14 +332,28 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           "of the file system meta-data.");
     } else if (dirNames.isEmpty())
       dirNames.add("/tmp/hadoop/dfs/name");
-    Collection<File> dirs = new ArrayList<File>(dirNames.size());
+    Collection<URI> dirs = new ArrayList<URI>(dirNames.size());
     for(String name : dirNames) {
-      dirs.add(new File(name));
+      try {
+        URI u = new URI(name);
+        // If the scheme was not declared, default to file://
+        // and use the absolute path of the file, then warn the user 
+        if(u.getScheme() == null) {
+          u = new URI("file://" + new File(name).getAbsolutePath());
+          LOG.warn("Scheme is undefined for " + name);
+          LOG.warn("Please check your file system configuration in " +
+          		"hdfs-site.xml");
+        }
+        dirs.add(u);
+      } catch (Exception e) {
+        LOG.error("Error while processing URI: " + name + 
+            ". The error message was: " + e.getMessage());
+      }
     }
     return dirs;
   }
 
-  public static Collection<File> getNamespaceEditsDirs(Configuration conf) {
+  public static Collection<URI> getNamespaceEditsDirs(Configuration conf) {
     return getStorageDirs(conf, "dfs.name.edits.dir");
   }
 
@@ -3687,7 +3702,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     boolean regAllowed = getEditLog().checkBackupRegistration(registration);
     if(!regAllowed)
       throw new IOException("Registration is not allowed. " +
-      		"Another node is registered as a backup.");
+          "Another node is registered as a backup.");
   }
 
   /**

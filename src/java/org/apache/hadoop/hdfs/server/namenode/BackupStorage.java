@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -66,12 +67,12 @@ public class BackupStorage extends FSImage {
    * Read VERSION and fstime files if exist.<br>
    * Do not load image or edits.
    * 
-   * @param imageDirs list of image directories.
-   * @param editsDirs list of edits directories.
+   * @param imageDirs list of image directories as URI.
+   * @param editsDirs list of edits directories URI.
    * @throws IOException if the node should shutdown.
    */
-  void recoverCreateRead(Collection<File> imageDirs,
-                         Collection<File> editsDirs) throws IOException {
+  void recoverCreateRead(Collection<URI> imageDirs,
+                         Collection<URI> editsDirs) throws IOException {
     setStorageDirectories(imageDirs, editsDirs);
     this.checkpointTime = 0L;
     for(Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {

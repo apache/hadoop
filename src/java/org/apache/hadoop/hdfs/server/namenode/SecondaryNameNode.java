@@ -79,8 +79,8 @@ public class SecondaryNameNode implements Runnable {
   private int infoPort;
   private String infoBindAddress;
 
-  private Collection<File> checkpointDirs;
-  private Collection<File> checkpointEditsDirs;
+  private Collection<URI> checkpointDirs;
+  private Collection<URI> checkpointEditsDirs;
   private long checkpointPeriod;	// in seconds
   private long checkpointSize;    // size (in MB) of current Edit Log
 
@@ -489,10 +489,10 @@ public class SecondaryNameNode implements Runnable {
      * @param editsDirs
      * @throws IOException
      */
-    void recoverCreate(Collection<File> dataDirs,
-                       Collection<File> editsDirs) throws IOException {
-      Collection<File> tempDataDirs = new ArrayList<File>(dataDirs);
-      Collection<File> tempEditsDirs = new ArrayList<File>(editsDirs);
+    void recoverCreate(Collection<URI> dataDirs,
+                       Collection<URI> editsDirs) throws IOException {
+      Collection<URI> tempDataDirs = new ArrayList<URI>(dataDirs);
+      Collection<URI> tempEditsDirs = new ArrayList<URI>(editsDirs);
       this.storageDirs = new ArrayList<StorageDirectory>();
       setStorageDirectories(tempDataDirs, tempEditsDirs);
       for (Iterator<StorageDirectory> it = 

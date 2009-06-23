@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Iterator;
@@ -107,7 +108,7 @@ public class TestCheckpoint extends TestCase {
   /*
    * Verify that namenode does not startup if one namedir is bad.
    */
-  private void testNamedirError(Configuration conf, Collection<File> namedirs) 
+  private void testNamedirError(Configuration conf, Collection<URI> namedirs) 
     throws IOException {
     System.out.println("Starting testNamedirError");
     MiniDFSCluster cluster = null;
@@ -119,7 +120,7 @@ public class TestCheckpoint extends TestCase {
     //
     // Remove one namedir & Restart cluster. This should fail.
     //
-    File first = namedirs.iterator().next();
+    File first = new File(namedirs.iterator().next().getPath());
     removeOneNameDir(first);
     try {
       cluster = new MiniDFSCluster(conf, 0, false, null);
@@ -477,12 +478,13 @@ public class TestCheckpoint extends TestCase {
     
     // Remove current image and import a checkpoint.
     System.out.println("Import a checkpoint with existing primary image.");
-    List<File> nameDirs = (List<File>)FSNamesystem.getNamespaceDirs(conf);
-    List<File> nameEditsDirs = (List<File>)FSNamesystem.
+    List<URI> nameDirs = (List<URI>)FSNamesystem.getNamespaceDirs(conf);
+    List<URI> nameEditsDirs = (List<URI>)FSNamesystem.
                                   getNamespaceEditsDirs(conf);
-    long fsimageLength = new File(new File(nameDirs.get(0), "current"), 
+    long fsimageLength = new File(new File(nameDirs.get(0).getPath(), "current"), 
                                         NameNodeFile.IMAGE.getName()).length();
-    for(File dir : nameDirs) {
+    for(URI uri : nameDirs) {
+      File dir = new File(uri.getPath());
       if(dir.exists())
         if(!(FileUtil.fullyDelete(dir)))
           throw new IOException("Cannot remove directory: " + dir);
@@ -490,7 +492,8 @@ public class TestCheckpoint extends TestCase {
         throw new IOException("Cannot create directory " + dir);
     }
 
-    for(File dir : nameEditsDirs) {
+    for(URI uri : nameEditsDirs) {
+      File dir = new File(uri.getPath());
       if(dir.exists())
         if(!(FileUtil.fullyDelete(dir)))
           throw new IOException("Cannot remove directory: " + dir);
@@ -512,26 +515,30 @@ public class TestCheckpoint extends TestCase {
     // recover failed checkpoint
     nn = startNameNode(conf, primaryDirs, primaryEditsDirs,
                         StartupOption.REGULAR);
-    Collection<File> secondaryDirs = FSImage.getCheckpointDirs(conf, null);
-    for(File dir : secondaryDirs) {
+    Collection<URI> secondaryDirs = FSImage.getCheckpointDirs(conf, null);
+    for(URI uri : secondaryDirs) {
+      File dir = new File(uri.getPath());
       Storage.rename(new File(dir, "current"), 
                      new File(dir, "lastcheckpoint.tmp"));
     }
     secondary = startSecondaryNameNode(conf);
     secondary.shutdown();
-    for(File dir : secondaryDirs) {
+    for(URI uri : secondaryDirs) {
+      File dir = new File(uri.getPath());
       assertTrue(new File(dir, "current").exists()); 
       assertFalse(new File(dir, "lastcheckpoint.tmp").exists());
     }
     
     // complete failed checkpoint
-    for(File dir : secondaryDirs) {
+    for(URI uri : secondaryDirs) {
+      File dir = new File(uri.getPath());
       Storage.rename(new File(dir, "previous.checkpoint"), 
                      new File(dir, "lastcheckpoint.tmp"));
     }
     secondary = startSecondaryNameNode(conf);
     secondary.shutdown();
-    for(File dir : secondaryDirs) {
+    for(URI uri : secondaryDirs) {
+      File dir = new File(uri.getPath());
       assertTrue(new File(dir, "current").exists()); 
       assertTrue(new File(dir, "previous.checkpoint").exists()); 
       assertFalse(new File(dir, "lastcheckpoint.tmp").exists());
@@ -574,7 +581,7 @@ public class TestCheckpoint extends TestCase {
   public void testCheckpoint() throws IOException {
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
-    Collection<File> namedirs = null;
+    Collection<URI> namedirs = null;
 
     Configuration conf = new Configuration();
     conf.set("dfs.secondary.http.address", "0.0.0.0:0");
@@ -690,8 +697,9 @@ public class TestCheckpoint extends TestCase {
       writeFile(fs, file, replication);
       checkFile(fs, file, replication);
       // verify that the edits file is NOT empty
-      Collection<File> editsDirs = cluster.getNameEditsDirs();
-      for(File ed : editsDirs) {
+      Collection<URI> editsDirs = cluster.getNameEditsDirs();
+      for(URI uri : editsDirs) {
+        File ed = new File(uri.getPath());
         assertTrue(new File(ed, "current/edits").length() > Integer.SIZE/Byte.SIZE);
       }
 
@@ -703,7 +711,8 @@ public class TestCheckpoint extends TestCase {
         throw new IOException(e);
       }
       // verify that the edits file is empty
-      for(File ed : editsDirs) {
+      for(URI uri : editsDirs) {
+        File ed = new File(uri.getPath());
         assertTrue(new File(ed, "current/edits").length() == Integer.SIZE/Byte.SIZE);
       }
 

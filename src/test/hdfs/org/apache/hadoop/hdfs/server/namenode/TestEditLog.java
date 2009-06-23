@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.net.URI;
 import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -92,8 +93,8 @@ public class TestEditLog extends TestCase {
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
   
-      for (Iterator<File> it = cluster.getNameDirs().iterator(); it.hasNext(); ) {
-        File dir = it.next();
+      for (Iterator<URI> it = cluster.getNameDirs().iterator(); it.hasNext(); ) {
+        File dir = new File(it.next().getPath());
         System.out.println(dir);
       }
   

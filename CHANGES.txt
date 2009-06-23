@@ -12,6 +12,9 @@ Trunk (unreleased changes)
     HDFS-381. Remove blocks from DataNode maps when corresponding file
     is deleted. (Suresh Srinivas via rangadi)
 
+    HDFS-396. NameNode image and edits directories are specified as URIs.
+    (Luca Telloli via rangadi)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

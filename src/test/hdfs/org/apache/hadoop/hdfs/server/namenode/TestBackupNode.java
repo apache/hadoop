@@ -75,7 +75,7 @@ public class TestBackupNode extends TestCase {
   }
 
   static String getBackupNodeDir(StartupOption t, int i) {
-    return BASE_DIR + "name" + t.getName() + i;
+    return BASE_DIR + "name" + t.getName() + i + "/";
   }
 
   BackupNode startBackupNode(Configuration conf,

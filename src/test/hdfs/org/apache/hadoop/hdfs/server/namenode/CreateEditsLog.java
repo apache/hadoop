@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -52,7 +54,7 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 public class CreateEditsLog {
   static final String BASE_PATH = "/createdViaInjectingInEditsLog";
   static final String EDITS_DIR = "/tmp/EditsLogOut";
-  static String edits_dir = EDITS_DIR;
+  static String edits_dir = "file:// " + EDITS_DIR; // process as URI
   static final public long BLOCK_GENERATION_STAMP =
     GenerationStamp.FIRST_VALID_STAMP;
   
@@ -134,7 +136,8 @@ public class CreateEditsLog {
    * @param args
    * @throws IOException 
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) 
+      throws IOException {
 
 
 
@@ -194,8 +197,14 @@ public class CreateEditsLog {
         System.exit(-1);
       }
     }
-  
-    FSImage fsImage = new FSImage(new File(edits_dir));
+    
+    FSImage fsImage = null;
+    try {
+      fsImage = new FSImage(new URI(edits_dir));
+    } catch (URISyntaxException use) {
+      throw new IOException("Error while processing URI: " + edits_dir + 
+          ". The full error message was: " + use.getMessage());
+    }
     FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
 
 

@@ -2,6 +2,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -126,11 +127,11 @@ public class TestStartup extends TestCase {
    */
   private void corruptNameNodeFiles() throws IOException {
     // now corrupt/delete the directrory
-    List<File> nameDirs = (List<File>)FSNamesystem.getNamespaceDirs(config);
-    List<File> nameEditsDirs = (List<File>)FSNamesystem.getNamespaceEditsDirs(config);
+    List<URI> nameDirs = (List<URI>)FSNamesystem.getNamespaceDirs(config);
+    List<URI> nameEditsDirs = (List<URI>)FSNamesystem.getNamespaceEditsDirs(config);
 
     // get name dir and its length, then delete and recreate the directory
-    File dir = nameDirs.get(0); // has only one
+    File dir = new File(nameDirs.get(0).getPath()); // has only one
     this.fsimageLength = new File(new File(dir, "current"), 
         NameNodeFile.IMAGE.getName()).length();
 
@@ -142,7 +143,7 @@ public class TestStartup extends TestCase {
     if (!dir.mkdirs())
       throw new IOException("Cannot create directory " + dir);
 
-    dir = nameEditsDirs.get(0); //has only one
+    dir = new File( nameEditsDirs.get(0).getPath()); //has only one
 
     this.editsLength = new File(new File(dir, "current"), 
         NameNodeFile.EDITS.getName()).length();

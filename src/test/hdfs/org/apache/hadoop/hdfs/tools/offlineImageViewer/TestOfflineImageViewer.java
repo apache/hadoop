@@ -28,6 +28,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -124,8 +125,8 @@ public class TestOfflineImageViewer extends TestCase {
       cluster.getNameNode().saveNamespace();
       
       // Determine location of fsimage file
-      File [] files = cluster.getNameDirs().toArray(new File[0]);
-      orig =  new File(files[0], "current/fsimage");
+      URI [] files = cluster.getNameDirs().toArray(new URI[0]);
+      orig =  new File(files[0].getPath(), "current/fsimage");
       
       if(!orig.exists())
         fail("Didn't generate or can't find fsimage.");

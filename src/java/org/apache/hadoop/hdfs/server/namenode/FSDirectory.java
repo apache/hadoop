@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.*;
+import java.net.URI;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -85,8 +86,8 @@ class FSDirectory implements Closeable {
     directoryMetrics.setTag("sessionId", conf.get("session.id"));
   }
 
-  void loadFSImage(Collection<File> dataDirs,
-                   Collection<File> editsDirs,
+  void loadFSImage(Collection<URI> dataDirs,
+                   Collection<URI> editsDirs,
                    StartupOption startOpt) throws IOException {
     // format before starting up if requested
     if (startOpt == StartupOption.FORMAT) {

@@ -1030,11 +1030,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private static boolean format(Configuration conf,
                                 boolean isConfirmationNeeded
                                 ) throws IOException {
-    Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    Collection<File> editDirsToFormat = 
+    Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    Collection<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    for(Iterator<File> it = dirsToFormat.iterator(); it.hasNext();) {
-      File curDir = it.next();
+    for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
+      File curDir = new File(it.next().getPath());
       if (!curDir.exists())
         continue;
       if (isConfirmationNeeded) {
@@ -1056,8 +1056,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private static boolean finalize(Configuration conf,
                                boolean isConfirmationNeeded
                                ) throws IOException {
-    Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    Collection<File> editDirsToFormat = 
+    Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    Collection<URI> editDirsToFormat = 
                                FSNamesystem.getNamespaceEditsDirs(conf);
     FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat,
                                          editDirsToFormat), conf);

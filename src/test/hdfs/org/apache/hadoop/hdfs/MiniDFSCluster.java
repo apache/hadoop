@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.nio.channels.FileChannel;
@@ -704,14 +705,14 @@ public class MiniDFSCluster {
   /**
    * Get the directories where the namenode stores its image.
    */
-  public Collection<File> getNameDirs() {
+  public Collection<URI> getNameDirs() {
     return FSNamesystem.getNamespaceDirs(conf);
   }
 
   /**
    * Get the directories where the namenode stores its edits.
    */
-  public Collection<File> getNameEditsDirs() {
+  public Collection<URI> getNameEditsDirs() {
     return FSNamesystem.getNamespaceEditsDirs(conf);
   }
 
