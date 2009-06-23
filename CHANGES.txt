@@ -1,0 +1,14 @@
+Hadoop MapReduce Change Log
+
+Trunk (unreleased changes)
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+    HADOOP-4687. HDFS is split from Hadoop Core. It is a subproject under 
+    Hadoop (Owen O'Malley)
+
+    HADOOP-6096. Fix Eclipse project and classpath files following project
+    split. (tomwhite)
