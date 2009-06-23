@@ -218,6 +218,8 @@ Release 0.20.0 - Unreleased
                not reassigned
    HBASE-1568  Client doesnt consult old row filter interface in
                filterSaysStop() - could result in NPE or excessive scanning
+   HBASE-1564  in UI make host addresses all look the same -- not IP sometimes
+               and host at others
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

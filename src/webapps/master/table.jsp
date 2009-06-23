@@ -110,7 +110,7 @@
 %>
 <tr>
   <td><%= Bytes.toString(meta.getRegionName()) %></td>
-    <td><a href="<%= url %>"><%= meta.getServer().toString() %></a></td>
+    <td><a href="<%= url %>"><%= meta.getServer().getHostname().toString() + ":" + infoPort %></a></td>
     <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td>-</td>
 </tr>
 <%  } %>
@@ -141,7 +141,7 @@
 %>
 <tr>
   <td><a href="<%= urlRegionHistorian %>"><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></a></td>
-  <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().toString() %></a></td>
+  <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + infoPort %></a></td>
   <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
   <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>
 </tr>
