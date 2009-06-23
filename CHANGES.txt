@@ -390,6 +390,8 @@ Release 0.20.0 - Unreleased
                command fails
    HBASE-1515  Address part of config option hbase.regionserver unnecessary
    HBASE-1532  UI Visibility into ZooKeeper
+   HBASE-1572  Zookeeper log4j property set to ERROR on default, same output
+               when cluster working and not working (Jon Gray via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
