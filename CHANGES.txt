@@ -22,3 +22,6 @@ Trunk (unreleased changes)
 
     HDFS-377. Separate codes which implement DataTransferProtocol.
     (szetszwo)
+
+    HADOOP-6096. Fix Eclipse project and classpath files following project
+    split. (tomwhite)
