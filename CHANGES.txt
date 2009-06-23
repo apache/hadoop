@@ -12,6 +12,9 @@ Trunk (unreleased changes)
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via
     tomwhite)
 
+    HADOOP-5968. Sqoop should only print a warning about mysql import speed
+    once. (Aaron Kimball via tomwhite)
+
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)
