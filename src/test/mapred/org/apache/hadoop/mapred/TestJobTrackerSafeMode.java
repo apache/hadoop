@@ -194,7 +194,7 @@ public class TestJobTrackerSafeMode extends TestCase {
     long jobtrackerRecoveryFinishTime = 
       jobtracker.getStartTime() + jobtracker.getRecoveryDuration();
     for (String trackerName : present) {
-      TaskTrackerStatus status = jobtracker.getTaskTracker(trackerName);
+      TaskTrackerStatus status = jobtracker.getTaskTrackerStatus(trackerName);
       // check if the status is present and also the tracker has contacted back
       // after restart
       if (status == null 
@@ -203,7 +203,7 @@ public class TestJobTrackerSafeMode extends TestCase {
       }
     }
     for (String trackerName : absent) {
-      TaskTrackerStatus status = jobtracker.getTaskTracker(trackerName);
+      TaskTrackerStatus status = jobtracker.getTaskTrackerStatus(trackerName);
       // check if the status is still present
       if ( status != null) {
         return false;

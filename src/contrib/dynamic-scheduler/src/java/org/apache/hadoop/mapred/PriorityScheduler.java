@@ -41,7 +41,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
-
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * A {@link TaskScheduler} that 
@@ -338,8 +338,8 @@ class PriorityScheduler extends QueueTaskScheduler {
       TaskTrackerStatus taskTracker, int numTrackers, boolean map)
       throws IOException {
     int taskOffset = assignedTasks.size();
-    int maxTasks = (map) ? taskTracker.getMaxMapTasks() : 
-        taskTracker.getMaxReduceTasks();
+    int maxTasks = (map) ? taskTracker.getMaxMapSlots() : 
+        taskTracker.getMaxReduceSlots();
     int countTasks =  (map) ? taskTracker.countMapTasks() : 
         taskTracker.countReduceTasks();
     int availableSlots = maxTasks - countTasks;
@@ -483,7 +483,7 @@ class PriorityScheduler extends QueueTaskScheduler {
   }
 
   @Override
-  public List<Task> assignTasks(TaskTrackerStatus taskTracker)
+  public List<Task> assignTasks(TaskTracker taskTracker)
     throws IOException {
     long millis = 0;
     if (debug) {
@@ -494,8 +494,8 @@ class PriorityScheduler extends QueueTaskScheduler {
  
     List<Task> assignedTasks = new ArrayList<Task>();
 
-    assignMapRedTasks(assignedTasks, taskTracker, numTrackers, MAP);
-    assignMapRedTasks(assignedTasks, taskTracker, numTrackers, REDUCE);
+    assignMapRedTasks(assignedTasks, taskTracker.getStatus(), numTrackers, MAP);
+    assignMapRedTasks(assignedTasks, taskTracker.getStatus(), numTrackers, REDUCE);
     if (debug) {
       long elapsed = System.currentTimeMillis() - millis;
       LOG.debug("assigned total tasks: " + 

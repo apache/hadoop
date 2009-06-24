@@ -105,14 +105,14 @@ public class TestSpeculativeExecution extends TestCase {
         JobClient.RawSplit split = new JobClient.RawSplit();
         split.setLocations(new String[0]);
         maps[i] = new TaskInProgress(getJobID(), "test", 
-            split, jobtracker, getJobConf(), this, i);
+            split, jobtracker, getJobConf(), this, i, 1);
         nonLocalMaps.add(maps[i]);
       }
       reduces = new TaskInProgress[numReduceTasks];
       for (int i = 0; i < numReduceTasks; i++) {
         reduces[i] = new TaskInProgress(getJobID(), "test", 
                                         numMapTasks, i, 
-                                        jobtracker, getJobConf(), this);
+                                        jobtracker, getJobConf(), this, 1);
         nonRunningReduces.add(reduces[i]);
       }
     }
@@ -165,7 +165,7 @@ public class TestSpeculativeExecution extends TestCase {
     public void finishTask(TaskAttemptID taskId) {
       TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
       TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          1.0f, TaskStatus.State.SUCCEEDED, "", "", tip.machineWhereTaskRan(taskId), 
+          1.0f, 1, TaskStatus.State.SUCCEEDED, "", "", tip.machineWhereTaskRan(taskId), 
           tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
       updateTaskStatus(tip, status);
     }
@@ -174,14 +174,14 @@ public class TestSpeculativeExecution extends TestCase {
       addRunningTaskToTIP(tip, taskId, new TaskTrackerStatus(taskTracker,
           JobInProgress.convertTrackerNameToHostName(taskTracker)), true);
       TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          0.0f, TaskStatus.State.RUNNING, "", "", taskTracker,
+          0.0f, 1, TaskStatus.State.RUNNING, "", "", taskTracker,
           tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
       updateTaskStatus(tip, status);
     }
     public void progressMade(TaskAttemptID taskId, float progress) {
       TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
       TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          progress, TaskStatus.State.RUNNING, "", "", tip.machineWhereTaskRan(taskId), 
+          progress, 1, TaskStatus.State.RUNNING, "", "", tip.machineWhereTaskRan(taskId), 
           tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
       updateTaskStatus(tip, status);
     }

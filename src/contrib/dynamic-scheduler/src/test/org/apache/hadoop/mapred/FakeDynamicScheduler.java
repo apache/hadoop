@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Collection;
 
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+
 /**
  * Mock queue scheduler for testing only
  */
@@ -30,7 +32,7 @@ public class FakeDynamicScheduler extends QueueTaskScheduler {
   }
   public void terminate() throws IOException {
   }
-  public List<Task> assignTasks(TaskTrackerStatus taskTracker)
+  public List<Task> assignTasks(TaskTracker taskTracker)
     throws IOException {
     return null;
   }

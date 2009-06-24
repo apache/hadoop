@@ -185,7 +185,7 @@ public class IsolationRunner {
     BytesWritable split = new BytesWritable();
     split.readFields(splitFile);
     splitFile.close();
-    Task task = new MapTask(jobFilename.toString(), taskId, partition, splitClass, split);
+    Task task = new MapTask(jobFilename.toString(), taskId, partition, splitClass, split, 1);
     task.setConf(conf);
     task.run(conf, new FakeUmbilical());
     return true;

@@ -37,7 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.http.HttpServer;
-
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * A {@link TaskScheduler} that 
@@ -257,7 +257,7 @@ class DynamicPriorityScheduler extends TaskScheduler {
   }
 
   @Override
-  public List<Task> assignTasks(TaskTrackerStatus taskTracker)
+  public List<Task> assignTasks(TaskTracker taskTracker)
       throws IOException {
     return scheduler.assignTasks(taskTracker);  
   }

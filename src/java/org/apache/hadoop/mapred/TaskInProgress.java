@@ -68,6 +68,7 @@ class TaskInProgress {
   private JobTracker jobtracker;
   private TaskID id;
   private JobInProgress job;
+  private final int numSlotsRequired;
 
   // Status of the TIP
   private int successEventNumber = -1;
@@ -134,7 +135,8 @@ class TaskInProgress {
   public TaskInProgress(JobID jobid, String jobFile, 
                         RawSplit rawSplit, 
                         JobTracker jobtracker, JobConf conf, 
-                        JobInProgress job, int partition) {
+                        JobInProgress job, int partition,
+                        int numSlotsRequired) {
     this.jobFile = jobFile;
     this.rawSplit = rawSplit;
     this.jobtracker = jobtracker;
@@ -142,6 +144,7 @@ class TaskInProgress {
     this.conf = conf;
     this.partition = partition;
     this.maxSkipRecords = SkipBadRecords.getMapperMaxSkipRecords(conf);
+    this.numSlotsRequired = numSlotsRequired;
     setMaxTaskAttempts();
     init(jobid);
   }
@@ -152,7 +155,7 @@ class TaskInProgress {
   public TaskInProgress(JobID jobid, String jobFile, 
                         int numMaps, 
                         int partition, JobTracker jobtracker, JobConf conf,
-                        JobInProgress job) {
+                        JobInProgress job, int numSlotsRequired) {
     this.jobFile = jobFile;
     this.numMaps = numMaps;
     this.partition = partition;
@@ -160,6 +163,7 @@ class TaskInProgress {
     this.job = job;
     this.conf = conf;
     this.maxSkipRecords = SkipBadRecords.getReducerMaxSkipGroups(conf);
+    this.numSlotsRequired = numSlotsRequired;
     setMaxTaskAttempts();
     init(jobid);
   }
@@ -538,7 +542,9 @@ class TaskInProgress {
            newState != TaskStatus.State.UNASSIGNED) && 
           (oldState == newState)) {
         LOG.warn("Recieved duplicate status update of '" + newState + 
-                 "' for '" + taskid + "' of TIP '" + getTIPId() + "'");
+                 "' for '" + taskid + "' of TIP '" + getTIPId() + "'" +
+                 "oldTT=" + oldStatus.getTaskTracker() + 
+                 " while newTT=" + status.getTaskTracker());
         return false;
       }
 
@@ -968,9 +974,10 @@ class TaskInProgress {
       } else {
         split = new BytesWritable();
       }
-      t = new MapTask(jobFile, taskid, partition, splitClass, split);
+      t = new MapTask(jobFile, taskid, partition, splitClass, split,
+                      numSlotsRequired);
     } else {
-      t = new ReduceTask(jobFile, taskid, partition, numMaps);
+      t = new ReduceTask(jobFile, taskid, partition, numMaps, numSlotsRequired);
     }
     if (jobCleanup) {
       t.setJobCleanupTask();

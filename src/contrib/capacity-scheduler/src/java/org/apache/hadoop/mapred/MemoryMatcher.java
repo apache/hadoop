@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapreduce.TaskType;
 
 class MemoryMatcher {
 
@@ -54,55 +55,26 @@ class MemoryMatcher {
    *          null if memory cannot be computed for some reason.
    */
   synchronized Long getMemReservedForTasks(
-      TaskTrackerStatus taskTracker, CapacityTaskScheduler.TYPE taskType) {
+      TaskTrackerStatus taskTracker, TaskType taskType) {
     long vmem = 0;
 
     for (TaskStatus task : taskTracker.getTaskReports()) {
       // the following task states are one in which the slot is
       // still occupied and hence memory of the task should be
       // accounted in used memory.
-      if ((task.getRunState() == TaskStatus.State.RUNNING)
-          || (task.getRunState() == TaskStatus.State.COMMIT_PENDING)) {
-        JobInProgress job =
-            scheduler.taskTrackerManager.getJob(task.getTaskID().getJobID());
-        if (job == null) {
-          // This scenario can happen if a job was completed/killed
-          // and retired from JT's memory. In this state, we can ignore
-          // the running task status and compute memory for the rest of
-          // the tasks. However, any scheduling done with this computation
-          // could result in over-subscribing of memory for tasks on this
-          // TT (as the unaccounted for task is still running).
-          // So, it is safer to not schedule anything for this TT
-          // One of the ways of doing that is to return null from here
-          // and check for null in the calling method.
-          LOG.info("Task tracker: " + taskTracker.getHost() + " is reporting "
-              + "a running / commit pending task: " + task.getTaskID()
-              + " but no corresponding job was found. "
-              + "Maybe job was retired. Not computing "
-              + "memory values for this TT.");
-          return null;
-        }
-
-        JobConf jConf = job.getJobConf();
-
-        // Get the memory "allotted" for this task by rounding off the job's
-        // tasks' memory limits to the nearest multiple of the slot-memory-size
-        // set on JT. This essentially translates to tasks of a high memory job
-        // using multiple slots.
+      if ((task.getRunState() == TaskStatus.State.RUNNING) ||
+          (task.getRunState() == TaskStatus.State.UNASSIGNED) ||
+          (task.inTaskCleanupPhase())) {
+        // Get the memory "allotted" for this task based on number of slots
         long myVmem = 0;
-        if (task.getIsMap() && taskType.equals(CapacityTaskScheduler.TYPE.MAP)) {
-          myVmem = jConf.getMemoryForMapTask();
-          myVmem =
-              (long) (scheduler.getMemSizeForMapSlot() * Math
-                  .ceil((float) myVmem
-                      / (float) scheduler.getMemSizeForMapSlot()));
+        if (task.getIsMap() && taskType == TaskType.MAP) {
+          long memSizePerMapSlot = scheduler.getMemSizeForMapSlot(); 
+          myVmem = 
+            memSizePerMapSlot * task.getNumSlots();
         } else if (!task.getIsMap()
-            && taskType.equals(CapacityTaskScheduler.TYPE.REDUCE)) {
-          myVmem = jConf.getMemoryForReduceTask();
-          myVmem =
-              (long) (scheduler.getMemSizeForReduceSlot() * Math
-                  .ceil((float) myVmem
-                      / (float) scheduler.getMemSizeForReduceSlot()));
+            && taskType == TaskType.REDUCE) {
+          long memSizePerReduceSlot = scheduler.getMemSizeForReduceSlot(); 
+          myVmem = memSizePerReduceSlot * task.getNumSlots();
         }
         vmem += myVmem;
       }
@@ -118,8 +90,8 @@ class MemoryMatcher {
    * @param taskTracker
    * @return true if this TT has enough memory for this job. False otherwise.
    */
-  boolean matchesMemoryRequirements(JobInProgress job,
-      CapacityTaskScheduler.TYPE taskType, TaskTrackerStatus taskTracker) {
+  boolean matchesMemoryRequirements(JobInProgress job,TaskType taskType, 
+                                    TaskTrackerStatus taskTracker) {
 
     LOG.debug("Matching memory requirements of " + job.getJobID().toString()
         + " for scheduling on " + taskTracker.trackerName);
@@ -131,44 +103,36 @@ class MemoryMatcher {
     }
 
     Long memUsedOnTT = getMemReservedForTasks(taskTracker, taskType);
-    if (memUsedOnTT == null) {
-      // For some reason, maybe because we could not find the job
-      // corresponding to a running task (as can happen if the job
-      // is retired in between), we could not compute the memory state
-      // on this TT. Treat this as an error, and fail memory
-      // requirements.
-      LOG.info("Could not compute memory for taskTracker: "
-          + taskTracker.getHost() + ". Failing memory requirements.");
-      return false;
-    }
-
     long totalMemUsableOnTT = 0;
-
     long memForThisTask = 0;
-    if (taskType.equals(CapacityTaskScheduler.TYPE.MAP)) {
+    if (taskType == TaskType.MAP) {
       memForThisTask = job.getJobConf().getMemoryForMapTask();
       totalMemUsableOnTT =
-          scheduler.getMemSizeForMapSlot() * taskTracker.getMaxMapTasks();
-    } else if (taskType.equals(CapacityTaskScheduler.TYPE.REDUCE)) {
+          scheduler.getMemSizeForMapSlot() * taskTracker.getMaxMapSlots();
+    } else if (taskType == TaskType.REDUCE) {
       memForThisTask = job.getJobConf().getMemoryForReduceTask();
       totalMemUsableOnTT =
           scheduler.getMemSizeForReduceSlot()
-              * taskTracker.getMaxReduceTasks();
+              * taskTracker.getMaxReduceSlots();
     }
 
     long freeMemOnTT = totalMemUsableOnTT - memUsedOnTT.longValue();
     if (memForThisTask > freeMemOnTT) {
-      LOG.debug("memForThisTask (" + memForThisTask + ") > freeMemOnTT ("
-          + freeMemOnTT + "). A " + taskType + " task from "
-          + job.getJobID().toString() + " cannot be scheduled on TT "
-          + taskTracker.trackerName);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("memForThisTask (" + memForThisTask + ") > freeMemOnTT ("
+                  + freeMemOnTT + "). A " + taskType + " task from "
+                  + job.getJobID().toString() + " cannot be scheduled on TT "
+                  + taskTracker.trackerName);
+      }
       return false;
     }
 
-    LOG.debug("memForThisTask = " + memForThisTask + ". freeMemOnTT = "
-        + freeMemOnTT + ". A " + taskType.toString() + " task from "
-        + job.getJobID().toString() + " matches memory requirements on TT "
-        + taskTracker.trackerName);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("memForThisTask = " + memForThisTask + ". freeMemOnTT = "
+                + freeMemOnTT + ". A " + taskType.toString() + " task from "
+                + job.getJobID().toString() + " matches memory requirements "
+                + "on TT "+ taskTracker.trackerName);
+    }
     return true;
   }
 }

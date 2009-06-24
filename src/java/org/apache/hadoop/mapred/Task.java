@@ -52,8 +52,12 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
-/** Base class for tasks. */
-abstract class Task implements Writable, Configurable {
+/** 
+ * Base class for tasks.
+ * 
+ * This is NOT a public interface.
+ */
+abstract public class Task implements Writable, Configurable {
   private static final Log LOG =
     LogFactory.getLog(Task.class);
 
@@ -119,6 +123,7 @@ abstract class Task implements Writable, Configurable {
   protected org.apache.hadoop.mapreduce.OutputFormat<?,?> outputFormat;
   protected org.apache.hadoop.mapreduce.OutputCommitter committer;
   protected final Counters.Counter spilledRecordsCounter;
+  private int numSlotsRequired;
 
   ////////////////////////////////////////////
   // Constructors
@@ -130,13 +135,15 @@ abstract class Task implements Writable, Configurable {
     spilledRecordsCounter = counters.findCounter(TaskCounter.SPILLED_RECORDS);
   }
 
-  public Task(String jobFile, TaskAttemptID taskId, int partition) {
+  public Task(String jobFile, TaskAttemptID taskId, int partition, 
+              int numSlotsRequired) {
     this.jobFile = jobFile;
     this.taskId = taskId;
      
     this.partition = partition;
+    this.numSlotsRequired = numSlotsRequired;
     this.taskStatus = TaskStatus.createTaskStatus(isMapTask(), this.taskId, 
-                                                  0.0f, 
+                                                  0.0f, numSlotsRequired, 
                                                   TaskStatus.State.UNASSIGNED, 
                                                   "", "", "", 
                                                   isMapTask() ? 
@@ -153,6 +160,10 @@ abstract class Task implements Writable, Configurable {
   public void setJobFile(String jobFile) { this.jobFile = jobFile; }
   public String getJobFile() { return jobFile; }
   public TaskAttemptID getTaskID() { return taskId; }
+  public int getNumSlotsRequired() {
+    return numSlotsRequired;
+  }
+
   Counters getCounters() { return counters; }
   
   /**
@@ -173,14 +184,14 @@ abstract class Task implements Writable, Configurable {
   /**
    * Return current phase of the task. 
    * needs to be synchronized as communication thread sends the phase every second
-   * @return
+   * @return the curent phase of the task
    */
   public synchronized TaskStatus.Phase getPhase(){
     return this.taskStatus.getPhase(); 
   }
   /**
    * Set current phase of the task. 
-   * @param p
+   * @param phase task phase 
    */
   protected synchronized void setPhase(TaskStatus.Phase phase){
     this.taskStatus.setPhase(phase); 
@@ -282,6 +293,7 @@ abstract class Task implements Writable, Configurable {
     Text.writeString(out, jobFile);
     taskId.write(out);
     out.writeInt(partition);
+    out.writeInt(numSlotsRequired);
     taskStatus.write(out);
     skipRanges.write(out);
     out.writeBoolean(skipping);
@@ -295,6 +307,7 @@ abstract class Task implements Writable, Configurable {
     jobFile = Text.readString(in);
     taskId = TaskAttemptID.read(in);
     partition = in.readInt();
+    numSlotsRequired = in.readInt();
     taskStatus.readFields(in);
     this.mapOutputFile.setJobId(taskId.getJobID()); 
     skipRanges.readFields(in);
