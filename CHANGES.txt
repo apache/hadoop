@@ -7,6 +7,9 @@ Trunk (unreleased changes)
     HADOOP-5887. Sqoop should create tables in Hive metastore after importing
     to HDFS. (Aaron Kimball via tomwhite)
 
+    MAPREDUCE-567. Add a new example MR that always fails. (Philip Zeyliger
+    via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via
