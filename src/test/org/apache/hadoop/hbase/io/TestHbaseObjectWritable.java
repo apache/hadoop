@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
+import org.apache.hadoop.hbase.filter.RowPrefixFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 
@@ -79,6 +80,10 @@ public class TestHbaseObjectWritable extends TestCase {
     obj = doType(conf, new StopRowFilter(HConstants.EMPTY_BYTE_ARRAY),
         RowFilterInterface.class);
     assertTrue(obj instanceof StopRowFilter);
+    // Check that filters can be serialized
+    obj = doType(conf, new RowPrefixFilter(HConstants.EMPTY_BYTE_ARRAY),
+      RowPrefixFilter.class);
+    assertTrue(obj instanceof RowPrefixFilter);
   }
   
   private Object doType(final HBaseConfiguration conf, final Object value,

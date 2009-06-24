@@ -46,6 +46,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
+import org.apache.hadoop.hbase.filter.RowWhileMatchFilter;
+import org.apache.hadoop.hbase.filter.RowPrefixFilter;
+import org.apache.hadoop.hbase.filter.PageFilter;
+import org.apache.hadoop.hbase.filter.RowInclusiveStopFilter;
+import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.ObjectWritable;
@@ -139,7 +144,12 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(Result.class, code++);
     addToMap(Result[].class, code++);
     addToMap(Scan.class, code++);
-    
+
+    addToMap(RowWhileMatchFilter.class, code++);
+    addToMap(RowPrefixFilter.class, code++);
+    addToMap(PageFilter.class, code++);
+    addToMap(RowInclusiveStopFilter.class, code++);
+    addToMap(ColumnCountGetFilter.class, code++);
   }
   
   private Class<?> declaredClass;
