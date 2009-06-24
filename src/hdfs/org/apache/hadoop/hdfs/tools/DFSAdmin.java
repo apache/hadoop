@@ -196,8 +196,10 @@ public class DFSAdmin extends FsShell {
       "-"+NAME+" <quota> <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
       "Set the disk space quota <quota> for each directory <dirName>.\n" + 
-      "\t\tThe directory quota is a long integer that puts a hard limit\n" +
-      "\t\ton the number of names in the directory tree.\n" +
+      "\t\tThe space quota is a long integer that puts a hard limit\n" +
+      "\t\ton the total size of all the files under the directory tree.\n" +
+      "\t\tThe extra space required for replication is also counted. E.g.\n" +
+      "\t\ta 1GB file with replication of 3 consumes 3GB of the quota.\n\n" +
       "\t\tQuota can also be speciefied with a binary prefix for terabytes,\n" +
       "\t\tpetabytes etc (e.g. 50t is 50TB, 5m is 5MB, 3p is 3PB).\n" + 
       "\t\tBest effort for the directory, with faults reported if\n" +
@@ -492,13 +494,13 @@ public class DFSAdmin extends FsShell {
       System.out.println(upgradeProgress);
     } else if ("metasave".equals(cmd)) {
       System.out.println(metaSave);
-    } else if (SetQuotaCommand.matches(cmd)) {
+    } else if (SetQuotaCommand.matches("-"+cmd)) {
       System.out.println(SetQuotaCommand.DESCRIPTION);
-    } else if (ClearQuotaCommand.matches(cmd)) {
+    } else if (ClearQuotaCommand.matches("-"+cmd)) {
       System.out.println(ClearQuotaCommand.DESCRIPTION);
-    } else if (SetSpaceQuotaCommand.matches(cmd)) {
+    } else if (SetSpaceQuotaCommand.matches("-"+cmd)) {
       System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
-    } else if (ClearSpaceQuotaCommand.matches(cmd)) {
+    } else if (ClearSpaceQuotaCommand.matches("-"+cmd)) {
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
     } else if ("refreshServiceAcl".equals(cmd)) {
       System.out.println(refreshServiceAcl);
