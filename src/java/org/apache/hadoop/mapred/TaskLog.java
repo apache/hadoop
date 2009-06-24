@@ -390,7 +390,7 @@ public class TaskLog {
    * @return the number of bytes to cap the log files at
    */
   public static long getTaskLogLength(JobConf conf) {
-    return conf.getLong("mapred.userlog.limit.kb", 100) * 1024;
+    return conf.getLong("mapred.userlog.limit.kb", 0) * 1024;
   }
 
   /**

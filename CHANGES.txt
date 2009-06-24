@@ -21,3 +21,6 @@ Trunk (unreleased changes)
 
     HADOOP-6096. Fix Eclipse project and classpath files following project
     split. (tomwhite)
+
+    MAPREDUCE-419. Reconcile mapred.userlog.limit.kb defaults in configuration
+    and code. (Philip Zeyliger via cdouglas)
