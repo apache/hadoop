@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,11 +36,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -192,11 +191,11 @@ public class TestHRegion extends HBaseTestCase {
     
     //checkAndPut with wrong value
     Store store = region.getStore(fam1);
-    int size = store.memcache.memcache.size();
+    int size = store.memstore.memstore.size();
     
     boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
-    size = store.memcache.memcache.size();
+    size = store.memstore.memstore.size();
     
     Get get = new Get(row1);
     get.addColumn(fam2, qf1);
@@ -412,14 +411,14 @@ public class TestHRegion extends HBaseTestCase {
 
     region.delete(fam1, kvs, true);
 
-    // extract the key values out the memcache:
+    // extract the key values out the memstore:
     // This is kinda hacky, but better than nothing...
     long now = System.currentTimeMillis();
-    KeyValue firstKv = region.getStore(fam1).memcache.memcache.firstKey();
+    KeyValue firstKv = region.getStore(fam1).memstore.memstore.firstKey();
     assertTrue(firstKv.getTimestamp() <= now);
     now = firstKv.getTimestamp();
     for (Map.Entry<KeyValue, ?> entry:
-        region.getStore(fam1).memcache.memcache.entrySet()) {
+        region.getStore(fam1).memstore.memstore.entrySet()) {
       KeyValue kv = entry.getKey();
       assertTrue(kv.getTimestamp() <= now);
       now = kv.getTimestamp();
@@ -467,7 +466,7 @@ public class TestHRegion extends HBaseTestCase {
     String method = this.getName();
     initHRegion(tableName, method, fam1);
     
-    //Add to memcache
+    //Add to memstore
     Put put = new Put(row1);
     put.add(fam1, col1, null);
     put.add(fam1, col2, null);
@@ -529,7 +528,7 @@ public class TestHRegion extends HBaseTestCase {
     String method = this.getName();
     initHRegion(HConstants.ROOT_TABLE_NAME, method, HConstants.CATALOG_FAMILY);
 
-    //Add to memcache
+    //Add to memstore
     Put put = new Put(HConstants.EMPTY_START_ROW);
     put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, null);
     region.put(put);
@@ -542,7 +541,7 @@ public class TestHRegion extends HBaseTestCase {
         HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     KeyValue [] expected = {kv1};
     
-    //Test from memcache
+    //Test from memstore
     Result res = region.get(get, null);
     
     assertEquals(expected.length, res.size());
@@ -871,7 +870,7 @@ public class TestHRegion extends HBaseTestCase {
     
   }
   
-  public void testScanner_ExplicitColumns_FromMemcache_EnforceVersions() 
+  public void testScanner_ExplicitColumns_FromMemStore_EnforceVersions() 
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -987,7 +986,7 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
   
-  public void testScanner_ExplicitColumns_FromMemcacheAndFiles_EnforceVersions()
+  public void testScanner_ExplicitColumns_FromMemStoreAndFiles_EnforceVersions()
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -1066,7 +1065,7 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
   
-  public void testScanner_Wildcard_FromMemcache_EnforceVersions() 
+  public void testScanner_Wildcard_FromMemStore_EnforceVersions() 
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -1232,7 +1231,7 @@ public class TestHRegion extends HBaseTestCase {
     
   }
   
-  public void testScanner_Wildcard_FromMemcacheAndFiles_EnforceVersions()
+  public void testScanner_Wildcard_FromMemStoreAndFiles_EnforceVersions()
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");

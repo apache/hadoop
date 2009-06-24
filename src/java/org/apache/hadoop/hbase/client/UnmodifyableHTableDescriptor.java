@@ -119,10 +119,10 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   /**
-   * @see org.apache.hadoop.hbase.HTableDescriptor#setMemcacheFlushSize(int)
+   * @see org.apache.hadoop.hbase.HTableDescriptor#setMemStoreFlushSize(int)
    */
   @Override
-  public void setMemcacheFlushSize(int memcacheFlushSize) {
+  public void setMemStoreFlushSize(int memstoreFlushSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 

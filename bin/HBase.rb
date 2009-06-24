@@ -217,9 +217,9 @@ module HBase
           htd.setMaxFileSize(HTableDescriptor::DEFAULT_MAX_FILESIZE);
         args[READONLY]? htd.setReadOnly(JBoolean.valueOf(args[READONLY])) : 
           htd.setReadOnly(HTableDescriptor::DEFAULT_READONLY);
-        args[MEMCACHE_FLUSHSIZE]? 
-          htd.setMemcacheFlushSize(JLong.valueOf(args[MEMCACHE_FLUSHSIZE])) :
-          htd.setMemcacheFlushSize(HTableDescriptor::DEFAULT_MEMCACHE_FLUSH_SIZE);
+        args[MEMSTORE_FLUSHSIZE]? 
+          htd.setMemStoreFlushSize(JLong.valueOf(args[MEMSTORE_FLUSHSIZE])) :
+          htd.setMemStoreFlushSize(HTableDescriptor::DEFAULT_MEMSTORE_FLUSH_SIZE);
         @admin.modifyTable(tableName.to_java_bytes, htd)
       else
         descriptor = hcd(args) 

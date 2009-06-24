@@ -49,7 +49,7 @@
       </p>
       <p>
       If you enable the <em>hbase</em> context, on regionservers you'll see total requests since last
-      metric emission, count of regions and storefiles as well as a count of memcache size.
+      metric emission, count of regions and storefiles as well as a count of memstore size.
       On the master, you'll see a count of the cluster's requests.
       </p>
       <p>

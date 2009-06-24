@@ -397,6 +397,8 @@ Release 0.20.0 - Unreleased
                row tables & performance
    HBASE-1577  Move memcache to ConcurrentSkipListMap from
                ConcurrentSkipListSet
+   HBASE-1578  Change the name of the in-memory updates from 'memcache' to
+               'memtable' or....
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

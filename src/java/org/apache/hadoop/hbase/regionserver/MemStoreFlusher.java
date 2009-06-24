@@ -48,8 +48,8 @@ import org.apache.hadoop.util.StringUtils;
  * 
  * @see FlushRequester
  */
-class MemcacheFlusher extends Thread implements FlushRequester {
-  static final Log LOG = LogFactory.getLog(MemcacheFlusher.class);
+class MemStoreFlusher extends Thread implements FlushRequester {
+  static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
   private final BlockingQueue<HRegion> flushQueue =
     new LinkedBlockingQueue<HRegion>();
   
@@ -59,15 +59,15 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   private final HRegionServer server;
   private final ReentrantLock lock = new ReentrantLock();
 
-  protected final long globalMemcacheLimit;
-  protected final long globalMemcacheLimitLowMark;
+  protected final long globalMemStoreLimit;
+  protected final long globalMemStoreLimitLowMark;
   
   private static final float DEFAULT_UPPER = 0.4f;
   private static final float DEFAULT_LOWER = 0.25f;
   private static final String UPPER_KEY =
-    "hbase.regionserver.globalMemcache.upperLimit";
+    "hbase.regionserver.global.memstore.upperLimit";
   private static final String LOWER_KEY =
-    "hbase.regionserver.globalMemcache.lowerLimit";
+    "hbase.regionserver.global.memstore.lowerLimit";
   private long blockingStoreFilesNumber;
   private long blockingWaitTime;
 
@@ -75,22 +75,22 @@ class MemcacheFlusher extends Thread implements FlushRequester {
    * @param conf
    * @param server
    */
-  public MemcacheFlusher(final HBaseConfiguration conf,
+  public MemStoreFlusher(final HBaseConfiguration conf,
       final HRegionServer server) {
     super();
     this.server = server;
     this.threadWakeFrequency =
       conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-    this.globalMemcacheLimit = globalMemcacheLimit(max, DEFAULT_UPPER,
+    this.globalMemStoreLimit = globalMemStoreLimit(max, DEFAULT_UPPER,
       UPPER_KEY, conf);
-    long lower = globalMemcacheLimit(max, DEFAULT_LOWER, LOWER_KEY, conf);
-    if (lower > this.globalMemcacheLimit) {
-      lower = this.globalMemcacheLimit;
-      LOG.info("Setting globalMemcacheLimitLowMark == globalMemcacheLimit " +
+    long lower = globalMemStoreLimit(max, DEFAULT_LOWER, LOWER_KEY, conf);
+    if (lower > this.globalMemStoreLimit) {
+      lower = this.globalMemStoreLimit;
+      LOG.info("Setting globalMemStoreLimitLowMark == globalMemStoreLimit " +
         "because supplied " + LOWER_KEY + " was > " + UPPER_KEY);
     }
-    this.globalMemcacheLimitLowMark = lower;
+    this.globalMemStoreLimitLowMark = lower;
     this.blockingStoreFilesNumber = 
       conf.getInt("hbase.hstore.blockingStoreFiles", -1);
     if (this.blockingStoreFilesNumber == -1) {
@@ -99,10 +99,10 @@ class MemcacheFlusher extends Thread implements FlushRequester {
     }
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000); // default of 180 seconds
-    LOG.info("globalMemcacheLimit=" +
-      StringUtils.humanReadableInt(this.globalMemcacheLimit) +
-      ", globalMemcacheLimitLowMark=" +
-      StringUtils.humanReadableInt(this.globalMemcacheLimitLowMark) +
+    LOG.info("globalMemStoreLimit=" +
+      StringUtils.humanReadableInt(this.globalMemStoreLimit) +
+      ", globalMemStoreLimitLowMark=" +
+      StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark) +
       ", maxHeap=" + StringUtils.humanReadableInt(max));
   }
 
@@ -115,16 +115,16 @@ class MemcacheFlusher extends Thread implements FlushRequester {
    * @param c
    * @return Limit.
    */
-  static long globalMemcacheLimit(final long max,
+  static long globalMemStoreLimit(final long max,
      final float defaultLimit, final String key, final HBaseConfiguration c) {
     float limit = c.getFloat(key, defaultLimit);
-    return getMemcacheLimit(max, limit, defaultLimit);
+    return getMemStoreLimit(max, limit, defaultLimit);
   }
   
-  static long getMemcacheLimit(final long max, final float limit,
+  static long getMemStoreLimit(final long max, final float limit,
       final float defaultLimit) {
     if (limit >= 0.9f || limit < 0.1f) {
-      LOG.warn("Setting global memcache limit to default of " + defaultLimit +
+      LOG.warn("Setting global memstore limit to default of " + defaultLimit +
         " because supplied value outside allowed range of 0.1 -> 0.9");
     }
     return (long)(max * limit);
@@ -292,13 +292,13 @@ class MemcacheFlusher extends Thread implements FlushRequester {
   }
   
   /**
-   * Check if the regionserver's memcache memory usage is greater than the 
-   * limit. If so, flush regions with the biggest memcaches until we're down
+   * Check if the regionserver's memstore memory usage is greater than the 
+   * limit. If so, flush regions with the biggest memstores until we're down
    * to the lower limit. This method blocks callers until we're down to a safe
-   * amount of memcache consumption.
+   * amount of memstore consumption.
    */
-  public synchronized void reclaimMemcacheMemory() {
-    if (server.getGlobalMemcacheSize() >= globalMemcacheLimit) {
+  public synchronized void reclaimMemStoreMemory() {
+    if (server.getGlobalMemStoreSize() >= globalMemStoreLimit) {
       flushSomeRegions();
     }
   }
@@ -308,33 +308,33 @@ class MemcacheFlusher extends Thread implements FlushRequester {
    */
   private synchronized void flushSomeRegions() {
     // keep flushing until we hit the low water mark
-    long globalMemcacheSize = -1;
+    long globalMemStoreSize = -1;
     ArrayList<HRegion> regionsToCompact = new ArrayList<HRegion>();
     for (SortedMap<Long, HRegion> m =
         this.server.getCopyOfOnlineRegionsSortedBySize();
-      (globalMemcacheSize = server.getGlobalMemcacheSize()) >=
-        this.globalMemcacheLimitLowMark;) {
-      // flush the region with the biggest memcache
+      (globalMemStoreSize = server.getGlobalMemStoreSize()) >=
+        this.globalMemStoreLimitLowMark;) {
+      // flush the region with the biggest memstore
       if (m.size() <= 0) {
         LOG.info("No online regions to flush though we've been asked flush " +
-          "some; globalMemcacheSize=" +
-          StringUtils.humanReadableInt(globalMemcacheSize) +
-          ", globalMemcacheLimitLowMark=" +
-          StringUtils.humanReadableInt(this.globalMemcacheLimitLowMark));
+          "some; globalMemStoreSize=" +
+          StringUtils.humanReadableInt(globalMemStoreSize) +
+          ", globalMemStoreLimitLowMark=" +
+          StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark));
         break;
       }
-      HRegion biggestMemcacheRegion = m.remove(m.firstKey());
-      LOG.info("Forced flushing of " +  biggestMemcacheRegion.toString() +
-        " because global memcache limit of " +
-        StringUtils.humanReadableInt(this.globalMemcacheLimit) +
+      HRegion biggestMemStoreRegion = m.remove(m.firstKey());
+      LOG.info("Forced flushing of " +  biggestMemStoreRegion.toString() +
+        " because global memstore limit of " +
+        StringUtils.humanReadableInt(this.globalMemStoreLimit) +
         " exceeded; currently " +
-        StringUtils.humanReadableInt(globalMemcacheSize) + " and flushing till " +
-        StringUtils.humanReadableInt(this.globalMemcacheLimitLowMark));
-      if (!flushRegion(biggestMemcacheRegion, true)) {
+        StringUtils.humanReadableInt(globalMemStoreSize) + " and flushing till " +
+        StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark));
+      if (!flushRegion(biggestMemStoreRegion, true)) {
         LOG.warn("Flush failed");
         break;
       }
-      regionsToCompact.add(biggestMemcacheRegion);
+      regionsToCompact.add(biggestMemStoreRegion);
     }
     for (HRegion region : regionsToCompact) {
       server.compactSplitThread.compactionRequested(region, getName());

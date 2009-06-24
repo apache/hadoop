@@ -5,7 +5,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 
 /**
- * Class that provides static method needed when putting deletes into memcache 
+ * Class that provides static method needed when putting deletes into memstore 
  */
 public class DeleteCompare {
   
@@ -14,7 +14,7 @@ public class DeleteCompare {
    */
   enum DeleteCode {
     /**
-     * Do nothing.  Move to next KV in Memcache
+     * Do nothing.  Move to next KV in memstore
      */
     SKIP,
     
@@ -24,13 +24,13 @@ public class DeleteCompare {
     DELETE,
     
     /**
-     * Stop looking at KVs in Memcache.  Finalize.
+     * Stop looking at KVs in memstore.  Finalize.
      */
     DONE
   }
 
   /**
-   * Method used when putting deletes into memcache to remove all the previous
+   * Method used when putting deletes into memstore to remove all the previous
    * entries that are affected by this Delete
    * @param mem
    * @param deleteBuffer

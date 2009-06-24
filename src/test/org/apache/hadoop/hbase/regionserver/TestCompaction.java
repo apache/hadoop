@@ -54,8 +54,8 @@ public class TestCompaction extends HBaseTestCase {
     super();
     
     // Set cache flush size to 1MB
-    conf.setInt("hbase.hregion.memcache.flush.size", 1024*1024);
-    conf.setInt("hbase.hregion.memcache.block.multiplier", 10);
+    conf.setInt("hbase.hregion.memstore.flush.size", 1024*1024);
+    conf.setInt("hbase.hregion.memstore.block.multiplier", 10);
     this.cluster = null;
   }
   
@@ -85,7 +85,7 @@ public class TestCompaction extends HBaseTestCase {
   }
   
   /**
-   * Run compaction and flushing memcache
+   * Run compaction and flushing memstore
    * Assert deletes get cleaned up.
    * @throws Exception
    */
@@ -129,7 +129,7 @@ public class TestCompaction extends HBaseTestCase {
 //      cellValues.length);
 //    assertTrue(cellValues.length == 3);
 
-    // Now add deletes to memcache and then flush it.  That will put us over
+    // Now add deletes to memstore and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.

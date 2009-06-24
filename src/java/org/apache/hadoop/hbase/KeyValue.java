@@ -214,7 +214,7 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * Lowest possible key.
    * Makes a Key with highest possible Timestamp, empty row and column.  No
-   * key can be equal or lower than this one in memcache or in store file.
+   * key can be equal or lower than this one in memstore or in store file.
    */
   public static final KeyValue LOWESTKEY = 
     new KeyValue(HConstants.EMPTY_BYTE_ARRAY, HConstants.LATEST_TIMESTAMP);
@@ -1771,7 +1771,7 @@ public class KeyValue implements Writable, HeapSize {
     int compareTimestamps(final long ltimestamp, final long rtimestamp) {
       // The below older timestamps sorting ahead of newer timestamps looks
       // wrong but it is intentional. This way, newer timestamps are first
-      // found when we iterate over a memcache and newer versions are the
+      // found when we iterate over a memstore and newer versions are the
       // first we trip over when reading from a store file.
       if (ltimestamp < rtimestamp) {
         return 1;

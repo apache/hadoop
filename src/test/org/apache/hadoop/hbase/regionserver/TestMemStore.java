@@ -38,10 +38,10 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
-/** memcache test case */
-public class TestMemcache extends TestCase {
+/** memstore test case */
+public class TestMemStore extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  private Memcache memcache;
+  private MemStore memstore;
   private static final int ROW_COUNT = 10;
   private static final int QUALIFIER_COUNT = 10;
   private static final byte [] FAMILY = Bytes.toBytes("column");
@@ -51,20 +51,20 @@ public class TestMemcache extends TestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.memcache = new Memcache();
+    this.memstore = new MemStore();
   }
 
   /** 
-   * Test memcache snapshot happening while scanning.
+   * Test memstore snapshot happening while scanning.
    * @throws IOException
    */
   public void testScanAcrossSnapshot() throws IOException {
-    int rowCount = addRows(this.memcache);
-    KeyValueScanner [] memcachescanners = this.memcache.getScanners();
+    int rowCount = addRows(this.memstore);
+    KeyValueScanner [] memstorescanners = this.memstore.getScanners();
     Scan scan = new Scan();
     List<KeyValue> result = new ArrayList<KeyValue>();
     StoreScanner s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memcache.comparator, null, memcachescanners);
+      this.memstore.comparator, null, memstorescanners);
     int count = 0;
     try {
       while (s.next(result)) {
@@ -78,7 +78,7 @@ public class TestMemcache extends TestCase {
     assertEquals(rowCount, count);
     // Now assert can count same number even if a snapshot mid-scan.
     s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memcache.comparator, null, memcachescanners);
+      this.memstore.comparator, null, memstorescanners);
     count = 0;
     try {
       while (s.next(result)) {
@@ -87,7 +87,7 @@ public class TestMemcache extends TestCase {
         assertTrue(Bytes.compareTo(Bytes.toBytes(count), result.get(0).getRow()) == 0);
         count++;
         if (count == 2) {
-          this.memcache.snapshot();
+          this.memstore.snapshot();
           LOG.info("Snapshotted");
         }
         result.clear();
@@ -99,22 +99,22 @@ public class TestMemcache extends TestCase {
   }
 
   /** 
-   * Test memcache snapshots
+   * Test memstore snapshots
    * @throws IOException
    */
   public void testSnapshotting() throws IOException {
     final int snapshotCount = 5;
     // Add some rows, run a snapshot. Do it a few times.
     for (int i = 0; i < snapshotCount; i++) {
-      addRows(this.memcache);
-      runSnapshot(this.memcache);
-      Map<KeyValue, ?> ss = this.memcache.getSnapshot();
+      addRows(this.memstore);
+      runSnapshot(this.memstore);
+      Map<KeyValue, ?> ss = this.memstore.getSnapshot();
       assertEquals("History not being cleared", 0, ss.size());
     }
   }
 
   public void testMultipleVersionsSimple() throws Exception {
-    Memcache m = new Memcache(HConstants.FOREVER, KeyValue.COMPARATOR);
+    MemStore m = new MemStore(HConstants.FOREVER, KeyValue.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
     byte [] family = Bytes.toBytes("testFamily");
     byte [] qf = Bytes.toBytes("testQualifier");
@@ -129,12 +129,12 @@ public class TestMemcache extends TestCase {
     m.add(key1);
     m.add(key2);
     
-    assertTrue("Expected memcache to hold 3 values, actually has " + 
-        m.memcache.size(), m.memcache.size() == 3);
+    assertTrue("Expected memstore to hold 3 values, actually has " + 
+        m.memstore.size(), m.memstore.size() == 3);
   }
 
   public void testBinary() throws IOException {
-    Memcache mc = new Memcache(HConstants.FOREVER, KeyValue.ROOT_COMPARATOR);
+    MemStore mc = new MemStore(HConstants.FOREVER, KeyValue.ROOT_COMPARATOR);
     final int start = 43;
     final int end = 46;
     for (int k = start; k <= end; k++) {
@@ -153,7 +153,7 @@ public class TestMemcache extends TestCase {
 //      System.out.println(key);
     }
     int index = start;
-    for (Map.Entry<KeyValue, ?> entry: mc.memcache.entrySet()) {
+    for (Map.Entry<KeyValue, ?> entry: mc.memstore.entrySet()) {
       System.out.println(entry);
       byte [] b = entry.getKey().getRow();
       // Hardcoded offsets into String
@@ -177,70 +177,70 @@ public class TestMemcache extends TestCase {
     byte [] t35 = Bytes.toBytes("035");
     byte [] t40 = Bytes.toBytes("040");
     
-    memcache.add(getKV(t10, "t10 bytes".getBytes()));
-    memcache.add(getKV(t20, "t20 bytes".getBytes()));
-    memcache.add(getKV(t30, "t30 bytes".getBytes()));
-    memcache.add(getKV(t35, "t35 bytes".getBytes()));
+    memstore.add(getKV(t10, "t10 bytes".getBytes()));
+    memstore.add(getKV(t20, "t20 bytes".getBytes()));
+    memstore.add(getKV(t30, "t30 bytes".getBytes()));
+    memstore.add(getKV(t35, "t35 bytes".getBytes()));
     // write a delete in there to see if things still work ok
-    memcache.add(getDeleteKV(t35));
-    memcache.add(getKV(t40, "t40 bytes".getBytes()));
+    memstore.add(getDeleteKV(t35));
+    memstore.add(getKV(t40, "t40 bytes".getBytes()));
     
     NavigableSet<KeyValue> results = null;
     
     // try finding "015"
     results =
-      new TreeSet<KeyValue>(this.memcache.comparator.getComparatorIgnoringType());
+      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
     KeyValue t15 = new KeyValue(Bytes.toBytes("015"),
       System.currentTimeMillis());
-    memcache.getRowKeyAtOrBefore(t15, results);
+    memstore.getRowKeyAtOrBefore(t15, results);
     KeyValue kv = results.last();
     assertTrue(KeyValue.COMPARATOR.compareRows(kv, t10) == 0);
 
     // try "020", we should get that row exactly
     results =
-      new TreeSet<KeyValue>(this.memcache.comparator.getComparatorIgnoringType());
-    memcache.getRowKeyAtOrBefore(new KeyValue(t20, System.currentTimeMillis()),
+      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
+    memstore.getRowKeyAtOrBefore(new KeyValue(t20, System.currentTimeMillis()),
       results);
     assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t20) == 0);
 
     // try "030", we should get that row exactly
     results =
-      new TreeSet<KeyValue>(this.memcache.comparator.getComparatorIgnoringType());
-    memcache.getRowKeyAtOrBefore(new KeyValue(t30, System.currentTimeMillis()),
+      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
+    memstore.getRowKeyAtOrBefore(new KeyValue(t30, System.currentTimeMillis()),
       results);
     assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t30) == 0);
   
     // try "038", should skip the deleted "035" and give "030"
     results =
-      new TreeSet<KeyValue>(this.memcache.comparator.getComparatorIgnoringType());
+      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
     byte [] t38 = Bytes.toBytes("038");
-    memcache.getRowKeyAtOrBefore(new KeyValue(t38, System.currentTimeMillis()),
+    memstore.getRowKeyAtOrBefore(new KeyValue(t38, System.currentTimeMillis()),
       results);
     assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t30) == 0);
   
     // try "050", should get stuff from "040"
     results =
-      new TreeSet<KeyValue>(this.memcache.comparator.getComparatorIgnoringType());
+      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
     byte [] t50 = Bytes.toBytes("050");
-    memcache.getRowKeyAtOrBefore(new KeyValue(t50, System.currentTimeMillis()),
+    memstore.getRowKeyAtOrBefore(new KeyValue(t50, System.currentTimeMillis()),
       results);
     assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t40) == 0);
   }
   
   
-  /** Test getNextRow from memcache
+  /** Test getNextRow from memstore
    * @throws InterruptedException 
    */
   public void testGetNextRow() throws Exception {
-    addRows(this.memcache);
+    addRows(this.memstore);
     // Add more versions to make it a little more interesting.
     Thread.sleep(1);
-    addRows(this.memcache);
-    KeyValue closestToEmpty = this.memcache.getNextRow(KeyValue.LOWESTKEY);
+    addRows(this.memstore);
+    KeyValue closestToEmpty = this.memstore.getNextRow(KeyValue.LOWESTKEY);
     assertTrue(KeyValue.COMPARATOR.compareRows(closestToEmpty,
       new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
-      KeyValue nr = this.memcache.getNextRow(new KeyValue(Bytes.toBytes(i),
+      KeyValue nr = this.memstore.getNextRow(new KeyValue(Bytes.toBytes(i),
         System.currentTimeMillis()));
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
@@ -253,8 +253,8 @@ public class TestMemcache extends TestCase {
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
       InternalScanner scanner =
           new StoreScanner(new Scan(Bytes.toBytes(startRowId)), FAMILY,
-              Integer.MAX_VALUE, this.memcache.comparator, null,
-              new KeyValueScanner[]{memcache.getScanners()[0]});
+              Integer.MAX_VALUE, this.memstore.comparator, null,
+              new KeyValueScanner[]{memstore.getScanners()[0]});
       List<KeyValue> results = new ArrayList<KeyValue>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;
@@ -281,13 +281,13 @@ public class TestMemcache extends TestCase {
     byte [] qf3 = Bytes.toBytes("testqualifier3");
     byte [] val = Bytes.toBytes("testval");
     
-    //Setting up memcache
+    //Setting up memstore
     KeyValue add1 = new KeyValue(row, fam ,qf1, val);
     KeyValue add2 = new KeyValue(row, fam ,qf2, val);
     KeyValue add3 = new KeyValue(row, fam ,qf3, val);
-    memcache.add(add1);
-    memcache.add(add2);
-    memcache.add(add3);
+    memstore.add(add1);
+    memstore.add(add2);
+    memstore.add(add3);
     
     //test
     Get get = new Get(row);
@@ -299,7 +299,7 @@ public class TestMemcache extends TestCase {
       new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memcache.get(matcher, result);
+    boolean res = memstore.get(matcher, result);
     assertEquals(true, res);
   }
   
@@ -311,11 +311,11 @@ public class TestMemcache extends TestCase {
     byte [] qf3 = Bytes.toBytes("testqualifier3");
     byte [] val = Bytes.toBytes("testval");
     
-    //Setting up memcache
+    //Setting up memstore
     KeyValue add1 = new KeyValue(row, fam ,qf1, val);
     KeyValue add3 = new KeyValue(row, fam ,qf3, val);
-    memcache.add(add1);
-    memcache.add(add3);
+    memstore.add(add1);
+    memstore.add(add3);
     
     //test
     Get get = new Get(row);
@@ -327,11 +327,11 @@ public class TestMemcache extends TestCase {
       new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
     List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memcache.get(matcher, result);
+    boolean res = memstore.get(matcher, result);
     assertEquals(false, res);
   }
 
-  public void testGet_MemcacheAndSnapShot() throws IOException {
+  public void testGet_memstoreAndSnapShot() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
     byte [] qf1 = Bytes.toBytes("testqualifier1");
@@ -351,21 +351,21 @@ public class TestMemcache extends TestCase {
     QueryMatcher matcher =
       new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
     
-    //Setting up memcache
-    memcache.add(new KeyValue(row, fam ,qf1, val));
-    memcache.add(new KeyValue(row, fam ,qf2, val));
-    memcache.add(new KeyValue(row, fam ,qf3, val));
+    //Setting up memstore
+    memstore.add(new KeyValue(row, fam ,qf1, val));
+    memstore.add(new KeyValue(row, fam ,qf2, val));
+    memstore.add(new KeyValue(row, fam ,qf3, val));
     //Creating a snapshot
-    memcache.snapshot();
-    assertEquals(3, memcache.snapshot.size());
-    //Adding value to "new" memcache
-    assertEquals(0, memcache.memcache.size());
-    memcache.add(new KeyValue(row, fam ,qf4, val));
-    memcache.add(new KeyValue(row, fam ,qf5, val));
-    assertEquals(2, memcache.memcache.size());
+    memstore.snapshot();
+    assertEquals(3, memstore.snapshot.size());
+    //Adding value to "new" memstore
+    assertEquals(0, memstore.memstore.size());
+    memstore.add(new KeyValue(row, fam ,qf4, val));
+    memstore.add(new KeyValue(row, fam ,qf5, val));
+    assertEquals(2, memstore.memstore.size());
     
     List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memcache.get(matcher, result);
+    boolean res = memstore.get(matcher, result);
     assertEquals(true, res);
   }
   
@@ -402,20 +402,20 @@ public class TestMemcache extends TestCase {
     expected.add(kv2);
     expected.add(kv3);
     
-    //Setting up memcache
-    memcache.add(new KeyValue(row, fam ,qf1, ts1, val));
-    memcache.add(new KeyValue(row, fam ,qf2, ts1, val));
-    memcache.add(new KeyValue(row, fam ,qf3, ts1, val));
-    memcache.add(kv1);
-    memcache.add(kv2);
-    memcache.add(kv3);
-    memcache.add(new KeyValue(row, fam ,qf1, ts3, val));
-    memcache.add(new KeyValue(row, fam ,qf2, ts3, val));
-    memcache.add(new KeyValue(row, fam ,qf3, ts3, val));
+    //Setting up memstore
+    memstore.add(new KeyValue(row, fam ,qf1, ts1, val));
+    memstore.add(new KeyValue(row, fam ,qf2, ts1, val));
+    memstore.add(new KeyValue(row, fam ,qf3, ts1, val));
+    memstore.add(kv1);
+    memstore.add(kv2);
+    memstore.add(kv3);
+    memstore.add(new KeyValue(row, fam ,qf1, ts3, val));
+    memstore.add(new KeyValue(row, fam ,qf2, ts3, val));
+    memstore.add(new KeyValue(row, fam ,qf3, ts3, val));
     
     //Get
     List<KeyValue> result = new ArrayList<KeyValue>();
-    memcache.get(matcher, result);
+    memstore.get(matcher, result);
     
     assertEquals(expected.size(), result.size());
     for(int i=0; i<expected.size(); i++){
@@ -439,23 +439,23 @@ public class TestMemcache extends TestCase {
     KeyValue put2 = new KeyValue(row, fam, qf1, ts2, val);
     long ts3 = ts2 +1;
     KeyValue put3 = new KeyValue(row, fam, qf1, ts3, val);
-    memcache.add(put1);
-    memcache.add(put2);
-    memcache.add(put3);
+    memstore.add(put1);
+    memstore.add(put2);
+    memstore.add(put3);
     
-    assertEquals(3, memcache.memcache.size());
+    assertEquals(3, memstore.memstore.size());
     
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
-    memcache.delete(del2);
+    memstore.delete(del2);
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(put3);
     expected.add(del2);
     expected.add(put1);
     
-    assertEquals(3, memcache.memcache.size());
+    assertEquals(3, memstore.memstore.size());
     int i = 0;
-    for(Map.Entry<KeyValue, ?> entry : memcache.memcache.entrySet()) {
+    for(Map.Entry<KeyValue, ?> entry : memstore.memstore.entrySet()) {
       assertEquals(expected.get(i++), entry.getKey());
     }
   }
@@ -472,23 +472,23 @@ public class TestMemcache extends TestCase {
     KeyValue put2 = new KeyValue(row, fam, qf1, ts2, val);
     long ts3 = ts2 +1;
     KeyValue put3 = new KeyValue(row, fam, qf1, ts3, val);
-    memcache.add(put1);
-    memcache.add(put2);
-    memcache.add(put3);
+    memstore.add(put1);
+    memstore.add(put2);
+    memstore.add(put3);
     
-    assertEquals(3, memcache.memcache.size());
+    assertEquals(3, memstore.memstore.size());
     
     KeyValue del2 = 
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
-    memcache.delete(del2);
+    memstore.delete(del2);
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(put3);
     expected.add(del2);
     
-    assertEquals(2, memcache.memcache.size());
+    assertEquals(2, memstore.memstore.size());
     int i = 0;
-    for(Map.Entry<KeyValue, ?> entry : memcache.memcache.entrySet()) {
+    for(Map.Entry<KeyValue, ?> entry : memstore.memstore.entrySet()) {
       assertEquals(expected.get(i++), entry.getKey());
     }
   }
@@ -508,74 +508,74 @@ public class TestMemcache extends TestCase {
     KeyValue put3 = new KeyValue(row, fam, qf3, ts, val);
     KeyValue put4 = new KeyValue(row, fam, qf3, ts+1, val);
 
-    memcache.add(put1);
-    memcache.add(put2);
-    memcache.add(put3);
-    memcache.add(put4);
+    memstore.add(put1);
+    memstore.add(put2);
+    memstore.add(put3);
+    memstore.add(put4);
     
     KeyValue del = 
       new KeyValue(row, fam, null, ts, KeyValue.Type.DeleteFamily, val);
-    memcache.delete(del);
+    memstore.delete(del);
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(del);
     expected.add(put4);
     
-    assertEquals(2, memcache.memcache.size());
+    assertEquals(2, memstore.memstore.size());
     int i = 0;
-    for(Map.Entry<KeyValue, ?> entry : memcache.memcache.entrySet()) {
+    for(Map.Entry<KeyValue, ?> entry : memstore.memstore.entrySet()) {
       assertEquals(expected.get(i++), entry.getKey());
     }
   }
   
-  public void testKeepDeleteInMemcache() {
+  public void testKeepDeleteInmemstore() {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
     byte [] qf = Bytes.toBytes("testqualifier");
     byte [] val = Bytes.toBytes("testval");
     long ts = System.nanoTime();
-    memcache.add(new KeyValue(row, fam, qf, ts, val));
+    memstore.add(new KeyValue(row, fam, qf, ts, val));
     KeyValue delete = new KeyValue(row, fam, qf, ts, KeyValue.Type.Delete, val);
-    memcache.delete(delete);
-    assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.firstKey());
+    memstore.delete(delete);
+    assertEquals(1, memstore.memstore.size());
+    assertEquals(delete, memstore.memstore.firstKey());
   }
 
   public void testRetainsDeleteVersion() throws IOException {
-    // add a put to memcache
-    memcache.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
+    // add a put to memstore
+    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
 
     // now process a specific delete:
     KeyValue delete = KeyValueTestUtil.create(
         "row1", "fam", "a", 100, KeyValue.Type.Delete, "dont-care");
-    memcache.delete(delete);
+    memstore.delete(delete);
 
-    assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.firstKey());
+    assertEquals(1, memstore.memstore.size());
+    assertEquals(delete, memstore.memstore.firstKey());
   }
   public void testRetainsDeleteColumn() throws IOException {
-    // add a put to memcache
-    memcache.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
+    // add a put to memstore
+    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
 
     // now process a specific delete:
     KeyValue delete = KeyValueTestUtil.create("row1", "fam", "a", 100,
         KeyValue.Type.DeleteColumn, "dont-care");
-    memcache.delete(delete);
+    memstore.delete(delete);
 
-    assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.firstKey());
+    assertEquals(1, memstore.memstore.size());
+    assertEquals(delete, memstore.memstore.firstKey());
   }
   public void testRetainsDeleteFamily() throws IOException {
-    // add a put to memcache
-    memcache.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
+    // add a put to memstore
+    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
 
     // now process a specific delete:
     KeyValue delete = KeyValueTestUtil.create("row1", "fam", "a", 100,
         KeyValue.Type.DeleteFamily, "dont-care");
-    memcache.delete(delete);
+    memstore.delete(delete);
 
-    assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.firstKey());
+    assertEquals(1, memstore.memstore.size());
+    assertEquals(delete, memstore.memstore.firstKey());
   }
 
   
@@ -593,7 +593,7 @@ public class TestMemcache extends TestCase {
    * @return How many rows we added.
    * @throws IOException 
    */
-  private int addRows(final Memcache hmc) {
+  private int addRows(final MemStore hmc) {
     for (int i = 0; i < ROW_COUNT; i++) {
       long timestamp = System.currentTimeMillis();
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
@@ -605,7 +605,7 @@ public class TestMemcache extends TestCase {
     return ROW_COUNT;
   }
 
-  private void runSnapshot(final Memcache hmc) throws UnexpectedException {
+  private void runSnapshot(final MemStore hmc) throws UnexpectedException {
     // Save off old state.
     int oldHistorySize = hmc.getSnapshot().size();
     hmc.snapshot();

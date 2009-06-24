@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
  * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
  * conditions of the query.  This method returns a {@link MatchCode} to define
  * what action should be taken.
- * <li>{@link #update} is called at the end of every StoreFile or Memcache.
+ * <li>{@link #update} is called at the end of every StoreFile or memstore.
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded 
  */

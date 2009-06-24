@@ -59,7 +59,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
 /**
-  * A Store holds a column family in a Region.  Its a memcache and a set of zero
+  * A Store holds a column family in a Region.  Its a memstore and a set of zero
   * or more StoreFiles, which stretch backwards over time.
   *
   * <p>There's no reason to consider append-logging at this level; all logging 
@@ -89,7 +89,7 @@ public class Store implements HConstants {
    * If no delimiter present, presume the buffer holds a store name so no need
    * of a delimiter.
    */
-  protected final Memcache memcache;
+  protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final Path homedir;
   private final HRegionInfo regioninfo;
@@ -176,7 +176,7 @@ public class Store implements HConstants {
       // second -> ms adjust for user data
       this.ttl *= 1000;
     }
-    this.memcache = new Memcache(this.ttl, this.comparator);
+    this.memstore = new MemStore(this.ttl, this.comparator);
     this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir), 
         Integer.toString(info.getEncodedName()));
     this.storeName = this.family.getName();
@@ -289,7 +289,7 @@ public class Store implements HConstants {
     long maxSeqIdInLog = -1;
     // TODO: Move this memstoring over into MemStore.
     ConcurrentSkipListMap<KeyValue, Object> reconstructedCache =
-      Memcache.createMap(this.comparator);
+      MemStore.createMap(this.comparator);
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
       reconstructionLog, this.conf);
     try {
@@ -387,30 +387,30 @@ public class Store implements HConstants {
   }
 
   /**
-   * Adds a value to the memcache
+   * Adds a value to the memstore
    * 
    * @param kv
-   * @return memcache size delta
+   * @return memstore size delta
    */
   protected long add(final KeyValue kv) {
     lock.readLock().lock();
     try {
-      return this.memcache.add(kv);
+      return this.memstore.add(kv);
     } finally {
       lock.readLock().unlock();
     }
   }
   
   /**
-   * Adds a value to the memcache
+   * Adds a value to the memstore
    * 
    * @param kv
-   * @return memcache size delta
+   * @return memstore size delta
    */
   protected long delete(final KeyValue kv) {
     lock.readLock().lock();
     try {
-      return this.memcache.delete(kv);
+      return this.memstore.delete(kv);
     } finally {
       lock.readLock().unlock();
     }
@@ -449,11 +449,11 @@ public class Store implements HConstants {
   }
 
   /**
-   * Snapshot this stores memcache.  Call before running
+   * Snapshot this stores memstore.  Call before running
    * {@link #flushCache(long)} so it has some work to do.
    */
   void snapshot() {
-    this.memcache.snapshot();
+    this.memstore.snapshot();
   }
 
   /**
@@ -465,10 +465,10 @@ public class Store implements HConstants {
    */
   boolean flushCache(final long logCacheFlushId) throws IOException {
     // Get the snapshot to flush.  Presumes that a call to
-    // this.memcache.snapshot() has happened earlier up in the chain.
-    ConcurrentSkipListMap<KeyValue, ?> cache = this.memcache.getSnapshot();
+    // this.memstore.snapshot() has happened earlier up in the chain.
+    ConcurrentSkipListMap<KeyValue, ?> cache = this.memstore.getSnapshot();
     // If an exception happens flushing, we let it out without clearing
-    // the memcache snapshot.  The old snapshot will be returned when we say
+    // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
     StoreFile sf = internalFlushCache(cache, logCacheFlushId);
     if (sf == null) {
@@ -509,7 +509,7 @@ public class Store implements HConstants {
           if (!isExpired(kv, oldestTimestamp)) {
             writer.append(kv);
             entries++;
-            flushed += this.memcache.heapSize(kv, true);
+            flushed += this.memstore.heapSize(kv, true);
           }
         }
         // B. Write out the log sequence number that corresponds to this output
@@ -568,7 +568,7 @@ public class Store implements HConstants {
       count = this.storefiles.size();
       // Tell listeners of the change in readers.
       notifyChangedReadersObservers();
-      this.memcache.clearSnapshot(cache);
+      this.memstore.clearSnapshot(cache);
       return count;
     } finally {
       this.lock.writeLock().unlock();
@@ -612,7 +612,7 @@ public class Store implements HConstants {
    * thread must be able to block for long periods.
    * 
    * <p>During this time, the Store can work as usual, getting values from
-   * MapFiles and writing new MapFiles from the Memcache.
+   * MapFiles and writing new MapFiles from the memstore.
    * 
    * Existing MapFiles are not destroyed until the new compacted TreeMap is 
    * completely written-out to disk.
@@ -1014,8 +1014,8 @@ public class Store implements HConstants {
     long now = System.currentTimeMillis();
     this.lock.readLock().lock();
     try {
-      // First go to the memcache.  Pick up deletes and candidates.
-      this.memcache.getRowKeyAtOrBefore(targetkey, candidates, deletes, now);
+      // First go to the memstore.  Pick up deletes and candidates.
+      this.memstore.getRowKeyAtOrBefore(targetkey, candidates, deletes, now);
       // Process each store file.  Run through from newest to oldest.
       Map<Long, StoreFile> m = this.storefiles.descendingMap();
       for (Map.Entry<Long, StoreFile> e: m.entrySet()) {
@@ -1340,7 +1340,7 @@ public class Store implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Return a scanner for both the memcache and the HStore files
+   * Return a scanner for both the memstore and the HStore files
    */
   protected KeyValueScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) {
@@ -1470,9 +1470,9 @@ public class Store implements HConstants {
     QueryMatcher matcher = new QueryMatcher(get, this.family.getName(), columns,
       this.ttl, keyComparator, versionsToReturn(get.getMaxVersions()));
     
-    // Read from Memcache
-    if(this.memcache.get(matcher, result)) {
-      // Received early-out from memcache
+    // Read from memstore
+    if(this.memstore.get(matcher, result)) {
+      // Received early-out from memstore
       return;
     }
     
@@ -1526,9 +1526,9 @@ public class Store implements HConstants {
     QueryMatcher matcher = new QueryMatcher(get, f, qualifiers, this.ttl,
       keyComparator, 1);
     
-    // Read from Memcache
-    if(this.memcache.get(matcher, result)) {
-      // Received early-out from memcache
+    // Read from memstore
+    if(this.memstore.get(matcher, result)) {
+      // Received early-out from memstore
       KeyValue kv = result.get(0);
       byte [] buffer = kv.getBuffer();
       int valueOffset = kv.getValueOffset();

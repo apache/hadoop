@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
  * Implements KeyValueScanner itself.
  * <p>
  * This class is used at the Region level to merge across Stores
- * and at the Store level to merge across the Memcache and StoreFiles.
+ * and at the Store level to merge across the memstore and StoreFiles.
  * <p>
  * In the Region case, we also need InternalScanner.next(List), so this class
  * also implements InternalScanner.  WARNING: As is, if you try to use this

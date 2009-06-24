@@ -157,7 +157,7 @@ public class TestScanner extends HBaseTestCase {
           byteStream.toByteArray());
       region.put(put);
 
-      // What we just committed is in the memcache. Verify that we can get
+      // What we just committed is in the memstore. Verify that we can get
       // it back both with scanning and get
       
       scan(false, null);
@@ -188,7 +188,7 @@ public class TestScanner extends HBaseTestCase {
       region.put(put);
       
       // Validate that we can still get the HRegionInfo, even though it is in
-      // an older row on disk and there is a newer row in the memcache
+      // an older row on disk and there is a newer row in the memstore
       
       scan(true, address.toString());
       getRegionInfo();
@@ -383,7 +383,7 @@ public class TestScanner extends HBaseTestCase {
 
   /**
    * Tests to do a concurrent flush (using a 2nd thread) while scanning.  This tests both
-   * the StoreScanner update readers and the transition from memcache -> snapshot -> store file.
+   * the StoreScanner update readers and the transition from memstore -> snapshot -> store file.
    *
    * @throws Exception
    */

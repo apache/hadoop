@@ -215,10 +215,10 @@ public class TestClient extends HBaseClusterTestCase {
     scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
     
     ////////////////////////////////////////////////////////////////////////////
-    // Flush memcache and run same tests from storefiles
+    // Flush memstore and run same tests from storefiles
     ////////////////////////////////////////////////////////////////////////////
     
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     
     // Redo get and scan tests from storefile
     
@@ -228,7 +228,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
     
     ////////////////////////////////////////////////////////////////////////////
-    // Now, Test reading from memcache and storefiles at once
+    // Now, Test reading from memstore and storefiles at once
     ////////////////////////////////////////////////////////////////////////////
     
     // Insert multiple columns to two other families
@@ -253,14 +253,14 @@ public class TestClient extends HBaseClusterTestCase {
     // Flush the table again
     ////////////////////////////////////////////////////////////////////////////
     
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     
     // Redo tests again
     
     singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
     singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
     
-    // Insert more data to memcache
+    // Insert more data to memstore
     
     put = new Put(ROWS[0]);
     put.add(FAMILIES[6], QUALIFIERS[5], VALUES[5]);
@@ -315,7 +315,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
     
     ////////////////////////////////////////////////////////////////////////////
-    // Delete a memcache column
+    // Delete a memstore column
     ////////////////////////////////////////////////////////////////////////////
     delete = new Delete(ROWS[0]);
     delete.deleteColumns(FAMILIES[6], QUALIFIERS[8]);
@@ -360,7 +360,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
     
     ////////////////////////////////////////////////////////////////////////////
-    // Delete joint storefile/memcache family
+    // Delete joint storefile/memstore family
     ////////////////////////////////////////////////////////////////////////////
     
     delete = new Delete(ROWS[0]);
@@ -374,7 +374,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = ht.get(get);
     assertEmptyResult(result);
     
-    // Try to get memcache column in deleted family
+    // Try to get memstore column in deleted family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = ht.get(get);
@@ -393,7 +393,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
     
-    // Try to scan memcache column in deleted family
+    // Try to scan memstore column in deleted family
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = getSingleScanResult(ht, scan);
@@ -433,7 +433,7 @@ public class TestClient extends HBaseClusterTestCase {
     // Flush everything and rerun delete tests
     ////////////////////////////////////////////////////////////////////////////
     
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     
     // Try to get storefile column in deleted family
     
@@ -442,7 +442,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = ht.get(get);
     assertEmptyResult(result);
     
-    // Try to get memcache column in deleted family
+    // Try to get memstore column in deleted family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = ht.get(get);
@@ -461,7 +461,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
     
-    // Try to scan memcache column in deleted family
+    // Try to scan memstore column in deleted family
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = getSingleScanResult(ht, scan);
@@ -572,7 +572,7 @@ public class TestClient extends HBaseClusterTestCase {
       
       // Flush and try again
       
-      flushMemcache(TABLE2);
+      flushMemStore(TABLE2);
       
       getTestNull(ht, ROW, FAMILY, VALUE);
       
@@ -681,7 +681,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Flush and redo
 
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -721,7 +721,7 @@ public class TestClient extends HBaseClusterTestCase {
         0, 1);
     
     
-    // Add some memcache and retest
+    // Add some memstore and retest
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
@@ -784,7 +784,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Ensure maxVersions of table is respected
 
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
@@ -812,7 +812,7 @@ public class TestClient extends HBaseClusterTestCase {
         new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
         0, 9);
     
-    // Delete a version in the memcache and a version in a storefile
+    // Delete a version in the memstore and a version in a storefile
     Delete delete = new Delete(ROW);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[11]);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[7]);
@@ -1406,7 +1406,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // flush and try again
     
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     
     // Get a row
     get = new Get(ROWS[numRows-1]);
@@ -1466,12 +1466,12 @@ public class TestClient extends HBaseClusterTestCase {
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
     
     // Try same from storefile
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
     
-    // Insert two more versions surrounding others, into memcache
+    // Insert two more versions surrounding others, into memstore
     put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     put.add(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
@@ -1487,7 +1487,7 @@ public class TestClient extends HBaseClusterTestCase {
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
     
     // Try same from two storefiles
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -1533,7 +1533,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
 
     // Try same from storefile
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
 
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
@@ -1603,7 +1603,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
     
     // Try same from storefile
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
 
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
@@ -1644,7 +1644,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
 
     // Try same from storefile
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
 
     getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     
@@ -1821,7 +1821,7 @@ public class TestClient extends HBaseClusterTestCase {
       byte [][] QUALIFIERS, byte [][] VALUES)
   throws Exception {
     
-    // Single column from memcache
+    // Single column from memstore
     Get get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[0]);
     Result result = ht.get(get);
@@ -1839,7 +1839,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[7], QUALIFIERS[7], VALUES[7]);
     
-    // Two columns, one from memcache one from storefile, same family,
+    // Two columns, one from memstore one from storefile, same family,
     // wildcard match
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[4]);
@@ -1847,7 +1847,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
     
-    // Two columns, one from memcache one from storefile, same family,
+    // Two columns, one from memstore one from storefile, same family,
     // explicit match
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[0]);
@@ -1856,7 +1856,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
   
-    // Three column, one from memcache two from storefile, different families,
+    // Three column, one from memstore two from storefile, different families,
     // wildcard match
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[4]);
@@ -1919,7 +1919,7 @@ public class TestClient extends HBaseClusterTestCase {
       byte [][] QUALIFIERS, byte [][] VALUES)
   throws Exception {
   
-    // Single column from memcache
+    // Single column from memstore
     Scan scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[0]);
     Result result = getSingleScanResult(ht, scan);
@@ -1937,7 +1937,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[7], QUALIFIERS[7], VALUES[7]);
     
-    // Two columns, one from memcache one from storefile, same family,
+    // Two columns, one from memstore one from storefile, same family,
     // wildcard match
     scan = new Scan();
     scan.addFamily(FAMILIES[4]);
@@ -1945,7 +1945,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
     
-    // Two columns, one from memcache one from storefile, same family,
+    // Two columns, one from memstore one from storefile, same family,
     // explicit match
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[0]);
@@ -1954,7 +1954,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
   
-    // Three column, one from memcache two from storefile, different families,
+    // Three column, one from memstore two from storefile, different families,
     // wildcard match
     scan = new Scan();
     scan.addFamily(FAMILIES[4]);
@@ -2378,7 +2378,7 @@ public class TestClient extends HBaseClusterTestCase {
   // Helpers
   //
   
-  private void flushMemcache(byte [] tableName) throws Exception {
+  private void flushMemStore(byte [] tableName) throws Exception {
     System.out.println("\n\nFlushing table [" + Bytes.toString(tableName) + "]...\n");
 //    HBaseAdmin hba = new HBaseAdmin(conf);
 //    hba.flush(tableName);
@@ -2561,7 +2561,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Flush and redo
 
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
     
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -2601,7 +2601,7 @@ public class TestClient extends HBaseClusterTestCase {
         0, 1);
     
     
-    // Add some memcache and retest
+    // Add some memstore and retest
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
@@ -2665,7 +2665,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Ensure maxVersions of table is respected
 
-    flushMemcache(TABLE);
+    flushMemStore(TABLE);
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
@@ -2693,7 +2693,7 @@ public class TestClient extends HBaseClusterTestCase {
         new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
         0, 9);
     
-    // Delete a version in the memcache and a version in a storefile
+    // Delete a version in the memstore and a version in a storefile
     Delete delete = new Delete(ROW);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[11]);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[7]);

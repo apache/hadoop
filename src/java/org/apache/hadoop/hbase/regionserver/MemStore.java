@@ -43,27 +43,27 @@ import org.apache.hadoop.hbase.regionserver.DeleteCompare.DeleteCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * The Memcache holds in-memory modifications to the HRegion.  Modifications
- * are {@link KeyValue}s.  When asked to flush, current memcache is moved
- * to snapshot and is cleared.  We continue to serve edits out of new memcache
+ * The MemStore holds in-memory modifications to the Store.  Modifications
+ * are {@link KeyValue}s.  When asked to flush, current memstore is moved
+ * to snapshot and is cleared.  We continue to serve edits out of new memstore
  * and backing snapshot until flusher reports in that the flush succeeded. At
  * this point we let the snapshot go.
- * TODO: Adjust size of the memcache when we remove items because they have
+ * TODO: Adjust size of the memstore when we remove items because they have
  * been deleted.
  */
-class Memcache {
-  private static final Log LOG = LogFactory.getLog(Memcache.class);
+class MemStore {
+  private static final Log LOG = LogFactory.getLog(MemStore.class);
 
   private final long ttl;
 
-  // Memcache.  Use a SkipListMap rather than SkipListSet because of the
+  // MemStore.  Use a SkipListMap rather than SkipListSet because of the
   // better semantics.  The Map will overwrite if passed a key it already had
   // whereas the Set will not add new KV if key is same though value might be
   // different.  Value is not important -- just make sure always same
   // reference passed.
-  volatile ConcurrentSkipListMap<KeyValue, Object> memcache;
+  volatile ConcurrentSkipListMap<KeyValue, Object> memstore;
 
-  // Snapshot of memcache.  Made for flusher.
+  // Snapshot of memstore.  Made for flusher.
   volatile ConcurrentSkipListMap<KeyValue, Object> snapshot;
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -87,7 +87,7 @@ class Memcache {
   /**
    * Default constructor. Used for tests.
    */
-  public Memcache() {
+  public MemStore() {
     this(HConstants.FOREVER, KeyValue.COMPARATOR);
   }
 
@@ -96,13 +96,13 @@ class Memcache {
    * @param ttl The TTL for cache entries, in milliseconds.
    * @param c
    */
-  public Memcache(final long ttl, final KeyValue.KVComparator c) {
+  public MemStore(final long ttl, final KeyValue.KVComparator c) {
     this.ttl = ttl;
     this.comparator = c;
     this.comparatorIgnoreTimestamp =
       this.comparator.getComparatorIgnoringTimestamps();
     this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
-    this.memcache = createMap(c);
+    this.memstore = createMap(c);
     this.snapshot = createMap(c);
   }
 
@@ -111,7 +111,7 @@ class Memcache {
   }
 
   void dump() {
-    for (Map.Entry<KeyValue, ?> entry: this.memcache.entrySet()) {
+    for (Map.Entry<KeyValue, ?> entry: this.memstore.entrySet()) {
       LOG.info(entry.getKey());
     }
     for (Map.Entry<KeyValue, ?> entry: this.snapshot.entrySet()) {
@@ -120,7 +120,7 @@ class Memcache {
   }
 
   /**
-   * Creates a snapshot of the current Memcache.
+   * Creates a snapshot of the current memstore.
    * Snapshot must be cleared by call to {@link #clearSnapshot(java.util.Map)}
    * To get the snapshot made by this method, use {@link #getSnapshot()}
    */
@@ -133,12 +133,12 @@ class Memcache {
         LOG.warn("Snapshot called again without clearing previous. " +
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
       } else {
-        // We used to synchronize on the memcache here but we're inside a
+        // We used to synchronize on the memstore here but we're inside a
         // write lock so removed it. Comment is left in case removal was a
         // mistake. St.Ack
-        if (!this.memcache.isEmpty()) {
-          this.snapshot = this.memcache;
-          this.memcache = createMap(this.comparator);
+        if (!this.memstore.isEmpty()) {
+          this.snapshot = this.memstore;
+          this.memstore = createMap(this.comparator);
         }
       }
     } finally {
@@ -193,7 +193,7 @@ class Memcache {
     try {
       // Add anything as value as long as same instance each time.
       size = heapSize(kv,
-        this.memcache.put(kv, NULL) == null);
+        this.memstore.put(kv, NULL) == null);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -211,7 +211,7 @@ class Memcache {
     //Have to find out what we want to do here, to find the fastest way of
     //removing things that are under a delete.
     //Actions that will take place here are:
-    //1. Insert a delete and remove all the affected entries already in memcache
+    //1. Insert a delete and remove all the affected entries already in memstore
     //2. In the case of a Delete and the matching put is found then don't insert
     //   the delete
     //TODO Would be nice with if we had an iterator for this, so we could remove
@@ -221,7 +221,7 @@ class Memcache {
     try {
       boolean notpresent = false;
       List<KeyValue> deletes = new ArrayList<KeyValue>();
-      SortedMap<KeyValue, Object> tail = this.memcache.tailMap(delete);
+      SortedMap<KeyValue, Object> tail = this.memstore.tailMap(delete);
 
       //Parse the delete, so that it is only done once
       byte [] deleteBuffer = delete.getBuffer();
@@ -250,7 +250,7 @@ class Memcache {
       deleteOffset += Bytes.SIZEOF_LONG;
       byte deleteType = deleteBuffer[deleteOffset];
       
-      //Comparing with tail from memcache
+      //Comparing with tail from memstore
       for (Map.Entry<KeyValue, ?> entry : tail.entrySet()) {
         DeleteCode res = DeleteCompare.deleteCompare(entry.getKey(),
             deleteBuffer, 
@@ -266,13 +266,13 @@ class Memcache {
 
       //Delete all the entries effected by the last added delete
       for(KeyValue del : deletes) {
-        notpresent = this.memcache.remove(del) == null;
+        notpresent = this.memstore.remove(del) == null;
         size -= heapSize(del, notpresent);
       }
       
-      // Adding the delete to memcache. Add any value, as long as
+      // Adding the delete to memstore. Add any value, as long as
       // same instance each time.
-      size += heapSize(delete, this.memcache.put(delete, NULL) == null);
+      size += heapSize(delete, this.memstore.put(delete, NULL) == null);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -280,7 +280,7 @@ class Memcache {
   }
   
   /*
-   * Calculate how the memcache size has changed, approximately.  Be careful.
+   * Calculate how the memstore size has changed, approximately.  Be careful.
    * If class changes, be sure to change the size calculation.
    * Add in tax of Map.Entry.
    * @param kv
@@ -302,7 +302,7 @@ class Memcache {
   KeyValue getNextRow(final KeyValue kv) {
     this.lock.readLock().lock();
     try {
-      return getLowest(getNextRow(kv, this.memcache),
+      return getLowest(getNextRow(kv, this.memstore),
         getNextRow(kv, this.snapshot));
     } finally {
       this.lock.readLock().unlock();
@@ -350,7 +350,7 @@ class Memcache {
   /**
    * @param row Row to look for.
    * @param candidateKeys Map of candidate keys (Accumulation over lots of
-   * lookup over stores and memcaches)
+   * lookup over stores and memstores)
    */
   void getRowKeyAtOrBefore(final KeyValue row,
       final NavigableSet<KeyValue> candidateKeys) {
@@ -361,7 +361,7 @@ class Memcache {
   /**
    * @param kv Row to look for.
    * @param candidates Map of candidate keys (Accumulation over lots of
-   * lookup over stores and memcaches).  Pass a Set with a Comparator that
+   * lookup over stores and memstores).  Pass a Set with a Comparator that
    * ignores key Type so we can do Set.remove using a delete, i.e. a KeyValue
    * with a different Type to the candidate key.
    * @param deletes Pass a Set that has a Comparator that ignores key type.
@@ -372,7 +372,7 @@ class Memcache {
       final NavigableSet<KeyValue> deletes, final long now) {
     this.lock.readLock().lock();
     try {
-      getRowKeyAtOrBefore(memcache, kv, candidates, deletes, now);
+      getRowKeyAtOrBefore(memstore, kv, candidates, deletes, now);
       getRowKeyAtOrBefore(snapshot, kv, candidates, deletes, now);
     } finally {
       this.lock.readLock().unlock();
@@ -544,14 +544,14 @@ class Memcache {
   }
 
   /**
-   * @return scanner on memcache and snapshot in this order.
+   * @return scanner on memstore and snapshot in this order.
    */
   KeyValueScanner [] getScanners() {
     this.lock.readLock().lock();
     try {
       KeyValueScanner [] scanners = new KeyValueScanner[2];
-      scanners[0] = new MemcacheScanner(this.memcache);
-      scanners[1] = new MemcacheScanner(this.snapshot);
+      scanners[0] = new MemStoreScanner(this.memstore);
+      scanners[1] = new MemStoreScanner(this.snapshot);
       return scanners;
     } finally {
       this.lock.readLock().unlock();
@@ -563,7 +563,7 @@ class Memcache {
   //
 
   /**
-   * Perform a single-row Get on the memcache and snapshot, placing results
+   * Perform a single-row Get on the  and snapshot, placing results
    * into the specified KV list.
    * <p>
    * This will return true if it is determined that the query is complete
@@ -579,7 +579,7 @@ class Memcache {
   throws IOException {
     this.lock.readLock().lock();
     try {
-      if(internalGet(this.memcache, matcher, result) || matcher.isDone()) {
+      if(internalGet(this.memstore, matcher, result) || matcher.isDone()) {
         return true;
       }
       matcher.update();
@@ -591,7 +591,7 @@ class Memcache {
   
   /**
    *
-   * @param map memcache or snapshot
+   * @param map memstore or snapshot
    * @param matcher query matcher
    * @param result list to add results to
    * @return true if done with store (early-out), false if not
@@ -624,18 +624,18 @@ class Memcache {
   
 
   /*
-   * MemcacheScanner implements the KeyValueScanner.
-   * It lets the caller scan the contents of a memcache.
+   * MemStoreScanner implements the KeyValueScanner.
+   * It lets the caller scan the contents of a memstore.
    * This behaves as if it were a real scanner but does not maintain position
-   * in the passed memcache tree.
+   * in the passed memstore tree.
    */
-  protected class MemcacheScanner implements KeyValueScanner {
+  protected class MemStoreScanner implements KeyValueScanner {
     private final NavigableMap<KeyValue, Object> mc;
     private KeyValue current = null;
     private List<KeyValue> result = new ArrayList<KeyValue>();
     private int idx = 0;
 
-    MemcacheScanner(final NavigableMap<KeyValue, Object> mc) {
+    MemStoreScanner(final NavigableMap<KeyValue, Object> mc) {
       this.mc = mc;
     }
 
@@ -713,7 +713,7 @@ class Memcache {
 
   /**
    * Code to help figure if our approximation of object heap sizes is close
-   * enough.  See hbase-900.  Fills memcaches then waits so user can heap
+   * enough.  See hbase-900.  Fills memstores then waits so user can heap
    * dump and bring up resultant hprof in something like jprofiler which
    * allows you get 'deep size' on objects.
    * @param args
@@ -723,27 +723,27 @@ class Memcache {
     LOG.info("vmName=" + runtime.getVmName() + ", vmVendor=" +
       runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
     LOG.info("vmInputArguments=" + runtime.getInputArguments());
-    Memcache memcache1 = new Memcache();
+    MemStore memstore1 = new MemStore();
     // TODO: x32 vs x64
     long size = 0;
     final int count = 10000;
     byte [] column = Bytes.toBytes("col:umn");
     for (int i = 0; i < count; i++) {
       // Give each its own ts
-      size += memcache1.add(new KeyValue(Bytes.toBytes(i), column, i));
+      size += memstore1.add(new KeyValue(Bytes.toBytes(i), column, i));
     }
-    LOG.info("memcache1 estimated size=" + size);
+    LOG.info("memstore1 estimated size=" + size);
     for (int i = 0; i < count; i++) {
-      size += memcache1.add(new KeyValue(Bytes.toBytes(i), column, i));
+      size += memstore1.add(new KeyValue(Bytes.toBytes(i), column, i));
     }
-    LOG.info("memcache1 estimated size (2nd loading of same data)=" + size);
-    // Make a variably sized memcache.
-    Memcache memcache2 = new Memcache();
+    LOG.info("memstore1 estimated size (2nd loading of same data)=" + size);
+    // Make a variably sized memstore.
+    MemStore memstore2 = new MemStore();
     for (int i = 0; i < count; i++) {
-      size += memcache2.add(new KeyValue(Bytes.toBytes(i), column, i,
+      size += memstore2.add(new KeyValue(Bytes.toBytes(i), column, i,
         new byte[i]));
     }
-    LOG.info("memcache2 estimated size=" + size);
+    LOG.info("memstore2 estimated size=" + size);
     final int seconds = 30;
     LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
     for (int i = 0; i < seconds; i++) {

@@ -99,10 +99,10 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("storefileIndexSizeMB", registry);
 
   /**
-   * Sum of all the memcache sizes in this regionserver in MB
+   * Sum of all the memstore sizes in this regionserver in MB
    */
-  public final MetricsIntValue memcacheSizeMB =
-    new MetricsIntValue("memcacheSizeMB", registry);
+  public final MetricsIntValue memstoreSizeMB =
+    new MetricsIntValue("memstoreSizeMB", registry);
 
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -129,7 +129,7 @@ public class RegionServerMetrics implements Updater {
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
-      this.memcacheSizeMB.pushMetric(this.metricsRecord);
+      this.memstoreSizeMB.pushMetric(this.metricsRecord);
       this.regions.pushMetric(this.metricsRecord);
       this.requests.pushMetric(this.metricsRecord);
 
@@ -177,8 +177,8 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.storefiles.get()));
     sb = Strings.appendKeyValue(sb, "storefileIndexSize",
       Integer.valueOf(this.storefileIndexSizeMB.get()));
-    sb = Strings.appendKeyValue(sb, "memcacheSize",
-      Integer.valueOf(this.memcacheSizeMB.get()));
+    sb = Strings.appendKeyValue(sb, "memstoreSize",
+      Integer.valueOf(this.memstoreSizeMB.get()));
     // Duplicate from jvmmetrics because metrics are private there so
     // inaccessible.
     MemoryUsage memory =

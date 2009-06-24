@@ -49,10 +49,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class QueryMatcher {
   /**
    * {@link #match} return codes.  These instruct the scanner moving through
-   * Memcaches and StoreFiles what to do with the current KeyValue.
+   * memstores and StoreFiles what to do with the current KeyValue.
    * <p>
    * Additionally, this contains "early-out" language to tell the scanner to
-   * move on to the next File (Memcache or Storefile), or to return immediately.
+   * move on to the next File (memstore or Storefile), or to return immediately.
    */
   static enum MatchCode {
     /**
@@ -66,7 +66,7 @@ public class QueryMatcher {
     SKIP,
     
     /**
-     * Do not include, jump to next StoreFile or Memcache (in time order)
+     * Do not include, jump to next StoreFile or memstore (in time order)
      */
     NEXT,
     
@@ -100,7 +100,7 @@ public class QueryMatcher {
   /** Keeps track of columns and versions */
   protected ColumnTracker columns;
   
-  /** Key to seek to in Memcache and StoreFiles */
+  /** Key to seek to in memstore and StoreFiles */
   protected KeyValue startKey;
   
   /** Row comparator for the region this query is for */
@@ -309,7 +309,7 @@ public class QueryMatcher {
   }
   
   /**
-   * Called after reading each section (memcache, snapshot, storefiles).
+   * Called after reading each section (memstore, snapshot, storefiles).
    * <p>
    * This method will update the internal structures to be accurate for
    * the next section. 

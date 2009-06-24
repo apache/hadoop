@@ -20,18 +20,18 @@ public class TestDeleteCompare extends TestCase {
   //3. Delete and the matching put
   //4. Big test that include starting on the wrong row and qualifier
   public void testDeleteCompare_DeleteFamily() {
-    //Creating memcache
-    Set<KeyValue> memcache = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 3, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 2, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col2", 1, "d-c"));
+    //Creating memstore
+    Set<KeyValue> memstore = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 3, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 2, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col2", 1, "d-c"));
 
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col3", 3, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col3", 2, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col3", 1, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col3", 3, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col3", 2, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col3", 1, "d-c"));
 
-    memcache.add(KeyValueTestUtil.create("row21", "fam", "col1", 1, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row21", "fam", "col1", 1, "d-c"));
 
     //Creating expected result
     List<DeleteCode> expected = new ArrayList<DeleteCode>();
@@ -55,7 +55,7 @@ public class TestDeleteCompare extends TestCase {
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
     
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
-    for(KeyValue mem : memcache){
+    for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));
@@ -69,12 +69,12 @@ public class TestDeleteCompare extends TestCase {
   }
   
   public void testDeleteCompare_DeleteColumn() {
-    //Creating memcache
-    Set<KeyValue> memcache = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 3, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 2, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row21", "fam", "col1", 1, "d-c"));
+    //Creating memstore
+    Set<KeyValue> memstore = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 3, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 2, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row21", "fam", "col1", 1, "d-c"));
 
 
     //Creating expected result
@@ -95,7 +95,7 @@ public class TestDeleteCompare extends TestCase {
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
     
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
-    for(KeyValue mem : memcache){
+    for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));
@@ -110,11 +110,11 @@ public class TestDeleteCompare extends TestCase {
   
   
   public void testDeleteCompare_Delete() {
-    //Creating memcache
-    Set<KeyValue> memcache = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 3, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 2, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
+    //Creating memstore
+    Set<KeyValue> memstore = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 3, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 2, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
 
     //Creating expected result
     List<DeleteCode> expected = new ArrayList<DeleteCode>();
@@ -133,7 +133,7 @@ public class TestDeleteCompare extends TestCase {
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
     
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
-    for(KeyValue mem : memcache){
+    for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));
@@ -146,15 +146,15 @@ public class TestDeleteCompare extends TestCase {
   }
   
   public void testDeleteCompare_Multiple() {
-    //Creating memcache
-    Set<KeyValue> memcache = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
-    memcache.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row21", "fam", "col1", 4, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row21", "fam", "col1", 3, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row21", "fam", "col1", 2, "d-c"));
-    memcache.add(KeyValueTestUtil.create("row21", "fam", "col1", 1,
+    //Creating memstore
+    Set<KeyValue> memstore = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+    memstore.add(KeyValueTestUtil.create("row11", "fam", "col1", 1, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row21", "fam", "col1", 4, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row21", "fam", "col1", 3, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row21", "fam", "col1", 2, "d-c"));
+    memstore.add(KeyValueTestUtil.create("row21", "fam", "col1", 1,
         KeyValue.Type.Delete, "dont-care"));
-    memcache.add(KeyValueTestUtil.create("row31", "fam", "col1", 1, "dont-care"));
+    memstore.add(KeyValueTestUtil.create("row31", "fam", "col1", 1, "dont-care"));
 
     //Creating expected result
     List<DeleteCode> expected = new ArrayList<DeleteCode>();
@@ -176,7 +176,7 @@ public class TestDeleteCompare extends TestCase {
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
     
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
-    for(KeyValue mem : memcache){
+    for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));

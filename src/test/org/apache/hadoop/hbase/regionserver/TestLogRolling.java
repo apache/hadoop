@@ -24,16 +24,13 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
-
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -83,10 +80,10 @@ public class TestLogRolling extends HBaseClusterTestCase {
     conf.setInt("hbase.regionserver.maxlogentries", 32);
 
     // For less frequently updated regions flush after every 2 flushes
-    conf.setInt("hbase.hregion.memcache.optionalflushcount", 2);
+    conf.setInt("hbase.hregion.memstore.optionalflushcount", 2);
 
     // We flush the cache after every 8192 bytes
-    conf.setInt("hbase.hregion.memcache.flush.size", 8192);
+    conf.setInt("hbase.hregion.memstore.flush.size", 8192);
 
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);

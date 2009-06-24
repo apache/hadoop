@@ -709,7 +709,7 @@ public class HLog implements HConstants, Syncable {
    * Abort a cache flush.
    * Call if the flush fails. Note that the only recovery for an aborted flush
    * currently is a restart of the regionserver so the snapshot content dropped
-   * by the failure gets restored to the memcache.
+   * by the failure gets restored to the memstore.
    */
   void abortCacheFlush() {
     this.cacheFlushLock.unlock();

@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 
 /**
- * Scanner scans both the memcache and the HStore. Coaleace KeyValue stream
+ * Scanner scans both the memstore and the HStore. Coaleace KeyValue stream
  * into List<KeyValue> for a single row.
  */
 class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
@@ -47,7 +47,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   private final AtomicBoolean closing = new AtomicBoolean(false);
 
   /**
-   * Opens a scanner across memcache, snapshot, and all StoreFiles.
+   * Opens a scanner across memstore, snapshot, and all StoreFiles.
    */
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns) {
     this.store = store;
@@ -90,9 +90,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    */
   private List<KeyValueScanner> getScanners() {
     List<KeyValueScanner> scanners = getStoreFileScanners();
-    KeyValueScanner [] memcachescanners = this.store.memcache.getScanners();
-    for (int i = memcachescanners.length - 1; i >= 0; i--) {
-      scanners.add(memcachescanners[i]);
+    KeyValueScanner [] memstorescanners = this.store.memstore.getScanners();
+    for (int i = memstorescanners.length - 1; i >= 0; i--) {
+      scanners.add(memstorescanners[i]);
     }
     return scanners;
   }

@@ -70,9 +70,9 @@ ISerializable {
   public static final String READONLY = "READONLY";
   public static final ImmutableBytesWritable READONLY_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(READONLY));
-  public static final String MEMCACHE_FLUSHSIZE = "MEMCACHE_FLUSHSIZE";
-  public static final ImmutableBytesWritable MEMCACHE_FLUSHSIZE_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(MEMCACHE_FLUSHSIZE));
+  public static final String MEMSTORE_FLUSHSIZE = "MEMSTORE_FLUSHSIZE";
+  public static final ImmutableBytesWritable MEMSTORE_FLUSHSIZE_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
   public static final String IS_ROOT = "IS_ROOT";
   public static final ImmutableBytesWritable IS_ROOT_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
@@ -94,7 +94,7 @@ ISerializable {
 
   public static final boolean DEFAULT_READONLY = false;
 
-  public static final int DEFAULT_MEMCACHE_FLUSH_SIZE = 1024*1024*64;
+  public static final int DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64;
   
   public static final int DEFAULT_MAX_FILESIZE = 1024*1024*256;
     
@@ -122,7 +122,7 @@ ISerializable {
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
-    setMemcacheFlushSize(16 * 1024);
+    setMemStoreFlushSize(16 * 1024);
   }
 
   /**
@@ -440,19 +440,19 @@ ISerializable {
   /**
    * @return memory cache flush size for each hregion
    */
-  public int getMemcacheFlushSize() {
-    byte [] value = getValue(MEMCACHE_FLUSHSIZE_KEY);
+  public int getMemStoreFlushSize() {
+    byte [] value = getValue(MEMSTORE_FLUSHSIZE_KEY);
     if (value != null)
       return Integer.valueOf(Bytes.toString(value)).intValue();
-    return DEFAULT_MEMCACHE_FLUSH_SIZE;
+    return DEFAULT_MEMSTORE_FLUSH_SIZE;
   }
   
   /**
-   * @param memcacheFlushSize memory cache flush size for each hregion
+   * @param memstoreFlushSize memory cache flush size for each hregion
    */
-  public void setMemcacheFlushSize(int memcacheFlushSize) {
-    setValue(MEMCACHE_FLUSHSIZE_KEY,
-      Bytes.toBytes(Integer.toString(memcacheFlushSize)));
+  public void setMemStoreFlushSize(int memstoreFlushSize) {
+    setValue(MEMSTORE_FLUSHSIZE_KEY,
+      Bytes.toBytes(Integer.toString(memstoreFlushSize)));
   }
     
 //  public Collection<IndexSpecification> getIndexes() {

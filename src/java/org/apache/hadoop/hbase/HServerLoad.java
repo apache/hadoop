@@ -59,8 +59,8 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     private int stores;
     /** the number of storefiles for the region */
     private int storefiles;
-    /** the current size of the memcache for the region, in MB */
-    private int memcacheSizeMB;
+    /** the current size of the memstore for the region, in MB */
+    private int memstoreSizeMB;
     /** the current total size of storefile indexes for the region, in MB */
     private int storefileIndexSizeMB;
 
@@ -75,16 +75,16 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      * @param name
      * @param stores
      * @param storefiles
-     * @param memcacheSizeMB
+     * @param memstoreSizeMB
      * @param storefileIndexSizeMB
      */
     public RegionLoad(final byte[] name, final int stores,
-        final int storefiles, final int memcacheSizeMB,
+        final int storefiles, final int memstoreSizeMB,
         final int storefileIndexSizeMB) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
-      this.memcacheSizeMB = memcacheSizeMB;
+      this.memstoreSizeMB = memstoreSizeMB;
       this.storefileIndexSizeMB = storefileIndexSizeMB;
     }
 
@@ -119,10 +119,10 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     }
 
     /**
-     * @return the memcache size, in MB
+     * @return the memstore size, in MB
      */
-    public int getMemcacheSizeMB() {
-      return memcacheSizeMB;
+    public int getMemStoreSizeMB() {
+      return memstoreSizeMB;
     }
 
     /**
@@ -156,10 +156,10 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     }
 
     /**
-     * @param memcacheSizeMB the memcache size, in MB
+     * @param memstoreSizeMB the memstore size, in MB
      */
-    public void setMemcacheSizeMB(int memcacheSizeMB) {
-      this.memcacheSizeMB = memcacheSizeMB;
+    public void setMemStoreSizeMB(int memstoreSizeMB) {
+      this.memstoreSizeMB = memstoreSizeMB;
     }
 
     /**
@@ -177,7 +177,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       in.readFully(this.name);
       this.stores = in.readInt();
       this.storefiles = in.readInt();
-      this.memcacheSizeMB = in.readInt();
+      this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
     }
 
@@ -186,7 +186,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       out.write(name);
       out.writeInt(stores);
       out.writeInt(storefiles);
-      out.writeInt(memcacheSizeMB);
+      out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
     }
 
@@ -199,8 +199,8 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
         Integer.valueOf(this.stores));
       sb = Strings.appendKeyValue(sb, "storefiles",
         Integer.valueOf(this.storefiles));
-      sb = Strings.appendKeyValue(sb, "memcacheSize",
-        Integer.valueOf(this.memcacheSizeMB));
+      sb = Strings.appendKeyValue(sb, "memstoreSize",
+        Integer.valueOf(this.memstoreSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileIndexSize",
         Integer.valueOf(this.storefileIndexSizeMB));
       return sb.toString();
@@ -350,12 +350,12 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   }
 
   /**
-   * @return Size of memcaches in MB
+   * @return Size of memstores in MB
    */
-  public int getMemcacheSizeInMB() {
+  public int getMemStoreSizeInMB() {
     int count = 0;
     for (RegionLoad info: regionLoad)
-    	count += info.getMemcacheSizeMB();
+    	count += info.getMemStoreSizeMB();
     return count;
   }
 
@@ -411,16 +411,16 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
    * @param name
    * @param stores
    * @param storefiles
-   * @param memcacheSizeMB
+   * @param memstoreSizeMB
    * @param storefileIndexSizeMB
    * @deprecated Use {@link #addRegionInfo(RegionLoad)}
    */
   @Deprecated
   public void addRegionInfo(final byte[] name, final int stores,
-      final int storefiles, final int memcacheSizeMB,
+      final int storefiles, final int memstoreSizeMB,
       final int storefileIndexSizeMB) {
     this.regionLoad.add(new HServerLoad.RegionLoad(name, stores, storefiles,
-      memcacheSizeMB, storefileIndexSizeMB));
+      memstoreSizeMB, storefileIndexSizeMB));
   }
 
   // Writable

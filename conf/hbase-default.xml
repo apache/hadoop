@@ -230,20 +230,20 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.globalMemcache.upperLimit</name>
+    <name>hbase.regionserver.global.memstore.upperLimit</name>
     <value>0.4</value>
-    <description>Maximum size of all memcaches in a region server before new 
-      updates are blocked and flushes are forced. Defaults to 40% of heap.
+    <description>Maximum size of all memstores in a region server before new 
+      updates are blocked and flushes are forced. Defaults to 40% of heap
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.globalMemcache.lowerLimit</name>
+    <name>hbase.regionserver.global.memstore.lowerLimit</name>
     <value>0.25</value>
-    <description>When memcaches are being forced to flush to make room in
+    <description>When memstores are being forced to flush to make room in
       memory, keep flushing until we hit this mark. Defaults to 30% of heap. 
-      This value equal to hbase.regionserver.globalmemcache.upperLimit causes
+      This value equal to hbase.regionserver.global.memstore.upperLimit causes
       the minimum possible flushing to occur when updates are blocked due to 
-      memcache limiting.
+      memstore limiting.
     </description>
   </property>  
   <property>
@@ -268,22 +268,22 @@
     </description>
   </property>
   <property>
-    <name>hbase.hregion.memcache.flush.size</name>
+    <name>hbase.hregion.memstore.flush.size</name>
     <value>67108864</value>
     <description>
-    A HRegion memcache will be flushed to disk if size of the memcache
+    Memstore will be flushed to disk if size of the memstore
     exceeds this number of bytes.  Value is checked by a thread that runs
-    every hbase.server.thread.wakefrequency.  
+    every hbase.server.thread.wakefrequency.
     </description>
   </property>
   <property>
-    <name>hbase.hregion.memcache.block.multiplier</name>
+    <name>hbase.hregion.memstore.block.multiplier</name>
     <value>2</value>
     <description>
-    Block updates if memcache has hbase.hregion.block.memcache
+    Block updates if memstore has hbase.hregion.block.memstore
     time hbase.hregion.flush.size bytes.  Useful preventing
-    runaway memcache during spikes in update traffic.  Without an
-    upper-bound, memcache fills such that when it flushes the
+    runaway memstore during spikes in update traffic.  Without an
+    upper-bound, memstore fills such that when it flushes the
     resultant flush files take a long time to compact or split, or
     worse, we OOME.
     </description>
@@ -302,7 +302,7 @@
     <value>3</value>
     <description>
     If more than this number of HStoreFiles in any one HStore
-    (one HStoreFile is written per flush of memcache) then a compaction
+    (one HStoreFile is written per flush of memstore) then a compaction
     is run to rewrite all HStoreFiles files as one.  Larger numbers
     put off compaction but when it runs, it takes longer to complete.
     During a compaction, updates cannot be flushed to disk.  Long

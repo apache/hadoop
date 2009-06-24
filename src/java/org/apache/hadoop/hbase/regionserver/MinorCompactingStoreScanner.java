@@ -20,19 +20,17 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.util.Bytes;
-
-import java.util.List;
 import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 
 /**
  * A scanner that does a minor compaction at the same time.  Doesn't need to
- * implement ChangedReadersObserver, since it doesn't scan memcache, only store files
- * and optionally the memcache-snapshot.
+ * implement ChangedReadersObserver, since it doesn't scan memstore, only store files
+ * and optionally the memstore-snapshot.
  */
 public class MinorCompactingStoreScanner implements KeyValueScanner, InternalScanner {
 

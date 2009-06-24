@@ -88,13 +88,13 @@ public class TestStore extends TestCase {
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
   /**
-   * Getting data from memcache only
+   * Getting data from memstore only
    * @throws IOException
    */
-  public void testGet_FromMemCacheOnly() throws IOException {
+  public void testGet_FromMemStoreOnly() throws IOException {
     init(this.getName());
     
-    //Put data in memcache
+    //Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, null));
     this.store.add(new KeyValue(row, family, qf2, null));
     this.store.add(new KeyValue(row, family, qf3, null));
@@ -116,7 +116,7 @@ public class TestStore extends TestCase {
   public void testGet_FromFilesOnly() throws IOException {
     init(this.getName());
 
-    //Put data in memcache
+    //Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, null));
     this.store.add(new KeyValue(row, family, qf2, null));
     //flush
@@ -145,13 +145,13 @@ public class TestStore extends TestCase {
   }
 
   /**
-   * Getting data from memcache and files
+   * Getting data from memstore and files
    * @throws IOException
    */
-  public void testGet_FromMemCacheAndFiles() throws IOException {
+  public void testGet_FromMemStoreAndFiles() throws IOException {
     init(this.getName());
 
-    //Put data in memcache
+    //Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, null));
     this.store.add(new KeyValue(row, family, qf2, null));
     //flush
@@ -181,7 +181,7 @@ public class TestStore extends TestCase {
     this.store.snapshot();
     this.store.flushCache(id++);
     assertEquals(storeFilessize, this.store.getStorefiles().size());
-    assertEquals(0, this.store.memcache.memcache.size());
+    assertEquals(0, this.store.memstore.memstore.size());
   }
 
   private void assertCheck() {
@@ -196,14 +196,14 @@ public class TestStore extends TestCase {
   //////////////////////////////////////////////////////////////////////////////
   /**
    * Testing if the update in place works. When you want to update a value that
-   * is already in memcache, you don't delete it and put a new one, but just 
+   * is already in memstore, you don't delete it and put a new one, but just 
    * update the value in the original KeyValue
    * @throws IOException
    */
   public void testIncrementColumnValue_UpdatingInPlace() throws IOException {
     init(this.getName());
 
-    //Put data in memcache
+    //Put data in memstore
     long value = 1L;
     long amount = 3L;
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
@@ -227,7 +227,7 @@ public class TestStore extends TestCase {
   throws IOException {
     init(this.getName());
 
-    //Put data in memcache
+    //Put data in memstore
     long value = 3L;
     long amount = -1L;
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
@@ -250,7 +250,7 @@ public class TestStore extends TestCase {
   public void testIncrementColumnValue_AddingNew() throws IOException {
     init(this.getName());
     
-    //Put data in memcache
+    //Put data in memstore
     long value = 1L;
     long amount = 3L;
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
@@ -268,14 +268,14 @@ public class TestStore extends TestCase {
   }
 
   /**
-   * When we have the key in a file add a new key + value to memcache with the 
+   * When we have the key in a file add a new key + value to memstore with the 
    * updates value. 
    * @throws IOException
    */
   public void testIncrementColumnValue_UpdatingFromSF() throws IOException {
     init(this.getName());
     
-    //Put data in memcache
+    //Put data in memstore
     long value = 1L;
     long amount = 3L;
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
@@ -296,14 +296,14 @@ public class TestStore extends TestCase {
 
   /**
    * Same as testIncrementColumnValue_AddingNew() except that the keys are
-   * checked in file not in memcache
+   * checked in file not in memstore
    * @throws IOException
    */
   public void testIncrementColumnValue_AddingNewAfterSFCheck() 
   throws IOException {
     init(this.getName());
     
-    //Put data in memcache
+    //Put data in memstore
     long value = 1L;
     long amount = 3L;
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));

@@ -221,7 +221,7 @@ public class TestClassMigration extends TestCase {
       }
       // The below older timestamps sorting ahead of newer timestamps looks
       // wrong but it is intentional. This way, newer timestamps are first
-      // found when we iterate over a memcache and newer versions are the
+      // found when we iterate over a memstore and newer versions are the
       // first we trip over when reading from a store file.
       if (this.timestamp < other.timestamp) {
         result = 1;

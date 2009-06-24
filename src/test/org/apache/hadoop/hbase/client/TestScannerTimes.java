@@ -22,14 +22,10 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -85,7 +81,7 @@ public class TestScannerTimes extends HBaseClusterTestCase {
     
     long times[] = new long[3];
     
-    // First scan the memcache
+    // First scan the memstore
     
     Scan scan = new Scan();
     scan.addFamily(FAM1);
