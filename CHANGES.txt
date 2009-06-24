@@ -393,6 +393,8 @@ Release 0.20.0 - Unreleased
    HBASE-1532  UI Visibility into ZooKeeper
    HBASE-1572  Zookeeper log4j property set to ERROR on default, same output
                when cluster working and not working (Jon Gray via Stack)
+   HBASE-1576  TIF needs to be able to set scanner caching size for smaller
+               row tables & performance
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

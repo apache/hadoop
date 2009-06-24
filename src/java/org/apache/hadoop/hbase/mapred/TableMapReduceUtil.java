@@ -168,5 +168,17 @@ public class TableMapReduceUtil {
     int regions = outputTable.getRegionsInfo().size();
     job.setNumMapTasks(regions);
   }
-  
+
+  /**
+   * Sets the number of rows to return and cache with each scanner iteration.
+   * Higher caching values will enable faster mapreduce jobs at the expense of
+   * requiring more heap to contain the cached rows.
+   * 
+   * @param job The current job configuration to adjust.
+   * @param batchSize The number of rows to return in batch with each scanner
+   * iteration.
+   */
+  public static void setScannerCaching(JobConf job, int batchSize) {
+    job.setInt("hbase.client.scanner.caching", batchSize);
+  }
 }
