@@ -507,6 +507,8 @@
       <sysproperty key="java.library.path"
        value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
       <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
+      <sysproperty key="io.compression.codec.lzo.class"
+		  value="${io.compression.codec.lzo.class}"/>
       <!-- set compile.c++ in the child jvm only if it is set -->
       <syspropertyset dynamic="no">
          <propertyref name="compile.c++"/>

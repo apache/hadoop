@@ -155,6 +155,8 @@ Trunk (unreleased changes)
     HADOOP-5897. Add name-node metrics to capture java heap usage.
     (Suresh Srinivas via shv)
 
+    HADOOP-3315. Add a new, binary file foramt, TFile. (Hong Tang via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
