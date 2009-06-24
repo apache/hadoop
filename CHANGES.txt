@@ -31,3 +31,10 @@ Trunk (unreleased changes)
 
     HDFS-195. Handle expired tokens when write pipeline is restablished.
     (Kan Zhang via rangadi)
+
+Release 0.20.1 - Unreleased
+
+  IMPROVEMENTS
+
+    HDFS-438. Improve help message for space quota command. (Raghu Angadi)
+

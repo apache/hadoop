@@ -16068,19 +16068,15 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*The directory quota is a long integer that puts a hard limit( )*</expected-output>
+          <expected-output>^( |\t)*The space quota is a long integer that puts a hard limit( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*on the number of names in the directory tree.( )*</expected-output>
+          <expected-output>^( |\t)*on the total size of all the files under the directory tree.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*2. user is not an administrator.( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*It does not fault if the directory has no quota.( )*</expected-output>
+          <expected-output>^( |\t)*2. user is not an administrator, or( )*</expected-output>
         </comparator>
       </comparators>
     </test>

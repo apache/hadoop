@@ -73,7 +73,8 @@ effort for each directory, with faults reported if the directory does not exist 
 directory has no quota. </li>
 
  <li> <code>dfsadmin -setSpaceQuota &lt;N> &lt;directory>...&lt;directory></code> <br /> Set the space quota to be
-N bytes for each directory. N can also be specified with a binary prefix for convenience, for e.g. 50g for 50 gigabytes and 
+N bytes for each directory. This is a hard limit on total size of all the files under the directory tree.
+The space quota takes replication also into account, i.e. one GB of data with replication of 3 consumes 3GB of quota. N can also be specified with a binary prefix for convenience, for e.g. 50g for 50 gigabytes and 
 2t for 2 terabytes etc. Best effort for each directory, with faults reported if <code>N</code> is
 neither zero nor a positive integer, the directory does not exist or it is a file, or the directory would immediately exceed
 the new quota. </li>
