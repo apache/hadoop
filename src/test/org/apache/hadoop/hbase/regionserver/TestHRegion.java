@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.Iterator;
 
@@ -414,10 +415,12 @@ public class TestHRegion extends HBaseTestCase {
     // extract the key values out the memcache:
     // This is kinda hacky, but better than nothing...
     long now = System.currentTimeMillis();
-    KeyValue firstKv = region.getStore(fam1).memcache.memcache.first();
+    KeyValue firstKv = region.getStore(fam1).memcache.memcache.firstKey();
     assertTrue(firstKv.getTimestamp() <= now);
     now = firstKv.getTimestamp();
-    for (KeyValue kv : region.getStore(fam1).memcache.memcache) {
+    for (Map.Entry<KeyValue, ?> entry:
+        region.getStore(fam1).memcache.memcache.entrySet()) {
+      KeyValue kv = entry.getKey();
       assertTrue(kv.getTimestamp() <= now);
       now = kv.getTimestamp();
     }

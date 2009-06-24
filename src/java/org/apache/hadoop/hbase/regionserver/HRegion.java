@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -312,8 +311,6 @@ public class HRegion implements HConstants { // , Writable{
       }
     }
 
-    // Play log if one.  Delete when done.
-    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -1479,13 +1476,6 @@ public class HRegion implements HConstants { // , Writable{
   private boolean isFlushSize(final long size) {
     return size > this.memcacheFlushSize;
   }
-  
-  // Do any reconstruction needed from the log
-  protected void doReconstructionLog(Path oldLogFile, long minSeqId, long maxSeqId,
-    Progressable reporter)
-  throws UnsupportedEncodingException, IOException {
-    // Nothing to do (Replaying is done in HStores)
-  }
 
   protected Store instantiateHStore(Path baseDir, 
     HColumnDescriptor c, Path oldLogFile, Progressable reporter)
@@ -1663,11 +1653,10 @@ public class HRegion implements HConstants { // , Writable{
    * It is used to combine scanners from multiple Stores (aka column families).
    */
   class RegionScanner implements InternalScanner {
-    
     private KeyValueHeap storeHeap;
     private byte [] stopRow;
     
-    RegionScanner(Scan scan) throws IOException {
+    RegionScanner(Scan scan) {
       if(Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
       } else {
@@ -1675,21 +1664,11 @@ public class HRegion implements HConstants { // , Writable{
       }
       
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-      try {
-        for(Map.Entry<byte[], NavigableSet<byte[]>> entry : 
+      for(Map.Entry<byte[], NavigableSet<byte[]>> entry : 
           scan.getFamilyMap().entrySet()) {
-          Store store = stores.get(entry.getKey());
-          scanners.add(store.getScanner(scan, entry.getValue()));
-        }
-      } catch (IOException e) {
-        for(KeyValueScanner scanner : scanners) {
-          if(scanner != null) {
-            close(scanner);
-          }
-        }
-        throw e;
+        Store store = stores.get(entry.getKey());
+        scanners.add(store.getScanner(scan, entry.getValue()));
       }
-      
       this.storeHeap = 
         new KeyValueHeap(scanners.toArray(new KeyValueScanner[0]), comparator);
       

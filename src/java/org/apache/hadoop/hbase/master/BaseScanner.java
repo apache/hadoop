@@ -154,12 +154,10 @@ abstract class BaseScanner extends Chore implements HConstants {
     int rows = 0;
     try {
       regionServer = master.connection.getHRegionConnection(region.getServer());
-      
       scannerId = regionServer.openScanner(region.getRegionName(),
-          new Scan().addFamily(HConstants.CATALOG_FAMILY));
+        new Scan().addFamily(HConstants.CATALOG_FAMILY));
       while (true) {
         Result values = regionServer.next(scannerId);
-        
         if (values == null || values.size() == 0) {
           break;
         }

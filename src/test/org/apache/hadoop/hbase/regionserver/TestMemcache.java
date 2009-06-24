@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.TreeSet;
 
 import junit.framework.TestCase;
@@ -108,7 +108,7 @@ public class TestMemcache extends TestCase {
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.memcache);
       runSnapshot(this.memcache);
-      Set<KeyValue> ss = this.memcache.getSnapshot();
+      Map<KeyValue, ?> ss = this.memcache.getSnapshot();
       assertEquals("History not being cleared", 0, ss.size());
     }
   }
@@ -153,9 +153,9 @@ public class TestMemcache extends TestCase {
 //      System.out.println(key);
     }
     int index = start;
-    for (KeyValue kv: mc.memcache) {
-      System.out.println(kv);
-      byte [] b = kv.getRow();
+    for (Map.Entry<KeyValue, ?> entry: mc.memcache.entrySet()) {
+      System.out.println(entry);
+      byte [] b = entry.getKey().getRow();
       // Hardcoded offsets into String
       String str = Bytes.toString(b, 13, 4);
       byte [] bb = Bytes.toBytes(index);
@@ -454,9 +454,9 @@ public class TestMemcache extends TestCase {
     expected.add(put1);
     
     assertEquals(3, memcache.memcache.size());
-    int i=0;
-    for(KeyValue actual : memcache.memcache) {
-      assertEquals(expected.get(i++), actual);
+    int i = 0;
+    for(Map.Entry<KeyValue, ?> entry : memcache.memcache.entrySet()) {
+      assertEquals(expected.get(i++), entry.getKey());
     }
   }
   
@@ -487,9 +487,9 @@ public class TestMemcache extends TestCase {
     expected.add(del2);
     
     assertEquals(2, memcache.memcache.size());
-    int i=0;
-    for(KeyValue actual : memcache.memcache) {
-      assertEquals(expected.get(i++), actual);
+    int i = 0;
+    for(Map.Entry<KeyValue, ?> entry : memcache.memcache.entrySet()) {
+      assertEquals(expected.get(i++), entry.getKey());
     }
   }
   
@@ -522,9 +522,9 @@ public class TestMemcache extends TestCase {
     expected.add(put4);
     
     assertEquals(2, memcache.memcache.size());
-    int i=0;
-    for(KeyValue actual : memcache.memcache) {
-      assertEquals(expected.get(i++), actual);
+    int i = 0;
+    for(Map.Entry<KeyValue, ?> entry : memcache.memcache.entrySet()) {
+      assertEquals(expected.get(i++), entry.getKey());
     }
   }
   
@@ -538,7 +538,7 @@ public class TestMemcache extends TestCase {
     KeyValue delete = new KeyValue(row, fam, qf, ts, KeyValue.Type.Delete, val);
     memcache.delete(delete);
     assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.first());
+    assertEquals(delete, memcache.memcache.firstKey());
   }
 
   public void testRetainsDeleteVersion() throws IOException {
@@ -551,7 +551,7 @@ public class TestMemcache extends TestCase {
     memcache.delete(delete);
 
     assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.first());
+    assertEquals(delete, memcache.memcache.firstKey());
   }
   public void testRetainsDeleteColumn() throws IOException {
     // add a put to memcache
@@ -563,7 +563,7 @@ public class TestMemcache extends TestCase {
     memcache.delete(delete);
 
     assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.first());
+    assertEquals(delete, memcache.memcache.firstKey());
   }
   public void testRetainsDeleteFamily() throws IOException {
     // add a put to memcache
@@ -575,7 +575,7 @@ public class TestMemcache extends TestCase {
     memcache.delete(delete);
 
     assertEquals(1, memcache.memcache.size());
-    assertEquals(delete, memcache.memcache.first());
+    assertEquals(delete, memcache.memcache.firstKey());
   }
 
   
@@ -609,7 +609,7 @@ public class TestMemcache extends TestCase {
     // Save off old state.
     int oldHistorySize = hmc.getSnapshot().size();
     hmc.snapshot();
-    Set<KeyValue> ss = hmc.getSnapshot();
+    Map<KeyValue, ?> ss = hmc.getSnapshot();
     // Make some assertions about what just happened.
     assertTrue("History size has not increased", oldHistorySize < ss.size());
     hmc.clearSnapshot(ss);

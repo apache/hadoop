@@ -395,6 +395,8 @@ Release 0.20.0 - Unreleased
                when cluster working and not working (Jon Gray via Stack)
    HBASE-1576  TIF needs to be able to set scanner caching size for smaller
                row tables & performance
+   HBASE-1577  Move memcache to ConcurrentSkipListMap from
+               ConcurrentSkipListSet
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

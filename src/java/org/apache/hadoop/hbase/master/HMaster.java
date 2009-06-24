@@ -235,7 +235,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     // dont retry too much
     conf.setInt("hbase.client.retries.number", 3);
-
     this.connection = ServerConnectionManager.getConnection(conf);
 
     this.metaRescanInterval =
