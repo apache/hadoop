@@ -90,9 +90,10 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
   private long missCount = 0;
 
   /** Memory overhead of this Object (for HeapSize) */
-  private static final int OVERHEAD = (int)ClassSize.alignSize(HeapSize.OBJECT +
-      1 * Bytes.SIZEOF_FLOAT + 2 * Bytes.SIZEOF_INT + 1 * HeapSize.ARRAY + 
-      3 * HeapSize.REFERENCE + 4 * Bytes.SIZEOF_LONG);
+  private static final int OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT + 1 * Bytes.SIZEOF_FLOAT + 2 * Bytes.SIZEOF_INT + 
+      ClassSize.align(ClassSize.ARRAY) + 3 * ClassSize.REFERENCE + 
+      4 * Bytes.SIZEOF_LONG);
   
   /**
    * Constructs a new, empty map with the specified initial capacity,
@@ -119,7 +120,7 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
     if (loadFactor <= 0 || Float.isNaN(loadFactor)) {
       throw new IllegalArgumentException("Load factor must be > 0");
     }
-    if (maxMemUsage <= (OVERHEAD + initialCapacity * HeapSize.REFERENCE)) {
+    if (maxMemUsage <= (OVERHEAD + initialCapacity * ClassSize.REFERENCE)) {
       throw new IllegalArgumentException("Max memory usage too small to " +
       "support base overhead");
     }
@@ -300,7 +301,7 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
    * @return memory usage of map in bytes
    */
   public long heapSize() {
-    return (memTotal - memFree);
+    return ClassSize.align(memTotal - memFree);
   }
   
   //--------------------------------------------------------------------------
@@ -503,7 +504,7 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
    * @return baseline memory overhead of object in bytes
    */
   private long getMinimumUsage() {
-    return OVERHEAD + (entries.length * HeapSize.REFERENCE);
+    return OVERHEAD + (entries.length * ClassSize.REFERENCE);
   }
   
   //--------------------------------------------------------------------------
@@ -724,7 +725,7 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
     }
 
     // Determine how much additional space will be required to grow the array
-    long requiredSpace = (newCapacity - oldCapacity) * HeapSize.REFERENCE;
+    long requiredSpace = (newCapacity - oldCapacity) * ClassSize.REFERENCE;
     
     // Verify/enforce we have sufficient memory to grow
     checkAndFreeMemory(requiredSpace);
@@ -833,7 +834,6 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
    */
   private void init() {
     memFree -= OVERHEAD;
-    memFree -= (entries.length * HeapSize.REFERENCE);
   }
   
   //--------------------------------------------------------------------------
@@ -975,8 +975,9 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
     protected long heapSize;
 
     /** The baseline overhead memory usage of this class */
-    static final int OVERHEAD = HeapSize.OBJECT + 5 * HeapSize.REFERENCE + 
-      1 * Bytes.SIZEOF_INT + 1 * Bytes.SIZEOF_LONG;
+    static final int OVERHEAD = ClassSize.OBJECT + 
+      5 * ClassSize.REFERENCE + 1 * Bytes.SIZEOF_INT + 
+      1 * Bytes.SIZEOF_LONG;
     
     /**
      * Create a new entry.
@@ -1139,8 +1140,8 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
      * @return size of String in bytes
      */
     private long heapSize(String s) {
-      return HeapSize.STRING_SIZE + 
-        ClassSize.alignSize(s.length() * Bytes.SIZEOF_CHAR);
+      return ClassSize.STRING + ClassSize.align(ClassSize.ARRAY + 
+          s.length() * Bytes.SIZEOF_CHAR);
     }
     
     /**
@@ -1148,7 +1149,8 @@ implements HeapSize, Map<String,ByteBuffer>, BlockCache {
      * @return size of ByteBuffer in bytes
      */
     private long heapSize(ByteBuffer b) {
-      return HeapSize.BYTE_BUFFER + ClassSize.alignSize(b.capacity());
+      return ClassSize.BYTE_BUFFER + 
+        ClassSize.align(ClassSize.ARRAY + b.capacity());
     }
     
   }

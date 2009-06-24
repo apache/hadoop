@@ -38,38 +38,6 @@ package org.apache.hadoop.hbase.io;
  * </pre>
  */
 public interface HeapSize {
-
-  /** Reference size is 8 bytes on 64-bit, 4 bytes on 32-bit */
-  static final int REFERENCE = 8;
-  
-  /** Object overhead is minimum 2 * reference size (8 bytes on 64-bit) */
-  static final int OBJECT = 2 * REFERENCE;
-  
-  /** Array overhead */
-  static final int ARRAY = 3 * REFERENCE;
-
-  /** OverHead for nested arrays */
-  static final int MULTI_ARRAY = (4 * REFERENCE) + ARRAY;
-  
-  /** Byte arrays are fixed size below plus its length, 8 byte aligned */
-  static final int BYTE_ARRAY = 3 * REFERENCE;
-  
-  /** Overhead for ByteBuffer */
-  static final int BYTE_BUFFER = 56;
-  
-  /** String overhead */
-  static final int STRING_SIZE = 64;
-  
-  /** Overhead for ArrayList(0) */
-  static final int ARRAYLIST_SIZE = 64;
-  
-  /** Overhead for TreeMap */
-  static final int TREEMAP_SIZE = 80;
-  
-  /** Overhead for entry in map */
-  static final int MAP_ENTRY_SIZE = 64;
-  
-  
   /**
    * @return Approximate 'exclusive deep size' of implementing object.  Includes
    * count of payload and hosting object sizings.

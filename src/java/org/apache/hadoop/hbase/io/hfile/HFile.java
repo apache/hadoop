@@ -1339,10 +1339,6 @@ public class HFile {
      */
     final RawComparator<byte []> comparator;
   
-    static final int OVERHEAD = (int)ClassSize.alignSize(HeapSize.OBJECT + 
-        2 * Bytes.SIZEOF_INT + 1 * HeapSize.MULTI_ARRAY +  2 * HeapSize.ARRAY + 
-        4 * HeapSize.REFERENCE);
-    
     /*
      * Shutdown default constructor
      */
@@ -1498,23 +1494,28 @@ public class HFile {
     }
 
     public long heapSize() {
-      long size = OVERHEAD;
-      
+      long heapsize = ClassSize.align(ClassSize.OBJECT + 
+          2 * Bytes.SIZEOF_INT + (3 + 1) * ClassSize.REFERENCE);
       //Calculating the size of blockKeys 
       if(blockKeys != null) {
+        //Adding array + references overhead
+        heapsize += ClassSize.align(ClassSize.ARRAY + 
+            blockKeys.length * ClassSize.REFERENCE);
+        //Adding bytes
         for(byte [] bs : blockKeys) {
-          size += HeapSize.MULTI_ARRAY;
-          size += ClassSize.alignSize(bs.length);
+          heapsize += ClassSize.align(ClassSize.ARRAY + bs.length);
         }
       }
       if(blockOffsets != null) {
-        size += blockOffsets.length * Bytes.SIZEOF_LONG;
+        heapsize += ClassSize.align(ClassSize.ARRAY + 
+            blockOffsets.length * Bytes.SIZEOF_LONG);
       }
       if(blockDataSizes != null) {
-        size += blockDataSizes.length * Bytes.SIZEOF_INT;
+        heapsize += ClassSize.align(ClassSize.ARRAY + 
+            blockDataSizes.length * Bytes.SIZEOF_INT);
       }
       
-      return size;
+      return ClassSize.align(heapsize);
     }
     
   }

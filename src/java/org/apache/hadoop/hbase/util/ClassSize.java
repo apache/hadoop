@@ -22,10 +22,10 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.io.HeapSize;
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -36,34 +36,72 @@ import org.apache.hadoop.hbase.io.HeapSize;
 public class ClassSize {
   static final Log LOG = LogFactory.getLog(ClassSize.class);
   
-  private int refSize;
-  private int minObjectSize;
+  private static int nrOfRefsPerObj = 2;
+
+  /** Array overhead */
+  public static int ARRAY = 0;
+
+  /** Overhead for ArrayList(0) */
+  public static int ARRAYLIST = 0;
+  
+  /** Overhead for ByteBuffer */
+  public static int BYTE_BUFFER = 0;
+
+  /** Overhead for an Integer */
+  public static int INTEGER = 0;
+  
+  /** Overhead for entry in map */
+  public static int MAP_ENTRY = 0;
+  
+  /** Object overhead is minimum 2 * reference size (8 bytes on 64-bit) */
+  public static int OBJECT = 0;
+  
+  /** Reference size is 8 bytes on 64-bit, 4 bytes on 32-bit */
+  public static int REFERENCE = 0;
+  
+  /** String overhead */
+  public static int STRING = 0;
+
+  /** Overhead for TreeMap */
+  public static int TREEMAP = 0;
+
+  private static final String THIRTY_TWO = "32";
 
   /**
-   * Constructor
-   * @throws Exception
+   * Method for reading the arc settings and setting overheads according
+   * to 32-bit or 64-bit architecture.
    */
-  public ClassSize() throws Exception{
+  static {
     // Figure out whether this is a 32 or 64 bit machine.
-    Runtime runtime = Runtime.getRuntime();
-    int loops = 10;
-    int sz = 0;
-    for(int i = 0; i < loops; i++) {
-      cleaner(runtime, i);
-      long memBase = runtime.totalMemory() - runtime.freeMemory();  
-      Object[] junk = new Object[10000];
-      cleaner(runtime, i);
-      long memUsed = runtime.totalMemory() - runtime.freeMemory() - memBase;
-      sz = (int)((memUsed + junk.length/2)/junk.length);
-      if(sz > 0 ) {
-        break;
-      }
+    Properties sysProps = System.getProperties();
+    String arcModel = sysProps.getProperty("sun.arch.data.model");
+    
+    //Default value is set to 8, covering the case when arcModel is unknown
+    REFERENCE = 8;
+    if (arcModel.equals(THIRTY_TWO)) {
+      REFERENCE = 4;
     }
+    
+    ARRAY = 3 * REFERENCE;
 
-    refSize = ( 4 > sz) ? 4 : sz;
-    minObjectSize = 4*refSize;
+    ARRAYLIST = align(OBJECT + REFERENCE + Bytes.SIZEOF_INT + 
+        align(Bytes.SIZEOF_INT));
+    
+    BYTE_BUFFER = align(OBJECT + REFERENCE + Bytes.SIZEOF_INT + 
+        3 * Bytes.SIZEOF_BOOLEAN + 4 * Bytes.SIZEOF_INT + Bytes.SIZEOF_LONG); 
+    
+    INTEGER = align(OBJECT + Bytes.SIZEOF_INT);
+    
+    MAP_ENTRY = align(OBJECT + 5 * REFERENCE + Bytes.SIZEOF_BOOLEAN);
+    
+    OBJECT = 2 * REFERENCE;
+    
+    TREEMAP = align(OBJECT + 2 * Bytes.SIZEOF_INT + (5+2) * REFERENCE + 
+        ClassSize.align(OBJECT + Bytes.SIZEOF_INT));
+    
+    STRING = align(OBJECT + REFERENCE + 3 * Bytes.SIZEOF_INT);
   }
-
+  
   /**
    * The estimate of the size of a class instance depends on whether the JVM 
    * uses 32 or 64 bit addresses, that is it depends on the size of an object 
@@ -78,10 +116,12 @@ public class ClassSize {
    * primitives, the second the number of arrays and the third the number of
    * references.
    */
-  private int [] getSizeCoefficients(Class cl, boolean debug) {
+  @SuppressWarnings("unchecked")
+  private static int [] getSizeCoefficients(Class cl, boolean debug) {
     int primitives = 0;
     int arrays = 0;
-    int references = HeapSize.OBJECT / HeapSize.REFERENCE;
+    //The number of references that a new object takes
+    int references = nrOfRefsPerObj; 
 
     for( ; null != cl; cl = cl.getSuperclass()) {
       Field[] field = cl.getDeclaredFields();
@@ -91,8 +131,9 @@ public class ClassSize {
             Class fieldClass = field[i].getType();
             if( fieldClass.isArray()){
               arrays++;
+              references++;
             }
-            else if(! fieldClass.isPrimitive()){
+            else if(!fieldClass.isPrimitive()){
               references++;
             }
             else {// Is simple primitive
@@ -136,21 +177,21 @@ public class ClassSize {
    *
    * @return the size estimate, in bytes
    */
-  private long estimateBaseFromCoefficients(int [] coeff, boolean debug) {
-    int size = coeff[0] + (coeff[1]*4 + coeff[2])*refSize;
+  private static long estimateBaseFromCoefficients(int [] coeff, boolean debug) {
+    long size = coeff[0] + align(coeff[1]*ARRAY) + coeff[2]*REFERENCE;
 
     // Round up to a multiple of 8
-    size = (int)alignSize(size);
+    size = align(size);
     if(debug) {
       if (LOG.isDebugEnabled()) {
         // Write out region name as string and its encoded name.
         LOG.debug("Primitives " + coeff[0] + ", arrays " + coeff[1] +
-            ", references(inlcuding " + HeapSize.OBJECT + 
-            ", for object overhead) " + coeff[2] + ", refSize " + refSize + 
+            ", references(inlcuding " + nrOfRefsPerObj + 
+            ", for object overhead) " + coeff[2] + ", refSize " + REFERENCE + 
             ", size " + size);
       }
     }
-    return (size < minObjectSize) ? minObjectSize : size;
+    return size;
   } 
 
   /**
@@ -162,33 +203,29 @@ public class ClassSize {
    *
    * @return the size estimate in bytes.
    */
-  public long estimateBase(Class cl, boolean debug) {
+  @SuppressWarnings("unchecked")
+  public static long estimateBase(Class cl, boolean debug) {
     return estimateBaseFromCoefficients( getSizeCoefficients(cl, debug), debug);
   } 
 
   /**
-   * Tries to clear all the memory used to estimate the reference size for the
-   * current JVM
-   * @param runtime
-   * @param i
-   * @throws Exception
+   * Aligns a number to 8.
+   * @param num number to align to 8
+   * @return smallest number >= input that is a multiple of 8
    */
-  private void cleaner(Runtime runtime, int i) throws Exception{
-    Thread.sleep(i*1000);
-    runtime.gc();runtime.gc(); runtime.gc();runtime.gc();runtime.gc();
-    runtime.runFinalization();
+  public static int align(int num) {
+    return (int)(align((long)num));
   }
-
   
   /**
    * Aligns a number to 8.
    * @param num number to align to 8
    * @return smallest number >= input that is a multiple of 8
    */
-  public static long alignSize(int num) {
-    int aligned = (num + 7)/8;
-    aligned *= 8;
-    return aligned;
+  public static long align(long num) {
+    //The 7 comes from that the alignSize is 8 which is the number of bytes
+    //stored and sent together
+    return  ((num + 7) >> 3) << 3;
   }
   
 }

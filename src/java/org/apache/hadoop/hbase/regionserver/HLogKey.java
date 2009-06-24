@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -42,7 +43,7 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
   private long logSeqNum;
   // Time at which this edit was written.
   private long writeTime;
-  private int HEAP_TAX = HeapSize.OBJECT + (2 * HeapSize.BYTE_ARRAY) +
+  private int HEAP_TAX = ClassSize.OBJECT + (2 * ClassSize.ARRAY) +
     (2 * Bytes.SIZEOF_LONG);
 
   /** Writable Consructor -- Do not use. */

@@ -1784,8 +1784,9 @@ public class KeyValue implements Writable, HeapSize {
   
   // HeapSize
   public long heapSize() {
-    return ClassSize.alignSize(HeapSize.OBJECT + HeapSize.REFERENCE + 
-        HeapSize.BYTE_ARRAY + length + (2 * Bytes.SIZEOF_INT));
+    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE + 
+        ClassSize.align(ClassSize.ARRAY + length) + 
+        (2 * Bytes.SIZEOF_INT));
   }
   
   // Writable

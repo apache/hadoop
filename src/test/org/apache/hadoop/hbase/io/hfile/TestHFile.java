@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.BlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -251,25 +250,22 @@ public class TestHFile extends HBaseTestCase {
   /**
    * Checks if the HeapSize calculator is within reason
    */
-  public void testHeapSizeForBlockIndex() {
-    ClassSize cs = null;
+  @SuppressWarnings("unchecked")
+  public void testHeapSizeForBlockIndex() throws IOException{
     Class cl = null;
     long expected = 0L;
     long actual = 0L;
-    try {
-      cs = new ClassSize();
-    } catch(Exception e) {}
     
-    //KeyValue
     cl = BlockIndex.class;
-    expected = cs.estimateBase(cl, false);
+    expected = ClassSize.estimateBase(cl, false);
     BlockIndex bi = new BlockIndex(Bytes.BYTES_RAWCOMPARATOR);
     actual = bi.heapSize();
-    //Since we have a [[]] in BlockIndex and the checker only sees the [] we 
-    // miss a MULTI_ARRAY which is 4*Reference = 32 B
-    actual -= 32;
+    //Since the arrays in BlockIndex(byte [][] blockKeys, long [] blockOffsets,
+    //int [] blockDataSizes) are all null they are not going to show up in the
+    //HeapSize calculation, so need to remove those array costs from ecpected.
+    expected -= ClassSize.align(3 * ClassSize.ARRAY);
     if(expected != actual) {
-      cs.estimateBase(cl, true);
+      ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
   }

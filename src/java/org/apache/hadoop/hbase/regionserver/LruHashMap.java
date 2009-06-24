@@ -28,12 +28,10 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-
-
 
 /**
  * The LruHashMap is a memory-aware HashMap with a configurable maximum
@@ -67,8 +65,8 @@ implements HeapSize, Map<K,V> {
   
   /** Memory overhead of this Object (for HeapSize) */
   private static final int OVERHEAD = 5 * Bytes.SIZEOF_LONG + 
-    2 * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_FLOAT + 3 * HeapSize.REFERENCE + 
-    1 * HeapSize.ARRAY;
+    2 * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_FLOAT + 3 * ClassSize.REFERENCE + 
+    1 * ClassSize.ARRAY;
   
   /** Load factor allowed (usually 75%) */
   private final float loadFactor;
@@ -119,7 +117,7 @@ implements HeapSize, Map<K,V> {
     if (loadFactor <= 0 || Float.isNaN(loadFactor)) {
       throw new IllegalArgumentException("Load factor must be > 0");
     }
-    if (maxMemUsage <= (OVERHEAD + initialCapacity * HeapSize.REFERENCE)) {
+    if (maxMemUsage <= (OVERHEAD + initialCapacity * ClassSize.REFERENCE)) {
       throw new IllegalArgumentException("Max memory usage too small to " +
       "support base overhead");
     }
@@ -472,7 +470,7 @@ implements HeapSize, Map<K,V> {
    * @return baseline memory overhead of object in bytes
    */
   private long getMinimumUsage() {
-    return OVERHEAD + (entries.length * HeapSize.REFERENCE);
+    return OVERHEAD + (entries.length * ClassSize.REFERENCE);
   }
   
   //--------------------------------------------------------------------------
@@ -693,7 +691,7 @@ implements HeapSize, Map<K,V> {
     }
 
     // Determine how much additional space will be required to grow the array
-    long requiredSpace = (newCapacity - oldCapacity) * HeapSize.REFERENCE;
+    long requiredSpace = (newCapacity - oldCapacity) * ClassSize.REFERENCE;
     
     // Verify/enforce we have sufficient memory to grow
     checkAndFreeMemory(requiredSpace);
@@ -802,7 +800,7 @@ implements HeapSize, Map<K,V> {
    */
   private void init() {
     memFree -= OVERHEAD;
-    memFree -= (entries.length * HeapSize.REFERENCE);
+    memFree -= (entries.length * ClassSize.REFERENCE);
   }
   
   //--------------------------------------------------------------------------
@@ -927,8 +925,8 @@ implements HeapSize, Map<K,V> {
   protected static class Entry<K extends HeapSize, V extends HeapSize>
   implements Map.Entry<K,V>, HeapSize {
     /** The baseline overhead memory usage of this class */
-    static final int OVERHEAD = 1 * Bytes.SIZEOF_LONG + 5 * HeapSize.REFERENCE + 
-      2 * Bytes.SIZEOF_INT;
+    static final int OVERHEAD = 1 * Bytes.SIZEOF_LONG + 
+      5 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT;
     
     /** The key */
     protected final K key;
