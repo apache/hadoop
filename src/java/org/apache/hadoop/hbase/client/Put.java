@@ -103,8 +103,8 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * @param qualifier column qualifier
    * @param value column value
    */
-  public void add(byte [] family, byte [] qualifier, byte [] value) {
-    add(family, qualifier, this.timestamp, value);
+  public Put add(byte [] family, byte [] qualifier, byte [] value) {
+    return add(family, qualifier, this.timestamp, value);
   }
 
   /**
@@ -115,9 +115,9 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * @param ts version timestamp
    * @param value column value
    */
-  public void add(byte [] column, long ts, byte [] value) {
+  public Put add(byte [] column, long ts, byte [] value) {
     byte [][] parts = KeyValue.parseColumn(column);
-    add(parts[0], parts[1], ts, value);
+    return add(parts[0], parts[1], ts, value);
   }
 
   /**
@@ -128,7 +128,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * @param ts version timestamp
    * @param value column value
    */
-  public void add(byte [] family, byte [] qualifier, long ts, byte [] value) {
+  public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<KeyValue>(0);
@@ -137,13 +137,14 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
       KeyValue.Type.Put, value); 
     list.add(kv);
     familyMap.put(family, list);
+    return this;
   }
   
   /**
    * Add the specified KeyValue to this Put operation.
    * @param kv
    */
-  public void add(KeyValue kv) {
+  public Put add(KeyValue kv) {
     byte [] family = kv.getFamily();
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
@@ -151,6 +152,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     }
     list.add(kv);
     familyMap.put(family, list);
+    return this;
   }
   
   
@@ -195,11 +197,19 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   }
   
   /**
+   * @return Timestamp
+   */
+  public long getTimeStamp() {
+    return this.timestamp;
+  }
+  
+  /**
    * Method for setting the timestamp
    * @param timestamp
    */
-  public void setTimeStamp(long timestamp) {
+  public Put setTimeStamp(long timestamp) {
     this.timestamp = timestamp;
+    return this;
   }
   
   /**

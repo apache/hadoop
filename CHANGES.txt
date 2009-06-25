@@ -401,6 +401,8 @@ Release 0.20.0 - Unreleased
                'memtable' or....
    HBASE-1562  How to handle the setting of 32 bit versus 64 bit machines
                (Erik Holstad via Stack)
+   HBASE-1584  Put add methods should return this for ease of use (Be
+               consistant with Get) (Clint Morgan via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
