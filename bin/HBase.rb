@@ -161,6 +161,7 @@ module HBase
         raise IOError.new("Table " + tableName + " is enabled. Disable it first")
       else
         @admin.deleteTable(tableName)
+        major_compact(HConstants::META_TABLE_NAME);
       end
       @formatter.footer(now)
     end

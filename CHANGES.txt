@@ -407,6 +407,7 @@ Release 0.20.0 - Unreleased
                (Erik Holstad via Stack)
    HBASE-1584  Put add methods should return this for ease of use (Be
                consistant with Get) (Clint Morgan via Stack)
+   HBASE-1581  Run major compaction on .META. when table is dropped or truncated
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
