@@ -229,6 +229,7 @@ Release 0.20.0 - Unreleased
                for them
    HBASE-1566  using Scan(startRow,stopRow) will cause you to iterate the
                entire table
+   HBASE-1560  TIF can't seem to find one region
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

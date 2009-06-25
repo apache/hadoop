@@ -148,7 +148,11 @@ public class Scan implements Writable {
     for(int i=0; i<columns.length; i++) {
       try {
         byte [][] split = KeyValue.parseColumn(columns[i]);
-        addColumn(split[0], split[1]);
+        if (split[1].length == 0) {
+          addFamily(split[0]);
+        } else {
+          addColumn(split[0], split[1]);
+        }
       } catch(Exception e) {}
     }
     return this;
