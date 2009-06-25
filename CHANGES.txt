@@ -221,6 +221,8 @@ Release 0.20.0 - Unreleased
    HBASE-1564  in UI make host addresses all look the same -- not IP sometimes
                and host at others
    HBASE-1567  cant serialize new filters
+   HBASE-1585  More binary key/value log output cleanup
+               (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

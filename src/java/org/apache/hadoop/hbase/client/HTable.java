@@ -1774,7 +1774,7 @@ public class HTable {
       if (CLIENT_LOG.isDebugEnabled()) {
         CLIENT_LOG.debug("Creating scanner over " 
             + Bytes.toString(getTableName()) 
-            + " starting at key '" + Bytes.toString(scan.getStartRow()) + "'");
+            + " starting at key '" + Bytes.toStringBinary(scan.getStartRow()) + "'");
       }
       this.scan = scan;
       this.lastNext = System.currentTimeMillis();
@@ -1833,7 +1833,7 @@ public class HTable {
 
       if (CLIENT_LOG.isDebugEnabled()) {
         CLIENT_LOG.debug("Advancing internal scanner to startKey at '" +
-          Bytes.toString(localStartKey) + "'");
+          Bytes.toStringBinary(localStartKey) + "'");
       }
             
       try {
