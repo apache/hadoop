@@ -225,6 +225,8 @@ Release 0.20.0 - Unreleased
                (Lars George via Stack)
    HBASE-1563  incrementColumnValue does not write to WAL (Jon Gray via Stack)
    HBASE-1569  rare race condition can take down a regionserver
+   HBASE-1450  Scripts passed to hbase shell do not have shell context set up
+               for them
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

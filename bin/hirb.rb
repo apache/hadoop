@@ -18,6 +18,11 @@ include Java
 # Some goodies for hirb. Should these be left up to the user's discretion?
 require 'irb/completion'
 
+# Hack to turn down zk logging so it don't spew over the shell
+# log4j.logger.org.apache.zookeeper=INFO
+logger = org.apache.log4j.Logger.getLogger("org.apache.zookeeper")
+logger.setLevel(org.apache.log4j.Level::WARN);
+
 # Add the $HBASE_HOME/bin directory, the location of this script, to the ruby
 # load path so I can load up my HBase ruby modules
 $LOAD_PATH.unshift File.dirname($PROGRAM_NAME)
@@ -35,6 +40,7 @@ HERE
 found = []
 format = 'console'
 format_width = 110
+script2run = nil
 for arg in ARGV
   if arg =~ /^--format=(.+)/i
     format = $1
@@ -53,9 +59,10 @@ for arg in ARGV
     puts cmdline_help
     exit
   else
-    # Presume it a script and try running it.  Will go on to run the shell unless
-    # script calls 'exit' or 'exit 0' or 'exit errcode'.
-    load(arg)
+    # Presume it a script. Save it off for running later below
+    # after we've set up some environment.
+    script2run = arg
+    found.push(arg)
   end
 end
 for arg in found
@@ -90,6 +97,10 @@ end
 promoteConstants(org.apache.hadoop.hbase.HColumnDescriptor.constants)
 promoteConstants(org.apache.hadoop.hbase.HTableDescriptor.constants)
 promoteConstants(HBase.constants)
+
+# If script2run, try running it.  Will go on to run the shell unless
+# script calls 'exit' or 'exit 0' or 'exit errcode'.
+load(script2run) if script2run
 
 # Start of the hbase shell commands.
 
