@@ -147,11 +147,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @param family
    * @param qualifier
    * @param amount
+   * @param writeToWAL whether to write the increment to the WAL
    * @return new incremented column value
    * @throws IOException
    */
   public long incrementColumnValue(byte [] regionName, byte [] row, 
-      byte [] family, byte [] qualifier, long amount)
+      byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException;
   
   

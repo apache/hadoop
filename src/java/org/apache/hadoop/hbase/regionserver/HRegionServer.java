@@ -2392,7 +2392,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   
   /** {@inheritDoc} */
   public long incrementColumnValue(byte [] regionName, byte [] row, 
-      byte [] family, byte [] qualifier, long amount)
+      byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException {
     checkOpen();
 
@@ -2403,7 +2403,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      return region.incrementColumnValue(row, family, qualifier, amount);
+      return region.incrementColumnValue(row, family, qualifier, amount, 
+          writeToWAL);
     } catch (IOException e) {
       checkFileSystem();
       throw e;

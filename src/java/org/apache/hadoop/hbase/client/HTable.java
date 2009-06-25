@@ -472,8 +472,8 @@ public class HTable {
   }
   
   /**
-   * Atomically increments a column value. If the column value isn't long-like,
-   * this could throw an exception.
+   * Atomically increments a column value. If the column value already exists
+   * and is not a big-endian long, this could throw an exception.<p>
    * 
    * @param row
    * @param family
@@ -484,6 +484,26 @@ public class HTable {
    */
   public long incrementColumnValue(final byte [] row, final byte [] family, 
       final byte [] qualifier, final long amount)
+  throws IOException {
+    return incrementColumnValue(row, family, qualifier, amount, true);
+  }
+
+  /**
+   * Atomically increments a column value. If the column value already exists
+   * and is not a big-endian long, this could throw an exception.<p>
+   * 
+   * Setting writeToWAL to false means that in a fail scenario, you will lose 
+   * any increments that have not been flushed.
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param amount
+   * @param writeToWAL true if increment should be applied to WAL, false if not
+   * @return The new value.
+   * @throws IOException
+   */
+  public long incrementColumnValue(final byte [] row, final byte [] family, 
+      final byte [] qualifier, final long amount, final boolean writeToWAL)
   throws IOException {
     NullPointerException npe = null;
     if (row == null) {
@@ -499,11 +519,9 @@ public class HTable {
     return connection.getRegionServerWithRetries(
         new ServerCallable<Long>(connection, tableName, row) {
           public Long call() throws IOException {
-            Get get = new Get(row);
-            get.addColumn(family, qualifier);
             return server.incrementColumnValue(
                 location.getRegionInfo().getRegionName(), row, family, 
-                qualifier, amount);
+                qualifier, amount, writeToWAL);
           }
         }
     );

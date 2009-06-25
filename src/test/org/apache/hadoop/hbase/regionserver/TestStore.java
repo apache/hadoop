@@ -208,7 +208,9 @@ public class TestStore extends TestCase {
     long amount = 3L;
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
     
-    this.store.incrementColumnValue(row, family, qf1, amount);
+    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
+    assertEquals(vas.value, value+amount);
+    store.add(vas.kv);
     Get get = new Get(row);
     get.addColumn(family, qf1);
     NavigableSet<byte[]> qualifiers = 
@@ -232,7 +234,9 @@ public class TestStore extends TestCase {
     long amount = -1L;
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
     
-    this.store.incrementColumnValue(row, family, qf1, amount);
+    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
+    assertEquals(vas.value, value+amount);
+    store.add(vas.kv);
     Get get = new Get(row);
     get.addColumn(family, qf1);
     NavigableSet<byte[]> qualifiers = 
@@ -256,7 +260,8 @@ public class TestStore extends TestCase {
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
     this.store.add(new KeyValue(row, family, qf2, Bytes.toBytes(value)));
     
-    this.store.incrementColumnValue(row, family, qf3, amount);
+    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf3, amount);
+    store.add(vas.kv);
     Get get = new Get(row);
     get.addColumn(family, qf3);
     NavigableSet<byte[]> qualifiers = 
@@ -283,7 +288,8 @@ public class TestStore extends TestCase {
     
     flush(1);
     
-    this.store.incrementColumnValue(row, family, qf1, amount);
+    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
+    store.add(vas.kv);
     Get get = new Get(row);
     get.addColumn(family, qf1);
     NavigableSet<byte[]> qualifiers = 
@@ -311,7 +317,8 @@ public class TestStore extends TestCase {
     
     flush(1);
     
-    this.store.incrementColumnValue(row, family, qf3, amount);
+    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf3, amount);
+    store.add(vas.kv);
     Get get = new Get(row);
     get.addColumn(family, qf3);
     NavigableSet<byte[]> qualifiers = 

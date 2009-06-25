@@ -1493,15 +1493,21 @@ public class Store implements HConstants {
     scanner.get(result);
   }
 
-  public static class ValueAndSize {
-    public long value;
-    public long sizeAdded;
-    public ValueAndSize(long value, long sizeAdded) {
+  /*
+   * Data structure to hold incrementColumnValue result.
+   */
+  static class ICVResult {
+    final long value;
+    final long sizeAdded;
+    final KeyValue kv;
+
+    ICVResult(long value, long sizeAdded, KeyValue kv) {
       this.value = value;
       this.sizeAdded = sizeAdded;
+      this.kv = kv;
     }
   }
-  
+
   /**
    * Increments the value for the given row/family/qualifier
    * @param row
@@ -1511,8 +1517,9 @@ public class Store implements HConstants {
    * @return The new value.
    * @throws IOException
    */
-  public ValueAndSize incrementColumnValue(byte [] row, byte [] f,
-      byte [] qualifier, long amount) throws IOException {
+  public ICVResult incrementColumnValue(byte [] row, byte [] f,
+      byte [] qualifier, long amount)
+  throws IOException {
     long value = 0;
     List<KeyValue> result = new ArrayList<KeyValue>();
     KeyComparator keyComparator = this.comparator.getRawComparator();
@@ -1526,19 +1533,20 @@ public class Store implements HConstants {
       keyComparator, 1);
     
     // Read from memstore
-    if(this.memstore.get(matcher, result)) {
+    if (this.memstore.get(matcher, result)) {
       // Received early-out from memstore
-      KeyValue kv = result.get(0);
+      // Make a copy of the KV and increment it
+      KeyValue kv = result.get(0).clone();
       byte [] buffer = kv.getBuffer();
       int valueOffset = kv.getValueOffset();
       value = Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG) + amount;
-      Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0, 
-          Bytes.SIZEOF_LONG);
-      return new ValueAndSize(value, 0);
+      Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0,
+        Bytes.SIZEOF_LONG);
+      return new ICVResult(value, 0, kv);
     }
     // Check if we even have storefiles
     if(this.storefiles.isEmpty()) {
-      return addNewKeyValue(row, f, qualifier, value, amount);
+      return createNewKeyValue(row, f, qualifier, value, amount);
     }
     
     // Get storefiles for this store
@@ -1555,16 +1563,15 @@ public class Store implements HConstants {
     if(result.size() > 0) {
       value = Bytes.toLong(result.get(0).getValue());
     }
-    return addNewKeyValue(row, f, qualifier, value, amount);
+    return createNewKeyValue(row, f, qualifier, value, amount);
   }
   
-  private ValueAndSize addNewKeyValue(byte [] row, byte [] f, byte [] qualifier,
-      long value, long amount) {
+  private ICVResult createNewKeyValue(byte [] row, byte [] f, 
+      byte [] qualifier, long value, long amount) {
     long newValue = value + amount;
     KeyValue newKv = new KeyValue(row, f, qualifier,
         System.currentTimeMillis(),
         Bytes.toBytes(newValue));
-    add(newKv);
-    return new ValueAndSize(newValue, newKv.heapSize());
+    return new ICVResult(newValue, newKv.heapSize(), newKv);
   }
 }

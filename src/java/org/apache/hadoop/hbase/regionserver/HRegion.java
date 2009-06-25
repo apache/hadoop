@@ -2256,18 +2256,29 @@ public class HRegion implements HConstants { // , Writable{
    * @throws IOException
    */
   public long incrementColumnValue(byte [] row, byte [] family,
-      byte [] qualifier, long amount)
+      byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException {
     checkRow(row);
-
     boolean flush = false;
     // Lock row
     Integer lid = obtainRowLock(row);
     long result = 0L;
     try {
       Store store = stores.get(family);
-      Store.ValueAndSize vas =
+      // Determine what to do and perform increment on returned KV, no insertion 
+      Store.ICVResult vas =
         store.incrementColumnValue(row, family, qualifier, amount);
+      // Write incremented value to WAL before inserting
+      if (writeToWAL) {
+        long now = System.currentTimeMillis();
+        List<KeyValue> edits = new ArrayList<KeyValue>(1);
+        edits.add(vas.kv);
+        this.log.append(regionInfo.getRegionName(),
+          regionInfo.getTableDesc().getName(), edits,
+          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
+      }
+      // Insert to the Store
+      store.add(vas.kv);
       result = vas.value;
       long size = this.memstoreSize.addAndGet(vas.sizeAdded);
       flush = isFlushSize(size);

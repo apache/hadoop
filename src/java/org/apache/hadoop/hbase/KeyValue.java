@@ -234,7 +234,7 @@ public class KeyValue implements Writable, HeapSize {
   public KeyValue(final byte [] bytes) {
     this(bytes, 0);
   }
-  
+
   /**
    * Creates a KeyValue from the specified byte array and offset.
    * Presumes <code>bytes</code> content starting at <code>offset</code> is
@@ -565,6 +565,16 @@ public class KeyValue implements Writable, HeapSize {
   //
   //---------------------------------------------------------------------------
   
+  /**
+   * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
+   * @return Fully copied clone of this KeyValue
+   */
+  public KeyValue clone() {
+    byte [] bytes = new byte[this.length];
+    System.arraycopy(this.bytes, this.offset, bytes, 0, this.length);
+    return new KeyValue(bytes, 0, bytes.length);
+  }
+
   /**
    * Clones a row.
    * 
