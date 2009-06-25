@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 
 /**
@@ -195,7 +196,12 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       new ArrayList<HFileScanner>(this.store.getStorefilesCount());
     Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
     for(StoreFile sf : map.values()) {
-      s.add(sf.getReader().getScanner());
+      HFile.Reader r = sf.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + sf + " has null Reader");
+        continue;
+      }
+      s.add(r.getScanner());
     }
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(s.size()+1);

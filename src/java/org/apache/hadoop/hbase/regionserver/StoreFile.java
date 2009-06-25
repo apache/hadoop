@@ -349,12 +349,9 @@ public class StoreFile implements HConstants {
   }
 
   /**
-   * @return Current reader.  Must call open first.
+   * @return Current reader.  Must call open first else returns null.
    */
   public HFile.Reader getReader() {
-    if (this.reader == null) {
-      throw new IllegalAccessError("Call open first");
-    }
     return this.reader;
   }
 

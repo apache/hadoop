@@ -1049,11 +1049,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
     HLog newlog = new HLog(fs, logdir, conf, hlogRoller);
     return newlog;
   }
-  
-  /*
-   * @param interval Interval since last time metrics were called.
-   */
+
   protected void doMetrics() {
+    try {
+      metrics();
+    } catch (Throwable e) {
+      LOG.warn("Failed metrics", e);
+    }
+  }
+
+  protected void metrics() {
     this.metrics.regions.set(this.onlineRegions.size());
     this.metrics.incrementRequests(this.requestCount.get());
     // Is this too expensive every three seconds getting a lock on onlineRegions
