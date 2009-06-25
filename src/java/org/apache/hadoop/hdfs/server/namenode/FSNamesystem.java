@@ -1442,6 +1442,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    *         or null if file not found
    */
   FileStatus getFileInfo(String src) throws IOException {
+    if (!DFSUtil.isValidName(src)) {
+      throw new IOException("Invalid file name: " + src);
+    }
     if (isPermissionEnabled) {
       checkTraverse(src);
     }

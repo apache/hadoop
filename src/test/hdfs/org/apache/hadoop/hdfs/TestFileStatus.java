@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * This class tests the FileStatus API.
@@ -78,6 +79,15 @@ public class TestFileStatus extends TestCase {
       // make sure getFileInfo returns null for files which do not exist
       FileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
       assertTrue(fileInfo == null);
+
+      // make sure getFileInfo throws the appropriate exception for non-relative
+      // filenames
+      try {
+        FileStatus foo = dfsClient.getFileInfo("non-relative");
+        fail("getFileInfo for a non-relative path did not thro IOException");
+      } catch (RemoteException re) {
+        assertTrue(re.toString().contains("Invalid file name"));
+      }
 
       // create a file in home directory
       //

@@ -35,6 +35,9 @@ Trunk (unreleased changes)
     HDFS-195. Handle expired tokens when write pipeline is restablished.
     (Kan Zhang via rangadi)
 
+    HDFS-181. Validate src path in FSNamesystem.getFileInfo(..).  (Todd
+    Lipcon via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
