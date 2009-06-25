@@ -227,6 +227,8 @@ Release 0.20.0 - Unreleased
    HBASE-1569  rare race condition can take down a regionserver
    HBASE-1450  Scripts passed to hbase shell do not have shell context set up
                for them
+   HBASE-1566  using Scan(startRow,stopRow) will cause you to iterate the
+               entire table
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

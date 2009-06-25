@@ -1881,9 +1881,22 @@ public class HTable {
      * filter.
      */
     private boolean filterSaysStop(final byte [] endKey) {
+      if (scan.getStopRow().length > 0) {
+        // there is a stop row, check to see if we are past it.
+        byte [] stopRow = scan.getStopRow();
+        int cmp = Bytes.compareTo(stopRow, 0, stopRow.length,
+            endKey, 0, endKey.length);
+        if (cmp <= 0) {
+          // stopRow <= endKey (endKey is equals to or larger than stopRow)
+          // This is a stop.
+          return true;
+        }
+      }
+
       if(!scan.hasFilter()) {
         return false;
       }
+
       if (scan.getFilter() != null) {
         // Let the filter see current row.
         scan.getFilter().filterRowKey(endKey, 0, endKey.length);
