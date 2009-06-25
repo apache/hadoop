@@ -191,11 +191,11 @@ public class TestHRegion extends HBaseTestCase {
     
     //checkAndPut with wrong value
     Store store = region.getStore(fam1);
-    int size = store.memstore.memstore.size();
+    int size = store.memstore.kvset.size();
     
     boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
-    size = store.memstore.memstore.size();
+    size = store.memstore.kvset.size();
     
     Get get = new Get(row1);
     get.addColumn(fam2, qf1);
@@ -414,12 +414,10 @@ public class TestHRegion extends HBaseTestCase {
     // extract the key values out the memstore:
     // This is kinda hacky, but better than nothing...
     long now = System.currentTimeMillis();
-    KeyValue firstKv = region.getStore(fam1).memstore.memstore.firstKey();
+    KeyValue firstKv = region.getStore(fam1).memstore.kvset.first();
     assertTrue(firstKv.getTimestamp() <= now);
     now = firstKv.getTimestamp();
-    for (Map.Entry<KeyValue, ?> entry:
-        region.getStore(fam1).memstore.memstore.entrySet()) {
-      KeyValue kv = entry.getKey();
+    for (KeyValue kv: region.getStore(fam1).memstore.kvset) {
       assertTrue(kv.getTimestamp() <= now);
       now = kv.getTimestamp();
     }

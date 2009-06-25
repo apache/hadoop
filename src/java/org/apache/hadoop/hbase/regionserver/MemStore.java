@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -50,6 +51,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * this point we let the snapshot go.
  * TODO: Adjust size of the memstore when we remove items because they have
  * been deleted.
+ * TODO: With new KVSLS, need to make sure we update HeapSize with difference
+ * in KV size.
  */
 class MemStore {
   private static final Log LOG = LogFactory.getLog(MemStore.class);
@@ -61,10 +64,10 @@ class MemStore {
   // whereas the Set will not add new KV if key is same though value might be
   // different.  Value is not important -- just make sure always same
   // reference passed.
-  volatile ConcurrentSkipListMap<KeyValue, Object> memstore;
+  volatile KeyValueSkipListSet kvset;
 
   // Snapshot of memstore.  Made for flusher.
-  volatile ConcurrentSkipListMap<KeyValue, Object> snapshot;
+  volatile KeyValueSkipListSet snapshot;
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -78,11 +81,6 @@ class MemStore {
 
   // TODO: Fix this guess by studying jprofiler
   private final static int ESTIMATED_KV_HEAP_TAX = 60;
-
-  /* Value we add memstore 'value'.  Memstore backing is a Map
-   * but we are only interested in its keys.
-   */
-  private static final Object NULL = new Object();
 
   /**
    * Default constructor. Used for tests.
@@ -102,20 +100,16 @@ class MemStore {
     this.comparatorIgnoreTimestamp =
       this.comparator.getComparatorIgnoringTimestamps();
     this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
-    this.memstore = createMap(c);
-    this.snapshot = createMap(c);
-  }
-
-  static ConcurrentSkipListMap<KeyValue, Object> createMap(final KeyValue.KVComparator c) {
-    return new ConcurrentSkipListMap<KeyValue, Object>(c);
+    this.kvset = new KeyValueSkipListSet(c);
+    this.snapshot = new KeyValueSkipListSet(c);
   }
 
   void dump() {
-    for (Map.Entry<KeyValue, ?> entry: this.memstore.entrySet()) {
-      LOG.info(entry.getKey());
+    for (KeyValue kv: this.kvset) {
+      LOG.info(kv);
     }
-    for (Map.Entry<KeyValue, ?> entry: this.snapshot.entrySet()) {
-      LOG.info(entry.getKey());
+    for (KeyValue kv: this.snapshot) {
+      LOG.info(kv);
     }
   }
 
@@ -136,9 +130,9 @@ class MemStore {
         // We used to synchronize on the memstore here but we're inside a
         // write lock so removed it. Comment is left in case removal was a
         // mistake. St.Ack
-        if (!this.memstore.isEmpty()) {
-          this.snapshot = this.memstore;
-          this.memstore = createMap(this.comparator);
+        if (!this.kvset.isEmpty()) {
+          this.snapshot = this.kvset;
+          this.kvset = new KeyValueSkipListSet(this.comparator);
         }
       }
     } finally {
@@ -154,7 +148,7 @@ class MemStore {
    * @see {@link #snapshot()}
    * @see {@link #clearSnapshot(java.util.Map)}
    */
-  ConcurrentSkipListMap<KeyValue, ?> getSnapshot() {
+  KeyValueSkipListSet getSnapshot() {
     return this.snapshot;
   }
 
@@ -164,7 +158,7 @@ class MemStore {
    * @throws UnexpectedException
    * @see {@link #snapshot()}
    */
-  void clearSnapshot(final Map<KeyValue, ?> ss)
+  void clearSnapshot(final KeyValueSkipListSet ss)
   throws UnexpectedException {
     this.lock.writeLock().lock();
     try {
@@ -175,7 +169,7 @@ class MemStore {
       // OK. Passed in snapshot is same as current snapshot.  If not-empty,
       // create a new snapshot and let the old one go.
       if (!ss.isEmpty()) {
-        this.snapshot = createMap(this.comparator);
+        this.snapshot = new KeyValueSkipListSet(this.comparator);
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -191,15 +185,13 @@ class MemStore {
     long size = -1;
     this.lock.readLock().lock();
     try {
-      // Add anything as value as long as same instance each time.
-      size = heapSize(kv,
-        this.memstore.put(kv, NULL) == null);
+      size = heapSize(kv, this.kvset.add(kv));
     } finally {
       this.lock.readLock().unlock();
     }
     return size;
   }
-  
+
   /** 
    * Write a delete
    * @param delete
@@ -221,7 +213,7 @@ class MemStore {
     try {
       boolean notpresent = false;
       List<KeyValue> deletes = new ArrayList<KeyValue>();
-      SortedMap<KeyValue, Object> tail = this.memstore.tailMap(delete);
+      SortedSet<KeyValue> tail = this.kvset.tailSet(delete);
 
       //Parse the delete, so that it is only done once
       byte [] deleteBuffer = delete.getBuffer();
@@ -251,28 +243,27 @@ class MemStore {
       byte deleteType = deleteBuffer[deleteOffset];
       
       //Comparing with tail from memstore
-      for (Map.Entry<KeyValue, ?> entry : tail.entrySet()) {
-        DeleteCode res = DeleteCompare.deleteCompare(entry.getKey(),
-            deleteBuffer, 
+      for (KeyValue kv : tail) {
+        DeleteCode res = DeleteCompare.deleteCompare(kv, deleteBuffer, 
             deleteRowOffset, deleteRowLen, deleteQualifierOffset, 
             deleteQualifierLen, deleteTimestampOffset, deleteType,
             comparator.getRawComparator());
         if (res == DeleteCode.DONE) {
           break;
         } else if (res == DeleteCode.DELETE) {
-          deletes.add(entry.getKey());
+          deletes.add(kv);
         } // SKIP
       }
 
       //Delete all the entries effected by the last added delete
-      for(KeyValue del : deletes) {
-        notpresent = this.memstore.remove(del) == null;
-        size -= heapSize(del, notpresent);
+      for (KeyValue kv : deletes) {
+        notpresent = this.kvset.remove(kv);
+        size -= heapSize(kv, notpresent);
       }
       
       // Adding the delete to memstore. Add any value, as long as
       // same instance each time.
-      size += heapSize(delete, this.memstore.put(delete, NULL) == null);
+      size += heapSize(delete, this.kvset.add(delete));
     } finally {
       this.lock.readLock().unlock();
     }
@@ -302,8 +293,7 @@ class MemStore {
   KeyValue getNextRow(final KeyValue kv) {
     this.lock.readLock().lock();
     try {
-      return getLowest(getNextRow(kv, this.memstore),
-        getNextRow(kv, this.snapshot));
+      return getLowest(getNextRow(kv, this.kvset), getNextRow(kv, this.snapshot));
     } finally {
       this.lock.readLock().unlock();
     }
@@ -325,22 +315,22 @@ class MemStore {
   }
 
   /*
-   * @param kv Find row that follows this one.  If null, return first.
+   * @param key Find row that follows this one.  If null, return first.
    * @param map Set to look in for a row beyond <code>row</code>.
    * @return Next row or null if none found.  If one found, will be a new
    * KeyValue -- can be destroyed by subsequent calls to this method.
    */
-  private KeyValue getNextRow(final KeyValue kv,
-      final NavigableMap<KeyValue, ?> map) {
+  private KeyValue getNextRow(final KeyValue key,
+      final NavigableSet<KeyValue> set) {
     KeyValue result = null;
-    SortedMap<KeyValue, ?> tail = kv == null? map: map.tailMap(kv);
+    SortedSet<KeyValue> tail = key == null? set: set.tailSet(key);
     // Iterate until we fall into the next row; i.e. move off current row
-    for (Map.Entry<KeyValue, ?> i : tail.entrySet()) {
-      if (comparator.compareRows(i.getKey(), kv) <= 0)
+    for (KeyValue kv: tail) {
+      if (comparator.compareRows(kv, key) <= 0)
         continue;
       // Note: Not suppressing deletes or expired cells.  Needs to be handled
       // by higher up functions.
-      result = i.getKey();
+      result = kv;
       break;
     }
     return result;
@@ -372,17 +362,17 @@ class MemStore {
       final NavigableSet<KeyValue> deletes, final long now) {
     this.lock.readLock().lock();
     try {
-      getRowKeyAtOrBefore(memstore, kv, candidates, deletes, now);
+      getRowKeyAtOrBefore(kvset, kv, candidates, deletes, now);
       getRowKeyAtOrBefore(snapshot, kv, candidates, deletes, now);
     } finally {
       this.lock.readLock().unlock();
     }
   }
 
-  private void getRowKeyAtOrBefore(final ConcurrentSkipListMap<KeyValue, Object> map,
+  private void getRowKeyAtOrBefore(final NavigableSet<KeyValue> set,
       final KeyValue kv, final NavigableSet<KeyValue> candidates,
       final NavigableSet<KeyValue> deletes, final long now) {
-    if (map.isEmpty()) {
+    if (set.isEmpty()) {
       return;
     }
     // We want the earliest possible to start searching from.  Start before
@@ -390,22 +380,21 @@ class MemStore {
     KeyValue search = candidates.isEmpty()? kv: candidates.first();
 
     // Get all the entries that come equal or after our search key
-    SortedMap<KeyValue, Object> tail = map.tailMap(search);
+    SortedSet<KeyValue> tail = set.tailSet(search);
 
     // if there are items in the tail map, there's either a direct match to
     // the search key, or a range of values between the first candidate key
     // and the ultimate search key (or the end of the cache)
     if (!tail.isEmpty() &&
-        this.comparator.compareRows(tail.firstKey(), search) <= 0) {
+        this.comparator.compareRows(tail.first(), search) <= 0) {
       // Keep looking at cells as long as they are no greater than the 
       // ultimate search key and there's still records left in the map.
       KeyValue deleted = null;
       KeyValue found = null;
-      for (Iterator<Map.Entry<KeyValue, Object>> iterator =
-          tail.entrySet().iterator();
+      for (Iterator<KeyValue> iterator = tail.iterator();
         iterator.hasNext() && (found == null ||
           this.comparator.compareRows(found, kv) <= 0);) {
-        found = iterator.next().getKey();
+        found = iterator.next();
         if (this.comparator.compareRows(found, kv) <= 0) {
           if (found.isDeleteType()) {
             Store.handleDeletes(found, candidates, deletes);
@@ -427,12 +416,12 @@ class MemStore {
         }
       }
       if (candidates.isEmpty() && deleted != null) {
-        getRowKeyBefore(map, deleted, candidates, deletes, now);
+        getRowKeyBefore(set, deleted, candidates, deletes, now);
       }
     } else {
       // The tail didn't contain any keys that matched our criteria, or was 
       // empty. Examine all the keys that proceed our splitting point.
-      getRowKeyBefore(map, search, candidates, deletes, now);
+      getRowKeyBefore(set, search, candidates, deletes, now);
     }
   }
 
@@ -440,19 +429,19 @@ class MemStore {
    * Get row key that comes before passed <code>search_key</code>
    * Use when we know search_key is not in the map and we need to search
    * earlier in the cache.
-   * @param map
+   * @param set
    * @param search
    * @param candidates
    * @param deletes Pass a Set that has a Comparator that ignores key type.
    * @param now
    */
-  private void getRowKeyBefore(ConcurrentSkipListMap<KeyValue, Object> map,
+  private void getRowKeyBefore(NavigableSet<KeyValue> set,
       KeyValue search, NavigableSet<KeyValue> candidates,
       final NavigableSet<KeyValue> deletes, final long now) {
-    NavigableMap<KeyValue, Object> headMap = map.headMap(search);
+    NavigableSet<KeyValue> head = set.headSet(search, false);
     // If we tried to create a headMap and got an empty map, then there are
     // no keys at or before the search key, so we're done.
-    if (headMap.isEmpty()) {
+    if (head.isEmpty()) {
       return;
     }
 
@@ -461,7 +450,7 @@ class MemStore {
     if (candidates.isEmpty()) {
       KeyValue lastFound = null;
       // TODO: Confirm we're iterating in the right order
-      for (Iterator<KeyValue> i = headMap.descendingKeySet().iterator();
+      for (Iterator<KeyValue> i = head.descendingIterator();
           i.hasNext();) {
         KeyValue found = i.next();
         // if the last row we found a candidate key for is different than
@@ -481,14 +470,14 @@ class MemStore {
             candidates.add(found);
           } else {
             // Its expired.
-            Store.expiredOrDeleted(map, found);
+            Store.expiredOrDeleted(set, found);
           }
         } else {
           // We are encountering items in reverse.  We may have just added
           // an item to candidates that this later item deletes.  Check.  If we
           // found something in candidates, remove it from the set.
           if (Store.handleDeletes(found, candidates, deletes)) {
-            remove(map, found);
+            remove(set, found);
           }
         }
       }
@@ -497,11 +486,11 @@ class MemStore {
       // the very last row's worth of keys in the headMap, because any 
       // smaller acceptable candidate keys would have caused us to start
       // our search earlier in the list, and we wouldn't be searching here.
-      SortedMap<KeyValue, Object> rowTailMap = 
-        headMap.tailMap(headMap.lastKey().cloneRow(HConstants.LATEST_TIMESTAMP));
-      Iterator<Map.Entry<KeyValue, Object>> i = rowTailMap.entrySet().iterator();
+      SortedSet<KeyValue> rowTail = 
+        head.tailSet(head.last().cloneRow(HConstants.LATEST_TIMESTAMP));
+      Iterator<KeyValue> i = rowTail.iterator();
       do {
-        KeyValue found = i.next().getKey();
+        KeyValue found = i.next();
         if (found.isDeleteType()) {
           Store.handleDeletes(found, candidates, deletes);
         } else {
@@ -510,7 +499,7 @@ class MemStore {
               !deletes.contains(found)) {
             candidates.add(found);
           } else {
-            Store.expiredOrDeleted(map, found);
+            Store.expiredOrDeleted(set, found);
           }
         }
       } while (i.hasNext());
@@ -519,22 +508,22 @@ class MemStore {
 
 
   /*
-   * @param map
-   * @param kv This is a delete record.  Remove anything behind this of same
+   * @param set
+   * @param delete This is a delete record.  Remove anything behind this of same
    * r/c/ts.
    * @return True if we removed anything.
    */
-  private boolean remove(final NavigableMap<KeyValue, Object> map,
-      final KeyValue kv) {
-    SortedMap<KeyValue, Object> m = map.tailMap(kv);
-    if (m.isEmpty()) {
+  private boolean remove(final NavigableSet<KeyValue> set,
+      final KeyValue delete) {
+    SortedSet<KeyValue> s = set.tailSet(delete);
+    if (s.isEmpty()) {
       return false;
     }
     boolean removed = false;
-    for (Map.Entry<KeyValue, Object> entry: m.entrySet()) {
-      if (this.comparatorIgnoreType.compare(entry.getKey(), kv) == 0) {
+    for (KeyValue kv: s) {
+      if (this.comparatorIgnoreType.compare(kv, delete) == 0) {
         // Same r/c/ts.  Remove it.
-        m.remove(entry.getKey());
+        s.remove(kv);
         removed = true;
         continue;
       }
@@ -550,7 +539,7 @@ class MemStore {
     this.lock.readLock().lock();
     try {
       KeyValueScanner [] scanners = new KeyValueScanner[2];
-      scanners[0] = new MemStoreScanner(this.memstore);
+      scanners[0] = new MemStoreScanner(this.kvset);
       scanners[1] = new MemStoreScanner(this.snapshot);
       return scanners;
     } finally {
@@ -579,7 +568,7 @@ class MemStore {
   throws IOException {
     this.lock.readLock().lock();
     try {
-      if(internalGet(this.memstore, matcher, result) || matcher.isDone()) {
+      if(internalGet(this.kvset, matcher, result) || matcher.isDone()) {
         return true;
       }
       matcher.update();
@@ -591,23 +580,23 @@ class MemStore {
   
   /**
    *
-   * @param map memstore or snapshot
+   * @param set memstore or snapshot
    * @param matcher query matcher
    * @param result list to add results to
    * @return true if done with store (early-out), false if not
    * @throws IOException
    */
-  private boolean internalGet(SortedMap<KeyValue, Object> map, QueryMatcher matcher,
-      List<KeyValue> result)
+  private boolean internalGet(final NavigableSet<KeyValue> set,
+      final QueryMatcher matcher, final List<KeyValue> result)
   throws IOException {
-    if(map.isEmpty()) return false;
+    if(set.isEmpty()) return false;
     // Seek to startKey
-    SortedMap<KeyValue, Object> tail = map.tailMap(matcher.getStartKey());
-    for (Map.Entry<KeyValue, Object> entry : tail.entrySet()) {
-      QueryMatcher.MatchCode res = matcher.match(entry.getKey());
+    SortedSet<KeyValue> tail = set.tailSet(matcher.getStartKey());
+    for (KeyValue kv : tail) {
+      QueryMatcher.MatchCode res = matcher.match(kv);
       switch(res) {
         case INCLUDE:
-          result.add(entry.getKey());
+          result.add(kv);
           break;
         case SKIP:
           break;
@@ -630,13 +619,13 @@ class MemStore {
    * in the passed memstore tree.
    */
   protected class MemStoreScanner implements KeyValueScanner {
-    private final NavigableMap<KeyValue, Object> mc;
+    private final NavigableSet<KeyValue> kvs;
     private KeyValue current = null;
     private List<KeyValue> result = new ArrayList<KeyValue>();
     private int idx = 0;
 
-    MemStoreScanner(final NavigableMap<KeyValue, Object> mc) {
-      this.mc = mc;
+    MemStoreScanner(final NavigableSet<KeyValue> s) {
+      this.kvs = s;
     }
 
     public boolean seek(KeyValue key) {
@@ -678,9 +667,9 @@ class MemStore {
      * next row.
      */
     boolean cacheNextRow() {
-      SortedMap<KeyValue, Object> keys;
+      SortedSet<KeyValue> keys;
       try {
-        keys = this.mc.tailMap(this.current);
+        keys = this.kvs.tailSet(this.current);
       } catch (Exception e) {
         close();
         return false;
@@ -690,9 +679,8 @@ class MemStore {
         return false;
       }
       this.current = null;
-      byte [] row = keys.firstKey().getRow();
-      for (Map.Entry<KeyValue, Object> key: keys.entrySet()) {
-        KeyValue kv = key.getKey();
+      byte [] row = keys.first().getRow();
+      for (KeyValue kv: keys) {
         if (comparator.compareRows(kv, row) != 0) {
           this.current = kv;
           break;

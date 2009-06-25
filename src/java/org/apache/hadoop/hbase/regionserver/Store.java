@@ -288,8 +288,8 @@ public class Store implements HConstants {
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
     // TODO: Move this memstoring over into MemStore.
-    ConcurrentSkipListMap<KeyValue, Object> reconstructedCache =
-      MemStore.createMap(this.comparator);
+    KeyValueSkipListSet reconstructedCache =
+      new KeyValueSkipListSet(this.comparator);
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
       reconstructionLog, this.conf);
     try {
@@ -315,7 +315,7 @@ public class Store implements HConstants {
           continue;
         }
         // Add anything as value as long as we use same instance each time.
-        reconstructedCache.put(val, Boolean.TRUE);
+        reconstructedCache.add(val);
         editsCount++;
         // Every 2k edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.
@@ -466,17 +466,17 @@ public class Store implements HConstants {
   boolean flushCache(final long logCacheFlushId) throws IOException {
     // Get the snapshot to flush.  Presumes that a call to
     // this.memstore.snapshot() has happened earlier up in the chain.
-    ConcurrentSkipListMap<KeyValue, ?> cache = this.memstore.getSnapshot();
+    KeyValueSkipListSet snapshot = this.memstore.getSnapshot();
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    StoreFile sf = internalFlushCache(cache, logCacheFlushId);
+    StoreFile sf = internalFlushCache(snapshot, logCacheFlushId);
     if (sf == null) {
       return false;
     }
     // Add new file to store files.  Clear snapshot too while we have the
     // Store write lock.
-    int size = updateStorefiles(logCacheFlushId, sf, cache);
+    int size = updateStorefiles(logCacheFlushId, sf, snapshot);
     return size >= this.compactionThreshold;
   }
 
@@ -486,13 +486,13 @@ public class Store implements HConstants {
    * @return StoreFile created.
    * @throws IOException
    */
-  private StoreFile internalFlushCache(final ConcurrentSkipListMap<KeyValue, ?> cache,
+  private StoreFile internalFlushCache(final KeyValueSkipListSet set,
     final long logCacheFlushId)
   throws IOException {
     HFile.Writer writer = null;
     long flushed = 0;
     // Don't flush if there are no entries.
-    if (cache.size() == 0) {
+    if (set.size() == 0) {
       return null;
     }
     long oldestTimestamp = System.currentTimeMillis() - ttl;
@@ -504,8 +504,7 @@ public class Store implements HConstants {
       writer = getWriter();
       int entries = 0;
       try {
-        for (Map.Entry<KeyValue, ?> entry: cache.entrySet()) {
-          KeyValue kv = entry.getKey();
+        for (KeyValue kv: set) {
           if (!isExpired(kv, oldestTimestamp)) {
             writer.append(kv);
             entries++;
@@ -554,12 +553,12 @@ public class Store implements HConstants {
    * Change storefiles adding into place the Reader produced by this new flush.
    * @param logCacheFlushId
    * @param sf
-   * @param cache That was used to make the passed file <code>p</code>.
+   * @param set That was used to make the passed file <code>p</code>.
    * @throws IOException
    * @return Count of store files.
    */
   private int updateStorefiles(final long logCacheFlushId,
-    final StoreFile sf, final NavigableMap<KeyValue, ?> cache)
+    final StoreFile sf, final KeyValueSkipListSet set)
   throws IOException {
     int count = 0;
     this.lock.writeLock().lock();
@@ -568,7 +567,7 @@ public class Store implements HConstants {
       count = this.storefiles.size();
       // Tell listeners of the change in readers.
       notifyChangedReadersObservers();
-      this.memstore.clearSnapshot(cache);
+      this.memstore.clearSnapshot(set);
       return count;
     } finally {
       this.lock.writeLock().unlock();
@@ -974,8 +973,8 @@ public class Store implements HConstants {
     return wantedVersions > maxVersions ? maxVersions: wantedVersions;
   }
 
-  static void expiredOrDeleted(final Map<KeyValue, Object> set, final KeyValue kv) {
-    boolean b = set.remove(kv) != null;
+  static void expiredOrDeleted(final Set<KeyValue> set, final KeyValue kv) {
+    boolean b = set.remove(kv);
     if (LOG.isDebugEnabled()) {
       LOG.debug(kv.toString() + " expired: " + b);
     }

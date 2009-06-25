@@ -1717,7 +1717,7 @@ public class HTable {
     for (BatchOperation bo: batchUpdate) {
       if (!bo.isPut()) throw new IOException("Only Puts in BU as of 0.20.0");
       Put p = new Put(batchUpdate.getRow(), rl);
-      p.add(bo.getColumn(),batchUpdate.getTimestamp(), bo.getValue());
+      p.add(bo.getColumn(), batchUpdate.getTimestamp(), bo.getValue());
       put(p);
     }
   }

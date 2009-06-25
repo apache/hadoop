@@ -2266,10 +2266,8 @@ public class HRegion implements HConstants { // , Writable{
     long result = 0L;
     try {
       Store store = stores.get(family);
-
       Store.ValueAndSize vas =
-          store.incrementColumnValue(row, family, qualifier, amount);
-
+        store.incrementColumnValue(row, family, qualifier, amount);
       result = vas.value;
       long size = this.memstoreSize.addAndGet(vas.sizeAdded);
       flush = isFlushSize(size);

@@ -64,6 +64,8 @@ public class TestOldAPIGetRowVersions extends HBaseClusterTestCase {
     BatchUpdate b = new BatchUpdate(ROW, TIMESTAMP);
     b.put(COLUMN, Bytes.toBytes(VALUE1));
     this.table.commit(b);
+    Cell c = this.table.get(ROW, COLUMN);
+    assertEquals(VALUE1, Bytes.toString(c.getValue()));
     /* Taking out this recycle of the mini cluster -- it don't work well
      * Debug it if fails in TestGetRowVersion, not this old api version.
     // Shut down and restart the HBase cluster
@@ -72,17 +74,18 @@ public class TestOldAPIGetRowVersions extends HBaseClusterTestCase {
     LOG.debug("HBase cluster shut down -- restarting");
     this.hBaseClusterSetup();
     */
-    // Make a new connection
-    this.table = new HTable(conf, TABLE_NAME);
     // Overwrite previous value
     b = new BatchUpdate(ROW, TIMESTAMP);
     b.put(COLUMN, Bytes.toBytes(VALUE2));
     this.table.commit(b);
+    c = this.table.get(ROW, COLUMN);
+    LOG.info("Got " + Bytes.toString(c.getValue()));
+    assertEquals(VALUE2, Bytes.toString(c.getValue()));
     // Now verify that getRow(row, column, latest) works
     RowResult r = table.getRow(ROW);
     assertNotNull(r);
     assertTrue(r.size() != 0);
-    Cell c = r.get(COLUMN);
+    c = r.get(COLUMN);
     assertNotNull(c);
     assertTrue(c.getValue().length != 0);
     String value = Bytes.toString(c.getValue());

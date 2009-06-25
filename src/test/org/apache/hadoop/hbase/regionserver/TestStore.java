@@ -181,7 +181,7 @@ public class TestStore extends TestCase {
     this.store.snapshot();
     this.store.flushCache(id++);
     assertEquals(storeFilessize, this.store.getStorefiles().size());
-    assertEquals(0, this.store.memstore.memstore.size());
+    assertEquals(0, this.store.memstore.kvset.size());
   }
 
   private void assertCheck() {

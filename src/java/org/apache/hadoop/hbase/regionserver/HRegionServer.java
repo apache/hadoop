@@ -1993,7 +1993,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    */
   Integer getLockFromId(long lockId)
   throws IOException {
-    if(lockId == -1L) {
+    if (lockId == -1L) {
       return null;
     }
     String lockName = String.valueOf(lockId);
