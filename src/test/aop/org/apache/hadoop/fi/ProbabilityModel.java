@@ -46,7 +46,8 @@ public class ProbabilityModel {
 
   static final String FPROB_NAME = "fi.";
   private static final String ALL_PROBABILITIES = FPROB_NAME + "*";
-  private static final float DEFAULT_PROB = 0.00f; // Default probability rate is 0%
+  private static final float DEFAULT_PROB = 0.00f; //Default probability is 0%
+  private static final float MAX_PROB = 1.00f; // Max probability is 100%
 
   private static Configuration conf = FiConfig.getConfig();
 
@@ -60,7 +61,14 @@ public class ProbabilityModel {
     LOG.info(ALL_PROBABILITIES + "=" + conf.get(ALL_PROBABILITIES));
   }
 
-  // Simplistic method to check if we have reached the point of injection
+  /**
+   * Simplistic method to check if we have reached the point of injection
+   * @param klassName is the name of the probability level to check. 
+   *  If a configuration has been set for "fi.myClass" then you can check if the
+   *  inject criteria has been reached by calling this method with "myClass"
+   *  string as its parameter
+   * @return true if the probability threshold has been reached; false otherwise
+   */
   public static boolean injectCriteria(String klassName) {
     boolean trigger = false;
     // TODO fix this: make it more sophisticated!!!
@@ -70,17 +78,26 @@ public class ProbabilityModel {
     return trigger;
   }
 
-  // This primitive checks for arbitrary set of desired probability and
-  // uses default setting if it wasn't
-  // The probability expected to be set as an float between 0 and 100
+  /**
+   * This primitive checks for arbitrary set of desired probability. If the 
+   * level hasn't been set method will return default setting.
+   * The probability expected to be set as an float between 0.0 and 1.0
+   * @param klass is the name of the resource
+   * @return float representation of configured probability level of 
+   *  the requested resource or default value if hasn't been set
+   */
   protected static float getProbability(final String klass) {
     String newProbName = FPROB_NAME + klass;
 
-    conf.setIfUnset(newProbName, System.getProperty(newProbName, conf.get(ALL_PROBABILITIES)));
-    float ret = conf.getFloat(newProbName, conf.getFloat(ALL_PROBABILITIES, DEFAULT_PROB));
+    String newValue = System.getProperty(newProbName, conf.get(ALL_PROBABILITIES));
+    if (newValue != null && !newValue.equals(conf.get(newProbName)))
+      conf.set(newProbName, newValue);
+
+    float ret = conf.getFloat(newProbName,
+        conf.getFloat(ALL_PROBABILITIES, DEFAULT_PROB));
     LOG.debug("Request for " + newProbName + " returns=" + ret);
     // Make sure that probability level is valid.
-    if (ret < 0.00 || ret > 1.00) 
+    if (ret < DEFAULT_PROB || ret > MAX_PROB) 
       ret = conf.getFloat(ALL_PROBABILITIES, DEFAULT_PROB);
     
     return ret;

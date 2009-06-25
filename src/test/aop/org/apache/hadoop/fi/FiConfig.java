@@ -38,7 +38,6 @@ public class FiConfig {
   protected static void init () {
     if (conf == null) {
       conf = new Configuration(false);
-      System.out.println(System.getProperties());
       String configName = System.getProperty(CONFIG_PARAMETER, DEFAULT_CONFIG);
       conf.addResource(configName);
     }
