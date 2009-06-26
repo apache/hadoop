@@ -76,12 +76,21 @@ public class KeyFieldBasedPartitioner<K2, V2> implements Partitioner<K2, V2> {
       throw new RuntimeException("The current system does not " +
           "support UTF-8 encoding!", e);
     }
+    // return 0 if the key is empty
+    if (keyBytes.length == 0) {
+      return 0;
+    }
+    
     int []lengthIndicesFirst = keyFieldHelper.getWordLengths(keyBytes, 0, 
         keyBytes.length);
     int currentHash = 0;
     for (KeyDescription keySpec : allKeySpecs) {
       int startChar = keyFieldHelper.getStartOffset(keyBytes, 0, keyBytes.length, 
           lengthIndicesFirst, keySpec);
+       // no key found! continue
+      if (startChar < 0) {
+        continue;
+      }
       int endChar = keyFieldHelper.getEndOffset(keyBytes, 0, keyBytes.length, 
           lengthIndicesFirst, keySpec);
       currentHash = hashCode(keyBytes, startChar, endChar, 
