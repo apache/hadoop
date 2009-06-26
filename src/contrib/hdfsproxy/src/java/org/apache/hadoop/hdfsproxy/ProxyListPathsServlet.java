@@ -29,21 +29,30 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 public class ProxyListPathsServlet extends ListPathsServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
-  
+
   /** {@inheritDoc} */
   @Override
   public void init() throws ServletException {
     ServletContext context = getServletContext();
-    if (context.getAttribute("name.conf") == null) { 
+    if (context.getAttribute("name.conf") == null) {
       context.setAttribute("name.conf", new Configuration());
-    }    
+    }
   }
 
   /** {@inheritDoc} */
   @Override
   protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    String userID = (String) request.getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    UnixUserGroupInformation ugi = ProxyUgiManager.getUgiForUser(userID);
+    String userID = (String) request
+        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    String groupName = (String) request
+        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.role");
+    UnixUserGroupInformation ugi;
+    if (groupName != null) {
+      // group info stored in ldap
+      ugi = new UnixUserGroupInformation(userID, groupName.split(","));
+    } else {// stronger ugi management
+      ugi = ProxyUgiManager.getUgiForUser(userID);
+    }
     return ugi;
   }
 }

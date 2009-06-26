@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.hdfsproxy;
 
+import java.io.IOException;
+
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import javax.servlet.ServletException;
-import javax.servlet.ServletContext;
-import javax.servlet.RequestDispatcher;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 
 /**
  * 
@@ -40,51 +41,55 @@ public class ProxyForwardServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
   private static Configuration configuration = null;
   public static final Log LOG = LogFactory.getLog(ProxyForwardServlet.class);
-  
+
   /** {@inheritDoc} */
   @Override
   public void init() throws ServletException {
     ServletContext context = getServletContext();
-    configuration = (Configuration) context.getAttribute("org.apache.hadoop.hdfsproxy.conf");
+    configuration = (Configuration) context
+        .getAttribute("org.apache.hadoop.hdfsproxy.conf");
   }
-  
+
   /** {@inheritDoc} */
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
-    throws IOException, ServletException {  
-    String hostname = request.getServerName(); 
-    
-    String version = configuration.get(hostname);
-    if (version != null) {
-      ServletContext curContext = getServletContext();
-      ServletContext dstContext = curContext.getContext(version);
-      
-      if (dstContext == null) {
-        LOG.info("Context non-exist or restricted from access: " + version);
-        response.sendError(HttpServletResponse.SC_NOT_FOUND);
-        return;
-      }
-      LOG.debug("Request to " + hostname + " is forwarded to version " + version);
-      forwardRequest(request, response, dstContext, request.getServletPath());
+      throws IOException, ServletException {
+    String hostname = request.getServerName();
 
-    } else {
-      LOG.info("not a valid context path");
-      response.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED); 
+    String version = configuration.get(hostname);
+    if (version == null) {
+      // extract from hostname directly
+      String[] strs = hostname.split("[-\\.]");
+      version = "/" + strs[0];
     }
-  } 
+
+    ServletContext curContext = getServletContext();
+    ServletContext dstContext = curContext.getContext(version);
+
+    if (dstContext == null) {
+      LOG.info("Context non-exist or restricted from access: " + version);
+      response.sendError(HttpServletResponse.SC_NOT_FOUND);
+      return;
+    }
+    LOG.debug("Request to " + hostname + " is forwarded to version " + version);
+    forwardRequest(request, response, dstContext, request.getServletPath());
+
+  }
+
   /** {@inheritDoc} */
-  public void forwardRequest(HttpServletRequest request, HttpServletResponse response, ServletContext context, String pathInfo) 
-    throws IOException, ServletException{
-    String path = buildForwardPath(request, pathInfo);    
+  public void forwardRequest(HttpServletRequest request,
+      HttpServletResponse response, ServletContext context, String pathInfo)
+      throws IOException, ServletException {
+    String path = buildForwardPath(request, pathInfo);
     RequestDispatcher dispatcher = context.getRequestDispatcher(path);
     if (dispatcher == null) {
-      LOG.info("There was no such dispatcher");
+      LOG.info("There was no such dispatcher: " + path);
       response.sendError(HttpServletResponse.SC_NO_CONTENT);
       return;
     }
     dispatcher.forward(request, response);
   }
-  
+
   /** {@inheritDoc} */
   protected String buildForwardPath(HttpServletRequest request, String pathInfo) {
     String path = pathInfo;

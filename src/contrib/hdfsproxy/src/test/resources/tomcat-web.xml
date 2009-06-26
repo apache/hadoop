@@ -57,16 +57,8 @@
       </description>
     </context-param>
     
-    <filter>
-	   	<filter-name>ldapIpDirFilter</filter-name>
-	   	<filter-class>org.apache.hadoop.hdfsproxy.LdapIpDirFilter</filter-class>
-		</filter>
+     	
 
-		<filter-mapping>
-        <filter-name>ldapIpDirFilter</filter-name>
-				<url-pattern>/*</url-pattern>
-    </filter-mapping>
-    	
 
     <!-- Servlet definitions for the servlets that make up
          your web application, including initialization
@@ -93,6 +85,15 @@
          You can define any number of servlets, including zero.
     -->
 
+		 <filter>
+	        <filter-name>proxyFilter</filter-name>
+	        <filter-class>org.apache.hadoop.hdfsproxy.ProxyFilter</filter-class>
+	   </filter>
+
+    <filter-mapping>
+        <filter-name>proxyFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
     
     <servlet>
     	<servlet-name>listPaths</servlet-name>

@@ -55,5 +55,51 @@
   </description>
 </property>
 
+<property>
+  <name>hdfsproxy.ldap.initial.context.factory</name>
+  <value>com.sun.jndi.ldap.LdapCtxFactory</value>
+  <description> ldap initial context factory
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ldap.provider.url</name>
+  <value>ldap://localhost:389</value>
+  <description> ldap server address
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ldap.role.base</name>
+  <value>ou=proxyroles,dc=mycompany,dc=com</value>
+  <description> ldap role base
+  </description>
+</property>
+
+<property>
+    <name>fs.default.name</name>
+    <!-- cluster variant -->
+    <value>hdfs://localhost:54321</value>
+    <description>The name of the default file system.  Either the
+  literal string "local" or a host:port for NDFS.</description>
+    <final>true</final>
+  </property>
+
+<property>
+  <name>dfs.block.size</name>
+  <value>134217728</value>
+  <description>The default block size for new files.</description>
+</property>
+
+<property>
+    <name>io.file.buffer.size</name>
+    <value>131072</value>
+    <description>The size of buffer for use in sequence files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+
 </configuration>
 

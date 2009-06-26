@@ -7,6 +7,8 @@ Trunk (unreleased changes)
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
     (Konstantin Boudnik via szetszwo)
 
+    HDFS-447. Add LDAP lookup to hdfsproxy. (Zhiyong Zhang via cdouglas)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file

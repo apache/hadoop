@@ -24,22 +24,23 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.conf.Configuration;
 
 /** {@inheritDoc} */
 public class ProxyStreamFile extends StreamFile {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
+
   /** {@inheritDoc} */
   @Override
   public void init() throws ServletException {
     ServletContext context = getServletContext();
-    if (context.getAttribute("name.conf") == null) { 
+    if (context.getAttribute("name.conf") == null) {
       context.setAttribute("name.conf", new Configuration());
-    }    
+    }
   }
 
   /** {@inheritDoc} */
@@ -59,8 +60,18 @@ public class ProxyStreamFile extends StreamFile {
   /** {@inheritDoc} */
   @Override
   protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    String userID = (String) request.getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    UnixUserGroupInformation ugi = ProxyUgiManager.getUgiForUser(userID);
+    String userID = (String) request
+        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    String groupName = (String) request
+        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.role");
+    UnixUserGroupInformation ugi;
+    if (groupName != null) {
+      // get group info from ldap
+      ugi = new UnixUserGroupInformation(userID, groupName.split(","));
+    } else {// stronger ugi management
+      ugi = ProxyUgiManager.getUgiForUser(userID);
+    }
     return ugi;
   }
+
 }

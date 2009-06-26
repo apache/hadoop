@@ -70,5 +70,35 @@
   </description>
 </property>
 
+<property>
+  <name>hdfsproxy.ldap.initial.context.factory</name>
+  <value>com.sun.jndi.ldap.LdapCtxFactory</value>
+  <description> ldap initial context factory
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ldap.provider.url</name>
+  <value>ldap://ldapserver:389</value>
+  <description> ldap server address
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ldap.role.base</name>
+  <value>ou=proxyroles,dc=mycompany,dc=com</value>
+  <description> ldap role base
+  </description>
+</property>
+
+<property>
+  <name>fs.default.name</name>
+  <!-- cluster variant -->
+  <value>hdfs://localhost:8020</value>
+  <description>The name of the default file system.  Either the
+  literal string "local" or a host:port for NDFS.</description>
+  <final>true</final>
+</property>
+
 </configuration>
 
