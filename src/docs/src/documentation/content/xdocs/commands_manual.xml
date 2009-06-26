@@ -483,11 +483,11 @@
 					Runs a HDFS dfsadmin client.
 				</p> 
 				<p>
-					<code>Usage: hadoop dfsadmin  [</code><a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a><code>] [-report] [-safemode enter | leave | get | wait] [-refreshNodes]
-					 [-finalizeUpgrade] [-upgradeProgress status | details | force] [-metasave filename] 
-					 [-setQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;] [-clrQuota &lt;dirname&gt;...&lt;dirname&gt;] 
-					 [-restoreFailedStorage true|false|check] 
-					 [-help [cmd]]</code>
+					<code>Usage: hadoop dfsadmin  [</code><a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a><code>] 
+					[-report][-safemode enter | leave | get | wait] [-saveNamespace] [-restoreFailedStorage true|false|check] [-refreshNodes] [-finalizeUpgrade]
+					[-upgradeProgress status | details | force] [-metasave filename] [-refreshServiceAcl] [-printTopology] [-setQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;]
+					[-clrQuota &lt;dirname&gt;...&lt;dirname&gt;] [-setSpaceQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;] [-clrSpaceQuota &lt;dirname&gt;...&lt;dirname&gt;] [-help [cmd]]
+					</code>
 				</p>
 				<table>
 			          <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
@@ -499,14 +499,68 @@
 			           <tr>
 			          	<td><code>-safemode enter | leave | get | wait</code></td>
 			            <td>Safe mode maintenance command.
-                Safe mode is a Namenode state in which it <br/>
-                        1.  does not accept changes to the name space (read-only) <br/> 
-                        2.  does not replicate or delete blocks. <br/>
-                Safe mode is entered automatically at Namenode startup, and
-                leaves safe mode automatically when the configured minimum
-                percentage of blocks satisfies the minimum replication
-                condition.  Safe mode can also be entered manually, but then
+               Safe mode is a Namenode state in which it <br/>
+               1.  does not accept changes to the name space (read-only) <br/> 
+               2.  does not replicate or delete blocks. <br/>
+               Safe mode is entered automatically at Namenode startup, and
+               leaves safe mode automatically when the configured minimum
+               percentage of blocks satisfies the minimum replication
+               condition.  Safe mode can also be entered manually, but then
                 it can only be turned off manually as well.</td>
+			           </tr>
+			           <tr>
+			              <td><code>-saveNamesapce</code></td>
+			              <td>Save current namespace into storage directories and reset edits log.
+        Requires superuser permissions and safe mode.
+			              </td>
+			           </tr>
+			           <tr>
+			           		<td><code> -restoreFailedStorage</code></td>
+			           		<td>  Set/Unset/Check flag to attempt restore of failed storage replicas if they become available.
+        Requires superuser permissions.</td>
+			           </tr>
+			           <tr>
+			                <td><code>-refreshServiceAcl</code></td>
+			                <td> Reload the service-level authorization policy file
+        Namenode will reload the authorization policy file</td>
+			           </tr>
+			           <tr>
+			           		<td><code>-setSpaceQuota &lt;quota> &lt;dirname&gt;...&lt;dirname&gt;</code></td>
+			           		<td>Set the disk space quota &lt;quota&gt; for each directory &lt;dirName&gt;. The directory quota is a long integer that puts a hard limit
+        on the number of names in the directory tree.
+        Quota can also be speciefied with a binary prefix for terabytes,
+        petabytes etc (e.g. 50t is 50TB, 5m is 5MB, 3p is 3PB).<br/>
+        For each directory, attempt to set the quota. An error will be reported if<br/>
+        1. N is not a positive integer, or<br/>
+        2. user is not an administrator, or<br/>
+        3. the directory does not exist or is a file, or<br/>
+        4. the directory would immediately exceed the new space quota.</td>
+			           </tr>
+			           <tr>
+			           		<td><code>-clrSpaceQuota &lt;dirname&gt;...&lt;dirname&gt;</code></td>
+			           		<td> Clear the disk space quota for each directory &lt;dirName&gt;.
+        For each directory, attempt to set the quota. An error will be reported if<br/>
+        1. the directory does not exist or is a file, or<br/>
+        2. user is not an administrator.<br/>
+        It does not fault if the directory has no quota.</td>
+			           </tr>
+			            <tr>
+			          	<td><code>-setQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;</code></td>
+			            <td>Set the quota &lt;quota&gt; for each directory &lt;dirname&gt;.
+         The directory quota is a long integer that puts a hard limit on the number of names in the directory tree.<br/>
+         For each directory, attempt to set the quota. An error will be reported if<br/>
+         1. N is not a positive integer, or<br/>
+         2. user is not an administrator, or<br/>
+         3. the directory does not exist or is a file, or<br/>
+         4. the directory would immediately exceed the new quota.</td>
+			           </tr>
+			           <tr>
+			          	<td><code>-clrQuota &lt;dirname&gt;...&lt;dirname&gt;</code></td>
+			            <td>Clear the quota for each directory &lt;dirname&gt;.<br/>
+        For each directory, attempt to set the quota. An error will be reported if<br/>
+        1. the directory does not exist or is a file, or<br/>
+        2. user is not an administrator.<br/>
+        It does not fault if the directory has no quota.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>-refreshNodes</code></td>
@@ -540,24 +594,6 @@
                         2. Blocks waiting to be replicated<br/>
                         3. Blocks currrently being replicated<br/>
                         4. Blocks waiting to be deleted</td>
-			           </tr>
-			           <tr>
-			          	<td><code>-setQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;</code></td>
-			            <td>Set the quota &lt;quota&gt; for each directory &lt;dirname&gt;.
-                The directory quota is a long integer that puts a hard limit on the number of names in the directory tree.<br/>
-                Best effort for the directory, with faults reported if<br/>
-                1. N is not a positive integer, or<br/>
-                2. user is not an administrator, or<br/>
-                3. the directory does not exist or is a file, or<br/>
-                4. the directory would immediately exceed the new quota.</td>
-			           </tr>
-			           <tr>
-			          	<td><code>-clrQuota &lt;dirname&gt;...&lt;dirname&gt;</code></td>
-			            <td>Clear the quota for each directory &lt;dirname&gt;.<br/>
-                Best effort for the directory. with fault reported if<br/>
-                1. the directory does not exist or is a file, or<br/>
-                2. user is not an administrator.<br/>
-                It does not fault if the directory has no quota.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>-restoreFailedStorage true | false | check</code></td>

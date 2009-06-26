@@ -76,7 +76,7 @@ public class DFSAdmin extends FsShell {
     private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
     "Clear the quota for each directory <dirName>.\n" +
-    "\t\tBest effort for the directory. with fault reported if\n" +
+    "\t\tFor each directory, attempt to clear the quota. An error will be reported if\n" +
     "\t\t1. the directory does not exist or is a file, or\n" +
     "\t\t2. user is not an administrator.\n" +
     "\t\tIt does not fault if the directory has no quota.";
@@ -119,7 +119,7 @@ public class DFSAdmin extends FsShell {
       "Set the quota <quota> for each directory <dirName>.\n" + 
       "\t\tThe directory quota is a long integer that puts a hard limit\n" +
       "\t\ton the number of names in the directory tree\n" +
-      "\t\tBest effort for the directory, with faults reported if\n" +
+      "\t\tFor each directory, attempt to set the quota. An error will be reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
       "\t\t3. the directory does not exist or is a file, or\n";
@@ -161,7 +161,7 @@ public class DFSAdmin extends FsShell {
     private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
     "Clear the disk space quota for each directory <dirName>.\n" +
-    "\t\tBest effort for the directory. with fault reported if\n" +
+    "\t\tFor each directory, attempt to clear the quota. An error will be reported if\n" +
     "\t\t1. the directory does not exist or is a file, or\n" +
     "\t\t2. user is not an administrator.\n" +
     "\t\tIt does not fault if the directory has no quota.";
@@ -207,7 +207,7 @@ public class DFSAdmin extends FsShell {
       "\t\ta 1GB file with replication of 3 consumes 3GB of the quota.\n\n" +
       "\t\tQuota can also be speciefied with a binary prefix for terabytes,\n" +
       "\t\tpetabytes etc (e.g. 50t is 50TB, 5m is 5MB, 3p is 3PB).\n" + 
-      "\t\tBest effort for the directory, with faults reported if\n" +
+      "\t\tFor each directory, attempt to set the quota. An error will be reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
       "\t\t3. the directory does not exist or is a file, or\n";

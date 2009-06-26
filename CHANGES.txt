@@ -18,6 +18,8 @@ Trunk (unreleased changes)
     HDFS-444. Allow to change probability levels dynamically in the fault
     injection framework.  (Konstantin Boudnik via szetszwo)
 
+    HDFS-352. Documentation for saveNamespace command. (Ravi Phulari via shv)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than
