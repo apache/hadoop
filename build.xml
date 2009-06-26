@@ -250,7 +250,7 @@
   <!-- ================================================================== -->
   <!-- Package                                                            -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar,javadoc,compile-test,docs" 
+  <target name="package" depends="jar,javadoc,compile-test" 
       description="Build distribution; must define -Djava5.home and -Dforrest.home so can generate doc"> 
     <mkdir dir="${dist.dir}"/>
     <copy todir="${dist.dir}" includeEmptyDirs="false" flatten="true">
