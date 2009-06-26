@@ -30,6 +30,9 @@ Trunk (unreleased changes)
     MAPREDUCE-463. Makes job setup and cleanup tasks as optional.
     (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-502. Allow jobtracker to be configured with zero completed jobs
+    in memory. (Amar Kamat via sharad)
+
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)

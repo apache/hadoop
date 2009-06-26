@@ -57,6 +57,7 @@ public class MiniMRCluster {
   private int numTrackerToExclude;
     
   private JobConf job;
+  private Clock clock;
   
   /**
    * An inner class that runs a job tracker.
@@ -66,9 +67,15 @@ public class MiniMRCluster {
     private volatile boolean isActive = true;
     
     JobConf jc = null;
+    Clock clock = null;
         
     public JobTrackerRunner(JobConf conf) {
       jc = conf;
+    }
+
+    public JobTrackerRunner(JobConf conf, Clock clock) {
+      jc = conf;
+      this.clock = clock;
     }
 
     public boolean isUp() {
@@ -101,7 +108,11 @@ public class MiniMRCluster {
         jc.set("mapred.local.dir",f.getAbsolutePath());
         jc.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
-        tracker = JobTracker.startTracker(jc);
+        if (clock == null) {
+          tracker = JobTracker.startTracker(jc);
+        } else {
+          tracker = JobTracker.startTracker(jc, clock);
+        }
         tracker.offerService();
       } catch (Throwable e) {
         LOG.error("Job tracker crashed", e);
@@ -422,6 +433,14 @@ public class MiniMRCluster {
       int numTaskTrackers, String namenode, 
       int numDir, String[] racks, String[] hosts, UnixUserGroupInformation ugi,
       JobConf conf, int numTrackerToExclude) throws IOException {
+    this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, numDir,
+         racks, hosts, ugi, conf, numTrackerToExclude, new Clock());
+  }
+
+   public MiniMRCluster(int jobTrackerPort, int taskTrackerPort,
+      int numTaskTrackers, String namenode,
+      int numDir, String[] racks, String[] hosts, UnixUserGroupInformation ugi,
+      JobConf conf, int numTrackerToExclude, Clock clock) throws IOException {
     if (racks != null && racks.length < numTaskTrackers) {
       LOG.error("Invalid number of racks specified. It should be at least " +
           "equal to the number of tasktrackers");
@@ -457,6 +476,7 @@ public class MiniMRCluster {
     this.ugi = ugi;
     this.conf = conf; // this is the conf the mr starts with
     this.numTrackerToExclude = numTrackerToExclude;
+    this.clock = clock;
 
     // start the jobtracker
     startJobTracker();
@@ -554,7 +574,7 @@ public class MiniMRCluster {
    */
   public void startJobTracker() {
     //  Create the JobTracker
-    jobTracker = new JobTrackerRunner(conf);
+    jobTracker = new JobTrackerRunner(conf, clock);
     jobTrackerThread = new Thread(jobTracker);
         
     jobTrackerThread.start();

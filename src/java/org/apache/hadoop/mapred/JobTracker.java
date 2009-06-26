@@ -163,7 +163,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     * The minimum time (in ms) that a job's information has to remain
     * in the JobTracker's memory before it is retired.
     */
-  static final int MIN_TIME_BEFORE_RETIRE = 60000;
+  final int MIN_TIME_BEFORE_RETIRE;
 
 
   private int nextJobId = 1;
@@ -187,10 +187,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public static JobTracker startTracker(JobConf conf
                                         ) throws IOException,
                                                  InterruptedException {
+    return startTracker(conf, new Clock());
+  }
+
+  static JobTracker startTracker(JobConf conf, Clock clock) 
+  throws IOException, InterruptedException {
     JobTracker result = null;
     while (true) {
       try {
-        result = new JobTracker(conf, new Clock());
+        result = new JobTracker(conf, clock);
         result.taskScheduler.setTaskTrackerManager(result);
         break;
       } catch (VersionMismatch e) {
@@ -404,6 +409,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Used to remove old finished Jobs that have been around for too long
   ///////////////////////////////////////////////////////
   class RetireJobs implements Runnable {
+    int runCount = 0;
     public RetireJobs() {
     }
 
@@ -414,6 +420,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
      */
     public void run() {
       while (true) {
+        ++runCount;
         try {
           Thread.sleep(retireJobCheckInterval);
           List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
@@ -1602,6 +1609,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       conf.getLong("mapred.tasktracker.expiry.interval", 10 * 60 * 1000);
     retireJobInterval = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
     retireJobCheckInterval = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);
+    // min time before retire
+    MIN_TIME_BEFORE_RETIRE = conf.getInt("mapred.jobtracker.retirejob.interval.min", 60000);
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
     MAX_BLACKLISTS_PER_TRACKER = 
         conf.getInt("mapred.max.tracker.blacklists", 4);
