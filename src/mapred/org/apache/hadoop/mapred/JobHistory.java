@@ -833,6 +833,19 @@ public class JobHistory {
     }
 
     /**
+     * Deletes job data from the local disk.
+     * For now just deletes the localized copy of job conf
+     */
+    static void cleanupJob(JobID id) {
+      String localJobFilePath =  JobInfo.getLocalJobFilePath(id);
+      File f = new File (localJobFilePath);
+      LOG.info("Deleting localized job conf at " + f);
+      if (!f.delete()) {
+        LOG.debug("Failed to delete file " + f);
+      }
+    }
+
+    /**
      * Log job submitted event to history. Creates a new file in history 
      * for the job. if history file creation fails, it disables history 
      * for all other events. 

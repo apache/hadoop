@@ -426,6 +426,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                     LOG.info("Retired job with id: '" + 
                              job.getProfile().getJobID() + "' of user '" +
                              jobUser + "'");
+
+                    // clean up job files from the local disk
+                    JobHistory.JobInfo.cleanupJob(job.getProfile().getJobID());
                   }
                 }
               }
