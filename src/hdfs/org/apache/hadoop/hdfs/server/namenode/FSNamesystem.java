@@ -117,6 +117,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   public static final Log auditLog = LogFactory.getLog(
       FSNamesystem.class.getName() + ".audit");
 
+  // Default initial capacity and load factor of map
+  public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;
+  public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
+
   private boolean isPermissionEnabled;
   private UserGroupInformation fsOwner;
   private String supergroup;
@@ -125,9 +129,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private FSNamesystemMetrics myFSMetrics;
   private long capacityTotal = 0L, capacityUsed = 0L, capacityRemaining = 0L;
   private int totalLoad = 0;
-  private long pendingReplicationBlocksCount = 0L, corruptReplicaBlocksCount,
-    underReplicatedBlocksCount = 0L, scheduledReplicationBlocksCount = 0L;
 
+  volatile long pendingReplicationBlocksCount = 0L;
+  volatile long corruptReplicaBlocksCount = 0L;
+  volatile long underReplicatedBlocksCount = 0L;
+  volatile long scheduledReplicationBlocksCount = 0L;
+  volatile long excessBlocksCount = 0L;
+  volatile long pendingDeletionBlocksCount = 0L;
   //
   // Stores the correct file name hierarchy
   //
@@ -137,7 +145,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   // Mapping: Block -> { INode, datanodes, self ref } 
   // Updated only in response to client-sent information.
   //
-  BlocksMap blocksMap = new BlocksMap();
+  final BlocksMap blocksMap = new BlocksMap(DEFAULT_INITIAL_MAP_CAPACITY, 
+                                            DEFAULT_MAP_LOAD_FACTOR);
 
   //
   // Store blocks-->datanodedescriptor(s) map of corrupt replicas
@@ -1181,7 +1190,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           // This reduces the possibility of triggering HADOOP-1349.
           //
           for(Collection<Block> v : recentInvalidateSets.values()) {
-            v.remove(last);
+            if (v.remove(last)) {
+              pendingDeletionBlocksCount--;
+            }
           }
         }
       }
@@ -1461,8 +1472,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Remove a datanode from the invalidatesSet
    * @param n datanode
    */
-  private void removeFromInvalidates(DatanodeInfo n) {
-    recentInvalidateSets.remove(n.getStorageID());
+  void removeFromInvalidates(String storageID) {
+    Collection<Block> blocks = recentInvalidateSets.remove(storageID);
+    if (blocks != null) {
+      pendingDeletionBlocksCount -= blocks.size();
+    }
   }
 
   /**
@@ -1489,7 +1503,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       invalidateSet = new HashSet<Block>();
       recentInvalidateSets.put(n.getStorageID(), invalidateSet);
     }
-    invalidateSet.add(b);
+    if (invalidateSet.add(b)) {
+      pendingDeletionBlocksCount++;
+    }
   }
   
   /**
@@ -1509,7 +1525,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   private synchronized void dumpRecentInvalidateSets(PrintWriter out) {
     int size = recentInvalidateSets.values().size();
-    out.println("Metasave: Blocks waiting deletion from "+size+" datanodes.");
+    out.println("Metasave: Blocks " + pendingDeletionBlocksCount 
+        + " waiting deletion from " + size + " datanodes.");
     if (size == 0) {
       return;
     }
@@ -2658,9 +2675,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     String firstNodeId = recentInvalidateSets.keySet().iterator().next();
     assert firstNodeId != null;
     DatanodeDescriptor dn = datanodeMap.get(firstNodeId);
-    Collection<Block> invalidateSet = recentInvalidateSets.remove(firstNodeId);
- 
-    if(invalidateSet == null || dn == null)
+    if (dn == null) {
+       removeFromInvalidates(firstNodeId);
+       return 0;
+    }
+
+    Collection<Block> invalidateSet = recentInvalidateSets.get(firstNodeId);
+    if(invalidateSet == null)
       return 0;
 
     ArrayList<Block> blocksToInvalidate = 
@@ -2674,10 +2695,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       it.remove();
     }
 
-    // If we could not send everything in this message, reinsert this item
-    // into the collection.
-    if(it.hasNext())
-      recentInvalidateSets.put(firstNodeId, invalidateSet);
+    // If we send everything in this message, remove this node entry
+    if (!it.hasNext()) {
+      removeFromInvalidates(firstNodeId);
+    }
 
     dn.addBlocksToBeInvalidated(blocksToInvalidate);
 
@@ -2756,7 +2777,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   void unprotectedRemoveDatanode(DatanodeDescriptor nodeDescr) {
     nodeDescr.resetBlocks();
-    removeFromInvalidates(nodeDescr);
+    removeFromInvalidates(nodeDescr.getStorageID());
     NameNode.stateChangeLog.debug(
                                   "BLOCK* NameSystem.unprotectedRemoveDatanode: "
                                   + nodeDescr.getName() + " is out of service now.");
@@ -3265,9 +3286,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         excessBlocks = new TreeSet<Block>();
         excessReplicateMap.put(cur.getStorageID(), excessBlocks);
       }
-      excessBlocks.add(b);
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates: "
-                                    +"("+cur.getName()+", "+b+") is added to excessReplicateMap");
+      if (excessBlocks.add(b)) {
+        excessBlocksCount++;
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates: "
+                                      +"("+cur.getName()+", "+b
+                                      +") is added to excessReplicateMap");
+      }
 
       //
       // The 'excessblocks' tracks blocks until we get confirmation
@@ -3315,11 +3339,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     //
     Collection<Block> excessBlocks = excessReplicateMap.get(node.getStorageID());
     if (excessBlocks != null) {
-      excessBlocks.remove(block);
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
-                                    +block+" is removed from excessBlocks");
-      if (excessBlocks.size() == 0) {
-        excessReplicateMap.remove(node.getStorageID());
+      if (excessBlocks.remove(block)) {
+        excessBlocksCount--;
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
+            + block + " is removed from excessBlocks");
+        if (excessBlocks.size() == 0) {
+          excessReplicateMap.remove(node.getStorageID());
+        }
       }
     }
     
@@ -4229,11 +4255,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
       }
-      int activeBlocks = blocksMap.size();
-      for(Iterator<Collection<Block>> it = 
-            recentInvalidateSets.values().iterator(); it.hasNext();) {
-        activeBlocks -= it.next().size();
-      }
+      int activeBlocks = blocksMap.size() - (int)pendingDeletionBlocksCount;
       return (blockTotal == activeBlocks) ||
         (blockSafe >= 0 && blockSafe <= blockTotal);
     }
@@ -4521,12 +4543,24 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /** Returns number of blocks with corrupt replicas */
-  public long getCorruptReplicaBlocksCount() {
+  public long getCorruptReplicaBlocks() {
     return corruptReplicaBlocksCount;
   }
 
   public long getScheduledReplicationBlocks() {
     return scheduledReplicationBlocksCount;
+  }
+
+  public long getPendingDeletionBlocks() {
+    return pendingDeletionBlocksCount;
+  }
+
+  public long getExcessBlocks() {
+    return excessBlocksCount;
+  }
+  
+  public synchronized int getBlockCapacity() {
+    return blocksMap.getCapacity();
   }
 
   public String getFSState() {

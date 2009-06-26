@@ -26,6 +26,9 @@ Release 0.20.1 - Unreleased
     HADOOP-4372. Improves the way history filenames are obtained and manipulated.
     (Amar Kamat via ddas)
 
+    HADOOP-5897. Add name-node metrics to capture java heap usage.
+    (Suresh Srinivas via shv)
+
     HDFS-438. Improve help message for space quota command. (Raghu Angadi)
 
   OPTIMIZATIONS

@@ -290,7 +290,20 @@ class BlocksMap {
     }
   }
 
-  private Map<Block, BlockInfo> map = new HashMap<Block, BlockInfo>();
+  // Used for tracking HashMap capacity growth
+  private int capacity;
+  private final float loadFactor;
+  
+  private Map<BlockInfo, BlockInfo> map;
+
+  BlocksMap(int initialCapacity, float loadFactor) {
+    this.capacity = 1;
+    // Capacity is initialized to the next multiple of 2 of initialCapacity
+    while (this.capacity < initialCapacity)
+      this.capacity <<= 1;
+    this.loadFactor = loadFactor;
+    this.map = new HashMap<BlockInfo, BlockInfo>(initialCapacity, loadFactor);
+  }
 
   /**
    * Add BlockInfo if mapping does not exist.
@@ -420,5 +433,19 @@ class BlocksMap {
       return false;
     
     return true;
+  }
+  
+  /** Get the capacity of the HashMap that stores blocks */
+  public int getCapacity() {
+    // Capacity doubles every time the map size reaches the threshold
+    while (map.size() > (int)(capacity * loadFactor)) {
+      capacity <<= 1;
+    }
+    return capacity;
+  }
+  
+  /** Get the load factor of the map */
+  public float getLoadFactor() {
+    return loadFactor;
   }
 }
