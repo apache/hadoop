@@ -230,6 +230,8 @@ Release 0.20.0 - Unreleased
    HBASE-1566  using Scan(startRow,stopRow) will cause you to iterate the
                entire table
    HBASE-1560  TIF can't seem to find one region
+   HBASE-1580  Store scanner does not consult filter.filterRow at end of scan
+               (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
