@@ -19,6 +19,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,14 +43,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -58,7 +61,7 @@ public class StoreFile implements HConstants {
   private static final String HFILE_CACHE_SIZE_KEY = "hfile.block.cache.size";
 
   private static BlockCache hfileBlockCache = null;
-  
+
   // Make default block size for StoreFiles 8k while testing.  TODO: FIX!
   // Need to make it 8k for testing.
   private static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
@@ -218,15 +221,22 @@ public class StoreFile implements HConstants {
    * @return The block cache or <code>null</code>.
    */
   public static synchronized BlockCache getBlockCache(HBaseConfiguration conf) {
-    if (hfileBlockCache != null)
-      return hfileBlockCache;
+    if (hfileBlockCache != null) return hfileBlockCache;
 
-    long cacheSize = conf.getLong(HFILE_CACHE_SIZE_KEY, 0L);
+    float cachePercentage = conf.getFloat(HFILE_CACHE_SIZE_KEY, 0.0f);
     // There should be a better way to optimize this. But oh well.
-    if (cacheSize == 0L)
-      return null;
+    if (cachePercentage == 0L) return null;
+    if (cachePercentage > 1.0) {
+      throw new IllegalArgumentException(HFILE_CACHE_SIZE_KEY +
+        " must be between 0.0 and 1.0, not > 1.0");
+    }
 
-    hfileBlockCache = new LruBlockCache(cacheSize);
+    // Calculate the amount of heap to give the heap.
+    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    long cacheSize = (long)(mu.getMax() * cachePercentage);
+    LOG.info("Allocating LruBlockCache with maximum size " +
+      StringUtils.humanReadableInt(cacheSize));
+    hfileBlockCache = new LruBlockCache(cacheSize, DEFAULT_BLOCKSIZE_SMALL);
     return hfileBlockCache;
   }
 

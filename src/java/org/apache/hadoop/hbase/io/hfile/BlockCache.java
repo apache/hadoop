@@ -30,6 +30,14 @@ public interface BlockCache {
    * Add block to cache.
    * @param blockName Zero-based file block number.
    * @param buf The block contents wrapped in a ByteBuffer.
+   * @param inMemory Whether block should be treated as in-memory
+   */
+  public void cacheBlock(String blockName, ByteBuffer buf, boolean inMemory);
+  
+  /**
+   * Add block to cache (defaults to not in-memory).
+   * @param blockName Zero-based file block number.
+   * @param buf The block contents wrapped in a ByteBuffer.
    */
   public void cacheBlock(String blockName, ByteBuffer buf);
   

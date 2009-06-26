@@ -48,7 +48,7 @@ public class TestHeapSize extends TestCase {
     //LruBlockCache
     cl = LruBlockCache.class;
     expected = ClassSize.estimateBase(cl, false);
-    LruBlockCache c = new LruBlockCache(1,1,200);
+    LruBlockCache c = new LruBlockCache(102400,1024);
     //Since minimum size for the for a LruBlockCache is 1
     //we need to remove one reference from the heapsize
     actual = c.heapSize();// - ClassSize.REFERENCE_SIZE;

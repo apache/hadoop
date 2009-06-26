@@ -46,7 +46,7 @@ public class SimpleBlockCache implements BlockCache {
     processQueue();
     return cache.size();
   }
-  @Override
+
   public synchronized ByteBuffer getBlock(String blockName) {
     processQueue(); // clear out some crap.
     Ref ref = cache.get(blockName);
@@ -55,8 +55,12 @@ public class SimpleBlockCache implements BlockCache {
     return ref.get();
   }
 
-  @Override
   public synchronized void cacheBlock(String blockName, ByteBuffer buf) {
+    cache.put(blockName, new Ref(blockName, buf, q));
+  }
+
+  public synchronized void cacheBlock(String blockName, ByteBuffer buf, 
+      boolean inMemory) {
     cache.put(blockName, new Ref(blockName, buf, q));
   }
 }

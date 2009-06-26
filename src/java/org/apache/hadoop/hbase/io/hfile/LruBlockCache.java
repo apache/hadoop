@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,1141 +19,652 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
+import java.util.PriorityQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import java.nio.ByteBuffer;
-
 /**
- * The LruBlockCache is a memory-aware HashMap with a configurable maximum
- * memory footprint.  This is a modified version of LruHashMap specialized
- * for use as the HBase block cache map.  Keys are String, and values are 
- * ByteBuffer.
- * <p>
- * It maintains an ordered list of all entries in the map ordered by 
- * access time.  When space needs to be freed becase the maximum has been 
- * reached, or the application has asked to free memory, entries will be
- * evicted according to an LRU (least-recently-used) algorithm.  That is,
- * those entries which have not been accessed the longest will be evicted
- * first.
- * <p>
- * This class contains internal synchronization and is thread-safe.
+ * A block cache implementation that is memory-aware using {@link HeapSize},
+ * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
+ * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
+ * constant-time {@link cacheBlock} and {@link getBlock} operations.<p>
+ * 
+ * Contains three levels of block priority to allow for
+ * scan-resistance and in-memory families.  A block is added with an inMemory
+ * flag if necessary, otherwise a block becomes a single access priority.  Once
+ * a blocked is accessed again, it changes to multiple access.  This is used
+ * to prevent scans from thrashing the cache, adding a least-frequently-used
+ * element to the eviction algorithm.<p>
+ * 
+ * Each priority is given its own chunk of the total cache to ensure
+ * fairness during eviction.  Each priority will retain close to its maximum
+ * size, however, if any priority is not using its entire chunk the others
+ * are able to grow beyond their chunk size.<p>
+ * 
+ * Instantiated at a minimum with the total size and average block size.
+ * All sizes are in bytes.  The block size is not especially important as this 
+ * cache is fully dynamic in its sizing of blocks.  It is only used for
+ * pre-allocating data structures and in initial heap estimation of the map.<p>
+ * 
+ * The detailed constructor defines the sizes for the three priorities (they
+ * should total to the maximum size defined).  It also sets the levels that
+ * trigger and control the eviction thread.<p>
+ * 
+ * The acceptable size is the cache size level which triggers the eviction
+ * process to start.  It evicts enough blocks to get the size below the
+ * minimum size specified.<p>
+ * 
+ * Eviction happens in a separate thread and involves a single full-scan
+ * of the map.  It determines how many bytes must be freed to reach the minimum
+ * size, and then while scanning determines the fewest least-recently-used 
+ * blocks necessary from each of the three priorities (would be 3 times bytes
+ * to free).  It then uses the priority chunk sizes to evict fairly according
+ * to the relative sizes and usage.
  */
-public class LruBlockCache
-implements HeapSize, Map<String,ByteBuffer>, BlockCache {
+public class LruBlockCache implements BlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(LruBlockCache.class);
   
-  /** The default size (in bytes) of the LRU */  
-  public static final long DEFAULT_MAX_MEM_USAGE = 50000000;
-  /** The default capacity of the hash table */
-  public static final int DEFAULT_INITIAL_CAPACITY = 16;
-  /** The maxmum capacity of the hash table */
-  private static final int MAXIMUM_CAPACITY = 1 << 30;
-  /** The default load factor to use */
-  public static final float DEFAULT_LOAD_FACTOR = 0.75f;
+  /** Default Configuration Parameters*/
   
-  /** Load factor allowed (usually 75%) */
-  private final float loadFactor;
-  /** Number of key/vals in the map */
-  private int size;
-  /** Size at which we grow hash */
-  private int threshold;
-  /** Entries in the map */
-  private Entry [] entries;
-
-  /** Pointer to least recently used entry */
-  private Entry headPtr;
-  /** Pointer to most recently used entry */
-  private Entry tailPtr;
-
-  /** Maximum memory usage of this map */
-  private long memTotal = 0;
-  /** Amount of available memory */
-  private long memFree = 0;
+  /** Backing Concurrent Map Configuration */
+  static final float DEFAULT_LOAD_FACTOR = 0.75f;
+  static final int DEFAULT_CONCURRENCY_LEVEL = 16;
   
-  /** Number of successful (found) get() calls */
-  private long hitCount = 0;
-  /** Number of unsuccessful (not found) get() calls */
-  private long missCount = 0;
+  /** Eviction thresholds */
+  static final float DEFAULT_MIN_FACTOR = 0.75f;
+  static final float DEFAULT_ACCEPTABLE_FACTOR = 0.85f;
+  
+  /** Priority buckets */
+  static final float DEFAULT_SINGLE_FACTOR = 0.25f;
+  static final float DEFAULT_MULTI_FACTOR = 0.50f;
+  static final float DEFAULT_MEMORY_FACTOR = 0.25f;
+  
+  /** Statistics thread */
+  static final int statThreadPeriod = 60;
+  
+  /** Concurrent map (the cache) */
+  private final ConcurrentHashMap<String,CachedBlock> map;
+  
+  /** Eviction lock (locked when eviction in process) */
+  private final ReentrantLock evictionLock = new ReentrantLock(true);
+  
+  /** Volatile boolean to track if we are in an eviction process or not */
+  private volatile boolean evictionInProgress = false;
+  
+  /** Eviction thread */
+  private final EvictionThread evictionThread;
+  
+  /** Statistics thread schedule pool (for heavy debugging, could remove) */
+  private final ScheduledExecutorService scheduleThreadPool = 
+    Executors.newScheduledThreadPool(1);
+  
+  /** Current size of cache */
+  private final AtomicLong size;
+  
+  /** Current number of cached elements */
+  private final AtomicLong elements;
+  
+  /** Cache access count (sequential ID) */
+  private final AtomicLong count;
+  
+  /** Cache statistics */
+  private final CacheStats stats;
+  
+  /** Maximum allowable size of cache (block put if size > max, evict) */
+  private long maxSize;
 
-  /** Memory overhead of this Object (for HeapSize) */
-  private static final int OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + 1 * Bytes.SIZEOF_FLOAT + 2 * Bytes.SIZEOF_INT + 
-      ClassSize.align(ClassSize.ARRAY) + 3 * ClassSize.REFERENCE + 
-      4 * Bytes.SIZEOF_LONG);
+  /** Approximate block size */
+  private long blockSize;
+  
+  /** Acceptable size of cache (no evictions if size < acceptable) */
+  private float acceptableFactor;
+  
+  /** Minimum threshold of cache (when evicting, evict until size < min) */
+  private float minFactor;
+  
+  /** Single access bucket size */
+  private float singleFactor;
+  
+  /** Multiple access bucket size */
+  private float multiFactor;
+  
+  /** In-memory bucket size */
+  private float memoryFactor;
+  
+  /** Overhead of the structure itself */
+  private long overhead;
   
   /**
-   * Constructs a new, empty map with the specified initial capacity,
-   * load factor, and maximum memory usage.
-   *
-   * @param initialCapacity the initial capacity
-   * @param loadFactor the load factor
-   * @param maxMemUsage the maximum total memory usage
-   * @throws IllegalArgumentException if the initial capacity is less than one
-   * @throws IllegalArgumentException if the initial capacity is greater than
-   * the maximum capacity
-   * @throws IllegalArgumentException if the load factor is <= 0
-   * @throws IllegalArgumentException if the max memory usage is too small
-   * to support the base overhead
+   * Default constructor.  Specify maximum size and expected average block
+   * size (approximation is fine).
+   * 
+   * <p>All other factors will be calculated based on defaults specified in
+   * this class.
+   * @param maxSize maximum size of cache, in bytes
+   * @param blockSize approximate size of each block, in bytes
    */
-  public LruBlockCache(int initialCapacity, float loadFactor,
-  long maxMemUsage) {
-    if (initialCapacity < 1) {
-      throw new IllegalArgumentException("Initial capacity must be > 0");
+  public LruBlockCache(long maxSize, long blockSize) {
+    this(maxSize, blockSize, true);
+  }
+  
+  /**
+   * Constructor used for testing.  Allows disabling of the eviction thread.
+   */
+  public LruBlockCache(long maxSize, long blockSize, boolean evictionThread) {
+    this(maxSize, blockSize, evictionThread,
+        (int)Math.ceil(1.2*maxSize/blockSize),
+        DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
+        DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
+        DEFAULT_SINGLE_FACTOR, DEFAULT_MULTI_FACTOR,
+        DEFAULT_MEMORY_FACTOR);
+  }
+  
+  /**
+   * Configurable constructor.  Use this constructor if not using defaults.
+   * @param maxSize maximum size of this cache, in bytes
+   * @param blockSize expected average size of blocks, in bytes
+   * @param evictionThread whether to run evictions in a bg thread or not
+   * @param mapInitialSize initial size of backing ConcurrentHashMap
+   * @param mapLoadFactor initial load factor of backing ConcurrentHashMap
+   * @param mapConcurrencyLevel initial concurrency factor for backing CHM
+   * @param minFactor percentage of total size that eviction will evict until
+   * @param acceptableFactor percentage of total size that triggers eviction
+   * @param singleFactor percentage of total size for single-access blocks
+   * @param multiFactor percentage of total size for multiple-access blocks
+   * @param memoryFactor percentage of total size for in-memory blocks
+   */
+  public LruBlockCache(long maxSize, long blockSize, boolean evictionThread,
+      int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
+      float minFactor, float acceptableFactor,
+      float singleFactor, float multiFactor, float memoryFactor) {
+    if(singleFactor + multiFactor + memoryFactor != 1) {
+      throw new IllegalArgumentException("Single, multi, and memory factors " + 
+          " should total 1.0");
     }
-    if (initialCapacity > MAXIMUM_CAPACITY) {
-      throw new IllegalArgumentException("Initial capacity is too large");
+    if(minFactor >= acceptableFactor) {
+      throw new IllegalArgumentException("minFactor must be smaller than acceptableFactor");
     }
-    if (loadFactor <= 0 || Float.isNaN(loadFactor)) {
-      throw new IllegalArgumentException("Load factor must be > 0");
+    if(minFactor >= 1.0f || acceptableFactor >= 1.0f) {
+      throw new IllegalArgumentException("all factors must be < 1");
     }
-    if (maxMemUsage <= (OVERHEAD + initialCapacity * ClassSize.REFERENCE)) {
-      throw new IllegalArgumentException("Max memory usage too small to " +
-      "support base overhead");
+    this.maxSize = maxSize;
+    this.blockSize = blockSize;
+    map = new ConcurrentHashMap<String,CachedBlock>(mapInitialSize,
+        mapLoadFactor, mapConcurrencyLevel);
+    this.minFactor = minFactor;
+    this.acceptableFactor = acceptableFactor;
+    this.singleFactor = singleFactor;
+    this.multiFactor = multiFactor;
+    this.memoryFactor = memoryFactor;
+    this.stats = new CacheStats();
+    this.count = new AtomicLong(0);
+    this.elements = new AtomicLong(0);
+    this.overhead = getOverhead(maxSize, blockSize, mapConcurrencyLevel);
+    this.size = new AtomicLong(0);
+    if(evictionThread) {
+      this.evictionThread = new EvictionThread(this);
+      this.evictionThread.start();
+    } else {
+      this.evictionThread = null;
     }
+    this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
+        statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
+  }
   
-    /** Find a power of 2 >= initialCapacity */
-    int capacity = calculateCapacity(initialCapacity);
-    this.loadFactor = loadFactor;
-    this.threshold = calculateThreshold(capacity,loadFactor);
-    this.entries = new Entry[capacity];
-    this.memFree = maxMemUsage;
-    this.memTotal = maxMemUsage;
-    init();
+  public void setMaxSize(long maxSize) {
+    this.maxSize = maxSize;
+    if(this.size.get() > acceptableSize() && !evictionInProgress) {
+      runEviction();
+    }
+  }
+  
+  // BlockCache implementation
+  
+  /**
+   * Cache the block with the specified name and buffer.
+   * <p>
+   * It is assumed this will NEVER be called on an already cached block.  If
+   * that is done, it is assumed that you are reinserting the same exact
+   * block due to a race condition and will update the buffer but not modify
+   * the size of the cache.
+   * @param blockName block name
+   * @param buf block buffer
+   * @param inMemory if block is in-memory
+   */
+  public void cacheBlock(String blockName, ByteBuffer buf, boolean inMemory) {
+    CachedBlock cb = map.get(blockName);
+    if(cb != null) {
+      throw new RuntimeException("Cached an already cached block");
+    }
+    cb = new CachedBlock(blockName, buf, count.incrementAndGet(), inMemory);
+    long newSize = size.addAndGet(cb.heapSize());
+    map.put(blockName, cb);
+    elements.incrementAndGet();
+    if(newSize > acceptableSize() && !evictionInProgress) {
+      runEviction();
+    }
   }
 
   /**
-   * Constructs a new, empty map with the specified initial capacity and
-   * load factor, and default maximum memory usage.
-   *
-   * @param initialCapacity the initial capacity
-   * @param loadFactor the load factor
-   * @throws IllegalArgumentException if the initial capacity is less than one
-   * @throws IllegalArgumentException if the initial capacity is greater than
-   * the maximum capacity
-   * @throws IllegalArgumentException if the load factor is <= 0
+   * Cache the block with the specified name and buffer.
+   * <p>
+   * It is assumed this will NEVER be called on an already cached block.  If
+   * that is done, it is assumed that you are reinserting the same exact
+   * block due to a race condition and will update the buffer but not modify
+   * the size of the cache.
+   * @param blockName block name
+   * @param buf block buffer
    */
-  public LruBlockCache(int initialCapacity, float loadFactor) {
-    this(initialCapacity, loadFactor, DEFAULT_MAX_MEM_USAGE);
-  }
-  
-  /**
-   * Constructs a new, empty map with the specified initial capacity and
-   * with the default load factor and maximum memory usage.
-   *
-   * @param initialCapacity the initial capacity
-   * @throws IllegalArgumentException if the initial capacity is less than one
-   * @throws IllegalArgumentException if the initial capacity is greater than
-   * the maximum capacity
-   */
-  public LruBlockCache(int initialCapacity) {
-    this(initialCapacity, DEFAULT_LOAD_FACTOR, DEFAULT_MAX_MEM_USAGE);
+  public void cacheBlock(String blockName, ByteBuffer buf) {
+    cacheBlock(blockName, buf, false);
   }
 
   /**
-   * Constructs a new, empty map with the specified maximum memory usage
-   * and with default initial capacity and load factor.
-   *
-   * @param maxMemUsage the maximum total memory usage
-   * @throws IllegalArgumentException if the max memory usage is too small
-   * to support the base overhead
+   * Get the buffer of the block with the specified name.
+   * @param blockName block name
+   * @return buffer of specified block name, or null if not in cache
    */
-  public LruBlockCache(long maxMemUsage) {
-    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR,
-    maxMemUsage);
-  }
-
-  /**
-   * Constructs a new, empty map with the default initial capacity, 
-   * load factor and maximum memory usage.
-   */
-  public LruBlockCache() {
-    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR,
-    DEFAULT_MAX_MEM_USAGE);
-  }
-  
-  //--------------------------------------------------------------------------
-  /**
-   * BlockCache Implementation
-   */
-  
-  /**
-   * Returns the ByteBuffer associated with the specified blockName, or null
-   * if none exists.
-   *
-   * @param blockName block identifier
-   * @return the ByteBuffer associated with the block name, or null
-   */
-  public synchronized ByteBuffer getBlock(String blockName) {
-    return get(blockName);
-  }
-  
-  /**
-   * Inserts the specified ByteBuffer into the LRU map with the specified
-   * blockName as the key.
-   *
-   * This automatically handles evicting other blocks if the LRU is full.
-   *
-   * @param blockName block identifier
-   * @param buf the ByteBuffer associated with the block name
-   */
-  public synchronized void cacheBlock(String blockName, ByteBuffer buf) {
-    put(blockName,buf);
-  }
-
-  //--------------------------------------------------------------------------
-  /**
-   * Get the currently available memory for this LRU in bytes.
-   * This is (maxAllowed - currentlyUsed).
-   *
-   * @return currently available bytes
-   */
-  public long getMemFree() {
-    return memFree;
-  }
-  
-  /**
-   * Get the maximum memory allowed for this LRU in bytes.
-   *
-   * @return maximum allowed bytes
-   */
-  public long getMemMax() {
-    return memTotal;
-  }
-  
-  /**
-   * Get the currently used memory for this LRU in bytes.
-   *
-   * @return currently used memory in bytes
-   */
-  public long getMemUsed() {
-    return (memTotal - memFree);
-  }
-  
-  /**
-   * Get the number of hits to the map.  This is the number of times
-   * a call to get() returns a matched key.
-   *
-   * @return number of hits
-   */
-  public long getHitCount() {
-    return hitCount;
-  }
-  
-  /**
-   * Get the number of misses to the map.  This is the number of times
-   * a call to get() returns null.
-   *
-   * @return number of misses
-   */
-  public long getMissCount() {
-    return missCount;
-  }
-  
-  /**
-   * Get the hit ratio.  This is the number of hits divided by the
-   * total number of requests.
-   *
-   * @return hit ratio (double between 0 and 1)
-   */
-  public double getHitRatio() {
-    return ((double)hitCount) / ((double)(hitCount+missCount));
-  }
-  
-  /**
-   * Free the requested amount of memory from the LRU map.
-   *
-   * This will do LRU eviction from the map until at least as much
-   * memory as requested is freed.  This does not affect the maximum
-   * memory usage parameter.
-   *
-   * @param requestedAmount memory to free from LRU in bytes
-   * @return actual amount of memory freed in bytes
-   */
-  public synchronized long freeMemory(long requestedAmount) throws Exception {
-    long minMemory = getMinimumUsage();
-    if(requestedAmount > (getMemUsed() - getMinimumUsage())) {
-      return clearAll();
+  public ByteBuffer getBlock(String blockName) {
+    CachedBlock cb = map.get(blockName);
+    if(cb == null) {
+      stats.miss();
+      return null;
     }
-    long freedMemory = 0;
-    while(freedMemory < requestedAmount) {
-      freedMemory += evictFromLru();
-    }
-    return freedMemory;
+    stats.hit();
+    cb.access(count.incrementAndGet());
+    return cb.getBuffer();
+  }
+
+  protected long evictBlock(CachedBlock block) {
+    map.remove(block.getName());
+    size.addAndGet(-1 * block.heapSize());
+    elements.decrementAndGet();
+    stats.evicted();
+    return block.heapSize();
   }
   
   /**
-   * The total memory usage of this map
-   *
-   * @return memory usage of map in bytes
+   * Multi-threaded call to run the eviction process.
    */
+  private void runEviction() {
+    if(evictionThread == null) {
+      evict();
+    } else {
+      evictionThread.evict();
+    }
+  }
+  
+  /**
+   * Eviction method.
+   */
+  void evict() {
+
+    // Ensure only one eviction at a time
+    if(!evictionLock.tryLock()) return;
+    
+    try {
+      evictionInProgress = true;
+      
+      long bytesToFree = size.get() - minSize();
+      
+      LOG.info("Block cache LRU eviction started.  Attempting to free " + 
+          bytesToFree + " bytes");
+      
+      if(bytesToFree <= 0) return;
+      
+      // Instantiate priority buckets
+      BlockBucket bucketSingle = new BlockBucket(bytesToFree, blockSize, 
+          singleSize(), "single");
+      BlockBucket bucketMulti = new BlockBucket(bytesToFree, blockSize, 
+          multiSize(), "multi");
+      BlockBucket bucketMemory = new BlockBucket(bytesToFree, blockSize, 
+          memorySize(), "memory");
+      
+      // Scan entire map putting into appropriate buckets
+      for(CachedBlock cachedBlock : map.values()) {
+        switch(cachedBlock.getPriority()) {
+          case SINGLE: {
+            bucketSingle.add(cachedBlock);
+            break;
+          }
+          case MULTI: {
+            bucketMulti.add(cachedBlock);
+            break;
+          }
+          case MEMORY: {
+            bucketMemory.add(cachedBlock);
+            break;
+          }
+        }
+      }
+      
+      PriorityQueue<BlockBucket> bucketQueue = 
+        new PriorityQueue<BlockBucket>(3);
+      
+      bucketQueue.add(bucketSingle);
+      bucketQueue.add(bucketMulti);
+      bucketQueue.add(bucketMemory);
+      
+      int remainingBuckets = 3;
+      long bytesFreed = 0;
+      
+      BlockBucket bucket;
+      while((bucket = bucketQueue.poll()) != null) {
+        long overflow = bucket.overflow();
+        if(overflow > 0) {
+          long bucketBytesToFree = Math.min(overflow,
+            (long)Math.ceil((bytesToFree - bytesFreed) / remainingBuckets));
+          bytesFreed += bucket.free(bucketBytesToFree);
+        } 
+        remainingBuckets--;
+      }
+      
+      LOG.info("Block cache LRU eviction completed. " + 
+          "Freed " + bytesFreed + " bytes");
+      
+    } finally {
+      stats.evict();
+      evictionInProgress = false;
+      evictionLock.unlock();
+    }
+  }
+  
+  /**
+   * Used to group blocks into priority buckets.  There will be a BlockBucket
+   * for each priority (single, multi, memory).  Once bucketed, the eviction
+   * algorithm takes the appropriate number of elements out of each according
+   * to configuration parameters and their relatives sizes.
+   */
+  private class BlockBucket implements Comparable<BlockBucket> {
+
+    private CachedBlockQueue queue;
+    private long totalSize = 0;
+    private long bucketSize;
+    String name;
+    
+    public BlockBucket(long bytesToFree, long blockSize, long bucketSize, 
+        String name) {
+      this.bucketSize = bucketSize;
+      queue = new CachedBlockQueue(bytesToFree, blockSize);
+      totalSize = 0;
+      this.name = name;
+    }
+    
+    public void add(CachedBlock block) {
+      totalSize += block.heapSize();
+      queue.add(block);
+    }
+    
+    public long free(long toFree) {
+      CachedBlock [] blocks = queue.get();
+      long freedBytes = 0;
+      for(int i=0; i<blocks.length; i++) {
+        freedBytes += evictBlock(blocks[i]);
+        if(freedBytes >= toFree) {
+          return freedBytes;
+        }
+      }
+      return freedBytes;
+    }
+    
+    public long overflow() {
+      return totalSize - bucketSize;
+    }
+    
+    public int compareTo(BlockBucket that) {
+      if(this.overflow() == that.overflow()) return 0;
+      return this.overflow() > that.overflow() ? 1 : -1;
+    }
+  }
+  
+  /**
+   * Get the maximum size of this cache.
+   * @return max size in bytes
+   */
+  public long getMaxSize() {
+    return this.maxSize;
+  }
+  
+  /**
+   * Get the current size of this cache.
+   * @return current size in bytes
+   */
+  public long getCurrentSize() {
+    return this.size.get();
+  }
+  
+  /**
+   * Get the current size of this cache.
+   * @return current size in bytes
+   */
+  public long getFreeSize() {
+    return getMaxSize() - getCurrentSize();
+  }
+  
+  /**
+   * Get the size of this cache (number of cached blocks)
+   * @return number of cached blocks
+   */
+  public long size() {
+    return this.elements.get();
+  }
+  
+  /**
+   * Get the number of eviction runs that have occurred
+   */
+  public long getEvictionCount() {
+    return this.stats.getEvictionCount();
+  }
+  
+  /**
+   * Get the number of blocks that have been evicted during the lifetime
+   * of this cache.
+   */
+  public long getEvictedCount() {
+    return this.stats.getEvictedCount();
+  }
+  
+  /**
+   * Eviction thread.  Sits in waiting state until an eviction is triggered
+   * when the cache size grows above the acceptable level.<p>
+   * 
+   * Thread is triggered into action by {@link LruBlockCache#runEviction()}
+   */
+  private static class EvictionThread extends Thread {
+
+    private WeakReference<LruBlockCache> cache;
+    
+    public EvictionThread(LruBlockCache cache) {
+      this.cache = new WeakReference<LruBlockCache>(cache);
+    }
+    
+    @Override
+    public void run() {
+      while(true) {
+        synchronized(this) {
+          try {
+            this.wait();
+          } catch(InterruptedException e) {}
+        }
+        LruBlockCache cache = this.cache.get();
+        if(cache == null) break;
+        cache.evict();
+      }
+    }
+    public void evict() {
+      synchronized(this) {
+        this.notify();
+      }
+    }
+  }
+  
+  /**
+   * Statistics thread.  Periodically prints the cache statistics to the log.
+   */
+  private static class StatisticsThread extends Thread {
+    LruBlockCache lru;
+    public StatisticsThread(LruBlockCache lru) {
+      this.lru = lru;
+    }
+    @Override
+    public void run() {
+      lru.logStats();
+    }
+  }
+  
+  public void logStats() {
+    // Log size
+    long totalSize = heapSize();
+    long freeSize = maxSize - totalSize;
+    float sizeMB = ((float)totalSize)/((float)(1024*1024));
+    float freeMB = ((float)freeSize)/((float)(1024*1024));
+    float maxMB = ((float)maxSize)/((float)(1024*1024));
+    LruBlockCache.LOG.debug("Cache Stats: Sizes: " + 
+        "Total=" + sizeMB + "MB (" + totalSize + "), " +
+        "Free=" + freeMB + "MB (" + freeSize + "), " +
+        "Max=" + maxMB + "MB (" + maxSize +")");
+    
+    // Log hit/miss and eviction counts
+    LruBlockCache.LOG.debug("Cache Stats: Counts: " +
+        "Blocks=" + size() +", " +
+        "Access=" + stats.getRequestCount() + ", " +
+        "Hit=" + stats.getHitCount() + ", " +
+        "Miss=" + stats.getMissCount() + ", " +
+        "Evictions=" + stats.getEvictionCount() + ", " +
+        "Evicted=" + stats.getEvictedCount());
+    
+    // Log hit/miss and eviction ratios
+    LruBlockCache.LOG.debug("Cache Stats: Ratios: " +
+        "Hit Ratio=" + stats.getHitRatio()*100 + "%, " +
+        "Miss Ratio=" + stats.getMissRatio()*100 + "%, " +
+        "Evicted/Run=" + stats.evictedPerEviction());
+  }
+  
+  /**
+   * Get counter statistics for this cache.
+   * 
+   * <p>Includes: total accesses, hits, misses, evicted blocks, and runs
+   * of the eviction processes.
+   */
+  public CacheStats getStats() {
+    return this.stats;
+  }
+  
+  public static class CacheStats {
+    private final AtomicLong accessCount = new AtomicLong(0);
+    private final AtomicLong hitCount = new AtomicLong(0);
+    private final AtomicLong missCount = new AtomicLong(0);
+    private final AtomicLong evictionCount = new AtomicLong(0);
+    private final AtomicLong evictedCount = new AtomicLong(0);
+    
+    public void miss() {
+      missCount.incrementAndGet();
+      accessCount.incrementAndGet();
+    }
+    
+    public void hit() {
+      hitCount.incrementAndGet();
+      accessCount.incrementAndGet();
+    }
+    
+    public void evict() {
+      evictionCount.incrementAndGet();
+    }
+    
+    public void evicted() {
+      evictedCount.incrementAndGet();
+    }
+    
+    public long getRequestCount() {
+      return accessCount.get();
+    }
+    
+    public long getMissCount() {
+      return missCount.get();
+    }
+
+    public long getHitCount() {
+      return hitCount.get();
+    }
+    
+    public long getEvictionCount() {
+      return evictionCount.get();
+    }
+    
+    public long getEvictedCount() {
+      return evictedCount.get();
+    }
+    
+    public double getHitRatio() {
+      return ((float)getHitCount()/(float)getRequestCount());
+    }
+    
+    public double getMissRatio() {
+      return ((float)getMissCount()/(float)getRequestCount());
+    }
+    
+    public double evictedPerEviction() {
+      return (float)((float)getEvictedCount()/(float)getEvictionCount());
+    }
+  }
+  
+  public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
+      (7 * Bytes.SIZEOF_LONG) + (5 * ClassSize.OBJECT) + Bytes.SIZEOF_BOOLEAN);
+  
+  public final static long CACHE_FUDGE_FACTOR = 1024 * 10; // 10k 
+  
+  public final static long MAP_SEGMENT_OVERHEAD = ClassSize.align(
+      ClassSize.REFERENCE + ClassSize.OBJECT + (3 * Bytes.SIZEOF_INT) +
+      Bytes.SIZEOF_FLOAT + ClassSize.ARRAY);
+  
+  public final static long MAP_ENTRY_OVERHEAD = ClassSize.align(
+      ClassSize.REFERENCE + ClassSize.OBJECT + (3 * ClassSize.REFERENCE) +
+      (2 * Bytes.SIZEOF_INT));
+  
+  // HeapSize implementation
   public long heapSize() {
-    return ClassSize.align(memTotal - memFree);
+    return getCurrentSize() + overhead;
   }
   
-  //--------------------------------------------------------------------------
-  /**
-   * Retrieves the value associated with the specified key.
-   *
-   * If an entry is found, it is updated in the LRU as the most recently
-   * used (last to be evicted) entry in the map.
-   *
-   * @param k the key
-   * @return the associated value, or null if none found
-   * @throws NullPointerException if key is null
-   */
-  public synchronized ByteBuffer get(Object k) {
-    String key = (String)k;
-    checkKey(key);
-    int hash = hash(key);
-    int i = hashIndex(hash, entries.length);
-    Entry e = entries[i]; 
-    while (true) {
-      if (e == null) {
-        missCount++;
-        return null;
-      }
-      if (e.hash == hash && isEqual(key, e.key))  {
-        // Hit!  Update position in LRU
-        hitCount++;
-        updateLru(e);
-        return e.value;
-      }
-      e = e.next;
-    }
-  }
-
-  /**
-   * Insert a key-value mapping into the map.
-   *
-   * Entry will be inserted as the most recently used.
-   *
-   * Both the key and value are required to be Objects and must
-   * implement the HeapSize interface.
-   *
-   * @param key the key
-   * @param value the value
-   * @return the value that was previously mapped to this key, null if none
-   * @throws UnsupportedOperationException if either objects do not 
-   * implement HeapSize
-   * @throws NullPointerException if the key or value is null
-   */
-  public synchronized ByteBuffer put(String key, ByteBuffer value) {
-    checkKey(key);
-    checkValue(value);
-    int hash = hash(key);
-    int i = hashIndex(hash, entries.length);
-    
-    // For old values
-    for (Entry e = entries[i]; e != null; e = e.next) {
-      if (e.hash == hash && isEqual(key, e.key)) {
-        ByteBuffer oldValue = e.value;
-        long memChange = e.replaceValue(value);
-        checkAndFreeMemory(memChange);
-        // If replacing an old value for this key, update in LRU
-        updateLru(e);
-        return oldValue;
-      }
-    }
-    long memChange = addEntry(hash, key, value, i);
-    checkAndFreeMemory(memChange);
-    return null;
+  public long cacheSize() {
+    return getCurrentSize();
   }
   
-  /**
-   * Deletes the mapping for the specified key if it exists.
-   *
-   * @param key the key of the entry to be removed from the map
-   * @return the value associated with the specified key, or null
-   * if no mapping exists.
-   */
-  public synchronized ByteBuffer remove(Object key) {
-    Entry e = removeEntryForKey((String)key);
-    if(e == null) return null;
-    // Add freed memory back to available
-    memFree += e.heapSize();
-    return e.value;
-  }
-
-  /**
-   * Gets the size (number of entries) of the map.
-   *
-   * @return size of the map
-   */
-  public int size() {
-    return size;
-  }
-
-  /**
-   * Checks whether the map is currently empty.
-   *
-   * @return true if size of map is zero
-   */
-  public boolean isEmpty() {
-    return size == 0;
-  }
-
-  /**
-   * Clears all entries from the map.
-   *
-   * This frees all entries, tracking memory usage along the way.
-   * All references to entries are removed so they can be GC'd.
-   */
-  public synchronized void clear() {
-    memFree += clearAll();
+  public static long getOverhead(long maxSize, long blockSize, int concurrency){
+    return CACHE_FIXED_OVERHEAD + CACHE_FUDGE_FACTOR +
+    ((int)Math.ceil(maxSize*1.2/blockSize) * MAP_ENTRY_OVERHEAD) +
+    (concurrency * MAP_SEGMENT_OVERHEAD);
   }
   
-  //--------------------------------------------------------------------------
-  /**
-   * Checks whether there is a value in the map for the specified key.
-   *
-   * Does not affect the LRU.
-   *
-   * @param k the key to check
-   * @return true if the map contains a value for this key, false if not
-   * @throws NullPointerException if the key is null
-   */
-  public synchronized boolean containsKey(Object k) {
-    String key = (String)k;
-    checkKey(key);
-    int hash = hash(key);
-    int i = hashIndex(hash, entries.length);
-    Entry e = entries[i]; 
-    while (e != null) {
-      if (e.hash == hash && isEqual(key, e.key)) 
-          return true;
-      e = e.next;
-    }
-    return false;
+  // Simple calculators of sizes given factors and maxSize
+  
+  private long acceptableSize() {
+    return (long)Math.floor(this.maxSize * this.acceptableFactor);
   }
-
-  /**
-   * Checks whether this is a mapping which contains the specified value.
-   * 
-   * Does not affect the LRU.  This is an inefficient operation.
-   *
-   * @param v the value to check
-   * @return true if the map contains an entry for this value, false
-   * if not
-   * @throws NullPointerException if the value is null
-   */
-  public synchronized boolean containsValue(Object v) {
-    ByteBuffer value = (ByteBuffer)v;
-    checkValue(value);
-    Entry[] tab = entries;
-    for (int i = 0; i < tab.length ; i++)
-      for (Entry e = tab[i] ; e != null ; e = e.next)
-          if (value.equals(e.value))
-            return true;
-    return false;
+  private long minSize() {
+    return (long)Math.floor(this.maxSize * this.minFactor);
   }
-
-  //--------------------------------------------------------------------------
-  /**
-   * Enforces key constraints.  Null keys are not permitted and key must
-   * implement HeapSize.  It should not be necessary to verify the second
-   * constraint because that's enforced on instantiation?
-   *
-   * Can add other constraints in the future.
-   *
-   * @param key the key
-   * @throws NullPointerException if the key is null
-   * @throws UnsupportedOperationException if the key class does not
-   * implement the HeapSize interface
-   */
-  private void checkKey(String key) {
-    if(key == null) {
-      throw new NullPointerException("null keys are not allowed");
-    }
+  private long singleSize() {
+    return (long)Math.floor(this.maxSize * this.singleFactor * this.minFactor);
+  }
+  private long multiSize() {
+    return (long)Math.floor(this.maxSize * this.multiFactor * this.minFactor);
+  }
+  private long memorySize() {
+    return (long)Math.floor(this.maxSize * this.memoryFactor * this.minFactor);
   }
   
-  /**
-   * Enforces value constraints.  Null values are not permitted and value must
-   * implement HeapSize.  It should not be necessary to verify the second
-   * constraint because that's enforced on instantiation?
-   *
-   * Can add other contraints in the future.
-   *
-   * @param value the value
-   * @throws NullPointerException if the value is null
-   * @throws UnsupportedOperationException if the value class does not
-   * implement the HeapSize interface
-   */
-  private void checkValue(ByteBuffer value) {
-    if(value == null) {
-      throw new NullPointerException("null values are not allowed");
-    }
-  }
-  
-  /**
-   * Returns the minimum memory usage of the base map structure.
-   *
-   * @return baseline memory overhead of object in bytes
-   */
-  private long getMinimumUsage() {
-    return OVERHEAD + (entries.length * ClassSize.REFERENCE);
-  }
-  
-  //--------------------------------------------------------------------------
-  /**
-   * Evicts and frees based on LRU until at least as much memory as requested
-   * is available.
-   *
-   * @param memNeeded the amount of memory needed in bytes
-   */
-  private void checkAndFreeMemory(long memNeeded) {
-    while(memFree < memNeeded) {
-      evictFromLru();
-    }
-    memFree -= memNeeded;
-  }
-
-  /**
-   * Evicts based on LRU.  This removes all references and updates available
-   * memory.
-   *
-   * @return amount of memory freed in bytes
-   */
-  private long evictFromLru() {
-    long freed = headPtr.heapSize();
-    memFree += freed;
-    removeEntry(headPtr);
-    return freed;
-  }
-  
-  /**
-   * Moves the specified entry to the most recently used slot of the
-   * LRU.  This is called whenever an entry is fetched.
-   *
-   * @param e entry that was accessed
-   */
-  private void updateLru(Entry e) {
-    Entry prev = e.getPrevPtr();
-    Entry next = e.getNextPtr();
-    if(next != null) {
-      if(prev != null) {
-        prev.setNextPtr(next);
-        next.setPrevPtr(prev);
-      } else {
-        headPtr = next;
-        headPtr.setPrevPtr(null);
-      }
-      e.setNextPtr(null);
-      e.setPrevPtr(tailPtr);
-      tailPtr.setNextPtr(e);
-      tailPtr = e;
-    }
-  }
-
-  /**
-   * Removes the specified entry from the map and LRU structure.
-   *
-   * @param entry entry to be removed
-   */
-  private void removeEntry(Entry entry) {
-    String k = entry.key;
-    int hash = entry.hash;
-    int i = hashIndex(hash, entries.length);
-    Entry prev = entries[i];
-    Entry e = prev;
-
-    while (e != null) {
-      Entry next = e.next;
-      if (e.hash == hash && isEqual(k, e.key)) {
-          size--;
-          if (prev == e) {
-            entries[i] = next;
-          } else {
-            prev.next = next;
-          }
-          
-          Entry prevPtr = e.getPrevPtr();
-          Entry nextPtr = e.getNextPtr();
-          
-          if(prevPtr != null && nextPtr != null) {
-            prevPtr.setNextPtr(nextPtr);
-            nextPtr.setPrevPtr(prevPtr);
-          } else if(prevPtr != null) {
-            tailPtr = prevPtr;
-            prevPtr.setNextPtr(null);
-          } else if(nextPtr != null) {
-            headPtr = nextPtr;
-            nextPtr.setPrevPtr(null);
-          }
-          
-          return;
-      }
-      prev = e;
-      e = next;
-    }
-  }
-
-  /**
-   * Removes and returns the entry associated with the specified
-   * key.
-   *
-   * @param key key of the entry to be deleted
-   * @return entry that was removed, or null if none found
-   */
-  private Entry removeEntryForKey(String key) {
-    int hash = hash(key);
-    int i = hashIndex(hash, entries.length);
-    Entry prev = entries[i];
-    Entry e = prev;
-
-    while (e != null) {
-      Entry next = e.next;
-      if (e.hash == hash && isEqual(key, e.key)) {
-          size--;
-          if (prev == e) {
-            entries[i] = next;
-          } else {
-            prev.next = next;
-          }
-          
-          // Updating LRU
-          Entry prevPtr = e.getPrevPtr();
-          Entry nextPtr = e.getNextPtr();
-          if(prevPtr != null && nextPtr != null) {
-            prevPtr.setNextPtr(nextPtr);
-            nextPtr.setPrevPtr(prevPtr);
-          } else if(prevPtr != null) {
-            tailPtr = prevPtr;
-            prevPtr.setNextPtr(null);
-          } else if(nextPtr != null) {
-            headPtr = nextPtr;
-            nextPtr.setPrevPtr(null);
-          }
-          
-          return e;
-      }
-      prev = e;
-      e = next;
-    }
-
-    return e;
-  }
-
- /**
-  * Adds a new entry with the specified key, value, hash code, and
-  * bucket index to the map.
-  *
-  * Also puts it in the bottom (most-recent) slot of the list and
-  * checks to see if we need to grow the array.
-  *
-  * @param hash hash value of key
-  * @param key the key
-  * @param value the value
-  * @param bucketIndex index into hash array to store this entry
-  * @return the amount of heap size used to store the new entry
-  */
-  private long addEntry(int hash, String key, ByteBuffer value, int bucketIndex) {
-    Entry e = entries[bucketIndex];
-    Entry newE = new Entry(hash, key, value, e, tailPtr);
-    entries[bucketIndex] = newE;
-    // add as most recently used in lru
-    if (size == 0) {
-      headPtr = newE;
-      tailPtr = newE;
-    } else {
-      newE.setPrevPtr(tailPtr);
-      tailPtr.setNextPtr(newE);
-      tailPtr = newE;
-    }
-    // Grow table if we are past the threshold now
-    if (size++ >= threshold) {
-      growTable(2 * entries.length);
-    }
-    return newE.heapSize();
-  }
-
-  /**
-   * Clears all the entries in the map.  Tracks the amount of memory being
-   * freed along the way and returns the total.
-   *
-   * Cleans up all references to allow old entries to be GC'd.
-   *
-   * @return total memory freed in bytes
-   */
-  private long clearAll() {
-    Entry cur;
-    Entry prev;
-    long freedMemory = 0;
-    for(int i=0; i<entries.length; i++) {
-      cur = entries[i];
-      while(cur != null) {
-        freedMemory += cur.heapSize();
-        cur = cur.next;
-      }
-      entries[i] = null;
-    }
-    headPtr = null;
-    tailPtr = null;
-    size = 0;
-    return freedMemory;
-  }
-  
-  //--------------------------------------------------------------------------
-  /**
-   * Recreates the entire contents of the hashmap into a new array
-   * with double the capacity.  This method is called when the number of
-   * keys in the map reaches the current threshold.
-   *
-   * @param newCapacity the new size of the hash entries
-   */
-  private void growTable(int newCapacity) {
-    Entry [] oldTable = entries;
-    int oldCapacity = oldTable.length;
-    
-    // Do not allow growing the table beyond the max capacity
-    if (oldCapacity == MAXIMUM_CAPACITY) {
-      threshold = Integer.MAX_VALUE;
-      return;
-    }
-
-    // Determine how much additional space will be required to grow the array
-    long requiredSpace = (newCapacity - oldCapacity) * ClassSize.REFERENCE;
-    
-    // Verify/enforce we have sufficient memory to grow
-    checkAndFreeMemory(requiredSpace);
-
-    Entry [] newTable = new Entry[newCapacity];
-    
-    // Transfer existing entries to new hash table
-    for(int i=0; i < oldCapacity; i++) {
-      Entry entry = oldTable[i];
-      if(entry != null) {
-        // Set to null for GC
-        oldTable[i] = null;
-        do {
-          Entry next = entry.next;
-          int idx = hashIndex(entry.hash, newCapacity);
-          entry.next = newTable[idx];
-          newTable[idx] = entry;
-          entry = next;
-        } while(entry != null);
-      }
-    }
-
-    entries = newTable;
-    threshold = (int)(newCapacity * loadFactor);
-  }
-
-  /**
-   * Gets the hash code for the specified key.
-   * This implementation uses the additional hashing routine
-   * from JDK 1.4.
-   *
-   * @param key the key to get a hash value for
-   * @return the hash value
-   */
-  private int hash(Object key) {
-    int h = key.hashCode();
-    h += ~(h << 9);
-    h ^=  (h >>> 14);
-    h +=  (h << 4);
-    h ^=  (h >>> 10);
-    return h;
-  }
-  
-  /**
-   * Compares two objects for equality.  Method uses equals method and
-   * assumes neither value is null.
-   *
-   * @param x the first value
-   * @param y the second value
-   * @return true if equal
-   */
-  private boolean isEqual(Object x, Object y) {
-    return (x == y || x.equals(y));
-  }
-  
-  /**
-   * Determines the index into the current hash table for the specified
-   * hashValue.
-   *
-   * @param hashValue the hash value
-   * @param length the current number of hash buckets
-   * @return the index of the current hash array to use
-   */
-  private int hashIndex(int hashValue, int length) {
-    return hashValue & (length - 1);
-  }
-
-  /**
-   * Calculates the capacity of the array backing the hash
-   * by normalizing capacity to a power of 2 and enforcing
-   * capacity limits.
-   *
-   * @param proposedCapacity the proposed capacity
-   * @return the normalized capacity
-   */
-  private int calculateCapacity(int proposedCapacity) {
-    int newCapacity = 1;
-    if(proposedCapacity > MAXIMUM_CAPACITY) {
-      newCapacity = MAXIMUM_CAPACITY;
-    } else {
-      while(newCapacity < proposedCapacity) {
-        newCapacity <<= 1;
-      }
-      if(newCapacity > MAXIMUM_CAPACITY) {
-        newCapacity = MAXIMUM_CAPACITY;
-      }
-    }
-    return newCapacity;
-  }
-  
-  /**
-   * Calculates the threshold of the map given the capacity and load
-   * factor.  Once the number of entries in the map grows to the
-   * threshold we will double the size of the array.
-   *
-   * @param capacity the size of the array
-   * @param factor the load factor of the hash
-   */
-  private int calculateThreshold(int capacity, float factor) {
-    return (int)(capacity * factor);
-  }
-
-  /**
-   * Set the initial heap usage of this class.  Includes class variable
-   * overhead and the entry array.
-   */
-  private void init() {
-    memFree -= OVERHEAD;
-  }
-  
-  //--------------------------------------------------------------------------
-  /**
-   * Debugging function that returns a List sorted by access time.
-   *
-   * The order is oldest to newest (first in list is next to be evicted).
-   *
-   * @return Sorted list of entries
-   */
-  public List<Entry> entryLruList() {
-    List<Entry> entryList = new ArrayList<Entry>();
-    Entry entry = headPtr;
-    while(entry != null) {
-      entryList.add(entry);
-      entry = entry.getNextPtr();
-    }
-    return entryList;
-  }
-
-  /**
-   * Debugging function that returns a Set of all entries in the hash table.
-   *
-   * @return Set of entries in hash
-   */
-  public Set<Entry> entryTableSet() {
-    Set<Entry> entrySet = new HashSet<Entry>();
-    Entry [] table = entries;
-    for(int i=0;i<table.length;i++) {
-      for(Entry e = table[i]; e != null; e = e.next) {
-        entrySet.add(e);
-      }
-    }
-    return entrySet;
-  }
-  
-  /**
-   * Get the head of the linked list (least recently used).
-   *
-   * @return head of linked list
-   */
-  public Entry getHeadPtr() {
-    return headPtr;
-  }
-  
-  /**
-   * Get the tail of the linked list (most recently used).
-   * 
-   * @return tail of linked list
-   */
-  public Entry getTailPtr() {
-    return tailPtr;
-  }
-  
-  //--------------------------------------------------------------------------
-  /**
-   * To best optimize this class, some of the methods that are part of a
-   * Map implementation are not supported.  This is primarily related
-   * to being able to get Sets and Iterators of this map which require
-   * significant overhead and code complexity to support and are
-   * unnecessary for the requirements of this class.
-   */
-  
-  /**
-   * Intentionally unimplemented.
-   */
-  public Set<Map.Entry<String,ByteBuffer>> entrySet() {
-    throw new UnsupportedOperationException(
-    "entrySet() is intentionally unimplemented");
-  }
-
-  /**
-   * Intentionally unimplemented.
-   */
-  public boolean equals(Object o) {
-    throw new UnsupportedOperationException(
-    "equals(Object) is intentionally unimplemented");
-  }
-
-  /**
-   * Intentionally unimplemented.
-   */
-  public int hashCode() {
-    throw new UnsupportedOperationException(
-    "hashCode(Object) is intentionally unimplemented");
-  }
-  
-  /**
-   * Intentionally unimplemented.
-   */
-  public Set<String> keySet() {
-    throw new UnsupportedOperationException(
-    "keySet() is intentionally unimplemented");
-  }
-  
-  /**
-   * Intentionally unimplemented.
-   */
-  public void putAll(Map<? extends String,? extends ByteBuffer> m) {
-    throw new UnsupportedOperationException(
-    "putAll() is intentionally unimplemented");
-  }
-  
-  /**
-   * Intentionally unimplemented.
-   */
-  public Collection<ByteBuffer> values() {
-    throw new UnsupportedOperationException(
-    "values() is intentionally unimplemented");
-  }
-
-  //--------------------------------------------------------------------------
-  /**
-   * Entry to store key/value mappings.
-   * <p>
-   * Contains previous and next pointers for the doubly linked-list which is
-   * used for LRU eviction.
-   * <p>
-   * Instantiations of this class are memory aware.  Both the key and value
-   * classes used must also implement <code>HeapSize</code>.
-   */
-  protected static class Entry
-  implements Map.Entry<String,ByteBuffer>, HeapSize {
-    /** The key */
-    protected final String key;
-    /** The value */
-    protected ByteBuffer value;
-    /** The hash value for this entries key */
-    protected final int hash;
-    /** The next entry in the hash chain (for collisions) */
-    protected Entry next;
-    
-    /** The previous entry in the LRU list (towards LRU) */
-    protected Entry prevPtr;
-    /** The next entry in the LRU list (towards MRU) */
-    protected Entry nextPtr;
-    
-    /** The precomputed heap size of this entry */
-    protected long heapSize;
-
-    /** The baseline overhead memory usage of this class */
-    static final int OVERHEAD = ClassSize.OBJECT + 
-      5 * ClassSize.REFERENCE + 1 * Bytes.SIZEOF_INT + 
-      1 * Bytes.SIZEOF_LONG;
-    
-    /**
-     * Create a new entry.
-     *
-     * @param h the hash value of the key
-     * @param k the key
-     * @param v the value
-     * @param nextChainPtr the next entry in the hash chain, null if none
-     * @param prevLruPtr the previous entry in the LRU
-     */
-    Entry(int h, String k, ByteBuffer v, Entry nextChainPtr, Entry prevLruPtr) {
-      value = v;
-      next = nextChainPtr;
-      key = k;
-      hash = h;
-      prevPtr = prevLruPtr;
-      nextPtr = null;
-      // Pre-compute heap size
-      heapSize = OVERHEAD + heapSize(k) + heapSize(v);
-    }
-
-    /**
-     * Get the key of this entry.
-     *
-     * @return the key associated with this entry
-     */
-    public String getKey() {
-      return key;
-    }
-
-    /**
-     * Get the value of this entry.
-     *
-     * @return the value currently associated with this entry
-     */
-    public ByteBuffer getValue() {
-      return value;
-    }
-  
-    /**
-     * Set the value of this entry.
-     *
-     * It is not recommended to use this method when changing the value.
-     * Rather, using <code>replaceValue</code> will return the difference
-     * in heap usage between the previous and current values.
-     *
-     * @param newValue the new value to associate with this entry
-     * @return the value previously associated with this entry
-     */
-    public ByteBuffer setValue(ByteBuffer newValue) {
-      ByteBuffer oldValue = value;
-      value = newValue;
-      return oldValue;
-    }
-  
-    /**
-     * Replace the value of this entry.
-     *
-     * Computes and returns the difference in heap size when changing
-     * the value associated with this entry.
-     *
-     * @param newValue the new value to associate with this entry
-     * @return the change in heap usage of this entry in bytes
-     */
-    protected long replaceValue(ByteBuffer newValue) {
-      long sizeDiff = heapSize(newValue) - heapSize(value);
-      value = newValue;
-      heapSize += sizeDiff;
-      return sizeDiff;
-    }
-  
-    /**
-     * Returns true is the specified entry has the same key and the
-     * same value as this entry.
-     *
-     * @param o entry to test against current
-     * @return true is entries have equal key and value, false if no
-     */
-    public boolean equals(Object o) {
-      if (!(o instanceof Map.Entry))
-          return false;
-      Map.Entry e = (Map.Entry)o;
-      Object k1 = getKey();
-      Object k2 = e.getKey();
-      if (k1 == k2 || (k1 != null && k1.equals(k2))) {
-          Object v1 = getValue();
-          Object v2 = e.getValue();
-          if (v1 == v2 || (v1 != null && v1.equals(v2))) 
-            return true;
-      }
-      return false;
-    }
-    
-    /** 
-     * Returns the hash code of the entry by xor'ing the hash values
-     * of the key and value of this entry.
-     *
-     * @return hash value of this entry
-     */
-    public int hashCode() {
-      return (key.hashCode() ^ value.hashCode());
-    }
-  
-    /**
-     * Returns String representation of the entry in form "key=value"
-     *
-     * @return string value of entry
-     */
-    public String toString() {
-      return getKey();
-    }
-
-    //------------------------------------------------------------------------
-    /**
-     * Sets the previous pointer for the entry in the LRU.
-     * @param prevPtr previous entry
-     */
-    protected void setPrevPtr(Entry prevPtr){
-      this.prevPtr = prevPtr;
-    }
-    
-    /**
-     * Returns the previous pointer for the entry in the LRU.
-     * @return previous entry
-     */
-    protected Entry getPrevPtr(){
-      return prevPtr;
-    }    
-    
-    /**
-     * Sets the next pointer for the entry in the LRU.
-     * @param nextPtr next entry
-     */
-    protected void setNextPtr(Entry nextPtr){
-      this.nextPtr = nextPtr;
-    }
-    
-    /**
-     * Returns the next pointer for the entry in teh LRU.
-     * @return next entry
-     */
-    protected Entry getNextPtr(){
-      return nextPtr;
-    }
-    
-    /**
-     * Returns the pre-computed and "deep" size of the Entry
-     * @return size of the entry in bytes
-     */
-    public long heapSize() {
-      return heapSize;
-    }
-    
-    /**
-     * Returns the estimated heap size of the passed String.
-     *
-     * Testing shows fixed overhead of 64 bytes per String and
-     * 2 bytes per character, 8 byte aligned.
-     *
-     * @return size of String in bytes
-     */
-    private long heapSize(String s) {
-      return ClassSize.STRING + ClassSize.align(ClassSize.ARRAY + 
-          s.length() * Bytes.SIZEOF_CHAR);
-    }
-    
-    /**
-     * Returns the estimated heap size of the passed ByteBuffer.
-     * @return size of ByteBuffer in bytes
-     */
-    private long heapSize(ByteBuffer b) {
-      return ClassSize.BYTE_BUFFER + 
-        ClassSize.align(ClassSize.ARRAY + b.capacity());
-    }
-    
-  }
 }
-
-

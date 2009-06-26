@@ -2,7 +2,7 @@
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <!--
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -342,9 +342,11 @@
   </property>
   <property>
       <name>hfile.block.cache.size</name>
-      <value>50000000</value>
+      <value>0.2</value>
       <description>
-          The size of the block cache used by HFile/StoreFile. Set to 0 to disable.
+          Percentage of maximum heap (-Xmx setting) to allocate to block cache
+          used by HFile/StoreFile. Default of 0.2 means allocate 20%.
+          Set to 0 to disable.
       </description>
   </property>
   <property>

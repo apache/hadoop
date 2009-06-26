@@ -1090,9 +1090,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     LruBlockCache lruBlockCache = (LruBlockCache)StoreFile.getBlockCache(conf);
     if (lruBlockCache != null) {
       this.metrics.blockCacheCount.set(lruBlockCache.size());
-      this.metrics.blockCacheFree.set(lruBlockCache.getMemFree());
-      this.metrics.blockCacheSize.set(lruBlockCache.getMemUsed());
-      double ratio = lruBlockCache.getHitRatio();
+      this.metrics.blockCacheFree.set(lruBlockCache.getFreeSize());
+      this.metrics.blockCacheSize.set(lruBlockCache.getCurrentSize());
+      double ratio = lruBlockCache.getStats().getHitRatio();
       int percent = (int) (ratio * 100);
       this.metrics.blockCacheHitRatio.set(percent);
     }
@@ -2364,7 +2364,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
           // LocalHBaseCluster.  It manages 'local' clusters.
           if (LocalHBaseCluster.isLocal(conf)) {
             LOG.warn("Not starting a distinct region server because " +
-              "hbase.master is set to 'local' mode");
+              HConstants.CLUSTER_DISTRIBUTED + " is false");
           } else {
             RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
             if (runtime != null) {
