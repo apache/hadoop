@@ -585,7 +585,7 @@ public class JobInProgress {
     }
         
     // set the launch time
-    this.launchTime = jobtracker.getClock().getTime();
+    this.launchTime = JobTracker.getClock().getTime();
 
     //
     // Create reduce tasks
@@ -1890,7 +1890,7 @@ public class JobInProgress {
     if (list.isEmpty()) {
       return null;
     }
-    long now = jobtracker.getClock().getTime();
+    long now = JobTracker.getClock().getTime();
     if (isSlowTracker(taskTrackerName) || atSpeculativeCap(list)) {
       return null;
     }
@@ -2597,7 +2597,7 @@ public class JobInProgress {
       if (reduces.length == 0) {
         this.status.setReduceProgress(1.0f);
       }
-      this.finishTime = jobtracker.getClock().getTime();
+      this.finishTime = JobTracker.getClock().getTime();
       cancelReservedSlots();
       LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
@@ -2620,7 +2620,7 @@ public class JobInProgress {
         this.status = new JobStatus(status.getJobID(),
                                     1.0f, 1.0f, 1.0f, JobStatus.FAILED,
                                     status.getJobPriority());
-        this.finishTime = jobtracker.getClock().getTime();
+        this.finishTime = JobTracker.getClock().getTime();
         JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks);
@@ -2628,7 +2628,7 @@ public class JobInProgress {
         this.status = new JobStatus(status.getJobID(),
                                     1.0f, 1.0f, 1.0f, JobStatus.KILLED,
                                     status.getJobPriority());
-        this.finishTime = jobtracker.getClock().getTime();
+        this.finishTime = JobTracker.getClock().getTime();
         JobHistory.JobInfo.logKilled(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks);
@@ -2985,10 +2985,10 @@ public class JobInProgress {
     // update the actual start-time of the attempt
     TaskStatus oldStatus = tip.getTaskStatus(taskid); 
     long startTime = oldStatus == null
-                     ? jobtracker.getClock().getTime()
+                     ? JobTracker.getClock().getTime()
                      : oldStatus.getStartTime();
     status.setStartTime(startTime);
-    status.setFinishTime(jobtracker.getClock().getTime());
+    status.setFinishTime(JobTracker.getClock().getTime());
     boolean wasComplete = tip.isComplete();
     updateTaskStatus(tip, status);
     boolean isComplete = tip.isComplete();

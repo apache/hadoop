@@ -142,7 +142,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   final static FsPermission SYSTEM_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0700); // rwx------
   
-  private Clock clock;
+  private static Clock clock;
 
   /**
    * A client tried to submit a job before the Job Tracker was ready.
@@ -170,7 +170,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
   public static final Log LOG = LogFactory.getLog(JobTracker.class);
     
-  public Clock getClock() {
+  static Clock getClock() {
     return clock;
   }
   
@@ -1794,7 +1794,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         NetworkTopology.DEFAULT_HOST_LEVEL);
 
     //initializes the job status store
-    completedJobStatusStore = new CompletedJobStatusStore(conf,fs);
+    completedJobStatusStore = new CompletedJobStatusStore(conf);
   }
 
   private static SimpleDateFormat getDateFormat() {

@@ -22,11 +22,16 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Properties;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
 public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
+  static final Path TEST_DIR = 
+    new Path(System.getProperty("test.build.data","/tmp"), 
+             "job-status-persistence");
+  
   private JobID runJob() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
     Writer wr = new OutputStreamWriter(os);
@@ -103,4 +108,29 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     }
   }
 
+  /**
+   * Test if the completed job status is persisted to localfs.
+   */
+  public void testLocalPersistency() throws Exception {
+    FileSystem fs = FileSystem.getLocal(createJobConf());
+    
+    fs.delete(TEST_DIR, true);
+    
+    Properties config = new Properties();
+    config.setProperty("mapred.job.tracker.persist.jobstatus.active", "true");
+    config.setProperty("mapred.job.tracker.persist.jobstatus.hours", "1");
+    config.setProperty("mapred.job.tracker.persist.jobstatus.dir", 
+                       fs.makeQualified(TEST_DIR).toString());
+    stopCluster();
+    startCluster(false, config);
+    JobID jobId = runJob();
+    JobClient jc = new JobClient(createJobConf());
+    RunningJob rj = jc.getJob(jobId);
+    assertNotNull(rj);
+    
+    // check if the local fs has the data
+    Path jobInfo = new Path(TEST_DIR, rj.getID() + ".info");
+    assertTrue("Missing job info from the local fs", fs.exists(jobInfo));
+    fs.delete(TEST_DIR, true);
+  }
 }

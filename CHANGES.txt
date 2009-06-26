@@ -48,3 +48,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-130. Delete the jobconf copy from the log directory of the 
     JobTracker when the job is retired. (Amar Kamat via sharad)
+
+    MAPREDUCE-657. Fix hardcoded filesystem problem in CompletedJobStatusStore.
+    (Amar Kamat via sharad)

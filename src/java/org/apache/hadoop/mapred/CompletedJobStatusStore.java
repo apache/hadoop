@@ -51,12 +51,11 @@ class CompletedJobStatusStore implements Runnable {
   private static long HOUR = 1000 * 60 * 60;
   private static long SLEEP_TIME = 1 * HOUR;
 
-  CompletedJobStatusStore(Configuration conf, FileSystem fs) throws IOException {
+  CompletedJobStatusStore(Configuration conf) throws IOException {
     active =
       conf.getBoolean("mapred.job.tracker.persist.jobstatus.active", false);
 
     if (active) {
-      this.fs = fs;
       retainTime =
         conf.getInt("mapred.job.tracker.persist.jobstatus.hours", 0) * HOUR;
 
@@ -64,6 +63,9 @@ class CompletedJobStatusStore implements Runnable {
         conf.get("mapred.job.tracker.persist.jobstatus.dir", JOB_INFO_STORE_DIR);
 
       Path path = new Path(jobInfoDir);
+      
+      // set the fs
+      this.fs = path.getFileSystem(conf);
       if (!fs.exists(path)) {
         fs.mkdirs(path);
       }
@@ -72,6 +74,10 @@ class CompletedJobStatusStore implements Runnable {
         // as retain time is zero, all stored jobstatuses are deleted.
         deleteJobStatusDirs();
       }
+      LOG.info("Completed job store activated/configured with retain-time : " 
+               + retainTime + " , job-info-dir : " + jobInfoDir);
+    } else {
+      LOG.info("Completed job store is inactive");
     }
   }
 
@@ -100,14 +106,13 @@ class CompletedJobStatusStore implements Runnable {
 
   private void deleteJobStatusDirs() {
     try {
-      long currentTime = System.currentTimeMillis();
-      FileStatus[] jobInfoFiles = fs.listStatus(
-              new Path[]{new Path(jobInfoDir)});
-
+      long currentTime = JobTracker.getClock().getTime();
       //noinspection ForLoopReplaceableByForEach
-      for (FileStatus jobInfo : jobInfoFiles) {
+      for (FileStatus jobInfo : fs.listStatus(new Path(jobInfoDir))) {
         try {
           if ((currentTime - jobInfo.getModificationTime()) > retainTime) {
+            LOG.info("Retiring job status from the store [" + jobInfo.getPath() 
+                     + "]");
             fs.delete(jobInfo.getPath(), true);
           }
         }

@@ -583,7 +583,7 @@ class TaskInProgress {
       taskStatuses.put(taskid, status);
       if ((isMapTask() && job.hasSpeculativeMaps()) || 
           (!isMapTask() && job.hasSpeculativeReduces())) {
-        long now = jobtracker.getClock().getTime();
+        long now = JobTracker.getClock().getTime();
         double oldProgRate = getOldProgressRate();
         double currProgRate = getCurrentProgressRate(now);
         job.updateStatistics(oldProgRate, currProgRate, isMapTask());
@@ -649,7 +649,7 @@ class TaskInProgress {
 
       // tasktracker went down and failed time was not reported. 
       if (0 == status.getFinishTime()){
-        status.setFinishTime(jobtracker.getClock().getTime());
+        status.setFinishTime(JobTracker.getClock().getTime());
       }
     }
 
@@ -753,7 +753,7 @@ class TaskInProgress {
     //
 
     this.completes++;
-    this.execFinishTime = jobtracker.getClock().getTime();
+    this.execFinishTime = JobTracker.getClock().getTime();
     recomputeProgress();
     
   }
@@ -792,7 +792,7 @@ class TaskInProgress {
     }
     this.failed = true;
     killed = true;
-    this.execFinishTime = jobtracker.getClock().getTime();
+    this.execFinishTime = JobTracker.getClock().getTime();
     recomputeProgress();
   }
 
@@ -939,7 +939,7 @@ class TaskInProgress {
 
     //keep track of the last time we started an attempt at this TIP
     //used to calculate the progress rate of this TIP
-    setDispatchTime(jobtracker.getClock().getTime());
+    setDispatchTime(JobTracker.getClock().getTime());
  
     //set this the first time we run a taskAttempt in this TIP
     //each Task attempt has its own TaskStatus, which tracks that
