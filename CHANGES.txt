@@ -152,9 +152,6 @@ Trunk (unreleased changes)
     HADOOP-5170. Allows jobs to set max maps/reduces per-node and per-cluster.
     (Matei Zaharia via ddas)
 
-    HADOOP-5897. Add name-node metrics to capture java heap usage.
-    (Suresh Srinivas via shv)
-
     HADOOP-3315. Add a new, binary file foramt, TFile. (Hong Tang via cdouglas)
 
   IMPROVEMENTS
@@ -880,6 +877,9 @@ Release 0.20.1 - Unreleased
 
     HADOOP-4372. Improves the way history filenames are obtained and manipulated.
     (Amar Kamat via ddas)
+
+    HADOOP-5897. Add name-node metrics to capture java heap usage.
+    (Suresh Srinivas via shv)
 
   OPTIMIZATIONS
 
