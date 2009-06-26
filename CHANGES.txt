@@ -42,3 +42,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2. Fixes a bug in KeyFieldBasedPartitioner in handling empty
     keys. (Amar Kamat via sharad)
+
+    MAPREDUCE-130. Delete the jobconf copy from the log directory of the 
+    JobTracker when the job is retired. (Amar Kamat via sharad)

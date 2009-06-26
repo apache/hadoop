@@ -788,10 +788,14 @@ public class TestJobHistory extends TestCase {
   public void testJobHistoryFile() throws IOException {
     MiniMRCluster mr = null;
     try {
-      mr = new MiniMRCluster(2, "file:///", 3);
+      JobConf conf = new JobConf();
+      // keep for less time
+      conf.setLong("mapred.jobtracker.retirejob.check", 1000);
+      conf.setLong("mapred.jobtracker.retirejob.interval", 1000);
+      mr = new MiniMRCluster(2, "file:///", 3, null, null, conf);
 
       // run the TCs
-      JobConf conf = mr.createJobConf();
+      conf = mr.createJobConf();
 
       FileSystem fs = FileSystem.get(conf);
       // clean up
@@ -812,6 +816,15 @@ public class TestJobHistory extends TestCase {
       validateJobHistoryFileFormat(job.getID(), conf, "SUCCESS", false);
       validateJobHistoryFileContent(mr, job, conf);
 
+      // get the job conf filename
+      String name = JobHistory.JobInfo.getLocalJobFilePath(job.getID());
+      File file = new File(name);
+
+      // check if the file get deleted
+      while (file.exists()) {
+        LOG.info("Waiting for " + file + " to be deleted");
+        UtilsForTests.waitFor(100);
+      }
     } finally {
       if (mr != null) {
         cleanupLocalFiles(mr);
