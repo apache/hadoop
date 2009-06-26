@@ -162,10 +162,8 @@
         <include name="**/*.properties" />
       </fileset>
     </copy>
-    <jar jarfile="${jarfile}"
-        basedir="${build.classes}" >
-      <fileset file="${basedir}/conf/hbase-default.xml"/>
-      <fileset file="${basedir}/conf/zoo.cfg"/>
+    <jar jarfile="${jarfile}" basedir="${build.classes}" >
+      <zipfileset dir="conf" prefix="conf" includes="zoo.cfg,hbase-default.xml" />
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
    		<manifest>
             <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapred/Driver" />
@@ -282,7 +280,6 @@
     </chmod>
     <mkdir dir="${dist.dir}/docs" />
     <copy todir="${dist.dir}/docs">
-      <fileset dir="${docs.dir}" />
       <fileset dir="${build.docs}"/>
     </copy>
     <copy todir="${dist.dir}">
@@ -347,10 +344,10 @@
     <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest" failonerror="true" >
       <env key="JAVA_HOME" value="${java5.home}"/>
     </exec>
-    <copy todir="${docs.dir}">
+    <copy todir="${build.docs}">
       <fileset dir="${docs.src}/build/site/" />
     </copy>
-    <style basedir="${conf.dir}" destdir="${docs.dir}"
+    <style basedir="${conf.dir}" destdir="${build.docs}"
            includes="hadoop-default.xml" style="conf/configuration.xsl"/>
   </target>
 
