@@ -461,6 +461,10 @@ Trunk (unreleased changes)
     HADOOP-5952. Change "-1 tests included" wording in test-patch.sh.
     (Gary Murry via szetszwo)
 
+    HADOOP-6106. Provides an option in ShellCommandExecutor to timeout 
+    commands that do not complete within a certain amount of time.
+    (Sreekanth Ramakrishnan via yhemanth)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
