@@ -1711,7 +1711,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         NetworkTopology.DEFAULT_HOST_LEVEL);
 
     //initializes the job status store
-    completedJobStatusStore = new CompletedJobStatusStore(conf,fs);
+    completedJobStatusStore = new CompletedJobStatusStore(conf);
   }
 
   private static SimpleDateFormat getDateFormat() {
