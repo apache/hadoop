@@ -48,6 +48,10 @@
        <Class name="~org.apache.hadoop.mapred.*" />
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
      </Match>
+     <Match>
+       <Class name="~org.apache.hadoop.mapred.lib.aggregate.*" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
      <!--
        Ignore warnings for usage of System.exit. This is
        required and have been well thought out

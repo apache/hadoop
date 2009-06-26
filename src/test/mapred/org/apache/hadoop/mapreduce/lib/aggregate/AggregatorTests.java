@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib.aggregate;
+package org.apache.hadoop.mapreduce.lib.aggregate;
 
 import org.apache.hadoop.io.Text;
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ public class AggregatorTests extends ValueAggregatorBaseDescriptor {
       long numVal = Long.parseLong(word);
       countType = LONG_VALUE_SUM;
       id = "count_" + word;
-      e = generateEntry(countType, id, ValueAggregatorDescriptor.ONE);
+      e = generateEntry(countType, id, ONE);
       if (e != null) {
         retv.add(e);
       }

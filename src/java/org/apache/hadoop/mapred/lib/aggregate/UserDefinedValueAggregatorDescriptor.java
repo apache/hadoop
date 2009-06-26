@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.mapred.lib.aggregate;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Map.Entry;
-
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 
 /**
@@ -31,14 +26,14 @@ import org.apache.hadoop.mapred.JobConf;
  * name of a user defined class that may be dynamically loaded. The other is to
  * deligate inviokations of generateKeyValPairs function to the created object.
  * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.aggregate.UserDefinedValueAggregatorDescriptor}
+ * instead
  */
-public class UserDefinedValueAggregatorDescriptor implements
-    ValueAggregatorDescriptor {
-  private String className;
-
-  private ValueAggregatorDescriptor theAggregatorDescriptor = null;
-
-  private static final Class[] argArray = new Class[] {};
+@Deprecated
+public class UserDefinedValueAggregatorDescriptor extends org.apache.hadoop.
+    mapreduce.lib.aggregate.UserDefinedValueAggregatorDescriptor
+    implements ValueAggregatorDescriptor {
 
   /**
    * Create an instance of the given class
@@ -46,24 +41,8 @@ public class UserDefinedValueAggregatorDescriptor implements
    * @return a dynamically created instance of the given class 
    */
   public static Object createInstance(String className) {
-    Object retv = null;
-    try {
-      ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-      Class<?> theFilterClass = Class.forName(className, true, classLoader);
-      Constructor meth = theFilterClass.getDeclaredConstructor(argArray);
-      meth.setAccessible(true);
-      retv = meth.newInstance();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-    return retv;
-  }
-
-  private void createAggregator(JobConf job) {
-    if (theAggregatorDescriptor == null) {
-      theAggregatorDescriptor = (ValueAggregatorDescriptor) createInstance(this.className);
-      theAggregatorDescriptor.configure(job);
-    }
+    return org.apache.hadoop.mapreduce.lib.aggregate.
+      UserDefinedValueAggregatorDescriptor.createInstance(className);
   }
 
   /**
@@ -72,37 +51,8 @@ public class UserDefinedValueAggregatorDescriptor implements
    * @param job a configure object used for decriptor configuration
    */
   public UserDefinedValueAggregatorDescriptor(String className, JobConf job) {
-    this.className = className;
-    this.createAggregator(job);
-  }
-
-  /**
-   *   Generate a list of aggregation-id/value pairs for the given key/value pairs
-   *   by delegating the invocation to the real object.
-   *   
-   * @param key
-   *          input key
-   * @param val
-   *          input value
-   * @return a list of aggregation id/value pairs. An aggregation id encodes an
-   *         aggregation type which is used to guide the way to aggregate the
-   *         value in the reduce/combiner phrase of an Aggregate based job.
-   */
-  public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key,
-                                                          Object val) {
-    ArrayList<Entry<Text, Text>> retv = new ArrayList<Entry<Text, Text>>();
-    if (this.theAggregatorDescriptor != null) {
-      retv = this.theAggregatorDescriptor.generateKeyValPairs(key, val);
-    }
-    return retv;
-  }
-
-  /**
-   * @return the string representation of this object.
-   */
-  public String toString() {
-    return "UserDefinedValueAggregatorDescriptor with class name:" + "\t"
-      + this.className;
+    super(className, job);
+    ((ValueAggregatorDescriptor)theAggregatorDescriptor).configure(job);
   }
 
   /**

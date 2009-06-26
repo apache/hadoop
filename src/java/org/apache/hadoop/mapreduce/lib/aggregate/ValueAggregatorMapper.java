@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib.aggregate;
+package org.apache.hadoop.mapreduce.lib.aggregate;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -25,45 +25,37 @@ import java.util.Map.Entry;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.Mapper;
 
 /**
  * This class implements the generic mapper of Aggregate.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorMapper}
- * instead
  */
-@Deprecated
-public class ValueAggregatorMapper<K1 extends WritableComparable,
+public class ValueAggregatorMapper<K1 extends WritableComparable<?>,
                                    V1 extends Writable>
-  extends ValueAggregatorJobBase<K1, V1> {
+  extends Mapper<K1, V1, Text, Text> {
 
+  public void setup(Context context) 
+      throws IOException, InterruptedException {
+    ValueAggregatorJobBase.setup(context.getConfiguration());
+  }
+  
   /**
    *  the map function. It iterates through the value aggregator descriptor 
    *  list to generate aggregation id/value pairs and emit them.
    */
   public void map(K1 key, V1 value,
-                  OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
+      Context context) throws IOException, InterruptedException  {
 
-    Iterator iter = this.aggregatorDescriptorList.iterator();
+    Iterator<?> iter = 
+      ValueAggregatorJobBase.aggregatorDescriptorList.iterator();
     while (iter.hasNext()) {
       ValueAggregatorDescriptor ad = (ValueAggregatorDescriptor) iter.next();
       Iterator<Entry<Text, Text>> ens =
         ad.generateKeyValPairs(key, value).iterator();
       while (ens.hasNext()) {
         Entry<Text, Text> en = ens.next();
-        output.collect(en.getKey(), en.getValue());
+        context.write(en.getKey(), en.getValue());
       }
     }
-  }
-
-  /**
-   * Do nothing. Should not be called.
-   */
-  public void reduce(Text arg0, Iterator<Text> arg1,
-                     OutputCollector<Text, Text> arg2,
-                     Reporter arg3) throws IOException {
-    throw new IOException("should not be called\n");
   }
 }

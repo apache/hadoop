@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.mapred.lib.aggregate;
 
-import java.util.ArrayList;
-import java.util.Map.Entry;
-
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 
@@ -35,27 +32,19 @@ import org.apache.hadoop.mapred.JobConf;
  * key/value pair, the mapper will use those objects to create aggregation
  * id/value pairs.
  * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorDescriptor}
+ * instead 
  */
-public interface ValueAggregatorDescriptor {
+@Deprecated
+public interface ValueAggregatorDescriptor extends 
+    org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorDescriptor {
 
-  public static final String TYPE_SEPARATOR = ":";
+  public static final String TYPE_SEPARATOR = org.apache.hadoop.mapreduce.
+      lib.aggregate.ValueAggregatorDescriptor.TYPE_SEPARATOR;
 
-  public static final Text ONE = new Text("1");
-
-  /**
-   * Generate a list of aggregation-id/value pairs for the given key/value pair.
-   * This function is usually called by the mapper of an Aggregate based job.
-   * 
-   * @param key
-   *          input key
-   * @param val
-   *          input value
-   * @return a list of aggregation id/value pairs. An aggregation id encodes an
-   *         aggregation type which is used to guide the way to aggregate the
-   *         value in the reduce/combiner phrase of an Aggregate based job.
-   */
-  public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key,
-                                                          Object val);
+  public static final Text ONE = org.apache.hadoop.mapreduce.
+      lib.aggregate.ValueAggregatorDescriptor.ONE;
 
   /**
    * Configure the object

@@ -30,8 +30,11 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * This class implements the generic reducer of Aggregate.
  * 
- * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorReducer}
+ * instead
  */
+@Deprecated
 public class ValueAggregatorReducer<K1 extends WritableComparable,
                                     V1 extends Writable>
   extends ValueAggregatorJobBase<K1, V1> {

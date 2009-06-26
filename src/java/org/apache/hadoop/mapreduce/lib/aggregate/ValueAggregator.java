@@ -16,15 +16,38 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib.aggregate;
+package org.apache.hadoop.mapreduce.lib.aggregate;
+
+import java.util.ArrayList;
 
 /**
  * This interface defines the minimal protocol for value aggregators.
  * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregator} instead
  */
-@Deprecated
-public interface ValueAggregator<E> extends 
-    org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregator<E> {
+public interface ValueAggregator<E> {
+
+  /**
+   * add a value to the aggregator
+   * 
+   * @param val the value to be added
+   */
+  public void addNextValue(Object val);
+
+  /**
+   * reset the aggregator
+   *
+   */
+  public void reset();
+
+  /**
+   * @return the string representation of the agregator
+   */
+  public String getReport();
+
+  /**
+   * 
+   * @return an array of values as the outputs of the combiner.
+   */
+  public ArrayList<E> getCombinerOutput();
+
 }

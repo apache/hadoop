@@ -16,57 +16,51 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib.aggregate;
+package org.apache.hadoop.mapreduce.lib.aggregate;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.Reducer;
 
 /**
  * This abstract class implements some common functionalities of the
  * the generic mapper, reducer and combiner classes of Aggregate.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorJobBase}
- * instead
  */
-@Deprecated
-public abstract class ValueAggregatorJobBase<K1 extends WritableComparable,
+public class ValueAggregatorJobBase<K1 extends WritableComparable<?>,
                                              V1 extends Writable>
-  implements Mapper<K1, V1, Text, Text>, Reducer<Text, Text, Text, Text> {
+{
 
-  protected ArrayList<ValueAggregatorDescriptor> aggregatorDescriptorList = null;
+  protected static ArrayList<ValueAggregatorDescriptor> aggregatorDescriptorList = null;
 
-  public void configure(JobConf job) {
-    this.initializeMySpec(job);
-    this.logSpec();
+  public static void setup(Configuration job) {
+    initializeMySpec(job);
+    logSpec();
   }
 
-  private static ValueAggregatorDescriptor getValueAggregatorDescriptor(
-      String spec, JobConf job) {
+  protected static ValueAggregatorDescriptor getValueAggregatorDescriptor(
+      String spec, Configuration conf) {
     if (spec == null)
       return null;
     String[] segments = spec.split(",", -1);
     String type = segments[0];
     if (type.compareToIgnoreCase("UserDefined") == 0) {
       String className = segments[1];
-      return new UserDefinedValueAggregatorDescriptor(className, job);
+      return new UserDefinedValueAggregatorDescriptor(className, conf);
     }
     return null;
   }
 
-  private static ArrayList<ValueAggregatorDescriptor> getAggregatorDescriptors(JobConf job) {
+  protected static ArrayList<ValueAggregatorDescriptor> getAggregatorDescriptors(
+      Configuration conf) {
     String advn = "aggregator.descriptor";
-    int num = job.getInt(advn + ".num", 0);
-    ArrayList<ValueAggregatorDescriptor> retv = new ArrayList<ValueAggregatorDescriptor>(num);
+    int num = conf.getInt(advn + ".num", 0);
+    ArrayList<ValueAggregatorDescriptor> retv = 
+      new ArrayList<ValueAggregatorDescriptor>(num);
     for (int i = 0; i < num; i++) {
-      String spec = job.get(advn + "." + i);
-      ValueAggregatorDescriptor ad = getValueAggregatorDescriptor(spec, job);
+      String spec = conf.get(advn + "." + i);
+      ValueAggregatorDescriptor ad = getValueAggregatorDescriptor(spec, conf);
       if (ad != null) {
         retv.add(ad);
       }
@@ -74,19 +68,15 @@ public abstract class ValueAggregatorJobBase<K1 extends WritableComparable,
     return retv;
   }
 
-  private void initializeMySpec(JobConf job) {
-    this.aggregatorDescriptorList = getAggregatorDescriptors(job);
-    if (this.aggregatorDescriptorList.size() == 0) {
-      this.aggregatorDescriptorList
+  private static void initializeMySpec(Configuration conf) {
+    aggregatorDescriptorList = getAggregatorDescriptors(conf);
+    if (aggregatorDescriptorList.size() == 0) {
+      aggregatorDescriptorList
           .add(new UserDefinedValueAggregatorDescriptor(
-              ValueAggregatorBaseDescriptor.class.getCanonicalName(), job));
+              ValueAggregatorBaseDescriptor.class.getCanonicalName(), conf));
     }
   }
 
-  protected void logSpec() {
-
-  }
-
-  public void close() throws IOException {
+  protected static void logSpec() {
   }
 }

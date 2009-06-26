@@ -24,18 +24,17 @@ import java.util.StringTokenizer;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorBaseDescriptor;
-import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorJob;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorBaseDescriptor;
+import org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorJob;
 
 /**
  * This is an example Aggregated Hadoop Map/Reduce application. It reads the
  * text input files, breaks each line into words and counts them. The output is
  * a locally sorted list of words and the count of how often they occurred.
  * 
- * To run: bin/hadoop jar hadoop-*-examples.jar aggregatewordcount <i>in-dir</i>
- * <i>out-dir</i> <i>numOfReducers</i> textinputformat
+ * To run: bin/hadoop jar hadoop-*-examples.jar aggregatewordcount 
+ * <i>in-dir</i> <i>out-dir</i> <i>numOfReducers</i> textinputformat
  * 
  */
 public class AggregateWordCount {
@@ -67,11 +66,13 @@ public class AggregateWordCount {
    *           When there is communication problems with the job tracker.
    */
   @SuppressWarnings("unchecked")
-  public static void main(String[] args) throws IOException {
-    JobConf conf = ValueAggregatorJob.createValueAggregatorJob(args
+  public static void main(String[] args) 
+    throws IOException, InterruptedException, ClassNotFoundException  {
+    Job job = ValueAggregatorJob.createValueAggregatorJob(args
         , new Class[] {WordCountPlugInClass.class});
-   
-    JobClient.runJob(conf);
+    job.setJarByClass(AggregateWordCount.class);
+    int ret = job.waitForCompletion(true) ? 0 : 1;
+    System.exit(ret);
   }
 
 }

@@ -7,6 +7,10 @@ Trunk (unreleased changes)
     MAPREDUCE-516. Fix the starvation problem in the Capacity Scheduler 
     when running High RAM Jobs. (Arun Murthy via yhemanth)
 
+    MAPREDUCE-358. Change org.apache.hadoop.examples. AggregateWordCount 
+    and org.apache.hadoop.examples.AggregateWordHistogram to use new 
+    mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   NEW FEATURES
 
     HADOOP-5887. Sqoop should create tables in Hive metastore after importing
