@@ -17,6 +17,8 @@
 
 # Launch an EC2 Hadoop slaves.
 
+set -o errexit
+
 if [ -z $1 ]; then
   echo "Cluster name required!"
   exit -1

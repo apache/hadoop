@@ -18,6 +18,8 @@
 # Create a Hadoop AMI.
 # Inspired by Jonathan Siegel's EC2 script (http://blogsiegel.blogspot.com/2006/08/sandboxing-amazon-ec2.html)
 
+set -o errexit
+
 # Import variables
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`

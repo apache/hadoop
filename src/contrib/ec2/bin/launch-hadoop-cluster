@@ -17,6 +17,8 @@
 
 # Launch an EC2 cluster of Hadoop instances.
 
+set -o errexit
+
 # Import variables
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`

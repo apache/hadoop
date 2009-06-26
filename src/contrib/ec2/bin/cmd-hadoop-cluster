@@ -17,6 +17,8 @@
 
 # Run commands on master or specified node of a running Hadoop EC2 cluster.
 
+set -o errexit
+
 # if no args specified, show usage
 if [ $# = 0 ]; then
   echo "Command required!"

@@ -17,6 +17,8 @@
 
 # List running clusters.
 
+set -o errexit
+
 # Import variables
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
