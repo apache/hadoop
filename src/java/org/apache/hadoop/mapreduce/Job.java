@@ -290,6 +290,18 @@ public class Job extends JobContext {
   }
 
   /**
+   * Specify whether job-setup and job-cleanup is needed for the job 
+   * 
+   * @param needed If <code>true</code>, job-setup and job-cleanup will be
+   *               considered from {@link OutputCommitter} 
+   *               else ignored.
+   */
+  public void setJobSetupCleanupNeeded(boolean needed) {
+    ensureState(JobState.DEFINE);
+    conf.setBoolean("mapred.committer.job.setup.cleanup.needed", needed);
+  }
+
+  /**
    * Get the URL where some job progress information will be displayed.
    * 
    * @return the URL where some job progress information will be displayed.

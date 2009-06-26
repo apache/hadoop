@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -227,5 +227,30 @@ public class MapReduceTestUtil {
         // Do nothing
       }
     }
+  }
+
+  public static Job createJob(Configuration conf, Path inDir, Path outDir, 
+      int numInputFiles, int numReds) throws IOException {
+    Job job = new Job(conf);
+    FileSystem fs = FileSystem.get(conf);
+    if (fs.exists(outDir)) {
+      fs.delete(outDir, true);
+    }
+    if (fs.exists(inDir)) {
+      fs.delete(inDir, true);
+    }
+    fs.mkdirs(inDir);
+    String input = "The quick brown fox\n" + "has many silly\n"
+      + "red fox sox\n";
+    for (int i = 0; i < numInputFiles; ++i) {
+      DataOutputStream file = fs.create(new Path(inDir, "part-" + i));
+      file.writeBytes(input);
+      file.close();
+    }    
+
+    FileInputFormat.setInputPaths(job, inDir);
+    FileOutputFormat.setOutputPath(job, outDir);
+    job.setNumReduceTasks(numReds);
+    return job;
   }
 }

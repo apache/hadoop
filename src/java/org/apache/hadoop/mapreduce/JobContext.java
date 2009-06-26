@@ -233,4 +233,15 @@ public class JobContext {
   public RawComparator<?> getGroupingComparator() {
     return conf.getOutputValueGroupingComparator();
   }
+  
+  /**
+   * Get whether job-setup and job-cleanup is needed for the job 
+   * 
+   * @return boolean 
+   */
+  public boolean getJobSetupCleanupNeeded() {
+    return conf.getBoolean("mapred.committer.job.setup.cleanup.needed", true);
+  }
+
+
 }

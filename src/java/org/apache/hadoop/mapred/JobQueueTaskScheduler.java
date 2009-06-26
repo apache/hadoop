@@ -48,7 +48,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
   public synchronized void start() throws IOException {
     super.start();
     taskTrackerManager.addJobInProgressListener(jobQueueJobInProgressListener);
-    
+    eagerTaskInitializationListener.setTaskTrackerManager(taskTrackerManager);
     eagerTaskInitializationListener.start();
     taskTrackerManager.addJobInProgressListener(
         eagerTaskInitializationListener);

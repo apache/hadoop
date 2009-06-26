@@ -98,6 +98,8 @@ public class BaseSchedulerTest extends TestCase {
     public JobInProgress getJob(JobID jobid) {
       return null;
     }
+    public void initJob(JobInProgress job) {
+    }
     public void startTask(String taskTrackerName, final Task t) {
     }
     void addQueues(String[] arr) {

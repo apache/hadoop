@@ -26,6 +26,13 @@
   </description>
 </property>
 
+<property>
+  <name>mapred.committer.job.setup.cleanup.needed</name>
+  <value>true</value>
+  <description> true, if job needs job-setup and job-cleanup.
+                false, otherwise  
+  </description>
+</property>
 <!-- i/o properties -->
 
 <property>

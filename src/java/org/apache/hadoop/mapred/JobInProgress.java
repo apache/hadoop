@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -110,6 +111,7 @@ public class JobInProgress {
   private volatile boolean launchedSetup = false;
   private volatile boolean jobKilled = false;
   private volatile boolean jobFailed = false;
+  private boolean jobSetupCleanupNeeded = true;
 
   JobPriority priority = JobPriority.NORMAL;
   protected JobTracker jobtracker;
@@ -350,6 +352,8 @@ public class JobInProgress {
     this.numReduceTasks = conf.getNumReduceTasks();
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
        (numMapTasks + numReduceTasks + 10);
+    JobContext jobContext = new JobContext(conf, jobId);
+    this.jobSetupCleanupNeeded = jobContext.getJobSetupCleanupNeeded();
 
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
@@ -601,7 +605,33 @@ public class JobInProgress {
           (conf.getFloat("mapred.reduce.slowstart.completed.maps", 
                          DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART) * 
            numMapTasks));
+    
+    initSetupCleanupTasks(jobFile);
+    
+    synchronized(jobInitKillStatus){
+      jobInitKillStatus.initDone = true;
+      if(jobInitKillStatus.killed) {
+        //setup not launched so directly terminate
+        terminateJob(JobStatus.KILLED);
+        return;
+      }
+    }
+    
+    tasksInited.set(true);
+    JobHistory.JobInfo.logInited(profile.getJobID(), this.launchTime, 
+                                 numMapTasks, numReduceTasks);
+    
+    // if setup is not needed, mark it complete
+    if (!jobSetupCleanupNeeded) {
+      setupComplete();
+    }
+  }
 
+  private void initSetupCleanupTasks(String jobFile) {
+    if (!jobSetupCleanupNeeded) {
+      // nothing to initialize
+      return;
+    }
     // create cleanup two cleanup tips, one map and one reduce.
     cleanup = new TaskInProgress[2];
 
@@ -630,19 +660,18 @@ public class JobInProgress {
     setup[1] = new TaskInProgress(jobId, jobFile, numMapTasks,
                        numReduceTasks + 1, jobtracker, conf, this, 1);
     setup[1].setJobSetupTask();
-    
-    synchronized(jobInitKillStatus){
-      jobInitKillStatus.initDone = true;
-      if(jobInitKillStatus.killed) {
-        //setup not launched so directly terminate
-        terminateJob(JobStatus.KILLED);
-        return;
-      }
+  }
+  
+  private void setupComplete() {
+    status.setSetupProgress(1.0f);
+    if (maps.length == 0 && reduces.length == 0 && !jobSetupCleanupNeeded) {
+      jobComplete();
+      return;
     }
-    
-    tasksInited.set(true);
-    JobHistory.JobInfo.logInited(profile.getJobID(), this.launchTime, 
-                                 numMapTasks, numReduceTasks);
+    if (this.status.getRunState() == JobStatus.PREP) {
+      this.status.setRunState(JobStatus.RUNNING);
+      JobHistory.JobInfo.logStarted(profile.getJobID());
+    }
   }
 
   /////////////////////////////////////////////////////
@@ -2446,13 +2475,7 @@ public class JobInProgress {
     if (tip.isJobSetupTask()) {
       // setup task has finished. kill the extra setup tip
       killSetupTip(!tip.isMapTask());
-      // Job can start running now.
-      this.status.setSetupProgress(1.0f);
-      // move the job to running state if the job is in prep state
-      if (this.status.getRunState() == JobStatus.PREP) {
-        this.status.setRunState(JobStatus.RUNNING);
-        JobHistory.JobInfo.logStarted(profile.getJobID());
-      }
+      setupComplete();
     } else if (tip.isJobCleanupTask()) {
       // cleanup task has finished. Kill the extra cleanup tip
       if (tip.isMapTask()) {
@@ -2503,6 +2526,10 @@ public class JobInProgress {
       }
     }
     decrementSpeculativeCount(wasSpeculating, tip);
+    // is job complete?
+    if (!jobSetupCleanupNeeded && canLaunchJobCleanupTask()) {
+      jobComplete();
+    }
     return true;
   }
   
@@ -2560,7 +2587,8 @@ public class JobInProgress {
     //
     // All tasks are complete, then the job is done!
     //
-    if (this.status.getRunState() == JobStatus.RUNNING ) {
+    if (this.status.getRunState() == JobStatus.RUNNING ||
+        this.status.getRunState() == JobStatus.PREP) {
       this.status.setRunState(JobStatus.SUCCEEDED);
       this.status.setCleanupProgress(1.0f);
       if (maps.length == 0) {
@@ -2657,6 +2685,9 @@ public class JobInProgress {
       
       // Clear out reserved tasktrackers
       cancelReservedSlots();
+      if (!jobSetupCleanupNeeded) {
+        terminateJob(jobTerminationState);
+      }
     }
   }
 
@@ -2918,7 +2949,9 @@ public class JobInProgress {
   }
 
   boolean isSetupFinished() {
-    if (setup[0].isComplete() || setup[0].isFailed() || setup[1].isComplete()
+    // if there is no setup to be launched, consider setup is finished.  
+    if ((tasksInited.get() && setup.length == 0) || 
+        setup[0].isComplete() || setup[0].isFailed() || setup[1].isComplete()
         || setup[1].isFailed()) {
       return true;
     }
@@ -3019,10 +3052,12 @@ public class JobInProgress {
    */
   public synchronized TaskInProgress getTaskInProgress(TaskID tipid) {
     if (tipid.getTaskType() == TaskType.MAP) {
-      if (tipid.equals(cleanup[0].getTIPId())) { // cleanup map tip
+      // cleanup map tip
+      if (cleanup.length > 0 && tipid.equals(cleanup[0].getTIPId())) {
         return cleanup[0]; 
       }
-      if (tipid.equals(setup[0].getTIPId())) { //setup map tip
+      // setup map tip
+      if (setup.length > 0 && tipid.equals(setup[0].getTIPId())) { 
         return setup[0];
       }
       for (int i = 0; i < maps.length; i++) {
@@ -3031,10 +3066,12 @@ public class JobInProgress {
         }
       }
     } else {
-      if (tipid.equals(cleanup[1].getTIPId())) { // cleanup reduce tip
+      // cleanup reduce tip
+      if (cleanup.length > 0 && tipid.equals(cleanup[1].getTIPId())) { 
         return cleanup[1]; 
       }
-      if (tipid.equals(setup[1].getTIPId())) { //setup reduce tip
+      // setup reduce tip
+      if (setup.length > 0 && tipid.equals(setup[1].getTIPId())) { 
         return setup[1];
       }
       for (int i = 0; i < reduces.length; i++) {

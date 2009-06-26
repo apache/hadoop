@@ -27,6 +27,7 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 
 public class TestParallelInitialization extends TestCase {
   
@@ -135,6 +136,23 @@ public class TestParallelInitialization extends TestCase {
       return null;
     }
 
+    public void initJob(JobInProgress job) {
+      JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+      try {
+        job.initTasks();
+      } catch (IOException ioe) {
+        job.fail();
+      }
+      JobStatus newStatus = (JobStatus)job.getStatus().clone();
+      if (prevStatus.getRunState() != newStatus.getRunState()) {
+        JobStatusChangeEvent event = 
+          new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+              newStatus);
+        for (JobInProgressListener listener : listeners) {
+          listener.jobUpdated(event);
+        }
+      }
+    }
     // Test methods
     
     public void submitJob(JobInProgress job) throws IOException {

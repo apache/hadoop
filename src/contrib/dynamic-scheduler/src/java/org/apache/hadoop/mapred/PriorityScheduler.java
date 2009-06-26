@@ -65,11 +65,7 @@ class PriorityScheduler extends QueueTaskScheduler {
 
     @Override
     public void run() {
-      try {
-        job.initTasks();
-      } catch (IOException io) {
-        LOG.error(io);
-      }
+      taskTrackerManager.initJob(job);
     }
   }
 

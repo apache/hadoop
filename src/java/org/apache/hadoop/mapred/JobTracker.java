@@ -855,14 +855,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         if (Values.PREP.name().equals(jobStatus)) {
           hasUpdates = true;
           LOG.info("Calling init from RM for job " + jip.getJobID().toString());
-          try {
-            jip.initTasks();
-          } catch (Throwable t) {
-            LOG.error("Job initialization failed : \n" 
-                      + StringUtils.stringifyException(t));
-            jip.fail(); // fail the job
-            throw new IOException(t);
-          }
+          initJob(jip);
         }
       }
       
@@ -3295,6 +3288,41 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
             newStatus);
       updateJobInProgressListeners(event);
+    }
+  }
+
+  public void initJob(JobInProgress job) {
+    if (null == job) {
+      LOG.info("Init on null job is not valid");
+      return;
+    }
+	        
+    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+    try {
+      LOG.info("Initializing " + job.getJobID());
+      job.initTasks();
+    } catch (Throwable t) {
+      LOG.error("Job initialization failed:\n" +
+          StringUtils.stringifyException(t));
+      if (job != null) {
+        job.fail();
+      }
+    }
+	    
+    // Inform the listeners if the job state has changed
+    // Note : 
+    //   If the job initialization is failed, job state will be FAILED
+    //   If job was killed during initialization, job state will be KILLED
+    //   If job does not require setup, job state will be RUNNING
+    //   otherwise, job state is PREP.
+    JobStatus newStatus = (JobStatus)job.getStatus().clone();
+    if (prevStatus.getRunState() != newStatus.getRunState()) {
+      JobStatusChangeEvent event = 
+        new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+            newStatus);
+      synchronized (JobTracker.this) {
+        updateJobInProgressListeners(event);
+      }
     }
   }
 
