@@ -252,6 +252,7 @@
   <!-- ================================================================== -->
   <target name="package" depends="jar,javadoc,compile-test" 
       description="Build distribution; must define -Djava5.home and -Dforrest.home so can generate doc"> 
+    <echo message="Be sure to run 'docs' target before this one else package will be missing site documentation" />
     <mkdir dir="${dist.dir}"/>
     <copy todir="${dist.dir}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}">
