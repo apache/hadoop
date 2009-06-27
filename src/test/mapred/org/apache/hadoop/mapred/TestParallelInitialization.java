@@ -136,6 +136,10 @@ public class TestParallelInitialization extends TestCase {
       return null;
     }
 
+    public boolean killTask(TaskAttemptID attemptId, boolean shouldFail) {
+      return true;
+    }
+
     public void initJob(JobInProgress job) {
       JobStatus prevStatus = (JobStatus)job.getStatus().clone();
       try {
@@ -153,6 +157,7 @@ public class TestParallelInitialization extends TestCase {
         }
       }
     }
+
     // Test methods
     
     public void submitJob(JobInProgress job) throws IOException {

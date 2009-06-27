@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 public abstract class LoadManager implements Configurable {
   protected Configuration conf;
   protected TaskTrackerManager taskTrackerManager;
+  protected FairSchedulerEventLog schedulingLog;
   
   public Configuration getConf() {
     return conf;
@@ -42,6 +43,10 @@ public abstract class LoadManager implements Configurable {
   public synchronized void setTaskTrackerManager(
       TaskTrackerManager taskTrackerManager) {
     this.taskTrackerManager = taskTrackerManager;
+  }
+
+  public void setEventLog(FairSchedulerEventLog schedulingLog) {
+    this.schedulingLog = schedulingLog;
   }
   
   /**

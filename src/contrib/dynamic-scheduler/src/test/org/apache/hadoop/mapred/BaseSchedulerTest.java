@@ -102,6 +102,9 @@ public class BaseSchedulerTest extends TestCase {
     }
     public void startTask(String taskTrackerName, final Task t) {
     }
+    public boolean killTask(TaskAttemptID attemptId, boolean shouldFail) {
+      return true;
+    }
     void addQueues(String[] arr) {
       Set<String> queues = new HashSet<String>();
       queues.addAll(Arrays.asList(arr));

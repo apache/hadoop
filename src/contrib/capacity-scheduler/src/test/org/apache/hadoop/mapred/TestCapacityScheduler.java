@@ -659,6 +659,11 @@ public class TestCapacityScheduler extends TestCase {
     public QueueManager getQueueManager() {
       return qm;
     }
+
+    @Override
+    public boolean killTask(TaskAttemptID taskid, boolean shouldFail) {
+      return true;
+    }
   }
   
   // represents a fake queue configuration info

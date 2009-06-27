@@ -13,6 +13,8 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    MAPREDUCE-551. Preemption support in the Fair Scheduler. (Matei Zaharia)
+
     HADOOP-5887. Sqoop should create tables in Hive metastore after importing
     to HDFS. (Aaron Kimball via tomwhite)
 

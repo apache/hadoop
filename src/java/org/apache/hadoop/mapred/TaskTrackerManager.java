@@ -88,6 +88,16 @@ interface TaskTrackerManager {
    * @return jobInProgress object
    */
   public JobInProgress getJob(JobID jobid);
+
+  /**
+   * Mark the task attempt identified by taskid to be killed
+   * 
+   * @param taskid task to kill
+   * @param shouldFail whether to count the task as failed
+   * @return true if the task was found and successfully marked to kill
+   */
+  public boolean killTask(TaskAttemptID taskid, boolean shouldFail)
+      throws IOException;
   
   /**
    * Initialize the Job

@@ -218,7 +218,7 @@ public class FairSchedulerServlet extends HttpServlet {
         JobProfile profile = job.getProfile();
         JobInfo info = scheduler.infos.get(job);
         if (info == null) { // Job finished, but let's show 0's for info
-          info = new JobInfo();
+          info = new JobInfo(0);
         }
         out.print("<tr>\n");
         out.printf("<td>%s</td>\n", DATE_FORMAT.format(
