@@ -477,17 +477,18 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return this.stats.getEvictedCount();
   }
   
-  /**
+  /*
    * Eviction thread.  Sits in waiting state until an eviction is triggered
    * when the cache size grows above the acceptable level.<p>
    * 
    * Thread is triggered into action by {@link LruBlockCache#runEviction()}
    */
   private static class EvictionThread extends Thread {
-
     private WeakReference<LruBlockCache> cache;
     
     public EvictionThread(LruBlockCache cache) {
+      super("LruBlockCache.EvictionThread");
+      setDaemon(true);
       this.cache = new WeakReference<LruBlockCache>(cache);
     }
     
@@ -511,12 +512,15 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
   }
   
-  /**
+  /*
    * Statistics thread.  Periodically prints the cache statistics to the log.
    */
   private static class StatisticsThread extends Thread {
     LruBlockCache lru;
+
     public StatisticsThread(LruBlockCache lru) {
+      super("LruBlockCache.StatisticsThread");
+      setDaemon(true);
       this.lru = lru;
     }
     @Override
