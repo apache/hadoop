@@ -475,7 +475,6 @@ public class HLog implements HConstants, Syncable {
    /** Append an entry to the log.
    * 
    * @param regionInfo
-   * @param row
    * @param logEdit
    * @param now Time of this edit write.
    * @throws IOException
@@ -488,12 +487,11 @@ public class HLog implements HConstants, Syncable {
     this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit);
   }
 
-  /** Construct a new log key.
-   * 
+  /**
    * @param now
    * @param regionName
    * @param tableName
-   * @return
+   * @return New log key.
    */
   protected HLogKey makeKey(byte[] regionName, byte[] tableName, long seqnum, long now) {
     return new HLogKey(regionName, tableName, seqnum, now);
@@ -504,7 +502,6 @@ public class HLog implements HConstants, Syncable {
   /** Append an entry to the log.
    * 
    * @param regionInfo
-   * @param row
    * @param logEdit
    * @param now Time of this edit write.
    * @throws IOException
@@ -541,7 +538,7 @@ public class HLog implements HConstants, Syncable {
    *
    * Later, if we sort by these keys, we obtain all the relevant edits for a
    * given key-range of the HRegion (TODO). Any edits that do not have a
-   * matching {@link HConstants#COMPLETE_CACHEFLUSH} message can be discarded.
+   * matching COMPLETE_CACHEFLUSH message can be discarded.
    *
    * <p>
    * Logs cannot be restarted once closed, or once the HLog process dies. Each

@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * A block cache implementation that is memory-aware using {@link HeapSize},
  * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
  * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
- * constant-time {@link cacheBlock} and {@link getBlock} operations.<p>
+ * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
  * 
  * Contains three levels of block priority to allow for
  * scan-resistance and in-memory families.  A block is added with an inMemory
