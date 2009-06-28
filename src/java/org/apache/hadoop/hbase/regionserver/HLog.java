@@ -503,7 +503,7 @@ public class HLog implements HConstants, Syncable {
    * 
    * @param regionInfo
    * @param logEdit
-   * @param now Time of this edit write.
+   * @param logKey
    * @throws IOException
    */
   public void append(HRegionInfo regionInfo, HLogKey logKey, KeyValue logEdit)
