@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="hadoopcontrib" default="compile" basedir=".">
+<project name="hbasecontrib" default="compile" basedir=".">
   
   <!-- In case one of the contrib subdirectories -->
   <!-- fails the build or test targets and you cannot fix it: -->

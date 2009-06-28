@@ -39,6 +39,8 @@
   <property name="docs.dir" value="${basedir}/docs"/>
   <property name="docs.src" value="${basedir}/src/docs"/>
 
+  <property name="contrib.dir" value="${basedir}/src/contrib"/>
+
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="600000"/>
 
@@ -135,12 +137,17 @@
     <chmod perm="ugo+x" type="file">
       <fileset dir="${build.bin}" />
     </chmod>
+    <!--Copy contrib. templates if any-->
+    <copy todir="${contrib.dir}" verbose="true">
+      <fileset dir="${contrib.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
     <exec executable="sh">
        <arg line="src/saveVersion.sh ${version}"/>
     </exec>
   </target>
 
-  <target name="compile" depends="clover,init,jspc">
+  <target name="compile-core" depends="clover,init,jspc" description="Compile hbase core">
    <!--Compile whats under src and generated java classes made from jsp-->
    <javac
     encoding="${build.encoding}"
@@ -154,8 +161,20 @@
      <classpath refid="classpath"/>
    </javac>
   </target>
+
+  <target name="compile-contrib" depends="compile-core" description="Compile contribs">
+     <subant target="compile">
+        <property name="version" value="${version}"/>
+        <fileset file="${contrib.dir}/build.xml"/>
+     </subant>  	
+  </target>
+
+  <target name="compile" depends="compile-core, compile-contrib"
+     description="Compile core, contrib">
+  </target>
 	
-  <target name="jar" depends="compile" description="Build jar">
+  <target name="jar" depends="compile"
+       description="Build jar">
     <!--Copy over any properties under src-->
     <copy todir="${build.classes}">
       <fileset dir="${src.dir}">
@@ -207,7 +226,8 @@
     <echo message="Setting jspc.notRequired property. jsp pages generated once per ant session only" />
   </target>
 
-  <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
+  <target name="clover" depends="clover.setup, clover.info"
+    description="Instrument the Unit tests using Clover.  To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
 
   <target name="clover.setup" if="clover.enabled">
     <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
@@ -250,7 +270,7 @@
   <!-- ================================================================== -->
   <!-- Package                                                            -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar,javadoc,compile-test" 
+  <target name="package" depends="jar,javadoc" 
       description="Build distribution; must define -Djava5.home and -Dforrest.home so can generate doc"> 
     <echo message="Be sure to run 'docs' target before this one else package will be missing site documentation" />
     <mkdir dir="${dist.dir}"/>
@@ -260,6 +280,14 @@
         <include name="${final.name}-test.jar" />
       </fileset>
     </copy>
+    <mkdir dir="${dist.dir}/contrib"/>
+    <subant target="package">
+      <!--Pass down the version in case its needed again and the target
+      distribution directory so contribs know where to install to.-->
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <fileset file="${contrib.dir}/build.xml"/>
+    </subant>  	
     <mkdir dir="${dist.dir}/webapps"/>
     <copy todir="${dist.dir}/webapps">
       <fileset dir="${build.webapps}" />
@@ -293,6 +321,13 @@
     <copy todir="${dist.dir}/src" includeEmptyDirs="true">
       <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
     </copy>
+    <copy todir="${dist.dir}/" file="build.xml"/>
+    <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/bin"/>
+        <fileset dir="${dist.dir}/src/contrib/">
+          <include name="*/bin/*" />
+        </fileset>
+    </chmod>
   </target>
 
   <!-- ================================================================== -->
@@ -327,12 +362,14 @@
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/contrib/*/bin/*" />
           <exclude name="${final.name}/src/**" />
           <exclude name="${final.name}/docs/**" />
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
           <include name="${final.name}/bin/*" />
+          <exclude name="${final.name}/contrib/*/bin/*" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>
@@ -410,7 +447,7 @@
       redoing init and jscpc at this stage of the game; i.e. the prereqs
       for compile.  TODO: Investigate why.  For now, test will fail
       if not preceeded by manual 'jar' or 'compile' invokation -->
-  <target name="compile-test" depends="compile" description="Build test jar">
+  <target name="compile-core-test" depends="compile" description="Build test jar">
     <javac encoding="${build.encoding}" 
        srcdir="${src.test}" 
        includes="**/*.java" 
@@ -432,8 +469,8 @@
     </jar>
   </target>
 
-  <target name="test" depends="compile-test"
-  	description="Build test jar and run tests">
+  <target name="test-core" depends="compile-core-test"
+   	  description="Build test jar and run tests">
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
     <junit
@@ -464,10 +501,28 @@
     <fail if="tests.failed">Tests failed!</fail>
   </target>
 
+  <target name="test-contrib" depends="compile, compile-core-test"
+      description="Run contrib unit tests">
+    <subant target="test">
+       <property name="version" value="${version}"/>
+       <fileset file="${contrib.dir}/build.xml"/>
+    </subant> 
+  </target>
+
+  <target name="test" depends="test-core, test-contrib"
+    description="Run core, contrib unit tests">
+  </target>
+
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" description="Clean all old builds">
+  <target name="clean-contrib" description="Clean contrib">
+     <subant target="clean">        
+        <fileset file="src/contrib/build.xml"/>
+     </subant>  	
+  </target>
+  <target name="clean" depends="clean-contrib" description="Clean all old builds">
     <delete dir="${build.dir}"/>
+    <delete dir="${docs.src}/build"/>
   </target>
 </project>

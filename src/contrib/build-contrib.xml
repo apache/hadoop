@@ -19,7 +19,7 @@
 
 <!-- Imported by contrib/*/build.xml files to share generic targets. -->
 
-<project name="hadoopbuildcontrib">
+<project name="hbasebuildcontrib">
 
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
@@ -29,7 +29,7 @@
   <property file="${user.home}/${name}.build.properties" />
   <property file="${root}/build.properties" />
 
-  <property name="hadoop.root" location="${root}/../../../"/>
+  <property name="hbase.root" location="${root}/../../../"/>
 
   <property name="src.dir"  location="${root}/src/java"/>
   <property name="src.test" location="${root}/src/test"/>
@@ -38,21 +38,21 @@
   <available file="${src.examples}" type="dir" property="examples.available"/>
   <available file="${src.test}" type="dir" property="test.available"/>
 
-  <property name="conf.dir" location="${hadoop.root}/conf"/>
+  <property name="conf.dir" location="${hbase.root}/conf"/>
   <property name="test.junit.output.format" value="plain"/>
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
-  <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
+  <property name="build.dir" location="${hbase.root}/build/contrib/${name}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
-  <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>
+  <property name="hbase.log.dir" location="${build.dir}/test/logs"/>
   <!-- all jars together -->
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
 
   <property name="javadoc.link"
-            value="http://java.sun.com/j2se/1.4/docs/api/"/>
+    value="http://java.sun.com/j2se/1.4/docs/api/"/>
 
   <property name="build.encoding" value="ISO-8859-1"/>
 
@@ -62,8 +62,8 @@
   <path id="classpath">
     <pathelement location="${build.classes}"/>
     <fileset refid="lib.jars"/>
-    <pathelement location="${hadoop.root}/build/classes"/>
-    <fileset dir="${hadoop.root}/lib">
+    <pathelement location="${hbase.root}/build/classes"/>
+    <fileset dir="${hbase.root}/lib">
       <include name="**/*.jar" />
     </fileset>
   </path>
@@ -72,9 +72,9 @@
   <path id="test.classpath">
     <path refid="classpath"/>
     <pathelement location="${build.test}" />
-    <pathelement location="${hadoop.root}/build/test"/>
-    <pathelement location="${hadoop.root}/build"/>
-    <pathelement location="${hadoop.root}/src/test"/>
+    <pathelement location="${hbase.root}/build/test"/>
+    <pathelement location="${hbase.root}/build"/>
+    <pathelement location="${hbase.root}/src/test"/>
     <pathelement location="${conf.dir}"/>
   </path>
 
@@ -92,13 +92,13 @@
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.test}"/>
     <mkdir dir="${build.examples}"/>
-    <mkdir dir="${hadoop.log.dir}"/>
+    <mkdir dir="${hbase.log.dir}"/>
     <antcall target="init-contrib"/>
   </target>
 
 
   <!-- ====================================================== -->
-  <!-- Compile a Hadoop contrib's files                       -->
+  <!-- Compile a hbase contrib's files                       -->
   <!-- ====================================================== -->
   <target name="compile" depends="init" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
@@ -115,7 +115,7 @@
 
 
   <!-- ======================================================= -->
-  <!-- Compile a Hadoop contrib's example files (if available) -->
+  <!-- Compile a hbase contrib's example files (if available) -->
   <!-- ======================================================= -->
   <target name="compile-examples" depends="compile" if="examples.available">
     <echo message="contrib: ${name}"/>
@@ -147,24 +147,24 @@
   
 
   <!-- ====================================================== -->
-  <!-- Make a Hadoop contrib's jar                            -->
+  <!-- Make a hbase contrib's jar                            -->
   <!-- ====================================================== -->
   <target name="jar" depends="compile" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <jar
-      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
+      jarfile="${build.dir}/hbase-${version}-${name}.jar"
       basedir="${build.classes}"      
     />
   </target>
 
   
   <!-- ====================================================== -->
-  <!-- Make a Hadoop contrib's examples jar                   -->
+  <!-- Make a hbase contrib's examples jar                   -->
   <!-- ====================================================== -->
   <target name="jar-examples" depends="compile-examples"
           if="examples.available" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
-    <jar jarfile="${build.dir}/hadoop-${version}-${name}-examples.jar">
+    <jar jarfile="${build.dir}/hbase-${version}-${name}-examples.jar">
       <fileset dir="${build.classes}">
       </fileset>
       <fileset dir="${build.examples}">
@@ -173,13 +173,13 @@
   </target>
   
   <!-- ====================================================== -->
-  <!-- Package a Hadoop contrib                               -->
+  <!-- Package a hbase contrib                               -->
   <!-- ====================================================== -->
   <target name="package" depends="jar, jar-examples" unless="skip.contrib"> 
     <mkdir dir="${dist.dir}/contrib/${name}"/>
     <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}">
-        <include name="hadoop-${version}-${name}.jar" />
+        <include name="hbase-${version}-${name}.jar" />
       </fileset>
     </copy>
   </target>
@@ -189,8 +189,8 @@
   <!-- ================================================================== -->
   <target name="test" depends="compile-test, compile" if="test.available">
     <echo message="contrib: ${name}"/>
-    <delete dir="${hadoop.log.dir}"/>
-    <mkdir dir="${hadoop.log.dir}"/>
+    <delete dir="${hbase.log.dir}"/>
+    <mkdir dir="${hbase.log.dir}"/>
     <junit
       printsummary="yes" showoutput="${test.output}" 
       haltonfailure="no" fork="yes" maxmemory="256m"
@@ -208,8 +208,8 @@
       <sysproperty key="user.dir" value="${build.test}/data"/>
       
       <sysproperty key="fs.default.name" value="${fs.default.name}"/>
-      <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
-      <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/> 
+      <sysproperty key="hbase.test.localoutputfile" value="${hbase.test.localoutputfile}"/>
+      <sysproperty key="hbase.log.dir" value="${hbase.log.dir}"/> 
       <classpath refid="test.classpath"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${build.test}" unless="testcase">
