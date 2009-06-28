@@ -1805,7 +1805,7 @@ public class HTable {
       // respect.
     }
 
-    protected void initialize() throws IOException {
+    public void initialize() throws IOException {
       nextScanner(this.scannerCaching);
     }
 

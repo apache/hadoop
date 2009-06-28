@@ -1046,10 +1046,24 @@ public class HRegionServer implements HConstants, HRegionInterface,
         "running at " + this.serverInfo.getServerAddress().toString() +
         " because logdir " + logdir.toString() + " exists");
     }
+    HLog newlog = instantiateHLog(logdir);
+    return newlog;
+  }
+
+  // instantiate 
+  protected HLog instantiateHLog(Path logdir) throws IOException {
     HLog newlog = new HLog(fs, logdir, conf, hlogRoller);
     return newlog;
   }
 
+  
+  protected LogRoller getLogRoller() {
+    return hlogRoller;
+  }  
+  
+  /*
+   * @param interval Interval since last time metrics were called.
+   */
   protected void doMetrics() {
     try {
       metrics();
@@ -1580,7 +1594,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
   }
 
-  void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
+  protected void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
   throws IOException {
     HRegion region = this.removeFromOnlineRegions(hri);
     if (region != null) {

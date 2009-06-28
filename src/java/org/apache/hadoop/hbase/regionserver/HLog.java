@@ -290,12 +290,7 @@ public class HLog implements HConstants, Syncable {
         Path oldFile = cleanupCurrentWriter(this.filenum);
         this.filenum = System.currentTimeMillis();
         Path newPath = computeFilename(this.filenum);
-        this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
-          HLogKey.class, KeyValue.class,
-          fs.getConf().getInt("io.file.buffer.size", 4096),
-          fs.getDefaultReplication(), this.blocksize,
-          SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
-          new Metadata());
+        this.writer = createWriter(newPath);
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
             this.numEntries.get() +
@@ -325,6 +320,20 @@ public class HLog implements HConstants, Syncable {
       this.cacheFlushLock.unlock();
     }
     return regionToFlush;
+  }
+
+  protected SequenceFile.Writer createWriter(Path path) throws IOException {
+    return createWriter(path, HLogKey.class, KeyValue.class);
+  }
+  
+  protected SequenceFile.Writer createWriter(Path path,
+      Class<? extends HLogKey> keyClass, Class<? extends KeyValue> valueClass)
+      throws IOException {
+    return SequenceFile.createWriter(this.fs, this.conf, path, keyClass,
+        valueClass, fs.getConf().getInt("io.file.buffer.size", 4096), fs
+            .getDefaultReplication(), this.blocksize,
+        SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
+        new Metadata());
   }
   
   /*
@@ -463,19 +472,35 @@ public class HLog implements HConstants, Syncable {
     }
   }
 
-
-  /** Append an entry without a row to the log.
+   /** Append an entry to the log.
    * 
    * @param regionInfo
+   * @param row
    * @param logEdit
-   * @param now
+   * @param now Time of this edit write.
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, KeyValue logEdit, final long now)
+  public void append(HRegionInfo regionInfo, KeyValue logEdit,
+    final long now)
   throws IOException {
-    this.append(regionInfo, new byte[0], logEdit, now);
+    byte [] regionName = regionInfo.getRegionName();
+    byte [] tableName = regionInfo.getTableDesc().getName();
+    this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit);
   }
 
+  /** Construct a new log key.
+   * 
+   * @param now
+   * @param regionName
+   * @param tableName
+   * @return
+   */
+  protected HLogKey makeKey(byte[] regionName, byte[] tableName, long seqnum, long now) {
+    return new HLogKey(regionName, tableName, seqnum, now);
+  }
+  
+  
+  
   /** Append an entry to the log.
    * 
    * @param regionInfo
@@ -484,24 +509,22 @@ public class HLog implements HConstants, Syncable {
    * @param now Time of this edit write.
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, byte [] row, KeyValue logEdit,
-    final long now)
+  public void append(HRegionInfo regionInfo, HLogKey logKey, KeyValue logEdit)
   throws IOException {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
     byte [] regionName = regionInfo.getRegionName();
-    byte [] tableName = regionInfo.getTableDesc().getName();
     synchronized (updateLock) {
       long seqNum = obtainSeqNum();
+      logKey.setLogSeqNum(seqNum);
       // The 'lastSeqWritten' map holds the sequence number of the oldest
       // write for each region. When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
-      HLogKey logKey = new HLogKey(regionName, tableName, seqNum, now);
       boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
-      doWrite(logKey, logEdit, sync, now);
+      doWrite(logKey, logEdit, sync, logKey.getWriteTime());
       this.numEntries.incrementAndGet();
       updateLock.notifyAll();
     }
@@ -536,7 +559,7 @@ public class HLog implements HConstants, Syncable {
    * @param now
    * @throws IOException
    */
-  void append(byte [] regionName, byte [] tableName, List<KeyValue> edits,
+  public void append(byte [] regionName, byte [] tableName, List<KeyValue> edits,
     boolean sync, final long now)
   throws IOException {
     if (this.closed) {
@@ -551,8 +574,7 @@ public class HLog implements HConstants, Syncable {
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum[0]));
       int counter = 0;
       for (KeyValue kv: edits) {
-        HLogKey logKey =
-          new HLogKey(regionName, tableName, seqNum[counter++], now);
+        HLogKey logKey = makeKey(regionName, tableName, seqNum[counter++], now);
         doWrite(logKey, kv, sync, now);
         this.numEntries.incrementAndGet();
       }
@@ -686,8 +708,8 @@ public class HLog implements HConstants, Syncable {
         return;
       }
       synchronized (updateLock) {
-        this.writer.append(new HLogKey(regionName, tableName, logSeqId,
-          System.currentTimeMillis()), completeCacheFlushLogEdit());
+        this.writer.append(makeKey(regionName, tableName, logSeqId, System.currentTimeMillis()), 
+            completeCacheFlushLogEdit());
         this.numEntries.incrementAndGet();
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {

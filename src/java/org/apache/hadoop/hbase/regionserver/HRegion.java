@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -311,6 +312,8 @@ public class HRegion implements HConstants { // , Writable{
       }
     }
 
+    // Play log if one.  Delete when done.
+    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -419,7 +422,7 @@ public class HRegion implements HConstants { // , Writable{
    * 
    * @throws IOException
    */
-  List<StoreFile> close(final boolean abort) throws IOException {
+  public List<StoreFile> close(final boolean abort) throws IOException {
     if (isClosed()) {
       LOG.warn("region " + this + " already closed");
       return null;
@@ -578,6 +581,7 @@ public class HRegion implements HConstants { // , Writable{
    * @throws IOException
    */
   HRegion [] splitRegion(final byte [] splitRow) throws IOException {
+    prepareToSplit();
     synchronized (splitLock) {
       if (closed.get()) {
         return null;
@@ -664,6 +668,10 @@ public class HRegion implements HConstants { // , Writable{
         regionA.getRegionInfo(), regionB.getRegionInfo());
       return regions;
     }
+  }
+  
+  protected void prepareToSplit() {
+    // nothing
   }
   
   /*
@@ -1475,6 +1483,13 @@ public class HRegion implements HConstants { // , Writable{
    */
   private boolean isFlushSize(final long size) {
     return size > this.memstoreFlushSize;
+  }
+  
+  // Do any reconstruction needed from the log
+  protected void doReconstructionLog(Path oldLogFile, long minSeqId, long maxSeqId,
+    Progressable reporter)
+  throws UnsupportedEncodingException, IOException {
+    // Nothing to do (Replaying is done in HStores)
   }
 
   protected Store instantiateHStore(Path baseDir, 

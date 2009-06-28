@@ -194,18 +194,10 @@ public class KeyValue implements Writable, HeapSize {
      * @return Type associated with passed code.
      */
     public static Type codeToType(final byte b) {
-      // This is messy repeating each type here below but no way around it; we
-      // can't use the enum ordinal.
-      if (b == Put.getCode()) {
-        return Put;
-      } else if (b == Delete.getCode()) {
-        return Delete;
-      } else if (b == DeleteColumn.getCode()) {
-        return DeleteColumn;
-      } else if (b == DeleteFamily.getCode()) {
-        return DeleteFamily;
-      } else if (b == Maximum.getCode()) {
-        return Maximum;
+      for (Type t : Type.values()) {
+        if (t.getCode() == b) {
+          return t;
+        }
       }
       throw new RuntimeException("Unknown code " + b);
     }
