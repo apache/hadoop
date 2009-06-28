@@ -21,6 +21,7 @@
 
 <project name="hbasebuildcontrib">
 
+  <property name="version" value="0.20.0"/>
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
 
@@ -43,6 +44,7 @@
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
   <property name="build.dir" location="${hbase.root}/build/contrib/${name}"/>
+  <property name="dist.dir" location="${build.dir}/${name}-${version}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
