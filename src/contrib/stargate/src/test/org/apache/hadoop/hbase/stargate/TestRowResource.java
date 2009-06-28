@@ -217,7 +217,6 @@ public class TestRowResource extends MiniClusterTestCase {
 
     response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_1);
     assertEquals(response.getCode(), 200);
-
     response = deleteValue(TABLE, ROW_1, COLUMN_1);
     assertEquals(response.getCode(), 200);
     response = getValueXML(TABLE, ROW_1, COLUMN_1);
@@ -229,20 +228,22 @@ public class TestRowResource extends MiniClusterTestCase {
   }
 
   public void testSingleCellGetPutPB() throws IOException, JAXBException {
-    Response response = getValuePB(TABLE, ROW_2, COLUMN_1);
+    Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
     assertEquals(response.getCode(), 404);
 
-    response = putValuePB(TABLE, ROW_2, COLUMN_1, VALUE_1);
+    response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 200);
-    checkValuePB(TABLE, ROW_2, COLUMN_1, VALUE_1);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
 
-    response = putValuePB(TABLE, ROW_2, COLUMN_2, VALUE_1);
+    response = putValuePB(TABLE, ROW_1, COLUMN_2, VALUE_1);
     assertEquals(response.getCode(), 200);
-    response = putValuePB(TABLE, ROW_2, COLUMN_2, VALUE_2);
+    response = deleteValue(TABLE, ROW_1, COLUMN_1);
     assertEquals(response.getCode(), 200);
-    checkValuePB(TABLE, ROW_2, COLUMN_2, VALUE_2);
+    response = getValuePB(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+    checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_1);
 
-    response = deleteRow(TABLE, ROW_2);
+    response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 200);    
   }
 
