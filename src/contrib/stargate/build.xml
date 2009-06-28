@@ -50,8 +50,6 @@
   </target>
   
   <target name="test" depends="compile-test" description="Build test jar and run tests">
-    <delete dir="${test.log.dir}"/>
-    <mkdir dir="${test.log.dir}"/>
     <junit printsummary="yes" showoutput="${test.output}" haltonfailure="no" fork="yes" forkmode="once" maxmemory="1000m" errorProperty="tests.failed" failureProperty="tests.failed" >
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
