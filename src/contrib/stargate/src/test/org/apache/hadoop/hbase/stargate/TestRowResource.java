@@ -97,7 +97,11 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(row);
     Response response = client.delete(path.toString());
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
     return response;
   }
 
@@ -111,7 +115,11 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(column);
     Response response = client.delete(path.toString());
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
     return response;
   }
 
@@ -125,7 +133,11 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(column);
     Response response = client.get(path.toString(), MIMETYPE_XML);
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
     return response;
   }
 
@@ -139,7 +151,11 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(column);
     Response response = client.get(path.toString(), MIMETYPE_PROTOBUF); 
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
     return response;
   }
 
@@ -160,7 +176,11 @@ public class TestRowResource extends MiniClusterTestCase {
     marshaller.marshal(cellSetModel, writer);
     Response response = client.put(path.toString(), MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
     return response;
   }
 
@@ -191,7 +211,11 @@ public class TestRowResource extends MiniClusterTestCase {
     cellSetModel.addRow(rowModel);
     Response response = client.put(path.toString(), MIMETYPE_PROTOBUF,
       cellSetModel.createProtobufOutput());
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
     return response;
   }
 
@@ -253,7 +277,11 @@ public class TestRowResource extends MiniClusterTestCase {
 
     Response response = client.put(path, MIMETYPE_BINARY, body);
     assertEquals(response.getCode(), 200);
-    Thread.yield();   // yield for minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
 
     response = client.get(path, MIMETYPE_BINARY);
     assertEquals(response.getCode(), 200);
@@ -277,7 +305,11 @@ public class TestRowResource extends MiniClusterTestCase {
     Response response = client.put(path, MIMETYPE_BINARY,
       Bytes.toBytes(VALUE_4));
     assertEquals(response.getCode(), 200);
-    Thread.yield();   // yield for minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
     response = client.get(path, MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
 
@@ -301,7 +333,11 @@ public class TestRowResource extends MiniClusterTestCase {
     marshaller.marshal(cellSetModel, writer);
     Response response = client.put(path, MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
 
     // make sure the fake row was not actually created
     response = client.get(path);
@@ -333,7 +369,11 @@ public class TestRowResource extends MiniClusterTestCase {
     cellSetModel.addRow(rowModel);
     Response response = client.put(path, MIMETYPE_PROTOBUF,
       cellSetModel.createProtobufOutput());
-    Thread.yield();    // yield for the minicluster threads
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // ignore
+    }
 
     // make sure the fake row was not actually created
     response = client.get(path);
