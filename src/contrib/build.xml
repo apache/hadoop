@@ -31,6 +31,12 @@
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
+
+  <target name="compile-test">
+    <subant target="compile-test">
+      <fileset dir="." includes="*/build.xml"/>
+    </subant>
+  </target>
   
   <!-- ====================================================== -->
   <!-- Package contrib jars.                                  -->
@@ -46,12 +52,9 @@
   <!-- ====================================================== -->
   <target name="test">
     <subant target="test">
-      <fileset dir="." includes="streaming/build.xml"/>
-      <fileset dir="." includes="fairscheduler/build.xml"/>
-      <fileset dir="." includes="capacity-scheduler/build.xml"/>
+      <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
-  
   
   <!-- ====================================================== -->
   <!-- Clean all the contribs.                              -->

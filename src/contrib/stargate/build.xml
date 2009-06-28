@@ -1,0 +1,120 @@
+<project name="stargate" default="archives" basedir=".">
+
+  <import file="../build-contrib.xml"/>
+  
+  <property name="version" value="0.0.1"/>
+  <property name="build.war.classes" location="${build.dir}/warClasses"/>
+  
+  <property name="war.file" value="stargate-${version}.war"/>
+  <property name="web.xml.file" value="${conf.dir}/web.xml"/>
+  
+  <property name="jar.file" value="stargate-${version}.jar"/>
+  <property name="test.jar.file" value="stargate-${version}-test.jar"/>
+  
+  <property name="javac.debug" value="on"/>
+  <property name="javac.source" value="1.6"/>
+  
+  <target name="init">
+    <tstamp/>
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.classes}"/>
+    <mkdir dir="${build.war.classes}"/>
+    <mkdir dir="${build.test}"/>
+  </target>
+  
+  <target name="javadoc">
+    <javadoc access="public" destdir="${docs.dir}" source="${javac.source}" sourcepath="${src.dir}" splitindex="true" use="true" version="true">
+      <classpath refid="classpath"/>
+    </javadoc>
+  </target>
+  
+  <target name="compile" depends="compile-jar, compile-war"/>
+
+  <target name="compile-jar" depends="init">
+    <javac srcdir="${src.dir}" destdir="${build.classes}" debug="${javac.debug}" source="${javac.source}">
+      <classpath refid="classpath"/>
+    </javac>
+  </target>
+  
+  <target name="compile-war" depends="init">
+    <javac srcdir="${src.dir}" destdir="${build.war.classes}" debug="${javac.debug}" source="${javac.source}">
+      <classpath refid="classpath"/>
+      <exclude name="**/Main.java"/>
+    </javac>
+  </target>
+  
+  <target name="compile-test" depends="compile-war">
+    <javac srcdir="${src.test}" includes="**/*.java" destdir="${build.test}" debug="${javac.debug}" source="1.6">
+      <classpath refid="test.classpath"/>
+    </javac>
+  </target>
+  
+  <target name="test" depends="compile-test" description="Build test jar and run tests">
+    <delete dir="${test.log.dir}"/>
+    <mkdir dir="${test.log.dir}"/>
+    <junit printsummary="yes" showoutput="${test.output}" haltonfailure="no" fork="yes" forkmode="once" maxmemory="1000m" errorProperty="tests.failed" failureProperty="tests.failed" >
+      <sysproperty key="test.build.data" value="${build.test}/data"/>
+      <sysproperty key="build.test" value="${build.test}"/>
+      <sysproperty key="user.dir" value="${build.test}/data"/>
+      <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/>
+      <classpath refid="test.classpath"/>
+      <formatter type="${test.junit.output.format}"/>
+      <batchtest todir="${build.test}" unless="testcase">
+        <fileset dir="${src.test}" includes="**/Test*.java"/>
+      </batchtest>
+      <batchtest todir="${build.test}" if="testcase">
+        <fileset dir="${src.test}" includes="**/${testcase}.java"/>
+      </batchtest>
+    </junit>
+    <fail if="tests.failed">
+      Tests failed!
+    </fail>
+  </target>
+ 
+  <target name="war" depends="compile-war">
+    <copy todir="${build.dir}/lib" overwrite="true">
+      <fileset dir="${lib.dir}"/>
+      <mapper type="flatten"/>
+    </copy>
+    <copy todir="${build.war.classes}" overwrite="true">
+      <fileset dir="${conf.dir}">
+        <include name="zoo.cfg"/>
+      </fileset>
+    </copy>
+    
+    <war destfile="${build.dir}/${war.file}" webxml="${web.xml.file}">
+      <lib dir="${build.dir}/lib"/>
+      <classes dir="${build.war.classes}"/>
+    </war>
+  </target>
+  
+  <target name="jar" depends="compile-jar">
+    <jar jarfile="${build.dir}/${jar.file}" basedir="${build.classes}"/>
+  </target>
+  
+  <target name="createDist" depends="jar, war">
+    <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}/webapps"/>
+	<mkdir dir="${dist.dir}/logs"/>
+    <copy todir="${dist.dir}/lib" overwrite="true">
+      <fileset dir="${lib.dir}/jetty"/>
+      <fileset dir="${lib.dir}/general"/>
+      <mapper type="flatten"/>
+    </copy>
+    <copy todir="${dist.dir}/bin" overwrite="true">
+      <fileset dir="${basedir}/bin"/>
+      <mapper type="flatten"/>
+    </copy>
+    <chmod perm="ugo+x" type="file">
+      <fileset dir="${dist.dir}/bin"/>
+    </chmod>
+    <copy todir="${dist.dir}" overwrite="true" file="${build.dir}/${jar.file}"/>
+    <copy todir="${dist.dir}/webapps" overwrite="true" file="${build.dir}/${war.file}"/>
+  </target>
+  
+  <target name="clean">
+    <delete dir="build"/>
+    <delete dir="dist"/>
+  </target>
+
+</project>

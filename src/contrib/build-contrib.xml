@@ -70,13 +70,12 @@
 
   <!-- the unit test classpath -->
   <path id="test.classpath">
+    <path refid="classpath"/>
     <pathelement location="${build.test}" />
-    <pathelement location="${hadoop.root}/build/test/classes"/>
+    <pathelement location="${hadoop.root}/build/test"/>
+    <pathelement location="${hadoop.root}/build"/>
     <pathelement location="${hadoop.root}/src/contrib/test"/>
     <pathelement location="${conf.dir}"/>
-    <pathelement location="${hadoop.root}/build"/>
-    <pathelement location="${build.examples}"/>
-    <path refid="classpath"/>
   </path>
 
 
