@@ -242,5 +242,4 @@ public class TransactionalRegionServer extends HRegionServer implements
     getTransactionalRegion(regionName).put(transactionId, puts);
     return puts.length; // ??
   }
-
 }

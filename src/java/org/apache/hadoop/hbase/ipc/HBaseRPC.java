@@ -100,6 +100,7 @@ public class HBaseRPC {
       code = addToMap(VersionedProtocol.class, code);
       code = addToMap(HMasterInterface.class, code);
       code = addToMap(HMasterRegionInterface.class, code);
+      code = addToMap(HRegionInterface.class, code);
     }
     // End of hbase modifications.
 

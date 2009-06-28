@@ -53,5 +53,4 @@ class CleanOldTransactionsChore extends Chore {
       ((TransactionalRegion) region).removeUnNeededCommitedTransactions();
     }
   }
-
 }

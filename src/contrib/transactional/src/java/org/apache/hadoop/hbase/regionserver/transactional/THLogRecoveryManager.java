@@ -249,6 +249,4 @@ class THLogRecoveryManager {
   private TransactionLogger getGlobalTransactionLog() {
     return null;
   }
-  
-  
 }

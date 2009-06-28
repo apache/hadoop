@@ -71,7 +71,8 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <li>Version 17: Added incrementColumnValue.</li>
    * <li>Version 18: HBASE-1302.</li>
    * <li>Version 19: Added getClusterStatus().</li>
+   * <li>Version 20: Backed Transaction HBase out of HBase core.</li>
    * </ul>
    */
-  public static final long versionID = 19L;
+  public static final long versionID = 20L;
 }

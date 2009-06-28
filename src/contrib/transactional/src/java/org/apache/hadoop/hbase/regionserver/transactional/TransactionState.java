@@ -338,5 +338,4 @@ class TransactionState {
   void incrementCommitPendingWaits() {
     this.commitPendingWaits++;
   }
-
 }
