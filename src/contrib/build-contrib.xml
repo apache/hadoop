@@ -230,6 +230,9 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
+  <!-- to be overridden by sub-projects -->
+  <target name="clean-contrib"/>
+
   <target name="clean">
     <echo message="contrib: ${name}"/>
     <delete dir="${build.dir}"/>

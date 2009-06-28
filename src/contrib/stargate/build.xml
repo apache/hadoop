@@ -1,4 +1,5 @@
 <project name="stargate" default="archives" basedir=".">
+  <import file="../build-contrib.xml"/>
 
   <import file="../build-contrib.xml"/>
   
@@ -13,12 +14,9 @@
   <property name="javac.debug" value="on"/>
   <property name="javac.source" value="1.6"/>
   
-  <target name="init">
+  <target name="init-contrib">
     <tstamp/>
-    <mkdir dir="${build.dir}"/>
-    <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.war.classes}"/>
-    <mkdir dir="${build.test}"/>
   </target>
   
   <target name="javadoc">
@@ -27,7 +25,9 @@
     </javadoc>
   </target>
   
-  <target name="compile" depends="compile-jar, compile-war"/>
+  <target name="compile" depends="compile-jar, compile-war">
+    <echo message="contrib: ${name}"/>
+  </target>
 
   <target name="compile-jar" depends="init">
     <javac srcdir="${src.dir}" destdir="${build.classes}" debug="${javac.debug}" source="${javac.source}">
@@ -100,8 +100,8 @@
        file="${build.dir}/${war.file}"/>
   </target>
   
-  <target name="clean">
-    <delete dir="${build.dir}"/>
+  <target name="clean-contrib">
+    <delete dir="dist"/>
   </target>
 
 </project>
