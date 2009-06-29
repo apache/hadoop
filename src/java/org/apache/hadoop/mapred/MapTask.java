@@ -390,10 +390,12 @@ class MapTask extends Task {
     extends org.apache.hadoop.mapreduce.RecordReader<K,V> {
     private final org.apache.hadoop.mapreduce.RecordReader<K,V> real;
     private final org.apache.hadoop.mapreduce.Counter inputRecordCounter;
+    private final TaskReporter reporter;
     
     NewTrackingRecordReader(org.apache.hadoop.mapreduce.RecordReader<K,V> real,
                             TaskReporter reporter) {
       this.real = real;
+      this.reporter = reporter;
       this.inputRecordCounter = reporter.getCounter(TaskCounter.MAP_INPUT_RECORDS);
     }
 
@@ -430,6 +432,7 @@ class MapTask extends Task {
       if (result) {
         inputRecordCounter.increment(1);
       }
+      reporter.setProgress(getProgress());
       return result;
     }
   }

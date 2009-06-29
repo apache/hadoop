@@ -53,3 +53,5 @@ Trunk (unreleased changes)
 
     MAPREDUCE-657. Fix hardcoded filesystem problem in CompletedJobStatusStore.
     (Amar Kamat via sharad)
+
+    MAPREDUCE-179. Update progress in new RecordReaders. (cdouglas)
