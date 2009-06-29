@@ -55,3 +55,6 @@ Trunk (unreleased changes)
     (Amar Kamat via sharad)
 
     MAPREDUCE-179. Update progress in new RecordReaders. (cdouglas)
+
+    MAPREDUCE-658. Replace NPE in distcp with a meaningful error message when
+    the source path does not exist. (Ravi Gummadi via cdouglas)

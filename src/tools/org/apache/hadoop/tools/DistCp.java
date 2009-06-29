@@ -545,6 +545,14 @@ public class DistCp implements Tool {
                           StringUtils.stringifyException(e);
         out.collect(null, new Text(sfailure));
         LOG.info(sfailure);
+        if (e instanceof FileNotFoundException) {
+          final String s = "Possible Cause for failure: Either the filesystem "
+                           + srcstat.getPath().getFileSystem(job)
+                           + " is not accessible or the file is deleted";
+          LOG.error(s);
+          out.collect(null, new Text(s));
+        }
+
         try {
           for (int i = 0; i < 3; ++i) {
             try {
@@ -623,7 +631,7 @@ public class DistCp implements Tool {
       FileSystem fs = p.getFileSystem(conf);
       FileStatus[] inputs = fs.globStatus(p);
       
-      if(inputs.length > 0) {
+      if(inputs != null && inputs.length > 0) {
         for (FileStatus onePath: inputs) {
           unglobbed.add(onePath.getPath());
         }
