@@ -97,11 +97,7 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(row);
     Response response = client.delete(path.toString());
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
     return response;
   }
 
@@ -115,11 +111,7 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(column);
     Response response = client.delete(path.toString());
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
     return response;
   }
 
@@ -133,11 +125,6 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(column);
     Response response = client.get(path.toString(), MIMETYPE_XML);
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
     return response;
   }
 
@@ -151,11 +138,6 @@ public class TestRowResource extends MiniClusterTestCase {
     path.append('/');
     path.append(column);
     Response response = client.get(path.toString(), MIMETYPE_PROTOBUF); 
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
     return response;
   }
 
@@ -176,11 +158,7 @@ public class TestRowResource extends MiniClusterTestCase {
     marshaller.marshal(cellSetModel, writer);
     Response response = client.put(path.toString(), MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
     return response;
   }
 
@@ -211,11 +189,7 @@ public class TestRowResource extends MiniClusterTestCase {
     cellSetModel.addRow(rowModel);
     Response response = client.put(path.toString(), MIMETYPE_PROTOBUF,
       cellSetModel.createProtobufOutput());
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
     return response;
   }
 
@@ -231,6 +205,30 @@ public class TestRowResource extends MiniClusterTestCase {
     assertEquals(Bytes.toString(cell.getValue()), value);
   }
 
+  public void testDelete() throws IOException, JAXBException {
+    Response response;
+    
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+
+    response = deleteValue(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 200);
+    response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
+
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);    
+    response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+    response = getValueXML(TABLE, ROW_1, COLUMN_2);
+    assertEquals(response.getCode(), 404);
+  }
+
   public void testSingleCellGetPutXML() throws IOException, JAXBException {
     Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
     assertEquals(response.getCode(), 404);
@@ -238,14 +236,9 @@ public class TestRowResource extends MiniClusterTestCase {
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 200);
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-
-    response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_1);
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
     assertEquals(response.getCode(), 200);
-    response = deleteValue(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 200);
-    response = getValueXML(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
-    checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_1);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 200);    
@@ -259,13 +252,12 @@ public class TestRowResource extends MiniClusterTestCase {
     assertEquals(response.getCode(), 200);
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
 
-    response = putValuePB(TABLE, ROW_1, COLUMN_2, VALUE_1);
+    response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 200);
-    response = deleteValue(TABLE, ROW_1, COLUMN_1);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
     assertEquals(response.getCode(), 200);
-    response = getValuePB(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
-    checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_1);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2);
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 200);    
@@ -274,14 +266,9 @@ public class TestRowResource extends MiniClusterTestCase {
   public void testSingleCellGetPutBinary() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_3 + "/" + COLUMN_1;
     final byte[] body = Bytes.toBytes(VALUE_3);
-
     Response response = client.put(path, MIMETYPE_BINARY, body);
     assertEquals(response.getCode(), 200);
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
 
     response = client.get(path, MIMETYPE_BINARY);
     assertEquals(response.getCode(), 200);
@@ -301,18 +288,12 @@ public class TestRowResource extends MiniClusterTestCase {
 
   public void testSingleCellGetJSON() throws IOException, JAXBException {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
-
     Response response = client.put(path, MIMETYPE_BINARY,
       Bytes.toBytes(VALUE_4));
     assertEquals(response.getCode(), 200);
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
     response = client.get(path, MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
-
     response = deleteRow(TABLE, ROW_4);
     assertEquals(response.getCode(), 200);
   }
@@ -333,11 +314,7 @@ public class TestRowResource extends MiniClusterTestCase {
     marshaller.marshal(cellSetModel, writer);
     Response response = client.put(path, MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
 
     // make sure the fake row was not actually created
     response = client.get(path);
@@ -369,11 +346,7 @@ public class TestRowResource extends MiniClusterTestCase {
     cellSetModel.addRow(rowModel);
     Response response = client.put(path, MIMETYPE_PROTOBUF,
       cellSetModel.createProtobufOutput());
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Thread.yield();
 
     // make sure the fake row was not actually created
     response = client.get(path);
