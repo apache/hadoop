@@ -63,7 +63,6 @@ public class IndexSpecification implements Writable {
    * @param indexedColumns
    * @param additionalColumns
    * @param keyGenerator
-   * @param keyComparator
    */
   public IndexSpecification(String indexId, byte[][] indexedColumns,
       byte[][] additionalColumns, IndexKeyGenerator keyGenerator) {

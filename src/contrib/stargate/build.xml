@@ -85,19 +85,23 @@
     </war>
   </target>
   
-  <target name="jar" depends="compile-jar">
-    <jar jarfile="${build.dir}/${jar.file}" basedir="${build.classes}"/>
-  </target>
-  
-  <target name="package" depends="jar, war">
-    <mkdir dir="${dist.dir}"/>
-    <copy todir="${dist.dir}/lib" overwrite="true">
+  <!--Override ../build-contrib.xml package-->
+  <target name="package" depends="jar, war" unless="skip.contrib">
+    <mkdir dir="${dist.dir}/contrib/${name}"/>
+    <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hbase-${version}-${name}.jar" />
+      </fileset>
+    </copy>
+    <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hbase-${version}-${name}.war" />
+      </fileset>
+    </copy>
+    <mkdir dir="${dist.dir}/contrib/${name}/lib"/>
+    <copy todir="${dist.dir}/contrib/${name}/lib" overwrite="true">
       <fileset dir="${lib.dir}"/>
     </copy>
-    <copy todir="${dist.dir}" overwrite="true"
-       file="${build.dir}/${jar.file}"/>
-    <copy todir="${dist.dir}" overwrite="true"
-       file="${build.dir}/${war.file}"/>
   </target>
   
   <target name="clean-contrib">

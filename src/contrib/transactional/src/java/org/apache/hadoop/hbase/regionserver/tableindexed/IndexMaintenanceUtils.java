@@ -73,7 +73,7 @@ public class IndexMaintenanceUtils {
      * Ask if this update does apply to the index.
      * 
      * @param indexSpec
-     * @param b
+     * @param columnValues
      * @return true if possibly apply.
      */
     public static boolean doesApplyToIndex(final IndexSpecification indexSpec,

@@ -73,7 +73,7 @@ public class TableInfoModel implements Serializable, IProtobufWrapper {
   }
 
   /**
-   * @param the table name
+   * @param name the table name
    */
   public void setName(String name) {
     this.name = name;

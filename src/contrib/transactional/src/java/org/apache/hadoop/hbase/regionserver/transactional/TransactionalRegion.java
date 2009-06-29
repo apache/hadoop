@@ -278,7 +278,7 @@ public class TransactionalRegion extends HRegion {
    * Add a write to the transaction. Does not get applied until commit process.
    * 
    * @param transactionId
-   * @param b
+   * @param put
    * @throws IOException
    */
   public void put(final long transactionId, final Put put) throws IOException {
@@ -313,8 +313,7 @@ public class TransactionalRegion extends HRegion {
    * FIXME, not sure about this approach
    * 
    * @param transactionId
-   * @param row
-   * @param timestamp
+   * @param delete
    * @throws IOException
    */
   public void delete(final long transactionId, Delete delete)

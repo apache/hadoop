@@ -62,7 +62,6 @@ public class TransactionalRegionServer extends HRegionServer implements
   private final CleanOldTransactionsChore cleanOldTransactionsThread;
 
   /**
-   * @param address
    * @param conf
    * @throws IOException
    */

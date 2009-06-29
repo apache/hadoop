@@ -77,7 +77,7 @@ public interface TransactionalRegionInterface extends HRegionInterface {
    * Put an array of puts into the specified region
    * @param regionName
    * @param puts
-   * @return
+   * @return result
    * @throws IOException
    */
   public int put(long transactionId, final byte[] regionName, final Put [] puts)

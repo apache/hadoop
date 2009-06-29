@@ -423,8 +423,13 @@
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />
+          <fileset dir="src/contrib/">
+            <include name="*/lib/*.jar" />
+          </fileset>
           <pathelement path="${java.class.path}"/>
         </classpath>
+    	<packageset dir="src/contrib/transactional/src/java"/>
+    	<packageset dir="src/contrib/stargate/src/java"/>
     </javadoc>
   </target>	
 

@@ -44,7 +44,7 @@ public class Cluster {
 
   /**
    * Add a node to the cluster
-   * @param name the service location in 'host:port' format
+   * @param node the service location in 'host:port' format
    */
   public Cluster add(String node) {
     nodes.add(node);
@@ -66,7 +66,7 @@ public class Cluster {
 
   /**
    * Remove a node from the cluster
-   * @param name the service location in 'host:port' format
+   * @param node the service location in 'host:port' format
    */
   public Cluster remove(String node) {
     nodes.remove(node);

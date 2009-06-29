@@ -75,7 +75,7 @@ public class ColumnSchemaModel implements Serializable {
   }
 
   /**
-   * @param the table name
+   * @param name the table name
    */
   public void setName(String name) {
     this.name = name;
