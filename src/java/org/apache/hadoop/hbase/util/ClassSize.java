@@ -81,25 +81,25 @@ public class ClassSize {
     if (arcModel.equals(THIRTY_TWO)) {
       REFERENCE = 4;
     }
+
+    OBJECT = 2 * REFERENCE;
     
     ARRAY = 3 * REFERENCE;
 
-    ARRAYLIST = align(OBJECT + REFERENCE + Bytes.SIZEOF_INT + 
-        align(Bytes.SIZEOF_INT));
+    ARRAYLIST = align(OBJECT +  align(REFERENCE) + align(ARRAY) +
+        (2 * Bytes.SIZEOF_INT));
     
-    BYTE_BUFFER = align(OBJECT + REFERENCE + Bytes.SIZEOF_INT + 
-        3 * Bytes.SIZEOF_BOOLEAN + 4 * Bytes.SIZEOF_INT + Bytes.SIZEOF_LONG); 
+    BYTE_BUFFER = align(OBJECT + align(REFERENCE) + align(ARRAY) + 
+        (5 * Bytes.SIZEOF_INT) + 
+        (3 * Bytes.SIZEOF_BOOLEAN) + Bytes.SIZEOF_LONG); 
     
     INTEGER = align(OBJECT + Bytes.SIZEOF_INT);
     
     MAP_ENTRY = align(OBJECT + 5 * REFERENCE + Bytes.SIZEOF_BOOLEAN);
     
-    OBJECT = 2 * REFERENCE;
+    TREEMAP = align(OBJECT + (2 * Bytes.SIZEOF_INT) + align(7 * REFERENCE));
     
-    TREEMAP = align(OBJECT + 2 * Bytes.SIZEOF_INT + (5+2) * REFERENCE + 
-        ClassSize.align(OBJECT + Bytes.SIZEOF_INT));
-    
-    STRING = align(OBJECT + REFERENCE + 3 * Bytes.SIZEOF_INT);
+    STRING = align(OBJECT + align(ARRAY) + 3 * Bytes.SIZEOF_INT);
   }
   
   /**

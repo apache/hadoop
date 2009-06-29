@@ -626,9 +626,15 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
   
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (7 * Bytes.SIZEOF_LONG) + (5 * ClassSize.OBJECT) + Bytes.SIZEOF_BOOLEAN);
+      (3 * Bytes.SIZEOF_LONG) + (8 * ClassSize.REFERENCE) + 
+      (5 * Bytes.SIZEOF_FLOAT) + Bytes.SIZEOF_BOOLEAN
+      + ClassSize.OBJECT);
   
   public final static long CACHE_FUDGE_FACTOR = 1024 * 10; // 10k 
+  
+  public final static long MAP_FIXED_OVERHEAD = ClassSize.align(
+      (2 * Bytes.SIZEOF_INT) + ClassSize.ARRAY + (6 * ClassSize.REFERENCE) +
+      ClassSize.OBJECT);
   
   public final static long MAP_SEGMENT_OVERHEAD = ClassSize.align(
       ClassSize.REFERENCE + ClassSize.OBJECT + (3 * Bytes.SIZEOF_INT) +

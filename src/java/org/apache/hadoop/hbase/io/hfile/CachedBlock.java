@@ -33,12 +33,11 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * either instantiating as in-memory or handling the transition from single
  * to multiple access.
  */
-class CachedBlock implements HeapSize, Comparable<CachedBlock> {
+public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
   
   public final static long PER_BLOCK_OVERHEAD = ClassSize.align(
-    ClassSize.OBJECT + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) +
+    ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) +
     ClassSize.STRING + ClassSize.BYTE_BUFFER);
-  
   
   static enum BlockPriority { 
     /**
