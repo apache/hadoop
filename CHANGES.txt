@@ -64,3 +64,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-658. Replace NPE in distcp with a meaningful error message when
     the source path does not exist. (Ravi Gummadi via cdouglas)
+
+    MAPREDUCE-671. Update ignore list to include untracked, generated
+    build artifacts and config files. (cdouglas)
