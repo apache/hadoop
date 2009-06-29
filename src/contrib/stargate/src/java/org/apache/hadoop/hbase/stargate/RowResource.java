@@ -133,33 +133,7 @@ public class RowResource implements Constants {
     }
   }
 
-  private void deleteRow() {
-    HTablePool pool;
-    try {
-      pool = RESTServlet.getInstance().getTablePool(this.table);
-    } catch (IOException e) {
-      throw new WebApplicationException(e, 
-                  Response.Status.INTERNAL_SERVER_ERROR);
-    }
-    HTable table = null;
-    try {
-      table = pool.get();
-      table.delete(new Delete(rowspec.getRow()));
-      table.flushCommits();
-    } catch (IOException e) {
-      throw new WebApplicationException(e,
-                  Response.Status.SERVICE_UNAVAILABLE);
-    } finally {
-      if (table != null) {
-        pool.put(table);
-      }
-    }
-  }
-
   private Response update(CellSetModel model, boolean replace) {
-    if (replace) {
-      deleteRow();
-    }
     HTablePool pool;
     try {
       pool = RESTServlet.getInstance().getTablePool(this.table);
@@ -173,11 +147,6 @@ public class RowResource implements Constants {
       for (RowModel row: model.getRows()) {
         Put put = new Put(row.getKey());
         for (CellModel cell: row.getCells()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("update cell '" +
-              Bytes.toStringBinary(cell.getColumn()) + "' @" +
-                cell.getTimestamp() + " length " + cell.getValue().length);
-          }
           byte [][] parts = KeyValue.parseColumn(cell.getColumn());
           if (cell.hasUserTimestamp()) {
             put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
@@ -186,6 +155,9 @@ public class RowResource implements Constants {
           }
         }
         table.put(put);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("PUT " + put.toString());
+        }
       }
       table.flushCommits();
       ResponseBuilder response = Response.ok();
@@ -202,9 +174,6 @@ public class RowResource implements Constants {
 
   private Response updateBinary(byte[] message, HttpHeaders headers, 
       boolean replace) {
-    if (replace) {
-      deleteRow();
-    }
     HTablePool pool;
     try {
       pool = RESTServlet.getInstance().getTablePool(this.table);
@@ -236,10 +205,6 @@ public class RowResource implements Constants {
       if (column == null) {
         throw new WebApplicationException(Response.Status.BAD_REQUEST);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("update cell '" + Bytes.toStringBinary(column) + "' @" +
-          timestamp + " length " + message.length);
-      }
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
       if (timestamp >= 0) {
@@ -249,6 +214,9 @@ public class RowResource implements Constants {
       }
       table = pool.get();
       table.put(put);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("PUT " + put.toString());
+      }
       table.flushCommits();
       return Response.ok().build();
     } catch (IOException e) {
@@ -328,6 +296,9 @@ public class RowResource implements Constants {
     try {
       table = pool.get();
       table.delete(delete);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("DELETE " + delete.toString());
+      }
       table.flushCommits();
     } catch (IOException e) {
       throw new WebApplicationException(e, 
