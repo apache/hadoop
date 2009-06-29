@@ -389,7 +389,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
   /**
    * Call
-   * {@link #create(String,FsPermission,boolean,short,long,Progressable,int)}
+   * {@link #create(String,FsPermission,EnumSet,short,long,Progressable,int)}
    * with default permission.
    * @see FsPermission#getDefault()
    */
@@ -417,7 +417,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param replication block replication
    * @return output stream
    * @throws IOException
-   * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
+   * @see ClientProtocol#create(String, FsPermission, String, EnumSetWritable, short, long)
    */
   public OutputStream create(String src, 
                              FsPermission permission,
