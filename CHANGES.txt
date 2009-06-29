@@ -156,6 +156,8 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-657. Fix hardcoded filesystem problem in CompletedJobStatusStore.
     (Amar Kamat via sharad)
 
+    MAPREDUCE-179. Update progress in new RecordReaders. (cdouglas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

@@ -37,9 +37,12 @@ import org.apache.hadoop.examples.WordCount.TokenizerMapper;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
@@ -93,6 +96,33 @@ public class TestMapReduceLocal extends TestCase {
     }
   }
 
+  public static class TrackingTextInputFormat extends TextInputFormat {
+
+    public static class MonoProgressRecordReader extends LineRecordReader {
+      private float last = 0.0f;
+      private boolean progressCalled = false;
+      @Override
+      public float getProgress() {
+        progressCalled = true;
+        final float ret = super.getProgress();
+        assertTrue("getProgress decreased", ret >= last);
+        last = ret;
+        return ret;
+      }
+      @Override
+      public synchronized void close() throws IOException {
+        assertTrue("getProgress never called", progressCalled);
+        super.close();
+      }
+    }
+
+    @Override
+    public RecordReader<LongWritable, Text> createRecordReader(
+        InputSplit split, TaskAttemptContext context) {
+      return new MonoProgressRecordReader();
+    }
+  }
+
   private void runWordCount(Configuration conf
                             ) throws IOException,
                                      InterruptedException,
@@ -109,6 +139,7 @@ public class TestMapReduceLocal extends TestCase {
     job.setReducerClass(IntSumReducer.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(IntWritable.class);
+    job.setInputFormatClass(TrackingTextInputFormat.class);
     FileInputFormat.addInputPath(job, new Path(TEST_ROOT_DIR + "/in"));
     FileOutputFormat.setOutputPath(job, new Path(TEST_ROOT_DIR + "/out"));
     assertTrue(job.waitForCompletion(false));
