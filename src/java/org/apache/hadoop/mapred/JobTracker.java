@@ -1684,7 +1684,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     String historyLogDir = null;
     FileSystem historyFS = null;
     if (historyInitialized) {
-      historyLogDir = conf.get("hadoop.job.history.location");
+      historyLogDir = JobHistory.getCompletedJobHistoryLocation().toString();
       infoServer.setAttribute("historyLogDir", historyLogDir);
       historyFS = new Path(historyLogDir).getFileSystem(conf);
       infoServer.setAttribute("fileSys", historyFS);
@@ -2172,6 +2172,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       } catch (IOException ioe) {
         LOG.info("Failed to finalize the log file recovery for job " + id, ioe);
       }
+    }
+
+    // mark the job as completed
+    try {
+      JobHistory.JobInfo.markCompleted(id);
+    } catch (IOException ioe) {
+      LOG.info("Failed to mark job " + id + " as completed!", ioe);
     }
 
     final JobTrackerInstrumentation metrics = getInstrumentation();
