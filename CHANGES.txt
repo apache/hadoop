@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     MAPREDUCE-416. Moves the history file to a "done" folder whenever a job 
     completes. (Amar Kamat via ddas)
 
+    MAPREDUCE-646. Increase srcfilelist replication number in dictcp job.
+    (Ravi Gummadi via szetszwo)
+
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)

@@ -945,14 +945,16 @@ public class DistCp implements Tool {
    * @param job The job to configure
    * @return Count of maps to run.
    */
-  private static void setMapCount(long totalBytes, JobConf job) 
+  private static int setMapCount(long totalBytes, JobConf job) 
       throws IOException {
     int numMaps =
       (int)(totalBytes / job.getLong(BYTES_PER_MAP_LABEL, BYTES_PER_MAP));
     numMaps = Math.min(numMaps, 
         job.getInt(MAX_MAPS_LABEL, MAX_MAPS_PER_NODE *
           new JobClient(job).getClusterStatus().getTaskTrackers()));
-    job.setNumMapTasks(Math.max(numMaps, 1));
+    numMaps = Math.max(numMaps, 1);
+    job.setNumMapTasks(numMaps);
+    return numMaps;
   }
 
   /** Fully delete dir */
@@ -986,6 +988,28 @@ public class DistCp implements Tool {
     return Integer.toString(RANDOM.nextInt(Integer.MAX_VALUE), 36);
   }
 
+  /**
+   * Increase the replication factor of _distcp_src_files to
+   * sqrt(min(maxMapsOnCluster, numMaps)). This is to reduce the chance of
+   * failing of distcp because of "not having a replication of _distcp_src_files
+   * available for reading for some maps".
+   */
+  private static void setReplication(Configuration conf, JobConf jobConf,
+                         Path srcfilelist, int numMaps) throws IOException {
+    int numMaxMaps = new JobClient(jobConf).getClusterStatus().getMaxMapTasks();
+    short replication = (short) Math.ceil(
+                                Math.sqrt(Math.min(numMaxMaps, numMaps)));
+    FileSystem fs = srcfilelist.getFileSystem(conf);
+    FileStatus srcStatus = fs.getFileStatus(srcfilelist);
+
+    if (srcStatus.getReplication() < replication) {
+      if (!fs.setReplication(srcfilelist, replication)) {
+        throw new IOException("Unable to increase the replication of file " +
+                              srcfilelist);
+      }
+    }
+  }
+  
   /**
    * Initialize DFSCopyFileMapper specific job-configuration.
    * @param conf : The dfs/mapred configuration.
@@ -1142,6 +1166,10 @@ public class DistCp implements Tool {
       checkAndClose(dir_writer);
     }
 
+    int mapCount = setMapCount(byteCount, jobConf);
+    // Increase the replication of _distcp_src_files, if needed
+    setReplication(conf, jobConf, srcfilelist, mapCount);
+    
     FileStatus dststatus = null;
     try {
       dststatus = dstfs.getFileStatus(args.dst);
@@ -1173,7 +1201,7 @@ public class DistCp implements Tool {
     LOG.info("bytesToCopyCount=" + StringUtils.humanReadableInt(byteCount));
     jobConf.setInt(SRC_COUNT_LABEL, srcCount);
     jobConf.setLong(TOTAL_SIZE_LABEL, byteCount);
-    setMapCount(byteCount, jobConf);
+    
     return (fileCount + dirCount) > 0;
   }
 
