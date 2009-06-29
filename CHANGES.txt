@@ -42,6 +42,8 @@ Trunk (unreleased changes)
     HDFS-181. Validate src path in FSNamesystem.getFileInfo(..).  (Todd
     Lipcon via szetszwo)
 
+    HDFS-441. Remove TestFTPFileSystem.  (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
