@@ -31,6 +31,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.MalformedInputException;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -237,11 +238,11 @@ public class Text extends BinaryComparable
    */
   private void setCapacity(int len, boolean keepData) {
     if (bytes == null || bytes.length < len) {
-      byte[] newBytes = new byte[len];
       if (bytes != null && keepData) {
-        System.arraycopy(bytes, 0, newBytes, 0, length);
+        bytes = Arrays.copyOf(bytes, Math.max(len,length << 1));
+      } else {
+        bytes = new byte[len];
       }
-      bytes = newBytes;
     }
   }
    

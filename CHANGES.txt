@@ -464,6 +464,10 @@ Trunk (unreleased changes)
 
     HADOOP-5925. EC2 scripts should exit on error. (tomwhite)
 
+    HADOOP-6109. Change Text to grow its internal buffer exponentially, rather
+    than the max of the current length and the proposed length to improve
+    performance reading large values. (thushara wijeratna via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
