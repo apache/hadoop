@@ -79,13 +79,11 @@ public class PageFilter implements Filter {
     out.writeLong(pageSize);
   }
 
-  @Override
   public ReturnCode filterKeyValue(KeyValue v) {
     this.rowsAccepted++;
     return filterAllRemaining()? ReturnCode.NEXT_ROW: ReturnCode.INCLUDE;
   }
 
-  @Override
   public boolean filterRow() {
     return filterAllRemaining();
   }

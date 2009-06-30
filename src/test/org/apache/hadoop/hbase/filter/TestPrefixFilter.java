@@ -30,7 +30,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.UnsupportedEncodingException;
 
-public class TestRowPrefixFilter extends TestCase {
+public class TestPrefixFilter extends TestCase {
   Filter mainFilter;
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';
@@ -47,7 +47,7 @@ public class TestRowPrefixFilter extends TestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-    this.mainFilter = new RowPrefixFilter(Bytes.toBytes(HOST_PREFIX));
+    this.mainFilter = new PrefixFilter(Bytes.toBytes(HOST_PREFIX));
   }
 
   public void testPrefixOnRow() throws Exception {
@@ -68,7 +68,7 @@ public class TestRowPrefixFilter extends TestCase {
 
     // Recompose filter.
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    Filter newFilter = new RowPrefixFilter();
+    Filter newFilter = new PrefixFilter();
     newFilter.readFields(in);
 
     // Ensure the serialization preserved the filter by running all test.

@@ -24,14 +24,8 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.RowInclusiveStopFilter;
-import org.apache.hadoop.hbase.filter.RowWhileMatchFilter;
-import org.apache.hadoop.hbase.filter.RowPrefixFilter;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
-import org.apache.hadoop.hbase.filter.PrefixRowFilter;
-import org.apache.hadoop.hbase.filter.InclusiveStopRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
@@ -402,8 +396,8 @@ public class TestStoreScanner extends TestCase {
 
   // Test new and old row prefix filters.
   public void testNewRowPrefixFilter() throws IOException {
-     Filter f = new RowWhileMatchFilter(
-        new RowPrefixFilter(Bytes.toBytes("R:")));
+     Filter f = new WhileMatchFilter(
+        new PrefixFilter(Bytes.toBytes("R:")));
     Scan s = new Scan(Bytes.toBytes("R:7"));
     s.setFilter(f);
 
@@ -442,7 +436,7 @@ public class TestStoreScanner extends TestCase {
 
   // Test new and old row-inclusive stop filter.
   public void testNewRowInclusiveStopFilter() throws IOException {
-    Filter f = new RowWhileMatchFilter(new RowInclusiveStopFilter(Bytes.toBytes("R:3")));
+    Filter f = new WhileMatchFilter(new InclusiveStopFilter(Bytes.toBytes("R:3")));
     Scan scan = new Scan();
     scan.setFilter(f);
 

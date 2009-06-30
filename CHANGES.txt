@@ -233,6 +233,8 @@ Release 0.20.0 - Unreleased
    HBASE-1580  Store scanner does not consult filter.filterRow at end of scan
                (Clint Morgan via Stack)
    HBASE-1437  broken links in hbase.org
+   HBASE-1582  Translate ColumnValueFilter and RowFilterSet to the new Filter
+               interface
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

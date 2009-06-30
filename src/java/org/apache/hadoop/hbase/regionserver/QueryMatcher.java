@@ -258,7 +258,7 @@ public class QueryMatcher {
     }
 
     /* Check Deletes
-     * If deleted, move to next KeyValue 
+     * If deleted, move to next KeyValue
      */
     if (!deletes.isEmpty() && deletes.isDeleted(bytes, columnOffset,
         columnLength, timestamp)) {

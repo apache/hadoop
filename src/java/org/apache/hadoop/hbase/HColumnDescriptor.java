@@ -603,7 +603,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
         Text t = new Text();
         t.readFields(in);
         this.name = t.getBytes();
-//        if(KeyValue.getFamilyDelimiterIndex(this.name, 0, this.name.length) 
+//        if(KeyValue.getFamilyDelimiterIndex(this.name, 0, this.name.length)
 //            > 0) {
 //          this.name = stripColon(this.name);
 //        }

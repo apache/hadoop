@@ -28,62 +28,51 @@ import java.io.IOException;
 import java.io.DataInput;
 
 /**
- * A Filter that stops after the given row.  There is no "RowStopFilter" because
- * the Scan spec allows you to specify a stop row.
- *
- * Use this filter to include the stop row, eg: [A,Z].
+ * Pass results that have same row prefix.
  */
-public class RowInclusiveStopFilter implements Filter {
-  private byte [] stopRowKey;
+public class PrefixFilter implements Filter {
+  protected byte [] prefix = null;
 
-  public RowInclusiveStopFilter() {
+  public PrefixFilter(final byte [] prefix) {
+    this.prefix = prefix;
+  }
+
+  public PrefixFilter() {
     super();
   }
 
-  public RowInclusiveStopFilter(final byte [] stopRowKey) {
-    this.stopRowKey = stopRowKey;
-  }
-
-  @Override
   public void reset() {
-    // noop, no state
+    // Noop
   }
 
-  @Override
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    if (buffer == null) {
-      if (this.stopRowKey == null) {
-        return true; //filter...
-      }
-      return false;
-    }
-    // if stopRowKey is <= buffer, then true, filter row.
-    return Bytes.compareTo(stopRowKey, 0, stopRowKey.length, buffer, offset, length) < 0;
+    if (buffer == null || this.prefix == null)
+      return true;
+    if (length < prefix.length)
+      return true;
+    // if they are equal, return false => pass row
+    // else return true, filter row
+    return Bytes.compareTo(buffer, offset, this.prefix.length, this.prefix, 0,
+      this.prefix.length) != 0;
   }
 
-  @Override
   public boolean filterAllRemaining() {
     return false;
   }
 
-  @Override
   public ReturnCode filterKeyValue(KeyValue v) {
-    // include everything.
     return ReturnCode.INCLUDE;
   }
 
-  @Override
   public boolean filterRow() {
     return false;
   }
 
-  @Override
   public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.stopRowKey);
+    Bytes.writeByteArray(out, this.prefix);
   }
 
-  @Override
   public void readFields(DataInput in) throws IOException {
-    this.stopRowKey = Bytes.readByteArray(in);
+    this.prefix = Bytes.readByteArray(in);
   }
 }

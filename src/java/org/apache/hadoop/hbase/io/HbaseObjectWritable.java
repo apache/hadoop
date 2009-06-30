@@ -44,21 +44,14 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.filter.RowFilterSet;
-import org.apache.hadoop.hbase.filter.RowWhileMatchFilter;
-import org.apache.hadoop.hbase.filter.RowPrefixFilter;
-import org.apache.hadoop.hbase.filter.PageFilter;
-import org.apache.hadoop.hbase.filter.RowInclusiveStopFilter;
-import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.*;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -145,10 +138,10 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(Result[].class, code++);
     addToMap(Scan.class, code++);
 
-    addToMap(RowWhileMatchFilter.class, code++);
-    addToMap(RowPrefixFilter.class, code++);
+    addToMap(WhileMatchFilter.class, code++);
+    addToMap(PrefixFilter.class, code++);
     addToMap(PageFilter.class, code++);
-    addToMap(RowInclusiveStopFilter.class, code++);
+    addToMap(InclusiveStopFilter.class, code++);
     addToMap(ColumnCountGetFilter.class, code++);
   }
   

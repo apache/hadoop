@@ -50,11 +50,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  * </pre>
  */
 public class RegexStringComparator implements WritableByteArrayComparable {
-
   private Pattern pattern;
 
   /** Nullary constructor for Writable */
   public RegexStringComparator() {
+    super();
   }
 
   /**
@@ -78,5 +78,4 @@ public class RegexStringComparator implements WritableByteArrayComparable {
   public void write(DataOutput out) throws IOException {
     out.writeUTF(pattern.toString());
   }
-
 }

@@ -28,32 +28,35 @@ import java.io.IOException;
 import java.io.DataInput;
 
 /**
- * Pass results that have same row prefix.
+ * A Filter that stops after the given row.  There is no "RowStopFilter" because
+ * the Scan spec allows you to specify a stop row.
+ *
+ * Use this filter to include the stop row, eg: [A,Z].
  */
-public class RowPrefixFilter implements Filter {
-  protected byte [] prefix = null;
+public class InclusiveStopFilter implements Filter {
+  private byte [] stopRowKey;
 
-  public RowPrefixFilter(final byte [] prefix) {
-    this.prefix = prefix;
-  }
-
-  public RowPrefixFilter() {
+  public InclusiveStopFilter() {
     super();
   }
 
+  public InclusiveStopFilter(final byte [] stopRowKey) {
+    this.stopRowKey = stopRowKey;
+  }
+
   public void reset() {
-    // Noop
+    // noop, no state
   }
 
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    if (buffer == null || this.prefix == null)
-      return true;
-    if (length < prefix.length)
-      return true;
-    // if they are equal, return false => pass row
-    // else return true, filter row
-    return Bytes.compareTo(buffer, offset, this.prefix.length, this.prefix, 0,
-      this.prefix.length) != 0;
+    if (buffer == null) {
+      if (this.stopRowKey == null) {
+        return true; //filter...
+      }
+      return false;
+    }
+    // if stopRowKey is <= buffer, then true, filter row.
+    return Bytes.compareTo(stopRowKey, 0, stopRowKey.length, buffer, offset, length) < 0;
   }
 
   public boolean filterAllRemaining() {
@@ -61,6 +64,7 @@ public class RowPrefixFilter implements Filter {
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {
+    // include everything.
     return ReturnCode.INCLUDE;
   }
 
@@ -69,10 +73,10 @@ public class RowPrefixFilter implements Filter {
   }
 
   public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.prefix);
+    Bytes.writeByteArray(out, this.stopRowKey);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.prefix = Bytes.readByteArray(in);
+    this.stopRowKey = Bytes.readByteArray(in);
   }
 }

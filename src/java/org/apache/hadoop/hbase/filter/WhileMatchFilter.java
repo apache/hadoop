@@ -29,19 +29,18 @@ import java.io.DataInput;
 /**
  * A wrapper filter that filters everything after the first filtered row.
  */
-public class RowWhileMatchFilter implements Filter {
+public class WhileMatchFilter implements Filter {
   private boolean filterAllRemaining = false;
   private Filter filter;
 
-  public RowWhileMatchFilter() {
+  public WhileMatchFilter() {
     super();
   }
 
-  public RowWhileMatchFilter(Filter filter) {
+  public WhileMatchFilter(Filter filter) {
     this.filter = filter;
   }
 
-  @Override
   public void reset() {
     // no state.
   }
@@ -50,36 +49,30 @@ public class RowWhileMatchFilter implements Filter {
     filterAllRemaining = filterAllRemaining || value;
   }
 
-  @Override
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
     changeFAR(filter.filterRowKey(buffer, offset, length));
     return filterAllRemaining();
   }
 
-  @Override
   public boolean filterAllRemaining() {
     return this.filterAllRemaining || this.filter.filterAllRemaining();
   }
 
-  @Override
   public ReturnCode filterKeyValue(KeyValue v) {
     ReturnCode c = filter.filterKeyValue(v);
     changeFAR(c != ReturnCode.INCLUDE);
     return c;
   }
 
-  @Override
   public boolean filterRow() {
     return false;
   }
 
-  @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(this.filter.getClass().getName());
     this.filter.write(out);
   }
 
-  @Override
   public void readFields(DataInput in) throws IOException {
     String className = in.readUTF();
     try {

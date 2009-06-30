@@ -39,6 +39,7 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.
+ * Backed by array of KeyValues.
  */
 public class Result implements Writable {
   private KeyValue [] kvs = null;
@@ -84,7 +85,7 @@ public class Result implements Writable {
   }
 
   /**
-   * Directly return the unsorted array of KeyValues in this Result.
+   * Return the unsorted array of KeyValues backing this Result instance.
    * @return unsorted array of KeyValues
    */
   public KeyValue[] raw() {
@@ -92,7 +93,7 @@ public class Result implements Writable {
   }
 
   /**
-   * Return a sorted list of the KeyValue's in this result.
+   * Create a sorted list of the KeyValue's in this result.
    * 
    * @return The sorted list of KeyValue's.
    */
@@ -108,7 +109,7 @@ public class Result implements Writable {
    * @return sorted array of KeyValues
    */
   public KeyValue[] sorted() {
-    if(isEmpty()) {
+    if (isEmpty()) {
       return null;
     }
     Arrays.sort(kvs, (Comparator<KeyValue>)KeyValue.COMPARATOR);
@@ -230,7 +231,7 @@ public class Result implements Writable {
    */
   public byte [] getValue(byte [] family, byte [] qualifier) {
     Map.Entry<Long,byte[]> entry = getKeyValue(family, qualifier);
-    return entry == null ?null :entry.getValue();
+    return entry == null? null: entry.getValue();
   }
 
   public Cell getCellValue(byte[] family, byte[] qualifier) {
@@ -281,11 +282,8 @@ public class Result implements Writable {
   
   private NavigableMap<Long, byte[]> getVersionMap(
       NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap, byte [] qualifier) {
-    if(qualifier != null) {
-      return qualifierMap.get(qualifier);
-    } else {
-      return qualifierMap.get(new byte[0]);
-    }
+    return qualifier != null?
+      qualifierMap.get(qualifier): qualifierMap.get(new byte[0]);
   }
   
   /**
@@ -341,7 +339,7 @@ public class Result implements Writable {
    * @return value of the first column
    */
   public byte [] value() {
-    if(isEmpty()) {
+    if (isEmpty()) {
       return null;
     }
     return kvs[0].getValue();
@@ -352,15 +350,14 @@ public class Result implements Writable {
    * @return true if empty
    */
   public boolean isEmpty() {
-    return (this.kvs == null || this.kvs.length == 0);
+    return this.kvs == null || this.kvs.length == 0;
   }
   
   /**
-   * 
    * @return the size of the underlying KeyValue []
    */
   public int size() {
-    return (this.kvs == null ? 0 : this.kvs.length);
+    return this.kvs == null? 0: this.kvs.length;
   }
   
   /**

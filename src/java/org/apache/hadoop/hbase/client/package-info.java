@@ -22,9 +22,14 @@ Provides HBase Client
 
 <h2>Table of Contents</h2>
 <ul>
+ <li><a href="#overview">Overview</a></li>
 <li><a href="#client_example">Example API Usage</a></li>
 </ul>
 
+ <h2><a name="overview">Overview</a></h2>
+ <p>
+ </p>
+ 
 <h2><a name="client_example">Example API Usage</a></h2>
 
 <p>Once you have a running HBase, you probably want a way to hook your application up to it. 
