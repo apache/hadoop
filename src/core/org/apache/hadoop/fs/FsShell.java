@@ -1021,10 +1021,12 @@ public class FsShell extends Configured implements Tool {
    * Delete all files that match the file pattern <i>srcf</i>.
    * @param srcf a file pattern specifying source files
    * @param recursive if need to delete subdirs
+   * @param skipTrash Should we skip the trash, if it's enabled?
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
-  void delete(String srcf, final boolean recursive) throws IOException {
+  void delete(String srcf, final boolean recursive, final boolean skipTrash) 
+                                                            throws IOException {
     //rm behavior in Linux
     //  [~/1207]$ ls ?.txt
     //  x.txt  z.txt
@@ -1035,22 +1037,27 @@ public class FsShell extends Configured implements Tool {
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
-        delete(p, srcFs, recursive);
+        delete(p, srcFs, recursive, skipTrash);
       }
     }.globAndProcess(srcPattern, srcPattern.getFileSystem(getConf()));
   }
     
   /* delete a file */
-  private void delete(Path src, FileSystem srcFs, boolean recursive) throws IOException {
+  private void delete(Path src, FileSystem srcFs, boolean recursive, 
+                      boolean skipTrash) throws IOException {
     if (srcFs.isDirectory(src) && !recursive) {
       throw new IOException("Cannot remove directory \"" + src +
                             "\", use -rmr instead");
     }
-    Trash trashTmp = new Trash(srcFs, getConf());
-    if (trashTmp.moveToTrash(src)) {
-      System.out.println("Moved to trash: " + src);
-      return;
+    
+    if(!skipTrash) {
+      Trash trashTmp = new Trash(srcFs, getConf());
+      if (trashTmp.moveToTrash(src)) {
+        System.out.println("Moved to trash: " + src);
+        return;
+      }
     }
+    
     if (srcFs.delete(src, true)) {
       System.out.println("Deleted " + src);
     } else {
@@ -1061,7 +1068,6 @@ public class FsShell extends Configured implements Tool {
       throw new IOException("Delete failed " + src);
     }
   }
-
   private void expunge() throws IOException {
     trash.expunge();
     trash.checkpoint();
@@ -1243,8 +1249,8 @@ public class FsShell extends Configured implements Tool {
       "The full syntax is: \n\n" +
       "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
       "[-D <property=value>] [-ls <path>] [-lsr <path>] [-du <path>]\n\t" + 
-      "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]\n\t" + 
-      "[-rmr <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
+      "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm [-skipTrash] <src>]\n\t" + 
+      "[-rmr [-skipTrash] <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
       GET_SHORT_USAGE + "\n\t" +
       "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
@@ -1308,11 +1314,15 @@ public class FsShell extends Configured implements Tool {
       "\t\tdestination.  When copying multiple files, the destination\n" +
       "\t\tmust be a directory. \n";
 
-    String rm = "-rm <src>: \tDelete all files that match the specified file pattern.\n" +
-      "\t\tEquivlent to the Unix command \"rm <src>\"\n";
+    String rm = "-rm [-skipTrash] <src>: \tDelete all files that match the specified file pattern.\n" +
+      "\t\tEquivalent to the Unix command \"rm <src>\"\n" +
+      "\t\t-skipTrash option bypasses trash, if enabled, and immediately\n" +
+      "deletes <src>";
 
-    String rmr = "-rmr <src>: \tRemove all directories which match the specified file \n" +
-      "\t\tpattern. Equivlent to the Unix command \"rm -rf <src>\"\n";
+    String rmr = "-rmr [-skipTrash] <src>: \tRemove all directories which match the specified file \n" +
+      "\t\tpattern. Equivalent to the Unix command \"rm -rf <src>\"\n" +
+      "\t\t-skipTrash option bypasses trash, if enabled, and immediately\n" +
+      "deletes <src>";
 
     String put = "-put <localsrc> ... <dst>: \tCopy files " + 
     "from the local file system \n\t\tinto fs. \n";
@@ -1507,6 +1517,15 @@ public class FsShell extends Configured implements Tool {
   private int doall(String cmd, String argv[], int startindex) {
     int exitCode = 0;
     int i = startindex;
+    boolean rmSkipTrash = false;
+    
+    // Check for -skipTrash option in rm/rmr
+    if(("-rm".equals(cmd) || "-rmr".equals(cmd)) 
+        && "-skipTrash".equals(argv[i])) {
+      rmSkipTrash = true;
+      i++;
+    }
+
     //
     // for each source file, issue the command
     //
@@ -1520,9 +1539,9 @@ public class FsShell extends Configured implements Tool {
         } else if ("-mkdir".equals(cmd)) {
           mkdir(argv[i]);
         } else if ("-rm".equals(cmd)) {
-          delete(argv[i], false);
+          delete(argv[i], false, rmSkipTrash);
         } else if ("-rmr".equals(cmd)) {
-          delete(argv[i], true);
+          delete(argv[i], true, rmSkipTrash);
         } else if ("-du".equals(cmd)) {
           du(argv[i]);
         } else if ("-dus".equals(cmd)) {
@@ -1629,8 +1648,8 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [" + Count.USAGE + "]");
       System.err.println("           [-mv <src> <dst>]");
       System.err.println("           [-cp <src> <dst>]");
-      System.err.println("           [-rm <path>]");
-      System.err.println("           [-rmr <path>]");
+      System.err.println("           [-rm [-skipTrash] <path>]");
+      System.err.println("           [-rmr [-skipTrash] <path>]");
       System.err.println("           [-expunge]");
       System.err.println("           [-put <localsrc> ... <dst>]");
       System.err.println("           [-copyFromLocal <localsrc> ... <dst>]");
