@@ -31,6 +31,7 @@ import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -737,6 +738,56 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return defaultValue;
     } else {
       return StringUtils.getStrings(valueString);
+    }
+  }
+  
+  /** 
+   * Get the comma delimited values of the <code>name</code> property as 
+   * a collection of <code>String</code>s, trimmed of the leading and trailing whitespace.  
+   * If no such property is specified then empty <code>Collection</code> is returned.
+   *
+   * @param name property name.
+   * @return property value as a collection of <code>String</code>s, or empty <code>Collection</code> 
+   */
+  public Collection<String> getTrimmedStringCollection(String name) {
+    String valueString = get(name);
+    if (null == valueString) {
+      Collection<String> empty = Collections.emptyList();
+      return empty;
+    }
+    return StringUtils.getTrimmedStringCollection(valueString);
+  }
+  
+  /** 
+   * Get the comma delimited values of the <code>name</code> property as 
+   * an array of <code>String</code>s, trimmed of the leading and trailing whitespace.
+   * If no such property is specified then an empty array is returned.
+   * 
+   * @param name property name.
+   * @return property value as an array of trimmed <code>String</code>s, 
+   *         or empty array. 
+   */
+  public String[] getTrimmedStrings(String name) {
+    String valueString = get(name);
+    return StringUtils.getTrimmedStrings(valueString);
+  }
+
+  /** 
+   * Get the comma delimited values of the <code>name</code> property as 
+   * an array of <code>String</code>s, trimmed of the leading and trailing whitespace.
+   * If no such property is specified then default value is returned.
+   * 
+   * @param name property name.
+   * @param defaultValue The default value
+   * @return property value as an array of trimmed <code>String</code>s, 
+   *         or default value. 
+   */
+  public String[] getTrimmedStrings(String name, String... defaultValue) {
+    String valueString = get(name);
+    if (null == valueString) {
+      return defaultValue;
+    } else {
+      return StringUtils.getTrimmedStrings(valueString);
     }
   }
 
