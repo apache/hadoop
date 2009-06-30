@@ -67,3 +67,5 @@ Trunk (unreleased changes)
 
     MAPREDUCE-671. Update ignore list to include untracked, generated
     build artifacts and config files. (cdouglas)
+
+    MAPREDUCE-433. Use more reliable counters in TestReduceFetch. (cdouglas)
