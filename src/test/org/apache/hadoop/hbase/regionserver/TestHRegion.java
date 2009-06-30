@@ -1480,21 +1480,19 @@ public class TestHRegion extends HBaseTestCase {
    */
   public void testScanSplitOnRegion() throws Exception {
     byte [] tableName = Bytes.toBytes("testtable");
-    byte [][] families = {fam3};
 
     HBaseConfiguration hc = initSplit();
     //Setting up region
     String method = this.getName();
-    initHRegion(tableName, method, hc, families);
+    initHRegion(tableName, method, hc, new byte [][] {fam3});
 
     try {
       addContent(region, fam3);
       region.flushcache();
       final byte [] midkey = region.compactStores();
       assertNotNull(midkey);
-      byte [][] cols = {fam3};
       Scan scan = new Scan();
-      scan.addColumns(cols);
+      scan.addFamily(fam3);
       final InternalScanner s = region.getScanner(scan);
       final HRegion regionForThread = region;
 
@@ -1544,16 +1542,16 @@ public class TestHRegion extends HBaseTestCase {
   /*
    * Assert first value in the passed region is <code>firstValue</code>.
    * @param r
-   * @param column
+   * @param fs
    * @param firstValue
    * @throws IOException
    */
-  private void assertScan(final HRegion r, final byte [] column,
+  private void assertScan(final HRegion r, final byte [] fs,
       final byte [] firstValue)
   throws IOException {
-    byte [][] cols = {column};
+    byte [][] families = {fs};
     Scan scan = new Scan();
-    scan.addColumns(cols);
+    for (int i = 0; i < families.length; i++) scan.addFamily(families[i]);
     InternalScanner s = r.getScanner(scan);
     try {
       List<KeyValue> curVals = new ArrayList<KeyValue>();

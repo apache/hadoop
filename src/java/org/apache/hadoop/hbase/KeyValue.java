@@ -1183,9 +1183,12 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static byte [][] parseColumn(byte [] c) {
     final byte [][] result = new byte [2][];
-    final int index = getFamilyDelimiterIndex(c, 0, c.length);
+    final int index = getDelimiter(c, 0, c.length, COLUMN_FAMILY_DELIMITER);
     if (index == -1) {
-      throw new IllegalArgumentException("Impossible column name: " + c);
+      // If no delimiter, return <code>c</code> as family and null qualifier.
+      result[0] = c;
+      result[1] = null;
+      return result;
     }
     result[0] = new byte [index];
     System.arraycopy(c, 0, result[0], 0, index);

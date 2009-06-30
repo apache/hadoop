@@ -39,9 +39,11 @@ public class TimestampTestBase extends HBaseTestCase {
   private static final long T1 = 100L;
   private static final long T2 = 200L;
   
-  private static final String COLUMN_NAME = "contents:contents";
+  private static final String COLUMN_NAME = "colfamily1:contents";
   
   private static final byte [] COLUMN = Bytes.toBytes(COLUMN_NAME);
+  private static final byte [][] COLUMNS =
+    new byte [][] {Bytes.toBytes("colfamily1")};
   private static final byte [] ROW = Bytes.toBytes("row");
 
     /*

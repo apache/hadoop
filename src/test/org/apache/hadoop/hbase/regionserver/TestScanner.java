@@ -285,7 +285,9 @@ public class TestScanner extends HBaseTestCase {
     for(int i = 0; i < scanColumns.length; i++) {
       try {
         scan = new Scan(FIRST_ROW);
-        scan.addColumns(scanColumns[i]);
+        for (int ii = 0; ii < EXPLICIT_COLS.length; ii++) {
+          scan.addColumn(COLS[0],  EXPLICIT_COLS[ii]);
+        }
         scanner = r.getScanner(scan);
         while (scanner.next(results)) {
           assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, 
@@ -316,7 +318,6 @@ public class TestScanner extends HBaseTestCase {
           }
           results.clear();
         }
-
       } finally {
         InternalScanner s = scanner;
         scanner = null;

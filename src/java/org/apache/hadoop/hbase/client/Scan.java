@@ -177,8 +177,8 @@ public class Scan implements Writable {
    * @throws IllegalArgumentException When the colon is missing.
    */
   public Scan addColumn(byte[] familyAndQualifier) {
-    byte[][] fq = KeyValue.parseColumn(familyAndQualifier);
-    if (fq[1].length > 0) {
+    byte [][] fq = KeyValue.parseColumn(familyAndQualifier);
+    if (fq.length > 1 && fq[1] != null && fq[1].length > 0) {
       addColumn(fq[0], fq[1]);  
     } else {
       addFamily(fq[0]);
@@ -187,14 +187,14 @@ public class Scan implements Writable {
   }
   
   /**
-   * Adds an array of columns specified the old format, family:qualifier.
+   * Adds an array of columns specified using old format, family:qualifier.
    * <p>
    * Overrides previous calls to addFamily for any families in the input.
    * 
    * @param columns array of columns, formatted as <pre>family:qualifier</pre>
    */
   public Scan addColumns(byte [][] columns) {
-    for(int i=0; i<columns.length; i++) {
+    for (int i = 0; i < columns.length; i++) {
       addColumn(columns[i]);
     }
     return this;

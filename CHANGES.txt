@@ -235,6 +235,7 @@ Release 0.20.0 - Unreleased
    HBASE-1437  broken links in hbase.org
    HBASE-1582  Translate ColumnValueFilter and RowFilterSet to the new Filter
                interface
+   HBASE-1594  Fix scan addcolumns after hbase-1385 commit (broken hudson build)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
