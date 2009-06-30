@@ -182,10 +182,13 @@
       </fileset>
     </copy>
     <jar jarfile="${jarfile}" basedir="${build.classes}" >
+      <fileset dir="${conf.dir}" >
+        <include name="hbase-default.xml" />
+      </fileset>
       <zipfileset dir="conf" prefix="conf" includes="zoo.cfg,hbase-default.xml" />
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
    		<manifest>
-            <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapred/Driver" />
+            <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapreduce/Driver" />
     	</manifest>
     </jar>
   </target>
