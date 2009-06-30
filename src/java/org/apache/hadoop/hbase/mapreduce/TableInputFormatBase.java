@@ -20,8 +20,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,23 +31,19 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.filter.StopRowFilter;
-import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * A Base for {@link TableInputFormat}s. Receives a {@link HTable}, a
- * byte[] of input columns and optionally a {@link RowFilterInterface}.
- * Subclasses may use other TableRecordReader implementations.
+ * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an 
+ * {@link Scan} instance that defines the input columns etc. Subclasses may use 
+ * other TableRecordReader implementations.
  * <p>
  * An example of a subclass:
  * <pre>
@@ -72,155 +68,146 @@ import org.apache.hadoop.util.StringUtils;
  *  }
  * </pre>
  */
-
 public abstract class TableInputFormatBase
-implements InputFormat<ImmutableBytesWritable, Result> {
+extends InputFormat<ImmutableBytesWritable, Result> {
+  
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
-  private byte [][] inputColumns;
-  private HTable table;
-  private TableRecordReader tableRecordReader;
-  private RowFilterInterface rowFilter;
+
+  /** Holds the details for the internal scanner. */
+  private Scan scan = null;
+  /** The table to scan. */
+  private HTable table = null;
+  /** The reader scanning the table, can be a custom one. */
+  private TableRecordReader tableRecordReader = null;
 
   /**
-   * Iterate over an HBase table data, return (Text, RowResult) pairs
+   * Iterate over an HBase table data, return (ImmutableBytesWritable, Result) 
+   * pairs.
    */
   protected class TableRecordReader
-  implements RecordReader<ImmutableBytesWritable, Result> {
-    private byte [] startRow;
-    private byte [] endRow;
-    private byte [] lastRow;
-    private RowFilterInterface trrRowFilter;
-    private ResultScanner scanner;
-    private HTable htable;
-    private byte [][] trrInputColumns;
+  extends RecordReader<ImmutableBytesWritable, Result> {
+    
+    private ResultScanner scanner = null;
+    private Scan scan = null;
+    private HTable htable = null;
+    private byte[] lastRow = null;
+    private ImmutableBytesWritable key = null;
+    private Result value = null;
 
     /**
      * Restart from survivable exceptions by creating a new scanner.
      *
-     * @param firstRow
-     * @throws IOException
+     * @param firstRow  The first row to start at.
+     * @throws IOException When restarting fails.
      */
     public void restart(byte[] firstRow) throws IOException {
-      if ((endRow != null) && (endRow.length > 0)) {
-        if (trrRowFilter != null) {
-          final Set<RowFilterInterface> rowFiltersSet =
-            new HashSet<RowFilterInterface>();
-          rowFiltersSet.add(new WhileMatchRowFilter(new StopRowFilter(endRow)));
-          rowFiltersSet.add(trrRowFilter);
-          Scan scan = new Scan(startRow);
-          scan.addColumns(trrInputColumns);
-//          scan.setFilter(new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
-//              rowFiltersSet));
-          this.scanner = this.htable.getScanner(scan);
-        } else {
-          Scan scan = new Scan(firstRow, endRow);
-          scan.addColumns(trrInputColumns);
-          this.scanner = this.htable.getScanner(scan);
-        }
-      } else {
-        Scan scan = new Scan(firstRow);
-        scan.addColumns(trrInputColumns);
-//        scan.setFilter(trrRowFilter);
-        this.scanner = this.htable.getScanner(scan);
-      }
+      Scan newScan = new Scan(scan);
+      newScan.setStartRow(firstRow);
+      this.scanner = this.htable.getScanner(newScan);      
     }
 
     /**
      * Build the scanner. Not done in constructor to allow for extension.
      *
-     * @throws IOException
+     * @throws IOException When restarting the scan fails. 
      */
     public void init() throws IOException {
-      restart(startRow);
+      restart(scan.getStartRow());
     }
 
     /**
-     * @param htable the {@link HTable} to scan.
+     * Sets the HBase table.
+     * 
+     * @param htable  The {@link HTable} to scan.
      */
     public void setHTable(HTable htable) {
       this.htable = htable;
     }
 
     /**
-     * @param inputColumns the columns to be placed in {@link Result}.
+     * Sets the scan defining the actual details like columns etc.
+     *  
+     * @param scan  The scan to set.
      */
-    public void setInputColumns(final byte [][] inputColumns) {
-      this.trrInputColumns = inputColumns;
+    public void setScan(Scan scan) {
+      this.scan = scan;
     }
 
     /**
-     * @param startRow the first row in the split
+     * Closes the split.
+     * 
+     * @see org.apache.hadoop.mapreduce.RecordReader#close()
      */
-    public void setStartRow(final byte [] startRow) {
-      this.startRow = startRow;
-    }
-
-    /**
-     *
-     * @param endRow the last row in the split
-     */
-    public void setEndRow(final byte [] endRow) {
-      this.endRow = endRow;
-    }
-
-    /**
-     * @param rowFilter the {@link RowFilterInterface} to be used.
-     */
-    public void setRowFilter(RowFilterInterface rowFilter) {
-      this.trrRowFilter = rowFilter;
-    }
-
+    @Override
     public void close() {
       this.scanner.close();
     }
 
     /**
-     * @return ImmutableBytesWritable
-     *
-     * @see org.apache.hadoop.mapred.RecordReader#createKey()
-     */
-    public ImmutableBytesWritable createKey() {
-      return new ImmutableBytesWritable();
-    }
-
-    /**
-     * @return RowResult
-     *
-     * @see org.apache.hadoop.mapred.RecordReader#createValue()
-     */
-    public Result createValue() {
-      return new Result();
-    }
-
-    public long getPos() {
-      // This should be the ordinal tuple in the range;
-      // not clear how to calculate...
-      return 0;
-    }
-
-    public float getProgress() {
-      // Depends on the total number of tuples and getPos
-      return 0;
-    }
-
-    /**
-     * @param key HStoreKey as input key.
-     * @param value MapWritable as input value
-     * @return true if there was more data
+     * Returns the current key.
+     *  
+     * @return The current key.
      * @throws IOException
+     * @throws InterruptedException When the job is aborted.
+     * @see org.apache.hadoop.mapreduce.RecordReader#getCurrentKey()
      */
-    public boolean next(ImmutableBytesWritable key, Result value)
-    throws IOException {
+    @Override
+    public ImmutableBytesWritable getCurrentKey() throws IOException,
+        InterruptedException {
+      return key;
+    }
+
+    /**
+     * Returns the current value.
+     * 
+     * @return The current value.
+     * @throws IOException When the value is faulty.
+     * @throws InterruptedException When the job is aborted.
+     * @see org.apache.hadoop.mapreduce.RecordReader#getCurrentValue()
+     */
+    @Override
+    public Result getCurrentValue() throws IOException, InterruptedException {
+      return value;
+    }
+
+    /**
+     * Initializes the reader.
+     * 
+     * @param inputsplit  The split to work with.
+     * @param context  The current task context.
+     * @throws IOException When setting up the reader fails.
+     * @throws InterruptedException When the job is aborted.
+     * @see org.apache.hadoop.mapreduce.RecordReader#initialize(
+     *   org.apache.hadoop.mapreduce.InputSplit, 
+     *   org.apache.hadoop.mapreduce.TaskAttemptContext)
+     */
+    @Override
+    public void initialize(InputSplit inputsplit,
+        TaskAttemptContext context) throws IOException,
+        InterruptedException {
+    }
+
+    /**
+     * Positions the record reader to the next record.
+     *  
+     * @return <code>true</code> if there was another record.
+     * @throws IOException When reading the record failed.
+     * @throws InterruptedException When the job was aborted.
+     * @see org.apache.hadoop.mapreduce.RecordReader#nextKeyValue()
+     */
+    @Override
+    public boolean nextKeyValue() throws IOException, InterruptedException {
+      if (key == null) key = new ImmutableBytesWritable();
+      if (value == null) value = new Result();
       Result result;
       try {
         result = this.scanner.next();
       } catch (UnknownScannerException e) {
         LOG.debug("recovered from " + StringUtils.stringifyException(e));  
         restart(lastRow);
-        this.scanner.next();    // skip presumed already mapped row
-        result = this.scanner.next();
+        scanner.next();    // skip presumed already mapped row
+        result = scanner.next();
       }
-
       if (result != null && result.size() > 0) {
         key.set(result.getRow());
         lastRow = key.get();
@@ -229,17 +216,35 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       }
       return false;
     }
+
+    /**
+     * The current progress of the record reader through its data.
+     * 
+     * @return A number between 0.0 and 1.0, the fraction of the data read.
+     * @see org.apache.hadoop.mapreduce.RecordReader#getProgress()
+     */
+    @Override
+    public float getProgress() {
+      // Depends on the total number of tuples
+      return 0;
+    }
   }
 
   /**
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
    * the default.
-   *
-   * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
-   *      JobConf, Reporter)
+   * 
+   * @param split  The split to work with.
+   * @param context  The current context.
+   * @return The newly created record reader.
+   * @throws IOException When creating the reader fails.
+   * @see org.apache.hadoop.mapreduce.InputFormat#createRecordReader(
+   *   org.apache.hadoop.mapreduce.InputSplit, 
+   *   org.apache.hadoop.mapreduce.TaskAttemptContext)
    */
-  public RecordReader<ImmutableBytesWritable, Result> getRecordReader(
-      InputSplit split, JobConf job, Reporter reporter)
+  @Override
+  public RecordReader<ImmutableBytesWritable, Result> createRecordReader(
+      InputSplit split, TaskAttemptContext context)
   throws IOException {
     TableSplit tSplit = (TableSplit) split;
     TableRecordReader trr = this.tableRecordReader;
@@ -247,45 +252,38 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     if (trr == null) {
       trr = new TableRecordReader();
     }
-    trr.setStartRow(tSplit.getStartRow());
-    trr.setEndRow(tSplit.getEndRow());
-    trr.setHTable(this.table);
-    trr.setInputColumns(this.inputColumns);
-    trr.setRowFilter(this.rowFilter);
+    Scan sc = new Scan(scan);
+    sc.setStartRow(tSplit.getStartRow());
+    sc.setStopRow(tSplit.getEndRow());
+    trr.setScan(sc);
+    trr.setHTable(table);
     trr.init();
     return trr;
   }
 
   /**
-   * Calculates the splits that will serve as input for the map tasks.
-   * <ul>
-   * Splits are created in number equal to the smallest between numSplits and
-   * the number of {@link HRegion}s in the table. If the number of splits is
-   * smaller than the number of {@link HRegion}s then splits are spanned across
-   * multiple {@link HRegion}s and are grouped the most evenly possible. In the
-   * case splits are uneven the bigger splits are placed first in the
-   * {@link InputSplit} array.
+   * Calculates the splits that will serve as input for the map tasks. The
+   * number of splits matches the number of regions in a table.
    *
-   * @param job the map task {@link JobConf}
-   * @param numSplits a hint to calculate the number of splits (mapred.map.tasks).
-   *
-   * @return the input splits
-   *
-   * @see org.apache.hadoop.mapred.InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
+   * @param context  The current job context.
+   * @return The list of input splits.
+   * @throws IOException When creating the list of splits fails.
+   * @see org.apache.hadoop.mapreduce.InputFormat#getSplits(
+   *   org.apache.hadoop.mapreduce.JobContext)
    */
-  public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-    byte [][] startKeys = this.table.getStartKeys();
+  @Override
+  public List<InputSplit> getSplits(JobContext context) throws IOException {
+    byte [][] startKeys = table.getStartKeys();
     if (startKeys == null || startKeys.length == 0) {
-      throw new IOException("Expecting at least one region");
+      throw new IOException("Expecting at least one region.");
     }
-    if (this.table == null) {
-      throw new IOException("No table was provided");
+    if (table == null) {
+      throw new IOException("No table was provided.");
     }
-    if (this.inputColumns == null || this.inputColumns.length == 0) {
-      throw new IOException("Expecting at least one column");
+    if (!scan.hasFamilies()) {
+      throw new IOException("Expecting at least one column.");
     }
-    int realNumSplits = numSplits > startKeys.length? startKeys.length:
-      numSplits;
+    int realNumSplits = startKeys.length;
     InputSplit[] splits = new InputSplit[realNumSplits];
     int middle = startKeys.length / realNumSplits;
     int startPos = 0;
@@ -300,14 +298,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       LOG.info("split: " + i + "->" + splits[i]);
       startPos = lastPos;
     }
-    return splits;
-  }
-
-  /**
-   * @param inputColumns to be passed in {@link Result} to the map task.
-   */
-  protected void setInputColumns(byte [][] inputColumns) {
-    this.inputColumns = inputColumns;
+    return Arrays.asList(splits);
   }
 
   /**
@@ -320,28 +311,39 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   /**
    * Allows subclasses to set the {@link HTable}.
    *
-   * @param table to get the data from
+   * @param table  The table to get the data from.
    */
   protected void setHTable(HTable table) {
     this.table = table;
   }
 
   /**
+   * Gets the scan defining the actual details like columns etc.
+   *  
+   * @return The internal scan instance.
+   */
+  public Scan getScan() {
+    if (scan == null) scan = new Scan();
+    return scan;
+  }
+
+  /**
+   * Sets the scan defining the actual details like columns etc.
+   *  
+   * @param scan  The scan to set.
+   */
+  public void setScan(Scan scan) {
+    this.scan = scan;
+  }
+
+  /**
    * Allows subclasses to set the {@link TableRecordReader}.
    *
-   * @param tableRecordReader
-   *                to provide other {@link TableRecordReader} implementations.
+   * @param tableRecordReader A different {@link TableRecordReader} 
+   *   implementation.
    */
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {
     this.tableRecordReader = tableRecordReader;
   }
 
-  /**
-   * Allows subclasses to set the {@link RowFilterInterface} to be used.
-   *
-   * @param rowFilter
-   */
-  protected void setRowFilter(RowFilterInterface rowFilter) {
-    this.rowFilter = rowFilter;
-  }
 }

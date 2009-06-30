@@ -23,44 +23,47 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Partitioner;
+import org.apache.hadoop.mapreduce.Partitioner;
 
 /**
  * This is used to partition the output keys into groups of keys.
  * Keys are grouped according to the regions that currently exist
  * so that each reducer fills a single region so load is distributed.
  * 
- * @param <K2>
- * @param <V2>
+ * @param <KEY>  The type of the key.
+ * @param <VALUE>  The type of the value.
  */
-public class HRegionPartitioner<K2,V2> 
-implements Partitioner<ImmutableBytesWritable, V2> {
+public class HRegionPartitioner<KEY, VALUE> 
+extends Partitioner<ImmutableBytesWritable, VALUE>
+implements Configurable {
+  
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private Configuration conf = null;
   private HTable table;
   private byte[][] startKeys; 
   
-  public void configure(JobConf job) {
-    try {
-      this.table = new HTable(new HBaseConfiguration(job), 
-        job.get(TableOutputFormat.OUTPUT_TABLE));
-    } catch (IOException e) {
-      LOG.error(e);
-    }
-    
-    try {
-      this.startKeys = this.table.getStartKeys();
-    } catch (IOException e) {
-      LOG.error(e);
-    }
-  }
-
+  /**
+   * Gets the partition number for a given key (hence record) given the total 
+   * number of partitions i.e. number of reduce-tasks for the job.
+   *   
+   * <p>Typically a hash function on a all or a subset of the key.</p>
+   *
+   * @param key  The key to be partitioned.
+   * @param value  The entry value.
+   * @param numPartitions  The total number of partitions.
+   * @return The partition number for the <code>key</code>.
+   * @see org.apache.hadoop.mapreduce.Partitioner#getPartition(
+   *   java.lang.Object, java.lang.Object, int)
+   */
+  @Override
   public int getPartition(ImmutableBytesWritable key,
-      V2 value, int numPartitions) {
+      VALUE value, int numPartitions) {
     byte[] region = null;
     // Only one region return 0
     if (this.startKeys.length == 1){
@@ -85,5 +88,40 @@ implements Partitioner<ImmutableBytesWritable, V2> {
     }
     // if above fails to find start key that match we need to return something
     return 0;
+  }
+
+  /**
+   * Returns the current configuration.
+   *  
+   * @return The current configuration.
+   * @see org.apache.hadoop.conf.Configurable#getConf()
+   */
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  /**
+   * Sets the configuration. This is used to determine the start keys for the
+   * given table.
+   * 
+   * @param configuration  The configuration to set.
+   * @see org.apache.hadoop.conf.Configurable#setConf(
+   *   org.apache.hadoop.conf.Configuration)
+   */
+  @Override
+  public void setConf(Configuration configuration) {
+    this.conf = configuration;
+    try {
+      this.table = new HTable(new HBaseConfiguration(conf), 
+        configuration.get(TableOutputFormat.OUTPUT_TABLE));
+    } catch (IOException e) {
+      LOG.error(e);
+    }
+    try {
+      this.startKeys = this.table.getStartKeys();
+    } catch (IOException e) {
+      LOG.error(e);
+    }
   }
 }

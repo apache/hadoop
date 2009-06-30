@@ -421,6 +421,9 @@ Release 0.20.0 - Unreleased
    HBASE-1587  Update ganglia config and doc to account for ganglia 3.1 and
                hadoop-4675
    HBASE-1589  Up zk maxClientCnxns from default of 10 to 20 or 30 or so
+   HBASE-1385  Revamp TableInputFormat, needs updating to match hadoop 0.20.x
+               AND remove bit where we can make < maps than regions
+               (Lars George via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

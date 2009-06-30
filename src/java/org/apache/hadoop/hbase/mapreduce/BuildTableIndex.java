@@ -27,9 +27,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
  * Example table column indexing class.  Runs a mapreduce job to index
@@ -51,32 +52,36 @@ import org.apache.hadoop.mapred.JobConf;
  * </ul>
  */
 public class BuildTableIndex {
+
   private static final String USAGE = "Usage: BuildTableIndex " +
-    "-m <numMapTasks> -r <numReduceTasks>\n  -indexConf <iconfFile> " +
-    "-indexDir <indexDir>\n  -table <tableName> -columns <columnName1> " +
+    "-r <numReduceTasks> -indexConf <iconfFile>\n" +
+    "-indexDir <indexDir> -table <tableName>\n -columns <columnName1> " +
     "[<columnName2> ...]";
 
+  /**
+   * Prints the usage message and exists the program.
+   * 
+   * @param message  The message to print first.
+   */
   private static void printUsage(String message) {
     System.err.println(message);
     System.err.println(USAGE);
     System.exit(-1);
   }
 
-  /** default constructor */
-  public BuildTableIndex() {
-    super();
-  }
-
   /**
-   * @param args
-   * @throws IOException
+   * Creates a new job.
+   * @param conf 
+   * 
+   * @param args  The command line arguments.
+   * @throws IOException When reading the configuration fails.
    */
-  public void run(String[] args) throws IOException {
+  public static Job createSubmittableJob(Configuration conf, String[] args) 
+  throws IOException {
     if (args.length < 6) {
       printUsage("Too few arguments");
     }
 
-    int numMapTasks = 1;
     int numReduceTasks = 1;
     String iconfFile = null;
     String indexDir = null;
@@ -85,9 +90,7 @@ public class BuildTableIndex {
 
     // parse args
     for (int i = 0; i < args.length - 1; i++) {
-      if ("-m".equals(args[i])) {
-        numMapTasks = Integer.parseInt(args[++i]);
-      } else if ("-r".equals(args[i])) {
+      if ("-r".equals(args[i])) {
         numReduceTasks = Integer.parseInt(args[++i]);
       } else if ("-indexConf".equals(args[i])) {
         iconfFile = args[++i];
@@ -111,7 +114,6 @@ public class BuildTableIndex {
         "be specified");
     }
 
-    Configuration conf = new HBaseConfiguration();
     if (iconfFile != null) {
       // set index configuration content from a file
       String content = readContent(iconfFile);
@@ -121,52 +123,31 @@ public class BuildTableIndex {
       conf.set("hbase.index.conf", content);
     }
 
-    if (columnNames != null) {
-      JobConf jobConf = createJob(conf, numMapTasks, numReduceTasks, indexDir,
-          tableName, columnNames.toString());
-      JobClient.runJob(jobConf);
-    }
+    Job job = new Job(conf, "build index for table " + tableName);
+    // number of indexes to partition into
+    job.setNumReduceTasks(numReduceTasks);
+    Scan scan = new Scan();
+    scan.addColumns(columnNames.toString());
+    // use identity map (a waste, but just as an example)
+    IdentityTableMapper.initJob(tableName, scan, 
+      IdentityTableMapper.class, job);
+    // use IndexTableReduce to build a Lucene index
+    job.setReducerClass(IndexTableReducer.class);
+    FileOutputFormat.setOutputPath(job, new Path(indexDir));
+    job.setOutputFormatClass(IndexOutputFormat.class);
+    return job;
   }
 
   /**
-   * @param conf
-   * @param numMapTasks
-   * @param numReduceTasks
-   * @param indexDir
-   * @param tableName
-   * @param columnNames
-   * @return JobConf
-   */
-  public JobConf createJob(Configuration conf, int numMapTasks,
-      int numReduceTasks, String indexDir, String tableName,
-      String columnNames) {
-    JobConf jobConf = new JobConf(conf, BuildTableIndex.class);
-    jobConf.setJobName("build index for table " + tableName);
-    jobConf.setNumMapTasks(numMapTasks);
-    // number of indexes to partition into
-    jobConf.setNumReduceTasks(numReduceTasks);
-
-    // use identity map (a waste, but just as an example)
-    IdentityTableMap.initJob(tableName, columnNames, IdentityTableMap.class,
-        jobConf);
-
-    // use IndexTableReduce to build a Lucene index
-    jobConf.setReducerClass(IndexTableReduce.class);
-    FileOutputFormat.setOutputPath(jobConf, new Path(indexDir));
-    jobConf.setOutputFormat(IndexOutputFormat.class);
-
-    return jobConf;
-  }
-
-  /*
-   * Read xml file of indexing configurations.  The xml format is similar to
+   * Reads xml file of indexing configurations.  The xml format is similar to
    * hbase-default.xml and hadoop-default.xml. For an example configuration,
-   * see the <code>createIndexConfContent</code> method in TestTableIndex
-   * @param fileName File to read.
-   * @return XML configuration read from file
-   * @throws IOException
+   * see the <code>createIndexConfContent</code> method in TestTableIndex.
+   * 
+   * @param fileName  The file to read.
+   * @return XML configuration read from file.
+   * @throws IOException When the XML is broken.
    */
-  private String readContent(String fileName) throws IOException {
+  private static String readContent(String fileName) throws IOException {
     File file = new File(fileName);
     int length = (int) file.length();
     if (length == 0) {
@@ -195,11 +176,17 @@ public class BuildTableIndex {
   }
 
   /**
-   * @param args
-   * @throws IOException
+   * The main entry point.
+   * 
+   * @param args  The command line arguments.
+   * @throws Exception When running the job fails.
    */
-  public static void main(String[] args) throws IOException {
-    BuildTableIndex build = new BuildTableIndex();
-    build.run(args);
+  public static void main(String[] args) throws Exception {
+    HBaseConfiguration conf = new HBaseConfiguration();
+    String[] otherArgs = 
+      new GenericOptionsParser(conf, args).getRemainingArgs();
+    Job job = createSubmittableJob(conf, otherArgs);
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
+  
 }

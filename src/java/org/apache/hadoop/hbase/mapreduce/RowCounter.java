@@ -21,73 +21,71 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
- * A job with a map to count rows.
- * Map outputs table rows IF the input row has columns that have content.  
- * Uses an {@link IdentityReducer}
+ * A job with a just a map phase to count rows. Map outputs table rows IF the 
+ * input row has columns that have content.
  */
-public class RowCounter extends Configured implements Tool {
-  // Name of this 'program'
+public class RowCounter {
+  
+  /** Name of this 'program'. */
   static final String NAME = "rowcounter";
 
   /**
    * Mapper that runs the count.
    */
   static class RowCounterMapper
-  implements TableMap<ImmutableBytesWritable, Result> {
-    private static enum Counters {ROWS}
+  extends TableMapper<ImmutableBytesWritable, Result> {
+    
+    /** Counter enumeration to count the actual rows. */
+    private static enum Counters { ROWS }
 
+    /**
+     * Maps the data.
+     * 
+     * @param row  The current table row key.
+     * @param values  The columns.
+     * @param context  The current context.
+     * @throws IOException When something is broken with the data.
+     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, 
+     *   org.apache.hadoop.mapreduce.Mapper.Context)
+     */
+    @Override
     public void map(ImmutableBytesWritable row, Result values,
-        OutputCollector<ImmutableBytesWritable, Result> output,
-        Reporter reporter)
+      Context context)
     throws IOException {
-      boolean content = !values.list().isEmpty();
       for (KeyValue value: values.list()) {
         if (value.getValue().length > 0) {
-          content = true;
+          context.getCounter(Counters.ROWS).increment(1);
           break;
         }
       }
-      if (!content) {
-        // Don't count rows that are all empty values.
-        return;
-      }
-      // Give out same value every time.  We're only interested in the row/key
-      reporter.incrCounter(Counters.ROWS, 1);
     }
 
-    public void configure(JobConf jc) {
-      // Nothing to do.
-    }
-
-    public void close() throws IOException {
-      // Nothing to do.
-    }
   }
 
   /**
-   * @param args
-   * @return the JobConf
-   * @throws IOException
+   * Sets up the actual job.
+   * 
+   * @param conf  The current configuration.
+   * @param args  The command line parameters.
+   * @return The newly created job.
+   * @throws IOException When setting up the job fails.
    */
-  public JobConf createSubmittableJob(String[] args) throws IOException {
-    JobConf c = new JobConf(getConf(), getClass());
-    c.setJobName(NAME);
+  public static Job createSubmittableJob(Configuration conf, String[] args) 
+  throws IOException {
+    Job job = new Job(conf, NAME);
+    job.setJarByClass(RowCounter.class);
     // Columns are space delimited
     StringBuilder sb = new StringBuilder();
     final int columnoffset = 2;
@@ -97,38 +95,34 @@ public class RowCounter extends Configured implements Tool {
       }
       sb.append(args[i]);
     }
+    Scan scan = new Scan();
+    scan.addColumns(sb.toString());
     // Second argument is the table name.
-    TableMapReduceUtil.initTableMapJob(args[1], sb.toString(),
-      RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, c);
-    c.setNumReduceTasks(0);
-    // First arg is the output directory.
-    FileOutputFormat.setOutputPath(c, new Path(args[0]));
-    return c;
-  }
-  
-  static int printUsage() {
-    System.out.println(NAME +
-      " <outputdir> <tablename> <column1> [<column2>...]");
-    return -1;
-  }
-  
-  public int run(final String[] args) throws Exception {
-    // Make sure there are at least 3 parameters
-    if (args.length < 3) {
-      System.err.println("ERROR: Wrong number of parameters: " + args.length);
-      return printUsage();
-    }
-    JobClient.runJob(createSubmittableJob(args));
-    return 0;
+    TableMapReduceUtil.initTableMapperJob(args[1], scan,
+      RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
+    job.setNumReduceTasks(0);
+    // first argument is the output directory.
+    FileOutputFormat.setOutputPath(job, new Path(args[0]));
+    return job;
   }
 
   /**
-   * @param args
-   * @throws Exception
+   * Main entry point.
+   * 
+   * @param args  The command line parameters.
+   * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    HBaseConfiguration c = new HBaseConfiguration();
-    int errCode = ToolRunner.run(c, new RowCounter(), args);
-    System.exit(errCode);
+    HBaseConfiguration conf = new HBaseConfiguration();
+    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+    if (otherArgs.length < 3) {
+      System.err.println("ERROR: Wrong number of parameters: " + args.length);
+      System.err.println("Usage: " + NAME + 
+        " <outputdir> <tablename> <column1> [<column2>...]");
+      System.exit(-1);
+    }
+    Job job = createSubmittableJob(conf, otherArgs);
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
+  
 }

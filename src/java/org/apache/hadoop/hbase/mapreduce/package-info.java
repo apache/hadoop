@@ -75,10 +75,10 @@ directory and the hbase conf into a job jar <code>conf/</code> directory.
 <p>HBase can be used as a data source, {@link org.apache.hadoop.hbase.mapreduce.TableInputFormat TableInputFormat},
 and data sink, {@link org.apache.hadoop.hbase.mapreduce.TableOutputFormat TableOutputFormat}, for MapReduce jobs.
 Writing MapReduce jobs that read or write HBase, you'll probably want to subclass
-{@link org.apache.hadoop.hbase.mapreduce.TableMap TableMap} and/or
-{@link org.apache.hadoop.hbase.mapreduce.TableReduce TableReduce}.  See the do-nothing
-pass-through classes {@link org.apache.hadoop.hbase.mapreduce.IdentityTableMap IdentityTableMap} and
-{@link org.apache.hadoop.hbase.mapreduce.IdentityTableReduce IdentityTableReduce} for basic usage.  For a more
+{@link org.apache.hadoop.hbase.mapreduce.TableMapper TableMapper} and/or
+{@link org.apache.hadoop.hbase.mapreduce.TableReducer TableReducer}.  See the do-nothing
+pass-through classes {@link org.apache.hadoop.hbase.mapreduce.IdentityTableMapper IdentityTableMapper} and
+{@link org.apache.hadoop.hbase.mapreduce.IdentityTableReducer IdentityTableReducer} for basic usage.  For a more
 involved example, see {@link org.apache.hadoop.hbase.mapreduce.BuildTableIndex BuildTableIndex}
 or review the <code>org.apache.hadoop.hbase.mapreduce.TestTableMapReduce</code> unit test.
 </p>

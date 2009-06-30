@@ -29,6 +29,8 @@ import org.apache.lucene.document.Document;
  * It doesn't really serialize/deserialize a lucene document.
  */
 public class LuceneDocumentWrapper implements Writable {
+  
+  /** The document to add to the index. */
   protected Document doc;
 
   /**

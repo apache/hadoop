@@ -23,60 +23,64 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobConfigurable;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.util.StringUtils;
 
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
  */
-public class TableInputFormat extends TableInputFormatBase implements
-    JobConfigurable {
+public class TableInputFormat extends TableInputFormatBase 
+implements Configurable {
+  
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  
+  /** Job parameter that specifies the output table. */
+  public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
+  /** Space delimited list of columns. */
+  public static final String SCAN = "hbase.mapreduce.scan";
+  
+  /** The configuration. */
+  private Configuration conf = null;
 
   /**
-   * space delimited list of columns
+   * Returns the current configuration.
+   *  
+   * @return The current configuration.
+   * @see org.apache.hadoop.conf.Configurable#getConf()
    */
-  public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 
-  public void configure(JobConf job) {
-    Path[] tableNames = FileInputFormat.getInputPaths(job);
-    String colArg = job.get(COLUMN_LIST);
-    String[] colNames = colArg.split(" ");
-    byte [][] m_cols = new byte[colNames.length][];
-    for (int i = 0; i < m_cols.length; i++) {
-      m_cols[i] = Bytes.toBytes(colNames[i]);
-    }
-    setInputColumns(m_cols);
+  /**
+   * Sets the configuration. This is used to set the details for the table to
+   * be scanned.
+   * 
+   * @param configuration  The configuration to set.
+   * @see org.apache.hadoop.conf.Configurable#setConf(
+   *   org.apache.hadoop.conf.Configuration)
+   */
+  @Override
+  public void setConf(Configuration configuration) {
+    this.conf = configuration;
+    String tableName = conf.get(INPUT_TABLE);
     try {
-      setHTable(new HTable(new HBaseConfiguration(job), tableNames[0].getName()));
+      setHTable(new HTable(new HBaseConfiguration(conf), tableName));
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
+    Scan scan = null;
+    try {
+      scan = TableMapReduceUtil.convertStringToScan(conf.get(SCAN));
+    } catch (IOException e) {
+      LOG.error("An error occurred.", e);
+    }
+    setScan(scan);
   }
-
-  public void validateInput(JobConf job) throws IOException {
-    // expecting exactly one path
-    Path [] tableNames = FileInputFormat.getInputPaths(job);
-    if (tableNames == null || tableNames.length > 1) {
-      throw new IOException("expecting one table name");
-    }
-
-    // connected to table?
-    if (getHTable() == null) {
-      throw new IOException("could not connect to table '" +
-        tableNames[0].getName() + "'");
-    }
-
-    // expecting at least one column
-    String colArg = job.get(COLUMN_LIST);
-    if (colArg == null || colArg.length() == 0) {
-      throw new IOException("expecting at least one column");
-    }
-  }
+  
 }

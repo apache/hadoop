@@ -27,13 +27,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.search.Similarity;
 
@@ -41,29 +38,40 @@ import org.apache.lucene.search.Similarity;
  * Create a local index, unwrap Lucene documents created by reduce, add them to
  * the index, and copy the index to the destination.
  */
-public class IndexOutputFormat extends
-    FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
+public class IndexOutputFormat 
+extends FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
+  
   static final Log LOG = LogFactory.getLog(IndexOutputFormat.class);
 
+  /** Random generator. */
   private Random random = new Random();
 
+  /**
+   * Returns the record writer.
+   * 
+   * @param context  The current task context.
+   * @return The record writer.
+   * @throws IOException When there is an issue with the writer.
+   * @see org.apache.hadoop.mapreduce.lib.output.FileOutputFormat#getRecordWriter(org.apache.hadoop.mapreduce.TaskAttemptContext)
+   */
   @Override
   public RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper>
-  getRecordWriter(final FileSystem fs, JobConf job, String name,
-      final Progressable progress)
+    getRecordWriter(TaskAttemptContext context)
   throws IOException {
 
-    final Path perm = new Path(FileOutputFormat.getOutputPath(job), name);
-    final Path temp = job.getLocalPath("index/_"
-        + Integer.toString(random.nextInt()));
+    final Path perm = new Path(FileOutputFormat.getOutputPath(context), 
+      FileOutputFormat.getUniqueFile(context, "part", ""));
+    // null for "dirsProp" means no predefined directories
+    final Path temp = context.getConfiguration().getLocalPath(
+      "mapred.local.dir", "index/_" + Integer.toString(random.nextInt()));
 
     LOG.info("To index into " + perm);
-
+    FileSystem fs = FileSystem.get(context.getConfiguration());
     // delete old, if any
     fs.delete(perm, true);
 
     final IndexConfiguration indexConf = new IndexConfiguration();
-    String content = job.get("hbase.index.conf");
+    String content = context.getConfiguration().get("hbase.index.conf");
     if (content != null) {
       indexConf.addFromXML(content);
     }
@@ -99,65 +107,7 @@ public class IndexOutputFormat extends
       }
     }
     writer.setUseCompoundFile(indexConf.isUseCompoundFile());
-
-    return new RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper>() {
-      boolean closed;
-      private long docCount = 0;
-
-      public void write(ImmutableBytesWritable key, 
-          LuceneDocumentWrapper value)
-      throws IOException {
-        // unwrap and index doc
-        Document doc = value.get();
-        writer.addDocument(doc);
-        docCount++;
-        progress.progress();
-      }
-
-      public void close(final Reporter reporter) throws IOException {
-        // spawn a thread to give progress heartbeats
-        Thread prog = new Thread() {
-          @Override
-          public void run() {
-            while (!closed) {
-              try {
-                reporter.setStatus("closing");
-                Thread.sleep(1000);
-              } catch (InterruptedException e) {
-                continue;
-              } catch (Throwable e) {
-                return;
-              }
-            }
-          }
-        };
-
-        try {
-          prog.start();
-
-          // optimize index
-          if (indexConf.doOptimize()) {
-            if (LOG.isInfoEnabled()) {
-              LOG.info("Optimizing index.");
-            }
-            writer.optimize();
-          }
-
-          // close index
-          writer.close();
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Done indexing " + docCount + " docs.");
-          }
-
-          // copy to perm destination in dfs
-          fs.completeLocalOutput(perm, temp);
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Copy done.");
-          }
-        } finally {
-          closed = true;
-        }
-      }
-    };
+    return new IndexRecordWriter(context, fs, writer, indexConf, perm, temp);
   }
+  
 }

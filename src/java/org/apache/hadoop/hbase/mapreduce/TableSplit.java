@@ -25,88 +25,152 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.InputSplit;
 
 /**
- * A table split corresponds to a key range [low, high)
+ * A table split corresponds to a key range (low, high). All references to row
+ * below refer to the key of the row.
  */
-public class TableSplit implements InputSplit, Comparable<TableSplit> {
-  private byte [] m_tableName;
-  private byte [] m_startRow;
-  private byte [] m_endRow;
-  private String m_regionLocation;
+public class TableSplit extends InputSplit 
+implements Writable, Comparable<TableSplit> {
+  
+  private byte [] tableName;
+  private byte [] startRow;
+  private byte [] endRow;
+  private String regionLocation;
 
-  /** default constructor */
+  /** Default constructor. */
   public TableSplit() {
     this(HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
       HConstants.EMPTY_BYTE_ARRAY, "");
   }
 
   /**
-   * Constructor
-   * @param tableName
-   * @param startRow
-   * @param endRow
-   * @param location
+   * Creates a new instance while assigning all variables.
+   * 
+   * @param tableName  The name of the current table.
+   * @param startRow  The start row of the split.
+   * @param endRow  The end row of the split.
+   * @param location  The location of the region.
    */
   public TableSplit(byte [] tableName, byte [] startRow, byte [] endRow,
       final String location) {
-    this.m_tableName = tableName;
-    this.m_startRow = startRow;
-    this.m_endRow = endRow;
-    this.m_regionLocation = location;
+    this.tableName = tableName;
+    this.startRow = startRow;
+    this.endRow = endRow;
+    this.regionLocation = location;
   }
 
-  /** @return table name */
+  /**
+   * Returns the table name.
+   * 
+   * @return The table name. 
+   */
   public byte [] getTableName() {
-    return this.m_tableName;
+    return tableName;
   }
 
-  /** @return starting row key */
+  /**
+   * Returns the start row.
+   *  
+   * @return The start row.
+   */ 
   public byte [] getStartRow() {
-    return this.m_startRow;
+    return startRow;
   }
 
-  /** @return end row key */
+  /**
+   * Returns the end row.
+   * 
+   * @return The end row. 
+   */
   public byte [] getEndRow() {
-    return this.m_endRow;
+    return endRow;
   }
 
-  /** @return the region's hostname */
+  /** 
+   * Returns the region location.
+   * 
+   * @return The region's location. 
+   */
   public String getRegionLocation() {
-    return this.m_regionLocation;
+    return regionLocation;
   }
 
+  /**
+   * Returns the region's location as an array.
+   * 
+   * @return The array containing the region location.
+   * @see org.apache.hadoop.mapreduce.InputSplit#getLocations()
+   */
+  @Override
   public String[] getLocations() {
-    return new String[] {this.m_regionLocation};
+    return new String[] {regionLocation};
   }
 
+  /**
+   * Returns the length of the split.
+   * 
+   * @return The length of the split.
+   * @see org.apache.hadoop.mapreduce.InputSplit#getLength()
+   */
+  @Override
   public long getLength() {
     // Not clear how to obtain this... seems to be used only for sorting splits
     return 0;
   }
 
+  /**
+   * Reads the values of each field.
+   * 
+   * @param in  The input to read from.
+   * @throws IOException When reading the input fails.
+   */
+  @Override
   public void readFields(DataInput in) throws IOException {
-    this.m_tableName = Bytes.readByteArray(in);
-    this.m_startRow = Bytes.readByteArray(in);
-    this.m_endRow = Bytes.readByteArray(in);
-    this.m_regionLocation = Bytes.toString(Bytes.readByteArray(in));
+    tableName = Bytes.readByteArray(in);
+    startRow = Bytes.readByteArray(in);
+    endRow = Bytes.readByteArray(in);
+    regionLocation = Bytes.toString(Bytes.readByteArray(in));
   }
 
+  /**
+   * Writes the field values to the output.
+   * 
+   * @param out  The output to write to.
+   * @throws IOException When writing the values to the output fails.
+   */
+  @Override
   public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.m_tableName);
-    Bytes.writeByteArray(out, this.m_startRow);
-    Bytes.writeByteArray(out, this.m_endRow);
-    Bytes.writeByteArray(out, Bytes.toBytes(this.m_regionLocation));
+    Bytes.writeByteArray(out, tableName);
+    Bytes.writeByteArray(out, startRow);
+    Bytes.writeByteArray(out, endRow);
+    Bytes.writeByteArray(out, Bytes.toBytes(regionLocation));
   }
 
+  /**
+   * Returns the details about this instance as a string.
+   * 
+   * @return The values of this instance as a string.
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
-    return m_regionLocation + ":" +
-      Bytes.toStringBinary(m_startRow) + "," + Bytes.toStringBinary(m_endRow);
+    return regionLocation + ":" +
+      Bytes.toStringBinary(startRow) + "," + Bytes.toStringBinary(endRow);
   }
 
-  public int compareTo(TableSplit o) {
-    return Bytes.compareTo(getStartRow(), o.getStartRow());
+  /**
+   * Compares this split against the given one.
+   * 
+   * @param split  The split to compare to.
+   * @return The result of the comparison.
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo(TableSplit split) {
+    return Bytes.compareTo(getStartRow(), split.getStartRow());
   }
+  
 }

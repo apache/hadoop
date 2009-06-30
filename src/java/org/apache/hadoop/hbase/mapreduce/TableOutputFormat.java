@@ -23,68 +23,89 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.mapred.FileAlreadyExistsException;
-import org.apache.hadoop.mapred.InvalidJobConfException;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
- * Convert Map/Reduce output and write it to an HBase table
+ * Convert Map/Reduce output and write it to an HBase table.
  */
 public class TableOutputFormat extends
     FileOutputFormat<ImmutableBytesWritable, Put> {
 
-  /** JobConf parameter that specifies the output table */
-  public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
   private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
+  /** Job parameter that specifies the output table. */
+  public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
 
   /**
    * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) 
    * and write to an HBase table
    */
   protected static class TableRecordWriter
-    implements RecordWriter<ImmutableBytesWritable, Put> {
-    private HTable m_table;
+    extends RecordWriter<ImmutableBytesWritable, Put> {
+    
+    /** The table to write to. */
+    private HTable table;
 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing.
      * 
-     * @param table
+     * @param table  The table to write to.
      */
     public TableRecordWriter(HTable table) {
-      m_table = table;
+      this.table = table;
     }
 
-    public void close(Reporter reporter) 
-      throws IOException {
-      m_table.flushCommits();
+    /**
+     * Closes the writer, in this case flush table commits.
+     * 
+     * @param context  The context.
+     * @throws IOException When closing the writer fails.
+     * @see org.apache.hadoop.mapreduce.RecordWriter#close(org.apache.hadoop.mapreduce.TaskAttemptContext)
+     */
+    @Override
+    public void close(TaskAttemptContext context) 
+    throws IOException {
+      table.flushCommits();
     }
 
-    public void write(ImmutableBytesWritable key,
-        Put value) throws IOException {
-      m_table.put(new Put(value));
+    /**
+     * Writes a key/value pair into the table.
+     * 
+     * @param key  The key.
+     * @param value  The value.
+     * @throws IOException When writing fails.
+     * @see org.apache.hadoop.mapreduce.RecordWriter#write(java.lang.Object, java.lang.Object)
+     */
+    @Override
+    public void write(ImmutableBytesWritable key, Put value) 
+    throws IOException {
+      table.put(new Put(value));
     }
   }
   
-  @Override
-  @SuppressWarnings("unchecked")
-  public RecordWriter getRecordWriter(FileSystem ignored,
-      JobConf job, String name, Progressable progress) throws IOException {
-    
+  /**
+   * Creates a new record writer.
+   * 
+   * @param context  The current task context.
+   * @return The newly created writer instance.
+   * @throws IOException When creating the writer fails.
+   * @throws InterruptedException When the jobs is cancelled.
+   * @see org.apache.hadoop.mapreduce.lib.output.FileOutputFormat#getRecordWriter(org.apache.hadoop.mapreduce.TaskAttemptContext)
+   */
+  public RecordWriter<ImmutableBytesWritable, Put> getRecordWriter(
+    TaskAttemptContext context) 
+  throws IOException, InterruptedException {
     // expecting exactly one path
-    
-    String tableName = job.get(OUTPUT_TABLE);
+    String tableName = context.getConfiguration().get(OUTPUT_TABLE);
     HTable table = null;
     try {
-      table = new HTable(new HBaseConfiguration(job), tableName);
+      table = new HTable(new HBaseConfiguration(context.getConfiguration()), 
+        tableName);
     } catch(IOException e) {
       LOG.error(e);
       throw e;
@@ -92,14 +113,5 @@ public class TableOutputFormat extends
     table.setAutoFlush(false);
     return new TableRecordWriter(table);
   }
-
-  @Override
-  public void checkOutputSpecs(FileSystem ignored, JobConf job)
-  throws FileAlreadyExistsException, InvalidJobConfException, IOException {
-    
-    String tableName = job.get(OUTPUT_TABLE);
-    if(tableName == null) {
-      throw new IOException("Must specify table name");
-    }
-  }
+  
 }
