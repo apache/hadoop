@@ -22,6 +22,9 @@ Trunk (unreleased changes)
 
     HDFS-352. Documentation for saveNamespace command. (Ravi Phulari via shv)
 
+    HADOOP-6106. Updated hadoop-core and test jars from hudson trunk 
+    build #12. (Giridharan Kesavan)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than
