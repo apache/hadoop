@@ -154,9 +154,6 @@ Trunk (unreleased changes)
 
     HADOOP-3315. Add a new, binary file foramt, TFile. (Hong Tang via cdouglas)
 
-    HADOOP-6080. Introduce -skipTrash option to rm and rmr.
-    (Jakob Homan via shv)
-
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
@@ -870,6 +867,9 @@ Release 0.20.1 - Unreleased
     configuration. (Vinod Kumar Vavilapalli via yhemanth)
 
   NEW FEATURES
+
+    HADOOP-6080. Introduce -skipTrash option to rm and rmr.
+    (Jakob Homan via shv)
 
   IMPROVEMENTS
 
