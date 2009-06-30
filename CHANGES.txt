@@ -21,6 +21,10 @@ Trunk (unreleased changes)
     MAPREDUCE-567. Add a new example MR that always fails. (Philip Zeyliger
     via tomwhite)
 
+    MAPREDUCE-211. Provides ability to run a health check script on the
+    tasktracker nodes and blacklist nodes if they are unhealthy.
+    (Sreekanth Ramakrishnan via yhemanth)
+
   IMPROVEMENTS
 
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via
