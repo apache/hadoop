@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.19.2 - Unreleased
+Release 0.19.2 - 2009-06-30
 
   BUG FIXES
 

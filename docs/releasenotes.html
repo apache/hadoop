@@ -1,8 +1,108 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-    <title>Hadoop 0.19.1</title></head>
+    <title>Hadoop 0.19.2</title></head>
 <body>
 <font face="sans-serif">
+	
+<h1>Hadoop 0.19.2 Release Notes</h1>
+The bug fixes and improvements are listed below.
+<ul>
+<h2>Changes Since Hadoop 0.19.1</h2>
+<h3>        Bug
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3998'>HADOOP-3998</a>] -         Got an exception from ClientFinalizer when the JT is terminated
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4619'>HADOOP-4619</a>] -         hdfs_write infinite loop when dfs fails and cannot write files &gt; 2 GB
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4638'>HADOOP-4638</a>] -         Exception thrown in/from RecoveryManager.recover() should be caught and handled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4719'>HADOOP-4719</a>] -         The ls shell command documentation is out-dated
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4780'>HADOOP-4780</a>] -         Task Tracker  burns a lot of cpu in calling getLocalCache
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5146'>HADOOP-5146</a>] -         LocalDirAllocator misses files on the local filesystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5154'>HADOOP-5154</a>] -         4-way deadlock in FairShare scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5213'>HADOOP-5213</a>] -         BZip2CompressionOutputStream NullPointerException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5231'>HADOOP-5231</a>] -         Negative number of maps in cluster summary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5233'>HADOOP-5233</a>] -         Reducer not Succeded after 100%
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5241'>HADOOP-5241</a>] -         Reduce tasks get stuck because of over-estimated task size (regression from 0.18)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5247'>HADOOP-5247</a>] -         NPEs in JobTracker and JobClient when mapred.jobtracker.completeuserjobs.maximum is set to zero.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5269'>HADOOP-5269</a>] -         TaskTracker.runningTasks holding FAILED_UNCLEAN and KILLED_UNCLEAN taskStatuses forever in some cases.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5280'>HADOOP-5280</a>] -         When expiring a lost launched task, JT doesn't remove the attempt from the taskidToTIPMap.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5285'>HADOOP-5285</a>] -         JobTracker hangs for long periods of time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5326'>HADOOP-5326</a>] -         bzip2 codec (CBZip2OutputStream) creates corrupted output file for some inputs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5333'>HADOOP-5333</a>] -         The libhdfs append API is not coded correctly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5374'>HADOOP-5374</a>] -         NPE in JobTracker.getTasksToSave() method
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5376'>HADOOP-5376</a>] -         JobInProgress.obtainTaskCleanupTask() throws an ArrayIndexOutOfBoundsException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5384'>HADOOP-5384</a>] -         DataNodeCluster should not create blocks with generationStamp == 1
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5392'>HADOOP-5392</a>] -         JobTracker crashes during recovery if job files are garbled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5421'>HADOOP-5421</a>] -         HADOOP-4638 has broken 0.19 compilation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5440'>HADOOP-5440</a>] -         Successful taskid are not removed from TaskMemoryManager
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5446'>HADOOP-5446</a>] -         TaskTracker metrics are disabled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5449'>HADOOP-5449</a>] -         Verify if JobHistory.HistoryCleaner works as expected
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5454'>HADOOP-5454</a>] -         SortedMapWritable: readFields() will not clear values before deserialization
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5465'>HADOOP-5465</a>] -         Blocks remain under-replicated
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5479'>HADOOP-5479</a>] -         NameNode should not send empty block replication request to DataNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5522'>HADOOP-5522</a>] -         Document job setup/cleaup tasks and task cleanup tasks in mapred tutorial
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5549'>HADOOP-5549</a>] -         ReplicationMonitor should schedule both replication and deletion work in one iteration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5551'>HADOOP-5551</a>] -         Namenode permits directory destruction on overwrite
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5554'>HADOOP-5554</a>] -         DataNodeCluster should create blocks with the same generation stamp as the blocks created in CreateEditsLog
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5557'>HADOOP-5557</a>] -         Two minor problems in TestOverReplicatedBlocks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5579'>HADOOP-5579</a>] -         libhdfs does not set errno correctly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5644'>HADOOP-5644</a>] -         Namnode is stuck in safe mode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5671'>HADOOP-5671</a>] -         DistCp.sameFile(..) should return true if src fs does not support checksum
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5728'>HADOOP-5728</a>] -         FSEditLog.printStatistics may cause IndexOutOfBoundsException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5816'>HADOOP-5816</a>] -         ArrayIndexOutOfBoundsException when using KeyFieldBasedComparator
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5951'>HADOOP-5951</a>] -         StorageInfo needs Apache license header.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6017'>HADOOP-6017</a>] -         NameNode and SecondaryNameNode fail to restart because of abnormal filenames.
+</li>
+</ul>
+    
+<h3>        Improvement
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5332'>HADOOP-5332</a>] -         Make support for file append API configurable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5379'>HADOOP-5379</a>] -         Throw exception instead of writing to System.err when there is a CRC error on CBZip2InputStream
+</li>
+</ul>
+</ul>
+
 
 <h1>Hadoop 0.19.1 Release Notes</h1>
 Hadoop 0.19.1 fixes serveral problems that may lead to data loss

@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.19.1_-_2009-02-23_' && list.id != 'release_0.19.0_-_2008-11-18_') {
+        if (list.id != 'release_0.19.2_-_2009-06-30_' && list.id != 'release_0.19.1_-_2009-02-23_') {
           list.style.display = "none";
         }
       }
@@ -52,31 +52,98 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
-<h2><a href="javascript:toggleList('release_0.19.1_-_2009-02-23_')">Release 0.19.1 - 2009-02-23
+<h2><a href="javascript:toggleList('release_0.19.2_-_2009-06-30_')">Release 0.19.2 - 2009-06-30
 </a></h2>
-<ul id="release_0.19.1_-_2009-02-23_">
-  <li><a href="javascript:toggleList('release_0.19.1_-_2009-02-23_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(2)
-    <ol id="release_0.19.1_-_2009-02-23_._incompatible_changes_">
+<ul id="release_0.19.2_-_2009-06-30_">
+  <li><a href="javascript:toggleList('release_0.19.2_-_2009-06-30_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(36)
+    <ol id="release_0.19.2_-_2009-06-30_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5379">HADOOP-5379</a>. CBZip2InputStream to throw IOException on data crc error.<br />(Rodrigo Schmidt via zshao)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5326">HADOOP-5326</a>. Fixes CBZip2OutputStream data corruption problem.<br />(Rodrigo Schmidt via zshao)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5154">HADOOP-5154</a>. Fixes a deadlock in the fairshare scheduler.<br />(Matei Zaharia via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5269">HADOOP-5269</a>. Fixes a problem to do with tasktracker holding on to FAILED_UNCLEAN
+or KILLED_UNCLEAN tasks forever.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5280">HADOOP-5280</a>. Adds a check to prevent a task state transition from FAILED to
+any of UNASSIGNED, RUNNING, COMMIT_PENDING or SUCCEEDED.<br />(ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5241">HADOOP-5241</a>. Fixes a bug in disk-space resource estimation. Makes the estimation
+formula linear where blowUp = Total-Output/Total-Input.<br />(Sharad Agarwal via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5233">HADOOP-5233</a>. Addresses the three issues - Race condition in updating
+status, NPE in TaskTracker task localization when the conf file is missing
+(<a href="http://issues.apache.org/jira/browse/HADOOP-5234">HADOOP-5234</a>) and NPE in handling KillTaskAction of a cleanup task (<a href="http://issues.apache.org/jira/browse/HADOOP-5235">HADOOP-5235</a>).<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5247">HADOOP-5247</a>. Introduces a broadcast of KillJobAction to all trackers when
+a job finishes. This fixes a bunch of problems to do with NPE when a completed
+job is not in memory and a tasktracker comes to the jobtracker with a status
+report of a task belonging to that job.<br />(Amar Kamat via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5146">HADOOP-5146</a>. Fixes a race condition that causes LocalDirAllocator to miss
+files.<br />(Devaraj Das via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4638">HADOOP-4638</a>. Fixes job recovery to not crash the job tracker for problems
+with a single job file.<br />(Amar Kamat via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5384">HADOOP-5384</a>. Fix a problem that DataNodeCluster creates blocks with
+generationStamp == 1.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5376">HADOOP-5376</a>. Fixes the code handling lost tasktrackers to set the task state
+to KILLED_UNCLEAN only for relevant type of tasks.<br />(Amareshwari Sriramadasu via yhemanth)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5285">HADOOP-5285</a>. Fixes the issues - (1) obtainTaskCleanupTask checks whether job is
+inited before trying to lock the JobInProgress (2) Moves the CleanupQueue class
+outside the TaskTracker and makes it a generic class that is used by the
+JobTracker also for deleting the paths on the job's output fs. (3) Moves the
+references to completedJobStore outside the block where the JobTracker is locked.<br />(ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5392">HADOOP-5392</a>. Fixes a problem to do with JT crashing during recovery when
+the job files are garbled.<br />(Amar Kamat vi ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5421">HADOOP-5421</a>. Removes the test TestRecoveryManager.java from the 0.19 branch
+as it has compilation issues.<br />(ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5332">HADOOP-5332</a>. Appending to files is not allowed (by default) unless
+dfs.support.append is set to true.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5333">HADOOP-5333</a>. libhdfs supports appending to files.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3998">HADOOP-3998</a>. Fix dfsclient exception when JVM is shutdown.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5440">HADOOP-5440</a>. Fixes a problem to do with removing a taskId from the list
+of taskIds that the TaskTracker's TaskMemoryManager manages.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5446">HADOOP-5446</a>. Restore TaskTracker metrics.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5449">HADOOP-5449</a>. Fixes the history cleaner thread.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5479">HADOOP-5479</a>. NameNode should not send empty block replication request to
+DataNode.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5522">HADOOP-5522</a>. Documents the setup/cleanup tasks in the mapred tutorial.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5549">HADOOP-5549</a>. ReplicationMonitor should schedule both replication and
+deletion work in one iteration.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5554">HADOOP-5554</a>. DataNodeCluster and CreateEditsLog should create blocks with
+the same generation stamp value.<br />(hairong via szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5231">HADOOP-5231</a>. Clones the TaskStatus before passing it to the JobInProgress.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4719">HADOOP-4719</a>. Fix documentation of 'ls' format for FsShell.<br />(Ravi Phulari
+via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5374">HADOOP-5374</a>. Fixes a NPE problem in getTasksToSave method.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-4780">HADOOP-4780</a>. Cache the size of directories in DistributedCache, avoiding
+long delays in recalculating it.<br />(He Yongqiang via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5551">HADOOP-5551</a>. Prevent directory destruction on file create.<br />(Brian Bockelman via shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5671">HADOOP-5671</a>. Fix FNF exceptions when copying from old versions of
+HftpFileSystem. (Tsz Wo (Nicholas), SZE via cdouglas)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5213">HADOOP-5213</a>. Fix Null pointer exception caused when bzip2compression
+was used and user closed a output stream without writing any data.<br />(Zheng Shao via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5579">HADOOP-5579</a>. Set errno correctly in libhdfs for permission, quota, and FNF
+conditions.<br />(Brian Bockelman via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5728">HADOOP-5728</a>. Fixed FSEditLog.printStatistics IndexOutOfBoundsException.<br />(Wang Xu via johan)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5816">HADOOP-5816</a>. Fixes a problem in the KeyFieldBasedComparator to do with
+ArrayIndexOutOfBounds exception.<br />(He Yongqiang via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5951">HADOOP-5951</a>. Add Apache license header to StorageInfo.java.<br />(Suresh
+Srinivas via szetszwo)</li>
+    </ol>
+  </li>
+</ul>
+<h2><a href="javascript:toggleList('release_0.19.1_-_2009-02-23_')">Release 0.19.1 - 2009-02-23 
+</a></h2>
+    <ul id="release_0.19.1_-_2009-02-23_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-5225">HADOOP-5225</a>. Workaround for tmp file handling in HDFS. sync() is
 incomplete as a result. committed only to 0.19.x.<br />(Raghu Angadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-5224">HADOOP-5224</a>. HDFS append() is disabled. It throws
 UnsupportedOperationException. committed only to 0.19.x<br />(Raghu Angadi)</li>
-    </ol>
-  </li>
-  <li><a href="javascript:toggleList('release_0.19.1_-_2009-02-23_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(4)
-    <ol id="release_0.19.1_-_2009-02-23_._improvements_">
+    </ul>
+    <ul id="release_0.19.1_-_2009-02-23_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4739">HADOOP-4739</a>. Fix spelling and grammar, improve phrasing of some sections in
 mapred tutorial.<br />(Vivek Ratan via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3894">HADOOP-3894</a>. DFSClient logging improvements.<br />(Steve Loughran via shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-5126">HADOOP-5126</a>. Remove empty file BlocksWithLocations.java<br />(shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-5127">HADOOP-5127</a>. Remove public methods in FSDirectory.<br />(Jakob Homan via shv)</li>
-    </ol>
-  </li>
-  <li><a href="javascript:toggleList('release_0.19.1_-_2009-02-23_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(31)
-    <ol id="release_0.19.1_-_2009-02-23_._bug_fixes_">
+    </ul>
+    <ul id="release_0.19.1_-_2009-02-23_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4697">HADOOP-4697</a>. Fix getBlockLocations in KosmosFileSystem to handle multiple
 blocks correctly.<br />(Sriram Rao via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4420">HADOOP-4420</a>. Add null checks for job, caused by invalid job IDs.<br />(Aaron Kimball via tomwhite)</li>
@@ -130,11 +197,11 @@ for the JobTracker. (Amar Kamat via yhemanth).
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-5067">HADOOP-5067</a>. Fixes TaskInProgress.java to keep track of count of failed and
 killed tasks correctly.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-4760">HADOOP-4760</a>. HDFS streams should not throw exceptions when closed twice.<br />(enis)</li>
-    </ol>
-  </li>
-</ul>
-<h2><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_')">Release 0.19.0 - 2008-11-18
-</a></h2>
+    </ul>
+<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
+<ul id="older">
+<h3><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_')">Release 0.19.0 - 2008-11-18
+</a></h3>
 <ul id="release_0.19.0_-_2008-11-18_">
   <li><a href="javascript:toggleList('release_0.19.0_-_2008-11-18_._incompatible_changes_')">  INCOMPATIBLE CHANGES
 </a>&nbsp;&nbsp;&nbsp;(22)
@@ -757,13 +824,11 @@ path rather than the JobClient.<br />(Joydeep Sen Sarma via dhruba)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
-<ul id="older">
 <h3><a href="javascript:toggleList('release_0.18.4_-_unreleased_')">Release 0.18.4 - Unreleased
 </a></h3>
 <ul id="release_0.18.4_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.18.4_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(3)
+</a>&nbsp;&nbsp;&nbsp;(8)
     <ol id="release_0.18.4_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-5114">HADOOP-5114</a>. Remove timeout for accept() in DataNode. This makes accept()
 fail in JDK on Windows and causes many tests to fail.<br />(Raghu Angadi)</li>
@@ -771,6 +836,17 @@ fail in JDK on Windows and causes many tests to fail.<br />(Raghu Angadi)</li>
 being written by other threads.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-5134">HADOOP-5134</a>. FSNamesystem#commitBlockSynchronization adds under-construction
 block locations to blocksMap.<br />(Dhruba Borthakur via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5412">HADOOP-5412</a>. Simulated DataNode should not write to a block that's being
+written by another thread.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5465">HADOOP-5465</a>. Fix the problem of blocks remaining under-replicated by
+providing synchronized modification to the counter xmitsInProgress in
+DataNode.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5557">HADOOP-5557</a>. Fixes some minor problems in TestOverReplicatedBlocks.<br />(szetszwo)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-5644">HADOOP-5644</a>. Namnode is stuck in safe mode.<br />(Suresh Srinivas via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-6017">HADOOP-6017</a>. Lease Manager in NameNode does not handle certain characters
+in filenames. This results in fatal errors in Secondary NameNode and while
+restrating NameNode. (Tsz Wo (Nicholas), SZE via rangadi)
+</li>
     </ol>
   </li>
 </ul>
