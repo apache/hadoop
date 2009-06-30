@@ -140,7 +140,7 @@ public class TestTrash extends TestCase {
 
     // Verify that we can recreate the file
     writeFile(fs, myFile);
-
+    
     // Verify that we succeed in removing the whole directory
     // along with the file inside it.
     {
@@ -255,6 +255,63 @@ public class TestTrash extends TestCase {
       }
       assertTrue(val == -1);
       assertTrue(fs.exists(trashRoot));
+    }
+    
+    // Verify skip trash option really works
+    
+    // recreate directory and file
+    mkdir(fs, myPath);
+    writeFile(fs, myFile);
+    
+    // Verify that skip trash option really skips the trash for files (rm)
+    {
+      String[] args = new String[3];
+      args[0] = "-rm";
+      args[1] = "-skipTrash";
+      args[2] = myFile.toString();
+      int val = -1;
+      try {
+        // Clear out trash
+        assertEquals(0, shell.run(new String [] { "-expunge" } ));
+        
+        val = shell.run(args);
+        
+      }catch (Exception e) {
+        System.err.println("Exception raised from Trash.run " +
+            e.getLocalizedMessage());
+      }
+      assertFalse(fs.exists(trashRoot)); // No new Current should be created
+      assertFalse(fs.exists(myFile));
+      assertTrue(val == 0);
+    }
+    
+    // recreate directory and file
+    mkdir(fs, myPath);
+    writeFile(fs, myFile);
+    
+    // Verify that skip trash option really skips the trash for rmr
+    {
+      String[] args = new String[3];
+      args[0] = "-rmr";
+      args[1] = "-skipTrash";
+      args[2] = myPath.toString();
+
+      int val = -1;
+      try {
+        // Clear out trash
+        assertEquals(0, shell.run(new String [] { "-expunge" } ));
+        
+        val = shell.run(args);
+        
+      }catch (Exception e) {
+        System.err.println("Exception raised from Trash.run " +
+            e.getLocalizedMessage());
+      }
+
+      assertFalse(fs.exists(trashRoot)); // No new Current should be created
+      assertFalse(fs.exists(myPath));
+      assertFalse(fs.exists(myFile));
+      assertTrue(val == 0);
     }
   }
 

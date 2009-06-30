@@ -325,10 +325,13 @@
 		<section>
 			<title> rm </title>
 			<p>
-				<code>Usage: hadoop fs -rm URI [URI &#x2026;] </code>
+				<code>Usage: hadoop fs -rm [-skipTrash] URI [URI &#x2026;] </code>
 			</p>
 			<p>
-	   Delete files specified as args. Only deletes non empty directory and files. Refer to rmr for recursive deletes.<br/>
+	   Delete files specified as args. Only deletes non empty directory and files. If the <code>-skipTrash</code> option
+	   is specified, the trash, if enabled, will be bypassed and the specified file(s) deleted immediately.  	This can be
+		   useful when it is necessary to delete files from an over-quota directory.
+	   Refer to rmr for recursive deletes.<br/>
 	   Example:
 	   </p>
 			<ul>
@@ -344,9 +347,11 @@
 		<section>
 			<title> rmr </title>
 			<p>
-				<code>Usage: hadoop fs -rmr URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -rmr [-skipTrash] URI [URI &#x2026;]</code>
 			</p>
-			<p>Recursive version of delete.<br/>
+			<p>Recursive version of delete. If the <code>-skipTrash</code> option
+		   is specified, the trash, if enabled, will be bypassed and the specified file(s) deleted immediately. This can be
+		   useful when it is necessary to delete files from an over-quota directory.<br/>
 	   Example:
 	   </p>
 			<ul>
