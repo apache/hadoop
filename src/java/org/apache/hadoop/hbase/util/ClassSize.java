@@ -64,6 +64,15 @@ public class ClassSize {
 
   /** Overhead for TreeMap */
   public static int TREEMAP = 0;
+  
+  /** Overhead for ConcurrentHashMap */
+  public static int CONCURRENT_HASHMAP = 0;
+  
+  /** Overhead for ConcurrentHashMap.Entry */
+  public static int CONCURRENT_HASHMAP_ENTRY = 0;
+  
+  /** Overhead for ConcurrentHashMap.Segment */
+  public static int CONCURRENT_HASHMAP_SEGMENT = 0;
 
   private static final String THIRTY_TWO = "32";
 
@@ -86,7 +95,7 @@ public class ClassSize {
     
     ARRAY = 3 * REFERENCE;
 
-    ARRAYLIST = align(OBJECT +  align(REFERENCE) + align(ARRAY) +
+    ARRAYLIST = align(OBJECT + align(REFERENCE) + align(ARRAY) +
         (2 * Bytes.SIZEOF_INT));
     
     BYTE_BUFFER = align(OBJECT + align(REFERENCE) + align(ARRAY) + 
@@ -99,7 +108,16 @@ public class ClassSize {
     
     TREEMAP = align(OBJECT + (2 * Bytes.SIZEOF_INT) + align(7 * REFERENCE));
     
-    STRING = align(OBJECT + align(ARRAY) + 3 * Bytes.SIZEOF_INT);
+    STRING = align(OBJECT + ARRAY + REFERENCE + 3 * Bytes.SIZEOF_INT);
+    
+    CONCURRENT_HASHMAP = align((2 * Bytes.SIZEOF_INT) + ARRAY + 
+        (6 * REFERENCE) + OBJECT);
+    
+    CONCURRENT_HASHMAP_ENTRY = align(REFERENCE + OBJECT + (3 * REFERENCE) +
+        (2 * Bytes.SIZEOF_INT));
+      
+    CONCURRENT_HASHMAP_SEGMENT = align(REFERENCE + OBJECT + 
+        (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_FLOAT + ARRAY);
   }
   
   /**
@@ -186,8 +204,8 @@ public class ClassSize {
       if (LOG.isDebugEnabled()) {
         // Write out region name as string and its encoded name.
         LOG.debug("Primitives " + coeff[0] + ", arrays " + coeff[1] +
-            ", references(inlcuding " + nrOfRefsPerObj + 
-            ", for object overhead) " + coeff[2] + ", refSize " + REFERENCE + 
+            ", references(includes " + nrOfRefsPerObj + 
+            " for object overhead) " + coeff[2] + ", refSize " + REFERENCE + 
             ", size " + size);
       }
     }

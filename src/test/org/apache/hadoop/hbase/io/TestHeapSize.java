@@ -136,7 +136,7 @@ public class TestHeapSize extends TestCase {
     
     // LruBlockCache Map Fixed Overhead
     cl = ConcurrentHashMap.class;
-    actual = LruBlockCache.MAP_FIXED_OVERHEAD;
+    actual = ClassSize.CONCURRENT_HASHMAP;
     expected = ClassSize.estimateBase(cl, false);
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);

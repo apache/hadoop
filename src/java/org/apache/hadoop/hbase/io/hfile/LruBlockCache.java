@@ -212,8 +212,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
     this.stats = new CacheStats();
     this.count = new AtomicLong(0);
     this.elements = new AtomicLong(0);
-    this.overhead = getOverhead(maxSize, blockSize, mapConcurrencyLevel);
-    this.size = new AtomicLong(0);
+    this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
+    this.size = new AtomicLong(this.overhead);
     if(evictionThread) {
       this.evictionThread = new EvictionThread(this);
       this.evictionThread.start();
@@ -630,33 +630,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
       (5 * Bytes.SIZEOF_FLOAT) + Bytes.SIZEOF_BOOLEAN
       + ClassSize.OBJECT);
   
-  public final static long CACHE_FUDGE_FACTOR = 1024 * 10; // 10k 
-  
-  public final static long MAP_FIXED_OVERHEAD = ClassSize.align(
-      (2 * Bytes.SIZEOF_INT) + ClassSize.ARRAY + (6 * ClassSize.REFERENCE) +
-      ClassSize.OBJECT);
-  
-  public final static long MAP_SEGMENT_OVERHEAD = ClassSize.align(
-      ClassSize.REFERENCE + ClassSize.OBJECT + (3 * Bytes.SIZEOF_INT) +
-      Bytes.SIZEOF_FLOAT + ClassSize.ARRAY);
-  
-  public final static long MAP_ENTRY_OVERHEAD = ClassSize.align(
-      ClassSize.REFERENCE + ClassSize.OBJECT + (3 * ClassSize.REFERENCE) +
-      (2 * Bytes.SIZEOF_INT));
-  
   // HeapSize implementation
   public long heapSize() {
-    return getCurrentSize() + overhead;
-  }
-  
-  public long cacheSize() {
     return getCurrentSize();
   }
   
-  public static long getOverhead(long maxSize, long blockSize, int concurrency){
-    return CACHE_FIXED_OVERHEAD + CACHE_FUDGE_FACTOR +
-    ((int)Math.ceil(maxSize*1.2/blockSize) * MAP_ENTRY_OVERHEAD) +
-    (concurrency * MAP_SEGMENT_OVERHEAD);
+  public static long calculateOverhead(long maxSize, long blockSize, int concurrency){
+    return CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP +
+        ((int)Math.ceil(maxSize*1.2/blockSize) 
+            * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
+        (concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }
   
   // Simple calculators of sizes given factors and maxSize
