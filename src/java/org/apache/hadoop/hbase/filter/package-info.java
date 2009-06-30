@@ -23,7 +23,7 @@
 <p>Since HBase 0.20.0, {@link org.apache.hadoop.hbase.filter.Filter} is the new Interface used filtering.
 It replaces the deprecated {@link org.apache.hadoop.hbase.filter.RowFilterInterface}.
 Filters run the extent of a table unless you wrap your filter in a
-{@link WhileMatchFilter}.
+{@link org.apache.hadoop.hbase.filter.WhileMatchFilter}.
 The latter returns as soon as the filter stops matching.
 </p>
 */

@@ -58,6 +58,20 @@
 
   <property name="build.encoding" value="ISO-8859-1"/>
 
+  <property name="clover.db.dir" location="${build.dir}/test/clover/db"/>
+  <property name="clover.report.dir" location="${build.dir}/test/clover/reports"/>
+
+  <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
+  <available property="clover.present" file="${clover.jar}"/>
+
+  <!-- check if clover reports should be generated -->
+  <condition property="clover.enabled">
+    <and>
+        <isset property="run.clover"/>
+        <isset property="clover.present"/>
+    </and>
+  </condition>
+
   <fileset id="lib.jars" dir="${root}" includes="lib/*.jar"/>
 
   <!-- the normal classpath -->
@@ -78,6 +92,7 @@
     <pathelement location="${hbase.root}/build"/>
     <pathelement location="${hbase.root}/src/test"/>
     <pathelement location="${conf.dir}"/>
+    <pathelement path="${clover.jar}"/>
   </path>
 
 
@@ -102,7 +117,7 @@
   <!-- ====================================================== -->
   <!-- Compile a hbase contrib's files                       -->
   <!-- ====================================================== -->
-  <target name="compile" depends="init" unless="skip.contrib">
+  <target name="compile" depends="clover,init" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <javac
      encoding="${build.encoding}"
@@ -159,6 +174,49 @@
     />
   </target>
 
+  <!-- ====================================================== -->
+  <!-- Clover stuff                                           -->
+  <!-- ====================================================== -->
+  <target name="clover" depends="clover.setup, clover.info"
+    description="Instrument the Unit tests using Clover.  To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
+
+  <target name="clover.setup" if="clover.enabled">
+    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+    <mkdir dir="${clover.db.dir}"/>
+    <clover-setup initString="${clover.db.dir}/hbase_coverage.db">
+      <fileset dir="src" includes="java/**/*"/>
+    </clover-setup>
+  </target>
+
+  <target name="clover.info" unless="clover.present">
+    <echo>
+      Clover not found. Code coverage reports disabled.
+    </echo>
+  </target>
+
+  <target name="clover.check">
+    <fail unless="clover.present">
+      ##################################################################
+      Clover not found.
+      Please specify -Dclover.home=&lt;base of clover installation&gt;
+      on the command line.
+      ##################################################################
+    </fail>
+  </target>
+
+  <target name="generate-clover-reports" depends="clover.check, clover">
+    <mkdir dir="${clover.report.dir}"/>
+    <clover-report>
+      <current outfile="${clover.report.dir}" title="${final.name}">
+        <format type="html"/>
+      </current>
+    </clover-report>
+    <clover-report>
+      <current outfile="${clover.report.dir}/clover.xml" title="${final.name}">
+        <format type="xml"/>
+      </current>
+    </clover-report>
+  </target>
   
   <!-- ====================================================== -->
   <!-- Make a hbase contrib's examples jar                   -->
