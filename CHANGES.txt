@@ -40,6 +40,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-646. Increase srcfilelist replication number in dictcp job.
     (Ravi Gummadi via szetszwo)
+   
+    HADOOP-6106. Updated hadoop-core and test jars from hudson trunk 
+    build #12. (Giridharan Kesavan)
 
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
