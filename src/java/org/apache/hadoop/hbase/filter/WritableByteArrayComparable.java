@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.io.Writable;
 
 /** Interface for both Comparable<byte []> and Writable. */
-public interface WritableByteArrayComparable extends Writable,
-    Comparable<byte[]> {
+public interface WritableByteArrayComparable extends Writable, Comparable<byte[]> {
   // Not methods, just tie the two interfaces together.
 }

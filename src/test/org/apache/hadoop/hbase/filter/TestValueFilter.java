@@ -31,12 +31,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import junit.framework.TestCase;
 
 /**
- * Tests the stop row filter
+ * Tests the value filter
  */
-public class TestColumnValueFilter extends TestCase {
-
+public class TestValueFilter extends TestCase {
   private static final byte[] ROW = Bytes.toBytes("test");
-  private static final byte[] COLUMN = Bytes.toBytes("test:foo");
+  private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
+  private static final byte [] COLUMN_QUALIFIER = Bytes.toBytes("foo");
   private static final byte[] VAL_1 = Bytes.toBytes("a");
   private static final byte[] VAL_2 = Bytes.toBytes("ab");
   private static final byte[] VAL_3 = Bytes.toBytes("abc");
@@ -48,56 +48,76 @@ public class TestColumnValueFilter extends TestCase {
   private static final String QUICK_SUBSTR = "quick";
   private static final String QUICK_REGEX = ".+quick.+";
 
-  private RowFilterInterface basicFilterNew() {
-    return new ColumnValueFilter(COLUMN,
-        ColumnValueFilter.CompareOp.GREATER_OR_EQUAL, VAL_2);
+  Filter basicFilter;
+  Filter substrFilter;
+  Filter regexFilter;
+
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    basicFilter = basicFilterNew();
+    substrFilter = substrFilterNew();
+    regexFilter = regexFilterNew();
   }
 
-  private RowFilterInterface substrFilterNew() {
-    return new ColumnValueFilter(COLUMN, ColumnValueFilter.CompareOp.EQUAL,
+  private Filter basicFilterNew() {
+    return new ValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+      ValueFilter.CompareOp.GREATER_OR_EQUAL, VAL_2);
+  }
+
+  private Filter substrFilterNew() {
+    return new ValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+      ValueFilter.CompareOp.EQUAL,
       new SubstringComparator(QUICK_SUBSTR));
   }
 
-  private RowFilterInterface regexFilterNew() {
-    return new ColumnValueFilter(COLUMN, ColumnValueFilter.CompareOp.EQUAL,
+  private Filter regexFilterNew() {
+    return new ValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+      ValueFilter.CompareOp.EQUAL,
       new RegexStringComparator(QUICK_REGEX));
   }
 
-  private void basicFilterTests(RowFilterInterface filter)
+  private void basicFilterTests(Filter filter)
       throws Exception {
-    assertTrue("basicFilter1", filter.filterColumn(ROW, 0, ROW.length,
-      COLUMN, 0, COLUMN.length, VAL_1, 0, VAL_1.length));
-    assertFalse("basicFilter2", filter.filterColumn(ROW, 0, ROW.length,
-      COLUMN, 0, COLUMN.length, VAL_2, 0, VAL_2.length));
-    assertFalse("basicFilter3", filter.filterColumn(ROW, 0, ROW.length,
-      COLUMN, 0, COLUMN.length, VAL_3, 0, VAL_3.length));
-    assertFalse("basicFilter4", filter.filterColumn(ROW, 0, ROW.length,
-      COLUMN, 0, COLUMN.length, VAL_4, 0, VAL_4.length));
+    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
+    assertFalse("basicFilter1", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
+    assertTrue("basicFilter2", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_3);
+    assertTrue("basicFilter3", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_4);
+    assertTrue("basicFilter4", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("basicFilterAllRemaining", filter.filterAllRemaining());
-    assertFalse("basicFilterNotNull", filter.filterRow((List<KeyValue>)null));
+    assertTrue("basicFilterNotNull", filter.filterRow());
   }
 
-  private void substrFilterTests(RowFilterInterface filter) 
+  private void substrFilterTests(Filter filter) 
       throws Exception {
-    assertFalse("substrTrue", filter.filterColumn(ROW, 0, ROW.length,
-        COLUMN, 0, COLUMN.length, FULLSTRING_1, 0, FULLSTRING_1.length));
-    assertTrue("substrFalse", filter.filterColumn(ROW, 0, ROW.length,
-        COLUMN, 0, COLUMN.length, FULLSTRING_2, 0, FULLSTRING_2.length));
+    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      FULLSTRING_1);
+    assertTrue("substrTrue",
+      filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      FULLSTRING_2);
+    assertFalse("substrFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("substrFilterAllRemaining", filter.filterAllRemaining());
-    assertFalse("substrFilterNotNull", filter.filterRow((List<KeyValue>)null));
+    assertTrue("substrFilterNotNull", filter.filterRow());
   }
 
-  private void regexFilterTests(RowFilterInterface filter) 
+  private void regexFilterTests(Filter filter) 
       throws Exception {
-    assertFalse("regexTrue", filter.filterColumn(ROW, 0, ROW.length,
-        COLUMN, 0, COLUMN.length, FULLSTRING_1, 0, FULLSTRING_1.length));
-    assertTrue("regexFalse", filter.filterColumn(ROW, 0, ROW.length,
-        COLUMN, 0, COLUMN.length, FULLSTRING_2, 0, FULLSTRING_2.length));
+    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      FULLSTRING_1);
+    assertTrue("regexTrue",
+      filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      FULLSTRING_2);
+    assertFalse("regexFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
-    assertFalse("regexFilterNotNull", filter.filterRow((List<KeyValue>)null));
-  }
-
-  private RowFilterInterface serializationTest(RowFilterInterface filter)
+    assertTrue("regexFilterNotNull", filter.filterRow());
+  }    
+                 
+  private Filter serializationTest(Filter filter)
       throws Exception {
     // Decompose filter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -109,22 +129,10 @@ public class TestColumnValueFilter extends TestCase {
     // Recompose filter.
     DataInputStream in =
       new DataInputStream(new ByteArrayInputStream(buffer));
-    RowFilterInterface newFilter = new ColumnValueFilter();
+    Filter newFilter = new ValueFilter();
     newFilter.readFields(in);
   
     return newFilter;
-  }
-
-  RowFilterInterface basicFilter;
-  RowFilterInterface substrFilter;
-  RowFilterInterface regexFilter;
-
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    basicFilter = basicFilterNew();
-    substrFilter = substrFilterNew();
-    regexFilter = regexFilterNew();
   }
 
   /**
@@ -135,19 +143,18 @@ public class TestColumnValueFilter extends TestCase {
     basicFilterTests(basicFilter);
     substrFilterTests(substrFilter);
     regexFilterTests(regexFilter);
-  }
+  }                               
 
   /**
    * Tests serialization
    * @throws Exception
-   */
+   */                       
   public void testSerialization() throws Exception {
-    RowFilterInterface newFilter = serializationTest(basicFilter);
+    Filter newFilter = serializationTest(basicFilter);
     basicFilterTests(newFilter);
     newFilter = serializationTest(substrFilter);
     substrFilterTests(newFilter);
     newFilter = serializationTest(regexFilter);
     regexFilterTests(newFilter);
-  }
-
+  }                   
 }

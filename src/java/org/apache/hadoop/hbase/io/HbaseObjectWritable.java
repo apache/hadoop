@@ -143,6 +143,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(PageFilter.class, code++);
     addToMap(InclusiveStopFilter.class, code++);
     addToMap(ColumnCountGetFilter.class, code++);
+    addToMap(ValueFilter.class, code++);
   }
   
   private Class<?> declaredClass;

@@ -43,9 +43,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * 
  * Note that column value filtering in this interface has been replaced by
  * {@link ColumnValueFilter}.
- * @deprecated This interface doesn't really work well in new KeyValue world.
- * Needs to be refactored/removed.  Marking it as deprecated till it gets
- * cleaned up.  Its also inefficient as written.
+ * @deprecated This interface doesn't work well in new KeyValue world.
+ * Use filters based on new {@link Filter} instead.
  */
 public class RegExpRowFilter implements RowFilterInterface {
 

@@ -41,7 +41,7 @@ import org.apache.hadoop.io.ObjectWritable;
  * lexicographic compare. If this is not sufficient (eg you want to deserialize
  * a long and then compare it to a fixed long value), then you can pass in your
  * own comparator instead.
- * @deprecated Use filters that are rooted on @{link Filter} instead
+ * @deprecated Use filters that are rooted on @{link Filter} instead.
  */
 public class ColumnValueFilter implements RowFilterInterface {
   /** Comparison operators. */

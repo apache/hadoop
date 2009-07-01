@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.KeyValue;
 
 
 import junit.framework.TestCase;
@@ -67,8 +68,26 @@ public class TestFilterSet extends TestCase {
     filterMPONE.reset();
     assertFalse(filterMPONE.filterAllRemaining());
     byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
+    for (int i = 0; i < MAX_PAGES; i++) {
+      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
+        Bytes.toBytes(i));
+      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+    }
+    rowkey = Bytes.toBytes("z");
+    for (int i = 0; i < MAX_PAGES - 1; i++) {
+      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
+        Bytes.toBytes(i));
+      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+    }
     assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
-    
+    // Should fail here
+    KeyValue kv = new KeyValue(rowkey, rowkey, rowkey, rowkey);
+    assertTrue(Filter.ReturnCode.SKIP == filterMPONE.filterKeyValue(kv));
+
+    // Both filters in Set should be satisfied by now
+    assertTrue(filterMPONE.filterRow());
   }
 
   /**
@@ -81,6 +100,36 @@ public class TestFilterSet extends TestCase {
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPALL =
       new FilterSet(FilterSet.Operator.MUST_PASS_ALL, filters);
+    /* Filter must do all below steps:
+     * <ul>
+     * <li>{@link #reset()}</li>
+     * <li>{@link #filterAllRemaining()} -> true indicates scan is over, false, keep going on.</li>
+     * <li>{@link #filterRowKey(byte[],int,int)} -> true to drop this row,
+     * if false, we will also call</li>
+     * <li>{@link #filterKeyValue(org.apache.hadoop.hbase.KeyValue)} -> true to drop this key/value</li>
+     * <li>{@link #filterRow()} -> last chance to drop entire row based on the sequence of
+     * filterValue() calls. Eg: filter a row if it doesn't contain a specified column.
+     * </li>
+     * </ul>
+    */
+    filterMPALL.reset();
+    assertFalse(filterMPALL.filterAllRemaining());
+    byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
+    for (int i = 0; i < MAX_PAGES - 1; i++) {
+      assertFalse(filterMPALL.filterRowKey(rowkey, 0, rowkey.length));
+      KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
+        Bytes.toBytes(i));
+      assertTrue(Filter.ReturnCode.INCLUDE == filterMPALL.filterKeyValue(kv));
+    }
+    filterMPALL.reset();
+    rowkey = Bytes.toBytes("z");
+    assertTrue(filterMPALL.filterRowKey(rowkey, 0, rowkey.length));
+    // Should fail here; row should be filtered out.
+    KeyValue kv = new KeyValue(rowkey, rowkey, rowkey, rowkey);
+    assertTrue(Filter.ReturnCode.NEXT_ROW == filterMPALL.filterKeyValue(kv));
+
+    // Both filters in Set should be satisfied by now
+    assertTrue(filterMPALL.filterRow());
   }
 
   /**

@@ -33,19 +33,19 @@ import junit.framework.TestCase;
 /**
  * Tests the inclusive stop row filter
  */
-public class DisabledTestInclusiveStopRowFilter extends TestCase {
+public class TestInclusiveStopFilter extends TestCase {
   private final byte [] STOP_ROW = Bytes.toBytes("stop_row");
   private final byte [] GOOD_ROW = Bytes.toBytes("good_row");
   private final byte [] PAST_STOP_ROW = Bytes.toBytes("zzzzzz");
-  
-  RowFilterInterface mainFilter;
+
+  Filter mainFilter;
 
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    mainFilter = new InclusiveStopRowFilter(STOP_ROW);
+    mainFilter = new InclusiveStopFilter(STOP_ROW);
   }
-  
+
   /**
    * Tests identification of the stop row
    * @throws Exception
@@ -53,7 +53,7 @@ public class DisabledTestInclusiveStopRowFilter extends TestCase {
   public void testStopRowIdentification() throws Exception {
     stopRowTests(mainFilter);
   }
-  
+
   /**
    * Tests serialization
    * @throws Exception
@@ -65,30 +65,27 @@ public class DisabledTestInclusiveStopRowFilter extends TestCase {
     mainFilter.write(out);
     out.close();
     byte[] buffer = stream.toByteArray();
-    
+
     // Recompose mainFilter.
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    RowFilterInterface newFilter = new InclusiveStopRowFilter();
+    Filter newFilter = new InclusiveStopFilter();
     newFilter.readFields(in);
-    
+
     // Ensure the serialization preserved the filter by running a full test.
     stopRowTests(newFilter);
   }
-  
-  private void stopRowTests(RowFilterInterface filter) throws Exception {
-    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW), filter.filterRowKey(GOOD_ROW));
-    assertFalse("Filtering on " + Bytes.toString(STOP_ROW), filter.filterRowKey(STOP_ROW));
-    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW), filter.filterRowKey(PAST_STOP_ROW));
-    
-    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW), filter.filterColumn(GOOD_ROW, null, 
-      null));
-    assertFalse("Filtering on " + Bytes.toString(STOP_ROW), filter.filterColumn(STOP_ROW, null, null));
-    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW), filter.filterColumn(PAST_STOP_ROW, 
-      null, null));
+
+  private void stopRowTests(Filter filter) throws Exception {
+    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW),
+      filter.filterRowKey(GOOD_ROW, 0, GOOD_ROW.length));
+    assertFalse("Filtering on " + Bytes.toString(STOP_ROW),
+      filter.filterRowKey(STOP_ROW, 0, STOP_ROW.length));
+    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW),
+      filter.filterRowKey(PAST_STOP_ROW, 0, PAST_STOP_ROW.length));
 
     assertFalse("FilterAllRemaining", filter.filterAllRemaining());
-    assertFalse("FilterNotNull", filter.filterRow((List<KeyValue>)null));
-    
-    assertFalse("Filter a null", filter.filterRowKey(null));
+    assertFalse("FilterNotNull", filter.filterRow());
+
+    assertFalse("Filter a null", filter.filterRowKey(null, 0, 0));
   }
 }

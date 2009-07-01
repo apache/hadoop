@@ -35,7 +35,9 @@ import org.apache.hadoop.io.ObjectWritable;
  * This filter is used to filter based on the value of a given column. It takes
  * an operator (equal, greater, not equal, etc) and either a byte [] value or a
  * byte [] comparator. If we have a byte [] value then we just do a
- * lexicographic compare. If this is not sufficient (eg you want to deserialize
+ * lexicographic compare. For example, if passed value is 'b' and cell has 'a'
+ * and the compare operator is LESS, then we will filter out this cell (return
+ * true).  If this is not sufficient (eg you want to deserialize
  * a long and then compare it to a fixed long value), then you can pass in your
  * own comparator instead.
  * */
@@ -58,11 +60,15 @@ public class ValueFilter implements Filter {
     GREATER;
   }
 
-  private byte[] columnName;
+  private byte [] columnFamily;
+  private byte [] columnQualifier; 
   private CompareOp compareOp;
-  private byte[] value;
+  private byte [] value;
   private WritableByteArrayComparable comparator;
   private boolean filterIfColumnMissing;
+
+  private boolean filterThisRow = false;
+  private boolean foundColValue = false;
 
   ValueFilter() {
     // for Writable
@@ -71,27 +77,31 @@ public class ValueFilter implements Filter {
   /**
    * Constructor.
    * 
-   * @param columnName name of column
+   * @param family name of column family
+   * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param value value to compare column values against
    */
-  public ValueFilter(final byte[] columnName, final CompareOp compareOp,
-      final byte[] value) {
-    this(columnName, compareOp, value, true);
+  public ValueFilter(final byte [] family, final byte [] qualifier,
+      final CompareOp compareOp, final byte[] value) {
+    this(family, qualifier, compareOp, value, true);
   }
 
   /**
    * Constructor.
    * 
-   * @param columnName name of column
+   * @param family name of column family
+   * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param value value to compare column values against
    * @param filterIfColumnMissing if true then we will filter rows that don't
    * have the column.
    */
-  public ValueFilter(final byte[] columnName, final CompareOp compareOp,
+  public ValueFilter(final byte [] family, final byte [] qualifier,
+      final CompareOp compareOp,
       final byte[] value, boolean filterIfColumnMissing) {
-    this.columnName = columnName;
+    this.columnFamily = family;
+    this.columnQualifier = qualifier;
     this.compareOp = compareOp;
     this.value = value;
     this.filterIfColumnMissing = filterIfColumnMissing;
@@ -100,28 +110,33 @@ public class ValueFilter implements Filter {
   /**
    * Constructor.
    * 
-   * @param columnName name of column
+   * @param family name of column family
+   * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param comparator Comparator to use.
    */
-  public ValueFilter(final byte[] columnName, final CompareOp compareOp,
+  public ValueFilter(final byte [] family, final byte [] qualifier,
+      final CompareOp compareOp,
       final WritableByteArrayComparable comparator) {
-    this(columnName, compareOp, comparator, true);
+    this(family, qualifier, compareOp, comparator, true);
   }
 
   /**
    * Constructor.
    * 
-   * @param columnName name of column
+   * @param family name of column family
+   * @param qualifier name of column qualifier
    * @param compareOp operator
    * @param comparator Comparator to use.
    * @param filterIfColumnMissing if true then we will filter rows that don't
    * have the column.
    */
-  public ValueFilter(final byte[] columnName, final CompareOp compareOp,
+  public ValueFilter(final byte [] family, final byte [] qualifier,
+      final CompareOp compareOp,
       final WritableByteArrayComparable comparator,
       boolean filterIfColumnMissing) {
-    this.columnName = columnName;
+    this.columnFamily = family;
+    this.columnQualifier = qualifier;
     this.compareOp = compareOp;
     this.comparator = comparator;
     this.filterIfColumnMissing = filterIfColumnMissing;
@@ -131,22 +146,15 @@ public class ValueFilter implements Filter {
     return false;
   }
 
-  private boolean filterThisRow = false;
-  private boolean foundColValue = false;
-
   public ReturnCode filterKeyValue(KeyValue keyValue) {
-    if (Bytes.compareTo(keyValue.getColumn(), this.columnName) != 0) {
+    if (!keyValue.matchingColumn(this.columnFamily, this.columnQualifier)) {
       return ReturnCode.INCLUDE;
     }
-    LOG.info("Found column [" + Bytes.toString(columnName) + "] in row ["
-        + Bytes.toString(keyValue.getRow()) + "]");
-    foundColValue = true;
-
-    boolean filtered = filterColumnValue(keyValue.getBuffer(), keyValue
-        .getValueOffset(), keyValue.getValueLength());
+    this.foundColValue = true;
+    boolean filtered = filterColumnValue(keyValue.getBuffer(),
+      keyValue.getValueOffset(), keyValue.getValueLength());
     if (filtered) {
-      LOG.info("filtered it");
-      filterThisRow = true;
+      this.filterThisRow = true;
       return ReturnCode.NEXT_ROW;
     }
     return ReturnCode.INCLUDE;
@@ -189,7 +197,6 @@ public class ValueFilter implements Filter {
     boolean result = filterThisRow || (filterIfColumnMissing && !foundColValue);
     filterThisRow = false;
     foundColValue = false;
-    LOG.info("Deciding " + (result ? "" : " not ") + "to filter");
     return result;
   }
 
@@ -203,7 +210,8 @@ public class ValueFilter implements Filter {
       value = new byte[valueLen];
       in.readFully(value);
     }
-    columnName = Bytes.readByteArray(in);
+    this.columnFamily = Bytes.readByteArray(in);
+    this.columnQualifier = Bytes.readByteArray(in);
     compareOp = CompareOp.valueOf(in.readUTF());
     comparator = (WritableByteArrayComparable) ObjectWritable.readObject(in,
         new HBaseConfiguration());
@@ -217,7 +225,8 @@ public class ValueFilter implements Filter {
       out.writeInt(value.length);
       out.write(value);
     }
-    Bytes.writeByteArray(out, columnName);
+    Bytes.writeByteArray(out, this.columnFamily);
+    Bytes.writeByteArray(out, this.columnQualifier);
     out.writeUTF(compareOp.name());
     ObjectWritable.writeObject(out, comparator,
         WritableByteArrayComparable.class, new HBaseConfiguration());
