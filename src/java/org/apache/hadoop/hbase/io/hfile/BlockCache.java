@@ -46,5 +46,10 @@ public interface BlockCache {
    * @param blockName Block number to fetch.
    * @return Block or null if block is not in the cache.
    */
-  public ByteBuffer getBlock(String blockName);  
+  public ByteBuffer getBlock(String blockName);
+
+  /**
+   * Shutdown the cache.
+   */
+  public void shutdown();
 }

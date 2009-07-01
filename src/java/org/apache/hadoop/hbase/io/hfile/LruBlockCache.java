@@ -22,12 +22,12 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.PriorityQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -108,7 +108,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   private final EvictionThread evictionThread;
   
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private final ScheduledExecutorService scheduleThreadPool = 
+  private final ScheduledExecutorService scheduleThreadPool =
     Executors.newScheduledThreadPool(1);
   
   /** Current size of cache */
@@ -320,7 +320,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
       
       long bytesToFree = size.get() - minSize();
       
-      LOG.info("Block cache LRU eviction started.  Attempting to free " + 
+      LOG.debug("Block cache LRU eviction started.  Attempting to free " + 
           bytesToFree + " bytes");
       
       if(bytesToFree <= 0) return;
@@ -372,7 +372,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
         remainingBuckets--;
       }
       
-      LOG.info("Block cache LRU eviction completed. " + 
+      LOG.debug("Block cache LRU eviction completed. " + 
           "Freed " + bytesFreed + " bytes");
       
     } finally {
@@ -659,5 +659,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
   private long memorySize() {
     return (long)Math.floor(this.maxSize * this.memoryFactor * this.minFactor);
   }
-  
+
+  public void shutdown() {
+    this.scheduleThreadPool.shutdown();
+  }
 }

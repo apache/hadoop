@@ -602,6 +602,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
         e.printStackTrace();
       }
     }
+    // Send cache a shutdown.
+    LruBlockCache c = (LruBlockCache)StoreFile.getBlockCache(this.conf);
+    if (c != null) c.shutdown();
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already

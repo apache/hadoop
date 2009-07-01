@@ -63,4 +63,8 @@ public class SimpleBlockCache implements BlockCache {
       boolean inMemory) {
     cache.put(blockName, new Ref(blockName, buf, q));
   }
+
+  public void shutdown() {
+    // noop
+  }
 }
