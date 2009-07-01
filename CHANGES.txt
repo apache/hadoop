@@ -25,6 +25,9 @@ Trunk (unreleased changes)
     tasktracker nodes and blacklist nodes if they are unhealthy.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-637. Add an example, distbbp, which able to compute the n th bit
+    of Pi for some large n.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via

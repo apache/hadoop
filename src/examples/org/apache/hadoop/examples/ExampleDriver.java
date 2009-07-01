@@ -20,6 +20,7 @@ package org.apache.hadoop.examples;
 
 import org.apache.hadoop.examples.dancing.DistributedPentomino;
 import org.apache.hadoop.examples.dancing.Sudoku;
+import org.apache.hadoop.examples.pi.DistBbp;
 import org.apache.hadoop.examples.terasort.TeraGen;
 import org.apache.hadoop.examples.terasort.TeraSort;
 import org.apache.hadoop.examples.terasort.TeraValidate;
@@ -51,6 +52,7 @@ public class ExampleDriver {
       pgd.addClass("pi", PiEstimator.class,
                    "A map/reduce program that estimates Pi using quasi-Monte Carlo method.");
       pgd.addClass("bbp", BaileyBorweinPlouffe.class, BaileyBorweinPlouffe.DESCRIPTION);
+      pgd.addClass("distbbp", DistBbp.class, DistBbp.DESCRIPTION);
       pgd.addClass("pentomino", DistributedPentomino.class,
       "A map/reduce tile laying program to find solutions to pentomino problems.");
       pgd.addClass("secondarysort", SecondarySort.class,
