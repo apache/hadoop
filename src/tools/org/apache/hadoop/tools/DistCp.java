@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,6 +90,7 @@ public class DistCp implements Tool {
     "\n                       t: modification and access times" +
     "\n                       -p alone is equivalent to -prbugpt" +
     "\n-i                     Ignore failures" +
+    "\n-basedir <basedir>     Use <basedir> as the base directory when copying files from <srcurl>" +
     "\n-log <logdir>          Write logs to <logdir>" +
     "\n-m <num_maps>          Maximum number of simultaneous copies" +
     "\n-overwrite             Overwrite destination" +
@@ -618,7 +620,7 @@ public class DistCp implements Tool {
       : EnumSet.noneOf(Options.class);
 
     final Path dst = new Path(destPath);
-    copy(conf, new Arguments(tmp, dst, logPath, flags, null,
+    copy(conf, new Arguments(tmp, null, dst, logPath, flags, null,
         Long.MAX_VALUE, Long.MAX_VALUE, null));
   }
 
@@ -735,6 +737,7 @@ public class DistCp implements Tool {
 
   static private class Arguments {
     final List<Path> srcs;
+    final Path basedir;
     final Path dst;
     final Path log;
     final EnumSet<Options> flags;
@@ -746,6 +749,7 @@ public class DistCp implements Tool {
     /**
      * Arguments for distcp
      * @param srcs List of source paths
+     * @param basedir Base directory for copy
      * @param dst Destination path
      * @param log Log output directory
      * @param flags Command-line flags
@@ -753,10 +757,11 @@ public class DistCp implements Tool {
      * @param filelimit File limit
      * @param sizelimit Size limit
      */
-    Arguments(List<Path> srcs, Path dst, Path log,
+    Arguments(List<Path> srcs, Path basedir, Path dst, Path log,
         EnumSet<Options> flags, String preservedAttributes,
         long filelimit, long sizelimit, String mapredSslConf) {
       this.srcs = srcs;
+      this.basedir = basedir;
       this.dst = dst;
       this.log = log;
       this.flags = flags;
@@ -775,6 +780,7 @@ public class DistCp implements Tool {
       List<Path> srcs = new ArrayList<Path>();
       Path dst = null;
       Path log = null;
+      Path basedir = null;
       EnumSet<Options> flags = EnumSet.noneOf(Options.class);
       String presevedAttributes = null;
       String mapredSslConf = null;
@@ -808,6 +814,11 @@ public class DistCp implements Tool {
             throw new IllegalArgumentException("logdir not specified in -log");
           }
           log = new Path(args[idx]);
+        } else if ("-basedir".equals(args[idx])) {
+          if (++idx ==  args.length) {
+            throw new IllegalArgumentException("basedir not specified in -basedir");
+          }
+          basedir = new Path(args[idx]);
         } else if ("-mapredSslConf".equals(args[idx])) {
           if (++idx ==  args.length) {
             throw new IllegalArgumentException("ssl conf file not specified in -mapredSslConf");
@@ -848,7 +859,7 @@ public class DistCp implements Tool {
             + " must be specified with " + Options.OVERWRITE + " or "
             + Options.UPDATE + ".");
       }
-      return new Arguments(srcs, dst, log, flags, presevedAttributes,
+      return new Arguments(srcs, basedir, dst, log, flags, presevedAttributes,
           filelimit, sizelimit, mapredSslConf);
     }
     
@@ -1087,12 +1098,49 @@ public class DistCp implements Tool {
       (args.srcs.size() == 1 && !dstExists) || update || overwrite;
     int srcCount = 0, cnsyncf = 0, dirsyn = 0;
     long fileCount = 0L, dirCount = 0L, byteCount = 0L, cbsyncs = 0L;
+    
+    Path basedir = null;
+    HashSet<Path> parentDirsToCopy = new HashSet<Path>(); 
+    if (args.basedir != null) {
+      FileSystem basefs = args.basedir.getFileSystem(conf);
+      basedir = args.basedir.makeQualified(basefs);
+      if (!basefs.isDirectory(basedir)) {
+        throw new IOException("Basedir " + basedir + " is not a directory.");
+      }
+    }
+    
     try {
       for(Iterator<Path> srcItr = args.srcs.iterator(); srcItr.hasNext(); ) {
         final Path src = srcItr.next();
         FileSystem srcfs = src.getFileSystem(conf);
         FileStatus srcfilestat = srcfs.getFileStatus(src);
         Path root = special && srcfilestat.isDir()? src: src.getParent();
+    
+        if (basedir != null) {
+          root = basedir;
+          Path parent = src.getParent().makeQualified(srcfs);
+          while (parent != null && !parent.equals(basedir)) {
+            if (!parentDirsToCopy.contains(parent)){
+              parentDirsToCopy.add(parent);
+              String dst = makeRelative(root, parent);
+              FileStatus pst = srcfs.getFileStatus(parent);
+              src_writer.append(new LongWritable(0), new FilePair(pst, dst));
+              dst_writer.append(new Text(dst), new Text(parent.toString()));
+              dir_writer.append(new Text(dst), new FilePair(pst, dst));
+              if (++dirsyn > SYNC_FILE_MAX) {
+                dirsyn = 0;
+                dir_writer.sync();                
+              }
+            }
+            parent = parent.getParent();
+          }
+          
+          if (parent == null) {
+            throw new IOException("Basedir " + basedir + 
+                " is not a prefix of source path " + src);
+          }
+        }
+        
         if (srcfilestat.isDir()) {
           ++srcCount;
           ++dirCount;

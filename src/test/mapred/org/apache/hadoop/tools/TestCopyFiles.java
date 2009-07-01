@@ -522,6 +522,33 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  /** tests basedir option copying files from dfs file system to dfs file system */
+  public void testBasedir() throws Exception {
+    String namenode = null;
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      final FileSystem hdfs = cluster.getFileSystem();
+      namenode = FileSystem.getDefaultUri(conf).toString();
+      if (namenode.startsWith("hdfs://")) {
+        MyFile[] files = createFiles(URI.create(namenode), "/basedir/middle/srcdat");
+        ToolRunner.run(new DistCp(conf), new String[] {
+                                         "-basedir",
+                                         "/basedir",
+                                         namenode+"/basedir/middle/srcdat",
+                                         namenode+"/destdat"});
+        assertTrue("Source and destination directories do not match.",
+                   checkFiles(hdfs, "/destdat/middle/srcdat", files));
+        deldir(hdfs, "/destdat");
+        deldir(hdfs, "/basedir");
+        deldir(hdfs, "/logs");
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+  
   public void testPreserveOption() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;

@@ -51,6 +51,10 @@ Trunk (unreleased changes)
     HADOOP-6106. Updated hadoop-core and test jars from hudson trunk 
     build #12. (Giridharan Kesavan)
 
+    MAPREDUCE-642. A option to distcp that allows preserving the full
+    source path of a file in the specified destination directory.
+    (Rodrigo Schmidt via dhruba)
+
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)
