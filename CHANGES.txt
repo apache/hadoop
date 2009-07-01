@@ -862,6 +862,9 @@ Trunk (unreleased changes)
     HADOOP-6122. The great than operator in test-patch.sh should be "-gt" but
     not ">".  (szetszwo)
 
+    HADOOP-6114. Fix javadoc documentation for FileStatus.getLen.
+    (Dmitry Rzhevskiy via dhruba)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

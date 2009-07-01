@@ -67,8 +67,9 @@ public class FileStatus implements Writable, Comparable {
     this.path = path;
   }
 
-  /* 
-   * @return the length of this file, in blocks
+  /**
+   * Get the length of this file, in bytes.
+   * @return the length of this file, in bytes.
    */
   public long getLen() {
     return length;
