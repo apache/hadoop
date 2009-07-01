@@ -316,7 +316,7 @@ checkJavacWarnings () {
     patchJavacWarnings=`$GREP -o '\[javac\] [0-9]* warning' $PATCH_DIR/patchJavacWarnings.txt | awk '{total += $2} END {print total}'`
     echo "There appear to be $trunkJavacWarnings javac compiler warnings before the patch and $patchJavacWarnings javac compiler warnings after applying the patch."
     if [[ $patchJavacWarnings != "" && $trunkJavacWarnings != "" ]] ; then
-      if [[ $patchJavacWarnings > $trunkJavacWarnings ]] ; then
+      if [[ $patchJavacWarnings -gt $trunkJavacWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
     -1 javac.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
@@ -353,7 +353,7 @@ checkReleaseAuditWarnings () {
     echo ""
     echo "There appear to be $trunkReleaseAuditWarnings release audit warnings before the patch and $patchReleaseAuditWarnings release audit warnings after applying the patch."
     if [[ $patchReleaseAuditWarnings != "" && $trunkReleaseAuditWarnings != "" ]] ; then
-      if [[ $patchReleaseAuditWarnings > $trunkReleaseAuditWarnings ]] ; then
+      if [[ $patchReleaseAuditWarnings -gt $trunkReleaseAuditWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
     -1 release audit.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $trunkReleaseAuditWarnings warnings)."

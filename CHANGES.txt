@@ -859,6 +859,9 @@ Trunk (unreleased changes)
     HADOOP-6096. Fix Eclipse project and classpath files following project
     split. (tomwhite)
 
+    HADOOP-6122. The great than operator in test-patch.sh should be "-gt" but
+    not ">".  (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
