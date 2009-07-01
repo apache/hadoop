@@ -23,6 +23,8 @@ Release 0.20.0 - Unreleased
                can't find the master
    HBASE-1304  New client server implementation of how gets and puts are
                handled (holstad, jgray, rawson, stack)
+   HBASE-1582  Translate ColumnValueFilter and RowFilterSet to the new
+               Filter interface (Clint Morgan and Stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)
@@ -426,8 +428,6 @@ Release 0.20.0 - Unreleased
    HBASE-1385  Revamp TableInputFormat, needs updating to match hadoop 0.20.x
                AND remove bit where we can make < maps than regions
                (Lars George via Stack)
-   HBASE-1582  Translate ColumnValueFilter and RowFilterSet to the new
-               Filter interface (Clint Morgan and Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
