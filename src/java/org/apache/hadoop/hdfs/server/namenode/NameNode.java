@@ -744,6 +744,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     FileStatus[] files = namesystem.getListing(src);
     if (files != null) {
       myMetrics.numGetListingOps.inc();
+      myMetrics.numFilesInGetListingOps.inc(files.length);
     }
     return files;
   }
