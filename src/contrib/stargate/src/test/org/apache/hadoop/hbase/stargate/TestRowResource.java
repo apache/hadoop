@@ -317,7 +317,7 @@ public class TestRowResource extends MiniClusterTestCase {
     Thread.yield();
 
     // make sure the fake row was not actually created
-    response = client.get(path);
+    response = client.get(path, MIMETYPE_XML);
     assertEquals(response.getCode(), 404);
 
     // check that all of the values were created
@@ -349,7 +349,7 @@ public class TestRowResource extends MiniClusterTestCase {
     Thread.yield();
 
     // make sure the fake row was not actually created
-    response = client.get(path);
+    response = client.get(path, MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 404);
 
     // check that all of the values were created
