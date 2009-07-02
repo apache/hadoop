@@ -161,6 +161,9 @@ Release 0.20.1 - Unreleased
 
     MAPREDUCE-179. Update progress in new RecordReaders. (cdouglas)
 
+    MAPREDUCE-124. Fix a bug in failure handling of abort task of 
+    OutputCommiter. (Amareshwari Sriramadasu via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

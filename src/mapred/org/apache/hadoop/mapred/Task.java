@@ -790,7 +790,7 @@ abstract class Task implements Writable, Configurable {
     statusUpdate(umbilical);
     LOG.info("Runnning cleanup for the task");
     // do the cleanup
-    discardOutput(taskContext);
+    committer.abortTask(taskContext);
   }
 
   protected void runJobCleanupTask(TaskUmbilicalProtocol umbilical,

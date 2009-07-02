@@ -96,6 +96,7 @@ public class TestTaskFail extends TestCase {
     // configure the mapred Job
     conf.setMapperClass(MapperClass.class);        
     conf.setReducerClass(IdentityReducer.class);
+    conf.setNumReduceTasks(0);
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
