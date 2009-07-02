@@ -88,10 +88,10 @@ public class TestPageFilter extends TestCase {
         assertTrue("Disagrees with 'filter'", f.filterAllRemaining());
         assertTrue(i >= pageSize);
       }
-      count++;
       if (Filter.ReturnCode.NEXT_ROW == f.filterKeyValue(kv)) {
         break;
       }
+      count++;
     }
     assertEquals(pageSize, count);
   }

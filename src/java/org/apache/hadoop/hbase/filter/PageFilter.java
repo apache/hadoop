@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * Implementation of Filter interface that limits results to a specific page
- * size. It terminates scanning once the number of filter-passed results is >=
+ * size. It terminates scanning once the number of filter-passed rows is >
  * the given page size.
  * 
  * <p>
@@ -64,10 +64,11 @@ public class PageFilter implements Filter {
   }
 
   public boolean filterAllRemaining() {
-    return this.rowsAccepted >= this.pageSize;
+    return this.rowsAccepted > this.pageSize;
   }
 
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
+    this.rowsAccepted++;
     return filterAllRemaining();
   }
 
@@ -80,8 +81,7 @@ public class PageFilter implements Filter {
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {
-    this.rowsAccepted++;
-    return filterAllRemaining()? ReturnCode.NEXT_ROW: ReturnCode.INCLUDE;
+    return filterAllRemaining() ? ReturnCode.NEXT_ROW : ReturnCode.INCLUDE;
   }
 
   public boolean filterRow() {

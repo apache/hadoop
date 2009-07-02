@@ -25,6 +25,7 @@ Release 0.20.0 - Unreleased
                handled (holstad, jgray, rawson, stack)
    HBASE-1582  Translate ColumnValueFilter and RowFilterSet to the new
                Filter interface (Clint Morgan and Stack)
+   HBASE-1599  Fix TestFilterSet, broken up on hudson (Jon Gray via Stack)
 
   BUG FIXES
    HBASE-1140  "ant clean test" fails (Nitay Joffe via Stack)

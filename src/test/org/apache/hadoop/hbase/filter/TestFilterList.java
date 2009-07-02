@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,8 +23,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.KeyValue;
@@ -36,8 +36,8 @@ import junit.framework.TestCase;
  * Tests filter sets
  *
  */
-public class TestFilterSet extends TestCase {
-  static final int MAX_PAGES = 5;
+public class TestFilterList extends TestCase {
+  static final int MAX_PAGES = 2;
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';
   static byte[] GOOD_BYTES = Bytes.toBytes("abc");
@@ -48,11 +48,11 @@ public class TestFilterSet extends TestCase {
    * @throws Exception
    */
   public void testMPONE() throws Exception {
-    Set<Filter> filters = new HashSet<Filter>();
+    List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPONE =
-        new FilterSet(FilterSet.Operator.MUST_PASS_ONE, filters);
+        new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
     /* Filter must do all below steps:
      * <ul>
      * <li>{@link #reset()}</li>
@@ -67,31 +67,40 @@ public class TestFilterSet extends TestCase {
     */
     filterMPONE.reset();
     assertFalse(filterMPONE.filterAllRemaining());
+    
+    /* Will pass both */
     byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
-    for (int i = 0; i < MAX_PAGES; i++) {
+    for (int i = 0; i < MAX_PAGES - 1; i++) {
       assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
         Bytes.toBytes(i));
       assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
     }
 
-    /* Weird -- below passes in IDE but not command-line
+    /* Only pass PageFilter */
     rowkey = Bytes.toBytes("z");
-    for (int i = 0; i < MAX_PAGES - 1; i++) {
-      assertFalse("i=" + i, filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
-      KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
-        Bytes.toBytes(i));
-      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
-    }
     assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
-    // Should fail here
-    KeyValue kv = new KeyValue(rowkey, rowkey, rowkey, rowkey);
+    KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
+        Bytes.toBytes(0));
+    assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+    
+    /* PageFilter will fail now, but should pass because we match yyy */
+    rowkey = Bytes.toBytes("yyy");
+    assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
+        Bytes.toBytes(0));
+    assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+    
+    /* We should filter the row key now if we match neither */
+    rowkey = Bytes.toBytes("x");
+    assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
+        Bytes.toBytes(0));
     assertTrue(Filter.ReturnCode.SKIP == filterMPONE.filterKeyValue(kv));
-
+    
     // Both filters in Set should be satisfied by now
     assertTrue(filterMPONE.filterRow());
 
-    */
   }
 
   /**
@@ -99,11 +108,11 @@ public class TestFilterSet extends TestCase {
    * @throws Exception
    */
   public void testMPALL() throws Exception {
-    Set<Filter> filters = new HashSet<Filter>();
+    List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPALL =
-      new FilterSet(FilterSet.Operator.MUST_PASS_ALL, filters);
+      new FilterList(FilterList.Operator.MUST_PASS_ALL, filters);
     /* Filter must do all below steps:
      * <ul>
      * <li>{@link #reset()}</li>
@@ -137,15 +146,73 @@ public class TestFilterSet extends TestCase {
   }
 
   /**
+   * Test list ordering
+   * @throws Exception
+   */
+  public void testOrdering() throws Exception {
+    List<Filter> filters = new ArrayList<Filter>();
+    filters.add(new PrefixFilter(Bytes.toBytes("yyy")));
+    filters.add(new PageFilter(MAX_PAGES));
+    Filter filterMPONE =
+        new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
+    /* Filter must do all below steps:
+     * <ul>
+     * <li>{@link #reset()}</li>
+     * <li>{@link #filterAllRemaining()} -> true indicates scan is over, false, keep going on.</li>
+     * <li>{@link #filterRowKey(byte[],int,int)} -> true to drop this row,
+     * if false, we will also call</li>
+     * <li>{@link #filterKeyValue(org.apache.hadoop.hbase.KeyValue)} -> true to drop this key/value</li>
+     * <li>{@link #filterRow()} -> last chance to drop entire row based on the sequence of
+     * filterValue() calls. Eg: filter a row if it doesn't contain a specified column.
+     * </li>
+     * </ul>
+    */
+    filterMPONE.reset();
+    assertFalse(filterMPONE.filterAllRemaining());
+    
+    /* We should be able to fill MAX_PAGES without incrementing page counter */
+    byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
+    for (int i = 0; i < MAX_PAGES; i++) {
+      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
+        Bytes.toBytes(i));
+      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+    }
+    
+    /* Now let's fill the page filter */
+    rowkey = Bytes.toBytes("zzzzzzzz");
+    for (int i = 0; i < MAX_PAGES; i++) {
+      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
+        Bytes.toBytes(i));
+      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+    }
+    
+    /* We should still be able to include even though page filter is at max */
+    rowkey = Bytes.toBytes("yyy");
+    for (int i = 0; i < MAX_PAGES; i++) {
+      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
+        Bytes.toBytes(i));
+      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+    }
+    
+    /* We should filter the row key now if we don't match neither */
+    rowkey = Bytes.toBytes("x");
+    assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    
+  }
+
+  /**
    * Test serialization
    * @throws Exception
    */
   public void testSerialization() throws Exception {
-    Set<Filter> filters = new HashSet<Filter>();
+    List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPALL =
-      new FilterSet(FilterSet.Operator.MUST_PASS_ALL, filters);
+      new FilterList(FilterList.Operator.MUST_PASS_ALL, filters);
 
     // Decompose filterMPALL to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -156,7 +223,7 @@ public class TestFilterSet extends TestCase {
 
     // Recompose filterMPALL.
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    FilterSet newFilter = new FilterSet();
+    FilterList newFilter = new FilterList();
     newFilter.readFields(in);
 
     // TODO: Run TESTS!!!

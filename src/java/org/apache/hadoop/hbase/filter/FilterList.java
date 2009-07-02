@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -31,13 +31,13 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 
 /**
- * Implementation of {@link Filter} that represents a Set of Filters
+ * Implementation of {@link Filter} that represents an ordered List of Filters
  * which will be evaluated with a specified boolean operator MUST_PASS_ALL 
- * (!AND) or MUST_PASS_ONE (!OR).  Since you can use Filter Sets as children
- * of Filter Sets, you can create a hierarchy of filters to be evaluated.
+ * (!AND) or MUST_PASS_ONE (!OR).  Since you can use Filter Lists as children
+ * of Filter Lists, you can create a hierarchy of filters to be evaluated.
  * <p>TODO: Fix creation of Configuration on serialization and deserialization. 
  */
-public class FilterSet implements Filter {
+public class FilterList implements Filter {
 
   /** set operator */
   public static enum Operator {
@@ -48,13 +48,13 @@ public class FilterSet implements Filter {
   }
 
   private Operator operator = Operator.MUST_PASS_ALL;
-  private Set<Filter> filters = new HashSet<Filter>();
+  private List<Filter> filters = new ArrayList<Filter>();
 
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
    */
-  public FilterSet() {
+  public FilterList() {
     super();
   }
 
@@ -64,7 +64,7 @@ public class FilterSet implements Filter {
    * 
    * @param rowFilters
    */
-  public FilterSet(final Set<Filter> rowFilters) {
+  public FilterList(final List<Filter> rowFilters) {
     this.filters = rowFilters;
   }
 
@@ -74,7 +74,7 @@ public class FilterSet implements Filter {
    * @param operator Operator to process filter set with.
    * @param rowFilters Set of row filters.
    */
-  public FilterSet(final Operator operator, final Set<Filter> rowFilters) {
+  public FilterList(final Operator operator, final List<Filter> rowFilters) {
     this.filters = rowFilters;
     this.operator = operator;
   }
@@ -93,7 +93,7 @@ public class FilterSet implements Filter {
    * 
    * @return filters
    */
-  public Set<Filter> getFilters() {
+  public List<Filter> getFilters() {
     return filters;
   }
 
@@ -198,7 +198,7 @@ public class FilterSet implements Filter {
     operator = Operator.values()[opByte];
     int size = in.readInt();
     if (size > 0) {
-      filters = new HashSet<Filter>();
+      filters = new ArrayList<Filter>(size);
       for (int i = 0; i < size; i++) {
         Filter filter = (Filter)HbaseObjectWritable.readObject(in, conf);
         filters.add(filter);
