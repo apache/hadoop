@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -34,22 +36,31 @@ import javax.ws.rs.ext.Provider;
 
 import org.apache.hadoop.hbase.stargate.Constants;
 
+/**
+ * An adapter between Jersey and Object.toString(). Hooks up plain text output
+ * to the Jersey content handling framework. 
+ * Jersey will first call getSize() to learn the number of bytes that will be
+ * sent, then writeTo to perform the actual I/O.
+ */
 @Provider
 @Produces(Constants.MIMETYPE_TEXT)
-public class PlainTextMessageBodyProducer implements MessageBodyWriter<Object>{
+public class PlainTextMessageBodyProducer 
+  implements MessageBodyWriter<Object> {
+
+  private Map<Object, byte[]> buffer = new WeakHashMap<Object, byte[]>();
+
+  @Override
+  public boolean isWriteable(Class<?> arg0, Type arg1, Annotation[] arg2,
+      MediaType arg3) {
+    return true;
+  }
 
 	@Override
 	public long getSize(Object object, Class<?> type, Type genericType,
 			Annotation[] annotations, MediaType mediaType) {
-		//TODO This is cheating, this needs to either be cashed or I need 
-		//	   to figure out a better way to calculate this information
-		return object.toString().getBytes().length;
-	}
-
-	@Override
-	public boolean isWriteable(Class<?> arg0, Type arg1, Annotation[] arg2,
-			MediaType arg3) {
-		return true;
+	  byte[] bytes = object.toString().getBytes(); 
+	  buffer.put(object, bytes);
+		return bytes.length;
 	}
 
 	@Override
@@ -57,7 +68,6 @@ public class PlainTextMessageBodyProducer implements MessageBodyWriter<Object>{
 			Annotation[] annotations, MediaType mediaType,
 			MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
 			throws IOException, WebApplicationException {
-		outStream.write(object.toString().getBytes());
-	}
-	
+		outStream.write(buffer.remove(object));
+	}	
 }
