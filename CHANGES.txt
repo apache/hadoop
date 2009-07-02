@@ -83,3 +83,7 @@ Trunk (unreleased changes)
     build artifacts and config files. (cdouglas)
 
     MAPREDUCE-433. Use more reliable counters in TestReduceFetch. (cdouglas)
+
+    MAPREDUCE-124. Fix a bug in failure handling of abort task of 
+    OutputCommiter. (Amareshwari Sriramadasu via sharad)
+
