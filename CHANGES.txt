@@ -97,3 +97,5 @@ Trunk (unreleased changes)
     MAPREDUCE-124. Fix a bug in failure handling of abort task of 
     OutputCommiter. (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-673. Sqoop depends on commons-cli, which is not in its ivy.xml.
+    (Kevin Weil via tomwhite)

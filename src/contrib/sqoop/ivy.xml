@@ -48,6 +48,10 @@
       name="commons-httpclient"
       rev="${commons-httpclient.version}"
       conf="common->default"/>
+    <dependency org="commons-cli"
+      name="commons-cli"
+      rev="${commons-cli.version}"
+      conf="common->default"/>
     <dependency org="junit"
       name="junit"
       rev="${junit.version}"
