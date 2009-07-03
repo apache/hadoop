@@ -110,3 +110,8 @@ Trunk (unreleased changes)
     (Aaron Kimball via tomwhite)
     
     MAPREDUCE-702. Fix eclipse-plugin jar target (Giridharan Kesavan) 
+
+    MAPREDUCE-522. Replace TestQueueCapacities with simpler test case to
+    test integration between capacity scheduler and MR framework.
+    (Sreekanth Ramakrishnan via yhemanth)
+
