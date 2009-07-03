@@ -52,7 +52,7 @@
   </target>
 
  <target name="compile" depends="init, ivy-retrieve-common" unless="skip.contrib">
-    <echo message="contrib: ${name} ${hadoop-core.version}"/>
+    <echo message="contrib: ${name} "/>
     <javac
      encoding="${build.encoding}"
      srcdir="${src.dir}"
@@ -67,7 +67,9 @@
   <!-- Override jar target to specify manifest -->
   <target name="jar" depends="compile" unless="skip.contrib">
     <mkdir dir="${build.dir}/lib"/>
-    <copy file="${hadoop.root}/lib/hadoop-core-${hadoop-core.version}.jar" tofile="${build.dir}/lib/hadoop-core.jar" verbose="true"/>
+    <copy tofile="${build.dir}/lib/hadoop-core.jar">
+      <fileset dir="${hadoop.root}/lib" includes="hadoop-core-*.jar" excludes="hadoop-core-test-*.jar"/>
+    </copy> 
     <copy file="${hadoop.root}/build/ivy/lib/Hadoop/common/commons-cli-${commons-cli.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
     <copy file="${hadoop.root}/build/ivy/lib/Hadoop/common/commons-cli-${commons-cli2.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
     <jar

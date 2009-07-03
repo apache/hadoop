@@ -108,3 +108,5 @@ Trunk (unreleased changes)
 
     MAPREDUCE-690. Sqoop's test "hive" script needs to be executable.
     (Aaron Kimball via tomwhite)
+    
+    MAPREDUCE-702. Fix eclipse-plugin jar target (Giridharan Kesavan) 
