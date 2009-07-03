@@ -76,6 +76,8 @@ public class StoreFile implements HConstants {
   private Path referencePath;
   // Should the block cache be used or not.
   private boolean blockcache;
+  // Is this from an in-memory store
+  private boolean inMemory;
   
   // Keys for metadata stored in backing HFile.
   private static final byte [] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
@@ -113,12 +115,13 @@ public class StoreFile implements HConstants {
    * @throws IOException When opening the reader fails.
    */
   StoreFile(final FileSystem fs, final Path p, final boolean blockcache, 
-      final HBaseConfiguration conf) 
+      final HBaseConfiguration conf, final boolean inMemory) 
   throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.path = p;
     this.blockcache = blockcache;
+    this.inMemory = inMemory;
     if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
@@ -263,7 +266,8 @@ public class StoreFile implements HConstants {
       this.reader = new HalfHFileReader(this.fs, this.referencePath, 
           getBlockCache(), this.reference);
     } else {
-      this.reader = new Reader(this.fs, this.path, getBlockCache());
+      this.reader = new Reader(this.fs, this.path, getBlockCache(),
+          this.inMemory);
     }
     // Load up indices and fileinfo.
     Map<byte [], byte []> map = this.reader.loadFileInfo();

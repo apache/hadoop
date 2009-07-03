@@ -122,10 +122,9 @@ public class TestHFile extends HBaseTestCase {
     fout.close();
     FSDataInputStream fin = fs.open(ncTFile);
     Reader reader = new Reader(fs.open(ncTFile),
-      fs.getFileStatus(ncTFile).getLen(), null);
+      fs.getFileStatus(ncTFile).getLen(), null, false);
     // Load up the index.
     reader.loadFileInfo();
-    LOG.info(reader);
     HFileScanner scanner = reader.getScanner();
     // Align scanner at start of the file.
     scanner.seekTo();
@@ -186,7 +185,7 @@ public class TestHFile extends HBaseTestCase {
     fout.close();
     FSDataInputStream fin = fs.open(mFile);
     Reader reader = new Reader(fs.open(mFile), this.fs.getFileStatus(mFile)
-        .getLen(), null);
+        .getLen(), null, false);
     reader.loadFileInfo();
     // No data -- this should return false.
     assertFalse(reader.getScanner().seekTo());
@@ -210,7 +209,7 @@ public class TestHFile extends HBaseTestCase {
     writer.append("foo".getBytes(), "value".getBytes());
     writer.close();
     fout.close();
-    Reader reader = new Reader(fs, mFile, null);
+    Reader reader = new Reader(fs, mFile, null, false);
     reader.loadFileInfo();
     assertNull(reader.getMetaBlock("non-existant"));
   }

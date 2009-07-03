@@ -372,8 +372,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
         remainingBuckets--;
       }
       
+      float singleMB = ((float)bucketSingle.totalSize())/((float)(1024*1024));
+      float multiMB = ((float)bucketMulti.totalSize())/((float)(1024*1024));
+      float memoryMB = ((float)bucketMemory.totalSize())/((float)(1024*1024));
+      
       LOG.debug("Block cache LRU eviction completed. " + 
-          "Freed " + bytesFreed + " bytes");
+          "Freed " + bytesFreed + " bytes.  " +
+          "Priority Sizes: " +
+          "Single=" + singleMB + "MB (" + bucketSingle.totalSize() + "), " +
+          "Multi=" + multiMB + "MB (" + bucketMulti.totalSize() + ")," +
+          "Memory=" + memoryMB + "MB (" + bucketMemory.totalSize() + ")");
       
     } finally {
       stats.evict();
@@ -422,6 +430,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
     
     public long overflow() {
       return totalSize - bucketSize;
+    }
+    
+    public long totalSize() {
+      return totalSize;
     }
     
     public int compareTo(BlockBucket that) {

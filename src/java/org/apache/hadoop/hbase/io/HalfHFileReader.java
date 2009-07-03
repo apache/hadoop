@@ -63,7 +63,7 @@ public class HalfHFileReader extends HFile.Reader {
   public HalfHFileReader(final FileSystem fs, final Path p, final BlockCache c,
     final Reference r)
   throws IOException {
-    super(fs, p, c);
+    super(fs, p, c, false);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

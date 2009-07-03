@@ -110,6 +110,7 @@ public class Store implements HConstants, HeapSize {
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   final byte [] storeName;
   private final String storeNameStr;
+  private final boolean inMemory;
 
   /*
    * Sorted Map of readers keyed by maximum edit sequence id (Most recent should
@@ -190,7 +191,10 @@ public class Store implements HConstants, HeapSize {
     // MIN_COMMITS_FOR_COMPACTION map files
     this.compactionThreshold =
       conf.getInt("hbase.hstore.compactionThreshold", 3);
-
+    
+    // Check if this is in-memory store
+    this.inMemory = family.isInMemory();
+    
     // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
     long maxFileSize = info.getTableDesc().getMaxFileSize();
     if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
@@ -366,7 +370,7 @@ public class Store implements HConstants, HeapSize {
       }
       StoreFile curfile = null;
       try {
-        curfile = new StoreFile(fs, p, blockcache, this.conf);
+        curfile = new StoreFile(fs, p, blockcache, this.conf, this.inMemory);
       } catch (IOException ioe) {
         LOG.warn("Failed open of " + p + "; presumption is that file was " +
           "corrupted at flush and lost edits picked up by commit log replay. " +
@@ -523,7 +527,7 @@ public class Store implements HConstants, HeapSize {
       }
     }
     StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache, 
-      this.conf);
+      this.conf, this.inMemory);
     Reader r = sf.getReader();
     this.storeSize += r.length();
     if(LOG.isDebugEnabled()) {
@@ -922,7 +926,7 @@ public class Store implements HConstants, HeapSize {
       return;
     }
     StoreFile finalCompactedFile = new StoreFile(this.fs, p, blockcache, 
-      this.conf);
+      this.conf, this.inMemory);
     this.lock.writeLock().lock();
     try {
       try {

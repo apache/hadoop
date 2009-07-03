@@ -90,8 +90,6 @@ ISerializable {
   private static final ImmutableBytesWritable TRUE =
     new ImmutableBytesWritable(Bytes.toBytes(Boolean.TRUE.toString()));
 
-  public static final boolean DEFAULT_IN_MEMORY = false;
-
   public static final boolean DEFAULT_READONLY = false;
 
   public static final int DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64;
@@ -350,25 +348,6 @@ ISerializable {
    */
   public void setValue(String key, String value) {
     setValue(Bytes.toBytes(key), Bytes.toBytes(value));
-  }
-
-  /**
-   * @return true if all columns in the table should be kept in the 
-   * HRegionServer cache only
-   */
-  public boolean isInMemory() {
-    String value = getValue(HConstants.IN_MEMORY);
-    if (value != null)
-      return Boolean.valueOf(value).booleanValue();
-    return DEFAULT_IN_MEMORY;
-  }
-
-  /**
-   * @param inMemory True if all of the columns in the table should be kept in
-   * the HRegionServer cache only.
-   */
-  public void setInMemory(boolean inMemory) {
-    setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
   }
 
   /**

@@ -226,7 +226,7 @@ public class HFilePerformanceEvaluation {
     
     @Override
     void setUp() throws Exception {
-      reader = new HFile.Reader(this.fs, this.mf, null);
+      reader = new HFile.Reader(this.fs, this.mf, null, false);
       this.reader.loadFileInfo();
     }
     

@@ -236,9 +236,8 @@ public class TestHFilePerformance extends TestCase {
 
     if ("HFile".equals(fileType)){
         HFile.Reader reader = new HFile.Reader(fs.open(path),
-          fs.getFileStatus(path).getLen(), null);
+          fs.getFileStatus(path).getLen(), null, false);
         reader.loadFileInfo();
-        System.out.println(reader);
         switch (method) {
         
           case 0:

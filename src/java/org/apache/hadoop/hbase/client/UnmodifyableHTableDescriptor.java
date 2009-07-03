@@ -74,15 +74,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   public HColumnDescriptor removeFamily(final byte [] column) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
-
-  /**
-   * @see org.apache.hadoop.hbase.HTableDescriptor#setInMemory(boolean)
-   */
-  @Override
-  public void setInMemory(boolean inMemory) {
-    throw new UnsupportedOperationException("HTableDescriptor is read-only");
-  }
-
+  
   /**
    * @see org.apache.hadoop.hbase.HTableDescriptor#setReadOnly(boolean)
    */

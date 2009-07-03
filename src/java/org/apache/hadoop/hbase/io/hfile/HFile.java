@@ -657,6 +657,9 @@ public class HFile {
     private final BlockCache cache;
     public int cacheHits = 0;
     public int blockLoads = 0;
+    
+    // Whether file is from in-memory store
+    private boolean inMemory = false;
 
     // Name for this object used when logging or in toString.  Is either
     // the result of a toString on the stream or else is toString of passed
@@ -668,7 +671,7 @@ public class HFile {
      */
     @SuppressWarnings("unused")
     private Reader() throws IOException {
-      this(null, null, null);
+      this(null, null, null, false);
     }
 
     /** 
@@ -680,9 +683,9 @@ public class HFile {
      * @param cache block cache. Pass null if none.
      * @throws IOException
      */
-    public Reader(FileSystem fs, Path path, BlockCache cache)
+    public Reader(FileSystem fs, Path path, BlockCache cache, boolean inMemory)
     throws IOException {
-      this(fs.open(path), fs.getFileStatus(path).getLen(), cache);
+      this(fs.open(path), fs.getFileStatus(path).getLen(), cache, inMemory);
       this.closeIStream = true;
       this.name = path.toString();
     }
@@ -698,12 +701,13 @@ public class HFile {
      * @throws IOException
      */
     public Reader(final FSDataInputStream fsdis, final long size,
-        final BlockCache cache) {
+        final BlockCache cache, final boolean inMemory) {
       this.cache = cache;
       this.fileSize = size;
       this.istream = fsdis;
       this.closeIStream = false;
       this.name = this.istream.toString();
+      this.inMemory = inMemory;
     }
 
     @Override
@@ -711,6 +715,7 @@ public class HFile {
       return "reader=" + this.name +
           (!isFileInfoLoaded()? "":
             ", compression=" + this.compressAlgo.getName() +
+            ", inMemory=" + this.inMemory +
             ", firstKey=" + toStringFirstKey() +
             ", lastKey=" + toStringLastKey()) +
             ", avgKeyLen=" + this.avgKeyLen +
@@ -730,7 +735,11 @@ public class HFile {
     public long length() {
       return this.fileSize;
     }
-
+    
+    public boolean inMemory() {
+      return this.inMemory;
+    }
+       
     /**
      * Read in the index and file info.
      * @return A map of fileinfo data.
@@ -933,7 +942,7 @@ public class HFile {
      */
     void cacheBlock(String blockName, ByteBuffer buf) {
       if (cache != null) {
-        cache.cacheBlock(blockName, buf.duplicate());
+        cache.cacheBlock(blockName, buf.duplicate(), inMemory);
       }
     }
 
@@ -1259,7 +1268,7 @@ public class HFile {
    */
   public static class CompactionReader extends Reader {
     public CompactionReader(Reader reader) {
-      super(reader.istream, reader.fileSize, reader.cache);
+      super(reader.istream, reader.fileSize, reader.cache, reader.inMemory);
       super.blockIndex = reader.blockIndex;
       super.trailer = reader.trailer;
       super.lastkey = reader.lastkey;
@@ -1625,7 +1634,7 @@ public class HFile {
       return;
     }
 
-    HFile.Reader reader = new HFile.Reader(fs, path, null);
+    HFile.Reader reader = new HFile.Reader(fs, path, null, false);
     Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
 
     // scan thru and count the # of unique rows.

@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.stargate.protobuf.generated.TableSchemaMessage.Ta
 @XmlType(propOrder = {"name","columns"})
 public class TableSchemaModel implements Serializable, IProtobufWrapper {
   private static final long serialVersionUID = 1L;
-  private static final QName IN_MEMORY = new QName(HConstants.IN_MEMORY);
   private static final QName IS_META = new QName(HTableDescriptor.IS_META);
   private static final QName IS_ROOT = new QName(HTableDescriptor.IS_ROOT);
   private static final QName READONLY = new QName(HTableDescriptor.READONLY);
@@ -177,15 +176,6 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
   // confuse JAXB
 
   /**
-   * @return true if IN_MEMORY attribute exists and is true
-   */
-  public boolean __getInMemory() {
-    Object o = attrs.get(IN_MEMORY);
-    return o != null ? 
-      Boolean.valueOf(o.toString()) : HTableDescriptor.DEFAULT_IN_MEMORY;
-  }
-
-  /**
    * @return true if IS_META attribute exists and is truel
    */
   public boolean __getIsMeta() {
@@ -208,13 +198,6 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
     Object o = attrs.get(READONLY);
     return o != null ? 
       Boolean.valueOf(o.toString()) : HTableDescriptor.DEFAULT_READONLY;
-  }
-
-  /**
-   * @param value desired value of IN_MEMORY attribute
-   */
-  public void __setInMemory(boolean value) {
-    attrs.put(IN_MEMORY, Boolean.toString(value));
   }
 
   /**
@@ -273,10 +256,6 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
       }
       builder.addColumns(familyBuilder);
     }
-    if (attrs.containsKey(IN_MEMORY)) {
-      builder.setInMemory(
-        Boolean.valueOf(attrs.get(IN_MEMORY).toString()));
-    }
     if (attrs.containsKey(READONLY)) {
       builder.setReadOnly(
         Boolean.valueOf(attrs.get(READONLY).toString()));
@@ -292,9 +271,6 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
     this.setName(builder.getName());
     for (TableSchema.Attribute attr: builder.getAttrsList()) {
       this.addAttribute(attr.getName(), attr.getValue());
-    }
-    if (builder.hasInMemory()) {
-      this.addAttribute(HConstants.IN_MEMORY, builder.getInMemory());
     }
     if (builder.hasReadOnly()) {
       this.addAttribute(HTableDescriptor.READONLY, builder.getReadOnly());
