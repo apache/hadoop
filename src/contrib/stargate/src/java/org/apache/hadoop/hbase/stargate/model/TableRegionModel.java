@@ -28,6 +28,10 @@ import javax.xml.bind.annotation.XmlType;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
+/**
+ * Representation of a region of a table and its current location on the
+ * storage cluster.
+ */
 @XmlRootElement(name="Region")
 @XmlType(propOrder = {"name","id","startKey","endKey","location"})
 public class TableRegionModel implements Serializable {

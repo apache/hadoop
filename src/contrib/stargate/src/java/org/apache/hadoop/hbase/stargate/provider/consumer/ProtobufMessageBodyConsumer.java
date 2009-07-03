@@ -38,9 +38,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.stargate.Constants;
 import org.apache.hadoop.hbase.stargate.model.IProtobufWrapper;
 
+/**
+ * Adapter for hooking up Jersey content processing dispatch to
+ * IProtobufWrapper interface capable handlers for decoding protobuf input.
+ */
 @Provider
 @Consumes(Constants.MIMETYPE_PROTOBUF)
-public class ProtobufMessageBodyConsumer implements MessageBodyReader<IProtobufWrapper> {
+public class ProtobufMessageBodyConsumer 
+    implements MessageBodyReader<IProtobufWrapper> {
   private static final Log LOG =
     LogFactory.getLog(ProtobufMessageBodyConsumer.class);
 
@@ -79,5 +84,4 @@ public class ProtobufMessageBodyConsumer implements MessageBodyReader<IProtobufW
     }
     return obj;
   }
-
 }

@@ -33,6 +33,9 @@ import javax.xml.namespace.QName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 
+/**
+ * Representation of a column family schema.
+ */
 @XmlRootElement(name="ColumnSchema")
 @XmlType(propOrder = {"name"})
 public class ColumnSchemaModel implements Serializable {
@@ -48,14 +51,27 @@ public class ColumnSchemaModel implements Serializable {
   private String name;
   private Map<QName,Object> attrs = new HashMap<QName,Object>();
 
+  /**
+   * Default constructor
+   */
   public ColumnSchemaModel() {}
 
+  /**
+   * Add an attribute to the column family schema
+   * @param name the attribute name
+   * @param value the attribute value
+   */
   public void addAttribute(String name, Object value) {
     attrs.put(new QName(name), value);
   }
 
+  /**
+   * @param name the attribute name
+   * @return the attribute value
+   */
   public String getAttribute(String name) {
-    return attrs.get(new QName(name)).toString();
+    Object o = attrs.get(new QName(name));
+    return o != null ? o.toString(): null;
   }
 
   /**
@@ -106,51 +122,78 @@ public class ColumnSchemaModel implements Serializable {
   // cannot be standard bean type getters and setters, otherwise this would
   // confuse JAXB
 
+  /**
+   * @return true if the BLOCKCACHE attribute is present and true
+   */
   public boolean __getBlockcache() {
     Object o = attrs.get(BLOCKCACHE);
     return o != null ? 
       Boolean.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKCACHE;
   }
 
+  /**
+   * @return the value of the BLOCKSIZE attribute or its default if it is unset
+   */
   public int __getBlocksize() {
     Object o = attrs.get(BLOCKSIZE);
     return o != null ? 
       Integer.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKSIZE;
   }
 
+  /**
+   * @return true if the BLOOMFILTER attribute is present and true
+   */
   public boolean __getBloomfilter() {
     Object o = attrs.get(BLOOMFILTER);
     return o != null ? 
       Boolean.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_BLOOMFILTER;
   }
 
+  /**
+   * @return the value of the COMPRESSION attribute or its default if it is unset
+   */
   public String __getCompression() {
     Object o = attrs.get(COMPRESSION);
     return o != null ? o.toString() : HColumnDescriptor.DEFAULT_COMPRESSION;
   }
 
+  /**
+   * @return true if the IN_MEMORY attribute is present and true
+   */
   public boolean __getInMemory() {
     Object o = attrs.get(IN_MEMORY);
     return o != null ? 
       Boolean.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_IN_MEMORY;
   }
 
+  /**
+   * @return the value of the TTL attribute or its default if it is unset
+   */
   public int __getTTL() {
     Object o = attrs.get(TTL);
     return o != null ? 
       Integer.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_TTL;
   }
 
+  /**
+   * @return the value of the VERSIONS attribute or its default if it is unset
+   */
   public int __getVersions() {
     Object o = attrs.get(VERSIONS);
     return o != null ? 
       Integer.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_VERSIONS;
   }
 
+  /**
+   * @param value the desired value of the BLOCKSIZE attribute
+   */
   public void __setBlocksize(int value) {
     attrs.put(BLOCKSIZE, Integer.toString(value));
   }
 
+  /**
+   * @param value the desired value of the BLOCKCACHE attribute
+   */
   public void __setBlockcache(boolean value) {
     attrs.put(BLOCKCACHE, Boolean.toString(value));
   }
@@ -159,18 +202,30 @@ public class ColumnSchemaModel implements Serializable {
     attrs.put(BLOOMFILTER, Boolean.toString(value));
   }
 
+  /**
+   * @param value the desired value of the COMPRESSION attribute
+   */
   public void __setCompression(String value) {
     attrs.put(COMPRESSION, value); 
   }
 
+  /**
+   * @param value the desired value of the IN_MEMORY attribute
+   */
   public void __setInMemory(boolean value) {
     attrs.put(IN_MEMORY, Boolean.toString(value));
   }
 
+  /**
+   * @param value the desired value of the TTL attribute
+   */
   public void __setTTL(int value) {
     attrs.put(TTL, Integer.toString(value));
   }
 
+  /**
+   * @param value the desired value of the VERSIONS attribute
+   */
   public void __setVersions(int value) {
     attrs.put(VERSIONS, Integer.toString(value));
   }

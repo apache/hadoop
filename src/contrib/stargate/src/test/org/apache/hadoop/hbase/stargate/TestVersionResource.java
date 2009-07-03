@@ -33,6 +33,9 @@ import org.apache.hadoop.hbase.stargate.client.Cluster;
 import org.apache.hadoop.hbase.stargate.client.Response;
 import org.apache.hadoop.hbase.stargate.model.StorageClusterVersionModel;
 import org.apache.hadoop.hbase.stargate.model.VersionModel;
+import org.apache.hadoop.hbase.util.Bytes;
+
+import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 public class TestVersionResource extends MiniClusterTestCase {
   private static final Log LOG =
@@ -63,15 +66,38 @@ public class TestVersionResource extends MiniClusterTestCase {
   private static void validate(VersionModel model) {
     assertNotNull(model);
     assertNotNull(model.getStargateVersion());
-    assertNotNull(model.getOsVersion());
-    assertNotNull(model.getJvmVersion());
+    assertEquals(model.getStargateVersion(), RESTServlet.VERSION_STRING);
+    String osVersion = model.getOsVersion(); 
+    assertNotNull(osVersion);
+    assertTrue(osVersion.contains(System.getProperty("os.name")));
+    assertTrue(osVersion.contains(System.getProperty("os.version")));
+    assertTrue(osVersion.contains(System.getProperty("os.arch")));
+    String jvmVersion = model.getJvmVersion();
+    assertNotNull(jvmVersion);
+    assertTrue(jvmVersion.contains(System.getProperty("java.vm.vendor")));
+    assertTrue(jvmVersion.contains(System.getProperty("java.version")));
+    assertTrue(jvmVersion.contains(System.getProperty("java.vm.version")));
     assertNotNull(model.getServerVersion());
-    assertNotNull(model.getJerseyVersion());
+    String jerseyVersion = model.getJerseyVersion();
+    assertNotNull(jerseyVersion);
+    assertEquals(jerseyVersion, ServletContainer.class.getPackage()
+      .getImplementationVersion());
   }
 
   public void testGetStargateVersionText() throws IOException {
     Response response = client.get(Constants.PATH_VERSION, MIMETYPE_PLAIN);
     assertTrue(response.getCode() == 200);
+    String body = Bytes.toString(response.getBody());
+    assertTrue(body.length() > 0);
+    assertTrue(body.contains(RESTServlet.VERSION_STRING));
+    assertTrue(body.contains(System.getProperty("java.vm.vendor")));
+    assertTrue(body.contains(System.getProperty("java.version")));
+    assertTrue(body.contains(System.getProperty("java.vm.version")));
+    assertTrue(body.contains(System.getProperty("os.name")));
+    assertTrue(body.contains(System.getProperty("os.version")));
+    assertTrue(body.contains(System.getProperty("os.arch")));
+    assertTrue(body.contains(ServletContainer.class.getPackage()
+      .getImplementationVersion()));
   }
 
   public void testGetStargateVersionXML() throws IOException, JAXBException {

@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.hbase.stargate;
 
+/**
+ * Common constants for org.apache.hadoop.hbase.stargate
+ */
 public interface Constants {
   public static final String MIMETYPE_TEXT = "text/plain";
   public static final String MIMETYPE_XML = "text/xml";

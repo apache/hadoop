@@ -22,8 +22,23 @@ package org.apache.hadoop.hbase.stargate.model;
 
 import java.io.IOException;
 
+/**
+ * Common interface for models capable of supporting protobuf marshalling
+ * and unmarshalling. Hooks up to the ProtobufMessageBodyConsumer and
+ * ProtobufMessageBodyProducer adapters. 
+ */
 public abstract interface IProtobufWrapper {
+  /**
+   * @return the protobuf represention of the model
+   */
   public byte[] createProtobufOutput();
+
+  /**
+   * Initialize the model from a protobuf representation.
+   * @param message the raw bytes of the protobuf message
+   * @return reference to self for convenience
+   * @throws IOException
+   */
   public IProtobufWrapper getObjectFromMessage(byte[] message)
     throws IOException;
 }

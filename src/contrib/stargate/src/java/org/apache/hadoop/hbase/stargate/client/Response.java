@@ -22,6 +22,9 @@ package org.apache.hadoop.hbase.stargate.client;
 
 import org.apache.commons.httpclient.Header;
 
+/**
+ * The HTTP result code, response headers, and body of a HTTP response.
+ */
 public class Response {
   private int code;
   private Header[] headers;

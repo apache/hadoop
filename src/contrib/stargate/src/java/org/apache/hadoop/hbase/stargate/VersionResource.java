@@ -34,6 +34,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.stargate.model.VersionModel;
 
+/**
+ * Implements Stargate software version reporting via
+ * <p>
+ * <tt>/version/stargate</tt>
+ * <p>
+ * <tt>/version</tt> (alias for <tt>/version/stargate</tt>)
+ */
 @Path(Constants.PATH_VERSION)
 public class VersionResource implements Constants {
   private static final Log LOG = LogFactory.getLog(VersionResource.class);
@@ -46,6 +53,12 @@ public class VersionResource implements Constants {
     cacheControl.setNoTransform(false);
   }
 
+  /**
+   * Build a response for a version request.
+   * @param context servlet context
+   * @param uriInfo (JAX-RS context variable) request URL
+   * @return a response for a version request 
+   */
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
     MIMETYPE_PROTOBUF})
@@ -57,7 +70,10 @@ public class VersionResource implements Constants {
     response.cacheControl(cacheControl);
     return response.build();
   }
-  
+
+  /**
+   * Dispatch <tt>/version/stargate</tt> to self.
+   */
   // "/version/stargate" is an alias for "/version"
   @Path("stargate")
   public VersionResource getVersionResource() {

@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.TableSchemaMessage.TableSchema;
 
+/**
+ * A representation of HBase table descriptors.
+ */
 @XmlRootElement(name="TableSchema")
 @XmlType(propOrder = {"name","columns"})
 public class TableSchemaModel implements Serializable, IProtobufWrapper {
@@ -58,20 +61,44 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
   private Map<QName,Object> attrs = new HashMap<QName,Object>();
   private List<ColumnSchemaModel> columns = new ArrayList<ColumnSchemaModel>();
   
+  /**
+   * Default constructor.
+   */
   public TableSchemaModel() {}
-  
+
+  /**
+   * Add an attribute to the table descriptor
+   * @param name attribute name
+   * @param value attribute value
+   */
   public void addAttribute(String name, Object value) {
     attrs.put(new QName(name), value);
   }
 
+  /**
+   * Return a table descriptor value as a string. Calls toString() on the
+   * object stored in the descriptor value map.
+   * @param name the attribute name
+   * @return the attribute value
+   */
   public String getAttribute(String name) {
-    return attrs.get(new QName(name)).toString();
+    Object o = attrs.get(new QName(name));
+    return o != null ? o.toString() : null;
   }
 
-  public void addColumnFamily(ColumnSchemaModel object) {
-    columns.add(object);
+  /**
+   * Add a column family to the table descriptor
+   * @param object the column family model
+   */
+  public void addColumnFamily(ColumnSchemaModel family) {
+    columns.add(family);
   }
-  
+
+  /**
+   * Retrieve the column family at the given index from the table descriptor
+   * @param index the index
+   * @return the column family model
+   */
   public ColumnSchemaModel getColumnFamily(int index) {
     return columns.get(index);
   }
@@ -149,40 +176,64 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
   // cannot be standard bean type getters and setters, otherwise this would
   // confuse JAXB
 
+  /**
+   * @return true if IN_MEMORY attribute exists and is true
+   */
   public boolean __getInMemory() {
     Object o = attrs.get(IN_MEMORY);
     return o != null ? 
       Boolean.valueOf(o.toString()) : HTableDescriptor.DEFAULT_IN_MEMORY;
   }
 
+  /**
+   * @return true if IS_META attribute exists and is truel
+   */
   public boolean __getIsMeta() {
     Object o = attrs.get(IS_META);
     return o != null ? Boolean.valueOf(o.toString()) : false;
   }
 
+  /**
+   * @return true if IS_ROOT attribute exists and is truel
+   */
   public boolean __getIsRoot() {
     Object o = attrs.get(IS_ROOT);
     return o != null ? Boolean.valueOf(o.toString()) : false;
   }
 
+  /**
+   * @return true if READONLY attribute exists and is truel
+   */
   public boolean __getReadOnly() {
     Object o = attrs.get(READONLY);
     return o != null ? 
       Boolean.valueOf(o.toString()) : HTableDescriptor.DEFAULT_READONLY;
   }
 
+  /**
+   * @param value desired value of IN_MEMORY attribute
+   */
   public void __setInMemory(boolean value) {
     attrs.put(IN_MEMORY, Boolean.toString(value));
   }
 
+  /**
+   * @param value desired value of IS_META attribute
+   */
   public void __setIsMeta(boolean value) {
     attrs.put(IS_META, Boolean.toString(value));
   }
 
+  /**
+   * @param value desired value of IS_ROOT attribute
+   */
   public void __setIsRoot(boolean value) {
     attrs.put(IS_ROOT, Boolean.toString(value));
   }
 
+  /**
+   * @param value desired value of READONLY attribute
+   */
   public void __setReadOnly(boolean value) {
     attrs.put(READONLY, Boolean.toString(value));
   }

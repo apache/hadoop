@@ -38,35 +38,43 @@ import javax.ws.rs.ext.Provider;
 import org.apache.hadoop.hbase.stargate.Constants;
 import org.apache.hadoop.hbase.stargate.model.IProtobufWrapper;
 
+/**
+ * An adapter between Jersey and IProtobufWrapper implementors. Hooks up
+ * protobuf output producing methods to the Jersey content handling framework.
+ * Jersey will first call getSize() to learn the number of bytes that will be
+ * sent, then writeTo to perform the actual I/O.
+ */
 @Provider
 @Produces(Constants.MIMETYPE_PROTOBUF)
-public class ProtobufMessageBodyProducer implements MessageBodyWriter<IProtobufWrapper> {
+public class ProtobufMessageBodyProducer
+  implements MessageBodyWriter<IProtobufWrapper> {
+
+  private Map<Object, byte[]> buffer = new WeakHashMap<Object, byte[]>();
 
 	@Override
-	public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return IProtobufWrapper.class.isAssignableFrom(type);
-    }
+	public boolean isWriteable(Class<?> type, Type genericType, 
+	  Annotation[] annotations, MediaType mediaType) {
+      return IProtobufWrapper.class.isAssignableFrom(type);
+  }
 
-    private Map<Object, byte[]> buffer = new WeakHashMap<Object, byte[]>();
+	@Override
+	public long getSize(IProtobufWrapper m, Class<?> type, Type genericType,
+	    Annotation[] annotations, MediaType mediaType) {
+	  ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	  try {
+	    baos.write(m.createProtobufOutput());
+	  } catch (IOException e) {
+	    return -1;
+	  }
+	  byte[] bytes = baos.toByteArray();
+	  buffer.put(m, bytes);
+	  return bytes.length;
+	}
 
-    @Override
-    public long getSize(IProtobufWrapper m, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-        	baos.write(m.createProtobufOutput());
-        } catch (IOException e) {
-            return -1;
-        }
-        byte[] bytes = baos.toByteArray();
-        buffer.put(m, bytes);
-        return bytes.length;
-    }
-
-    public void writeTo(IProtobufWrapper m, Class<?> type, Type genericType, Annotation[] annotations, 
-                MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                OutputStream entityStream) throws IOException, WebApplicationException {
-        entityStream.write(buffer.remove(m));
-    }
-
-
+	public void writeTo(IProtobufWrapper m, Class<?> type, Type genericType,
+	    Annotation[] annotations, MediaType mediaType, 
+	    MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 
+	    throws IOException, WebApplicationException {
+	  entityStream.write(buffer.remove(m));
+	}
 }

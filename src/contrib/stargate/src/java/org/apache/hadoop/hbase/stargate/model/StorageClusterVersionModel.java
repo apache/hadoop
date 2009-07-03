@@ -25,17 +25,26 @@ import java.io.Serializable;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
+/**
+ * Simple representation of the version of the storage cluster (HBase)
+ */
 @XmlRootElement(name="ClusterVersion")
 public class StorageClusterVersionModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private String version;
 
+	/**
+	 * @return the storage cluster version
+	 */
 	@XmlValue
 	public String getVersion() {
 	  return version;
 	}
-	
+
+	/**
+	 * @param version the storage cluster version
+	 */
 	public void setVersion(String version) {
 	  this.version = version;
 	}

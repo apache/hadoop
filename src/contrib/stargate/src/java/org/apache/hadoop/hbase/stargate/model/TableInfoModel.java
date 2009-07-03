@@ -34,6 +34,9 @@ import org.apache.hadoop.hbase.stargate.protobuf.generated.TableInfoMessage.Tabl
 
 import com.google.protobuf.ByteString;
 
+/**
+ * Representation of a list of table regions. 
+ */
 @XmlRootElement(name="TableInfo")
 @XmlType(propOrder = {"name","regions"})
 public class TableInfoModel implements Serializable, IProtobufWrapper {
@@ -42,16 +45,31 @@ public class TableInfoModel implements Serializable, IProtobufWrapper {
   private String name;
   private List<TableRegionModel> regions = new ArrayList<TableRegionModel>();
 
+  /**
+   * Default constructor
+   */
   public TableInfoModel() {}
 
+  /**
+   * Constructor
+   * @param name
+   */
   public TableInfoModel(String name) {
     this.name = name;
   }
 
-  public void add(TableRegionModel object) {
-    regions.add(object);
+  /**
+   * Add a region model to the list
+   * @param region the region
+   */
+  public void add(TableRegionModel region) {
+    regions.add(region);
   }
-  
+
+  /**
+   * @param index the index
+   * @return the region model
+   */
   public TableRegionModel get(int index) {
     return regions.get(index);
   }

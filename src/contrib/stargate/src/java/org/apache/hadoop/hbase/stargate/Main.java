@@ -24,7 +24,6 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.NCSARequestLog;
@@ -37,6 +36,15 @@ import org.mortbay.jetty.handler.RequestLogHandler;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.thread.QueuedThreadPool;
 
+/**
+ * Main class for launching Stargate as a servlet hosted by an embedded Jetty
+ * servlet container.
+ * <p> 
+ * The following options are supported:
+ * <ul>
+ * <li>-p: service port</li>
+ * </ul>
+ */
 public class Main {
 
   public static void main(String[] args) throws Exception {
@@ -50,17 +58,6 @@ public class Main {
       port = Integer.valueOf(cmd.getOptionValue("p"));
     }
 
-    HBaseConfiguration conf = new HBaseConfiguration();
-    if (cmd.hasOption("m")) {
-      conf.set("hbase.master", cmd.getOptionValue("m"));
-    }
-
-    /*
-     * RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean(); if (runtime
-     * != null) { LOG.info("vmName=" + runtime.getVmName() + ", vmVendor=" +
-     * runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
-     * LOG.info("vmInputArguments=" + runtime.getInputArguments()); }
-     */
     /*
      * poached from:
      * http://jetty.mortbay.org/xref/org/mortbay/jetty/example/LikeJettyXml.html

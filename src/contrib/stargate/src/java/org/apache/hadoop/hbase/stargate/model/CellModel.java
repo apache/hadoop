@@ -33,34 +33,41 @@ import org.apache.hadoop.hbase.stargate.protobuf.generated.CellMessage.Cell;
 
 import com.google.protobuf.ByteString;
 
+/**
+ * Representation of a cell. A cell is a single value associated a column and
+ * optional qualifier, and either the timestamp when it was stored or the user-
+ * provided timestamp if one was explicitly supplied.
+ */
 @XmlRootElement(name="Cell")
 @XmlType(propOrder={"column","timestamp"})
 public class CellModel implements IProtobufWrapper, Serializable {
   private static final long serialVersionUID = 1L;
   
-  private long   timestamp = HConstants.LATEST_TIMESTAMP;
+  private long timestamp;
   private byte[] column;
   private byte[] value;
 
+  /**
+   * Default constructor
+   */
   public CellModel() {}
 
   /**
+   * Constructor
    * @param column
    * @param value
    */
   public CellModel(byte[] column, byte[] value) {
-    super();
-    this.column = column;
-    this.value = value;
+    this(column, HConstants.LATEST_TIMESTAMP, value);
   }
 
   /**
+   * Constructor
    * @param column
    * @param timestamp
    * @param value
    */
   public CellModel(byte[] column, long timestamp, byte[] value) {
-    super();
     this.column = column;
     this.timestamp = timestamp;
     this.value = value;

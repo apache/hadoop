@@ -27,6 +27,12 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
+/**
+ * Parses a path based row/column/timestamp specification into its component
+ * elements.
+ * <p>
+ *  
+ */
 public class RowSpec {
   public static final long DEFAULT_START_TIMESTAMP = 0;
   public static final long DEFAULT_END_TIMESTAMP = Long.MAX_VALUE;

@@ -25,6 +25,9 @@ import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
+/**
+ * Simple representation of a table name.
+ */
 @XmlRootElement(name="table")
 public class TableModel implements Serializable {
 
@@ -32,9 +35,13 @@ public class TableModel implements Serializable {
 	
 	private String name;
 	
+	/**
+	 * Default constructor
+	 */
 	public TableModel() {}
 
 	/**
+	 * Constructor
 	 * @param name
 	 */
 	public TableModel(String name) {

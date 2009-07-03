@@ -29,60 +29,69 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+/**
+ * Representation of a row. A row is a related set of cells, grouped by common
+ * row key. RowModels do not appear in results by themselves. They are always
+ * encapsulated within CellSetModels.
+ */
 @XmlRootElement(name="Row")
 public class RowModel implements IProtobufWrapper, Serializable {
   private static final long serialVersionUID = 1L;
 
-  private byte[]            key;
-  private List<CellModel>   cells = new ArrayList<CellModel>();
+  private byte[] key;
+  private List<CellModel> cells = new ArrayList<CellModel>();
 
+  /**
+   * Default constructor
+   */
   public RowModel() { }
 
   /**
-   * @param key
+   * Constructor
+   * @param key the row key
    */
   public RowModel(final String key) {
     this(key.getBytes());
   }
   
   /**
-   * @param key
+   * Constructor
+   * @param key the row key
    */
   public RowModel(final byte[] key) {
-    super();
     this.key = key;
     cells = new ArrayList<CellModel>();
   }
 
   /**
-   * @param key
-   * @param cells
+   * Constructor
+   * @param key the row key
+   * @param cells the cells
    */
   public RowModel(final String key, final List<CellModel> cells) {
     this(key.getBytes(), cells);
   }
   
   /**
-   * @param key
-   * @param cells
+   * Constructor
+   * @param key the row key
+   * @param cells the cells
    */
   public RowModel(final byte[] key, final List<CellModel> cells) {
-    super();
     this.key = key;
     this.cells = cells;
   }
   
   /**
    * Adds a cell to the list of cells for this row
-   * 
-   * @param cell
+   * @param cell the cell
    */
   public void addCell(CellModel cell) {
     cells.add(cell);
   }
 
   /**
-   * @return the key
+   * @return the row key
    */
   @XmlAttribute
   public byte[] getKey() {
@@ -90,7 +99,7 @@ public class RowModel implements IProtobufWrapper, Serializable {
   }
 
   /**
-   * @param key the key to set
+   * @param key the row key
    */
   public void setKey(byte[] key) {
     this.key = key;
@@ -118,5 +127,4 @@ public class RowModel implements IProtobufWrapper, Serializable {
     throw new UnsupportedOperationException(
         "no protobuf equivalent to RowModel");
   }
-
 }

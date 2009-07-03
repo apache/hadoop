@@ -34,22 +34,27 @@ import org.apache.hadoop.hbase.stargate.protobuf.generated.CellSetMessage.CellSe
 
 import com.google.protobuf.ByteString;
 
+/**
+ * Representation of a grouping of cells. May contain cells from more than
+ * one row. Encapsulates RowModel and CellModel models.
+ */
 @XmlRootElement(name="CellSet")
 public class CellSetModel implements Serializable, IProtobufWrapper {
 
   private static final long serialVersionUID = 1L;
   
   private List<RowModel> rows;
-  
-  
+
+  /**  
+   * Constructor
+   */
   public CellSetModel() {
     this.rows = new ArrayList<RowModel>();
   }
   
   /**
-   * @param rows
+   * @param rows the rows
    */
-  
   public CellSetModel(List<RowModel> rows) {
     super();
     this.rows = rows;
@@ -57,8 +62,7 @@ public class CellSetModel implements Serializable, IProtobufWrapper {
   
   /**
    * Add a row to this cell set
-   * 
-   * @param row
+   * @param row the row
    */
   public void addRow(RowModel row) {
     rows.add(row);

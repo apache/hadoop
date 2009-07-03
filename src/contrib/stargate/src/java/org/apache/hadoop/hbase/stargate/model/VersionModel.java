@@ -32,6 +32,17 @@ import org.apache.hadoop.hbase.stargate.protobuf.generated.VersionMessage.Versio
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+/**
+ * A representation of the collection of versions of the Stargate software
+ * components.
+ * <ul>
+ * <li>stargateVersion: Stargate revision</li>
+ * <li>jvmVersion: the JVM vendor and version information</li>
+ * <li>osVersion: the OS type, version, and hardware architecture</li>
+ * <li>serverVersion: the name and version of the servlet container</li>
+ * <li>jerseyVersion: the version of the embedded Jersey framework</li>
+ * </ul>
+ */
 @XmlRootElement(name="Version")
 public class VersionModel implements Serializable, IProtobufWrapper {
 
@@ -43,8 +54,15 @@ public class VersionModel implements Serializable, IProtobufWrapper {
   private String serverVersion;
   private String jerseyVersion;
 
+  /**
+   * Default constructor. Do not use.
+   */
   public VersionModel() {}
   
+  /**
+   * Constructor
+   * @param context the servlet context
+   */
 	public VersionModel(ServletContext context) {
 	  stargateVersion = RESTServlet.VERSION_STRING;
 	  jvmVersion = System.getProperty("java.vm.vendor") + ' ' +
@@ -58,47 +76,77 @@ public class VersionModel implements Serializable, IProtobufWrapper {
       .getImplementationVersion();
 	}
 
+	/**
+	 * @return the Stargate version
+	 */
 	@XmlAttribute(name="Stargate")
 	public String getStargateVersion() {
     return stargateVersion;
   }
 
+	/**
+	 * @return the JVM vendor and version
+	 */
   @XmlAttribute(name="JVM")
   public String getJvmVersion() {
     return jvmVersion;
   }
 
+  /**
+   * @return the OS name, version, and hardware architecture
+   */
   @XmlAttribute(name="OS")
   public String getOsVersion() {
     return osVersion;
   }
 
+  /**
+   * @return the servlet container version
+   */
   @XmlAttribute(name="Server")
   public String getServerVersion() {
     return serverVersion;
   }
 
+  /**
+   * @return the version of the embedded Jersey framework
+   */
   @XmlAttribute(name="Jersey")
   public String getJerseyVersion() {
     return jerseyVersion;
   }
 
+  /**
+   * @param version the Stargate version string
+   */
   public void setStargateVersion(String version) {
     this.stargateVersion = version;
   }
 
+  /**
+   * @param version the OS version string
+   */
   public void setOsVersion(String version) {
     this.osVersion = version;
   }
 
+  /**
+   * @param version the JVM version string
+   */
   public void setJvmVersion(String version) {
     this.jvmVersion = version;
   }
 
+  /**
+   * @param version the servlet container version string
+   */
   public void setServerVersion(String version) {
     this.serverVersion = version;
   }
 
+  /**
+   * @param version the Jersey framework version string
+   */
   public void setJerseyVersion(String version) {
     this.jerseyVersion = version;
   }

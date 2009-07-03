@@ -34,6 +34,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
 
+/**
+ * A representation of Scanner parameters.
+ */
 @XmlRootElement(name="Scanner")
 public class ScannerModel implements IProtobufWrapper, Serializable {
   private static final long serialVersionUID = 1L;
@@ -45,8 +48,20 @@ public class ScannerModel implements IProtobufWrapper, Serializable {
   private long startTime = 0;
   private long endTime = Long.MAX_VALUE;
 
+  /**
+   * Default constructor
+   */
   public ScannerModel() {}
 
+  /**
+   * Constructor
+   * @param startRow the start key of the row-range
+   * @param endRow the end key of the row-range
+   * @param columns the columns to scan
+   * @param batch the number of values to return in batch
+   * @param endTime the upper bound on timestamps of values of interest
+   * (values with timestamps later than this are excluded)
+   */
   public ScannerModel(byte[] startRow, byte[] endRow, List<byte[]> columns,
       int batch, long endTime) {
     super();
@@ -57,6 +72,17 @@ public class ScannerModel implements IProtobufWrapper, Serializable {
     this.endTime = endTime;
   }
 
+  /**
+   * Constructor 
+   * @param startRow the start key of the row-range
+   * @param endRow the end key of the row-range
+   * @param columns the columns to scan
+   * @param batch the number of values to return in batch
+   * @param startTime the lower bound on timestamps of values of interest
+   * (values with timestamps earlier than this are excluded)
+   * @param endTime the upper bound on timestamps of values of interest
+   * (values with timestamps later than this are excluded)
+   */
   public ScannerModel(byte[] startRow, byte[] endRow, List<byte[]> columns,
       int batch, long startTime, long endTime) {
     super();
@@ -68,6 +94,10 @@ public class ScannerModel implements IProtobufWrapper, Serializable {
     this.endTime = endTime;
   }
 
+  /**
+   * Add a column to the column set
+   * @param column the column name, as &lt;column&gt;(:&lt;qualifier&gt;)?
+   */
   public void addColumn(byte[] column) {
     columns.add(column);
   }
@@ -156,14 +186,14 @@ public class ScannerModel implements IProtobufWrapper, Serializable {
   }
 
   /**
-   * @param startTime the lower bound on timestamps of items of interest
+   * @param startTime the lower bound on timestamps of values of interest
    */
   public void setStartTime(long startTime) {
     this.startTime = startTime;
   }
 
   /**
-   * @param endTime the upper bound on timestamps of items of interest
+   * @param endTime the upper bound on timestamps of values of interest
    */
   public void setEndTime(long endTime) {
     this.endTime = endTime;

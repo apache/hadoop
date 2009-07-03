@@ -30,6 +30,9 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.stargate.protobuf.generated.TableListMessage.TableList;
 
+/**
+ * Simple representation of a list of table names.
+ */
 @XmlRootElement(name="TableList")
 public class TableListModel implements Serializable, IProtobufWrapper {
 
@@ -37,12 +40,23 @@ public class TableListModel implements Serializable, IProtobufWrapper {
 
 	private List<TableModel> tables = new ArrayList<TableModel>();
 
+	/**
+	 * Default constructor
+	 */
 	public TableListModel() {}
-	
-	public void add(TableModel object) {
-		tables.add(object);
+
+	/**
+	 * Add the table name model to the list
+	 * @param table the table model
+	 */
+	public void add(TableModel table) {
+		tables.add(table);
 	}
 	
+	/**
+	 * @param index the index
+	 * @return the table model
+	 */
 	public TableModel get(int index) {
 		return tables.get(index);
 	}

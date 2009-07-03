@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+/**
+ * Singleton class encapsulating global REST servlet state and functions.
+ */
 public class RESTServlet extends ServletAdaptor {
   
   private static final long serialVersionUID = 1L;  
@@ -46,6 +48,10 @@ public class RESTServlet extends ServletAdaptor {
   protected Map<String,Integer> maxAgeMap = 
     Collections.synchronizedMap(new HashMap<String,Integer>());
 
+  /**
+   * @return the RESTServlet singleton instance
+   * @throws IOException
+   */
   public synchronized static RESTServlet getInstance() throws IOException {
     if (instance == null) {
       instance = new RESTServlet();
@@ -53,21 +59,33 @@ public class RESTServlet extends ServletAdaptor {
     return instance;
   }
 
+  /**
+   * Constructor
+   * @throws IOException
+   */
   public RESTServlet() throws IOException {
     this.conf = new HBaseConfiguration();
   }
 
 
+  /**
+   * Get or create a table pool for the given table. 
+   * @param name the table name
+   * @return the table pool
+   */
   protected HTablePool getTablePool(String name) {
     return HTablePool.getPool(conf, Bytes.toBytes(name));
   }
 
+  /**
+   * @return the servlet's global HBase configuration
+   */
   protected HBaseConfiguration getConfiguration() {
     return conf;
   }
 
   /**
-   * @param tableName
+   * @param tableName the table name
    * @return the maximum cache age suitable for use with this table, in
    *  seconds 
    * @throws IOException
@@ -97,30 +115,12 @@ public class RESTServlet extends ServletAdaptor {
     return DEFAULT_MAX_AGE;
   }
 
+  /**
+   * Signal that a previously calculated maximum cache age has been
+   * invalidated by a schema change.
+   * @param tableName the table name
+   */
   public void invalidateMaxAge(String tableName) {
     maxAgeMap.remove(tableName);
   }
-
-  public static final String getVersion() {
-    StringBuilder version = new StringBuilder();
-    version.append("Stargate ");
-    version.append(VERSION_STRING);
-    version.append(" [JVM: ");
-    version.append(System.getProperty("java.vm.vendor"));
-    version.append(' ');
-    version.append(System.getProperty("java.version"));
-    version.append('-');
-    version.append(System.getProperty("java.vm.version"));
-    version.append("] [OS: ");
-    version.append(System.getProperty("os.name"));
-    version.append(' ');
-    version.append(System.getProperty("os.version"));
-    version.append(' ');
-    version.append(System.getProperty("os.arch"));
-    version.append("] [Jersey: ");
-    version.append(ServletContainer.class.getPackage()
-      .getImplementationVersion());
-    version.append(']');
-    return version.toString();
-  }  
 }
