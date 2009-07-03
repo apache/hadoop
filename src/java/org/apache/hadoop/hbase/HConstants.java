@@ -75,6 +75,9 @@ public interface HConstants {
   /** default port for master web api */
   static final int DEFAULT_MASTER_INFOPORT = 60010;
 
+  /** Name of ZooKeeper quorum configuration parameter. */
+  static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
+
   /** Name of ZooKeeper config file in conf/ directory. */
   static final String ZOOKEEPER_CONFIG_NAME = "zoo.cfg";
 

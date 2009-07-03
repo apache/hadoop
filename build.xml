@@ -185,7 +185,7 @@
       <fileset dir="${conf.dir}" >
         <include name="hbase-default.xml" />
       </fileset>
-      <zipfileset dir="conf" prefix="conf" includes="zoo.cfg,hbase-default.xml" />
+      <zipfileset dir="conf" prefix="conf" includes="hbase-default.xml" />
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
    		<manifest>
             <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapreduce/Driver" />

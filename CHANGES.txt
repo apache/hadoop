@@ -438,6 +438,7 @@ Release 0.20.0 - Unreleased
    HBASE-1607  Redo MemStore heap sizing to be accurate, testable, and more
                like new LruBlockCache (Jon Gray via Stack)
    HBASE-1218  Implement in-memory column (Jon Gray via Stack)
+   HBASE-1606  Remove zoo.cfg, put config options into hbase-site.xml
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

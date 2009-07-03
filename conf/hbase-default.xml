@@ -396,7 +396,7 @@
     <value>/hbase</value>
     <description>Root ZNode for HBase in ZooKeeper. All of HBase's ZooKeeper
       files that are configured with a relative path will go under this node.
-      By default, all of HBase's ZooKeeper file patsh are configured with a
+      By default, all of HBase's ZooKeeper file path are configured with a
       relative path, so they will all go under this directory unless changed.
     </description>
   </property>
@@ -419,4 +419,95 @@
       mode flag is stored at /hbase/safe-mode.
     </description>
   </property>
+
+  <!--
+  The following three properties are used together to create the list of
+  host:peer_port:leader_port quorum servers for ZooKeeper.
+  -->
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>localhost</value>
+    <description>Comma separated list of servers in the ZooKeeper Quorum.
+    For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
+    By default this is set to localhost for local and pseudo-distributed modes
+    of operation. For a fully-distributed setup, this should be set to a full
+    list of ZooKeeper quorum servers. If HBASE_MANAGES_ZK is set in hbase-env.sh
+    this is the list of servers which we will start/stop ZooKeeper on.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.peerport</name>
+    <value>2888</value>
+    <description>Port used by ZooKeeper peers to talk to each other.
+    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.leaderport</name>
+    <value>3888</value>
+    <description>Port used by ZooKeeper for leader election.
+    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </description>
+  </property>
+  <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
+
+  <!--
+  Beginning of properties that are directly mapped from ZooKeeper's zoo.cfg.
+  All properties with an "hbase.zookeeper.property." prefix are converted for
+  ZooKeeper's configuration. Hence, if you want to add an option from zoo.cfg,
+  e.g.  "initLimit=10" you would append the following to your configuration:
+    <property>
+      <name>hbase.zookeeper.property.initLimit</name>
+      <value>10</value>
+    </property>
+  -->
+  <property>
+    <name>hbase.zookeeper.property.tickTime</name>
+    <value>2000</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of milliseconds of each tick.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.initLimit</name>
+    <value>10</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that the initial synchronization phase can take.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.syncLimit</name>
+    <value>5</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that can pass between sending a request and getting an
+    acknowledgment.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.dataDir</name>
+    <value>${hbase.tmp.dir}/zookeeper</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The directory where the snapshot is stored.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.clientPort</name>
+    <value>2181</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The port at which the clients will connect.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.maxClientCnxns</name>
+    <value>30</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    Limit on number of concurrent connections (at the socket level) that a
+    single client, identified by IP address, may make to a single member of
+    the ZooKeeper ensemble. Set high to avoid zk connection issues running
+    standalone and pseudo-distributed.
+    </description>
+  </property>
+  <!-- End of properties that are directly mapped from ZooKeeper's zoo.cfg -->
 </configuration>

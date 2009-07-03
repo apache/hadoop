@@ -73,11 +73,6 @@
       <fileset dir="${lib.dir}"/>
       <mapper type="flatten"/>
     </copy>
-    <copy todir="${build.war.classes}" overwrite="true">
-      <fileset dir="${conf.dir}">
-        <include name="zoo.cfg"/>
-      </fileset>
-    </copy>
     
     <war destfile="${build.dir}/${war.file}" webxml="${web.xml.file}">
       <lib dir="${build.dir}/lib"/>

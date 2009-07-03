@@ -70,10 +70,11 @@ public class MiniZooKeeperCluster {
 
   /**
    * @param baseDir
+   * @return ClientPort server bound to.
    * @throws IOException
    * @throws InterruptedException
    */
-  public void startup(File baseDir) throws IOException,
+  public int startup(File baseDir) throws IOException,
       InterruptedException {
     setupTestEnv();
 
@@ -96,14 +97,13 @@ public class MiniZooKeeperCluster {
     }
     standaloneServerFactory.startup(server);
 
-    String quorumServers = "localhost:" + clientPort;
-    ZooKeeperWrapper.setQuorumServers(quorumServers);
-
     if (!waitForServerUp(clientPort, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for startup of standalone server");
     }
 
     started = true;
+
+    return clientPort;
   }
 
   private void recreateDir(File dir) throws IOException {

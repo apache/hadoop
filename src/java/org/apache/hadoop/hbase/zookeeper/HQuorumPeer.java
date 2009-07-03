@@ -32,6 +32,7 @@ import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
+import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
 /**
  * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage
@@ -42,61 +43,113 @@ import org.apache.zookeeper.server.quorum.QuorumPeerMain;
  */
 public class HQuorumPeer implements HConstants {
   private static final Log LOG = LogFactory.getLog(HQuorumPeer.class);
+
   private static final String VARIABLE_START = "${";
   private static final int VARIABLE_START_LENGTH = VARIABLE_START.length();
   private static final String VARIABLE_END = "}";
   private static final int VARIABLE_END_LENGTH = VARIABLE_END.length();
+
+  private static final String ZK_CFG_PROPERTY = "hbase.zookeeper.property.";
+  private static final int ZK_CFG_PROPERTY_SIZE = ZK_CFG_PROPERTY.length();
 
   /**
    * Parse ZooKeeper configuration and run a QuorumPeer.
    * While parsing the zoo.cfg, we substitute variables with values from
    * hbase-site.xml.
    * @param args String[] of command line arguments. Not used.
-   * @throws IOException 
+   * @throws IOException
    */
   public static void main(String[] args) throws IOException {
-    QuorumPeerConfig config = new QuorumPeerConfig();
+    HBaseConfiguration conf = new HBaseConfiguration();
+    Properties zkProperties = makeZKProps(conf);
+
+    QuorumPeerConfig zkConfig = new QuorumPeerConfig();
     try {
-      Properties properties = parseZooKeeperConfig();
-      config.parseProperties(properties);
-    } catch (Exception e) {
+      zkConfig.parseProperties(zkProperties);
+    } catch (ConfigException e) {
       e.printStackTrace();
       System.exit(-1);
     }
-    if (config.isDistributed()) {
+
+    startZKServer(zkConfig);
+  }
+
+  private static void startZKServer(QuorumPeerConfig zkConfig) throws IOException {
+    if (zkConfig.isDistributed()) {
       QuorumPeerMain qp = new QuorumPeerMain();
-      qp.runFromConfig(config);
+      qp.runFromConfig(zkConfig);
     } else {
       ZooKeeperServerMain zk = new ZooKeeperServerMain();
       ServerConfig serverConfig = new ServerConfig();
-      serverConfig.readFrom(config);
+      serverConfig.readFrom(zkConfig);
       zk.runFromConfig(serverConfig);
     }
   }
 
   /**
-   * Parse ZooKeeper's zoo.cfg, injecting HBase Configuration variables in.
-   * @return Properties parsed from config stream with variables substituted.
-   * @throws IOException if anything goes wrong parsing config
+   * Make a Properties object holding ZooKeeper config equivalent to zoo.cfg.
+   * If there is a zoo.cfg in the classpath, simply read it in. Otherwise parse
+   * the corresponding config options from the HBase XML configs and generate
+   * the appropriate ZooKeeper properties.
+   * @param conf HBaseConfiguration to read from.
+   * @return Properties holding mappings representing ZooKeeper zoo.cfg file.
    */
-  public static Properties parseZooKeeperConfig() throws IOException {
+  public static Properties makeZKProps(HBaseConfiguration conf) {
+    // First check if there is a zoo.cfg in the CLASSPATH. If so, simply read
+    // it and grab its configuration properties.
     ClassLoader cl = HQuorumPeer.class.getClassLoader();
     InputStream inputStream = cl.getResourceAsStream(ZOOKEEPER_CONFIG_NAME);
-    if (inputStream == null) {
-      throw new IOException(ZOOKEEPER_CONFIG_NAME + " not found");
+    if (inputStream != null) {
+      try {
+        return parseZooCfg(conf, inputStream);
+      } catch (IOException e) {
+        LOG.warn("Cannot read " + ZOOKEEPER_CONFIG_NAME +
+                 ", loading from XML files", e);
+      }
     }
-    return parseConfig(inputStream);
+
+    // Otherwise, use the configuration options from HBase's XML files.
+    Properties zkProperties = new Properties();
+
+    // Directly map all of the hbase.zookeeper.property.KEY properties.
+    for (Entry<String, String> entry : conf) {
+      String key = entry.getKey();
+      if (key.startsWith(ZK_CFG_PROPERTY)) {
+        String zkKey = key.substring(ZK_CFG_PROPERTY_SIZE);
+        String value = entry.getValue();
+        // If the value has variables substitutions, need to do a get.
+        if (value.contains(VARIABLE_START)) {
+          value = conf.get(key);
+        }
+        zkProperties.put(zkKey, value);
+      }
+    }
+
+    // Create the server.X properties.
+    int peerPort = conf.getInt("hbase.zookeeper.peerport", 2888);
+    int leaderPort = conf.getInt("hbase.zookeeper.leaderport", 3888);
+
+    String[] serverHosts = conf.getStrings(ZOOKEEPER_QUORUM, "localhost");
+    for (int i = 0; i < serverHosts.length; ++i) {
+      String serverHost = serverHosts[i];
+      String address = serverHost + ":" + peerPort + ":" + leaderPort;
+      String key = "server." + i;
+      zkProperties.put(key, address);
+    }
+
+    return zkProperties;
   }
 
   /**
    * Parse ZooKeeper's zoo.cfg, injecting HBase Configuration variables in.
    * This method is used for testing so we can pass our own InputStream.
+   * @param conf HBaseConfiguration to use for injecting variables.
    * @param inputStream InputStream to read from.
    * @return Properties parsed from config stream with variables substituted.
    * @throws IOException if anything goes wrong parsing config
    */
-  public static Properties parseConfig(InputStream inputStream) throws IOException {
-    HBaseConfiguration conf = new HBaseConfiguration();
+  public static Properties parseZooCfg(HBaseConfiguration conf,
+      InputStream inputStream) throws IOException {
     Properties properties = new Properties();
     try {
       properties.load(inputStream);
@@ -130,7 +183,7 @@ public class HQuorumPeer implements HConstants {
           LOG.fatal(msg);
           throw new IOException(msg);
         }
-        
+
         newValue.append(substituteValue);
 
         varEnd += VARIABLE_END_LENGTH;
@@ -138,7 +191,7 @@ public class HQuorumPeer implements HConstants {
       }
       // Special case for 'hbase.cluster.distributed' property being 'true'
       if (key.startsWith("server.")) {
-        if(conf.get(CLUSTER_DISTRIBUTED).equals(CLUSTER_IS_DISTRIBUTED) && 
+        if(conf.get(CLUSTER_DISTRIBUTED).equals(CLUSTER_IS_DISTRIBUTED) &&
             value.startsWith("localhost")) {
            String msg = "The server in zoo.cfg cannot be set to localhost " +
               "in a fully-distributed setup because it won't be reachable. " +

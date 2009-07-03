@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -40,7 +39,8 @@ import org.apache.zookeeper.ZooKeeper;
  */
 public class TestZooKeeper extends HBaseClusterTestCase {
   private static class EmptyWatcher implements Watcher {
-    public EmptyWatcher() {}
+    public static EmptyWatcher instance = new EmptyWatcher();
+    private EmptyWatcher() {}
     public void process(WatchedEvent event) {}
   }
 
@@ -54,7 +54,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
    * @throws IOException
    */
   public void testWritesRootRegionLocation() throws IOException {
-    ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf, new EmptyWatcher());
+    ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
 
     boolean outOfSafeMode = zooKeeper.checkOutOfSafeMode();
     assertFalse(outOfSafeMode);
@@ -82,9 +82,11 @@ public class TestZooKeeper extends HBaseClusterTestCase {
    * @throws IOException
    */
   public void testParentExists() throws IOException {
+    String oldValue = conf.get("zookeeper.znode.safemode");
     conf.set("zookeeper.znode.safemode", "/a/b/c/d/e");
-    ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf, new EmptyWatcher());
+    ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
     assertTrue(zooKeeper.writeOutOfSafeMode());
+    conf.set("zookeeper.znode.safemode", oldValue);
   }
 
   /**
@@ -95,15 +97,15 @@ public class TestZooKeeper extends HBaseClusterTestCase {
   public void testClientSessionExpired() throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    String quorumServers = ZooKeeperWrapper.getQuorumServers();
+    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+    String quorumServers = zkw.getQuorumServers();
     int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
-    Watcher watcher = new EmptyWatcher();
     HConnection connection = HConnectionManager.getConnection(conf);
     ZooKeeperWrapper connectionZK = connection.getZooKeeperWrapper();
     long sessionID = connectionZK.getSessionID();
     byte[] password = connectionZK.getSessionPassword();
 
-    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, watcher, sessionID, password);
+    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance, sessionID, password);
     zk.close();
 
     Thread.sleep(sessionTimeout * 3);
@@ -119,16 +121,16 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     try {
       new HTable(conf, HConstants.META_TABLE_NAME);
   
-      String quorumServers = ZooKeeperWrapper.getQuorumServers();
+      ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+      String quorumServers = zkw.getQuorumServers();
       int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
-  
-      Watcher watcher = new EmptyWatcher();
+
       HRegionServer rs = cluster.getRegionServer(0);
       ZooKeeperWrapper rsZK = rs.getZooKeeperWrapper();
       long sessionID = rsZK.getSessionID();
       byte[] password = rsZK.getSessionPassword();
   
-      ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, watcher, sessionID, password);
+      ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance, sessionID, password);
       zk.close();
 
       Thread.sleep(sessionTimeout * 3);

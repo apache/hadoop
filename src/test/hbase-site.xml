@@ -127,4 +127,11 @@
     <name>hadoop.log.dir</name>
     <value>${user.dir}/../logs</value>
   </property>
+  <property>
+    <name>hbase.zookeeper.property.clientPort</name>
+    <value>21810</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The port at which the clients will connect.
+    </description>
+  </property>
 </configuration>

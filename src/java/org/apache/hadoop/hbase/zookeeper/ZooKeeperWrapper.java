@@ -56,18 +56,15 @@ public class ZooKeeperWrapper implements HConstants {
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
   private static final char ZNODE_PATH_SEPARATOR = '/';
 
-  private static String quorumServers = null;
-  static {
-    loadZooKeeperConfig();
-  }
+  private String quorumServers = null;
 
   private final ZooKeeper zooKeeper;
 
   private final String parentZNode;
-  public final String rootRegionZNode;
-  public final String outOfSafeModeZNode;
-  public final String rsZNode;
-  public final String masterElectionZNode;
+  private final String rootRegionZNode;
+  private final String outOfSafeModeZNode;
+  private final String rsZNode;
+  private final String masterElectionZNode;
   public final String clusterStateZNode;
 
   /**
@@ -78,6 +75,8 @@ public class ZooKeeperWrapper implements HConstants {
    */
   public ZooKeeperWrapper(HBaseConfiguration conf, Watcher watcher)
   throws IOException {
+    Properties properties = HQuorumPeer.makeZKProps(conf);
+    setQuorumServers(properties);
     if (quorumServers == null) {
       throw new IOException("Could not read quorum servers from " +
                             ZOOKEEPER_CONFIG_NAME);
@@ -110,76 +109,7 @@ public class ZooKeeperWrapper implements HConstants {
     clusterStateZNode = getZNode(parentZNode, stateZNodeName);
   }
 
-  /** @return String dump of everything in ZooKeeper. */
-  public String dump() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
-    sb.append("\n  Cluster up? ").append(exists(clusterStateZNode));
-    sb.append("\n  In safe mode? ").append(!checkOutOfSafeMode());
-    sb.append("\n  Master address: ").append(readMasterAddress(null));
-    sb.append("\n  Region server holding ROOT: ").append(readRootRegionLocation());
-    sb.append("\n  Region servers:");
-    for (HServerAddress address : scanRSDirectory()) {
-      sb.append("\n    - ").append(address);
-    }
-    return sb.toString();
-  }
-
-  private boolean exists(String znode) {
-    try {
-      return zooKeeper.exists(znode, null) != null;
-    } catch (KeeperException e) {
-      return false;
-    } catch (InterruptedException e) {
-      return false;
-    }
-  }
-
-  /** @return ZooKeeper used by this wrapper. */
-  public ZooKeeper getZooKeeper() {
-    return zooKeeper;
-  }
-
-  /**
-   * This is for testing KeeperException.SessionExpiredExcseption.
-   * See HBASE-1232.
-   * @return long session ID of this ZooKeeper session.
-   */
-  public long getSessionID() {
-    return zooKeeper.getSessionId();
-  }
-
-  /**
-   * This is for testing KeeperException.SessionExpiredExcseption.
-   * See HBASE-1232.
-   * @return byte[] password of this ZooKeeper session.
-   */
-  public byte[] getSessionPassword() {
-    return zooKeeper.getSessionPasswd();
-  }
-
-  /**
-   * This is for tests to directly set the ZooKeeper quorum servers.
-   * @param servers comma separated host:port ZooKeeper quorum servers.
-   */
-  public static void setQuorumServers(String servers) {
-    quorumServers = servers;
-  }
-
-  /** @return comma separated host:port list of ZooKeeper quorum servers. */
-  public static String getQuorumServers() {
-    return quorumServers;
-  }
-
-  private static void loadZooKeeperConfig() {
-    Properties properties = null;
-    try {
-      properties = HQuorumPeer.parseZooKeeperConfig();
-    } catch (IOException e) {
-      LOG.fatal("Fail to read properties from " + ZOOKEEPER_CONFIG_NAME, e);
-      System.exit(-1);
-    }
-
+  private void setQuorumServers(Properties properties) {
     String clientPort = null;
     List<String> servers = new ArrayList<String>();
 
@@ -217,7 +147,7 @@ public class ZooKeeperWrapper implements HConstants {
     if (servers.isEmpty()) {
       LOG.fatal("No server.X lines found in conf/zoo.cfg. HBase must have a " +
                 "ZooKeeper cluster configured for its operation.");
-      System.exit(-1);
+      return;
     }
 
     StringBuilder hostPortBuilder = new StringBuilder();
@@ -232,7 +162,59 @@ public class ZooKeeperWrapper implements HConstants {
     }
 
     quorumServers = hostPortBuilder.toString();
-    LOG.info("Quorum servers: " + quorumServers);
+  }
+
+  /** @return String dump of everything in ZooKeeper. */
+  public String dump() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
+    sb.append("\n  Cluster up? ").append(exists(clusterStateZNode));
+    sb.append("\n  In safe mode? ").append(!checkOutOfSafeMode());
+    sb.append("\n  Master address: ").append(readMasterAddress(null));
+    sb.append("\n  Region server holding ROOT: ").append(readRootRegionLocation());
+    sb.append("\n  Region servers:");
+    for (HServerAddress address : scanRSDirectory()) {
+      sb.append("\n    - ").append(address);
+    }
+    return sb.toString();
+  }
+
+  private boolean exists(String znode) {
+    try {
+      return zooKeeper.exists(znode, null) != null;
+    } catch (KeeperException e) {
+      return false;
+    } catch (InterruptedException e) {
+      return false;
+    }
+  }
+
+  /** @return ZooKeeper used by this wrapper. */
+  public ZooKeeper getZooKeeper() {
+    return zooKeeper;
+  }
+
+  /**
+   * This is for testing KeeperException.SessionExpiredException.
+   * See HBASE-1232.
+   * @return long session ID of this ZooKeeper session.
+   */
+  public long getSessionID() {
+    return zooKeeper.getSessionId();
+  }
+
+  /**
+   * This is for testing KeeperException.SessionExpiredException.
+   * See HBASE-1232.
+   * @return byte[] password of this ZooKeeper session.
+   */
+  public byte[] getSessionPassword() {
+    return zooKeeper.getSessionPasswd();
+  }
+
+  /** @return host:port list of quorum servers. */
+  public String getQuorumServers() {
+    return quorumServers;
   }
 
   /** @return true if currently connected to ZooKeeper, false otherwise. */
