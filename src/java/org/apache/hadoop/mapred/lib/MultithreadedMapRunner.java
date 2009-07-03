@@ -26,6 +26,7 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SkipBadRecords;
+import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -47,7 +48,9 @@ import java.util.concurrent.*;
  * <code>mapred.map.multithreadedrunner.threads</code> property, its default
  * value is 10 threads.
  * <p>
+ * @deprecated Use {@link MultithreadedMapper} instead.
  */
+@Deprecated
 public class MultithreadedMapRunner<K1, V1, K2, V2>
     implements MapRunnable<K1, V1, K2, V2> {
 

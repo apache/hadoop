@@ -61,6 +61,10 @@ Trunk (unreleased changes)
     MAPREDUCE-625. Modify TestTaskLimits to improve execution time.
     (Jothi Padmanabhan via sharad)
 
+    MAPREDUCE-465. Deprecate o.a.h.mapred.lib.MultithreadedMapRunner and add
+    test for o.a.h.mapreduce.lib.MultithreadedMapper.
+    (Amareshwari Sriramadasu via sharad)
+
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)
