@@ -372,6 +372,7 @@
   <target name="compile-contrib" depends="compile-core,compile-c++-libhdfs">
      <subant target="compile">
         <property name="version" value="${version}"/>
+        <property name="hadoop-core.version" value="${hadoop-core.version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
   </target>
