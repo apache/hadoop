@@ -102,3 +102,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-673. Sqoop depends on commons-cli, which is not in its ivy.xml.
     (Kevin Weil via tomwhite)
+
+    MAPREDUCE-694. Fix to add jsp-api jars to capacity-scheduler classpath.
+    (Giridharan Kesavan)
