@@ -21,101 +21,46 @@ package org.apache.hadoop.mapred;
 import junit.framework.TestCase;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.examples.PiEstimator;
-import org.apache.hadoop.fs.FileSystem;
-
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
-
 /**
- * A JUnit test to test configired task limits.
+ * A JUnit test to test configured task limits.
  */
 public class TestTaskLimits extends TestCase {
 
-  {     
-    ((Log4JLogger)JobInProgress.LOG).getLogger().setLevel(Level.ALL);
-  }     
-
-  private static final Log LOG =
-    LogFactory.getLog(TestMiniMRWithDFS.class.getName());
-  
-  static final int NUM_MAPS = 5;
-  static final int NUM_SAMPLES = 100;
-  
-  public static class TestResult {
-    public String output;
-    public RunningJob job;
-    TestResult(RunningJob job, String output) {
-      this.job = job;
-      this.output = output;
-    }
-  }
-  
-  static void runPI(MiniMRCluster mr, JobConf jobconf) 
-      throws IOException, InterruptedException, ClassNotFoundException  {
-    LOG.info("runPI");
-    double estimate = PiEstimator.estimate(NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
-    double error = Math.abs(Math.PI - estimate);
-    System.out.println("PI estimation " + error);
-  }
-
-  /**
-   * Run the pi test with a specifix value of 
-   * mapred.jobtracker.maxtasks.per.job. Returns true if the job succeeded.
-   */
-  private boolean runOneTest(int maxTasks) 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
-    FileSystem fileSys = null;
-    boolean success = false;
+  static void runTest(int maxTasks, int numMaps, int numReds, 
+                      boolean shouldFail) throws Exception {
+    JobConf conf = new JobConf();
+    conf.setInt("mapred.jobtracker.maxtasks.per.job", maxTasks);
+    conf.set("mapred.job.tracker.handler.count", "1");
+    MiniMRCluster mr = new MiniMRCluster(0, "file:///", 1, null, null, conf);
+    JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
+    JobConf jc = mr.createJobConf();
+    jc.setNumMapTasks(numMaps);
+    jc.setNumReduceTasks(numReds);
+    JobInProgress jip = new JobInProgress(new JobID(), jc, jt);
+    boolean failed = false;
     try {
-      final int taskTrackers = 2;
-
-      Configuration conf = new Configuration();
-      conf.setInt("mapred.jobtracker.maxtasks.per.job", maxTasks);
-      dfs = new MiniDFSCluster(conf, 4, true, null);
-      fileSys = dfs.getFileSystem();
-      JobConf jconf = new JobConf(conf);
-      mr = new MiniMRCluster(0, 0, taskTrackers, fileSys.getUri().toString(), 1,
-                             null, null, null, jconf);
-      
-      JobConf jc = mr.createJobConf();
-      try {
-        runPI(mr, jc);
-        success = true;
-      } catch (IOException e) {
-        success = false;
-      }
-    } finally {
-      if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown(); }
+      jip.checkTaskLimits();
+    } catch (IOException e) {
+      failed = true;
     }
-    return success;
+    assertEquals(shouldFail, failed);
+    mr.shutdown();
+  }
+  
+  public void testBeyondLimits() throws Exception {
+    // Max tasks is 4, Requested is 8, shouldFail = true
+    runTest(4, 8, 0, true);
+  }
+  
+  public void testTaskWithinLimits() throws Exception {
+    // Max tasks is 4, requested is 4, shouldFail = false
+    runTest(4, 4, 0, false);
   }
 
-  public void testTaskLimits() 
-      throws IOException, InterruptedException, ClassNotFoundException {
 
-    System.out.println("Job 1 running with max set to 2");
-    boolean status = runOneTest(2);
-    assertTrue(status == false);
-    System.out.println("Job 1 failed as expected.");
-
-    // verify that checking this limit works well. The job
-    // needs 5 mappers and we set the limit to 7.
-    System.out.println("Job 2 running with max set to 7.");
-    status = runOneTest(7);
-    assertTrue(status == true);
-    System.out.println("Job 2 succeeded as expected.");
-
-    System.out.println("Job 3 running with max disabled.");
-    status = runOneTest(-1);
-    assertTrue(status == true);
-    System.out.println("Job 3 succeeded as expected.");
+  public void testTaskWithoutLimits() throws Exception {
+    // No task limit, requested is 16, shouldFail = false
+    runTest(-1, 8, 8, false);
   }
+
 }

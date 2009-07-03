@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     MAPREDUCE-686. Move TestSpeculativeExecution.Fake* into a separate class
     so that it can be used by other tests. (Jothi Padmanabhan via sharad)
 
+    MAPREDUCE-625. Modify TestTaskLimits to improve execution time.
+    (Jothi Padmanabhan via sharad)
+
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)

@@ -536,9 +536,8 @@ public class JobInProgress {
 
     LOG.info("Initializing " + jobId);
 
-    // log job info
-    JobHistory.JobInfo.logSubmitted(getJobID(), conf, jobFile.toString(), 
-                                    this.startTime, hasRestarted());
+    logToJobHistory();
+    
     // log the job priority
     setPriority(this.priority);
     
@@ -547,39 +546,16 @@ public class JobInProgress {
     //
     String jobFile = profile.getJobFile();
 
-    DataInputStream splitFile =
-      fs.open(new Path(conf.get("mapred.job.split.file")));
-    JobClient.RawSplit[] splits;
-    try {
-      splits = JobClient.readSplitFile(splitFile);
-    } finally {
-      splitFile.close();
-    }
+    JobClient.RawSplit[] splits = createSplits();
     numMapTasks = splits.length;
 
-
-    // if the number of splits is larger than a configured value
-    // then fail the job.
-    int maxTasks = jobtracker.getMaxTasksPerJob();
-    if (maxTasks > 0 && numMapTasks + numReduceTasks > maxTasks) {
-      throw new IOException(
-                "The number of tasks for this job " + 
-                (numMapTasks + numReduceTasks) +
-                " exceeds the configured limit " + maxTasks);
-    }
+    checkTaskLimits();
 
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
+
+    createMapTasks(jobFile, splits);
     
-    maps = new TaskInProgress[numMapTasks];
-    for(int i=0; i < numMapTasks; ++i) {
-      inputLength += splits[i].getDataLength();
-      maps[i] = new TaskInProgress(jobId, jobFile, 
-                                   splits[i], 
-                                   jobtracker, conf, this, i, numSlotsPerMap);
-    }
-    LOG.info("Input size for job " + jobId + " = " + inputLength
-        + ". Number of splits = " + splits.length);
     if (numMapTasks > 0) { 
       nonRunningMapCache = createCache(splits, maxLevel);
     }
@@ -587,17 +563,8 @@ public class JobInProgress {
     // set the launch time
     this.launchTime = JobTracker.getClock().getTime();
 
-    //
-    // Create reduce tasks
-    //
-    this.reduces = new TaskInProgress[numReduceTasks];
-    for (int i = 0; i < numReduceTasks; i++) {
-      reduces[i] = new TaskInProgress(jobId, jobFile, 
-                                      numMapTasks, i, 
-                                      jobtracker, conf, this, numSlotsPerReduce);
-      nonRunningReduces.add(reduces[i]);
-    }
-
+    createReduceTasks(jobFile);
+    
     // Calculate the minimum number of maps to be complete before 
     // we should start scheduling reduces
     completedMapsForReduceSlowstart = 
@@ -627,7 +594,64 @@ public class JobInProgress {
     }
   }
 
-  private void initSetupCleanupTasks(String jobFile) {
+  void logToJobHistory() throws IOException {
+    // log job info
+    JobHistory.JobInfo.logSubmitted(getJobID(), conf, jobFile.toString(), 
+        this.startTime, hasRestarted());
+  }
+
+  JobClient.RawSplit[] createSplits() throws IOException {
+    DataInputStream splitFile =
+      fs.open(new Path(conf.get("mapred.job.split.file")));
+    JobClient.RawSplit[] splits;
+    try {
+      splits = JobClient.readSplitFile(splitFile);
+    } finally {
+      splitFile.close();
+    }
+    return splits;
+  }
+
+  /**
+   * If the number of taks is greater than the configured value
+   * throw an exception that will fail job initialization
+   */
+  void checkTaskLimits() throws IOException {
+    int maxTasks = jobtracker.getMaxTasksPerJob();
+    if (maxTasks > 0 && numMapTasks + numReduceTasks > maxTasks) {
+      throw new IOException(
+                "The number of tasks for this job " + 
+                (numMapTasks + numReduceTasks) +
+                " exceeds the configured limit " + maxTasks);
+    }
+  }
+
+  synchronized void createMapTasks(String jobFile, JobClient.RawSplit[] splits) {
+    maps = new TaskInProgress[numMapTasks];
+    for(int i=0; i < numMapTasks; ++i) {
+      inputLength += splits[i].getDataLength();
+      maps[i] = new TaskInProgress(jobId, jobFile, 
+                                   splits[i], 
+                                   jobtracker, conf, this, 
+                                   i, numSlotsPerMap);
+    }
+    LOG.info("Input size for job " + jobId + " = " + inputLength
+        + ". Number of splits = " + splits.length);
+
+  }
+
+  synchronized void createReduceTasks(String jobFile) {
+    this.reduces = new TaskInProgress[numReduceTasks];
+    for (int i = 0; i < numReduceTasks; i++) {
+      reduces[i] = new TaskInProgress(jobId, jobFile, 
+                                      numMapTasks, i, 
+                                      jobtracker, conf, 
+                                      this, numSlotsPerReduce);
+      nonRunningReduces.add(reduces[i]);
+    }
+  }
+
+  synchronized void initSetupCleanupTasks(String jobFile) {
     if (!jobSetupCleanupNeeded) {
       // nothing to initialize
       return;
