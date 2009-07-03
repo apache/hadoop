@@ -69,6 +69,9 @@ Trunk (unreleased changes)
     (Aaron Kimball via tomwhite)
 
   BUG FIXES
+    MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
+    (Aaron Kimball via matei)
+
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)
 

@@ -60,5 +60,9 @@
       name="log4j"
       rev="${log4j.version}"
       conf="common->master"/>
+    <dependency org="hsqldb"
+      name="hsqldb"
+      rev="${hsqldb.version}"
+      conf="common->default"/>
     </dependencies>
 </ivy-module>
