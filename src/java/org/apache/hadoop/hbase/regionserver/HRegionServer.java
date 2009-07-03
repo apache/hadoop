@@ -314,7 +314,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   private void reinitializeZooKeeper() throws IOException {
-    zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
     watchMasterAddress();
   }
 

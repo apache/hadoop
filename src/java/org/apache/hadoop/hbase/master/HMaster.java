@@ -88,6 +88,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 
 /**
  * HMaster is the "master server" for a HBase.
@@ -98,7 +100,7 @@ import org.apache.hadoop.util.StringUtils;
  * sleep time which is invariant.
  */
 public class HMaster extends Thread implements HConstants, HMasterInterface, 
-  HMasterRegionInterface {
+  HMasterRegionInterface, Watcher {
 
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
@@ -242,7 +244,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
     
-    zooKeeperWrapper = new ZooKeeperWrapper(conf);
+    zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
     zkMasterAddressWatcher = new ZKMasterAddressWatcher(this);
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
@@ -1167,5 +1169,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public static void main(String [] args) {
     doMain(args, HMaster.class);
+  }
+
+  /**
+   * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.WatchedEvent)
+   */
+  @Override
+  public void process(WatchedEvent event) {
+    // TODO: Write me to handle session expired events.
   }
 }

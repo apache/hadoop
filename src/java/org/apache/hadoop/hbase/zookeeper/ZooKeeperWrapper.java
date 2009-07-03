@@ -62,7 +62,6 @@ public class ZooKeeperWrapper implements HConstants {
   }
 
   private final ZooKeeper zooKeeper;
-  private final WatcherWrapper watcher;
 
   private final String parentZNode;
   public final String rootRegionZNode;
@@ -70,15 +69,6 @@ public class ZooKeeperWrapper implements HConstants {
   public final String rsZNode;
   public final String masterElectionZNode;
   public final String clusterStateZNode;
-
-  /**
-   * Create a ZooKeeperWrapper.
-   * @param conf HBaseConfiguration to read settings from.
-   * @throws IOException If a connection error occurs.
-   */
-  public ZooKeeperWrapper(HBaseConfiguration conf) throws IOException { 
-    this(conf, null);
-  }
 
   /**
    * Create a ZooKeeperWrapper.
@@ -94,9 +84,8 @@ public class ZooKeeperWrapper implements HConstants {
     }
 
     int sessionTimeout = conf.getInt("zookeeper.session.timeout", 10 * 1000);
-    this.watcher = new WatcherWrapper(watcher);
     try {
-      zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, this.watcher);
+      zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     } catch (IOException e) {
       LOG.error("Failed to create ZooKeeper object: " + e);
       throw new IOException(e);
