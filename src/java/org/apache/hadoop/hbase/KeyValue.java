@@ -639,9 +639,9 @@ public class KeyValue implements Writable, HeapSize {
     int familylength = b[columnoffset - 1];
     int columnlength = l - ((columnoffset - o) + TIMESTAMP_TYPE_SIZE);
     String family = familylength == 0? "":
-      Bytes.toString(b, columnoffset, familylength);
+      Bytes.toStringBinary(b, columnoffset, familylength);
     String qualifier = columnlength == 0? "":
-      Bytes.toString(b, columnoffset + familylength,
+      Bytes.toStringBinary(b, columnoffset + familylength,
       columnlength - familylength);
     long timestamp = Bytes.toLong(b, o + (l - TIMESTAMP_TYPE_SIZE));
     byte type = b[o + l - 1];

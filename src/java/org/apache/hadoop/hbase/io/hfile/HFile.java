@@ -513,8 +513,7 @@ public class HFile {
       }
     }
 
-    private void checkValue(final byte [] value,
-        @SuppressWarnings("unused") final int offset,
+    private void checkValue(final byte [] value, final int offset,
         final int length) throws IOException {
       if (value == null) {
         throw new IOException("Value cannot be null");
@@ -699,8 +698,7 @@ public class HFile {
      * @throws IOException
      */
     public Reader(final FSDataInputStream fsdis, final long size,
-        final BlockCache cache)
-    throws IOException {
+        final BlockCache cache) {
       this.cache = cache;
       this.fileSize = size;
       this.istream = fsdis;
@@ -722,11 +720,11 @@ public class HFile {
     }
 
     protected String toStringFirstKey() {
-      return Bytes.toStringBinary(getFirstKey());
+      return KeyValue.keyToString(getFirstKey());
     }
 
     protected String toStringLastKey() {
-      return Bytes.toStringBinary(getFirstKey());
+      return KeyValue.keyToString(getFirstKey());
     }
 
     public long length() {
@@ -918,13 +916,24 @@ public class HFile {
         buf.limit(buf.limit() - DATABLOCKMAGIC.length);
         buf.rewind();
 
-        // Cache a copy, not the one we are sending back, so the position doesnt
-        // get messed.
-        if (cache != null) {
-          cache.cacheBlock(name + block, buf.duplicate());
-        }
+        // Cache the block
+        cacheBlock(name + block, buf.duplicate());
 
         return buf;
+      }
+    }
+    
+    /**
+     * Cache this block if there is a block cache available.<p>
+     * 
+     * Makes a copy of the ByteBuffer, not the one we are sending back, so the 
+     * position does not get messed up.
+     * @param blockName
+     * @param buf
+     */
+    void cacheBlock(String blockName, ByteBuffer buf) {
+      if (cache != null) {
+        cache.cacheBlock(blockName, buf.duplicate());
       }
     }
 
@@ -1241,6 +1250,36 @@ public class HFile {
       return trailer.toString();
     }
   }
+  
+
+  /**
+   * HFile Reader that does not cache blocks that were not already cached.<p>
+   * 
+   * Used for compactions.
+   */
+  public static class CompactionReader extends Reader {
+    public CompactionReader(Reader reader) {
+      super(reader.istream, reader.fileSize, reader.cache);
+      super.blockIndex = reader.blockIndex;
+      super.trailer = reader.trailer;
+      super.lastkey = reader.lastkey;
+      super.avgKeyLen = reader.avgKeyLen;
+      super.avgValueLen = reader.avgValueLen;
+      super.comparator = reader.comparator;
+      super.metaIndex = reader.metaIndex;
+      super.fileInfoLoaded = reader.fileInfoLoaded;
+      super.compressAlgo = reader.compressAlgo;
+    }
+    
+    /**
+     * Do not cache this block when doing a compaction.
+     */
+    @Override
+    void cacheBlock(String blockName, ByteBuffer buf) {
+      return;
+    }
+  }
+  
   /*
    * The RFile has a fixed trailer which contains offsets to other variable
    * parts of the file.  Also includes basic metadata on this file.

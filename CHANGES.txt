@@ -433,6 +433,8 @@ Release 0.20.0 - Unreleased
                (Lars George via Stack)
    HBASE-1596  Remove WatcherWrapper and have all users of Zookeeper provide a
                Watcher
+   HBASE-1597  Prevent unnecessary caching of blocks during compactions
+               (Jon Gray via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

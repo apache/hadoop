@@ -539,19 +539,15 @@ public class LruBlockCache implements BlockCache, HeapSize {
     LruBlockCache.LOG.debug("Cache Stats: Sizes: " + 
         "Total=" + sizeMB + "MB (" + totalSize + "), " +
         "Free=" + freeMB + "MB (" + freeSize + "), " +
-        "Max=" + maxMB + "MB (" + maxSize +")");
-    
-    // Log hit/miss and eviction counts
-    LruBlockCache.LOG.debug("Cache Stats: Counts: " +
+        "Max=" + maxMB + "MB (" + maxSize +")" +
+      ", Counts: " +
         "Blocks=" + size() +", " +
         "Access=" + stats.getRequestCount() + ", " +
         "Hit=" + stats.getHitCount() + ", " +
         "Miss=" + stats.getMissCount() + ", " +
         "Evictions=" + stats.getEvictionCount() + ", " +
-        "Evicted=" + stats.getEvictedCount());
-    
-    // Log hit/miss and eviction ratios
-    LruBlockCache.LOG.debug("Cache Stats: Ratios: " +
+        "Evicted=" + stats.getEvictedCount() +
+      ", Ratios: " +
         "Hit Ratio=" + stats.getHitRatio()*100 + "%, " +
         "Miss Ratio=" + stats.getMissRatio()*100 + "%, " +
         "Evicted/Run=" + stats.evictedPerEviction());

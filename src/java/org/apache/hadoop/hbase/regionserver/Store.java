@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.io.SequenceFile;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.HFile.CompactionReader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -674,12 +675,12 @@ public class Store implements HConstants {
           LOG.warn("Path is null for " + file);
           return null;
         }
-        Reader r = file.getReader();
+        CompactionReader r = file.getCompactionReader();
         if (r == null) {
           LOG.warn("StoreFile " + file + " has a null Reader");
           continue;
         }
-        long len = file.getReader().length();
+        long len = file.getCompactionReader().length();
         fileSizes[i] = len;
         totalSize += len;
       }
@@ -838,7 +839,7 @@ public class Store implements HConstants {
     // init:
     for (int i = 0; i < filesToCompact.size(); ++i) {
       // TODO open a new HFile.Reader w/o block cache.
-      Reader r = filesToCompact.get(i).getReader();
+      CompactionReader r = filesToCompact.get(i).getCompactionReader();
       if (r == null) {
         LOG.warn("StoreFile " + filesToCompact.get(i) + " has a null Reader");
         continue;
@@ -953,7 +954,7 @@ public class Store implements HConstants {
       // 4. Compute new store size
       this.storeSize = 0L;
       for (StoreFile hsf : this.storefiles.values()) {
-        Reader r = hsf.getReader();
+        Reader r = hsf.getCompactionReader();
         if (r == null) {
           LOG.warn("StoreFile " + hsf + " has a null Reader");
           continue;

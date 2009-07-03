@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
@@ -262,7 +263,7 @@ public class StoreFile implements HConstants {
       this.reader = new HalfHFileReader(this.fs, this.referencePath, 
           getBlockCache(), this.reference);
     } else {
-      this.reader = new StoreFileReader(this.fs, this.path, getBlockCache());
+      this.reader = new Reader(this.fs, this.path, getBlockCache());
     }
     // Load up indices and fileinfo.
     Map<byte [], byte []> map = this.reader.loadFileInfo();
@@ -298,71 +299,18 @@ public class StoreFile implements HConstants {
   }
 
   /**
-   * Override to add some customization on HFile.Reader
-   */
-  static class StoreFileReader extends HFile.Reader {
-    /**
-     * 
-     * @param fs
-     * @param path
-     * @param cache
-     * @throws IOException
-     */
-    public StoreFileReader(FileSystem fs, Path path, BlockCache cache)
-        throws IOException {
-      super(fs, path, cache);
-    }
-
-    @Override
-    protected String toStringFirstKey() {
-      return KeyValue.keyToString(getFirstKey());
-    }
-
-    @Override
-    protected String toStringLastKey() {
-      return KeyValue.keyToString(getLastKey());
-    }
-  }
-
-  /**
-   * Override to add some customization on HalfHFileReader.
-   */
-  static class HalfStoreFileReader extends HalfHFileReader {
-    /**
-     * 
-     * @param fs
-     * @param p
-     * @param c
-     * @param r
-     * @throws IOException
-     */
-    public HalfStoreFileReader(FileSystem fs, Path p, BlockCache c, Reference r)
-        throws IOException {
-      super(fs, p, c, r);
-    }
-
-    @Override
-    public String toString() {
-      return super.toString() + (isTop()? ", half=top": ", half=bottom") +
-          " splitKey: " + KeyValue.keyToString(splitkey);
-    }
-
-    @Override
-    protected String toStringFirstKey() {
-      return KeyValue.keyToString(getFirstKey());
-    }
-
-    @Override
-    protected String toStringLastKey() {
-      return KeyValue.keyToString(getLastKey());
-    }
-  }
-
-  /**
    * @return Current reader.  Must call open first else returns null.
    */
   public HFile.Reader getReader() {
     return this.reader;
+  }
+
+  /**
+   * Gets a special Reader for use during compactions.  Will not cache blocks.
+   * @return Current reader.  Must call open first else returns null.
+   */
+  public HFile.CompactionReader getCompactionReader() {
+    return new HFile.CompactionReader(this.reader);
   }
 
   /**
