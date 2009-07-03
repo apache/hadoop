@@ -19,24 +19,19 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.mapred.TaskStatus.Phase;
-
-import java.util.Collection;
-import java.util.Iterator;
-
-import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
-
 import junit.extensions.TestSetup;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
+import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
+
 public class TestSpeculativeExecution extends TestCase {
 
   FakeJobInProgress job;
   static FakeJobTracker jobTracker;
-  static String jtIdentifier = "test";
-  private static int jobCounter;
   static class SpecFakeClock extends FakeClock {
     long SPECULATIVE_LAG = TaskInProgress.SPECULATIVE_LAG;
     @Override
@@ -57,11 +52,10 @@ public class TestSpeculativeExecution extends TestCase {
         JobConf conf = new JobConf();
         conf.set("mapred.job.tracker", "localhost:0");
         conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
-        jobTracker = new FakeJobTracker(conf, (clock = new SpecFakeClock()));
+        jobTracker = new FakeJobTracker(conf, (clock = new SpecFakeClock()),
+            trackers);
         for (String tracker : trackers) {
-          jobTracker.heartbeat(new TaskTrackerStatus(tracker,
-              JobInProgress.convertTrackerNameToHostName(tracker)), false, 
-              true, false, (short)0);
+          FakeObjectUtilities.establishFirstContact(jobTracker, tracker);
         }
       }
       protected void tearDown() throws Exception {
@@ -69,122 +63,6 @@ public class TestSpeculativeExecution extends TestCase {
       }
     };
     return setup;
-  }
-  
-  /*
-   * This class is required mainly to check the speculative cap
-   * based on cluster size
-   */
-  static class FakeJobTracker extends JobTracker {
-    //initialize max{Map/Reduce} task capacities to twice the clustersize
-    int totalSlots = trackers.length * 4;
-    FakeJobTracker(JobConf conf, Clock clock) throws IOException, 
-    InterruptedException {
-      super(conf, clock);
-    }
-    @Override
-    public ClusterStatus getClusterStatus(boolean detailed) {
-      return new ClusterStatus(trackers.length,
-          0, 0, 0, 0, totalSlots/2, totalSlots/2, JobTracker.State.RUNNING, 0);
-    }
-    public void setNumSlots(int totalSlots) {
-      this.totalSlots = totalSlots;
-    }
-  }
-
-  static class FakeJobInProgress extends JobInProgress {
-    JobClient.RawSplit[] rawSplits;
-    FakeJobInProgress(JobConf jobConf, JobTracker tracker) throws IOException {
-      super(new JobID(jtIdentifier, ++jobCounter), jobConf, tracker);
-      //initObjects(tracker, numMaps, numReduces);
-    }
-    @Override
-    public synchronized void initTasks() throws IOException {
-      maps = new TaskInProgress[numMapTasks];
-      for (int i = 0; i < numMapTasks; i++) {
-        JobClient.RawSplit split = new JobClient.RawSplit();
-        split.setLocations(new String[0]);
-        maps[i] = new TaskInProgress(getJobID(), "test", 
-            split, jobtracker, getJobConf(), this, i, 1);
-        nonLocalMaps.add(maps[i]);
-      }
-      reduces = new TaskInProgress[numReduceTasks];
-      for (int i = 0; i < numReduceTasks; i++) {
-        reduces[i] = new TaskInProgress(getJobID(), "test", 
-                                        numMapTasks, i, 
-                                        jobtracker, getJobConf(), this, 1);
-        nonRunningReduces.add(reduces[i]);
-      }
-    }
-    private TaskAttemptID findTask(String trackerName, String trackerHost,
-        Collection<TaskInProgress> nonRunningTasks, 
-        Collection<TaskInProgress> runningTasks)
-    throws IOException {
-      TaskInProgress tip = null;
-      Iterator<TaskInProgress> iter = nonRunningTasks.iterator();
-      //look for a non-running task first
-      while (iter.hasNext()) {
-        TaskInProgress t = iter.next();
-        if (t.isRunnable() && !t.isRunning()) {
-          runningTasks.add(t);
-          iter.remove();
-          tip = t;
-          break;
-        }
-      }
-      if (tip == null) {
-        if (getJobConf().getSpeculativeExecution()) {
-          tip = findSpeculativeTask(runningTasks, trackerName, trackerHost);
-        }
-      }
-      if (tip != null) {
-        TaskAttemptID tId = tip.getTaskToRun(trackerName).getTaskID();
-        if (tip.isMapTask()) {
-          scheduleMap(tip);
-        } else {
-          scheduleReduce(tip);
-        }
-        //Set it to RUNNING
-        makeRunning(tId, tip, trackerName);
-        return tId;
-      }
-      return null;
-    }
-    public TaskAttemptID findMapTask(String trackerName)
-    throws IOException {
-      return findTask(trackerName, 
-          JobInProgress.convertTrackerNameToHostName(trackerName),
-          nonLocalMaps, nonLocalRunningMaps);
-    }
-    public TaskAttemptID findReduceTask(String trackerName) 
-    throws IOException {
-      return findTask(trackerName, 
-          JobInProgress.convertTrackerNameToHostName(trackerName),
-          nonRunningReduces, runningReduces);
-    }
-    public void finishTask(TaskAttemptID taskId) {
-      TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
-      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          1.0f, 1, TaskStatus.State.SUCCEEDED, "", "", tip.machineWhereTaskRan(taskId), 
-          tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
-      updateTaskStatus(tip, status);
-    }
-    private void makeRunning(TaskAttemptID taskId, TaskInProgress tip, 
-        String taskTracker) {
-      addRunningTaskToTIP(tip, taskId, new TaskTrackerStatus(taskTracker,
-          JobInProgress.convertTrackerNameToHostName(taskTracker)), true);
-      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          0.0f, 1, TaskStatus.State.RUNNING, "", "", taskTracker,
-          tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
-      updateTaskStatus(tip, status);
-    }
-    public void progressMade(TaskAttemptID taskId, float progress) {
-      TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
-      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          progress, 1, TaskStatus.State.RUNNING, "", "", tip.machineWhereTaskRan(taskId), 
-          tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
-      updateTaskStatus(tip, status);
-    }
   }
 
   public void testIsSlowTracker() throws IOException {
@@ -298,7 +176,8 @@ public class TestSpeculativeExecution extends TestCase {
    * even though we have a lot of tasks in RUNNING state
    */
   public void testAtSpeculativeCap() throws IOException {
-    //The expr which is evaluated for determining whether atSpeculativeCap should
+    //The expr which is evaluated for determining whether 
+    //atSpeculativeCap should
     //return true or false is
     //(#speculative-tasks < max (10, 0.01*#slots, 0.1*#running-tasks)
     
@@ -336,7 +215,8 @@ public class TestSpeculativeExecution extends TestCase {
       taskAttemptID[i] = job.findMapTask(trackers[1]);
       clock.advance(2000);
       if (taskAttemptID[i] != null) {
-        //add some good progress constantly for the different task-attempts so that
+        //add some good progress constantly for the different 
+        //task-attempts so that
         //the tasktracker doesn't get into the slow trackers category
         job.progressMade(taskAttemptID[i], 0.99f);
       } else {
