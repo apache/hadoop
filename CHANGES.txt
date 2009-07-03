@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     test for o.a.h.mapreduce.lib.MultithreadedMapper.
     (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-692. Make Hudson run Sqoop unit tests.
+    (Aaron Kimball via tomwhite)
+
   BUG FIXES
     HADOOP-4687. MapReduce is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)

@@ -52,7 +52,8 @@
       <property name="continueOnFailure" value="true"/>
       <fileset dir="." includes="streaming/build.xml"/> 
       <fileset dir="." includes="fairscheduler/build.xml"/> 
-     <fileset dir="." includes="capacity-scheduler/build.xml"/>  
+      <fileset dir="." includes="capacity-scheduler/build.xml"/>  
+      <fileset dir="." includes="sqoop/build.xml"/>
       <fileset dir="." includes="mrunit/build.xml"/> 
       <fileset dir="." includes="dynamic-scheduler/build.xml"/>
     </subant>
