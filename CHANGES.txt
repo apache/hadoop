@@ -105,3 +105,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-694. Fix to add jsp-api jars to capacity-scheduler classpath.
     (Giridharan Kesavan)
+
+    MAPREDUCE-690. Sqoop's test "hive" script needs to be executable.
+    (Aaron Kimball via tomwhite)
