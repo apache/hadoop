@@ -271,6 +271,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private void bootstrap() throws IOException {
     LOG.info("BOOTSTRAP: creating ROOT and first META regions");
     try {
+      // Bootstrapping, make sure blockcache is off.  Else, one will be
+      // created here in bootstap and it'll need to be cleaned up.  Better to
+      // not make it in first place.  Turn off block caching for bootstrap.
+      // Enable after.
+      setBlockCaching(HRegionInfo.ROOT_REGIONINFO, false);
+      setBlockCaching(HRegionInfo.FIRST_META_REGIONINFO, false);
       HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
         this.rootdir, this.conf);
       HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
@@ -281,10 +287,22 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       root.getLog().closeAndDelete();
       meta.close();
       meta.getLog().closeAndDelete();
+      setBlockCaching(HRegionInfo.ROOT_REGIONINFO, true);
+      setBlockCaching(HRegionInfo.FIRST_META_REGIONINFO, true);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("bootstrap", e);
       throw e;
+    }
+  }
+
+  /*
+   * @param hri Set all family block caching to <code>b</code>
+   * @param b
+   */
+  private void setBlockCaching(final HRegionInfo hri, final boolean b) {
+    for (HColumnDescriptor hcd: hri.getTableDesc().families.values()) {
+      hcd.setBlockCacheEnabled(b);
     }
   }
 
