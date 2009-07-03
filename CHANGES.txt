@@ -241,6 +241,7 @@ Release 0.20.0 - Unreleased
    HBASE-1594  Fix scan addcolumns after hbase-1385 commit (broken hudson build)
    HBASE-1595  hadoop-default.xml and zoo.cfg in hbase jar
    HBASE-1602  HRegionServer won't go down since we added in new LruBlockCache
+   HBASE-1608  TestCachedBlockQueue failing on some jvms (Jon Gray via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

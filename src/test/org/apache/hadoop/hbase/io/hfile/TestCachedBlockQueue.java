@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import junit.framework.TestCase;
 
 public class TestCachedBlockQueue extends TestCase {
-
+  
   public void testQueue() throws Exception {
 
     CachedBlock cb1 = new CachedBlock(1000, "cb1", 1);
@@ -95,7 +95,7 @@ public class TestCachedBlockQueue extends TestCase {
     queue.add(cb9);
     queue.add(cb10);
     
-    CachedBlock cb0 = new CachedBlock(10, "cb0", 0);
+    CachedBlock cb0 = new CachedBlock(10 + CachedBlock.PER_BLOCK_OVERHEAD, "cb0", 0);
     queue.add(cb0);
     
     // This is older so we must include it, but it will not end up kicking
@@ -125,7 +125,9 @@ public class TestCachedBlockQueue extends TestCase {
   private class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
   {
     public CachedBlock(long heapSize, String name, long accessTime) {
-      super(name,ByteBuffer.allocate((int)heapSize),accessTime,false);
+      super(name,
+          ByteBuffer.allocate((int)(heapSize - CachedBlock.PER_BLOCK_OVERHEAD)),
+          accessTime,false);
     }
   }
   
