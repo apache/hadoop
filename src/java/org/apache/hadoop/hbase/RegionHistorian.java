@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * The Region Historian task is to keep track of every modification a region
@@ -48,8 +48,6 @@ public class RegionHistorian implements HConstants {
   private static final Log LOG = LogFactory.getLog(RegionHistorian.class);
   
   private HTable metaTable;
-
-
 
   /** Singleton reference */
   private static RegionHistorian historian;
@@ -333,4 +331,7 @@ public class RegionHistorian implements HConstants {
       LOG.debug("Offlined");
     }
   }
+
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT + ClassSize.REFERENCE);
 }

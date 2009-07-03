@@ -73,7 +73,25 @@ public class ClassSize {
   
   /** Overhead for ConcurrentHashMap.Segment */
   public static int CONCURRENT_HASHMAP_SEGMENT = 0;
-
+  
+  /** Overhead for ConcurrentSkipListMap */
+  public static int CONCURRENT_SKIPLISTMAP = 0;
+  
+  /** Overhead for ConcurrentSkipListMap Entry */
+  public static int CONCURRENT_SKIPLISTMAP_ENTRY = 0;
+  
+  /** Overhead for ReentrantReadWriteLock */
+  public static int REENTRANT_LOCK = 0;
+  
+  /** Overhead for AtomicLong */
+  public static int ATOMIC_LONG = 0;
+  
+  /** Overhead for AtomicInteger */
+  public static int ATOMIC_INTEGER = 0;
+  
+  /** Overhead for AtomicBoolean */
+  public static int ATOMIC_BOOLEAN = 0;
+  
   private static final String THIRTY_TWO = "32";
 
   /**
@@ -118,6 +136,21 @@ public class ClassSize {
       
     CONCURRENT_HASHMAP_SEGMENT = align(REFERENCE + OBJECT + 
         (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_FLOAT + ARRAY);
+    
+    CONCURRENT_SKIPLISTMAP = align(Bytes.SIZEOF_INT + OBJECT + (8 * REFERENCE));
+    
+    CONCURRENT_SKIPLISTMAP_ENTRY = align(
+        align(OBJECT + (3 * REFERENCE)) + /* one node per entry */ 
+        align((OBJECT + (3 * REFERENCE))/2)); /* one index per two entries */
+    
+    REENTRANT_LOCK = align(OBJECT + (3 * REFERENCE));
+    
+    ATOMIC_LONG = align(OBJECT + Bytes.SIZEOF_LONG);
+    
+    ATOMIC_INTEGER = align(OBJECT + Bytes.SIZEOF_INT);
+    
+    ATOMIC_BOOLEAN = align(OBJECT + Bytes.SIZEOF_BOOLEAN);
+    
   }
   
   /**

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.SequenceFile;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFile.CompactionReader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -83,7 +85,7 @@ import org.apache.hadoop.util.StringUtils;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-public class Store implements HConstants {
+public class Store implements HConstants, HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
   /**
    * Comparator that looks at columns and compares their family portions.
@@ -510,7 +512,7 @@ public class Store implements HConstants {
           if (!isExpired(kv, oldestTimestamp)) {
             writer.append(kv);
             entries++;
-            flushed += this.memstore.heapSize(kv, true);
+            flushed += this.memstore.heapSizeChange(kv, true);
           }
         }
         // B. Write out the log sequence number that corresponds to this output
@@ -1626,5 +1628,20 @@ public class Store implements HConstants {
         System.currentTimeMillis(),
         Bytes.toBytes(newValue));
     return new ICVResult(newValue, newKv.heapSize(), newKv);
+  }
+
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
+      (5 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
+      ClassSize.align(ClassSize.ARRAY));
+  
+  public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
+      ClassSize.OBJECT + ClassSize.REENTRANT_LOCK + 
+      ClassSize.CONCURRENT_SKIPLISTMAP + 
+      ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT);
+      
+  @Override
+  public long heapSize() {
+    return DEEP_OVERHEAD + this.memstore.heapSize();
   }
 }

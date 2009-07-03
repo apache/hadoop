@@ -54,9 +54,11 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.Progressable;
@@ -98,7 +100,7 @@ import org.apache.hadoop.util.StringUtils;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-public class HRegion implements HConstants { // , Writable{
+public class HRegion implements HConstants, HeapSize { // , Writable{
   static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
@@ -2322,45 +2324,28 @@ public class HRegion implements HConstants { // , Writable{
             + " in table " + regionInfo.getTableDesc());
     }
   }
+
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+      (3 * Bytes.SIZEOF_LONG) + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
+      (21 * ClassSize.REFERENCE) + ClassSize.OBJECT);
   
+  public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
+      ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) + 
+      ClassSize.ATOMIC_LONG + ClassSize.ATOMIC_INTEGER +
+      ClassSize.CONCURRENT_HASHMAP + 
+      (16 * ClassSize.CONCURRENT_HASHMAP_ENTRY) + 
+      (16 * ClassSize.CONCURRENT_HASHMAP_SEGMENT) +
+      ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY +
+      RegionHistorian.FIXED_OVERHEAD + HLog.FIXED_OVERHEAD +
+      ClassSize.align(ClassSize.OBJECT + (5 * Bytes.SIZEOF_BOOLEAN)) +
+      (3 * ClassSize.REENTRANT_LOCK));
   
-//  //HBaseAdmin Debugging 
-//  /**
-//   * @return number of stores in the region
-//   */
-//  public int getNumStores() {
-//    return this.numStores;
-//  }
-//  /**
-//   * @return the name of the region
-//   */
-//  public byte [] getRegionsName() {
-//    return this.name;
-//  }
-//  /**
-//   * @return the number of files in every store
-//   */
-//  public int [] getStoresSize() {
-//    return this.storeSize;
-//  }
-//  
-//  //Writable, used for debugging purposes only
-//  public void readFields(final DataInput in)
-//  throws IOException {
-//    this.name = Bytes.readByteArray(in);
-//    this.numStores = in.readInt();
-//    this.storeSize = new int [numStores];
-//    for(int i=0; i<this.numStores; i++) {
-//      this.storeSize[i] = in.readInt();
-//    }
-//  }
-//
-//  public void write(final DataOutput out)
-//  throws IOException {
-//    Bytes.writeByteArray(out, this.regionInfo.getRegionName());
-//    out.writeInt(this.stores.size());
-//    for(Store store : this.stores.values()) {
-//      out.writeInt(store.getNumberOfstorefiles());
-//    }
-//  }
+  @Override
+  public long heapSize() {
+    long heapSize = DEEP_OVERHEAD;
+    for(Store store : this.stores.values()) {
+      heapSize += store.heapSize();
+    }
+    return heapSize;
+  }
 }

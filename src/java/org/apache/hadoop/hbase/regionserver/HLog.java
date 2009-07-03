@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.SequenceFile;
@@ -111,7 +112,7 @@ public class HLog implements HConstants, Syncable {
   private final int flushlogentries;
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
   private volatile long lastLogFlushTime;
-
+  
   /*
    * Current log file.
    */
@@ -1117,4 +1118,9 @@ public class HLog implements HConstants, Syncable {
       }
     }
   }
+
+  public static final long FIXED_OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
+      ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
+  
 }

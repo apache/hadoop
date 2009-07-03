@@ -30,14 +30,17 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.DeleteCompare.DeleteCode;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -50,7 +53,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * TODO: With new KVSLS, need to make sure we update HeapSize with difference
  * in KV size.
  */
-class MemStore {
+public class MemStore implements HeapSize {
   private static final Log LOG = LogFactory.getLog(MemStore.class);
 
   private final long ttl;
@@ -75,8 +78,8 @@ class MemStore {
   // Used comparing versions -- same r/c and type but different timestamp.
   final KeyValue.KVComparator comparatorIgnoreTimestamp;
 
-  // TODO: Fix this guess by studying jprofiler
-  private final static int ESTIMATED_KV_HEAP_TAX = 60;
+  // Used to track own heapSize
+  final AtomicLong size;
 
   /**
    * Default constructor. Used for tests.
@@ -98,6 +101,7 @@ class MemStore {
     this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
     this.kvset = new KeyValueSkipListSet(c);
     this.snapshot = new KeyValueSkipListSet(c);
+    this.size = new AtomicLong(DEEP_OVERHEAD);
   }
 
   void dump() {
@@ -129,6 +133,8 @@ class MemStore {
         if (!this.kvset.isEmpty()) {
           this.snapshot = this.kvset;
           this.kvset = new KeyValueSkipListSet(this.comparator);
+          // Reset heap to not include any keys
+          this.size.set(DEEP_OVERHEAD);
         }
       }
     } finally {
@@ -181,7 +187,8 @@ class MemStore {
     long size = -1;
     this.lock.readLock().lock();
     try {
-      size = heapSize(kv, this.kvset.add(kv));
+      size = heapSizeChange(kv, this.kvset.add(kv));
+      this.size.addAndGet(size);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -254,33 +261,19 @@ class MemStore {
       //Delete all the entries effected by the last added delete
       for (KeyValue kv : deletes) {
         notpresent = this.kvset.remove(kv);
-        size -= heapSize(kv, notpresent);
+        size -= heapSizeChange(kv, notpresent);
       }
       
       // Adding the delete to memstore. Add any value, as long as
       // same instance each time.
-      size += heapSize(delete, this.kvset.add(delete));
+      size += heapSizeChange(delete, this.kvset.add(delete));
     } finally {
       this.lock.readLock().unlock();
     }
+    this.size.addAndGet(size);
     return size;
   }
   
-  /*
-   * Calculate how the memstore size has changed, approximately.  Be careful.
-   * If class changes, be sure to change the size calculation.
-   * Add in tax of Map.Entry.
-   * @param kv
-   * @param notpresent True if the kv was NOT present in the set.
-   * @return Size
-   */
-  long heapSize(final KeyValue kv, final boolean notpresent) {
-    return notpresent?
-      // Add overhead for value byte array and for Map.Entry -- 57 bytes
-      // on x64 according to jprofiler.
-      ESTIMATED_KV_HEAP_TAX + 57 + kv.getLength(): 0; // Guess no change in size.
-  }
-
   /**
    * @param kv Find the row that comes after this one.  If null, we return the
    * first.
@@ -693,6 +686,42 @@ class MemStore {
         result.clear();
       }
     }
+  }
+  
+  public final static long FIXED_OVERHEAD = ClassSize.align(
+      ClassSize.OBJECT + Bytes.SIZEOF_LONG + (7 * ClassSize.REFERENCE));
+  
+  public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
+      ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
+      (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
+
+  /*
+   * Calculate how the MemStore size has changed.  Includes overhead of the
+   * backing Map.
+   * @param kv
+   * @param notpresent True if the kv was NOT present in the set.
+   * @return Size
+   */
+  long heapSizeChange(final KeyValue kv, final boolean notpresent) {
+    return notpresent ? 
+        ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + kv.heapSize()):
+        0;
+  }
+  
+  /**
+   * Get the entire heap usage for this MemStore not including keys in the
+   * snapshot.
+   */
+  @Override
+  public long heapSize() {
+    return size.get();
+  }
+  
+  /**
+   * Get the heap usage of KVs in this MemStore.
+   */
+  public long keySize() {
+    return heapSize() - DEEP_OVERHEAD;
   }
 
   /**
