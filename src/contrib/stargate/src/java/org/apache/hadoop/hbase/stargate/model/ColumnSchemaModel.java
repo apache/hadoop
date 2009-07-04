@@ -35,6 +35,13 @@ import org.apache.hadoop.hbase.HConstants;
 
 /**
  * Representation of a column family schema.
+ * 
+ * <pre>
+ * &lt;complexType name="ColumnSchema"&gt;
+ *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+ *   &lt;anyAttribute&gt;&lt;/anyAttribute&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="ColumnSchema")
 @XmlType(propOrder = {"name"})

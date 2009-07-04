@@ -28,13 +28,14 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.TableListMessage.TableList;
 
 /**
  * Simple representation of a list of table names.
  */
 @XmlRootElement(name="TableList")
-public class TableListModel implements Serializable, IProtobufWrapper {
+public class TableListModel implements Serializable, ProtobufMessageHandler {
 
 	private static final long serialVersionUID = 1L;
 
@@ -99,7 +100,7 @@ public class TableListModel implements Serializable, IProtobufWrapper {
 	}
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     TableList.Builder builder = TableList.newBuilder();
     builder.mergeFrom(message);

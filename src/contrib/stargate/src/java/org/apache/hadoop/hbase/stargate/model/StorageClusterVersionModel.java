@@ -26,7 +26,13 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
 /**
- * Simple representation of the version of the storage cluster (HBase)
+ * Simple representation of the version of the storage cluster
+ * 
+ * <pre>
+ * &lt;complexType name="StorageClusterVersion"&gt;
+ *   &lt;attribute name="version" type="string"&gt;&lt;/attribute&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="ClusterVersion")
 public class StorageClusterVersionModel implements Serializable {

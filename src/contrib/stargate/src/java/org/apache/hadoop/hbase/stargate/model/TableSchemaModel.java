@@ -38,15 +38,27 @@ import javax.xml.namespace.QName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.TableSchemaMessage.TableSchema;
 
 /**
  * A representation of HBase table descriptors.
+ * 
+ * <pre>
+ * &lt;complexType name="TableSchema"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="column" type="tns:ColumnSchema" 
+ *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+ *   &lt;anyAttribute&gt;&lt;/anyAttribute&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="TableSchema")
 @XmlType(propOrder = {"name","columns"})
-public class TableSchemaModel implements Serializable, IProtobufWrapper {
+public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
   private static final QName IS_META = new QName(HTableDescriptor.IS_META);
   private static final QName IS_ROOT = new QName(HTableDescriptor.IS_ROOT);
@@ -264,7 +276,7 @@ public class TableSchemaModel implements Serializable, IProtobufWrapper {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message) 
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) 
       throws IOException {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.mergeFrom(message);

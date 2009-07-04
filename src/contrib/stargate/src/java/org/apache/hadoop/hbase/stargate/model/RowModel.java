@@ -29,13 +29,25 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
+
 /**
  * Representation of a row. A row is a related set of cells, grouped by common
  * row key. RowModels do not appear in results by themselves. They are always
  * encapsulated within CellSetModels.
+ * 
+ * <pre>
+ * &lt;complexType name="Row"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="key" type="base64Binary"&gt;&lt;/element&gt;
+ *     &lt;element name="cell" type="tns:Cell" 
+ *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="Row")
-public class RowModel implements IProtobufWrapper, Serializable {
+public class RowModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
 
   private byte[] key;
@@ -121,7 +133,7 @@ public class RowModel implements IProtobufWrapper, Serializable {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     // there is no standalone row protobuf message
     throw new UnsupportedOperationException(

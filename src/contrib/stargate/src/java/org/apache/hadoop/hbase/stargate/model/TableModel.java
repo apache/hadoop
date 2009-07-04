@@ -27,6 +27,14 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * Simple representation of a table name.
+ * 
+ * <pre>
+ * &lt;complexType name="Table"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="name" type="string"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="table")
 public class TableModel implements Serializable {

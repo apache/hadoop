@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.ScannerMessage.Scanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,9 +37,20 @@ import com.google.protobuf.ByteString;
 
 /**
  * A representation of Scanner parameters.
+ * 
+ * <pre>
+ * &lt;complexType name="Scanner"&gt;
+ *   &lt;attribute name="startRow" type="base64Binary"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="endRow" type="base64Binary"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="columns" type="base64Binary"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="batch" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="startTime" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="endTime" type="int"&gt;&lt;/attribute&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="Scanner")
-public class ScannerModel implements IProtobufWrapper, Serializable {
+public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
 
   private byte[] startRow = HConstants.EMPTY_START_ROW;
@@ -223,7 +235,7 @@ public class ScannerModel implements IProtobufWrapper, Serializable {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     Scanner.Builder builder = Scanner.newBuilder();
     builder.mergeFrom(message);

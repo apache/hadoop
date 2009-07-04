@@ -30,6 +30,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -46,10 +47,40 @@ import com.google.protobuf.ByteString;
  * <li>liveNodes: detailed status of the live region servers</li>
  * <li>deadNodes: the names of region servers declared dead</li>
  * </ul>
+ * 
+ * <pre>
+ * &lt;complexType name="StorageClusterStatus"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="liveNode" type="tns:Node"
+ *       maxOccurs="unbounded" minOccurs="0"&gt;
+ *     &lt;/element&gt;
+ *     &lt;element name="deadNode" type="string" maxOccurs="unbounded"
+ *       minOccurs="0"&gt;
+ *     &lt;/element&gt;
+ *   &lt;/sequence&gt;
+ *   &lt;attribute name="regions" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="requests" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="averageLoad" type="float"&gt;&lt;/attribute&gt;
+ * &lt;/complexType&gt;
+ *
+ * &lt;complexType name="Node"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="region" type="tns:Region" 
+ *       maxOccurs="unbounded" minOccurs="0"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="startCode" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="requests" type="int"&gt;&lt;/attribute&gt;
+ * &lt;/complexType&gt;
+ *
+ * &lt;complexType name="Region"&gt;
+ *   &lt;attribute name="name" type="base64Binary"&gt;&lt;/attribute&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="ClusterStatus")
 public class StorageClusterStatusModel 
-    implements Serializable, IProtobufWrapper {
+    implements Serializable, ProtobufMessageHandler {
 	private static final long serialVersionUID = 1L;
 
 	/**
@@ -382,7 +413,7 @@ public class StorageClusterStatusModel
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();
     builder.mergeFrom(message);

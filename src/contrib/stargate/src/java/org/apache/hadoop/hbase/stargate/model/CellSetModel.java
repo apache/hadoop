@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.CellSetMessage.CellSet;
 
@@ -37,9 +38,38 @@ import com.google.protobuf.ByteString;
 /**
  * Representation of a grouping of cells. May contain cells from more than
  * one row. Encapsulates RowModel and CellModel models.
+ * 
+ * <pre>
+ * &lt;complexType name="CellSet"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="row" type="tns:Row" maxOccurs="unbounded" 
+ *       minOccurs="1"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ * &lt;/complexType&gt;
+ * 
+ * &lt;complexType name="Row"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="key" type="base64Binary"&gt;&lt;/element&gt;
+ *     &lt;element name="cell" type="tns:Cell" 
+ *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ * &lt;/complexType&gt;
+ *
+ * &lt;complexType name="Cell"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="value" maxOccurs="1" minOccurs="1"&gt;
+ *       &lt;simpleType&gt;
+ *         &lt;restriction base="base64Binary"/&gt;
+ *       &lt;/simpleType&gt;
+ *     &lt;/element&gt;
+ *   &lt;/sequence&gt;
+ *   &lt;attribute name="column" type="base64Binary" /&gt;
+ *   &lt;attribute name="timestamp" type="int" /&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="CellSet")
-public class CellSetModel implements Serializable, IProtobufWrapper {
+public class CellSetModel implements Serializable, ProtobufMessageHandler {
 
   private static final long serialVersionUID = 1L;
   
@@ -97,7 +127,7 @@ public class CellSetModel implements Serializable, IProtobufWrapper {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     CellSet.Builder builder = CellSet.newBuilder();
     builder.mergeFrom(message);

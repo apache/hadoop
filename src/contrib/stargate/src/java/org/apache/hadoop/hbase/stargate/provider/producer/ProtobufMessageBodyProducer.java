@@ -36,10 +36,10 @@ import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
 
 import org.apache.hadoop.hbase.stargate.Constants;
-import org.apache.hadoop.hbase.stargate.model.IProtobufWrapper;
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 
 /**
- * An adapter between Jersey and IProtobufWrapper implementors. Hooks up
+ * An adapter between Jersey and ProtobufMessageHandler implementors. Hooks up
  * protobuf output producing methods to the Jersey content handling framework.
  * Jersey will first call getSize() to learn the number of bytes that will be
  * sent, then writeTo to perform the actual I/O.
@@ -47,18 +47,18 @@ import org.apache.hadoop.hbase.stargate.model.IProtobufWrapper;
 @Provider
 @Produces(Constants.MIMETYPE_PROTOBUF)
 public class ProtobufMessageBodyProducer
-  implements MessageBodyWriter<IProtobufWrapper> {
+  implements MessageBodyWriter<ProtobufMessageHandler> {
 
   private Map<Object, byte[]> buffer = new WeakHashMap<Object, byte[]>();
 
 	@Override
 	public boolean isWriteable(Class<?> type, Type genericType, 
 	  Annotation[] annotations, MediaType mediaType) {
-      return IProtobufWrapper.class.isAssignableFrom(type);
+      return ProtobufMessageHandler.class.isAssignableFrom(type);
   }
 
 	@Override
-	public long getSize(IProtobufWrapper m, Class<?> type, Type genericType,
+	public long getSize(ProtobufMessageHandler m, Class<?> type, Type genericType,
 	    Annotation[] annotations, MediaType mediaType) {
 	  ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	  try {
@@ -71,7 +71,7 @@ public class ProtobufMessageBodyProducer
 	  return bytes.length;
 	}
 
-	public void writeTo(IProtobufWrapper m, Class<?> type, Type genericType,
+	public void writeTo(ProtobufMessageHandler m, Class<?> type, Type genericType,
 	    Annotation[] annotations, MediaType mediaType, 
 	    MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 
 	    throws IOException, WebApplicationException {

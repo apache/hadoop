@@ -27,6 +27,7 @@ import javax.servlet.ServletContext;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.RESTServlet;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.VersionMessage.Version;
 
@@ -44,7 +45,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * </ul>
  */
 @XmlRootElement(name="Version")
-public class VersionModel implements Serializable, IProtobufWrapper {
+public class VersionModel implements Serializable, ProtobufMessageHandler {
 
 	private static final long serialVersionUID = 1L;
 
@@ -183,7 +184,7 @@ public class VersionModel implements Serializable, IProtobufWrapper {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     Version.Builder builder = Version.newBuilder();
     builder.mergeFrom(message);

@@ -36,31 +36,31 @@ import javax.ws.rs.ext.Provider;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.stargate.Constants;
-import org.apache.hadoop.hbase.stargate.model.IProtobufWrapper;
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 
 /**
  * Adapter for hooking up Jersey content processing dispatch to
- * IProtobufWrapper interface capable handlers for decoding protobuf input.
+ * ProtobufMessageHandler interface capable handlers for decoding protobuf input.
  */
 @Provider
 @Consumes(Constants.MIMETYPE_PROTOBUF)
 public class ProtobufMessageBodyConsumer 
-    implements MessageBodyReader<IProtobufWrapper> {
+    implements MessageBodyReader<ProtobufMessageHandler> {
   private static final Log LOG =
     LogFactory.getLog(ProtobufMessageBodyConsumer.class);
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType) {
-    return IProtobufWrapper.class.isAssignableFrom(type);
+    return ProtobufMessageHandler.class.isAssignableFrom(type);
   }
 
   @Override
-  public IProtobufWrapper readFrom(Class<IProtobufWrapper> type, Type genericType,
+  public ProtobufMessageHandler readFrom(Class<ProtobufMessageHandler> type, Type genericType,
       Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, String> httpHeaders, InputStream inputStream)
       throws IOException, WebApplicationException {
-    IProtobufWrapper obj = null;
+    ProtobufMessageHandler obj = null;
     try {
       obj = type.newInstance();
       ByteArrayOutputStream baos = new ByteArrayOutputStream();

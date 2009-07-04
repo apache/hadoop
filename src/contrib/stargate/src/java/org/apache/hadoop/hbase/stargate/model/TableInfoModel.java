@@ -30,16 +30,27 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.TableInfoMessage.TableInfo;
 
 import com.google.protobuf.ByteString;
 
 /**
  * Representation of a list of table regions. 
+ * 
+ * <pre>
+ * &lt;complexType name="TableInfo"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="region" type="tns:TableRegion" 
+ *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+ *   &lt;/sequence&gt;
+ *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="TableInfo")
 @XmlType(propOrder = {"name","regions"})
-public class TableInfoModel implements Serializable, IProtobufWrapper {
+public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
 
   private String name;
@@ -134,7 +145,7 @@ public class TableInfoModel implements Serializable, IProtobufWrapper {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message) 
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) 
       throws IOException {
     TableInfo.Builder builder = TableInfo.newBuilder();
     builder.mergeFrom(message);

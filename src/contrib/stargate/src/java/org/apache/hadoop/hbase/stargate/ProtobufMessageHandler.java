@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.stargate.model;
+package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
 
@@ -27,7 +27,7 @@ import java.io.IOException;
  * and unmarshalling. Hooks up to the ProtobufMessageBodyConsumer and
  * ProtobufMessageBodyProducer adapters. 
  */
-public abstract interface IProtobufWrapper {
+public abstract interface ProtobufMessageHandler {
   /**
    * @return the protobuf represention of the model
    */
@@ -39,6 +39,6 @@ public abstract interface IProtobufWrapper {
    * @return reference to self for convenience
    * @throws IOException
    */
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
     throws IOException;
 }

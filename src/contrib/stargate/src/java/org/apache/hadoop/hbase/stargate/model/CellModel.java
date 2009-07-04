@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.XmlValue;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.CellMessage.Cell;
 
 import com.google.protobuf.ByteString;
@@ -37,10 +38,24 @@ import com.google.protobuf.ByteString;
  * Representation of a cell. A cell is a single value associated a column and
  * optional qualifier, and either the timestamp when it was stored or the user-
  * provided timestamp if one was explicitly supplied.
+ *
+ * <pre>
+ * &lt;complexType name="Cell"&gt;
+ *   &lt;sequence&gt;
+ *     &lt;element name="value" maxOccurs="1" minOccurs="1"&gt;
+ *       &lt;simpleType&gt;
+ *         &lt;restriction base="base64Binary"/&gt;
+ *       &lt;/simpleType&gt;
+ *     &lt;/element&gt;
+ *   &lt;/sequence&gt;
+ *   &lt;attribute name="column" type="base64Binary" /&gt;
+ *   &lt;attribute name="timestamp" type="int" /&gt;
+ * &lt;/complexType&gt;
+ * </pre>
  */
 @XmlRootElement(name="Cell")
 @XmlType(propOrder={"column","timestamp"})
-public class CellModel implements IProtobufWrapper, Serializable {
+public class CellModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
   
   private long timestamp;
@@ -138,7 +153,7 @@ public class CellModel implements IProtobufWrapper, Serializable {
   }
 
   @Override
-  public IProtobufWrapper getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     Cell.Builder builder = Cell.newBuilder();
     builder.mergeFrom(message);
