@@ -35,7 +35,6 @@ import junit.framework.TestCase;
 public class TestTableSchemaModel extends TestCase {
 
   public static final String TABLE_NAME = "testTable";
-  private static final boolean IN_MEMORY = false;
   private static final boolean IS_META = false;
   private static final boolean IS_ROOT = false;
   private static final boolean READONLY = false;
@@ -44,8 +43,7 @@ public class TestTableSchemaModel extends TestCase {
     "<TableSchema name=\"testTable\"" +
       " IS_META=\"false\"" +
       " IS_ROOT=\"false\"" +
-      " READONLY=\"false\"" +
-      " IN_MEMORY=\"false\">" +
+      " READONLY=\"false\">" +
       TestColumnSchemaModel.AS_XML + 
     "</TableSchema>";
 
@@ -72,7 +70,6 @@ public class TestTableSchemaModel extends TestCase {
   public static TableSchemaModel buildTestModel(String name) {
     TableSchemaModel model = new TableSchemaModel();
     model.setName(name);
-    model.__setInMemory(IN_MEMORY);
     model.__setIsMeta(IS_META);
     model.__setIsRoot(IS_ROOT);
     model.__setReadOnly(READONLY);
@@ -108,7 +105,6 @@ public class TestTableSchemaModel extends TestCase {
 
   public static void checkModel(TableSchemaModel model, String tableName) {
     assertEquals(model.getName(), tableName);
-    assertEquals(model.__getInMemory(), IN_MEMORY);
     assertEquals(model.__getIsMeta(), IS_META);
     assertEquals(model.__getIsRoot(), IS_ROOT);
     assertEquals(model.__getReadOnly(), READONLY);
