@@ -28,6 +28,10 @@ Trunk (unreleased changes)
     MAPREDUCE-637. Add an example, distbbp, which able to compute the n th bit
     of Pi for some large n.  (szetszwo)
 
+    MAPREDUCE-532. Provide a way to limit the number of used slots 
+    per queue in the capacity scheduler.
+    (Rahul Kumar Singh via yhemanth)
+    
   IMPROVEMENTS
 
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via

@@ -45,6 +45,44 @@
     of the job queue.
     </description>
   </property>
+
+<property>
+  <name>mapred.capacity-scheduler.queue.default.max.map.slots</name>
+  <value>-1</value>
+  <description>
+    This value is the maximum map slots that can be used in a
+    queue at any point of time. So for example assuming above config value
+    is 100 , not more than 100 tasks would be in the queue at any point of
+    time, assuming each task takes one slot.
+
+    Default value of -1 would disable this capping feature
+
+    Typically the queue capacity should be equal to this limit.
+    If queue capacity is more than this limit, excess capacity will be
+    used by the other queues. If queue capacity is less than the above
+    limit , then the limit would be the queue capacity - as in the current
+    implementation
+  </description>
+</property>
+
+<property>
+  <name>mapred.capacity-scheduler.queue.default.max.reduce.slots</name>
+  <value>-1</value>
+  <description>
+    This value is the maximum reduce slots that can be used in a
+    queue at any point of time. So for example assuming above config value
+      is 100 , not more than 100 reduce tasks would be in the queue at any point
+      of time, assuming each task takes one slot.
+
+    Default value of -1 would disable this capping feature
+
+    Typically the queue capacity should be equal to this limit.
+    If queue capacity is more than this limit, excess capacity will be
+    used by the other queues. If queue capacity is less than the above
+    limit , then the limit would be the queue capacity - as in the current
+    implementation
+  </description>
+</property>
   
   <!-- The default configuration settings for the capacity task scheduler -->
   <!-- The default values would be applied to all the queues which don't have -->
