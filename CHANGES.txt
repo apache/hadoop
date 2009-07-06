@@ -72,6 +72,9 @@ Trunk (unreleased changes)
     MAPREDUCE-692. Make Hudson run Sqoop unit tests.
     (Aaron Kimball via tomwhite)
 
+    MAPREDUCE-701. Improves the runtime of the TestRackAwareTaskPlacement
+    by making it a unit test.  (Jothi Padmanabhan via ddas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

@@ -25,7 +25,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.TestRackAwareTaskPlacement;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.JobCounter;
 
 /**
  * This test checks whether the task caches are created and used properly.
@@ -110,7 +114,7 @@ public class TestMultipleLevelCaching extends TestCase {
        * Since the datanode is running under different subtree, there is no
        * node-level data locality but there should be topological locality.
        */
-      TestRackAwareTaskPlacement.launchJobAndTestCounters(
+      launchJobAndTestCounters(
     		  testName, mr, fileSys, inDir, outputPath, 1, 1, 0, 0);
       mr.shutdown();
     } finally {
@@ -120,5 +124,58 @@ public class TestMultipleLevelCaching extends TestCase {
         dfs.shutdown(); 
       }
     }
+  }
+  
+
+  /**
+   * Launches a MR job and tests the job counters against the expected values.
+   * @param testName The name for the job
+   * @param mr The MR cluster
+   * @param fileSys The FileSystem
+   * @param in Input path
+   * @param out Output path
+   * @param numMaps Number of maps
+   * @param otherLocalMaps Expected value of other local maps
+   * @param datalocalMaps Expected value of data(node) local maps
+   * @param racklocalMaps Expected value of rack local maps
+   */
+  static void launchJobAndTestCounters(String jobName, MiniMRCluster mr,
+                                       FileSystem fileSys, Path in, Path out,
+                                       int numMaps, int otherLocalMaps,
+                                       int dataLocalMaps, int rackLocalMaps)
+  throws IOException {
+    JobConf jobConf = mr.createJobConf();
+    if (fileSys.exists(out)) {
+        fileSys.delete(out, true);
+    }
+    RunningJob job = launchJob(jobConf, in, out, numMaps, jobName);
+    Counters counters = job.getCounters();
+    assertEquals("Number of local maps",
+            counters.getCounter(JobCounter.OTHER_LOCAL_MAPS), otherLocalMaps);
+    assertEquals("Number of Data-local maps",
+            counters.getCounter(JobCounter.DATA_LOCAL_MAPS),
+                                dataLocalMaps);
+    assertEquals("Number of Rack-local maps",
+            counters.getCounter(JobCounter.RACK_LOCAL_MAPS),
+                                rackLocalMaps);
+    mr.waitUntilIdle();
+    mr.shutdown();
+  }
+  
+  static RunningJob launchJob(JobConf jobConf, Path inDir, Path outputPath,
+      int numMaps, String jobName) throws IOException {
+    jobConf.setJobName(jobName);
+    jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
+    jobConf.setOutputFormat(SequenceFileOutputFormat.class);
+    FileInputFormat.setInputPaths(jobConf, inDir);
+    FileOutputFormat.setOutputPath(jobConf, outputPath);
+    jobConf.setMapperClass(IdentityMapper.class);
+    jobConf.setReducerClass(IdentityReducer.class);
+    jobConf.setOutputKeyClass(BytesWritable.class);
+    jobConf.setOutputValueClass(BytesWritable.class);
+    jobConf.setNumMapTasks(numMaps);
+    jobConf.setNumReduceTasks(0);
+    jobConf.setJar("build/test/mapred/testjar/testjob.jar");
+    return JobClient.runJob(jobConf);
   }
 }

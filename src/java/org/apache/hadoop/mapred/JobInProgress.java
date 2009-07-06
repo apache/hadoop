@@ -98,10 +98,10 @@ public class JobInProgress {
   int speculativeReduceTasks = 0;
   
   // Limits on concurrent running tasks per-node and cluster-wide
-  private int maxMapsPerNode;
-  private int maxReducesPerNode;
-  private int runningMapLimit;
-  private int runningReduceLimit;
+  int maxMapsPerNode;
+  int maxReducesPerNode;
+  int runningMapLimit;
+  int runningReduceLimit;
   
   int mapFailuresPercent = 0;
   int reduceFailuresPercent = 0;
@@ -140,7 +140,7 @@ public class JobInProgress {
   // A list of cleanup tasks for the reduce task attempts, to be launched
   List<TaskAttemptID> reduceCleanupTasks = new LinkedList<TaskAttemptID>();
 
-  private int maxLevel;
+  int maxLevel;
 
   /**
    * A special value indicating that 
@@ -434,7 +434,7 @@ public class JobInProgress {
     }
   }
   
-  private Map<Node, List<TaskInProgress>> createCache(
+  Map<Node, List<TaskInProgress>> createCache(
                          JobClient.RawSplit[] splits, int maxLevel) {
     Map<Node, List<TaskInProgress>> cache = 
       new IdentityHashMap<Node, List<TaskInProgress>>(maxLevel);
