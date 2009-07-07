@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.io.SequenceFile;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.HFile.CompactionReader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -681,12 +680,12 @@ public class Store implements HConstants, HeapSize {
           LOG.warn("Path is null for " + file);
           return null;
         }
-        CompactionReader r = file.getCompactionReader();
+        Reader r = file.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + file + " has a null Reader");
           continue;
         }
-        long len = file.getCompactionReader().length();
+        long len = file.getReader().length();
         fileSizes[i] = len;
         totalSize += len;
       }
@@ -845,12 +844,13 @@ public class Store implements HConstants, HeapSize {
     // init:
     for (int i = 0; i < filesToCompact.size(); ++i) {
       // TODO open a new HFile.Reader w/o block cache.
-      CompactionReader r = filesToCompact.get(i).getCompactionReader();
+      Reader r = filesToCompact.get(i).getReader();
       if (r == null) {
         LOG.warn("StoreFile " + filesToCompact.get(i) + " has a null Reader");
         continue;
       }
-      scanners[i] = new StoreFileScanner(r.getScanner());
+      // Instantiate HFile.Reader.Scanner to not cache blocks
+      scanners[i] = new StoreFileScanner(r.getScanner(false));
     }
 
     if (majorCompaction) {
@@ -960,7 +960,7 @@ public class Store implements HConstants, HeapSize {
       // 4. Compute new store size
       this.storeSize = 0L;
       for (StoreFile hsf : this.storefiles.values()) {
-        Reader r = hsf.getCompactionReader();
+        Reader r = hsf.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + hsf + " has a null Reader");
           continue;

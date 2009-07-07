@@ -80,7 +80,12 @@ public class HalfHFileReader extends HFile.Reader {
 
   @Override
   public HFileScanner getScanner() {
-    final HFileScanner s = super.getScanner();
+    return this.getScanner(true);
+  }
+  
+  @Override
+  public HFileScanner getScanner(boolean cacheBlocks) {
+    final HFileScanner s = super.getScanner(cacheBlocks);
     return new HFileScanner() {
       final HFileScanner delegate = s;
       public boolean atEnd = false;

@@ -671,7 +671,7 @@ public class HFile {
      */
     @SuppressWarnings("unused")
     private Reader() throws IOException {
-      this(null, null, null, false);
+      this(null, -1, null, false);
     }
 
     /** 
@@ -706,7 +706,7 @@ public class HFile {
       this.fileSize = size;
       this.istream = fsdis;
       this.closeIStream = false;
-      this.name = this.istream.toString();
+      this.name = this.istream == null? "": this.istream.toString();
       this.inMemory = inMemory;
     }
 
@@ -817,8 +817,20 @@ public class HFile {
      * @return Scanner on this file.
      */
     public HFileScanner getScanner() {
-      return new Scanner(this);
+      return new Scanner(this, true);
     }
+
+    /**
+     * Create a Scanner on this file.  No seeks or reads are done on creation.
+     * Call {@link HFileScanner#seekTo(byte[])} to position an start the read.
+     * There is nothing to clean up in a Scanner. Letting go of your references
+     * to the scanner is sufficient.
+     * @return Scanner on this file.
+     */
+    public HFileScanner getScanner(boolean cacheBlocks) {
+      return new Scanner(this, cacheBlocks);
+    }
+
     /**
      * @param key Key to search.
      * @return Block number of the block containing the key or -1 if not in this
@@ -873,7 +885,7 @@ public class HFile {
      * @return Block wrapped in a ByteBuffer.
      * @throws IOException
      */
-    ByteBuffer readBlock(int block) throws IOException {
+    ByteBuffer readBlock(int block, boolean cacheBlock) throws IOException {
       if (blockIndex == null) {
         throw new IOException("Block index not loaded");
       }
@@ -926,23 +938,11 @@ public class HFile {
         buf.rewind();
 
         // Cache the block
-        cacheBlock(name + block, buf.duplicate());
+        if(cacheBlock && cache != null) {
+          cache.cacheBlock(name + block, buf.duplicate(), inMemory);
+        }
 
         return buf;
-      }
-    }
-    
-    /**
-     * Cache this block if there is a block cache available.<p>
-     * 
-     * Makes a copy of the ByteBuffer, not the one we are sending back, so the 
-     * position does not get messed up.
-     * @param blockName
-     * @param buf
-     */
-    void cacheBlock(String blockName, ByteBuffer buf) {
-      if (cache != null) {
-        cache.cacheBlock(blockName, buf.duplicate(), inMemory);
       }
     }
 
@@ -1041,6 +1041,8 @@ public class HFile {
       private final Reader reader;
       private ByteBuffer block;
       private int currBlock;
+      
+      private boolean cacheBlocks = false;
 
       private int currKeyLen = 0;
       private int currValueLen = 0;
@@ -1049,6 +1051,11 @@ public class HFile {
 
       public Scanner(Reader r) {
         this.reader = r;
+      }
+      
+      public Scanner(Reader r, boolean cacheBlocks) {
+        this.reader = r;
+        this.cacheBlocks = cacheBlocks;
       }
       
       public KeyValue getKeyValue() {
@@ -1099,7 +1106,7 @@ public class HFile {
             block = null;
             return false;
           }
-          block = reader.readBlock(currBlock);
+          block = reader.readBlock(currBlock, cacheBlocks);
           currKeyLen = block.getInt();
           currValueLen = block.getInt();
           blockFetches++;
@@ -1230,7 +1237,7 @@ public class HFile {
           currValueLen = block.getInt();
         }
         currBlock = 0;
-        block = reader.readBlock(currBlock);
+        block = reader.readBlock(currBlock, cacheBlocks);
         currKeyLen = block.getInt();
         currValueLen = block.getInt();
         blockFetches++;
@@ -1239,12 +1246,12 @@ public class HFile {
       
       private void loadBlock(int bloc) throws IOException {
         if (block == null) {
-          block = reader.readBlock(bloc);
+          block = reader.readBlock(bloc, cacheBlocks);
           currBlock = bloc;
           blockFetches++;
         } else {
           if (bloc != currBlock) {
-            block = reader.readBlock(bloc);
+            block = reader.readBlock(bloc, cacheBlocks);
             currBlock = bloc;
             blockFetches++;
           } else {
@@ -1257,35 +1264,6 @@ public class HFile {
 
     public String getTrailerInfo() {
       return trailer.toString();
-    }
-  }
-  
-
-  /**
-   * HFile Reader that does not cache blocks that were not already cached.<p>
-   * 
-   * Used for compactions.
-   */
-  public static class CompactionReader extends Reader {
-    public CompactionReader(Reader reader) {
-      super(reader.istream, reader.fileSize, reader.cache, reader.inMemory);
-      super.blockIndex = reader.blockIndex;
-      super.trailer = reader.trailer;
-      super.lastkey = reader.lastkey;
-      super.avgKeyLen = reader.avgKeyLen;
-      super.avgValueLen = reader.avgValueLen;
-      super.comparator = reader.comparator;
-      super.metaIndex = reader.metaIndex;
-      super.fileInfoLoaded = reader.fileInfoLoaded;
-      super.compressAlgo = reader.compressAlgo;
-    }
-    
-    /**
-     * Do not cache this block when doing a compaction.
-     */
-    @Override
-    void cacheBlock(String blockName, ByteBuffer buf) {
-      return;
     }
   }
   

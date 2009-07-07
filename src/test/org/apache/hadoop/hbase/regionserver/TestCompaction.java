@@ -169,7 +169,7 @@ public class TestCompaction extends HBaseTestCase {
     boolean containsStartRow = false;
     for (StoreFile f: this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles().
         values()) {
-      HFileScanner scanner = f.getCompactionReader().getScanner();
+      HFileScanner scanner = f.getReader().getScanner(false);
       scanner.seekTo();
       do {
         byte [] row = scanner.getKeyValue().getRow();

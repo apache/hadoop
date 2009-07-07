@@ -310,14 +310,6 @@ public class StoreFile implements HConstants {
   }
 
   /**
-   * Gets a special Reader for use during compactions.  Will not cache blocks.
-   * @return Current reader.  Must call open first else returns null.
-   */
-  public HFile.CompactionReader getCompactionReader() {
-    return new HFile.CompactionReader(this.reader);
-  }
-
-  /**
    * @throws IOException
    */
   public synchronized void close() throws IOException {
