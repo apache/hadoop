@@ -30,6 +30,8 @@ function print_usage(){
   echo "  jar <jar>            run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo "  archive -archiveName NAME <src>* <dest> create a hadoop archive"
+  echo "  classpath            prints the class path needed to get the"
+  echo "                       Hadoop jar and the required libraries"
   echo "  daemonlog            get/set the log level for each daemon"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
@@ -70,6 +72,14 @@ case $COMMAND in
       echo "MAPRED not found."
       exit
     fi
+    ;;
+
+  classpath)
+    if $cygwin; then
+      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    fi
+    echo $CLASSPATH
+    exit
     ;;
 
   #core commands  

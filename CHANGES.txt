@@ -154,6 +154,9 @@ Trunk (unreleased changes)
 
     HADOOP-3315. Add a new, binary file foramt, TFile. (Hong Tang via cdouglas)
 
+    HADOOP-5976. Add a new command, classpath, to the hadoop script.  (Owen
+    O'Malley and Gary Murry via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
