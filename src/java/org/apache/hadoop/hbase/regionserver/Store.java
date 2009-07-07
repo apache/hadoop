@@ -859,8 +859,7 @@ public class Store implements HConstants, HeapSize {
       try {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
-        // TODO pass in the scanners/store files.
-        scanner = new StoreScanner(this, scan, null);
+        scanner = new StoreScanner(this, scan, scanners);
 
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.

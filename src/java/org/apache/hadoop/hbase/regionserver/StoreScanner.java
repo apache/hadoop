@@ -70,6 +70,26 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.store.addChangedReaderObserver(this);
   }
 
+  /**
+   * Used for major compactions.<p>
+   * 
+   * Opens a scanner across specified StoreFiles.
+   */
+  StoreScanner(Store store, Scan scan, KeyValueScanner [] scanners) {
+    this.store = store;
+    matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
+        null, store.ttl, store.comparator.getRawComparator(),
+        store.versionsToReturn(scan.getMaxVersions()));
+
+    // Seek all scanners to the initial key
+    for(KeyValueScanner scanner : scanners) {
+      scanner.seek(matcher.getStartKey());
+    }
+
+    // Combine all seeked scanners with a heap
+    heap = new KeyValueHeap(scanners, store.comparator);
+  }
+
   // Constructor for testing.
   StoreScanner(final Scan scan, final byte [] colFamily, final long ttl,
       final KeyValue.KVComparator comparator,
