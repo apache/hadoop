@@ -125,3 +125,7 @@ Trunk (unreleased changes)
     test integration between capacity scheduler and MR framework.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-683. Fixes an initialization problem in the JobHistory. 
+    The initialization of JobHistoryFilesManager is now done in the 
+    JobHistory.init call. (Amar Kamat via ddas)
+
