@@ -145,3 +145,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-676. Existing diagnostic rules fail for MAP ONLY jobs.
     (Suhas Gogate via tomwhite)
+
+    MAPREDUCE-722. Fixes a bug with tasktracker reservations for
+    high memory jobs in capacity scheduler.
+    (Vinod Kumar Vavilapalli via yhemanth)
+

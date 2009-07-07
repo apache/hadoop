@@ -529,21 +529,22 @@ class CapacityTaskScheduler extends TaskScheduler {
             continue;
           }
         } else {
-          //if memory requirements don't match then we check if the 
-          //job has either pending or speculative task or has insufficient number
-          //of 'reserved' tasktrackers to cover all pending tasks. If so
-          //we reserve the current tasktracker for this job so that 
-          //high memory jobs are not starved
-          if (getPendingTasks(j) != 0 || hasSpeculativeTask(j, taskTrackerStatus) || 
-              !hasSufficientReservedTaskTrackers(j)) {
+          // if memory requirements don't match then we check if the job has
+          // pending tasks and has insufficient number of 'reserved'
+          // tasktrackers to cover all pending tasks. If so we reserve the
+          // current tasktracker for this job so that high memory jobs are not
+          // starved
+          if ((getPendingTasks(j) != 0 && !hasSufficientReservedTaskTrackers(j))) {
             // Reserve all available slots on this tasktracker
-            LOG.info(j.getJobID() + ": Reserving " + taskTracker.getTrackerName() + 
-                     " since memory-requirements don't match");
-            taskTracker.reserveSlots(type, j, taskTracker.getAvailableSlots(type));
-            
+            LOG.info(j.getJobID() + ": Reserving "
+                + taskTracker.getTrackerName()
+                + " since memory-requirements don't match");
+            taskTracker.reserveSlots(type, j, taskTracker
+                .getAvailableSlots(type));
+
             // Block
             return TaskLookupResult.getMemFailedResult();
-          } 
+          }
         }//end of memory check block
         // if we're here, this job has no task to run. Look at the next job.
       }//end of for loop
