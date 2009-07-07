@@ -245,6 +245,8 @@ Release 0.20.0 - Unreleased
    HBASE-1615  HBASE-1597 introduced a bug when compacting after a split
                (Jon Gray via Stack)
    HBASE-1616  Unit test of compacting referenced StoreFiles (Jon Gray via Stack)
+   HBASE-1618  Investigate further into the MemStoreFlusher StoreFile limit
+               (Jon Gray via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

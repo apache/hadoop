@@ -222,10 +222,11 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * not flushed.
    */
   private boolean flushRegion(HRegion region, boolean removeFromQueue) {
-    // Wait until it is safe to flush
     int count = 0;
     boolean triggered = false;
+    boolean finished = false;
     while (count++ < (blockingWaitTime / 500)) {
+      finished = true;
       for (Store hstore: region.stores.values()) {
         if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
           // always request a compaction
@@ -233,22 +234,28 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           // only log once
           if (!triggered) {
             LOG.info("Too many store files for region " + region + ": " +
-              hstore.getStorefilesCount() + ", waiting");
+              hstore.getStorefilesCount() + ", requesting compaction and " +
+              "waiting");
             triggered = true;
           }
+          // pending compaction, not finished
+          finished = false;
           try {
             Thread.sleep(500);
           } catch (InterruptedException e) {
             // ignore
           }
-          continue;
         }
       }
-      if (triggered) {
-        LOG.info("Compaction completed on region " + region +
-          ", proceeding");
+      if(triggered && finished) {
+        LOG.info("Compaction has completed, we waited " + (count * 500) + "ms, "
+            + "finishing flush of region " + region);
+        break;
       }
-      break;
+    }
+    if(triggered && !finished) {
+      LOG.warn("Tried to hold up flushing for compactions of region " + region +
+          " but have waited longer than " + blockingWaitTime + "ms, continuing");
     }
     synchronized (regionsInQueue) {
       // See comment above for removeFromQueue on why we do not
