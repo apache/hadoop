@@ -70,6 +70,8 @@ class NodeHealthCheckerService {
 
   static final String HEALTH_CHECK_SCRIPT_ARGUMENTS_PROPERTY = "mapred.healthChecker.script.args";
   /* end of configuration keys */
+  /** Time out error message */
+  static final String NODE_HEALTH_SCRIPT_TIMED_OUT_MSG = "Node health script timed out";
 
   /** Default frequency of running node health script */
   private static final long DEFAULT_HEALTH_CHECK_INTERVAL = 10 * 60 * 1000;
@@ -83,6 +85,7 @@ class NodeHealthCheckerService {
   private long lastReportedTime;
 
   private TimerTask timer;
+  
   
   private enum HealthCheckerExitStatus {
     SUCCESS,
@@ -122,7 +125,11 @@ class NodeHealthCheckerService {
         status = HealthCheckerExitStatus.FAILED_WITH_EXIT_CODE;
       } catch (Exception e) {
         LOG.warn("Caught exception : " + e.getMessage());
-        status = HealthCheckerExitStatus.FAILED_WITH_EXCEPTION;
+        if (!shexec.isTimedOut()) {
+          status = HealthCheckerExitStatus.FAILED_WITH_EXCEPTION;
+        } else {
+          status = HealthCheckerExitStatus.TIMED_OUT;
+        }
         exceptionStackTrace = StringUtils.stringifyException(e);
       } finally {
         if (status == HealthCheckerExitStatus.SUCCESS) {
@@ -160,7 +167,7 @@ class NodeHealthCheckerService {
         setHealthStatus(true, "", now);
         break;
       case TIMED_OUT:
-        setHealthStatus(false, "Node health script timed out");
+        setHealthStatus(false, NODE_HEALTH_SCRIPT_TIMED_OUT_MSG);
         break;
       case FAILED_WITH_EXCEPTION:
         setHealthStatus(false, exceptionStackTrace);

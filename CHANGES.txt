@@ -133,3 +133,7 @@ Trunk (unreleased changes)
     blacklisting a node on the JobTracker UI.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-709. Fixes message displayed for a blacklisted node where
+    the reason for blacklisting is due to the health check script
+    timing out. (Sreekanth Ramakrishnan via yhemanth)
+
