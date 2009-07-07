@@ -129,3 +129,7 @@ Trunk (unreleased changes)
     The initialization of JobHistoryFilesManager is now done in the 
     JobHistory.init call. (Amar Kamat via ddas)
 
+    MAPREDUCE-708. Fixes a bug to allow updating the reason for
+    blacklisting a node on the JobTracker UI.
+    (Sreekanth Ramakrishnan via yhemanth)
+

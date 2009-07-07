@@ -239,6 +239,44 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     
     clock.jumpADay = false;
   }
+  
+  public void testBlacklistingReasonString() throws Exception {
+    String error = "ERROR";
+    String error1 = "ERROR1";
+    TaskTrackerHealthStatus status = new TaskTrackerHealthStatus();
+    status.setNodeHealthy(false);
+    status.setLastReported(System.currentTimeMillis());
+    status.setHealthReport(error);
+    sendHeartBeat(status, false);
+
+    assertEquals("All trackers not blacklisted", jobTracker
+        .getBlacklistedTrackerCount(), 3);
+
+    checkReasonForBlackListing(hosts[0], nodeUnHealthyReasonSet);
+    checkReasonForBlackListing(hosts[1], nodeUnHealthyReasonSet);
+    checkReasonForBlackListing(hosts[2], nodeUnHealthyReasonSet);
+    for (int i = 0; i < hosts.length; i++) {
+      //Replace new line as we are adding new line
+      //in getReasonsForBlacklisting
+      assertEquals("Blacklisting reason string not correct for host " + i,
+          jobTracker.getReasonsForBlacklisting(hosts[i]).replace("\n", ""),
+          error);
+    }
+    status.setNodeHealthy(false);
+    status.setLastReported(System.currentTimeMillis());
+    status.setHealthReport(error1);
+    sendHeartBeat(status, false);
+    checkReasonForBlackListing(hosts[0], nodeUnHealthyReasonSet);
+    checkReasonForBlackListing(hosts[1], nodeUnHealthyReasonSet);
+    checkReasonForBlackListing(hosts[2], nodeUnHealthyReasonSet);
+    for (int i = 0; i < hosts.length; i++) {
+      //Replace new line as we are adding new line
+      //in getReasonsForBlacklisting
+      assertEquals("Blacklisting reason string not correct for host " + i,
+          jobTracker.getReasonsForBlacklisting(hosts[i]).replace("\n", ""),
+          error1);
+    }
+  }
 
   private void runBlackListingJob() throws IOException, Exception {
     TaskAttemptID[] taskAttemptID = new TaskAttemptID[3];
