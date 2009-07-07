@@ -1003,7 +1003,9 @@ public class HConnectionManager implements HConstants {
       }
       boolean retryOnlyOne = false;
       int tries = 0;
-      Collections.sort(list); 
+      if (list.size() > 1) {
+        Collections.sort(list);
+      }
       List<Put> currentPuts = new ArrayList<Put>();
       HRegionLocation location =
         getRegionLocationForRowWithRetries(tableName, list.get(0).getRow(),
