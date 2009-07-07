@@ -1106,7 +1106,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     if(event.getState() == KeeperState.Expired || 
         (event.getType().equals(EventType.NodeDeleted) && 
             event.getPath().equals(
-                this.zooKeeperWrapper.getMasterElectionZNode()))) {
+                this.zooKeeperWrapper.getMasterElectionZNode())) 
+                && !shutdownRequested.get()) {
       LOG.error("Master lost its znode, killing itself now");
       System.exit(1);
     }
