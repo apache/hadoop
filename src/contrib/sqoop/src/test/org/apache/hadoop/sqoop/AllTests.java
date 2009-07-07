@@ -46,6 +46,7 @@ public final class AllTests  {
     suite.addTestSuite(TestColumnTypes.class);
     suite.addTestSuite(TestMultiCols.class);
     suite.addTestSuite(TestOrderBy.class);
+    suite.addTestSuite(TestWhere.class);
     suite.addTestSuite(LocalMySQLTest.class);
     suite.addTestSuite(TestHiveImport.class);
 

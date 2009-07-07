@@ -20,24 +20,17 @@ package org.apache.hadoop.sqoop.manager;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -128,6 +121,14 @@ public class LocalMySQLManager extends MySQLManager {
       // TODO(aaron): This is really insecure.
       args.add("--password=" + password);
     }
+    
+    String whereClause = options.getWhereClause();
+    if (null != whereClause) {
+      // Don't use the --where="<whereClause>" version because spaces in it can confuse
+      // Java, and adding in surrounding quotes confuses Java as well.
+      args.add("-w");
+      args.add(whereClause);
+    }
 
     args.add("--quick"); // no buffering
     // TODO(aaron): Add a flag to allow --lock-tables instead for MyISAM data
@@ -135,7 +136,7 @@ public class LocalMySQLManager extends MySQLManager {
 
     args.add(databaseName);
     args.add(tableName);
-
+    
     Process p = null;
     try {
       // begin the import in an external process.
@@ -143,9 +144,9 @@ public class LocalMySQLManager extends MySQLManager {
       for (String arg : args) {
         LOG.debug("  " + arg);
       }
-
+      
       p = Runtime.getRuntime().exec(args.toArray(new String[0]));
-
+      
       // read from the pipe, into HDFS.
       InputStream is = p.getInputStream();
       OutputStream os = null;

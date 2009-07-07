@@ -128,11 +128,14 @@ public class ImportJob {
       if (null == colNames) {
         colNames = mgr.getColumnNames(tableName);
       }
+      
+      // It's ok if the where clause is null in DBInputFormat.setInput.
+      String whereClause = options.getWhereClause();
 
       // We can't set the class properly in here, because we may not have the
       // jar loaded in this JVM. So we start by calling setInput() with DBWritable,
       // and then overriding the string manually.
-      DBInputFormat.setInput(job, DBWritable.class, tableName, null,
+      DBInputFormat.setInput(job, DBWritable.class, tableName, whereClause,
           orderByCol, colNames);
       job.set(DBConfiguration.INPUT_CLASS_PROPERTY, tableClassName);
 

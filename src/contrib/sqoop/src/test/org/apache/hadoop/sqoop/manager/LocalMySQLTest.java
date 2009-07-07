@@ -201,6 +201,8 @@ public class LocalMySQLTest extends ImportJobTestCase {
     args.add("--local");
     args.add("--username");
     args.add(getCurrentUser());
+    args.add("--where");
+    args.add("id > 1");
 
     return args.toArray(new String[0]);
   }
@@ -226,7 +228,6 @@ public class LocalMySQLTest extends ImportJobTestCase {
     try {
       // Read through the file and make sure it's all there.
       r = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
-      assertEquals("1,'Aaron','2009-05-14',1e+06,'engineering'", r.readLine());
       assertEquals("2,'Bob','2009-04-20',400,'sales'", r.readLine());
       assertEquals("3,'Fred','2009-01-23',15,'marketing'", r.readLine());
     } catch (IOException ioe) {

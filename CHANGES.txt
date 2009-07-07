@@ -75,6 +75,9 @@ Trunk (unreleased changes)
     MAPREDUCE-701. Improves the runtime of the TestRackAwareTaskPlacement
     by making it a unit test.  (Jothi Padmanabhan via ddas)
 
+    MAPREDUCE-674. Sqoop should allow a "where" clause to avoid having to
+    export entire tables. (Kevin Weil via tomwhite)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
