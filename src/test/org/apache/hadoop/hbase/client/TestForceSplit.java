@@ -48,6 +48,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
    * @throws Exception 
    * @throws IOException
    */
+  @SuppressWarnings("unused") 
   public void testForceSplit() throws Exception {
     // create the test table
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -56,6 +57,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
     admin.createTable(htd);
     HTable table = new HTable(conf, tableName);
     byte[] k = new byte[3];
+    int rowCount = 0;
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
       for (byte b2 = 'a'; b2 < 'z'; b2++) {
         for (byte b3 = 'a'; b3 < 'z'; b3++) {
@@ -66,6 +68,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
           byte [][] famAndQf = KeyValue.parseColumn(columnName);
           put.add(famAndQf[0], famAndQf[1], k);
           table.put(put);
+          rowCount++;
         }
       }
     }
@@ -75,6 +78,16 @@ public class TestForceSplit extends HBaseClusterTestCase {
     System.out.println("Initial regions (" + m.size() + "): " + m);
     assertTrue(m.size() == 1);
 
+    // Verify row count
+    Scan scan = new Scan();
+    ResultScanner scanner = table.getScanner(scan);
+    int rows = 0;
+    for(Result result : scanner) {
+      rows++;
+    }
+    scanner.close();
+    assertEquals(rowCount, rows);
+    
     // tell the master to split the table
     admin.split(Bytes.toString(tableName));
 
@@ -86,5 +99,20 @@ public class TestForceSplit extends HBaseClusterTestCase {
     System.out.println("Regions after split (" + m.size() + "): " + m);
     // should have two regions now
     assertTrue(m.size() == 2);
+    
+    // Verify row count
+    scan = new Scan();
+    scanner = table.getScanner(scan);
+    rows = 0;
+    for(Result result : scanner) {
+      rows++;
+      if(rows > rowCount) {
+        scanner.close();
+        assertTrue("Have already scanned more rows than expected (" + 
+            rowCount + ")", false);
+      }
+    }
+    scanner.close();
+    assertEquals(rowCount, rows);
   }
 }
