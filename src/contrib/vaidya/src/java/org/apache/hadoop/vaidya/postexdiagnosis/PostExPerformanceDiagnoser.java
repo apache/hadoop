@@ -200,15 +200,15 @@ public class PostExPerformanceDiagnoser extends JobDiagnoser {
         }
       }
     } catch (Exception e) {
-      System.out.println ("Invalid arguments.");
+      System.err.println ("Invalid arguments.");
       e.printStackTrace();
-      System.out.println();
+      System.err.println();
       printHelp();
     }
     
     // Check if required arguments are specified
     if (jobconffile == null || joblogfile  == null) {
-      System.out.println ("Invalid arguments: -jobconf or -joblog arguments are missing");
+      System.err.println ("Invalid arguments: -jobconf or -joblog arguments are missing");
       printHelp();
       return;
     }
@@ -251,7 +251,7 @@ public class PostExPerformanceDiagnoser extends JobDiagnoser {
         NodeList nodelist = pa.getReport().getElementsByTagName("PostExPerformanceDiagnosticReport");
         Element root = (Element)nodelist.item(0);
         //root.appendChild(rule.getReportElement(pa.getReport(), root)); 
-        Element re = test.getReportElement(pa.getReport(), root);
+        Element re = test.getReportElement(pa.getReport(), root, i);
         //XMLUtils.printDOM(re);
       } 
       
@@ -262,7 +262,7 @@ public class PostExPerformanceDiagnoser extends JobDiagnoser {
         pa.saveReport(pa.getReportFile());
       }
     }catch (Exception e) {
-      System.out.print("Exception:"+e);
+      System.err.print("Exception:"+e);
       e.printStackTrace();
     }
   }

@@ -137,3 +137,5 @@ Trunk (unreleased changes)
     the reason for blacklisting is due to the health check script
     timing out. (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-676. Existing diagnostic rules fail for MAP ONLY jobs.
+    (Suhas Gogate via tomwhite)

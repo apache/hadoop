@@ -35,8 +35,6 @@ public class ReadingHDFSFilesAsSideEffect extends DiagnosticTest {
   private double _impact;
   private JobStatistics _job;
   
-  
-  
   /**
    * 
    */
@@ -53,7 +51,7 @@ public class ReadingHDFSFilesAsSideEffect extends DiagnosticTest {
      * Set the this._job
      */
     this._job = job;
-        
+
     /*
      * Read the Normalization Factor
      */

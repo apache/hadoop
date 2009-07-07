@@ -36,7 +36,6 @@ public class ReducesReExecutionImpact extends DiagnosticTest {
   private JobStatistics _job;
   private long _percentReducesReExecuted;
   
-  
   /**
    * 
    */
@@ -53,6 +52,12 @@ public class ReducesReExecutionImpact extends DiagnosticTest {
      * Set the this._job
      */
     this._job = job;
+
+    /* find job type */
+    if (job.getStringValue(JobKeys.JOBTYPE).equals("MAP_ONLY")) {
+      this._impact = 0;
+      return this._impact;
+    }
     
     /*
      * Calculate and return the impact
@@ -80,7 +85,7 @@ public class ReducesReExecutionImpact extends DiagnosticTest {
   @Override
   public String getReferenceDetails() {
     String ref = 
-      "* Total Reduce Tasks: "+this._job.getLongValue(JobKeys.TOTAL_REDUCES)+"\n"+
+        "* Total Reduce Tasks: "+this._job.getLongValue(JobKeys.TOTAL_REDUCES)+"\n"+
         "* Launched Reduce Tasks: "+this._job.getLongValue(JobKeys.LAUNCHED_REDUCES)+"\n"+
         "* Percent Reduce Tasks ReExecuted: "+this._percentReducesReExecuted + "\n" +
         "* Impact: "+truncate(this._impact);

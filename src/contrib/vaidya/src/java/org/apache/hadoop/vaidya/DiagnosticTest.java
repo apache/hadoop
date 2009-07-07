@@ -18,12 +18,14 @@
 package org.apache.hadoop.vaidya;
 
 import java.lang.Runnable;
+import java.sql.Timestamp;
 import org.apache.hadoop.vaidya.statistics.job.*;
 import org.apache.hadoop.vaidya.util.*;
 import org.w3c.dom.Node;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
+import org.apache.hadoop.vaidya.statistics.job.JobStatisticsInterface.JobKeys;
 
 /*
  * This is an abstract base class to be extended by each diagnostic test 
@@ -151,14 +153,75 @@ public abstract class DiagnosticTest implements Runnable {
    * Creates and returns the report element for this test based on the 
    * test evaluation results.
    */
-  public Element getReportElement(Document doc, Node parent) throws Exception {
+  public Element getReportElement(Document doc, Node parent, int i) throws Exception {
+
     /* 
      * If test is not evaluated yet then throw exception
      */
     if (!this.isEvaluated()) {
       throw new Exception("Test has not been evaluated");
     }
-    
+
+    /* 
+     * If i == 0, means first test, then print job information
+     * before it.
+    */
+    if (i == 0) {
+      Node reportElementx = doc.createElement("JobInformationElement");
+      parent.appendChild(reportElementx);
+
+      // Insert JOBTRACKERID
+      Node itemx = doc.createElement("JobTrackerID");
+      reportElementx.appendChild(itemx);
+      Node valuex = doc.createTextNode(this._jobExecutionStats.getStringValue(JobKeys.JOBTRACKERID));
+      itemx.appendChild(valuex);
+
+      // Insert JOBNAME
+      itemx = doc.createElement("JobName");
+      reportElementx.appendChild(itemx);
+      valuex = doc.createTextNode(this._jobExecutionStats.getStringValue(JobKeys.JOBNAME));
+      itemx.appendChild(valuex);
+
+      // Insert JOBTYPE
+      itemx = doc.createElement("JobType");
+      reportElementx.appendChild(itemx);
+      valuex = doc.createTextNode(this._jobExecutionStats.getStringValue(JobKeys.JOBTYPE));
+      itemx.appendChild(valuex);
+
+      // Insert USER
+      itemx = doc.createElement("User");
+      reportElementx.appendChild(itemx);
+      valuex = doc.createTextNode(this._jobExecutionStats.getStringValue(JobKeys.USER));
+      itemx.appendChild(valuex);
+
+      // Insert SUBMIT_TIME
+      itemx = doc.createElement("SubmitTime");
+      reportElementx.appendChild(itemx);
+      String st1 = (new Timestamp(Long.parseLong(this._jobExecutionStats.getStringValue(JobKeys.SUBMIT_TIME))).toString());
+      valuex = doc.createTextNode(st1);
+      itemx.appendChild(valuex);
+
+      // Insert LAUNCH_TIME
+      itemx = doc.createElement("LaunchTime");
+      reportElementx.appendChild(itemx);
+      String st2 = (new Timestamp(Long.parseLong(this._jobExecutionStats.getStringValue(JobKeys.LAUNCH_TIME))).toString());
+      valuex = doc.createTextNode(st2);
+      itemx.appendChild(valuex);
+
+      // Insert FINISH_TIME
+      itemx = doc.createElement("FinishTime");
+      reportElementx.appendChild(itemx);
+      String st3 = (new Timestamp(Long.parseLong(this._jobExecutionStats.getStringValue(JobKeys.FINISH_TIME))).toString());
+      valuex = doc.createTextNode(st3);
+      itemx.appendChild(valuex);
+
+      // Insert STATUS
+      itemx = doc.createElement("Status");
+      reportElementx.appendChild(itemx);
+      valuex = doc.createTextNode(this._jobExecutionStats.getStringValue(JobKeys.STATUS));
+      itemx.appendChild(valuex);
+    }
+
     /*
      * Construct and return the report element
      */
