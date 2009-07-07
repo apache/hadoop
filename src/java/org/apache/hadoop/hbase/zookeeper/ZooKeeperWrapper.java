@@ -620,4 +620,14 @@ public class ZooKeeperWrapper implements HConstants {
   private String joinPath(String parent, String child) {
     return parent + ZNODE_PATH_SEPARATOR + child;
   }
+
+  /**
+   * Get the path of the masterElectionZNode
+   * @return the path to masterElectionZNode
+   */
+  public String getMasterElectionZNode() {
+    return masterElectionZNode;
+  }
+  
+  
 }

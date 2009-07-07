@@ -90,6 +90,8 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 
 /**
  * HMaster is the "master server" for a HBase.
@@ -227,11 +229,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.maxRegionOpenTime =
       conf.getLong("hbase.hbasemaster.maxregionopen", 120 * 1000);
     this.leaseTimeout = conf.getInt("hbase.master.lease.period", 120 * 1000);
-    
     this.server = HBaseRPC.getServer(this, address.getBindAddress(),
         address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
         false, conf);
-
+         
     //  The rpc-server port can be ephemeral... ensure we have the correct info
     this.address = new HServerAddress(server.getListenerAddress());
 
@@ -248,9 +249,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     zkMasterAddressWatcher = new ZKMasterAddressWatcher(this);
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
-
+    
     writeAddressToZooKeeper();
-
+    
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster initialized on " + this.address.toString());
@@ -265,6 +266,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         return;
       } else if(zooKeeperWrapper.writeMasterAddress(address)) {
         zooKeeperWrapper.setClusterState(true);
+        // Watch our own node
+        zooKeeperWrapper.readMasterAddress(this);
         return;
       }
     }
@@ -1090,6 +1093,24 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public ZooKeeperWrapper getZooKeeperWrapper() {
     return zooKeeperWrapper;
   }
+  
+  /**
+   * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.WatchedEvent)
+   */
+  @Override
+  public void process(WatchedEvent event) {
+    LOG.debug(("Got event " + event.getType() + 
+        " with path " + event.getPath()));
+    // Master should kill itself if its session expired or if its 
+    // znode was deleted manually (usually for testing purposes)
+    if(event.getState() == KeeperState.Expired || 
+        (event.getType().equals(EventType.NodeDeleted) && 
+            event.getPath().equals(
+                this.zooKeeperWrapper.getMasterElectionZNode()))) {
+      LOG.error("Master lost its znode, killing itself now");
+      System.exit(1);
+    }
+  }
    
   /*
    * Main program
@@ -1171,11 +1192,4 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     doMain(args, HMaster.class);
   }
 
-  /**
-   * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.WatchedEvent)
-   */
-  @Override
-  public void process(WatchedEvent event) {
-    // TODO: Write me to handle session expired events.
-  }
 }
