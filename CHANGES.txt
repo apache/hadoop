@@ -78,6 +78,9 @@ Trunk (unreleased changes)
     MAPREDUCE-674. Sqoop should allow a "where" clause to avoid having to
     export entire tables. (Kevin Weil via tomwhite)
 
+    MAPREDUCE-675. Sqoop should allow user-defined class and package names.
+    (Aaron Kimball via tomwhite)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

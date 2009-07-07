@@ -250,7 +250,7 @@ public abstract class SqlManager implements ConnManager {
         }
       }
 
-      LOG.info("Executing SQL statement: " + stmt);
+      LOG.debug("Executing SQL statement: " + stmt);
       return statement.executeQuery();
     } catch (SQLException sqlException) {
       LOG.error("Error returned by SQL database: " + sqlException.toString());

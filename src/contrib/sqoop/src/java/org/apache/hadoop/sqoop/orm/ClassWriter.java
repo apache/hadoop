@@ -455,8 +455,10 @@ public class ClassWriter {
     // Write this out to a file.
     String codeOutDir = options.getCodeOutputDir();
 
-    // TODO(aaron): Allow package subdirectory (that goes in sourceFilename).
-    String sourceFilename = tableName + ".java";
+    // Get the class name to generate, which includes package components
+    String className = new TableClassName(options).getClassForTable(tableName);
+    // convert the '.' characters to '/' characters
+    String sourceFilename = className.replace('.', File.separatorChar) + ".java";
     String filename = codeOutDir + sourceFilename;
 
     LOG.debug("Writing source file: " + filename);
@@ -468,6 +470,7 @@ public class ClassWriter {
     }
     String colTypeStr = sbColTypes.toString();
     LOG.debug("Columns: " + colTypeStr);
+    LOG.debug("sourceFilename is " + sourceFilename);
 
     compileManager.addSourceFile(sourceFilename);
 
@@ -515,9 +518,17 @@ public class ClassWriter {
   public StringBuilder generateClassForColumns(Map<String, Integer> columnTypes,
       String [] colNames) {
     StringBuilder sb = new StringBuilder();
-    // TODO(aaron): Emit package name.
     sb.append("// ORM class for " + tableName + "\n");
     sb.append("// WARNING: This class is AUTO-GENERATED. Modify at your own risk.\n");
+
+    TableClassName tableNameInfo = new TableClassName(options);
+
+    String packageName = tableNameInfo.getPackageForTable();
+    if (null != packageName) {
+      sb.append("package ");
+      sb.append(packageName);
+      sb.append(";\n");
+    }
 
     sb.append("import org.apache.hadoop.io.Text;\n");
     sb.append("import org.apache.hadoop.io.Writable;\n");
@@ -533,8 +544,8 @@ public class ClassWriter {
     sb.append("import java.sql.Time;\n");
     sb.append("import java.sql.Timestamp;\n");
 
-    // TODO(aaron): Allow different table/class names.
-    sb.append("public class " + tableName + " implements DBWritable, Writable {\n");
+    String className = tableNameInfo.getShortClassForTable(tableName);
+    sb.append("public class " + className + " implements DBWritable, Writable {\n");
     sb.append("  public static final int PROTOCOL_VERSION = " + CLASS_WRITER_VERSION + ";\n");
     generateFields(columnTypes, colNames, sb);
     generateDbRead(columnTypes, colNames, sb);

@@ -162,13 +162,15 @@ public class CompilationManager {
     }
 
     // NOTE(aaron): Usage is at http://java.sun.com/j2se/1.5.0/docs/tooldocs/solaris/javac.html
-    LOG.info("Invoking javac with args: " + sb.toString());
+    LOG.debug("Invoking javac with args: " + sb.toString());
     int javacRet = com.sun.tools.javac.Main.compile(args.toArray(new String[0]));
     if (javacRet != 0) {
       throw new IOException("javac exited with status " + javacRet);
     }
   }
 
+  /**
+   * @return the complete filename of the .jar file to generate */
   public String getJarFilename() {
     String jarOutDir = options.getJarOutputDir();
     String tableName = options.getTableName();
@@ -188,19 +190,62 @@ public class CompilationManager {
   }
 
   /**
+   * Searches through a directory and its children for .class
+   * files to add to a jar.
+   *
+   * @param dir - The root directory to scan with this algorithm.
+   * @param jstream - The JarOutputStream to write .class files to.
+   */
+  private void addClassFilesFromDir(File dir, JarOutputStream jstream)
+      throws IOException {
+    LOG.debug("Scanning for .class files in directory: " + dir);
+    List<File> dirEntries = FileListing.getFileListing(dir);
+    String baseDirName = dir.getAbsolutePath();
+    if (!baseDirName.endsWith(File.separator)) {
+      baseDirName = baseDirName + File.separator;
+    }
+
+    // for each input class file, create a zipfile entry for it,
+    // read the file into a buffer, and write it to the jar file.
+    for (File entry : dirEntries) {
+      if (!entry.isDirectory()) {
+        LOG.debug("Considering entry: " + entry);
+
+        // chomp off the portion of the full path that is shared
+        // with the base directory where class files were put;
+        // we only record the subdir parts in the zip entry.
+        String fullPath = entry.getAbsolutePath();
+        String chompedPath = fullPath.substring(baseDirName.length());
+
+        boolean include = chompedPath.endsWith(".class")
+            && sources.contains(
+            chompedPath.substring(0, chompedPath.length() - ".class".length()) + ".java");
+
+        if (include) {
+          // include this file.
+          LOG.debug("Got classfile: " + entry.getPath() + " -> " + chompedPath);
+          ZipEntry ze = new ZipEntry(chompedPath);
+          jstream.putNextEntry(ze);
+          copyFileToStream(entry, jstream);
+          jstream.closeEntry();
+        }
+      }
+    }
+  }
+
+  /**
    * Create an output jar file to use when executing MapReduce jobs
    */
   public void jar() throws IOException {
     String jarOutDir = options.getJarOutputDir();
-    List<File> outDirEntries =  FileListing.getFileListing(new File(jarOutDir));
 
     String jarFilename = getJarFilename();
 
     LOG.info("Writing jar file: " + jarFilename);
 
-    findThisJar();
     File jarFileObj = new File(jarFilename);
     if (jarFileObj.exists()) {
+      LOG.debug("Found existing jar (" + jarFilename + "); removing.");
       if (!jarFileObj.delete()) {
         LOG.warn("Could not remove existing jar file: " + jarFilename);
       }
@@ -212,40 +257,7 @@ public class CompilationManager {
       fstream = new FileOutputStream(jarFilename);
       jstream = new JarOutputStream(fstream);
 
-      // for each input class file, create a zipfile entry for it,
-      // read the file into a buffer, and write it to the jar file.
-
-      for (File entry : outDirEntries) {
-        if (entry.equals(jarFileObj)) {
-          // don't include our own jar!
-          continue;
-        } else if (entry.isDirectory()) {
-          // don't write entries for directories
-          continue;
-        } else {
-          String fileName = entry.getName();
-
-          boolean include = fileName.endsWith(".class")
-              && sources.contains(
-              fileName.substring(0, fileName.length() - ".class".length()) + ".java");
-
-          if (include) {
-            // include this file.
-
-            // chomp off the portion of the full path that is shared
-            // with the base directory where class files were put;
-            // we only record the subdir parts in the zip entry.
-            String fullPath = entry.getAbsolutePath();
-            String chompedPath = fullPath.substring(jarOutDir.length());
-
-            LOG.debug("Got classfile: " + entry.getPath() + " -> " + chompedPath);
-            ZipEntry ze = new ZipEntry(chompedPath);
-            jstream.putNextEntry(ze);
-            copyFileToStream(entry, jstream);
-            jstream.closeEntry();
-          }
-        }
-      }
+      addClassFilesFromDir(new File(jarOutDir), jstream);
 
       // put our own jar in there in its lib/ subdir
       String thisJarFile = findThisJar();
@@ -261,10 +273,27 @@ public class CompilationManager {
         // couldn't find our own jar (we were running from .class files?)
         LOG.warn("Could not find jar for Sqoop; MapReduce jobs may not run correctly.");
       }
+
+      jstream.finish();
     } finally {
-      IOUtils.closeStream(jstream);
-      IOUtils.closeStream(fstream);
+      if (null != jstream) {
+        try {
+          jstream.close();
+        } catch (IOException ioe) {
+          LOG.warn("IOException closing jar stream: " + ioe.toString());
+        }
+      }
+
+      if (null != fstream) {
+        try {
+          fstream.close();
+        } catch (IOException ioe) {
+          LOG.warn("IOException closing file stream: " + ioe.toString());
+        }
+      }
     }
+
+    LOG.debug("Finished writing jar file " + jarFilename);
   }
 
 

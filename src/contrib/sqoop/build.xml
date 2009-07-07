@@ -43,6 +43,11 @@ to call at top-level: ant deploy-contrib compile-core-test
       timeout="${test.timeout}"
       dir="${build.test}/data">
 
+      <!-- uncomment this if you want to attach a debugger -->
+      <!--
+      <jvmarg line="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=2601" />
+      -->
+
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="contrib.name" value="${name}"/>

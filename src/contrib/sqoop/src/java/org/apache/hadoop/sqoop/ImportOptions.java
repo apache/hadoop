@@ -97,6 +97,8 @@ public class ImportOptions {
   private String tmpDir; // where temp data goes; usually /tmp
   private String hiveHome;
   private boolean hiveImport;
+  private String packageName; // package to prepend to auto-named classes.
+  private String className; // package+class to apply to individual table import.
 
   private static final String DEFAULT_CONFIG_FILE = "sqoop.properties";
 
@@ -142,6 +144,8 @@ public class ImportOptions {
       this.driverClassName = props.getProperty("jdbc.driver", this.driverClassName);
       this.warehouseDir = props.getProperty("hdfs.warehouse.dir", this.warehouseDir);
       this.hiveHome = props.getProperty("hive.home", this.hiveHome);
+      this.className = props.getProperty("java.classname", this.className);
+      this.packageName = props.getProperty("java.packagename", this.packageName);
 
       String localImport = props.getProperty("local.import",
           Boolean.toString(this.local)).toLowerCase();
@@ -229,6 +233,9 @@ public class ImportOptions {
     System.out.println("--outdir (dir)               Output directory for generated code");
     System.out.println("--bindir (dir)               Output directory for compiled objects");
     System.out.println("--generate-only              Stop after code generation; do not import");
+    System.out.println("--package-name (name)        Put auto-generated classes in this package");
+    System.out.println("--class-name (name)          When generating one class, use this name.");
+    System.out.println("                             This overrides --package-name.");
     System.out.println("");
     System.out.println("Additional commands:");
     System.out.println("--list-tables                List tables in database and exit");
@@ -249,6 +256,14 @@ public class ImportOptions {
    * @throws Exception if there's a problem parsing arguments.
    */
   public void parse(String [] args) throws InvalidOptionsException {
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Parsing sqoop arguments:");
+      for (String arg : args) {
+        LOG.debug("  " + arg);
+      }
+    }
+
     int i = 0;
     try {
       for (i = 0; i < args.length; i++) {
@@ -296,6 +311,10 @@ public class ImportOptions {
           this.jarOutputDir = args[++i];
         } else if (args[i].equals("--warehouse-dir")) {
           this.warehouseDir = args[++i];
+        } else if (args[i].equals("--package-name")) {
+          this.packageName = args[++i];
+        } else if (args[i].equals("--class-name")) {
+          this.className = args[++i];
         } else if (args[i].equals("--list-databases")) {
           this.action = ControlAction.ListDatabases;
         } else if (args[i].equals("--generate-only")) {
@@ -323,6 +342,8 @@ public class ImportOptions {
     }
   }
 
+  private static final String HELP_STR = "\nTry --help for usage instructions.";
+
   /**
    * Validates options and ensures that any required options are
    * present and that any mutually-exclusive options are not selected.
@@ -332,14 +353,21 @@ public class ImportOptions {
     if (this.allTables && this.columns != null) {
       // If we're reading all tables in a database, can't filter column names.
       throw new InvalidOptionsException("--columns and --all-tables are incompatible options."
-          + "\nTry --help for usage instructions.");
+          + HELP_STR);
     } else if (this.allTables && this.orderByCol != null) {
       // If we're reading all tables in a database, can't set pkey
       throw new InvalidOptionsException("--order-by and --all-tables are incompatible options."
-          + "\nTry --help for usage instructions.");
+          + HELP_STR);
+    } else if (this.allTables && this.className != null) {
+      // If we're reading all tables, can't set individual class name
+      throw new InvalidOptionsException("--class-name and --all-tables are incompatible options."
+          + HELP_STR);
     } else if (this.connectString == null) {
       throw new InvalidOptionsException("Error: Required argument --connect is missing."
-          + "\nTry --help for usage instructions.");
+          + HELP_STR);
+    } else if (this.className != null && this.packageName != null) {
+      throw new InvalidOptionsException(
+          "--class-name overrides --package-name. You cannot use both." + HELP_STR);
     }
   }
 
@@ -392,6 +420,20 @@ public class ImportOptions {
 
   public boolean isLocal() {
     return local;
+  }
+
+  /**
+   * @return the user-specified absolute class name for the table
+   */
+  public String getClassName() {
+    return className;
+  }
+
+  /**
+   * @return the user-specified package to prepend to table names via --package-name.
+   */
+  public String getPackageName() {
+    return packageName;
   }
 
   public String getHiveHome() {

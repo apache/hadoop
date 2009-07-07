@@ -19,8 +19,12 @@
 package org.apache.hadoop.sqoop.orm;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
 
 import junit.framework.TestCase;
 
@@ -40,8 +44,6 @@ import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 /**
  * Test that the ClassWriter generates Java classes based on the given table,
  * which compile.
- *
- * 
  */
 public class TestClassWriter extends TestCase {
 
@@ -56,6 +58,8 @@ public class TestClassWriter extends TestCase {
   @Before
   public void setUp() {
     testServer = new HsqldbTestServer();
+    org.apache.log4j.Logger root = org.apache.log4j.Logger.getRootLogger();
+    root.setLevel(org.apache.log4j.Level.DEBUG);
     try {
       testServer.resetServer();
     } catch (SQLException sqlE) {
@@ -68,6 +72,31 @@ public class TestClassWriter extends TestCase {
 
     manager = testServer.getManager();
     options = testServer.getImportOptions();
+
+    // sanity check: make sure we're in a tmp dir before we blow anything away.
+    assertTrue("Test generates code in non-tmp dir!",
+        CODE_GEN_DIR.startsWith(ImportJobTestCase.TEMP_BASE_DIR));
+    assertTrue("Test generates jars in non-tmp dir!",
+        JAR_GEN_DIR.startsWith(ImportJobTestCase.TEMP_BASE_DIR));
+
+    // start out by removing these directories ahead of time
+    // to ensure that this is truly generating the code.
+    File codeGenDirFile = new File(CODE_GEN_DIR);
+    File classGenDirFile = new File(JAR_GEN_DIR);
+
+    if (codeGenDirFile.exists()) {
+      LOG.debug("Removing code gen dir: " + codeGenDirFile);
+      if (!DirUtil.deleteDir(codeGenDirFile)) {
+        LOG.warn("Could not delete " + codeGenDirFile + " prior to test");
+      }
+    }
+
+    if (classGenDirFile.exists()) {
+      LOG.debug("Removing class gen dir: " + classGenDirFile);
+      if (!DirUtil.deleteDir(classGenDirFile)) {
+        LOG.warn("Could not delete " + classGenDirFile + " prior to test");
+      }
+    }
   }
 
   @After
@@ -84,37 +113,12 @@ public class TestClassWriter extends TestCase {
   static final String JAR_GEN_DIR = ImportJobTestCase.TEMP_BASE_DIR + "sqoop/test/jargen";
 
   /**
-   * Test that we can generate code. Test that we can redirect the --outdir and --bindir too.
+   * Run a test to verify that we can generate code and it emits the output files
+   * where we expect them.
    */
-  @Test
-  public void testCodeGen() {
-
-    // sanity check: make sure we're in a tmp dir before we blow anything away.
-    assertTrue("Test generates code in non-tmp dir!",
-        CODE_GEN_DIR.startsWith(ImportJobTestCase.TEMP_BASE_DIR));
-    assertTrue("Test generates jars in non-tmp dir!",
-        JAR_GEN_DIR.startsWith(ImportJobTestCase.TEMP_BASE_DIR));
-
-    // start out by removing these directories ahead of time
-    // to ensure that this is truly generating the code.
+  private void runGenerationTest(String [] argv, String classNameToCheck) {
     File codeGenDirFile = new File(CODE_GEN_DIR);
     File classGenDirFile = new File(JAR_GEN_DIR);
-
-    if (codeGenDirFile.exists()) {
-      DirUtil.deleteDir(codeGenDirFile);
-    }
-
-    if (classGenDirFile.exists()) {
-      DirUtil.deleteDir(classGenDirFile);
-    }
-
-    // Set the option strings in an "argv" to redirect our srcdir and bindir
-    String [] argv = {
-        "--bindir",
-        JAR_GEN_DIR,
-        "--outdir",
-        CODE_GEN_DIR
-    };
 
     try {
       options.parse(argv);
@@ -135,14 +139,133 @@ public class TestClassWriter extends TestCase {
       fail("Got IOException: " + ioe.toString());
     }
 
-    File tableFile = new File(codeGenDirFile, HsqldbTestServer.getTableName() + ".java");
-    assertTrue("Cannot find generated source file for table!", tableFile.exists());
+    String classFileNameToCheck = classNameToCheck.replace('.', File.separatorChar);
+    LOG.debug("Class file to check for: " + classFileNameToCheck);
 
-    File tableClassFile = new File(classGenDirFile, HsqldbTestServer.getTableName() + ".class");
+    // check that all the files we expected to generate (.java, .class, .jar) exist.
+    File tableFile = new File(codeGenDirFile, classFileNameToCheck + ".java");
+    assertTrue("Cannot find generated source file for table!", tableFile.exists());
+    LOG.debug("Found generated source: " + tableFile);
+
+    File tableClassFile = new File(classGenDirFile, classFileNameToCheck + ".class");
     assertTrue("Cannot find generated class file for table!", tableClassFile.exists());
+    LOG.debug("Found generated class: " + tableClassFile);
 
     File jarFile = new File(compileMgr.getJarFilename());
     assertTrue("Cannot find compiled jar", jarFile.exists());
+    LOG.debug("Found generated jar: " + jarFile);
+
+    // check that the .class file made it into the .jar by enumerating 
+    // available entries in the jar file.
+    boolean foundCompiledClass = false;
+    try {
+      JarInputStream jis = new JarInputStream(new FileInputStream(jarFile));
+
+      LOG.debug("Jar file has entries:");
+      while (true) {
+        JarEntry entry = jis.getNextJarEntry();
+        if (null == entry) {
+          // no more entries.
+          break;
+        }
+
+        if (entry.getName().equals(classFileNameToCheck + ".class")) {
+          foundCompiledClass = true;
+          LOG.debug(" * " + entry.getName());
+        } else {
+          LOG.debug("   " + entry.getName());
+        }
+      }
+
+      jis.close();
+    } catch (IOException ioe) {
+      fail("Got IOException iterating over Jar file: " + ioe.toString());
+    }
+
+    assertTrue("Cannot find .class file " + classFileNameToCheck + ".class in jar file",
+        foundCompiledClass);
+
+    LOG.debug("Found class in jar - test success!");
+  }
+
+  /**
+   * Test that we can generate code. Test that we can redirect the --outdir and --bindir too.
+   */
+  @Test
+  public void testCodeGen() {
+
+    // Set the option strings in an "argv" to redirect our srcdir and bindir
+    String [] argv = {
+        "--bindir",
+        JAR_GEN_DIR,
+        "--outdir",
+        CODE_GEN_DIR
+    };
+
+    runGenerationTest(argv, HsqldbTestServer.getTableName());
+  }
+
+  private static final String OVERRIDE_CLASS_NAME = "override";
+
+  /**
+   * Test that we can generate code with a custom class name
+   */
+  @Test
+  public void testSetClassName() {
+
+    // Set the option strings in an "argv" to redirect our srcdir and bindir
+    String [] argv = {
+        "--bindir",
+        JAR_GEN_DIR,
+        "--outdir",
+        CODE_GEN_DIR,
+        "--class-name",
+        OVERRIDE_CLASS_NAME
+    };
+
+    runGenerationTest(argv, OVERRIDE_CLASS_NAME);
+  }
+
+  private static final String OVERRIDE_CLASS_AND_PACKAGE_NAME = "override.pkg.prefix.classname";
+
+  /**
+   * Test that we can generate code with a custom class name that includes a package
+   */
+  @Test
+  public void testSetClassAndPackageName() {
+
+    // Set the option strings in an "argv" to redirect our srcdir and bindir
+    String [] argv = {
+        "--bindir",
+        JAR_GEN_DIR,
+        "--outdir",
+        CODE_GEN_DIR,
+        "--class-name",
+        OVERRIDE_CLASS_AND_PACKAGE_NAME
+    };
+
+    runGenerationTest(argv, OVERRIDE_CLASS_AND_PACKAGE_NAME);
+  }
+ 
+  private static final String OVERRIDE_PACKAGE_NAME = "special.userpackage.name";
+
+  /**
+   * Test that we can generate code with a custom class name that includes a package
+   */
+  @Test
+  public void testSetPackageName() {
+
+    // Set the option strings in an "argv" to redirect our srcdir and bindir
+    String [] argv = {
+        "--bindir",
+        JAR_GEN_DIR,
+        "--outdir",
+        CODE_GEN_DIR,
+        "--package-name",
+        OVERRIDE_PACKAGE_NAME
+    };
+
+    runGenerationTest(argv, OVERRIDE_PACKAGE_NAME + "." + HsqldbTestServer.getTableName());
   }
 }
 

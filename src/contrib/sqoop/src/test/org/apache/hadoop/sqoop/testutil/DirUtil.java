@@ -51,6 +51,7 @@ public final class DirUtil {
     }
 
     // The directory is now empty so delete it too.
+    LOG.debug("Removing: " + dir);
     return dir.delete();
   }
 

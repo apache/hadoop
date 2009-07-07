@@ -39,6 +39,7 @@ import org.apache.hadoop.mapred.lib.db.DBWritable;
 import org.apache.hadoop.sqoop.ConnFactory;
 import org.apache.hadoop.sqoop.ImportOptions;
 import org.apache.hadoop.sqoop.manager.ConnManager;
+import org.apache.hadoop.sqoop.orm.TableClassName;
 import org.apache.hadoop.sqoop.util.ClassLoaderStack;
 
 /**
@@ -67,8 +68,7 @@ public class ImportJob {
 
     LOG.info("Beginning data import of " + tableName);
 
-    // TODO(aaron): If we add packages, the tableName will not be the class name.
-    String tableClassName = tableName;
+    String tableClassName = new TableClassName(options).getClassForTable(tableName);
 
     boolean isLocal = "local".equals(conf.get("mapred.job.tracker"));
     ClassLoader prevClassLoader = null;
@@ -76,8 +76,6 @@ public class ImportJob {
       // If we're using the LocalJobRunner, then instead of using the compiled jar file
       // as the job source, we're running in the current thread. Push on another classloader
       // that loads from that jar in addition to everything currently on the classpath.
-
-      // take advantage of the fact that table name = class name.
       prevClassLoader = ClassLoaderStack.addJarFile(ormJarFile, tableClassName);
     }
 
