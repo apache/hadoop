@@ -276,4 +276,27 @@ public class TestKeyValue extends TestCase {
     // TODO actually write this test!
     
   }
+  
+  public void testComparableInterface() {
+  	byte [] row1 = Bytes.toBytes("row1");
+  	byte [] row2 = Bytes.toBytes("row2");
+  	byte [] fam1 = Bytes.toBytes("fam1");
+  	byte []	fam2 = Bytes.toBytes("fam2");
+  	byte [] qf1 = Bytes.toBytes("qf1");
+  	byte [] qf2 = Bytes.toBytes("qf2");
+  	byte [] val1 = Bytes.toBytes("val1");
+  	KeyValue kv1 = new KeyValue(row1, fam1, qf1, val1);
+  	KeyValue kv2 = new KeyValue(row2, fam2, qf2, val1);
+  	int res = 0;
+  	
+  	res = kv1.compareTo(kv2);
+  	assertTrue(res < 0);
+  	
+  	res = kv2.compareTo(kv1);
+  	assertTrue(res > 0);
+  	
+  	res = kv1.compareTo(kv1);
+  	assertTrue(res == 0);
+  }
+  
 }
