@@ -540,8 +540,12 @@ public class KeyValue implements WritableComparable<KeyValue>, HeapSize {
         value, voffset, vlength);
   }
 
-  // Needed doing 'contains' on List.  Only compares the key portion, not the
-  // value.
+  /**
+   * Needed doing 'contains' on List.  Only compares the key portion, not the
+   * value.
+   * @param other Object to compare ourselves to.
+   * @return True if equal to <code>other</code>
+   */
   public boolean equals(Object other) {
     KeyValue kv = (KeyValue)other;
     // Comparing bytes should be fine doing equals test.  Shouldn't have to
