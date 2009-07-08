@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.Writable;
 
 /**
  * An HBase Key/Value.  Instances of this class are immutable.  They are not
@@ -53,7 +53,7 @@ import org.apache.hadoop.io.WritableComparable;
  * <p>TODO: Group Key-only comparators and operations into a Key class, just
  * for neatness sake, if can figure what to call it.
  */
-public class KeyValue implements WritableComparable<KeyValue>, HeapSize {
+public class KeyValue implements Writable, HeapSize {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
   /**
@@ -61,8 +61,7 @@ public class KeyValue implements WritableComparable<KeyValue>, HeapSize {
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
 
-  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY = 
-  	new byte[]{COLUMN_FAMILY_DELIMITER};
+  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY = new byte[]{COLUMN_FAMILY_DELIMITER};
   
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values.
@@ -540,12 +539,8 @@ public class KeyValue implements WritableComparable<KeyValue>, HeapSize {
         value, voffset, vlength);
   }
 
-  /**
-   * Needed doing 'contains' on List.  Only compares the key portion, not the
-   * value.
-   * @param other Object to compare ourselves to.
-   * @return True if equal to <code>other</code>
-   */
+  // Needed doing 'contains' on List.  Only compares the key portion, not the
+  // value.
   public boolean equals(Object other) {
     KeyValue kv = (KeyValue)other;
     // Comparing bytes should be fine doing equals test.  Shouldn't have to
@@ -1799,7 +1794,6 @@ public class KeyValue implements WritableComparable<KeyValue>, HeapSize {
         (2 * Bytes.SIZEOF_INT));
   }
   
-  // WritableComparable
   // Writable
   public void readFields(final DataInput in) throws IOException {
     this.length = in.readInt();
@@ -1812,10 +1806,4 @@ public class KeyValue implements WritableComparable<KeyValue>, HeapSize {
     out.writeInt(this.length);
     out.write(this.bytes, this.offset, this.length);
   }
-  // Comparable
-  public int compareTo(KeyValue that) {
-  	return KEY_COMPARATOR.compare(this.bytes, this.offset, this.length, 
-  			that.getBuffer(), that.getOffset(), that.getLength());
-  }
-  
 }

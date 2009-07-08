@@ -450,8 +450,6 @@ Release 0.20.0 - Unreleased
    HBASE-1620  Need to use special StoreScanner constructor for major compactions
                (passed sf, no caching, etc) (Jon Gray via Stack)
    HBASE-1624  Don't sort Puts if only one in list in HCM#processBatchOfRows
-   HBASE-1622  Make KeyValue implement the Comparable interface to make it work
-               with Cascading (Erik Holstad via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
