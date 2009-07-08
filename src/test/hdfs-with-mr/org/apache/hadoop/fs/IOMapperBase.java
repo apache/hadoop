@@ -19,14 +19,10 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.*;
 
 /**
  * Base mapper class for IO operations.
@@ -37,7 +33,8 @@ import org.apache.hadoop.mapred.Reporter;
  * statistics data to be collected by subsequent reducers.
  * 
  */
-public abstract class IOMapperBase extends Configured
+@SuppressWarnings("deprecation")
+public abstract class IOMapperBase<T> extends Configured
     implements Mapper<Text, LongWritable, Text, Text> {
   
   protected byte[] buffer;
@@ -45,8 +42,11 @@ public abstract class IOMapperBase extends Configured
   protected FileSystem fs;
   protected String hostName;
 
-  public IOMapperBase(Configuration conf) { 
-    super(conf); 
+  public IOMapperBase() { 
+  }
+
+  public void configure(JobConf conf) {
+    setConf(conf);
     try {
       fs = FileSystem.get(conf);
     } catch (Exception e) {
@@ -59,10 +59,6 @@ public abstract class IOMapperBase extends Configured
     } catch(Exception e) {
       hostName = "localhost";
     }
-  }
-
-  public void configure(JobConf job) {
-    setConf(job);
   }
 
   public void close() throws IOException {
@@ -78,7 +74,7 @@ public abstract class IOMapperBase extends Configured
    *          {@link #collectStats(OutputCollector,String,long,Object)}
    * @throws IOException
    */
-  abstract Object doIO(Reporter reporter, 
+  abstract T doIO(Reporter reporter, 
                        String name, 
                        long value) throws IOException;
 
@@ -94,7 +90,7 @@ public abstract class IOMapperBase extends Configured
   abstract void collectStats(OutputCollector<Text, Text> output, 
                              String name, 
                              long execTime, 
-                             Object doIOReturnValue) throws IOException;
+                             T doIOReturnValue) throws IOException;
   
   /**
    * Map file name and offset into statistical data.
@@ -119,7 +115,7 @@ public abstract class IOMapperBase extends Configured
     reporter.setStatus("starting " + name + " ::host = " + hostName);
     
     long tStart = System.currentTimeMillis();
-    Object statValue = doIO(reporter, name, longValue);
+    T statValue = doIO(reporter, name, longValue);
     long tEnd = System.currentTimeMillis();
     long execTime = tEnd - tStart;
     collectStats(output, name, execTime, statValue);

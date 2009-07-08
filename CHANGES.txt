@@ -9,6 +9,8 @@ Trunk (unreleased changes)
 
     HDFS-447. Add LDAP lookup to hdfsproxy. (Zhiyong Zhang via cdouglas)
 
+    HDFS-459. Introduce Job History Log Analyzer. (shv)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file

@@ -22,11 +22,12 @@ import org.apache.hadoop.fs.DFSCIOTest;
 import org.apache.hadoop.fs.DistributedFSCheck;
 import org.apache.hadoop.fs.TestDFSIO;
 import org.apache.hadoop.fs.TestFileSystem;
+import org.apache.hadoop.fs.JHLogAnalyzer;
 import org.apache.hadoop.hdfs.NNBench;
 import org.apache.hadoop.io.FileBench;
 import org.apache.hadoop.util.ProgramDriver;
 
-/*
+/**
  * Driver for HDFS tests, which require map-reduce to run.
  */
 public class HdfsWithMRTestDriver {
@@ -55,6 +56,8 @@ public class HdfsWithMRTestDriver {
           "Benchmark SequenceFile(Input|Output)Format " +
           "(block,record compressed and uncompressed), " +
           "Text(Input|Output)Format (compressed and uncompressed)");
+      pgd.addClass(JHLogAnalyzer.class.getSimpleName(), JHLogAnalyzer.class, 
+          "Job History Log analyzer.");
     } catch(Throwable e) {
       e.printStackTrace();
     }

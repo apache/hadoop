@@ -162,16 +162,15 @@ public class DFSCIOTest extends TestCase {
    * <li>i/o rate squared</li>
    * </ul>
    */
-  private abstract static class IOStatMapper extends IOMapperBase {
+  private abstract static class IOStatMapper extends IOMapperBase<Long> {
     IOStatMapper() { 
-      super(fsConfig);
     }
     
     void collectStats(OutputCollector<Text, Text> output, 
                       String name,
                       long execTime, 
-                      Object objSize) throws IOException {
-      long totalSize = ((Long)objSize).longValue();
+                      Long objSize) throws IOException {
+      long totalSize = objSize.longValue();
       float ioRateMbSec = (float)totalSize * 1000 / (execTime * MEGA);
       LOG.info("Number of bytes processed = " + totalSize);
       LOG.info("Exec time = " + execTime);
@@ -201,7 +200,7 @@ public class DFSCIOTest extends TestCase {
         buffer[i] = (byte)('0' + i % 50);
     }
 
-    public Object doIO(Reporter reporter, 
+    public Long doIO(Reporter reporter, 
                        String name, 
                        long totalSize 
                        ) throws IOException {
@@ -302,7 +301,7 @@ public class DFSCIOTest extends TestCase {
       super(); 
     }
 
-    public Object doIO(Reporter reporter, 
+    public Long doIO(Reporter reporter, 
                        String name, 
                        long totalSize 
                        ) throws IOException {

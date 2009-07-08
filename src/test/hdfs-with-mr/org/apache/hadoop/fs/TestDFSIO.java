@@ -78,7 +78,6 @@ public class TestDFSIO extends TestCase {
   private static final String BASE_FILE_NAME = "test_io_";
   private static final String DEFAULT_RES_FILE_NAME = "TestDFSIO_results.log";
   
-  private static Configuration fsConfig = new Configuration();
   private static final long MEGA = 0x100000;
   private static String TEST_ROOT_DIR = System.getProperty("test.build.data","/benchmarks/TestDFSIO");
   private static Path CONTROL_DIR = new Path(TEST_ROOT_DIR, "io_control");
@@ -86,13 +85,18 @@ public class TestDFSIO extends TestCase {
   private static Path READ_DIR = new Path(TEST_ROOT_DIR, "io_read");
   private static Path DATA_DIR = new Path(TEST_ROOT_DIR, "io_data");
 
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
+
   /**
    * Run the test with default parameters.
    * 
    * @throws Exception
    */
   public void testIOs() throws Exception {
-    testIOs(10, 10);
+    testIOs(10, 10, new Configuration());
   }
 
   /**
@@ -102,21 +106,21 @@ public class TestDFSIO extends TestCase {
    * @param nrFiles number of files
    * @throws IOException
    */
-  public static void testIOs(int fileSize, int nrFiles)
+  public static void testIOs(int fileSize, int nrFiles, Configuration fsConfig)
     throws IOException {
 
     FileSystem fs = FileSystem.get(fsConfig);
 
-    createControlFile(fs, fileSize, nrFiles);
-    writeTest(fs);
-    readTest(fs);
+    createControlFile(fs, fileSize, nrFiles, fsConfig);
+    writeTest(fs, fsConfig);
+    readTest(fs, fsConfig);
     cleanup(fs);
   }
 
-  private static void createControlFile(
-                                        FileSystem fs,
+  private static void createControlFile(FileSystem fs,
                                         int fileSize, // in MB 
-                                        int nrFiles
+                                        int nrFiles,
+                                        Configuration fsConfig
                                         ) throws IOException {
     LOG.info("creating control file: "+fileSize+" mega bytes, "+nrFiles+" files");
 
@@ -158,16 +162,15 @@ public class TestDFSIO extends TestCase {
    * <li>i/o rate squared</li>
    * </ul>
    */
-  private abstract static class IOStatMapper extends IOMapperBase {
+  private abstract static class IOStatMapper<T> extends IOMapperBase<T> {
     IOStatMapper() { 
-      super(fsConfig);
     }
     
     void collectStats(OutputCollector<Text, Text> output, 
                       String name,
                       long execTime, 
-                      Object objSize) throws IOException {
-      long totalSize = ((Long)objSize).longValue();
+                      Long objSize) throws IOException {
+      long totalSize = objSize.longValue();
       float ioRateMbSec = (float)totalSize * 1000 / (execTime * MEGA);
       LOG.info("Number of bytes processed = " + totalSize);
       LOG.info("Exec time = " + execTime);
@@ -189,15 +192,14 @@ public class TestDFSIO extends TestCase {
   /**
    * Write mapper class.
    */
-  public static class WriteMapper extends IOStatMapper {
+  public static class WriteMapper extends IOStatMapper<Long> {
 
     public WriteMapper() { 
-      super(); 
       for(int i=0; i < bufferSize; i++)
         buffer[i] = (byte)('0' + i % 50);
     }
 
-    public Object doIO(Reporter reporter, 
+    public Long doIO(Reporter reporter, 
                        String name, 
                        long totalSize 
                        ) throws IOException {
@@ -219,22 +221,24 @@ public class TestDFSIO extends TestCase {
       } finally {
         out.close();
       }
-      return new Long(totalSize);
+      return Long.valueOf(totalSize);
     }
   }
 
-  private static void writeTest(FileSystem fs)
-    throws IOException {
+  private static void writeTest(FileSystem fs, Configuration fsConfig)
+  throws IOException {
 
     fs.delete(DATA_DIR, true);
     fs.delete(WRITE_DIR, true);
     
-    runIOTest(WriteMapper.class, WRITE_DIR);
+    runIOTest(WriteMapper.class, WRITE_DIR, fsConfig);
   }
   
-  private static void runIOTest( Class<? extends Mapper> mapperClass, 
-                                 Path outputDir
-                                 ) throws IOException {
+  @SuppressWarnings("deprecation")
+  private static void runIOTest(
+          Class<? extends Mapper<Text, LongWritable, Text, Text>> mapperClass, 
+          Path outputDir,
+          Configuration fsConfig) throws IOException {
     JobConf job = new JobConf(fsConfig, TestDFSIO.class);
 
     FileInputFormat.setInputPaths(job, CONTROL_DIR);
@@ -253,13 +257,12 @@ public class TestDFSIO extends TestCase {
   /**
    * Read mapper class.
    */
-  public static class ReadMapper extends IOStatMapper {
+  public static class ReadMapper extends IOStatMapper<Long> {
 
     public ReadMapper() { 
-      super(); 
     }
 
-    public Object doIO(Reporter reporter, 
+    public Long doIO(Reporter reporter, 
                        String name, 
                        long totalSize 
                        ) throws IOException {
@@ -278,22 +281,22 @@ public class TestDFSIO extends TestCase {
       } finally {
         in.close();
       }
-      return new Long(totalSize);
+      return Long.valueOf(totalSize);
     }
   }
 
-  private static void readTest(FileSystem fs) throws IOException {
+  private static void readTest(FileSystem fs, Configuration fsConfig)
+  throws IOException {
     fs.delete(READ_DIR, true);
-    runIOTest(ReadMapper.class, READ_DIR);
+    runIOTest(ReadMapper.class, READ_DIR, fsConfig);
   }
 
-  private static void sequentialTest(
-                                     FileSystem fs, 
+  private static void sequentialTest(FileSystem fs, 
                                      int testType, 
                                      int fileSize, 
                                      int nrFiles
                                      ) throws Exception {
-    IOStatMapper ioer = null;
+    IOStatMapper<Long> ioer = null;
     if (testType == TEST_TYPE_READ)
       ioer = new ReadMapper();
     else if (testType == TEST_TYPE_WRITE)
@@ -348,6 +351,7 @@ public class TestDFSIO extends TestCase {
     LOG.info("bufferSize = " + bufferSize);
   
     try {
+      Configuration fsConfig = new Configuration();
       fsConfig.setInt("test.io.file.buffer.size", bufferSize);
       FileSystem fs = FileSystem.get(fsConfig);
 
@@ -363,12 +367,12 @@ public class TestDFSIO extends TestCase {
         cleanup(fs);
         return;
       }
-      createControlFile(fs, fileSize, nrFiles);
+      createControlFile(fs, fileSize, nrFiles, fsConfig);
       long tStart = System.currentTimeMillis();
       if (testType == TEST_TYPE_WRITE)
-        writeTest(fs);
+        writeTest(fs, fsConfig);
       if (testType == TEST_TYPE_READ)
-        readTest(fs);
+        readTest(fs, fsConfig);
       long execTime = System.currentTimeMillis() - tStart;
     
       analyzeResult(fs, testType, execTime, resFileName);
@@ -388,30 +392,34 @@ public class TestDFSIO extends TestCase {
       reduceFile = new Path(WRITE_DIR, "part-00000");
     else
       reduceFile = new Path(READ_DIR, "part-00000");
-    DataInputStream in;
-    in = new DataInputStream(fs.open(reduceFile));
-  
-    BufferedReader lines;
-    lines = new BufferedReader(new InputStreamReader(in));
     long tasks = 0;
     long size = 0;
     long time = 0;
     float rate = 0;
     float sqrate = 0;
-    String line;
-    while((line = lines.readLine()) != null) {
-      StringTokenizer tokens = new StringTokenizer(line, " \t\n\r\f%");
-      String attr = tokens.nextToken(); 
-      if (attr.endsWith(":tasks"))
-        tasks = Long.parseLong(tokens.nextToken());
-      else if (attr.endsWith(":size"))
-        size = Long.parseLong(tokens.nextToken());
-      else if (attr.endsWith(":time"))
-        time = Long.parseLong(tokens.nextToken());
-      else if (attr.endsWith(":rate"))
-        rate = Float.parseFloat(tokens.nextToken());
-      else if (attr.endsWith(":sqrate"))
-        sqrate = Float.parseFloat(tokens.nextToken());
+    DataInputStream in = null;
+    BufferedReader lines = null;
+    try {
+      in = new DataInputStream(fs.open(reduceFile));
+      lines = new BufferedReader(new InputStreamReader(in));
+      String line;
+      while((line = lines.readLine()) != null) {
+        StringTokenizer tokens = new StringTokenizer(line, " \t\n\r\f%");
+        String attr = tokens.nextToken(); 
+        if (attr.endsWith(":tasks"))
+          tasks = Long.parseLong(tokens.nextToken());
+        else if (attr.endsWith(":size"))
+          size = Long.parseLong(tokens.nextToken());
+        else if (attr.endsWith(":time"))
+          time = Long.parseLong(tokens.nextToken());
+        else if (attr.endsWith(":rate"))
+          rate = Float.parseFloat(tokens.nextToken());
+        else if (attr.endsWith(":sqrate"))
+          sqrate = Float.parseFloat(tokens.nextToken());
+      }
+    } finally {
+      if(in != null) in.close();
+      if(lines != null) lines.close();
     }
     
     double med = rate / 1000 / tasks;
@@ -429,12 +437,15 @@ public class TestDFSIO extends TestCase {
       "    Test exec time sec: " + (float)execTime / 1000,
       "" };
 
-    PrintStream res = new PrintStream(
-                                      new FileOutputStream(
-                                                           new File(resFileName), true)); 
-    for(int i = 0; i < resultLines.length; i++) {
-      LOG.info(resultLines[i]);
-      res.println(resultLines[i]);
+    PrintStream res = null;
+    try {
+      res = new PrintStream(new FileOutputStream(new File(resFileName), true)); 
+      for(int i = 0; i < resultLines.length; i++) {
+        LOG.info(resultLines[i]);
+        res.println(resultLines[i]);
+      }
+    } finally {
+      if(res != null) res.close();
     }
   }
 

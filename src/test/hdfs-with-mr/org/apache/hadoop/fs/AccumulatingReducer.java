@@ -23,10 +23,7 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.*;
 
 /**
  * Reducer that accumulates values based on their type.
@@ -44,6 +41,7 @@ import org.apache.hadoop.mapred.Reporter;
  * </ul>
  * 
  */
+@SuppressWarnings("deprecation")
 public class AccumulatingReducer extends MapReduceBase
     implements Reducer<Text, Text, Text, Text> {
   static final String VALUE_TYPE_LONG = "l:";
@@ -74,10 +72,10 @@ public class AccumulatingReducer extends MapReduceBase
 
     // concatenate strings
     if (field.startsWith(VALUE_TYPE_STRING)) {
-      String sSum = "";
+      StringBuffer sSum = new StringBuffer();
       while (values.hasNext())
-        sSum += values.next().toString() + ";";
-      output.collect(key, new Text(sSum));
+        sSum.append(values.next().toString()).append(";");
+      output.collect(key, new Text(sSum.toString()));
       reporter.setStatus("finished " + field + " ::host = " + hostName);
       return;
     }

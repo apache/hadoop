@@ -142,10 +142,9 @@ public class DistributedFSCheck extends TestCase {
   /**
    * DistributedFSCheck mapper class.
    */
-  public static class DistributedFSCheckMapper extends IOMapperBase {
+  public static class DistributedFSCheckMapper extends IOMapperBase<Object> {
 
     public DistributedFSCheckMapper() { 
-      super(fsConfig); 
     }
 
     public Object doIO(Reporter reporter, 
