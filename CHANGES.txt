@@ -868,6 +868,9 @@ Trunk (unreleased changes)
     HADOOP-6114. Fix javadoc documentation for FileStatus.getLen.
     (Dmitry Rzhevskiy via dhruba)
 
+    HADOOP-6131. A sysproperty should not be set unless the property 
+    is set on the ant command line in build.xml (hong tang via mahadev)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
