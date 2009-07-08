@@ -144,11 +144,20 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * Add the specified KeyValue to this Put operation.
    * @param kv
    */
-  public Put add(KeyValue kv) {
+  public Put add(KeyValue kv) throws IOException{
     byte [] family = kv.getFamily();
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<KeyValue>();
+    }
+    //Checking that the row of the kv is the same as the put
+    int res = Bytes.compareTo(this.row, 0, row.length, 
+    		kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
+    if(res != 0) {
+    	throw new IOException("The row in the recently added KeyValue " + 
+    			Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(), 
+    			kv.getRowLength()) + " doesn't match the original one " + 
+    			Bytes.toStringBinary(this.row));
     }
     list.add(kv);
     familyMap.put(family, list);

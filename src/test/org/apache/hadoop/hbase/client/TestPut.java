@@ -22,17 +22,11 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -82,7 +76,6 @@ public class TestPut extends HBaseClusterTestCase {
    * @throws IOException
    */
   public void testPut() throws IOException {
-    
     Put put = new Put(row1);
     put.add(CONTENTS_FAMILY, null, value);
     table.put(put);
@@ -198,5 +191,29 @@ public class TestPut extends HBaseClusterTestCase {
     }
   }
   
+  public void testAddKeyValue() throws IOException {
+  	byte [] qualifier = Bytes.toBytes("qf1");
+    Put put = new Put(row1);
+    
+    //Adding KeyValue with the same row
+    KeyValue kv = new KeyValue(row1, CONTENTS_FAMILY, qualifier, value);
+    boolean ok = true;
+    try {
+    	put.add(kv);
+    } catch (IOException e) {
+    	ok = false;
+    }
+    assertEquals(true, ok);
+    
+    //Adding KeyValue with the different row
+    kv = new KeyValue(row2, CONTENTS_FAMILY, qualifier, value);
+    ok = false;
+    try {
+    	put.add(kv);
+    } catch (IOException e) {
+    	ok = true;
+    }
+    assertEquals(true, ok);
+  }
   
 }
