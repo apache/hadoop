@@ -52,6 +52,8 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
  *     file that ends suddenly.
  */
 public class TestOfflineImageViewer extends TestCase {
+  private static final int NUM_DIRS = 3;
+  private static final int FILES_PER_DIR = 4;
 
   // Elements of lines of ls-file output to be compared to FileStatus instance
   private class LsElements {
@@ -80,6 +82,7 @@ public class TestOfflineImageViewer extends TestCase {
     
     // Tests:
     outputOfLSVisitor(originalFsimage);
+    outputOfFileDistributionVisitor(originalFsimage);
     
     unsupportedFSLayoutVersion(originalFsimage);
     
@@ -101,16 +104,14 @@ public class TestOfflineImageViewer extends TestCase {
       cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem hdfs = cluster.getFileSystem();
       
-      int numDirs = 3;
-      int numFilesPerDir = 4;
       int filesize = 256;
       
       // Create a reasonable namespace 
-      for(int i = 0; i < numDirs; i++)  {
+      for(int i = 0; i < NUM_DIRS; i++)  {
         Path dir = new Path("/dir" + i);
         hdfs.mkdirs(dir);
         writtenFiles.put(dir.toString(), pathToFileEntry(hdfs, dir.toString()));
-        for(int j = 0; j < numFilesPerDir; j++) {
+        for(int j = 0; j < FILES_PER_DIR; j++) {
           Path file = new Path(dir, "file" + j);
           FSDataOutputStream o = hdfs.create(file);
           o.write(new byte[ filesize++ ]);
@@ -368,5 +369,35 @@ public class TestOfflineImageViewer extends TestCase {
       if(in != null) in.close();
       if(out != null) out.close();
     }
+  }
+
+  private void outputOfFileDistributionVisitor(File originalFsimage) {
+    File testFile = new File(ROOT, "/basicCheck");
+    File outputFile = new File(ROOT, "/fileDistributionCheckOutput");
+
+    int totalFiles = 0;
+    try {
+      copyFile(originalFsimage, testFile);
+      ImageVisitor v = new FileDistributionVisitor(outputFile.getPath(), 0, 0);
+      OfflineImageViewer oiv = 
+        new OfflineImageViewer(testFile.getPath(), v, false);
+
+      oiv.go();
+
+      BufferedReader reader = new BufferedReader(new FileReader(outputFile));
+      String line = reader.readLine();
+      assertEquals(line, "Size\tNumFiles");
+      while((line = reader.readLine()) != null) {
+        String[] row = line.split("\t");
+        assertEquals(row.length, 2);
+        totalFiles += Integer.parseInt(row[1]);
+      }
+    } catch (IOException e) {
+      fail("Failed reading valid file: " + e.getMessage());
+    } finally {
+      if(testFile.exists()) testFile.delete();
+      if(outputFile.exists()) outputFile.delete();
+    }
+    assertEquals(totalFiles, NUM_DIRS * FILES_PER_DIR);
   }
 }

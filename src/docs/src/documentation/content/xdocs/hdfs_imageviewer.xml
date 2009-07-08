@@ -70,6 +70,21 @@
           of this processor is amenable to automated processing and analysis with XML tools.
           Due to the verbosity of the XML syntax, this processor will also generate
           the largest amount of output.</li>
+        <li><strong>FileDistribution</strong> is the tool for analyzing file 
+          sizes in the namespace image. In order to run the tool one should 
+          define a range of integers <code>[0, maxSize]</code> by specifying
+          <code>maxSize</code> and a <code>step</code>.
+          The range of integers is divided into segments of size
+          <code>step</code>:
+          <code>[0, s</code><sub>1</sub><code>, ..., s</code><sub>n-1</sub><code>, maxSize]</code>, 
+          and the processor calculates how many files in the system fall into 
+          each segment <code>[s</code><sub>i-1</sub><code>, s</code><sub>i</sub><code>)</code>.
+          Note that files larger than <code>maxSize</code> always fall into 
+          the very last segment.
+          The output file is formatted as a tab separated two column table:
+          Size and NumFiles. Where Size represents the start of the segment,
+          and numFiles is the number of files form the image which size falls
+          in this segment.</li>
         </ol>
 
     </section> <!-- overview -->

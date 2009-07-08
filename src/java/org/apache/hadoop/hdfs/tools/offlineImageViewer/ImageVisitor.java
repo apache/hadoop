@@ -93,7 +93,7 @@ abstract class ImageVisitor {
   abstract void finishAbnormally() throws IOException;
 
   /**
-   * Visit element of fsimage with specified value.
+   * Visit non enclosing element of fsimage with specified value.
    *
    * @param element FSImage element
    * @param value Element's value

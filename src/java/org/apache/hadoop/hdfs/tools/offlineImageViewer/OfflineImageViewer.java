@@ -67,6 +67,11 @@ public class OfflineImageViewer {
     "  * XML: This processor creates an XML document with all elements of\n" +
     "    the fsimage enumerated, suitable for further analysis by XML\n" +
     "    tools.\n" +
+    "  * FileDistribution: This processor analyzes the file size\n" +
+    "    distribution in the image.\n" +
+    "    -maxSize specifies the range [0, maxSize] of file sizes to be\n" +
+    "     analyzed (128GB by default).\n" +
+    "    -step defines the granularity of the distribution. (2MB by default)\n" +
     "\n" + 
     "Required command line arguments:\n" +
     "-i,--inputFile <arg>   FSImage file to process.\n" +
@@ -75,7 +80,8 @@ public class OfflineImageViewer {
     "\n" + 
     "Optional command line arguments:\n" +
     "-p,--processor <arg>   Select which type of processor to apply\n" +
-    "                       against image file. (Ls|XML|Delimited|Indented).\n" +
+    "                       against image file." +
+    " (Ls|XML|Delimited|Indented|FileDistribution).\n" +
     "-h,--help              Display usage information and exit\n" +
     "-printToScreen         For processors that write to a file, also\n" +
     "                       output to screen. On large image files this\n" +
@@ -223,6 +229,10 @@ public class OfflineImageViewer {
                  new DelimitedImageVisitor(outputFile, printToScreen) :
                  new DelimitedImageVisitor(outputFile, printToScreen, delimiter);
       skipBlocks = false;
+    } else if (processor.equals("FileDistribution")) {
+      long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
+      int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
+      v = new FileDistributionVisitor(outputFile, maxSize, step);
     } else {
       v = new LsImageVisitor(outputFile, printToScreen);
       skipBlocks = false;

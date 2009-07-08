@@ -11,6 +11,8 @@ Trunk (unreleased changes)
 
     HDFS-459. Introduce Job History Log Analyzer. (shv)
 
+    HDFS-461. Tool to analyze file size distribution in HDFS. (shv)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
