@@ -153,3 +153,5 @@ Trunk (unreleased changes)
     high memory jobs in capacity scheduler.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-6090. Updates gridmix script to use new mapreduce api output 
+    format. (Amareshwari Sriramadasu via sharad)
