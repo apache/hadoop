@@ -70,7 +70,7 @@ public class Delete implements Writable {
 
   /** Constructor for Writable.  DO NOT USE */
   public Delete() {
-    this(null);
+    this((byte [])null);
   }
 
   /**
@@ -105,6 +105,16 @@ public class Delete implements Writable {
     if (rowLock != null) {
     	this.lockId = rowLock.getLockId();
     }
+  }
+
+  /**
+   * @param d Delete to clone.
+   */
+  public Delete(final Delete d) {
+    this.row = d.getRow();
+    this.ts = d.getTimeStamp();
+    this.lockId = d.getLockId();
+    this.familyMap.putAll(d.getFamilyMap());
   }
 
   /**

@@ -24,29 +24,36 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
- * Convert Map/Reduce output and write it to an HBase table.
+ * Convert Map/Reduce output and write it to an HBase table. The KEY is ignored
+ * while the output value <u>must</u> be either a {@link Put} or a 
+ * {@link Delete} instance. 
+ * 
+ * @param <KEY>  The type of the key. Ignored in this class.
  */
-public class TableOutputFormat extends
-    FileOutputFormat<ImmutableBytesWritable, Put> {
+public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
 
   private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
   /** Job parameter that specifies the output table. */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
 
   /**
-   * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) 
-   * and write to an HBase table
+   * Writes the reducer output to an HBase table.
+   * 
+   * @param <KEY>  The type of the key.
    */
-  protected static class TableRecordWriter
-    extends RecordWriter<ImmutableBytesWritable, Put> {
+  protected static class TableRecordWriter<KEY> 
+  extends RecordWriter<KEY, Writable> {
     
     /** The table to write to. */
     private HTable table;
@@ -82,9 +89,11 @@ public class TableOutputFormat extends
      * @see org.apache.hadoop.mapreduce.RecordWriter#write(java.lang.Object, java.lang.Object)
      */
     @Override
-    public void write(ImmutableBytesWritable key, Put value) 
+    public void write(KEY key, Writable value) 
     throws IOException {
-      table.put(new Put(value));
+      if (value instanceof Put) this.table.put(new Put((Put)value));
+      else if (value instanceof Delete) this.table.delete(new Delete((Delete)value));
+      else throw new IOException("Pass a Delete or a Put");
     }
   }
   
@@ -97,7 +106,7 @@ public class TableOutputFormat extends
    * @throws InterruptedException When the jobs is cancelled.
    * @see org.apache.hadoop.mapreduce.lib.output.FileOutputFormat#getRecordWriter(org.apache.hadoop.mapreduce.TaskAttemptContext)
    */
-  public RecordWriter<ImmutableBytesWritable, Put> getRecordWriter(
+  public RecordWriter<KEY, Writable> getRecordWriter(
     TaskAttemptContext context) 
   throws IOException, InterruptedException {
     // expecting exactly one path
@@ -111,7 +120,37 @@ public class TableOutputFormat extends
       throw e;
     }
     table.setAutoFlush(false);
-    return new TableRecordWriter(table);
+    return new TableRecordWriter<KEY>(table);
+  }
+
+  /**
+   * Checks if the output target exists.
+   * 
+   * @param context  The current context.
+   * @throws IOException When the check fails. 
+   * @throws InterruptedException When the job is aborted.
+   * @see org.apache.hadoop.mapreduce.OutputFormat#checkOutputSpecs(org.apache.hadoop.mapreduce.JobContext)
+   */
+  @Override
+  public void checkOutputSpecs(JobContext context) throws IOException,
+      InterruptedException {
+    // TODO Check if the table exists?
+    
+  }
+
+  /**
+   * Returns the output committer.
+   *  
+   * @param context  The current context.
+   * @return The committer.
+   * @throws IOException When creating the committer fails.
+   * @throws InterruptedException When the job is aborted.
+   * @see org.apache.hadoop.mapreduce.OutputFormat#getOutputCommitter(org.apache.hadoop.mapreduce.TaskAttemptContext)
+   */
+  @Override
+  public OutputCommitter getOutputCommitter(TaskAttemptContext context) 
+  throws IOException, InterruptedException {
+    return new TableOutputCommitter();
   }
   
 }
