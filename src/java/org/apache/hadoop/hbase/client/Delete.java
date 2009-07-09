@@ -132,8 +132,9 @@ public class Delete implements Writable {
    * specified family.
    * @param family family name
    */
-  public void deleteFamily(byte [] family) {
-	this.deleteFamily(family, HConstants.LATEST_TIMESTAMP);
+  public Delete deleteFamily(byte [] family) {
+    this.deleteFamily(family, HConstants.LATEST_TIMESTAMP);
+    return this;
   }
 
   /**
@@ -145,7 +146,7 @@ public class Delete implements Writable {
    * @param family family name
    * @param timestamp maximum version timestamp
    */
-  public void deleteFamily(byte [] family, long timestamp) {
+  public Delete deleteFamily(byte [] family, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<KeyValue>();
@@ -154,6 +155,7 @@ public class Delete implements Writable {
     }
     list.add(new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamily));
     familyMap.put(family, list);
+    return this;
   }
   
   /**
@@ -161,8 +163,9 @@ public class Delete implements Writable {
    * @param family family name
    * @param qualifier column qualifier
    */
-  public void deleteColumns(byte [] family, byte [] qualifier) {
+  public Delete deleteColumns(byte [] family, byte [] qualifier) {
     this.deleteColumns(family, qualifier, HConstants.LATEST_TIMESTAMP);
+    return this;
   }
   
   /**
@@ -172,7 +175,7 @@ public class Delete implements Writable {
    * @param qualifier column qualifier
    * @param timestamp maximum version timestamp
    */
-  public void deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
+  public Delete deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<KeyValue>();
@@ -180,6 +183,7 @@ public class Delete implements Writable {
     list.add(new KeyValue(this.row, family, qualifier, timestamp,
       KeyValue.Type.DeleteColumn));
     familyMap.put(family, list);
+    return this;
   }
   
   /**
@@ -189,9 +193,10 @@ public class Delete implements Writable {
    * @param column colon-delimited family and qualifier
    * @param timestamp maximum version timestamp 
    */
-  public void deleteColumns(byte [] column, long timestamp) {
+  public Delete deleteColumns(byte [] column, long timestamp) {
     byte [][] parts = KeyValue.parseColumn(column);
     this.deleteColumns(parts[0], parts[1], timestamp);
+    return this;
   }
   
   /**
@@ -202,8 +207,9 @@ public class Delete implements Writable {
    * @param family family name
    * @param qualifier column qualifier
    */
-  public void deleteColumn(byte [] family, byte [] qualifier) {
+  public Delete deleteColumn(byte [] family, byte [] qualifier) {
     this.deleteColumn(family, qualifier, HConstants.LATEST_TIMESTAMP);
+    return this;
   }
   
   /**
@@ -212,7 +218,7 @@ public class Delete implements Writable {
    * @param qualifier column qualifier
    * @param timestamp version timestamp
    */
-  public void deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
+  public Delete deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<KeyValue>();
@@ -220,6 +226,7 @@ public class Delete implements Writable {
     list.add(new KeyValue(
         this.row, family, qualifier, timestamp, KeyValue.Type.Delete));
     familyMap.put(family, list);
+    return this;
   }
   
   /**
@@ -227,9 +234,10 @@ public class Delete implements Writable {
    * <code>family:qualifier</code> notation.
    * @param column colon-delimited family and qualifier 
    */
-  public void deleteColumn(byte [] column) {
+  public Delete deleteColumn(byte [] column) {
     byte [][] parts = KeyValue.parseColumn(column);
     this.deleteColumn(parts[0], parts[1], HConstants.LATEST_TIMESTAMP);
+    return this;
   }
   
   /**

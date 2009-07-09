@@ -454,6 +454,8 @@ Release 0.20.0 - Unreleased
    HBASE-1626  Allow emitting Deletes out of new TableReducer
                (Lars George via Stack)
    HBASE-1551  HBase should manage multiple node ZooKeeper quorum
+   HBASE-1637  Delete client class methods should return itself like Put, Get,
+               Scan (Jon Gray via Nitay)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
