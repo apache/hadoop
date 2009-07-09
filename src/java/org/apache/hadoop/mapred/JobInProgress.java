@@ -186,7 +186,7 @@ public class JobInProgress {
   private final int restartCount;
 
   private JobConf conf;
-  AtomicBoolean tasksInited = new AtomicBoolean(false);
+  protected AtomicBoolean tasksInited = new AtomicBoolean(false);
   private JobInitKillStatus jobInitKillStatus = new JobInitKillStatus();
 
   private LocalFileSystem localFs;
@@ -303,7 +303,8 @@ public class JobInProgress {
         "mapred.speculative.execution.speculativeCap",0.1f);
     this.slowNodeThreshold = conf.getFloat(
         "mapred.speculative.execution.slowNodeThreshold",1.0f);
-
+    this.jobSetupCleanupNeeded = conf.getBoolean(
+        "mapred.committer.job.setup.cleanup.needed", true);
   }
   
   /**
@@ -2622,7 +2623,6 @@ public class JobInProgress {
         this.status.setReduceProgress(1.0f);
       }
       this.finishTime = JobTracker.getClock().getTime();
-      cancelReservedSlots();
       LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
       JobHistory.JobInfo.logFinished(this.status.getJobID(), finishTime, 
@@ -2707,22 +2707,31 @@ public class JobInProgress {
         reduces[i].kill();
       }
       
-      // Clear out reserved tasktrackers
-      cancelReservedSlots();
       if (!jobSetupCleanupNeeded) {
         terminateJob(jobTerminationState);
       }
     }
   }
 
+  /**
+   * Cancel all reservations since the job is done
+   */
   private void cancelReservedSlots() {
-    for (TaskTracker tt : trackersReservedForMaps.keySet()) {
+    // Make a copy of the set of TaskTrackers to prevent a 
+    // ConcurrentModificationException ...
+    Set<TaskTracker> tm = 
+      new HashSet<TaskTracker>(trackersReservedForMaps.keySet());
+    for (TaskTracker tt : tm) {
       tt.unreserveSlots(TaskType.MAP, this);
     }
-    for (TaskTracker tt : trackersReservedForReduces.keySet()) {
+
+    Set<TaskTracker> tr = 
+      new HashSet<TaskTracker>(trackersReservedForReduces.keySet());
+    for (TaskTracker tt : tr) {
       tt.unreserveSlots(TaskType.REDUCE, this);
     }
   }
+  
   private void clearUncleanTasks() {
     TaskAttemptID taskid = null;
     TaskInProgress tip = null;
@@ -3030,6 +3039,8 @@ public class JobInProgress {
    * from the various tables.
    */
   synchronized void garbageCollect() {
+    //Cancel task tracker reservation
+    cancelReservedSlots();
     // Let the JobTracker know that a job is complete
     jobtracker.getInstrumentation().decWaitingMaps(getJobID(), pendingMaps());
     jobtracker.getInstrumentation().decWaitingReduces(getJobID(), pendingReduces());

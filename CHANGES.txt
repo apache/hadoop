@@ -164,3 +164,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-685. Sqoop will fail with OutOfMemory on large tables
     using mysql. (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-734. Fix a ConcurrentModificationException in unreserving
+    unused reservations for a job when it completes.
+    (Arun Murthy and Sreekanth Ramakrishnan via yhemanth)
+
