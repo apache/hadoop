@@ -249,6 +249,7 @@ Release 0.20.0 - Unreleased
                (Jon Gray via Stack)
    HBASE-1625  Adding check to Put.add(KeyValue kv), to see that it has the same
                row as when instantiated (Erik Holstad via Stack)
+   HBASE-1629  HRS unable to contact master
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
