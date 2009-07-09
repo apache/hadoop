@@ -383,6 +383,7 @@ public class PerformanceEvaluation implements HConstants {
       this.table = new HTable(conf, TABLE_DESCRIPTOR.getName());
       this.table.setAutoFlush(false);
       this.table.setWriteBufferSize(1024*1024*12);
+      this.table.setScannerCaching(30);
     }
 
     void testTakedown()  throws IOException {

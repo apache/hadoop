@@ -458,6 +458,7 @@ Release 0.20.0 - Unreleased
    HBASE-1535  Add client ability to perform mutations without the WAL
                (Jon Gray via Stack)
    HBASE-1460  Concurrent LRU Block Cache (Jon Gray via Stack)
+   HBASE-1635  PerformanceEvaluation should use scanner prefetching
 
 Release 0.19.0 - 01/21/2009
   INCOMPATIBLE CHANGES
