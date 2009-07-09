@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;

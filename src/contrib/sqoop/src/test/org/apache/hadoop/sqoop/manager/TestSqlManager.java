@@ -130,8 +130,9 @@ public class TestSqlManager extends TestCase {
 
   @Test
   public void testReadTable() {
+    ResultSet results = null;
     try {
-      ResultSet results = manager.readTable(HsqldbTestServer.getTableName(),
+      results = manager.readTable(HsqldbTestServer.getTableName(),
           HsqldbTestServer.getFieldNames());
 
       assertNotNull("ResultSet from readTable() is null!", results);
@@ -161,17 +162,34 @@ public class TestSqlManager extends TestCase {
       assertEquals("Expected right sum of 20", EXPECTED_COL2_SUM, sumCol2);
     } catch (SQLException sqlException) {
       fail("SQL Exception: " + sqlException.toString());
+    } finally {
+      if (null != results) {
+        try {
+          results.close();
+        } catch (SQLException sqlE) {
+          fail("SQL Exception in ResultSet.close(): " + sqlE.toString());
+        }
+      }
     }
   }
 
   @Test
   public void testReadMissingTable() {
+    ResultSet results = null;
     try {
       String [] colNames = { "*" };
-      ResultSet results = manager.readTable(MISSING_TABLE, colNames);
+      results = manager.readTable(MISSING_TABLE, colNames);
       assertNull("Expected null resultset from readTable(MISSING_TABLE)", results);
     } catch (SQLException sqlException) {
       // we actually expect this. pass.
+    } finally {
+      if (null != results) {
+        try {
+          results.close();
+        } catch (SQLException sqlE) {
+          fail("SQL Exception in ResultSet.close(): " + sqlE.toString());
+        }
+      }
     }
   }
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.sqoop.manager;
 
 import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -53,11 +54,20 @@ public class MySQLManager extends GenericJdbcManager {
   }
 
   @Override
+  protected String getColNamesQuery(String tableName) {
+    // Use mysql-specific hints and LIMIT to return fast
+    return "SELECT t.* FROM " + tableName + " AS t LIMIT 1";
+  }
+
+  @Override
   public String[] listDatabases() {
     // TODO(aaron): Add an automated unit test for this.
 
-    ResultSet results = execute("SHOW DATABASES");
-    if (null == results) {
+    ResultSet results;
+    try {
+      results = execute("SHOW DATABASES");
+    } catch (SQLException sqlE) {
+      LOG.error("Error executing statement: " + sqlE.toString());
       return null;
     }
 
@@ -72,6 +82,12 @@ public class MySQLManager extends GenericJdbcManager {
     } catch (SQLException sqlException) {
       LOG.error("Error reading from database: " + sqlException.toString());
       return null;
+    } finally {
+      try {
+        results.close();
+      } catch (SQLException sqlE) {
+        LOG.warn("Exception closing ResultSet: " + sqlE.toString());
+      }
     }
   }
 
@@ -97,6 +113,31 @@ public class MySQLManager extends GenericJdbcManager {
 
     // Then run the normal importTable() method.
     super.importTable(tableName, jarFile, conf);
+  }
+
+  /**
+   * Executes an arbitrary SQL statement. Sets mysql-specific parameter
+   * to ensure the entire table is not buffered in RAM before reading
+   * any rows. A consequence of this is that every ResultSet returned
+   * by this method *MUST* be close()'d, or read to exhaustion before
+   * another query can be executed from this ConnManager instance.
+   *
+   * @param stmt The SQL statement to execute
+   * @return A ResultSet encapsulating the results or null on error
+   */
+  protected ResultSet execute(String stmt, Object... args) throws SQLException {
+    PreparedStatement statement = null;
+    statement = this.getConnection().prepareStatement(stmt,
+        ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+    statement.setFetchSize(Integer.MIN_VALUE); // MySQL: read row-at-a-time.
+    if (null != args) {
+      for (int i = 0; i < args.length; i++) {
+        statement.setObject(i + 1, args[i]);
+      }
+    }
+
+    LOG.info("Executing SQL statement: " + stmt);
+    return statement.executeQuery();
   }
 }
 

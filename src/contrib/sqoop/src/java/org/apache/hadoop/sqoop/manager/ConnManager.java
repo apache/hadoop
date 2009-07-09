@@ -67,6 +67,8 @@ public interface ConnManager {
    * Execute a SQL statement to read the named set of columns from a table.
    * If columns is null, all columns from the table are read. This is a local
    * (non-parallelized) read of the table back to the current client.
+   * The client is responsible for calling ResultSet.close() when done with the
+   * returned ResultSet object.
    */
   ResultSet readTable(String tableName, String [] columns) throws SQLException;
 

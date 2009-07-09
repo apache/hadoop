@@ -44,9 +44,6 @@ import org.apache.hadoop.conf.Configuration;
  * ConnManager implementation for generic SQL-compliant database.
  * This is an abstract class; it requires a database-specific
  * ConnManager implementation to actually create the connection.
- *
- * 
- *
  */
 public abstract class SqlManager implements ConnManager {
 
@@ -63,12 +60,23 @@ public abstract class SqlManager implements ConnManager {
     this.options = opts;
   }
 
+  /**
+   * @return the SQL query to use in getColumnNames() in case this logic must
+   * be tuned per-database, but the main extraction loop is still inheritable.
+   */
+  protected String getColNamesQuery(String tableName) {
+    return "SELECT t.* FROM " + tableName + " AS t";
+  }
+
   @Override
   public String[] getColumnNames(String tableName) {
-    String stmt = "SELECT t.* FROM " + tableName + " AS t WHERE 1 = 1";
+    String stmt = getColNamesQuery(tableName);
 
-    ResultSet results = execute(stmt);
-    if (null == results) {
+    ResultSet results;
+    try {
+      results = execute(stmt);
+    } catch (SQLException sqlE) {
+      LOG.error("Error executing statement: " + sqlE.toString());
       return null;
     }
 
@@ -87,15 +95,32 @@ public abstract class SqlManager implements ConnManager {
     } catch (SQLException sqlException) {
       LOG.error("Error reading from database: " + sqlException.toString());
       return null;
+    } finally {
+      try {
+        results.close();
+      } catch (SQLException sqlE) {
+        LOG.warn("SQLException closing ResultSet: " + sqlE.toString());
+      }
     }
   }
 
+  /**
+   * @return the SQL query to use in getColumnTypes() in case this logic must
+   * be tuned per-database, but the main extraction loop is still inheritable.
+   */
+  protected String getColTypesQuery(String tableName) {
+    return getColNamesQuery(tableName);
+  }
+  
   @Override
   public Map<String, Integer> getColumnTypes(String tableName) {
-    String stmt = "SELECT t.* FROM " + tableName + " AS t WHERE 1 = 1";
+    String stmt = getColTypesQuery(tableName);
 
-    ResultSet results = execute(stmt);
-    if (null == results) {
+    ResultSet results;
+    try {
+      results = execute(stmt);
+    } catch (SQLException sqlE) {
+      LOG.error("Error executing statement: " + sqlE.toString());
       return null;
     }
 
@@ -118,6 +143,12 @@ public abstract class SqlManager implements ConnManager {
     } catch (SQLException sqlException) {
       LOG.error("Error reading from database: " + sqlException.toString());
       return null;
+    } finally {
+      try {
+        results.close();
+      } catch (SQLException sqlE) { 
+        LOG.warn("SQLException closing ResultSet: " + sqlE.toString());
+      }
     }
   }
 
@@ -157,28 +188,38 @@ public abstract class SqlManager implements ConnManager {
     ResultSet results = null;
     String [] tableTypes = {"TABLE"};
     try {
-      DatabaseMetaData metaData = this.getConnection().getMetaData();
-      results = metaData.getTables(null, null, null, tableTypes);
-    } catch (SQLException sqlException) {
-      LOG.error("Error reading database metadata: " + sqlException.toString());
-      return null;
-    }
-
-    if (null == results) {
-      return null;
-    }
-
-    try {
-      ArrayList<String> tables = new ArrayList<String>();
-      while (results.next()) {
-        String tableName = results.getString("TABLE_NAME");
-        tables.add(tableName);
+      try {
+        DatabaseMetaData metaData = this.getConnection().getMetaData();
+        results = metaData.getTables(null, null, null, tableTypes);
+      } catch (SQLException sqlException) {
+        LOG.error("Error reading database metadata: " + sqlException.toString());
+        return null;
       }
 
-      return tables.toArray(new String[0]);
-    } catch (SQLException sqlException) {
-      LOG.error("Error reading from database: " + sqlException.toString());
-      return null;
+      if (null == results) {
+        return null;
+      }
+
+      try {
+        ArrayList<String> tables = new ArrayList<String>();
+        while (results.next()) {
+          String tableName = results.getString("TABLE_NAME");
+          tables.add(tableName);
+        }
+
+        return tables.toArray(new String[0]);
+      } catch (SQLException sqlException) {
+        LOG.error("Error reading from database: " + sqlException.toString());
+        return null;
+      }
+    } finally {
+      if (null != results) {
+        try {
+          results.close();
+        } catch (SQLException sqlE) {
+          LOG.warn("Exception closing ResultSet: " + sqlE.toString());
+        }
+      }
     }
   }
 
@@ -190,16 +231,20 @@ public abstract class SqlManager implements ConnManager {
       if (null == results) {
         return null;
       }
-
-      if (results.next()) {
-        return results.getString("COLUMN_NAME");
+      
+      try {
+        if (results.next()) {
+          return results.getString("COLUMN_NAME");
+        } else {
+          return null;
+        }
+      } finally {
+        results.close();
       }
     } catch (SQLException sqlException) {
       LOG.error("Error reading primary key metadata: " + sqlException.toString());
       return null;
     }
-
-    return null;
   }
 
   /**
@@ -234,31 +279,18 @@ public abstract class SqlManager implements ConnManager {
    * @param stmt The SQL statement to execute
    * @return A ResultSet encapsulating the results or null on error
    */
-  protected ResultSet execute(String stmt, Object... args) {
-    if (null == stmt) {
-      LOG.error("Null statement sent to SqlManager.execute()");
-      return null;
-    }
-
+  protected ResultSet execute(String stmt, Object... args) throws SQLException {
     PreparedStatement statement = null;
-    try {
-      statement = this.getConnection().prepareStatement(stmt,
-          ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-      if (null != args) {
-        for (int i = 0; i < args.length; i++) {
-          statement.setObject(i + 1, args[i]);
-        }
+    statement = this.getConnection().prepareStatement(stmt,
+        ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+    if (null != args) {
+      for (int i = 0; i < args.length; i++) {
+        statement.setObject(i + 1, args[i]);
       }
-
-      LOG.debug("Executing SQL statement: " + stmt);
-      return statement.executeQuery();
-    } catch (SQLException sqlException) {
-      LOG.error("Error returned by SQL database: " + sqlException.toString());
-      return null;
     }
 
-    // TODO(aaron): Is calling ResultSet.close() sufficient?
-    // Or must statement.close() be called too?
+    LOG.info("Executing SQL statement: " + stmt);
+    return statement.executeQuery();
   }
 
   /**
@@ -319,28 +351,38 @@ public abstract class SqlManager implements ConnManager {
    */
   public void execAndPrint(String s) {
     System.out.println("Executing statement: " + s);
-    ResultSet results = execute(s);
-    if (null == results) {
-      LOG.info("Got null results back!");
-      return;
-    }
-
+    ResultSet results;
     try {
-      int cols = results.getMetaData().getColumnCount();
-      System.out.println("Got " + cols + " columns back");
-      if (cols > 0) {
-        System.out.println("Schema: " + results.getMetaData().getSchemaName(1));
-        System.out.println("Table: " + results.getMetaData().getTableName(1));
-      }
+      results = execute(s);
     } catch (SQLException sqlE) {
-      LOG.error("SQLException reading result metadata: " + sqlE.toString());
+      LOG.error("Error executing statement: " + sqlE.toString());
+      return;
     }
 
     try {
-      new ResultSetPrinter().printResultSet(System.out, results);
-    } catch (IOException ioe) {
-      LOG.error("IOException writing results to stdout: " + ioe.toString());
-      return;
+      try {
+        int cols = results.getMetaData().getColumnCount();
+        System.out.println("Got " + cols + " columns back");
+        if (cols > 0) {
+          System.out.println("Schema: " + results.getMetaData().getSchemaName(1));
+          System.out.println("Table: " + results.getMetaData().getTableName(1));
+        }
+      } catch (SQLException sqlE) {
+        LOG.error("SQLException reading result metadata: " + sqlE.toString());
+      }
+
+      try {
+        new ResultSetPrinter().printResultSet(System.out, results);
+      } catch (IOException ioe) {
+        LOG.error("IOException writing results to stdout: " + ioe.toString());
+        return;
+      }
+    } finally {
+      try {
+        results.close();
+      } catch (SQLException sqlE) {
+        LOG.warn("SQLException closing ResultSet: " + sqlE.toString());
+      }
     }
   }
 
@@ -368,8 +410,8 @@ public abstract class SqlManager implements ConnManager {
       connection = DriverManager.getConnection(options.getConnectString(), username, password);
     }
 
-    connection.setAutoCommit(false);
-    connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+    // We only use this for metadata queries. Loosest semantics are okay.
+    connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 
     return connection;
   }

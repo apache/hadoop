@@ -159,3 +159,5 @@ Trunk (unreleased changes)
     MAPREDUCE-732. Removed spurious log statements in the node
     blacklisting logic. (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-685. Sqoop will fail with OutOfMemory on large tables
+    using mysql. (Aaron Kimball via tomwhite)

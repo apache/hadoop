@@ -239,8 +239,9 @@ public class ImportJobTestCase extends TestCase {
    *
    */
   protected void verifyReadback(int colNum, String expectedVal) {
+    ResultSet results = null;
     try {
-      ResultSet results = getManager().readTable(getTableName(), getColNames());
+      results = getManager().readTable(getTableName(), getColNames());
       assertNotNull("Null results from readTable()!", results);
       assertTrue("Expected at least one row returned", results.next());
       String resultVal = results.getString(colNum);
@@ -250,9 +251,16 @@ public class ImportJobTestCase extends TestCase {
 
       assertEquals("Error reading inserted value back from db", expectedVal, resultVal);
       assertFalse("Expected at most one row returned", results.next());
-      results.close();
     } catch (SQLException sqlE) {
       fail("Got SQLException: " + sqlE.toString());
+    } finally {
+      if (null != results) {
+        try {
+          results.close();
+        } catch (SQLException sqlE) {
+          fail("Got SQLException in resultset.close(): " + sqlE.toString());
+        }
+      }
     }
   }
 
