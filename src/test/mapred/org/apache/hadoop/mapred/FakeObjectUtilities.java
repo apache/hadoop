@@ -87,6 +87,7 @@ public class FakeObjectUtilities {
                                         jobtracker, getJobConf(), this, 1);
         nonRunningReduces.add(reduces[i]);
       }
+      tasksInited.set(true);
     }
     
     private TaskAttemptID findTask(String trackerName, String trackerHost,
@@ -164,6 +165,22 @@ public class FakeObjectUtilities {
           tip.machineWhereTaskRan(taskId), 
           tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
       updateTaskStatus(tip, status);
+    }
+    
+    public void failTask(TaskAttemptID taskId) {
+      TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
+      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId,
+          1.0f, 1, TaskStatus.State.FAILED, "", "", tip
+              .machineWhereTaskRan(taskId), tip.isMapTask() ? Phase.MAP
+              : Phase.REDUCE, new Counters());
+      updateTaskStatus(tip, status);
+    }
+    
+    public void cleanUpMetrics() {
+    }
+    
+    public void setClusterSize(int clusterSize) {
+      super.setClusterSize(clusterSize);
     }
   }
   

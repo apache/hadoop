@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
@@ -48,25 +49,6 @@ public class TestTrackerReservation extends TestCase {
     }
   }
 
-  private static class FakeJobInProgress extends
-      org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress {
-    TaskInProgress cleanup[] = new TaskInProgress[0];
-    TaskInProgress setup[] = new TaskInProgress[0];
-
-    FakeJobInProgress(JobConf jobConf, JobTracker tracker) throws IOException {
-      super(jobConf, tracker);
-    }
-
-    @Override
-    public synchronized void initTasks() throws IOException {
-      super.initTasks();
-      tasksInited.set(true);
-    }
-
-    @Override
-    public void cleanUpMetrics() {
-    }
-  }
 
   public static Test suite() {
     TestSetup setup = new TestSetup(new TestSuite(TestTrackerReservation.class)) {
@@ -111,9 +93,9 @@ public class TestTrackerReservation extends TestCase {
         "mapred.committer.job.setup.cleanup.needed", false);
     
     //Set task tracker objects for reservation.
-    TaskTracker tt1 = new TaskTracker(trackers[0]);
-    TaskTracker tt2 = new TaskTracker(trackers[1]);
-    TaskTracker tt3 = new TaskTracker(trackers[2]);
+    TaskTracker tt1 = jobTracker.getTaskTracker(trackers[0]);
+    TaskTracker tt2 = jobTracker.getTaskTracker(trackers[1]);
+    TaskTracker tt3 = jobTracker.getTaskTracker(trackers[2]);
     TaskTrackerStatus status1 = new TaskTrackerStatus(
         trackers[0],JobInProgress.convertTrackerNameToHostName(
             trackers[0]),0,new ArrayList<TaskStatus>(), 0, 2, 2);
@@ -128,6 +110,7 @@ public class TestTrackerReservation extends TestCase {
     tt3.setStatus(status3);
     
     FakeJobInProgress fjob = new FakeJobInProgress(conf, jobTracker);
+    fjob.setClusterSize(3);
     fjob.initTasks();
     
     tt1.reserveSlots(TaskType.MAP, fjob, 2);
@@ -154,4 +137,113 @@ public class TestTrackerReservation extends TestCase {
     assertEquals("Reservation for the job not released : Reduces", 
         0, fjob.getNumReservedTaskTrackersForReduces());
   }
+  
+  /**
+   * Test case to check task tracker reservation for a job which 
+   * has a job blacklisted tracker.
+   * <ol>
+   * <li>Run a job which fails on one of the tracker.</li>
+   * <li>Check if the job succeeds and has no reservation.</li>
+   * </ol>
+   * 
+   * @throws Exception
+   */
+  
+  public void testTrackerReservationWithJobBlackListedTracker() throws Exception {
+    FakeJobInProgress job = TestTaskTrackerBlacklisting.runBlackListingJob(
+        jobTracker, trackers);
+    assertEquals("Job has no blacklisted trackers", 1, job
+        .getBlackListedTrackers().size());
+    assertTrue("Tracker 1 not blacklisted for the job", job
+        .getBlackListedTrackers().contains(
+            JobInProgress.convertTrackerNameToHostName(trackers[0])));
+    assertEquals("Job didnt complete successfully complete", job.getStatus()
+        .getRunState(), JobStatus.SUCCEEDED);
+    assertEquals("Reservation for the job not released: Maps", 
+        0, job.getNumReservedTaskTrackersForMaps());
+    assertEquals("Reservation for the job not released : Reduces", 
+        0, job.getNumReservedTaskTrackersForReduces());
+  }
+  
+  /**
+   * Test case to check if the job reservation is handled properly if the 
+   * job has a reservation on a black listed tracker.
+   * 
+   * @throws Exception
+   */
+  public void testReservationOnBlacklistedTracker() throws Exception {
+    TaskAttemptID[] taskAttemptID = new TaskAttemptID[3];
+    JobConf conf = new JobConf();
+    conf.setSpeculativeExecution(false);
+    conf.setNumMapTasks(2);
+    conf.setNumReduceTasks(2);
+    conf.set("mapred.max.reduce.failures.percent", ".70");
+    conf.set("mapred.max.map.failures.percent", ".70");
+    conf.setBoolean("mapred.committer.job.setup.cleanup.needed", false);
+    conf.setMaxTaskFailuresPerTracker(1);
+    FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
+    job.setClusterSize(trackers.length);
+    job.initTasks();
+    
+    TaskTracker tt1 = jobTracker.getTaskTracker(trackers[0]);
+    TaskTracker tt2 = jobTracker.getTaskTracker(trackers[1]);
+    TaskTracker tt3 = jobTracker.getTaskTracker(trackers[2]);
+    TaskTrackerStatus status1 = new TaskTrackerStatus(
+        trackers[0],JobInProgress.convertTrackerNameToHostName(
+            trackers[0]),0,new ArrayList<TaskStatus>(), 0, 2, 2);
+    TaskTrackerStatus status2 = new TaskTrackerStatus(
+        trackers[1],JobInProgress.convertTrackerNameToHostName(
+            trackers[1]),0,new ArrayList<TaskStatus>(), 0, 2, 2);
+    TaskTrackerStatus status3 = new TaskTrackerStatus(
+        trackers[1],JobInProgress.convertTrackerNameToHostName(
+            trackers[1]),0,new ArrayList<TaskStatus>(), 0, 2, 2);
+    tt1.setStatus(status1);
+    tt2.setStatus(status2);
+    tt3.setStatus(status3);
+    
+    tt1.reserveSlots(TaskType.MAP, job, 2);
+    tt1.reserveSlots(TaskType.REDUCE, job, 2);
+    tt3.reserveSlots(TaskType.MAP, job, 2);
+    tt3.reserveSlots(TaskType.REDUCE, job, 2);
+    
+    assertEquals("Trackers not reserved for the job : maps", 
+        2, job.getNumReservedTaskTrackersForMaps());
+    assertEquals("Trackers not reserved for the job : reduces", 
+        2, job.getNumReservedTaskTrackersForReduces());
+  
+    /*
+     * FakeJobInProgress.findMapTask does not handle
+     * task failures. So working around it by failing
+     * reduce and blacklisting tracker.
+     * Then finish the map task later. 
+     */
+    TaskAttemptID mTid = job.findMapTask(trackers[0]);
+    TaskAttemptID rTid = job.findReduceTask(trackers[0]);
+    //Task should blacklist the tasktracker.
+    job.failTask(rTid);
+    
+    assertEquals("Tracker 0 not blacklisted for the job", 1, 
+        job.getBlackListedTrackers().size());
+    assertEquals("Extra Trackers reserved for the job : maps", 
+        1, job.getNumReservedTaskTrackersForMaps());
+    assertEquals("Extra Trackers reserved for the job : reduces", 
+        1, job.getNumReservedTaskTrackersForReduces());
+    //Finish the map task on the tracker 1. Finishing it here to work
+    //around bug in the FakeJobInProgress object
+    job.finishTask(mTid);
+    mTid = job.findMapTask(trackers[1]);
+    rTid = job.findReduceTask(trackers[1]);
+    job.finishTask(mTid);
+    job.finishTask(rTid);
+    rTid = job.findReduceTask(trackers[1]);
+    job.finishTask(rTid);
+    assertEquals("Job didnt complete successfully complete", job.getStatus()
+        .getRunState(), JobStatus.SUCCEEDED);
+    assertEquals("Trackers not unreserved for the job : maps", 
+        0, job.getNumReservedTaskTrackersForMaps());
+    assertEquals("Trackers not unreserved for the job : reduces", 
+        0, job.getNumReservedTaskTrackersForReduces());
+    
+  }
 }
+  

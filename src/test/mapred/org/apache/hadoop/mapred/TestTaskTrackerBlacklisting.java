@@ -106,12 +106,8 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     }
 
     public void failTask(TaskAttemptID taskId) {
+      super.failTask(taskId);
       TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
-      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId,
-          1.0f, 1, TaskStatus.State.FAILED, "", "", tip
-              .machineWhereTaskRan(taskId), tip.isMapTask() ? Phase.MAP
-              : Phase.REDUCE, new Counters());
-      updateTaskStatus(tip, status);
       addFailuresToTrackers(tip.machineWhereTaskRan(taskId));
     }
 
@@ -178,7 +174,7 @@ public class TestTaskTrackerBlacklisting extends TestCase {
   }
 
   public void AtestTrackerBlacklistingForJobFailures() throws Exception {
-    runBlackListingJob();
+    runBlackListingJob(jobTracker, trackers);
     assertEquals("Tracker 1 not blacklisted", jobTracker
         .getBlacklistedTrackerCount(), 1);
     checkReasonForBlackListing(hosts[0], exceedsFailuresReasonSet);
@@ -207,7 +203,7 @@ public class TestTaskTrackerBlacklisting extends TestCase {
   }
 
   public void testBlackListingWithFailuresAndHealthStatus() throws Exception {
-    runBlackListingJob();
+    runBlackListingJob(jobTracker, trackers);
     assertEquals("Tracker 1 not blacklisted", jobTracker
         .getBlacklistedTrackerCount(), 1);
     checkReasonForBlackListing(hosts[0], exceedsFailuresReasonSet);
@@ -278,28 +274,49 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     }
   }
 
-  private void runBlackListingJob() throws IOException, Exception {
+  /**
+   * Runs a job which blacklists the first of the tracker
+   * which is passed to the method.
+   * 
+   * @param jobTracker JobTracker instance
+   * @param trackers array of trackers, the method would blacklist
+   * first element of the arry
+   * @return A job in progress object.
+   * @throws Exception
+   */
+  static FakeJobInProgress runBlackListingJob(JobTracker jobTracker,
+      String[] trackers) throws Exception {
     TaskAttemptID[] taskAttemptID = new TaskAttemptID[3];
     JobConf conf = new JobConf();
     conf.setSpeculativeExecution(false);
     conf.setNumMapTasks(0);
     conf.setNumReduceTasks(5);
     conf.set("mapred.max.reduce.failures.percent", ".70");
+    conf.setBoolean("mapred.committer.job.setup.cleanup.needed", false);
     conf.setMaxTaskFailuresPerTracker(1);
     FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
+    job.setClusterSize(trackers.length);
     job.initTasks();
 
     taskAttemptID[0] = job.findReduceTask(trackers[0]);
     taskAttemptID[1] = job.findReduceTask(trackers[1]);
     taskAttemptID[2] = job.findReduceTask(trackers[2]);
     job.finishTask(taskAttemptID[1]);
+    job.finishTask(taskAttemptID[2]);
     job.failTask(taskAttemptID[0]);
+
     taskAttemptID[0] = job.findReduceTask(trackers[0]);
     job.failTask(taskAttemptID[0]);
+
     taskAttemptID[0] = job.findReduceTask(trackers[1]);
-    job.finishTask(taskAttemptID[2]);
     job.finishTask(taskAttemptID[0]);
+    taskAttemptID[0] = job.findReduceTask(trackers[1]);
+    taskAttemptID[1] = job.findReduceTask(trackers[2]);
+    job.finishTask(taskAttemptID[0]);
+    job.finishTask(taskAttemptID[1]);
+
     jobTracker.finalizeJob(job);
+    return job;
   }
 
   private void checkReasonForBlackListing(String host,

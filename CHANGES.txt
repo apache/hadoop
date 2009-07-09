@@ -169,3 +169,7 @@ Trunk (unreleased changes)
     unused reservations for a job when it completes.
     (Arun Murthy and Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-733. Fix a RuntimeException while unreserving trackers
+    that are blacklisted for a job.
+    (Arun Murthy and Sreekanth Ramakrishnan via yhemanth)
+
