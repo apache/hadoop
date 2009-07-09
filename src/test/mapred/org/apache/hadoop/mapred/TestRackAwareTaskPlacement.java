@@ -85,10 +85,6 @@ public class TestRackAwareTaskPlacement extends TestCase {
       this.profile = new JobProfile(jc.getUser(), jobid, 
           jobFile.toString(), null, jc.getJobName(),
           jc.getQueueName());
-      this.maxMapsPerNode = jc.getMaxMapsPerNode();
-      this.maxReducesPerNode = jc.getMaxReducesPerNode();
-      this.runningMapLimit = jc.getRunningMapLimit();
-      this.runningReduceLimit = jc.getRunningReduceLimit();
     }
 
     @Override
