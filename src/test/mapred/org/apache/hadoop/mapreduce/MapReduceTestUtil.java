@@ -231,6 +231,13 @@ public class MapReduceTestUtil {
 
   public static Job createJob(Configuration conf, Path inDir, Path outDir, 
       int numInputFiles, int numReds) throws IOException {
+    String input = "The quick brown fox\n" + "has many silly\n"
+      + "red fox sox\n";
+    return createJob(conf, inDir, outDir, numInputFiles, numReds, input);
+  }
+
+  public static Job createJob(Configuration conf, Path inDir, Path outDir, 
+      int numInputFiles, int numReds, String input) throws IOException {
     Job job = new Job(conf);
     FileSystem fs = FileSystem.get(conf);
     if (fs.exists(outDir)) {
@@ -240,8 +247,6 @@ public class MapReduceTestUtil {
       fs.delete(inDir, true);
     }
     fs.mkdirs(inDir);
-    String input = "The quick brown fox\n" + "has many silly\n"
-      + "red fox sox\n";
     for (int i = 0; i < numInputFiles; ++i) {
       DataOutputStream file = fs.create(new Path(inDir, "part-" + i));
       file.writeBytes(input);

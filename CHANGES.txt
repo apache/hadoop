@@ -81,6 +81,9 @@ Trunk (unreleased changes)
     MAPREDUCE-675. Sqoop should allow user-defined class and package names.
     (Aaron Kimball via tomwhite)
 
+    MAPREDUCE-371. Change KeyFieldBasedComparator and KeyFieldBasedPartitioner
+    to use new api. (Amareshwari Sriramadasu via sharad)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

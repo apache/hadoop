@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.mapreduce.lib.partition;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
