@@ -84,6 +84,9 @@ Trunk (unreleased changes)
     MAPREDUCE-371. Change KeyFieldBasedComparator and KeyFieldBasedPartitioner
     to use new api. (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-713. Sqoop has some superfluous imports. (Aaron Kimball via
+    tomwhite)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
