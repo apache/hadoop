@@ -155,3 +155,7 @@ Trunk (unreleased changes)
 
     HADOOP-6090. Updates gridmix script to use new mapreduce api output 
     format. (Amareshwari Sriramadasu via sharad)
+
+    MAPREDUCE-732. Removed spurious log statements in the node
+    blacklisting logic. (Sreekanth Ramakrishnan via yhemanth)
+
