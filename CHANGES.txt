@@ -871,6 +871,9 @@ Trunk (unreleased changes)
     HADOOP-6131. A sysproperty should not be set unless the property 
     is set on the ant command line in build.xml (hong tang via mahadev)
 
+    HADOOP-6137. Fix project specific test-patch requirements
+    (Giridharan Kesavan)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
