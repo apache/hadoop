@@ -200,6 +200,21 @@
     </description>
   </property>
   <property>
+    <name>hbase.zookeeper.dns.interface</name>
+    <value>default</value>
+    <description>The name of the Network Interface from which a ZooKeeper server
+      should report its IP address.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.dns.nameserver</name>
+    <value>default</value>
+    <description>The host name or IP address of the name server (DNS)
+      which a ZooKeeper server should use to determine the host name used by the
+      master for communication and display purposes.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.dns.interface</name>
     <value>default</value>
     <description>The name of the Network Interface from which a region server 

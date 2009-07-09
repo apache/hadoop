@@ -19,8 +19,11 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.net.UnknownHostException;
 import java.util.Properties;
 import java.util.Map.Entry;
 
@@ -28,11 +31,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
 /**
  * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage
@@ -53,28 +56,24 @@ public class HQuorumPeer implements HConstants {
   private static final int ZK_CFG_PROPERTY_SIZE = ZK_CFG_PROPERTY.length();
 
   /**
-   * Parse ZooKeeper configuration and run a QuorumPeer.
-   * While parsing the zoo.cfg, we substitute variables with values from
-   * hbase-site.xml.
+   * Parse ZooKeeper configuration from HBase XML config and run a QuorumPeer.
    * @param args String[] of command line arguments. Not used.
-   * @throws IOException
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     HBaseConfiguration conf = new HBaseConfiguration();
-    Properties zkProperties = makeZKProps(conf);
-
-    QuorumPeerConfig zkConfig = new QuorumPeerConfig();
     try {
+      Properties zkProperties = makeZKProps(conf);
+      writeMyID(zkProperties);
+      QuorumPeerConfig zkConfig = new QuorumPeerConfig();
       zkConfig.parseProperties(zkProperties);
-    } catch (ConfigException e) {
+      runZKServer(zkConfig);
+    } catch (Exception e) {
       e.printStackTrace();
       System.exit(-1);
     }
-
-    startZKServer(zkConfig);
   }
 
-  private static void startZKServer(QuorumPeerConfig zkConfig) throws IOException {
+  private static void runZKServer(QuorumPeerConfig zkConfig) throws UnknownHostException, IOException {
     if (zkConfig.isDistributed()) {
       QuorumPeerMain qp = new QuorumPeerMain();
       qp.runFromConfig(zkConfig);
@@ -84,6 +83,48 @@ public class HQuorumPeer implements HConstants {
       serverConfig.readFrom(zkConfig);
       zk.runFromConfig(serverConfig);
     }
+  }
+
+  private static void writeMyID(Properties properties) throws UnknownHostException, IOException {
+    HBaseConfiguration conf = new HBaseConfiguration();
+    String myAddress = DNS.getDefaultHost(
+        conf.get("hbase.zookeeper.dns.interface","default"),
+        conf.get("hbase.zookeeper.dns.nameserver","default"));
+
+    long myId = -1;
+
+    for (Entry<Object, Object> entry : properties.entrySet()) {
+      String key = entry.getKey().toString().trim();
+      String value = entry.getValue().toString().trim();
+      if (key.startsWith("server.")) {
+        int dot = key.indexOf('.');
+        long id = Long.parseLong(key.substring(dot + 1));
+        String[] parts = value.split(":");
+        String address = parts[0];
+        if (myAddress.equals(address)) {
+          myId = id;
+          break;
+        }
+      }
+    }
+
+    if (myId == -1) {
+      throw new IOException("Could not find my address: " + myAddress +
+                            " in list of ZooKeeper quorum servers");
+    }
+
+    String dataDirStr = properties.get("dataDir").toString().trim();
+    File dataDir = new File(dataDirStr);
+    if (!dataDir.isDirectory()) {
+      if (!dataDir.mkdirs()) {
+        throw new IOException("Unable to create data dir " + dataDir);
+      }
+    }
+
+    File myIdFile = new File(dataDir, "myid");
+    PrintWriter w = new PrintWriter(myIdFile);
+    w.println(myId);
+    w.close();
   }
 
   /**
@@ -193,11 +234,11 @@ public class HQuorumPeer implements HConstants {
       if (key.startsWith("server.")) {
         if(conf.get(CLUSTER_DISTRIBUTED).equals(CLUSTER_IS_DISTRIBUTED) &&
             value.startsWith("localhost")) {
-           String msg = "The server in zoo.cfg cannot be set to localhost " +
+          String msg = "The server in zoo.cfg cannot be set to localhost " +
               "in a fully-distributed setup because it won't be reachable. " +
               "See \"Getting Started\" for more information.";
-           LOG.fatal(msg);
-           throw new IOException(msg);
+          LOG.fatal(msg);
+          throw new IOException(msg);
         }
       }
       newValue.append(value.substring(varEnd));

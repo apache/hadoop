@@ -37,6 +37,20 @@ bin=`cd "$bin"; pwd`
 
 . $bin/hbase-config.sh
 
-exec "$bin/regionservers.sh" --config "${HBASE_CONF_DIR}" \
- cd "${HBASE_HOME}" \; \
- "$bin/hbase-daemon.sh" --config "${HBASE_CONF_DIR}" "$@"
+remote_cmd="cd ${HBASE_HOME}; $bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} $@"
+args="--config ${HBASE_CONF_DIR} $remote_cmd"
+
+command=$2
+case $command in
+  (regionserver)
+    exec "$bin/regionservers.sh" $args
+    ;;
+  (zookeeper)
+    exec "$bin/zookeepers.sh" $args
+    ;;
+  (*)
+    echo $usage
+    exit 1
+    ;;
+esac
+

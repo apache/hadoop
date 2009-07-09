@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;

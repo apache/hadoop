@@ -30,5 +30,4 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-config.sh
 
 "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master
-"$bin"/hbase-zookeeper.sh --config "${HBASE_CONF_DIR}" \
-  stop zookeeper
+"$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" stop zookeeper

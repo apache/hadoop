@@ -452,6 +452,7 @@ Release 0.20.0 - Unreleased
    HBASE-1624  Don't sort Puts if only one in list in HCM#processBatchOfRows
    HBASE-1626  Allow emitting Deletes out of new TableReducer
                (Lars George via Stack)
+   HBASE-1551  HBase should manage multiple node ZooKeeper quorum
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

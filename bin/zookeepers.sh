@@ -20,14 +20,20 @@
 # * limitations under the License.
 # */
 # 
-# Run a hbase command on all slave hosts.
-# Modelled after $HADOOP_HOME/bin/hadoop-daemons.sh
+# Run a shell command on all zookeeper hosts.
+#
+# Environment Variables
+#
+#   HBASE_CONF_DIR  Alternate hbase conf dir. Default is ${HBASE_HOME}/conf.
+#   HBASE_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
+#   HBASE_SSH_OPTS Options passed to ssh when running remote commands.
+#
+# Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage="Usage: hbase-daemons.sh [--config <hbase-confdir>] \
- [start|stop] command args..."
+usage="Usage: zookeepers [--config <hbase-confdir>] command..."
 
 # if no args specified, show usage
-if [ $# -le 1 ]; then
+if [ $# -le 0 ]; then
   echo $usage
   exit 1
 fi
@@ -35,8 +41,25 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. $bin/hbase-config.sh
+. "$bin"/hbase-config.sh
 
-exec "$bin/zookeeper.sh" --config "${HBASE_CONF_DIR}" \
- cd "${HBASE_HOME}" \; \
- "$bin/hbase-daemon.sh" --config "${HBASE_CONF_DIR}" "$@"
+if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
+  . "${HBASE_CONF_DIR}/hbase-env.sh"
+fi
+
+if [ "$HBASE_MANAGES_ZK" = "" ]; then
+  HBASE_MANAGES_ZK=true
+fi
+
+if [ "$HBASE_MANAGES_ZK" = "true" ]; then
+  hosts=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZKServerTool`
+  cmd=$"${@// /\\ }"
+  for zookeeper in $hosts; do
+   ssh $HBASE_SSH_OPTS $zookeeper $cmd 2>&1 | sed "s/^/$zookeeper: /" &
+   if [ "$HBASE_SLAVE_SLEEP" != "" ]; then
+     sleep $HBASE_SLAVE_SLEEP
+   fi
+  done
+fi
+
+wait
