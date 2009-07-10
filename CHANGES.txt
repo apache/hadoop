@@ -55,6 +55,9 @@ Trunk (unreleased changes)
     HDFS-441. Remove TestFTPFileSystem.  (szetszwo)
 
     HDFS-440. Fix javadoc broken links in DFSClient.  (szetszwo)
+    
+    HDFS-480. Fix a typo in the jar name in build.xml.  
+    (Konstantin Shvachko via gkesavan)
 
 Release 0.20.1 - Unreleased
 

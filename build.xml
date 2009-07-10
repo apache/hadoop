@@ -32,7 +32,7 @@
   <property name="hadoop-mr.version" value="0.21.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
-  <property name="test.hdfswithmr.final.name" value="${name}-hdsfwithmr-test-${version}"/>
+  <property name="test.hdfswithmr.final.name" value="${name}-hdfswithmr-test-${version}"/>
   <property name="ant.final.name" value="${name}-ant-${version}"/>
   <property name="year" value="2009"/>
 
