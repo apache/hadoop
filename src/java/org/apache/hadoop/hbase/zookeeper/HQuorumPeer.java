@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
@@ -85,6 +86,19 @@ public class HQuorumPeer implements HConstants {
     }
   }
 
+  private static boolean addressIsLocalHost(String address) {
+    return address.equals("localhost") || address.equals("127.0.0.1");
+  }
+
+  private static boolean hostEquals(String addrA, String addrB) {
+    if (addrA.contains(".") && addrB.contains(".")) {
+      return addrA.equals(addrB);
+    }
+    String hostA = StringUtils.simpleHostname(addrA);
+    String hostB = StringUtils.simpleHostname(addrB);
+    return hostA.equals(hostB);
+  }
+
   private static void writeMyID(Properties properties) throws UnknownHostException, IOException {
     HBaseConfiguration conf = new HBaseConfiguration();
     String myAddress = DNS.getDefaultHost(
@@ -101,7 +115,9 @@ public class HQuorumPeer implements HConstants {
         long id = Long.parseLong(key.substring(dot + 1));
         String[] parts = value.split(":");
         String address = parts[0];
-        if (myAddress.equals(address)) {
+        if (addressIsLocalHost(address) || hostEquals(myAddress, address)) {
+          LOG.debug("found my address: " + myAddress + ", in list: " + address +
+                    ", setting myId to " + id);
           myId = id;
           break;
         }
