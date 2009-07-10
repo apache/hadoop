@@ -1011,6 +1011,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5920. Fixes a testcase failure for TestJobHistory. 
     (Amar Kamat via ddas)
 
+    HADOOP-6139. Fix the FsShell help messages for rm and rmr.  (Jakob Homan
+    via szetszwo)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
