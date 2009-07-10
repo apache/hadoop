@@ -33,7 +33,7 @@ public class TestScanDeleteTracker extends HBaseTestCase implements HConstants {
   private byte deleteType = 0;
   
   public void setUp(){
-    sdt = new ScanDeleteTracker(KeyValue.KEY_COMPARATOR);
+    sdt = new ScanDeleteTracker();
   }
   
   public void testDeletedBy_Delete() {

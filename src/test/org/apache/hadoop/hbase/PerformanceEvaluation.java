@@ -587,7 +587,7 @@ public class PerformanceEvaluation implements HConstants {
     byte [] b = new byte[10];
     int d = Math.abs(number);
     for (int i = b.length - 1; i >= 0; i--) {
-      b[i] = (byte)((d % 10) + '0');
+      b[i] = (byte)((d % 10) /*+ '0'*/);
       d /= 10;
     }
     return b;
