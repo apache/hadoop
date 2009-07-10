@@ -63,6 +63,8 @@ for arg in ARGV
     # after we've set up some environment.
     script2run = arg
     found.push(arg)
+    # Presume that any other args are meant for the script.
+    break
   end
 end
 for arg in found
