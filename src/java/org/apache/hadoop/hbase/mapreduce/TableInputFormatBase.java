@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -202,7 +201,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       Result result;
       try {
         result = this.scanner.next();
-      } catch (UnknownScannerException e) {
+      } catch (IOException e) {
         LOG.debug("recovered from " + StringUtils.stringifyException(e));  
         restart(lastRow);
         scanner.next();    // skip presumed already mapped row
