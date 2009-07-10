@@ -182,4 +182,7 @@ Trunk (unreleased changes)
     MAPREDUCE-677. Fix timeout in TestNodeRefresh. (Amar Kamat via 
     sharad)
 
+    MAPREDUCE-153. Fix timeout in TestJobInProgressListener. (Amar 
+    Kamat via sharad)
+
 

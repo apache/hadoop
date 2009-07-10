@@ -85,7 +85,7 @@ public class TestNoJobSetupCleanup extends HadoopTestCase {
     }
   }
   
-  static class MyOutputFormat extends TextOutputFormat {
+  public static class MyOutputFormat extends TextOutputFormat {
     public void checkOutputSpecs(JobContext job) 
         throws FileAlreadyExistsException, IOException{
       super.checkOutputSpecs(job);

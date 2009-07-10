@@ -2009,6 +2009,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return FileSystem.getLocal(conf);
   }
 
+  TaskScheduler getScheduler() {
+    return taskScheduler;
+  }
+
   public static Class<? extends JobTrackerInstrumentation> getInstrumentationClass(Configuration conf) {
     return conf.getClass("mapred.jobtracker.instrumentation",
         JobTrackerMetricsInst.class, JobTrackerInstrumentation.class);
