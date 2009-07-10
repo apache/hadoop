@@ -471,6 +471,9 @@ Trunk (unreleased changes)
     HADOOP-2366. Support trimmed strings in Configuration.  (Michele Catasta
     via szetszwo)
 
+    HADOOP-6099. The RPC module can be configured to not send period pings.
+    The default behaviour of sending periodic pings remain unchanged. (dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

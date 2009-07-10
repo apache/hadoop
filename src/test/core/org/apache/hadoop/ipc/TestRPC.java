@@ -231,7 +231,7 @@ public class TestRPC extends TestCase {
   }
 
 
-  public void testCalls() throws Exception {
+  public void testCalls(Configuration conf) throws Exception {
     Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, conf);
     TestProtocol proxy = null;
     try {
@@ -382,10 +382,20 @@ public class TestRPC extends TestCase {
     conf.set(ACL_CONFIG, "invalid invalid");
     doRPCs(conf, true);
   }
+
+  /**
+   * Switch off setting socketTimeout values on RPC sockets.
+   * Verify that RPC calls still work ok.
+   */
+  public void testNoPings() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean("ipc.client.ping", false);
+    new TestRPC("testnoPings").testCalls(conf);
+  }
   
   public static void main(String[] args) throws Exception {
 
-    new TestRPC("test").testCalls();
+    new TestRPC("test").testCalls(conf);
 
   }
 }

@@ -73,6 +73,7 @@ public class Client {
   final private int maxRetries; //the max. no. of retries for socket connections
   private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   private int pingInterval; // how often sends ping to the server in msecs
+  final private boolean doPing; //do we need to send ping message
 
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
@@ -100,6 +101,22 @@ public class Client {
    */
   final static int getPingInterval(Configuration conf) {
     return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
+  }
+
+  /**
+   * The time after which a RPC will timeout.
+   * If ping is not enabled (via ipc.client.ping), then the timeout value is the 
+   * same as the pingInterval.
+   * If ping is enabled, then there is no timeout value.
+   * 
+   * @param conf Configuration
+   * @return the timeout period in milliseconds. -1 if no timeout value is set
+   */
+  final public static int getTimeout(Configuration conf) {
+    if (!conf.getBoolean("ipc.client.ping", true)) {
+      return getPingInterval(conf);
+    }
+    return -1;
   }
   
   /**
@@ -317,8 +334,13 @@ public class Client {
             handleConnectionFailure(ioFailures++, maxRetries, ie);
           }
         }
-        this.in = new DataInputStream(new BufferedInputStream
+        if (doPing) {
+          this.in = new DataInputStream(new BufferedInputStream
             (new PingInputStream(NetUtils.getInputStream(socket))));
+        } else {
+          this.in = new DataInputStream(new BufferedInputStream
+            (NetUtils.getInputStream(socket)));
+        }
         this.out = new DataOutputStream
             (new BufferedOutputStream(NetUtils.getOutputStream(socket)));
         writeHeader();
@@ -634,6 +656,7 @@ public class Client {
       conf.getInt("ipc.client.connection.maxidletime", 10000); //10s
     this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
     this.tcpNoDelay = conf.getBoolean("ipc.client.tcpnodelay", false);
+    this.doPing = conf.getBoolean("ipc.client.ping", true);
     this.pingInterval = getPingInterval(conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("The ping interval is" + this.pingInterval + "ms.");
