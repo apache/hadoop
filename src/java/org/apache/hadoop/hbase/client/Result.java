@@ -389,6 +389,7 @@ public class Result implements Writable {
   public void readFields(final DataInput in)
   throws IOException {
     familyMap = null;
+    row = null;
     int numKeys = in.readInt();
     this.kvs = new KeyValue[numKeys];
     if(numKeys == 0) {
