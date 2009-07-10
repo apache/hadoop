@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     HDFS-438. Check for NULL before invoking GenericArgumentParser in
     DataNode. (Raghu Angadi)
 
+    HDFS-415. BlockReceiver hangs in case of certain runtime exceptions.
+    (Konstantin Boudnik via rangadi)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
