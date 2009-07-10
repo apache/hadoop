@@ -97,7 +97,7 @@ public class Util {
       return n + "ms";
 
     final StringBuilder b = new StringBuilder();
-    final int millis = (int)n % 1000;
+    final int millis = (int)(n % 1000L);
     if (millis != 0)
       b.append(String.format(".%03d", millis)); 
     if ((n /= 1000) < 60)

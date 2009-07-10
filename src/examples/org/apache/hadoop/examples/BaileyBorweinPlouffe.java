@@ -50,8 +50,19 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact digits
- * of Pi.
+ * A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact 
+ * digits of Pi.
+ * This program is able to calculate digit positions
+ * lower than a certain limit, which is roughly 10^8.
+ * If the limit is exceeded,
+ * the corresponding results may be incorrect due to overflow errors.
+ * For computing higher bits of Pi, consider using distbbp. 
+ * 
+ * Reference:
+ *
+ * [1] David H. Bailey, Peter B. Borwein and Simon Plouffe.  On the Rapid
+ *     Computation of Various Polylogarithmic Constants.
+ *     Math. Comp., 66:903-913, 1996.
  */
 public class BaileyBorweinPlouffe extends Configured implements Tool {
   public static final String DESCRIPTION
@@ -423,7 +434,11 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
    // static fields and methods for Bailey-Borwein-Plouffe algorithm. //
   /////////////////////////////////////////////////////////////////////
 
-  // TODO: the following value is conservative, should be at lease 2^28.
+  /** Limitation of the program.
+   * The program may return incorrect results if the limit is exceeded.
+   * The default value is 10^8.
+   * The program probably can handle some higher values such as 2^28.
+   */
   private static final long IMPLEMENTATION_LIMIT = 100000000;
 
   private static final long ACCURACY_BIT = 32;

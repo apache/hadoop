@@ -40,8 +40,23 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * A Map-reduce program to estimate the value of Pi
- * using quasi-Monte Carlo method.
+ * A map/reduce program that estimates the value of Pi
+ * using a quasi-Monte Carlo (qMC) method.
+ * Arbitrary integrals can be approximated numerically by qMC methods.
+ * In this example,
+ * we use a qMC method to approximate the integral $I = \int_S f(x) dx$,
+ * where $S=[0,1)^2$ is a unit square,
+ * $x=(x_1,x_2)$ is a 2-dimensional point,
+ * and $f$ is a function describing the inscribed circle of the square $S$,
+ * $f(x)=1$ if $(2x_1-1)^2+(2x_2-1)^2 <= 1$ and $f(x)=0$, otherwise.
+ * It is easy to see that Pi is equal to $4I$.
+ * So an approximation of Pi is obtained once $I$ is evaluated numerically.
+ * 
+ * There are better methods for computing Pi.
+ * We emphasize numerical approximation of arbitrary integrals in this example.
+ * For computing many digits of Pi, consider using bbp.
+ *
+ * The implementation is discussed below.
  *
  * Mapper:
  *   Generate points in a unit square
@@ -52,12 +67,14 @@ import org.apache.hadoop.util.ToolRunner;
  *
  * Let numTotal = numInside + numOutside.
  * The fraction numInside/numTotal is a rational approximation of
- * the value (Area of the circle)/(Area of the square),
+ * the value (Area of the circle)/(Area of the square) = $I$,
  * where the area of the inscribed circle is Pi/4
  * and the area of unit square is 1.
- * Then, Pi is estimated value to be 4(numInside/numTotal).  
+ * Finally, the estimated value of Pi is 4(numInside/numTotal).  
  */
 public class PiEstimator extends Configured implements Tool {
+  static final String DESCRIPTION
+      = "A map/reduce program that estimates Pi using a quasi-Monte Carlo method.";
   /** tmp directory for input/output */
   static private final Path TMP_DIR = new Path(
       PiEstimator.class.getSimpleName() + "_TMP_3_141592654");
