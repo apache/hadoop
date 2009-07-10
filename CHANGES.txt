@@ -90,6 +90,9 @@ Trunk (unreleased changes)
     MAPREDUCE-623. Resolve javac warnings in mapreduce. (Jothi Padmanabhan
     via sharad)
 
+    MAPREDUCE-655. Change KeyValueLineRecordReader and KeyValueTextInputFormat
+    to use new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

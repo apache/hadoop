@@ -258,4 +258,26 @@ public class MapReduceTestUtil {
     job.setNumReduceTasks(numReds);
     return job;
   }
+
+  public static TaskAttemptContext createDummyMapTaskAttemptContext(
+      Configuration conf) {
+    TaskAttemptID tid = new TaskAttemptID("jt", 1, TaskType.MAP, 0, 0);
+    conf.set("mapred.task.id", tid.toString());
+    return new TaskAttemptContext(conf, tid);    
+  }
+
+  public static StatusReporter createDummyReporter() {
+    return new StatusReporter() {
+      public void setStatus(String s) {
+      }
+      public void progress() {
+      }
+      public Counter getCounter(Enum<?> name) {
+        return new Counters().findCounter(name);
+      }
+      public Counter getCounter(String group, String name) {
+        return new Counters().findCounter(group, name);
+      }
+    };
+  }
 }
