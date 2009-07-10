@@ -198,19 +198,17 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     public boolean nextKeyValue() throws IOException, InterruptedException {
       if (key == null) key = new ImmutableBytesWritable();
       if (value == null) value = new Result();
-      Result result;
       try {
-        result = this.scanner.next();
+        value = this.scanner.next();
       } catch (IOException e) {
         LOG.debug("recovered from " + StringUtils.stringifyException(e));  
         restart(lastRow);
         scanner.next();    // skip presumed already mapped row
-        result = scanner.next();
+        value = scanner.next();
       }
-      if (result != null && result.size() > 0) {
-        key.set(result.getRow());
+      if (value != null && value.size() > 0) {
+        key.set(value.getRow());
         lastRow = key.get();
-        Writables.copyWritable(result, value);
         return true;
       }
       return false;
