@@ -47,14 +47,11 @@ public class ScanDeleteTracker implements DeleteTracker {
   private byte deleteType = 0;
   private long deleteTimestamp = 0L;
 
-  private KeyValue.KeyComparator comparator;
-  
   /**
    * Constructor for ScanDeleteTracker
-   * @param comparator
    */
-  public ScanDeleteTracker(KeyValue.KeyComparator comparator) {
-    this.comparator = comparator;
+  public ScanDeleteTracker() {
+    super();
   }
   
   /**
@@ -71,15 +68,15 @@ public class ScanDeleteTracker implements DeleteTracker {
   @Override
   public void add(byte[] buffer, int qualifierOffset, int qualifierLength,
       long timestamp, byte type) {
-    if(timestamp > familyStamp) {
-      if(type == KeyValue.Type.DeleteFamily.getCode()) {
+    if (timestamp > familyStamp) {
+      if (type == KeyValue.Type.DeleteFamily.getCode()) {
         familyStamp = timestamp;
         return;
       }
 
-      if(deleteBuffer != null && type < deleteType) {
+      if (deleteBuffer != null && type < deleteType) {
         // same column, so ignore less specific delete
-        if(Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
+        if (Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
             buffer, qualifierOffset, qualifierLength) == 0){
           return;
         }
@@ -107,17 +104,16 @@ public class ScanDeleteTracker implements DeleteTracker {
   @Override
   public boolean isDeleted(byte [] buffer, int qualifierOffset,
       int qualifierLength, long timestamp) {
-    if(timestamp < familyStamp) {
+    if (timestamp < familyStamp) {
       return true;
     }
     
-    if(deleteBuffer != null) {
-      // TODO ryan use a specific comparator
+    if (deleteBuffer != null) {
       int ret = Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
           buffer, qualifierOffset, qualifierLength);
 
-      if(ret == 0) {
-        if(deleteType == KeyValue.Type.DeleteColumn.getCode()) {
+      if (ret == 0) {
+        if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
           return true;
         }
         // Delete (aka DeleteVersion)
@@ -158,5 +154,4 @@ public class ScanDeleteTracker implements DeleteTracker {
   public void update() {
     this.reset();
   }
-
 }

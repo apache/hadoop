@@ -24,7 +24,6 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,15 +53,14 @@ public class ScanQueryMatcher extends QueryMatcher {
     this.tr = scan.getTimeRange();
     this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;
-    // shouldn't this be ScanDeleteTracker?
-    this.deletes =  new ScanDeleteTracker(rowComparator);
+    this.deletes =  new ScanDeleteTracker();
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
     this.stopKey = KeyValue.createFirstOnRow(scan.getStopRow());
     this.filter = scan.getFilter();
     this.oldFilter = scan.getOldFilter();
     
     // Single branch to deal with two types of reads (columns vs all in family)
-    if(columns == null || columns.size() == 0) {
+    if (columns == null || columns.size() == 0) {
       // use a specialized scan for wildcard column tracker.
       this.columns = new ScanWildcardColumnTracker(maxVersions);
     } else {
@@ -166,7 +164,8 @@ public class ScanQueryMatcher extends QueryMatcher {
       return MatchCode.SKIP;
     }
 
-    if (deletes.isDeleted(bytes, offset, qualLength, timestamp)) {
+    if (!this.deletes.isEmpty() &&
+        deletes.isDeleted(bytes, offset, qualLength, timestamp)) {
       return MatchCode.SKIP;
     }
 

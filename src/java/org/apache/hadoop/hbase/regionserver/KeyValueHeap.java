@@ -54,8 +54,8 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     this.comparator = new KVScannerComparator(comparator);
     this.heap = new PriorityQueue<KeyValueScanner>(scanners.length, 
         this.comparator);
-    for(KeyValueScanner scanner : scanners) {
-      if(scanner.peek() != null) {
+    for (KeyValueScanner scanner : scanners) {
+      if (scanner.peek() != null) {
         this.heap.add(scanner);
       }
     }
@@ -102,7 +102,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     InternalScanner currentAsInternal = (InternalScanner)this.current;
     currentAsInternal.next(result);
     KeyValue pee = this.current.peek();
-    if(pee == null) {
+    if (pee == null) {
       this.current.close();
     } else {
       this.heap.add(this.current);

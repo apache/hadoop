@@ -90,7 +90,7 @@ public class GetDeleteTracker implements DeleteTracker {
       int qualifierLength, long timestamp) {
 
     // Check against DeleteFamily
-    if(timestamp <= familyStamp) {
+    if (timestamp <= familyStamp) {
       return true;
     }
 

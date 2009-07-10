@@ -65,7 +65,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
 
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(
-        scanners.toArray(new KeyValueScanner[scanners.size()]), store.comparator);
+      scanners.toArray(new KeyValueScanner[scanners.size()]), store.comparator);
 
     this.store.addChangedReaderObserver(this);
   }
