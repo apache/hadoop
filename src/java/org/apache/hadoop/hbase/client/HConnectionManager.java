@@ -348,20 +348,21 @@ public class HConnectionManager implements HConstants {
       getMaster();
       final TreeSet<HTableDescriptor> uniqueTables =
         new TreeSet<HTableDescriptor>();
-
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
-
         public boolean processRow(Result result) throws IOException {
-          HRegionInfo info = Writables.getHRegionInfo(
+          try {
+            HRegionInfo info = Writables.getHRegionInfo(
               result.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
-
-          // Only examine the rows where the startKey is zero length
-          if (info != null && info.getStartKey().length == 0) {
-            uniqueTables.add(info.getTableDesc());
+            // Only examine the rows where the startKey is zero length
+            if (info != null && info.getStartKey().length == 0) {
+              uniqueTables.add(info.getTableDesc());
+            }
+            return true;
+          } catch (RuntimeException e) {
+            LOG.error("Result=" + result);
+            throw e;
           }
-          return true;
         }
-
       };
       MetaScanner.metaScan(conf, visitor);
 

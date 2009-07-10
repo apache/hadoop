@@ -427,7 +427,6 @@ public class HTable {
     connection.getRegionServerWithRetries(
         new ServerCallable<Boolean>(connection, tableName, delete.getRow()) {
           public Boolean call() throws IOException {
-            System.out.println("IN HT.get.ServerCallable,");
             server.delete(location.getRegionInfo().getRegionName(), delete);
             return null;
           }

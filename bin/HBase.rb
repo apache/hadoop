@@ -13,6 +13,7 @@ include_class('java.lang.Boolean') {|package,name| "J#{name}" }
 
 import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.client.HTable
+import org.apache.hadoop.hbase.client.Delete
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.io.BatchUpdate
 import org.apache.hadoop.hbase.io.RowResult
@@ -344,16 +345,17 @@ module HBase
     # Delete a cell
     def delete(row, column, timestamp = HConstants::LATEST_TIMESTAMP)
       now = Time.now 
-      bu = BatchUpdate.new(row, timestamp)
-      bu.delete(column)
-      @table.commit(bu)
+      d = Delete.new(row.to_java_bytes, timestamp, nil)
+      d.deleteColumn(Bytes.toBytes(column))
+      @table.delete(d)
       @formatter.header()
       @formatter.footer(now)
     end
 
     def deleteall(row, column = nil, timestamp = HConstants::LATEST_TIMESTAMP)
       now = Time.now 
-      @table.deleteAll(row, column, timestamp)
+      d = Delete.new(row.to_java_bytes, timestamp, nil)
+      @table.delete(d)
       @formatter.header()
       @formatter.footer(now)
     end

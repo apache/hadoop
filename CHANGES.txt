@@ -250,6 +250,7 @@ Release 0.20.0 - Unreleased
    HBASE-1625  Adding check to Put.add(KeyValue kv), to see that it has the same
                row as when instantiated (Erik Holstad via Stack)
    HBASE-1629  HRS unable to contact master
+   HBASE-1633  Can't delete in TRUNK shell; makes it hard doing admin repairs
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
