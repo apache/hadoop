@@ -59,15 +59,17 @@ public class TestCommandLineJobSubmission extends TestCase {
       FileOutputStream fstream = new FileOutputStream(f);
       fstream.write("somestrings".getBytes());
       fstream.close();
-      String[] args = new String[6];
+      String[] args = new String[8];
       args[0] = "-files";
       args[1] = f.toString();
       args[2] = "-libjars";
       // the testjob.jar as a temporary jar file 
       // rather than creating its own
       args[3] = "build/test/mapred/testjar/testjob.jar";
-      args[4] = input.toString();
-      args[5] = output.toString();
+      args[4] = "-D";
+      args[5] = "mapred.output.committer.class=testjar.CustomOutputCommitter";
+      args[6] = input.toString();
+      args[7] = output.toString();
       
       JobConf jobConf = mr.createJobConf();
       //before running the job, verify that libjar is not in client classpath
