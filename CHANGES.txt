@@ -251,6 +251,7 @@ Release 0.20.0 - Unreleased
                row as when instantiated (Erik Holstad via Stack)
    HBASE-1629  HRS unable to contact master
    HBASE-1633  Can't delete in TRUNK shell; makes it hard doing admin repairs
+   HBASE-1641  Stargate build.xml causes error in Eclipse
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

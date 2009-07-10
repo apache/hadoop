@@ -1,4 +1,4 @@
-<project name="stargate" default="archives" basedir=".">
+<project name="stargate" default="package" basedir=".">
   <import file="../build-contrib.xml"/>
 
   <import file="../build-contrib.xml"/>
