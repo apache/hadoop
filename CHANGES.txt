@@ -173,3 +173,7 @@ Trunk (unreleased changes)
     that are blacklisted for a job.
     (Arun Murthy and Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-677. Fix timeout in TestNodeRefresh. (Amar Kamat via 
+    sharad)
+
+

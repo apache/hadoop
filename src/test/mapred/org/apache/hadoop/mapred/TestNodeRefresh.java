@@ -387,7 +387,7 @@ public class TestNodeRefresh extends TestCase {
 
     File file = new File("hosts.exclude");
     file.delete();
-    startCluster(2, 1, 0, conf);
+    startCluster(1, 1, 0, conf);
     String hostToDecommission = getHostname(1);
     conf = mr.createJobConf(new JobConf(conf));
 
@@ -427,6 +427,10 @@ public class TestNodeRefresh extends TestCase {
     // restart the jobtracker
     mr.stopJobTracker();
     mr.startJobTracker();
+    
+    // start a tracker so that the jobs move to completion
+    String newTrackerHostName = getHostname(2);
+    mr.startTaskTracker(newTrackerHostName, null, 2, 1);
 
     // Wait for the JT to be ready
     UtilsForTests.waitForJobTracker(jobClient);
