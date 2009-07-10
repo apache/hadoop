@@ -1298,9 +1298,12 @@ public class DataNode extends Configured
                                       Configuration conf) throws IOException {
     if (conf == null)
       conf = new Configuration();
-    // parse generic hadoop options
-    GenericOptionsParser hParser = new GenericOptionsParser(conf, args);
-    args = hParser.getRemainingArgs();
+    
+    if (args != null) {
+      // parse generic hadoop options
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, args);
+      args = hParser.getRemainingArgs();
+    }
     
     if (!parseArguments(args, conf)) {
       printUsage();

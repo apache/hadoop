@@ -59,6 +59,9 @@ Trunk (unreleased changes)
     HDFS-480. Fix a typo in the jar name in build.xml.  
     (Konstantin Shvachko via gkesavan)
 
+    HDFS-438. Check for NULL before invoking GenericArgumentParser in
+    DataNode. (Raghu Angadi)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
