@@ -87,6 +87,9 @@ Trunk (unreleased changes)
     MAPREDUCE-713. Sqoop has some superfluous imports. (Aaron Kimball via
     tomwhite)
 
+    MAPREDUCE-623. Resolve javac warnings in mapreduce. (Jothi Padmanabhan
+    via sharad)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

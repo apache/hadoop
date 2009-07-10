@@ -29,6 +29,8 @@ import java.io.IOException;
  */
 class DisallowedTaskTrackerException extends IOException {
 
+  private static final long serialVersionUID = 1L;
+
   public DisallowedTaskTrackerException(TaskTrackerStatus tracker) {
     super("Tasktracker denied communication with jobtracker: " + tracker.getTrackerName());
   }

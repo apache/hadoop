@@ -378,7 +378,7 @@ class QueueManager {
         queueInfoList.add(getJobQueueInfo(queue));  
       }
     }
-    return (JobQueueInfo[]) queueInfoList.toArray(
+    return  queueInfoList.toArray(
             new JobQueueInfo[queueInfoList.size()]);
   }
 

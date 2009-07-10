@@ -29,6 +29,10 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
+
+<%!	private static final long serialVersionUID = 1L;
+%>
+
 <%	
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName =

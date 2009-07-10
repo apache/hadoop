@@ -204,6 +204,7 @@ public class JobHistory {
    *         false otherwise
    * @deprecated Use {@link #init(JobConf, String, long, FileSystem)} instead.
    */
+@Deprecated
   public static boolean init(JobConf conf, String hostname, 
                               long jobTrackerStartTime){
     return init(conf, hostname, jobTrackerStartTime, null);
@@ -993,7 +994,8 @@ public class JobHistory {
      * @deprecated Use 
      *     {@link #logSubmitted(JobID, JobConf, String, long, boolean)} instead.
      */
-    public static void logSubmitted(JobID jobId, JobConf jobConf, 
+     @Deprecated
+     public static void logSubmitted(JobID jobId, JobConf jobConf, 
                                     String jobConfPath, long submitTime) 
     throws IOException {
       logSubmitted(jobId, jobConf, jobConfPath, submitTime, true);
@@ -1342,6 +1344,7 @@ public class JobHistory {
      * @param restartCount number of times the job got restarted
      * @deprecated Use {@link #logJobInfo(JobID, long, long)} instead.
      */
+    @Deprecated
     public static void logJobInfo(JobID jobid, long submitTime, long launchTime,
                                   int restartCount){
       logJobInfo(jobid, submitTime, launchTime);

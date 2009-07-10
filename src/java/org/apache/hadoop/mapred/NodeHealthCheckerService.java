@@ -111,7 +111,7 @@ class NodeHealthCheckerService {
       if (args != null) {
         execScript.addAll(Arrays.asList(args));
       }
-      shexec = new ShellCommandExecutor((String[]) execScript
+      shexec = new ShellCommandExecutor(execScript
           .toArray(new String[execScript.size()]), null, null, scriptTimeout);
     }
 

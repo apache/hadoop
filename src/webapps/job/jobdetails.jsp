@@ -29,6 +29,9 @@
   import="org.apache.hadoop.util.*"
 %>
 
+<%!	private static final long serialVersionUID = 1L;
+%>
+
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
@@ -175,7 +178,7 @@
         }
     }
     JobID jobIdObj = JobID.forName(jobId);
-    JobInProgress job = (JobInProgress) tracker.getJob(jobIdObj);
+    JobInProgress job = tracker.getJob(jobIdObj);
     
     String action = request.getParameter("action");
     if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) && 

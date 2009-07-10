@@ -2869,6 +2869,7 @@ public class TaskTracker
    * to other nodes.
    */
   public static class MapOutputServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
     private static final int MAX_BYTES_TO_READ = 64 * 1024;
     @Override
     public void doGet(HttpServletRequest request, 
@@ -3054,7 +3055,7 @@ public class TaskTracker
         fConf.getClass(MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
             null, MemoryCalculatorPlugin.class);
     MemoryCalculatorPlugin memoryCalculatorPlugin =
-        (MemoryCalculatorPlugin) MemoryCalculatorPlugin
+        MemoryCalculatorPlugin
             .getMemoryCalculatorPlugin(clazz, fConf);
     LOG.info(" Using MemoryCalculatorPlugin : " + memoryCalculatorPlugin);
 

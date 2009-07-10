@@ -131,7 +131,7 @@ public class ValueHistogram implements ValueAggregator<String> {
     StringBuffer sb = new StringBuffer();
     Iterator<Entry<Object,Object>> iter = items.entrySet().iterator();
     while (iter.hasNext()) {
-      Entry<Object,Object> en = (Entry<Object,Object>) iter.next();
+      Entry<Object,Object> en = iter.next();
       Object val = en.getKey();
       Long count = (Long) en.getValue();
       sb.append("\t").append(val.toString()).append("\t").
@@ -149,7 +149,7 @@ public class ValueHistogram implements ValueAggregator<String> {
     Iterator<Entry<Object,Object>> iter = items.entrySet().iterator();
 
     while (iter.hasNext()) {
-      Entry<Object,Object> en = (Entry<Object,Object>) iter.next();
+      Entry<Object,Object> en =  iter.next();
       Object val = en.getKey();
       Long count = (Long) en.getValue();
       retv.add(val.toString() + "\t" + count.longValue());

@@ -26,6 +26,8 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
@@ -56,7 +58,7 @@
   	  return;
     }
     
-    JobInProgress job = (JobInProgress) tracker.getJob(JobID.forName(jobId));
+    JobInProgress job = tracker.getJob(JobID.forName(jobId));
     if (job == null) {
       out.print("<b>Job " + jobId + " not found.</b><br>\n");
       return;

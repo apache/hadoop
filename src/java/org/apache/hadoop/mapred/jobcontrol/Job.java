@@ -48,6 +48,7 @@ public class Job extends ControlledJob {
    * @param jobConf a mapred job configuration representing a job to be executed.
    * @param dependingJobs an array of jobs the current job depends on
    */
+  @SuppressWarnings("unchecked")
   public Job(JobConf jobConf, ArrayList<?> dependingJobs) throws IOException {
     super(new org.apache.hadoop.mapreduce.Job(jobConf), 
           (ArrayList<ControlledJob>) dependingJobs);
@@ -69,6 +70,7 @@ public class Job extends ControlledJob {
    * @deprecated setAssignedJobID should not be called.
    * JOBID is set by the framework.
    */
+  @Deprecated
   public void setAssignedJobID(JobID mapredJobID) {
     // do nothing
   }
