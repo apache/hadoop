@@ -941,7 +941,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // all and sundry.
       this.log.abortCacheFlush();
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
-          Bytes.toString(getRegionName()));
+          Bytes.toStringBinary(getRegionName()));
       dse.initCause(t);
       throw dse;
     }
@@ -1383,7 +1383,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       requestFlush();
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
-          "' on region " + Bytes.toString(getRegionName()) +
+          "' on region " + Bytes.toStringBinary(getRegionName()) +
           ": memstore size " +
           StringUtils.humanReadableInt(this.memstoreSize.get()) +
           " is >= than blocking " +
@@ -1521,9 +1521,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     if(!rowIsInRange(regionInfo, row)) {
       throw new WrongRegionException("Requested row out of range for " +
           "HRegion " + this + ", startKey='" +
-          Bytes.toString(regionInfo.getStartKey()) + "', getEndKey()='" +
-          Bytes.toString(regionInfo.getEndKey()) + "', row='" +
-          Bytes.toString(row) + "'");
+          Bytes.toStringBinary(regionInfo.getStartKey()) + "', getEndKey()='" +
+          Bytes.toStringBinary(regionInfo.getEndKey()) + "', row='" +
+          Bytes.toStringBinary(row) + "'");
     }
   }
 

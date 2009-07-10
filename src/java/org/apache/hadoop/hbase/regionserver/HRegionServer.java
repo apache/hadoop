@@ -1772,6 +1772,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   
   public int put(final byte[] regionName, final Put [] puts)
   throws IOException {
+    // Count of Puts processed.
     int i = 0;
     checkOpen();
     try {
@@ -1783,13 +1784,15 @@ public class HRegionServer implements HConstants, HRegionInterface,
         locks[i] = getLockFromId(puts[i].getLockId());
         region.put(puts[i], locks[i]);
       }
-    } catch(WrongRegionException ex) {
+    } catch (WrongRegionException ex) {
+      LOG.debug("Batch puts: " + i, ex);
       return i;
     } catch (NotServingRegionException ex) {
       return i;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
+    // All have been processed successfully.
     return -1;
   }
   

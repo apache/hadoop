@@ -102,7 +102,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * 
    * @param regionName
    * @param puts
-   * @return The number of processed put's.
+   * @return The number of processed put's.  Returns -1 if all Puts
+   * processed successfully.
    * @throws IOException
    */
   public int put(final byte[] regionName, final Put [] puts)

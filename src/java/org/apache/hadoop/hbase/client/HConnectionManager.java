@@ -606,8 +606,7 @@ public class HConnectionManager implements HConstants {
         
           // instantiate the location
           location = new HRegionLocation(regionInfo,
-              new HServerAddress(serverAddress));
-          LOG.debug(location);
+            new HServerAddress(serverAddress));
           cacheLocation(tableName, location);
           return location;
         } catch (TableNotFoundException e) {
@@ -744,7 +743,7 @@ public class HConnectionManager implements HConstants {
             if (rl != null && LOG.isDebugEnabled()) {
               LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString() +
                 " for tableName=" + Bytes.toString(tableName) + " from cache " +
-                "because of " + Bytes.toString(row));
+                "because of " + Bytes.toStringBinary(row));
             }
           }
         }
@@ -780,7 +779,9 @@ public class HConnectionManager implements HConstants {
       byte [] startKey = location.getRegionInfo().getStartKey();
       SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
-      tableLocations.put(startKey, location);
+      if (tableLocations.put(startKey, location) == null) {
+        LOG.debug("Cached location " + location);
+      }
     }
     
     public HRegionInterface getHRegionConnection(
@@ -973,7 +974,7 @@ public class HConnectionManager implements HConstants {
       List<Throwable> exceptions = new ArrayList<Throwable>();
       HRegionLocation location = null;
       int tries = 0;
-      while (tries < numRetries) {
+      for (; tries < numRetries;) {
         try {
           location = getRegionLocation(tableName, rowKey, reloadFlag);
         } catch (Throwable t) {
@@ -1003,7 +1004,6 @@ public class HConnectionManager implements HConstants {
         return;
       }
       boolean retryOnlyOne = false;
-      int tries = 0;
       if (list.size() > 1) {
         Collections.sort(list);
       }
@@ -1014,37 +1014,43 @@ public class HConnectionManager implements HConstants {
       byte [] currentRegion = location.getRegionInfo().getRegionName();
       byte [] region = currentRegion;
       boolean isLastRow = false;
-      for (int i = 0; i < list.size() && tries < numRetries; i++) {
+      Put [] putarray = new Put[0];
+      for (int i = 0, tries = 0; i < list.size() && tries < this.numRetries; i++) {
         Put put = list.get(i);
         currentPuts.add(put);
+        // If the next Put goes to a new region, then we are to clear
+        // currentPuts now during this cycle.
         isLastRow = (i + 1) == list.size();
         if (!isLastRow) {
           location = getRegionLocationForRowWithRetries(tableName,
-            list.get(i+1).getRow(), false);
+            list.get(i + 1).getRow(), false);
           region = location.getRegionInfo().getRegionName();
         }
         if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
-          final Put [] puts = currentPuts.toArray(new Put[0]);
+          final Put [] puts = currentPuts.toArray(putarray);
           int index = getRegionServerWithRetries(new ServerCallable<Integer>(
               this, tableName, put.getRow()) {
             public Integer call() throws IOException {
-              int i = server.put(location.getRegionInfo()
-                  .getRegionName(), puts);
-              return i;
+              return server.put(location.getRegionInfo().getRegionName(), puts);
             }
           });
+          // index is == -1 if all puts processed successfully, else its index
+          // of last Put successfully processed.
           if (index != -1) {
             if (tries == numRetries - 1) {
-              throw new RetriesExhaustedException("Some server",
-                  currentRegion, put.getRow(), 
-                  tries, new ArrayList<Throwable>());
+              throw new RetriesExhaustedException("Some server, retryOnlyOne=" +
+                retryOnlyOne + ", index=" + index + ", islastrow=" + isLastRow +
+                ", tries=" + tries + ", numtries=" + numRetries + ", i=" + i +
+                ", listsize=" + list.size() + ", location=" + location +
+                ", region=" + Bytes.toStringBinary(region),
+                currentRegion, put.getRow(), tries, new ArrayList<Throwable>());
             }
             long sleepTime = getPauseTime(tries);
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Reloading region " + Bytes.toString(currentRegion) +
+              LOG.debug("Reloading region " + Bytes.toStringBinary(currentRegion) +
                 " location because regionserver didn't accept updates; " +
-                "tries=" + tries +
-                " of max=" + this.numRetries + ", waiting=" + sleepTime + "ms");
+                "tries=" + tries + " of max=" + this.numRetries +
+                ", waiting=" + sleepTime + "ms");
             }
             try {
               Thread.sleep(sleepTime);
@@ -1054,12 +1060,14 @@ public class HConnectionManager implements HConstants {
             }
             i = i - puts.length + index;
             retryOnlyOne = true;
+            // Reload location.
             location = getRegionLocationForRowWithRetries(tableName, 
               list.get(i + 1).getRow(), true);
             region = location.getRegionInfo().getRegionName();
-          }
-          else {
+          } else {
+            // Reset these flags/counters on successful batch Put
             retryOnlyOne = false;
+            tries = 0;
           }
           currentRegion = region;
           currentPuts.clear();
