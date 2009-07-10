@@ -1605,13 +1605,15 @@ public class FsShell extends Configured implements Tool {
                          " [-D <[property=value>]");
     } else if ("-ls".equals(cmd) || "-lsr".equals(cmd) ||
                "-du".equals(cmd) || "-dus".equals(cmd) ||
-               "-rm".equals(cmd) || "-rmr".equals(cmd) ||
                "-touchz".equals(cmd) || "-mkdir".equals(cmd) ||
                "-text".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <path>]");
     } else if (Count.matches(cmd)) {
       System.err.println(prefix + " [" + Count.USAGE + "]");
+    } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
+      System.err.println("Usage: java FsShell [" + cmd + 
+                           " [-skipTrash] <src>]");
     } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <src> <dst>]");
