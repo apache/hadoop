@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -543,6 +545,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // Check if this is a fresh start of the cluster
       if(addresses.size() == 0) {
         LOG.debug("This is a fresh start, proceeding with normal startup");
+        splitLogAfterStartup();
         return;
       }
       LOG.info("This is a failover, ZK inspection begins...");
@@ -579,8 +582,43 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
       LOG.info("Inspection found " + assignedRegions.size() + " regions, " + 
           (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
+      splitLogAfterStartup();
     } catch(IOException ex) {
       ex.printStackTrace();
+    }
+  }
+  
+  /**
+   * Inspect the log directory to recover any log file without
+   * and active region server.
+   * @throws IOException
+   */
+  private void splitLogAfterStartup() throws IOException {
+    Path logsDirPath =
+      new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
+    FileStatus [] logFolders = this.fs.listStatus(logsDirPath);
+    if (logFolders == null || logFolders.length == 0) {
+      LOG.debug("No log files to split, proceeding...");
+      return;
+    }
+    for (FileStatus status : logFolders) {
+      String serverName = status.getPath().getName();
+      LOG.info("Found log folder : " + serverName);
+      if(this.serverManager.getServerInfo(serverName) == null) {
+        LOG.info("Log folder doesn't belong " +
+            "to a known region server, splitting");
+        this.regionManager.splitLogLock.lock();
+        Path logDir =
+          new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
+        try {
+          HLog.splitLog(this.rootdir, logDir, this.fs,
+              getConfiguration());
+        } finally {
+          this.regionManager.splitLogLock.unlock();
+        }
+      } else {
+        LOG.info("Log folder belongs to an existing region server");
+      }
     }
   }
 

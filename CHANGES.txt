@@ -458,6 +458,7 @@ Release 0.20.0 - Unreleased
    HBASE-1637  Delete client class methods should return itself like Put, Get,
                Scan (Jon Gray via Nitay)
    HBASE-1640  Allow passing arguments to jruby script run when run by bin/hbase shell
+   HBASE-698   HLog recovery is not performed after master failure
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
