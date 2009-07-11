@@ -167,6 +167,9 @@ Release 0.20.1 - Unreleased
     HADOOP-6139. Fix the FsShell help messages for rm and rmr.  (Jakob Homan
     via szetszwo)
 
+    HADOOP-6141. Fix a few bugs in 0.20 test-patch.sh.  (Hong Tang via
+    szetszwo)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

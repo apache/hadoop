@@ -75,7 +75,7 @@ parseArgs() {
       FINDBUGS_HOME=$7
       FORREST_HOME=$8
       BASEDIR=$9
-      JAVA5_HOME=$10
+      JAVA5_HOME=${10}
       ### Obtain the patch filename to append it to the version number
       defect=`basename $PATCH_FILE` 
       ;;
@@ -164,14 +164,14 @@ setup () {
     ### echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/trunkReleaseAuditWarnings.txt 2>&1"
     ### $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/trunkReleaseAuditWarnings.txt 2>&1
   ### fi
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk compilation is broken?"
     cleanupAndExit 1
   fi
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -DHadoopPatchProcess= findbugs > /dev/null 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -DHadoopPatchProcess= findbugs > /dev/null 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs > /dev/null 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs > /dev/null 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk findbugs is broken?"
     cleanupAndExit 1
@@ -307,8 +307,8 @@ checkJavacWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -DHadoopPatchProcess= tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -DHadoopPatchProcess= tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1
 
   ### Compare trunk and patch javac warning numbers
   if [[ -f $PATCH_DIR/patchJavacWarnings.txt ]] ; then
@@ -342,8 +342,8 @@ checkReleaseAuditWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1
 
   ### Compare trunk and patch release audit warning numbers
   if [[ -f $PATCH_DIR/patchReleaseAuditWarnings.txt ]] ; then
@@ -420,8 +420,8 @@ checkFindbugsWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -DHadoopPatchProcess= findbugs"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -DHadoopPatchProcess= findbugs
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
