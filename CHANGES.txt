@@ -149,8 +149,6 @@ Trunk (unreleased changes)
     HADOOP-5844. Use mysqldump when connecting to local mysql instance in Sqoop.
     (Aaron Kimball via tomwhite)
 
-    HADOOP-3315. Add a new, binary file foramt, TFile. (Hong Tang via cdouglas)
-
     HADOOP-5976. Add a new command, classpath, to the hadoop script.  (Owen
     O'Malley and Gary Murry via szetszwo)
 
@@ -888,6 +886,8 @@ Release 0.20.1 - Unreleased
 
     HADOOP-6080. Introduce -skipTrash option to rm and rmr.
     (Jakob Homan via shv)
+
+    HADOOP-3315. Add a new, binary file foramt, TFile. (Hong Tang via cdouglas)
 
   IMPROVEMENTS
 
