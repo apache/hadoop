@@ -28,4 +28,26 @@
        <Field name="out" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+     <!--
+       TFile
+     -->
+      <Match>
+       <Class name="org.apache.hadoop.io.file.tfile.Chunk$ChunkDecoder" />
+       <Method name="close" />
+       <Bug pattern="SR_NOT_CHECKED" />
+      </Match>
+    <!--
+      The purpose of skip() is to drain remaining bytes of the chunk-encoded
+	  stream (one chunk at a time). The termination condition is checked by
+	  checkEOF().
+    -->
+     <Match>
+       <Class name="org.apache.hadoop.io.file.tfile.Utils" />
+       <Method name="writeVLong" />
+       <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+     </Match>
+    <!--
+	  The switch condition fall through is intentional and for performance
+	  purposes.
+    -->
 </FindBugsFilter>
