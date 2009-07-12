@@ -25,10 +25,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -476,21 +476,31 @@ public class Scan implements Writable {
     return sb.toString();
   }
   
+  @SuppressWarnings("unchecked")
+  private Writable createForName(String className) {
+    try {
+      Class<? extends Writable> clazz =
+        (Class<? extends Writable>) Class.forName(className);
+      return WritableFactories.newInstance(clazz, new Configuration());
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Can't find class " + className);
+    }    
+  }
+  
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
     this.startRow = Bytes.readByteArray(in);
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
-    boolean hasFilter = in.readBoolean();
-    if(hasFilter) {
-      this.filter = (Filter)HbaseObjectWritable.readObject(in,
-        new Configuration());
+    if(in.readBoolean()) {
+      this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
+      this.filter.readFields(in);
     }
-    boolean hasOldFilter = in.readBoolean();
-    if (hasOldFilter) {
-      this.oldFilter = (RowFilterInterface)HbaseObjectWritable.readObject(in,
-          new Configuration());
+    if (in.readBoolean()) {
+      this.oldFilter =
+        (RowFilterInterface)createForName(Bytes.toString(Bytes.readByteArray(in)));
+      this.oldFilter.readFields(in);
     }
     this.tr = new TimeRange();
     tr.readFields(in);
@@ -518,15 +528,15 @@ public class Scan implements Writable {
       out.writeBoolean(false);
     } else {
       out.writeBoolean(true);
-      HbaseObjectWritable.writeObject(out, this.filter, 
-          Filter.class, null);
+      Bytes.writeByteArray(out, Bytes.toBytes(filter.getClass().getName()));
+      filter.write(out);
     }
     if (this.oldFilter == null) {
       out.writeBoolean(false);
     } else {
       out.writeBoolean(true);
-      HbaseObjectWritable.writeObject(out, this.oldFilter,
-          RowFilterInterface.class, null);
+      Bytes.writeByteArray(out, Bytes.toBytes(oldFilter.getClass().getName()));
+      oldFilter.write(out);
     }
     tr.write(out);
     out.writeInt(familyMap.size());

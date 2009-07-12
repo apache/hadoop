@@ -22,12 +22,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.NavigableSet;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -35,6 +34,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Test HBase Writables serializations
@@ -370,6 +370,15 @@ public class TestSerialization extends HBaseTestCase {
       for(byte[] column : set){
         assertTrue(desSet.contains(column));
       }
+      
+      // Test filters are serialized properly.
+      scan = new Scan(startRow);
+      byte [] prefix = Bytes.toBytes(getName());
+      scan.setFilter(new PrefixFilter(prefix));
+      sb = Writables.getBytes(scan);
+      desScan = (Scan)Writables.getWritable(sb, new Scan());
+      Filter f = desScan.getFilter();
+      assertTrue(f instanceof PrefixFilter);
     }
     
     assertEquals(scan.getMaxVersions(), desScan.getMaxVersions());
