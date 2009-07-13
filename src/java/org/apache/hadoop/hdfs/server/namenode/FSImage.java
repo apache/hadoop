@@ -47,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -63,7 +64,6 @@ import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -471,7 +471,14 @@ public class FSImage extends Storage {
     case REGULAR:
       // just load the image
     }
-    return loadFSImage();
+    
+    boolean needToSave = loadFSImage();
+
+    assert editLog != null : "editLog must be initialized";
+    if(!editLog.isOpen())
+      editLog.open();
+    
+    return needToSave;
   }
 
   private void doUpgrade() throws IOException {
@@ -516,6 +523,7 @@ public class FSImage extends Storage {
       assert curDir.exists() : "Current directory must exist.";
       assert !prevDir.exists() : "prvious directory must not exist.";
       assert !tmpDir.exists() : "prvious.tmp directory must not exist.";
+      assert !editLog.isOpen() : "Edits log must not be open.";
       // rename current to tmp
       rename(curDir, tmpDir);
       // save new image
@@ -979,10 +987,6 @@ public class FSImage extends Storage {
     
     // Load latest edits
     needToSave |= (loadFSEdits(latestEditsSD) > 0);
-
-    assert editLog != null : "editLog must be initialized";
-    if(!editLog.isOpen())
-      editLog.open();
     
     return needToSave;
   }
