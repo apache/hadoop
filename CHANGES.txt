@@ -258,6 +258,8 @@ Release 0.20.0 - Unreleased
                (Doğacan Güney via Stack)
    HBASE-1639  clean checkout with empty hbase-site.xml, zk won't start
    HBASE-1646  Scan-s can't set a Filter (Doğacan Güney via Stack)
+   HBASE-1649  ValueFilter may not reset its internal state
+               (Doğacan Güney via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

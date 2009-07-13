@@ -194,14 +194,12 @@ public class ValueFilter implements Filter {
   }
 
   public boolean filterRow() {
-    boolean result = filterThisRow || (filterIfColumnMissing && !foundColValue);
-    filterThisRow = false;
-    foundColValue = false;
-    return result;
+    return filterThisRow || (filterIfColumnMissing && !foundColValue);
   }
 
-  public void reset() {
-    // Nothing.
+  public void reset() {    
+    filterThisRow = false;
+    foundColValue = false;
   }
 
   public void readFields(final DataInput in) throws IOException {
