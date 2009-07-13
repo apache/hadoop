@@ -1043,8 +1043,16 @@ public class JobInProgress {
       if (taskEvent != null) {
         this.taskCompletionEvents.add(taskEvent);
         taskCompletionEventTracker++;
+        JobTrackerStatistics.TaskTrackerStat ttStat = jobtracker.
+           getStatistics().getTaskTrackerStat(tip.machineWhereTaskRan(taskid));
+        if(ttStat != null) { // ttStat can be null in case of lost tracker
+          ttStat.incrTotalTasks();
+        }
         if (state == TaskStatus.State.SUCCEEDED) {
           completedTask(tip, status);
+          if(ttStat != null) {
+            ttStat.incrSucceededTasks();
+          }
         }
       }
     }

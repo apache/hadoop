@@ -31,7 +31,10 @@ Trunk (unreleased changes)
     MAPREDUCE-532. Provide a way to limit the number of used slots 
     per queue in the capacity scheduler.
     (Rahul Kumar Singh via yhemanth)
-    
+
+    MAPREDUCE-467. Provide ability to collect statistics about total tasks 
+    and succeeded tasks in different time windows. (sharad)
+
   IMPROVEMENTS
 
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via
