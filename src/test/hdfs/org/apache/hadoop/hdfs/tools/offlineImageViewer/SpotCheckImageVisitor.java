@@ -42,11 +42,11 @@ class SpotCheckImageVisitor extends ImageVisitor {
   
   @Override
   void visit(ImageElement element, String value) throws IOException {
-    if(element == ImageElement.NumBytes) 
+    if(element == ImageElement.NUM_BYTES) 
       current.totalFileSize += Long.valueOf(value);
-    else if (element == ImageElement.Replication)
+    else if (element == ImageElement.REPLICATION)
       current.totalReplications += Long.valueOf(value);
-    else if (element == ImageElement.INodePath)
+    else if (element == ImageElement.INODE_PATH)
       current.pathNames.add(value);
   }
 
@@ -54,13 +54,13 @@ class SpotCheckImageVisitor extends ImageVisitor {
   void visitEnclosingElement(ImageElement element, ImageElement key,
       String value) throws IOException {
     switch(element) {
-    case INodes:
+    case INODES:
       current = inodes;
       break;
-    case INodesUnderConstruction:
+    case INODES_UNDER_CONSTRUCTION:
       current = INUCs;
       break;
-    case Blocks:
+    case BLOCKS:
       current.totalNumBlocks += Long.valueOf(value);
       break;
       // OK to not have a default, we're skipping most of the values

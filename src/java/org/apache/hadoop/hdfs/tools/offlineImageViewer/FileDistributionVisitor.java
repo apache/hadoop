@@ -116,8 +116,8 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
   void leaveEnclosingElement() throws IOException {
     ImageElement elem = elemS.pop();
 
-    if(elem != ImageElement.Inode &&
-       elem != ImageElement.INodeUnderConstruction)
+    if(elem != ImageElement.INODE &&
+       elem != ImageElement.INODE_UNDER_CONSTRUCTION)
       return;
     inInode = false;
     if(current.numBlocks < 0) {
@@ -144,13 +144,13 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
   void visit(ImageElement element, String value) throws IOException {
     if(inInode) {
       switch(element) {
-      case INodePath:
+      case INODE_PATH:
         current.path = (value.equals("") ? "/" : value);
         break;
-      case Replication:
+      case REPLICATION:
         current.replication = Integer.valueOf(value);
         break;
-      case NumBytes:
+      case NUM_BYTES:
         current.fileSize += Long.valueOf(value);
         break;
       default:
@@ -162,8 +162,8 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
   @Override
   void visitEnclosingElement(ImageElement element) throws IOException {
     elemS.push(element);
-    if(element == ImageElement.Inode ||
-       element == ImageElement.INodeUnderConstruction) {
+    if(element == ImageElement.INODE ||
+       element == ImageElement.INODE_UNDER_CONSTRUCTION) {
       current = new FileContext();
       inInode = true;
     }
@@ -173,10 +173,10 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
   void visitEnclosingElement(ImageElement element,
       ImageElement key, String value) throws IOException {
     elemS.push(element);
-    if(element == ImageElement.Inode ||
-       element == ImageElement.INodeUnderConstruction)
+    if(element == ImageElement.INODE ||
+       element == ImageElement.INODE_UNDER_CONSTRUCTION)
       inInode = true;
-    else if(element == ImageElement.Blocks)
+    else if(element == ImageElement.BLOCKS)
       current.numBlocks = Integer.parseInt(value);
   }
 }

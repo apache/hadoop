@@ -72,7 +72,6 @@ class LsImageVisitor extends TextWriterImageVisitor {
   /**
    * All the values have been gathered.  Print them to the console in an
    * ls-style format.
-   * @throws IOException
    */
   private final static int widthRepl = 2;  
   private final static int widthUser = 8; 
@@ -106,7 +105,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
 
   @Override
   void finishAbnormally() throws IOException {
-    System.out.println("Output ended unexpectedly.");
+    System.out.println("Input ended unexpectedly.");
     super.finishAbnormally();
   }
 
@@ -114,7 +113,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
   void leaveEnclosingElement() throws IOException {
     ImageElement elem = elemQ.pop();
 
-    if(elem == ImageElement.Inode)
+    if(elem == ImageElement.INODE)
       printLine();
   }
 
@@ -124,26 +123,26 @@ class LsImageVisitor extends TextWriterImageVisitor {
   void visit(ImageElement element, String value) throws IOException {
     if(inInode) {
       switch(element) {
-      case INodePath:
+      case INODE_PATH:
         if(value.equals("")) path = "/";
         else path = value;
         break;
-      case PermString:
+      case PERMISSION_STRING:
         perms = value;
         break;
-      case Replication:
+      case REPLICATION:
         replication = Integer.valueOf(value);
         break;
-      case Username:
+      case USER_NAME:
         username = value;
         break;
-      case GroupName:
+      case GROUP_NAME:
         group = value;
         break;
-      case NumBytes:
+      case NUM_BYTES:
         filesize += Long.valueOf(value);
         break;
-      case ModificationTime:
+      case MODIFICATION_TIME:
         modTime = value;
         break;
       default:
@@ -156,7 +155,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
   @Override
   void visitEnclosingElement(ImageElement element) throws IOException {
     elemQ.push(element);
-    if(element == ImageElement.Inode)
+    if(element == ImageElement.INODE)
       newLine();
   }
 
@@ -164,9 +163,9 @@ class LsImageVisitor extends TextWriterImageVisitor {
   void visitEnclosingElement(ImageElement element,
       ImageElement key, String value) throws IOException {
     elemQ.push(element);
-    if(element == ImageElement.Inode)
+    if(element == ImageElement.INODE)
       newLine();
-    else if (element == ImageElement.Blocks)
+    else if (element == ImageElement.BLOCKS)
       numBlocks = Integer.valueOf(value);
   }
 }

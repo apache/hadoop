@@ -70,7 +70,8 @@ public class TestOfflineImageViewer extends TestCase {
                                            = new HashMap<String, FileStatus>();
   
   
-  private static String ROOT = System.getProperty("test.build.data","/tmp");
+  private static String ROOT = System.getProperty("test.build.data",
+                                                  "build/test/data");
   
   // Main entry point into testing.  Necessary since we only want to generate
   // the fsimage file once and use it for multiple tests. 

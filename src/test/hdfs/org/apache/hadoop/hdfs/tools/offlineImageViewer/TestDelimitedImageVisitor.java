@@ -53,23 +53,23 @@ public class TestDelimitedImageVisitor extends TestCase {
     try {
       DelimitedImageVisitor div = new DelimitedImageVisitor(filename, true, delim);
 
-      div.visit(ImageElement.FSImage, "Not in ouput");
-      div.visitEnclosingElement(ImageElement.Inode);
-      div.visit(ImageElement.LayoutVersion, "not in");
-      div.visit(ImageElement.LayoutVersion, "the output");
+      div.visit(ImageElement.FS_IMAGE, "Not in ouput");
+      div.visitEnclosingElement(ImageElement.INODE);
+      div.visit(ImageElement.LAYOUT_VERSION, "not in");
+      div.visit(ImageElement.LAYOUT_VERSION, "the output");
       
-      build(div, ImageElement.INodePath,        "hartnell", sb, true);
-      build(div, ImageElement.Replication,      "99", sb, true);
-      build(div, ImageElement.ModificationTime, "troughton", sb, true);
-      build(div, ImageElement.AccessTime,       "pertwee", sb, true);
-      build(div, ImageElement.BlockSize,        "baker", sb, true);
-      build(div, ImageElement.NumBlocks,        "davison", sb, true);
-      build(div, ImageElement.NumBytes,         "55", sb, true);
-      build(div, ImageElement.NSQuota,          "baker2", sb, true);
-      build(div, ImageElement.DSQuota,          "mccoy", sb, true);
-      build(div, ImageElement.PermString,       "eccleston", sb, true);
-      build(div, ImageElement.Username,         "tennant", sb, true);
-      build(div, ImageElement.GroupName,        "smith", sb, false);
+      build(div, ImageElement.INODE_PATH,        "hartnell", sb, true);
+      build(div, ImageElement.REPLICATION,       "99", sb, true);
+      build(div, ImageElement.MODIFICATION_TIME, "troughton", sb, true);
+      build(div, ImageElement.ACCESS_TIME,       "pertwee", sb, true);
+      build(div, ImageElement.BLOCK_SIZE,        "baker", sb, true);
+      build(div, ImageElement.NUM_BLOCKS,        "davison", sb, true);
+      build(div, ImageElement.NUM_BYTES,         "55", sb, true);
+      build(div, ImageElement.NS_QUOTA,          "baker2", sb, true);
+      build(div, ImageElement.DS_QUOTA,          "mccoy", sb, true);
+      build(div, ImageElement.PERMISSION_STRING, "eccleston", sb, true);
+      build(div, ImageElement.USER_NAME,         "tennant", sb, true);
+      build(div, ImageElement.GROUP_NAME,        "smith", sb, false);
       
       div.leaveEnclosingElement(); // INode
       div.finish();

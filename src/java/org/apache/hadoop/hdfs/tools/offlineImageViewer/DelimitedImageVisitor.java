@@ -57,18 +57,18 @@ class DelimitedImageVisitor extends TextWriterImageVisitor {
     
     // This collection determines what elements are tracked and the order
     // in which they are output
-    Collections.addAll(elementsToTrack,  ImageElement.INodePath,
-                                         ImageElement.Replication,
-                                         ImageElement.ModificationTime,
-                                         ImageElement.AccessTime,
-                                         ImageElement.BlockSize,
-                                         ImageElement.NumBlocks,
-                                         ImageElement.NumBytes,
-                                         ImageElement.NSQuota,
-                                         ImageElement.DSQuota,
-                                         ImageElement.PermString,
-                                         ImageElement.Username,
-                                         ImageElement.GroupName);
+    Collections.addAll(elementsToTrack,  ImageElement.INODE_PATH,
+                                         ImageElement.REPLICATION,
+                                         ImageElement.MODIFICATION_TIME,
+                                         ImageElement.ACCESS_TIME,
+                                         ImageElement.BLOCK_SIZE,
+                                         ImageElement.NUM_BLOCKS,
+                                         ImageElement.NUM_BYTES,
+                                         ImageElement.NS_QUOTA,
+                                         ImageElement.DS_QUOTA,
+                                         ImageElement.PERMISSION_STRING,
+                                         ImageElement.USER_NAME,
+                                         ImageElement.GROUP_NAME);
   }
   
   public DelimitedImageVisitor(String filename) throws IOException {
@@ -104,8 +104,8 @@ class DelimitedImageVisitor extends TextWriterImageVisitor {
     ImageElement elem = elemQ.pop();
 
     // If we're done with an inode, write out our results and start over
-    if(elem == ImageElement.Inode || 
-       elem == ImageElement.INodeUnderConstruction) {
+    if(elem == ImageElement.INODE || 
+       elem == ImageElement.INODE_UNDER_CONSTRUCTION) {
       writeLine();
       write("\n");
       reset();
@@ -123,7 +123,7 @@ class DelimitedImageVisitor extends TextWriterImageVisitor {
       ImageElement e = it.next();
       
       String v = null;
-      if(e == ImageElement.NumBytes)
+      if(e == ImageElement.NUM_BYTES)
         v = String.valueOf(fileSize);
       else
         v = elements.get(e);
@@ -139,14 +139,14 @@ class DelimitedImageVisitor extends TextWriterImageVisitor {
   @Override
   void visit(ImageElement element, String value) throws IOException {
     // Explicitly label the root path
-    if(element == ImageElement.INodePath && value.equals(""))
+    if(element == ImageElement.INODE_PATH && value.equals(""))
       value = "/";
     
     // Special case of file size, which is sum of the num bytes in each block
-    if(element == ImageElement.NumBytes)
+    if(element == ImageElement.NUM_BYTES)
       fileSize += Long.valueOf(value);
     
-    if(elements.containsKey(element) && element != ImageElement.NumBytes)
+    if(elements.containsKey(element) && element != ImageElement.NUM_BYTES)
       elements.put(element, value);
     
   }
@@ -160,8 +160,8 @@ class DelimitedImageVisitor extends TextWriterImageVisitor {
   void visitEnclosingElement(ImageElement element, ImageElement key,
       String value) throws IOException {
     // Special case as numBlocks is an attribute of the blocks element
-    if(key == ImageElement.NumBlocks 
-        && elements.containsKey(ImageElement.NumBlocks))
+    if(key == ImageElement.NUM_BLOCKS 
+        && elements.containsKey(ImageElement.NUM_BLOCKS))
       elements.put(key, value);
     
     elemQ.push(element);

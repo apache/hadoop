@@ -118,18 +118,18 @@ class ImageLoaderCurrent implements ImageLoader {
       boolean skipBlocks) throws IOException {
     try {
       v.start();
-      v.visitEnclosingElement(ImageElement.FSImage);
+      v.visitEnclosingElement(ImageElement.FS_IMAGE);
 
       imageVersion = in.readInt();
       if( !canLoadVersion(imageVersion))
         throw new IOException("Cannot process fslayout version " + imageVersion);
 
-      v.visit(ImageElement.ImageVersion, imageVersion);
-      v.visit(ImageElement.NamespaceID, in.readInt());
+      v.visit(ImageElement.IMAGE_VERSION, imageVersion);
+      v.visit(ImageElement.NAMESPACE_ID, in.readInt());
 
       long numInodes = in.readLong();
 
-      v.visit(ImageElement.GenerationStamp, in.readLong());
+      v.visit(ImageElement.GENERATION_STAMP, in.readLong());
 
       processINodes(in, v, numInodes, skipBlocks);
 
@@ -149,31 +149,30 @@ class ImageLoaderCurrent implements ImageLoader {
    *
    * @param in DataInputStream to process
    * @param v Visitor to walk over inodes
-   * @param numINUC Number of inodes recorded in file
    * @param skipBlocks Walk over each block?
    */
   private void processINodesUC(DataInputStream in, ImageVisitor v,
       boolean skipBlocks) throws IOException {
     int numINUC = in.readInt();
 
-    v.visitEnclosingElement(ImageElement.INodesUnderConstruction,
-                           ImageElement.NumINodesUnderConstruction, numINUC);
+    v.visitEnclosingElement(ImageElement.INODES_UNDER_CONSTRUCTION,
+                           ImageElement.NUM_INODES_UNDER_CONSTRUCTION, numINUC);
 
     for(int i = 0; i < numINUC; i++) {
-      v.visitEnclosingElement(ImageElement.INodeUnderConstruction);
+      v.visitEnclosingElement(ImageElement.INODE_UNDER_CONSTRUCTION);
       byte [] name = FSImage.readBytes(in);
       String n = new String(name, "UTF8");
-      v.visit(ImageElement.INodePath, n);
-      v.visit(ImageElement.Replication, in.readShort());
-      v.visit(ImageElement.ModificationTime, formatDate(in.readLong()));
+      v.visit(ImageElement.INODE_PATH, n);
+      v.visit(ImageElement.REPLICATION, in.readShort());
+      v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
 
-      v.visit(ImageElement.PreferredBlockSize, in.readLong());
+      v.visit(ImageElement.PREFERRED_BLOCK_SIZE, in.readLong());
       int numBlocks = in.readInt();
       processBlocks(in, v, numBlocks, skipBlocks);
 
       processPermission(in, v);
-      v.visit(ImageElement.ClientName, FSImage.readString(in));
-      v.visit(ImageElement.ClientMachine, FSImage.readString(in));
+      v.visit(ImageElement.CLIENT_NAME, FSImage.readString(in));
+      v.visit(ImageElement.CLIENT_MACHINE, FSImage.readString(in));
 
       // Skip over the datanode descriptors, which are still stored in the
       // file but are not used by the datanode or loaded into memory
@@ -204,8 +203,8 @@ class ImageLoaderCurrent implements ImageLoader {
    */
   private void processBlocks(DataInputStream in, ImageVisitor v,
       int numBlocks, boolean skipBlocks) throws IOException {
-    v.visitEnclosingElement(ImageElement.Blocks,
-                            ImageElement.NumBlocks, numBlocks);
+    v.visitEnclosingElement(ImageElement.BLOCKS,
+                            ImageElement.NUM_BLOCKS, numBlocks);
     
     if(numBlocks == -1) { // directory, no blocks to process
       v.leaveEnclosingElement(); // Blocks
@@ -219,10 +218,10 @@ class ImageLoaderCurrent implements ImageLoader {
       
     } else {
       for(int j = 0; j < numBlocks; j++) {
-        v.visitEnclosingElement(ImageElement.Block);
-        v.visit(ImageElement.BlockID, in.readLong());
-        v.visit(ImageElement.NumBytes, in.readLong());
-        v.visit(ImageElement.GenerationStamp, in.readLong());
+        v.visitEnclosingElement(ImageElement.BLOCK);
+        v.visit(ImageElement.BLOCK_ID, in.readLong());
+        v.visit(ImageElement.NUM_BYTES, in.readLong());
+        v.visit(ImageElement.GENERATION_STAMP, in.readLong());
         v.leaveEnclosingElement(); // Block
       }
     }
@@ -237,11 +236,11 @@ class ImageLoaderCurrent implements ImageLoader {
    */
   private void processPermission(DataInputStream in, ImageVisitor v)
       throws IOException {
-    v.visitEnclosingElement(ImageElement.Permissions);
-    v.visit(ImageElement.Username, Text.readString(in));
-    v.visit(ImageElement.GroupName, Text.readString(in));
+    v.visitEnclosingElement(ImageElement.PERMISSIONS);
+    v.visit(ImageElement.USER_NAME, Text.readString(in));
+    v.visit(ImageElement.GROUP_NAME, Text.readString(in));
     FsPermission fsp = new FsPermission(in.readShort());
-    v.visit(ImageElement.PermString, fsp.toString());
+    v.visit(ImageElement.PERMISSION_STRING, fsp.toString());
     v.leaveEnclosingElement(); // Permissions
   }
 
@@ -257,25 +256,25 @@ class ImageLoaderCurrent implements ImageLoader {
    */
   private void processINodes(DataInputStream in, ImageVisitor v,
       long numInodes, boolean skipBlocks) throws IOException {
-    v.visitEnclosingElement(ImageElement.INodes,
-        ImageElement.NumInodes, numInodes);
+    v.visitEnclosingElement(ImageElement.INODES,
+        ImageElement.NUM_INODES, numInodes);
 
     for(long i = 0; i < numInodes; i++) {
-      v.visitEnclosingElement(ImageElement.Inode);
-      v.visit(ImageElement.INodePath, FSImage.readString(in));
-      v.visit(ImageElement.Replication, in.readShort());
-      v.visit(ImageElement.ModificationTime, formatDate(in.readLong()));
+      v.visitEnclosingElement(ImageElement.INODE);
+      v.visit(ImageElement.INODE_PATH, FSImage.readString(in));
+      v.visit(ImageElement.REPLICATION, in.readShort());
+      v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
       if(imageVersion <= -17) // added in version -17
-        v.visit(ImageElement.AccessTime, formatDate(in.readLong()));
-      v.visit(ImageElement.BlockSize, in.readLong());
+        v.visit(ImageElement.ACCESS_TIME, formatDate(in.readLong()));
+      v.visit(ImageElement.BLOCK_SIZE, in.readLong());
       int numBlocks = in.readInt();
 
       processBlocks(in, v, numBlocks, skipBlocks);
 
       if(numBlocks != 0) {
-        v.visit(ImageElement.NSQuota, numBlocks <= 0 ? in.readLong() : -1);
+        v.visit(ImageElement.NS_QUOTA, numBlocks <= 0 ? in.readLong() : -1);
         if(imageVersion <= -18) // added in version -18
-          v.visit(ImageElement.DSQuota, numBlocks <= 0 ? in.readLong() : -1);
+          v.visit(ImageElement.DS_QUOTA, numBlocks <= 0 ? in.readLong() : -1);
       }
 
       processPermission(in, v);

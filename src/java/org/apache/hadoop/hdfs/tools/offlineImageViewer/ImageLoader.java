@@ -62,7 +62,7 @@ interface ImageLoader {
      * Find an image loader capable of interpreting the specified
      * layout version number.  If none, return null;
      *
-     * @param imageVersion fsimage layout version number to be processed
+     * @param version fsimage layout version number to be processed
      * @return ImageLoader that can interpret specified version, or null
      */
     static public ImageLoader getLoader(int version) {

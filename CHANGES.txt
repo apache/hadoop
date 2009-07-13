@@ -13,6 +13,8 @@ Trunk (unreleased changes)
 
     HDFS-461. Tool to analyze file size distribution in HDFS. (shv)
 
+    HDFS-446. Improvements to Offline Image Viewer. (Jakob Homan via shv)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
