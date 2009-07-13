@@ -32,6 +32,8 @@ Trunk (unreleased changes)
     HDFS-204. Add a new metrics FilesInGetListingOps to the Namenode.
     (Jitendra Nath Pandey via szetszwo)
 
+    HDFS-278. HDFS Outputstream close does not hang forever. (dhruba)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

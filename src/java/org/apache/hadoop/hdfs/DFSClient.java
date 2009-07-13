@@ -85,8 +85,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   final int writePacketSize;
   private final FileSystem.Statistics stats;
   private int maxBlockAcquireFailures;
-    
- 
+  private final int hdfsTimeout;    // timeout value for a DFS operation.
+
+  /**
+   * The locking hierarchy is to first acquire lock on DFSClient object, followed by 
+   * lock on leasechecker, followed by lock on an individual DFSOutputStream.
+   */
   public static ClientProtocol createNamenode(Configuration conf) throws IOException {
     return createNamenode(NameNode.getAddress(conf), conf);
   }
@@ -169,7 +173,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.maxBlockAcquireFailures = 
                           conf.getInt("dfs.client.max.block.acquire.failures",
                                       MAX_BLOCK_ACQUIRE_FAILURES);
-    
+    // The hdfsTimeout is currently the same as the ipc timeout 
+    this.hdfsTimeout = Client.getTimeout(conf);
+
     try {
       this.ugi = UnixUserGroupInformation.login(conf, true);
     } catch (LoginException e) {
@@ -989,6 +995,25 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
+    /**
+     * Abort all open files. Release resources held. Ignore all errors.
+     */
+    synchronized void abort() {
+      clientRunning = false;
+      while (!pendingCreates.isEmpty()) {
+        String src = pendingCreates.firstKey();
+        DFSOutputStream out = (DFSOutputStream)pendingCreates.remove(src);
+        if (out != null) {
+          try {
+            out.abort();
+          } catch (IOException ie) {
+            LOG.error("Exception aborting file " + src+ ": ", ie);
+          }
+        }
+      }
+      RPC.stopProxy(rpcNamenode); // close connections to the namenode
+    }
+
     private void renew() throws IOException {
       synchronized(this) {
         if (pendingCreates.isEmpty()) {
@@ -1004,13 +1029,25 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     public void run() {
       long lastRenewed = 0;
+      int renewal = (int)(LEASE_SOFTLIMIT_PERIOD / 2);
+      if (hdfsTimeout > 0) {
+        renewal = Math.min(renewal, hdfsTimeout/2);
+      }
       while (clientRunning && !Thread.interrupted()) {
-        if (System.currentTimeMillis() - lastRenewed > (LEASE_SOFTLIMIT_PERIOD / 2)) {
+        if (System.currentTimeMillis() - lastRenewed > renewal) {
           try {
             renew();
             lastRenewed = System.currentTimeMillis();
+          } catch (SocketTimeoutException ie) {
+            LOG.warn("Problem renewing lease for " + clientName +
+                     " for a period of " + (hdfsTimeout/1000) +
+                     " seconds. Shutting down HDFS client...", ie);
+            abort();
+            break;
           } catch (IOException ie) {
-            LOG.warn("Problem renewing lease for " + clientName, ie);
+            LOG.warn("Problem renewing lease for " + clientName +
+                     " for a period of " + (hdfsTimeout/1000) +
+                     " seconds. Will retry shortly...", ie);
           }
         }
 
@@ -3141,6 +3178,19 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
+    /**
+     * Aborts this output stream and releases any system 
+     * resources associated with this stream.
+     */
+    synchronized void abort() throws IOException {
+      if (closed) {
+        return;
+      }
+      streamer.setLastException(new IOException("Lease timeout of " +
+                               (hdfsTimeout/1000) + " seconds expired."));
+      closeThreads();
+    }
+ 
     // shutdown datastreamer and responseprocessor threads.
     private void closeThreads() throws IOException {
       try {
@@ -3204,6 +3254,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       while (!fileComplete) {
         fileComplete = namenode.complete(src, clientName);
         if (!fileComplete) {
+          if (!clientRunning ||
+                (hdfsTimeout > 0 &&
+                 localstart + hdfsTimeout < System.currentTimeMillis())) {
+              String msg = "Unable to close file because dfsclient " +
+                            " was unable to contact the HDFS servers." +
+                            " clientRunning " + clientRunning +
+                            " hdfsTimeout " + hdfsTimeout;
+              LOG.info(msg);
+              throw new IOException(msg);
+          }
           try {
             Thread.sleep(400);
             if (System.currentTimeMillis() - localstart > 5000) {
