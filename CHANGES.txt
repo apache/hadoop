@@ -77,6 +77,9 @@ Trunk (unreleased changes)
     HDFS-489. Update TestHDFSCLI for the -skipTrash option in rm. (Jakob Homan
     via szetszwo)
 
+    HDFS-445. pread() does not pick up changes to block locations. 
+    (Kan Zhang via rangadi) 
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
