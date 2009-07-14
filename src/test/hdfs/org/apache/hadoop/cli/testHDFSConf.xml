@@ -15326,11 +15326,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-rm &lt;src&gt;:( |\t)*Delete all files that match the specified file pattern.( )*</expected-output>
+          <expected-output>^-rm \[-skipTrash\] &lt;src&gt;:( |\t)*Delete all files that match the specified file pattern.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Equivlent to the Unix command "rm &lt;src&gt;"( )*</expected-output>
+          <expected-output>^( |\t)*Equivalent to the Unix command "rm &lt;src&gt;"( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-skipTrash option bypasses trash, if enabled, and immediately( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*deletes &lt;src&gt;( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15345,11 +15353,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-rmr &lt;src&gt;:( |\t)*Remove all directories which match the specified file( )*</expected-output>
+          <expected-output>^-rmr \[-skipTrash\] &lt;src&gt;:( |\t)*Remove all directories which match the specified file( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*pattern. Equivlent to the Unix command "rm -rf &lt;src&gt;"( )*</expected-output>
+          <expected-output>^( |\t)*pattern. Equivalent to the Unix command "rm -rf &lt;src&gt;"( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-skipTrash option bypasses trash, if enabled, and immediately( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*deletes &lt;src&gt;( )*</expected-output>
         </comparator>
       </comparators>
     </test>

@@ -71,6 +71,9 @@ Trunk (unreleased changes)
 
     HDFS-462. loadFSImage should close edits file. (Jakob Homan via shv)
 
+    HDFS-489. Update TestHDFSCLI for the -skipTrash option in rm. (Jakob Homan
+    via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
