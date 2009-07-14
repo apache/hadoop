@@ -175,6 +175,9 @@ Release 0.20.1 - Unreleased
     HADOOP-6145. Fix FsShell rm/rmr error messages when there is a FNFE.
     (Jakob Homan via szetszwo)
 
+    MAPREDUCE-565. Fix partitioner to work with new API. (Owen O'Malley via
+    cdouglas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
