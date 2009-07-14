@@ -194,3 +194,5 @@ Trunk (unreleased changes)
     MAPREDUCE-742. Fix output messages and java comments in the Pi related
     examples.  (szetszwo)
 
+    MAPREDUCE-565. Fix partitioner to work with new API. (Owen O'Malley via
+    cdouglas)

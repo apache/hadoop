@@ -27,6 +27,12 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.examples.SecondarySort;
+import org.apache.hadoop.examples.WordCount;
+import org.apache.hadoop.examples.SecondarySort.FirstGroupingComparator;
+import org.apache.hadoop.examples.SecondarySort.FirstPartitioner;
+import org.apache.hadoop.examples.SecondarySort.IntPair;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -35,7 +41,11 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.MRCaching.TestResult;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.TestMapReduceLocal;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -82,6 +92,7 @@ public class TestMiniMRLocalFS extends TestCase {
       assertEquals("number of reduce outputs", 9, 
                    counters.getCounter(TaskCounter.REDUCE_OUTPUT_RECORDS));
       runCustomFormats(mr);
+      runSecondarySort(mr.createJobConf());
     } finally {
       if (mr != null) { mr.shutdown(); }
     }
@@ -285,5 +296,48 @@ public class TestMiniMRLocalFS extends TestCase {
     public void checkOutputSpecs(FileSystem ignored, 
                                  JobConf job) throws IOException {
     }
+  }
+
+  private void runSecondarySort(Configuration conf) throws IOException,
+                                                        InterruptedException,
+                                                        ClassNotFoundException {
+    FileSystem localFs = FileSystem.getLocal(conf);
+    localFs.delete(new Path(TEST_ROOT_DIR + "/in"), true);
+    localFs.delete(new Path(TEST_ROOT_DIR + "/out"), true);
+    TestMapReduceLocal.writeFile
+             ("in/part1", "-1 -4\n-3 23\n5 10\n-1 -2\n-1 300\n-1 10\n4 1\n" +
+              "4 2\n4 10\n4 -1\n4 -10\n10 20\n10 30\n10 25\n");
+    Job job = new Job(conf, "word count");
+    job.setJarByClass(WordCount.class);
+    job.setNumReduceTasks(2);
+    job.setMapperClass(SecondarySort.MapClass.class);
+    job.setReducerClass(SecondarySort.Reduce.class);
+    // group and partition by the first int in the pair
+    job.setPartitionerClass(FirstPartitioner.class);
+    job.setGroupingComparatorClass(FirstGroupingComparator.class);
+
+    // the map output is IntPair, IntWritable
+    job.setMapOutputKeyClass(IntPair.class);
+    job.setMapOutputValueClass(IntWritable.class);
+
+    // the reduce output is Text, IntWritable
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(IntWritable.class);
+
+    FileInputFormat.addInputPath(job, new Path(TEST_ROOT_DIR + "/in"));
+    FileOutputFormat.setOutputPath(job, new Path(TEST_ROOT_DIR + "/out"));
+    assertTrue(job.waitForCompletion(true));
+    String out = TestMapReduceLocal.readFile("out/part-r-00000");
+    assertEquals("------------------------------------------------\n" +
+                 "4\t-10\n4\t-1\n4\t1\n4\t2\n4\t10\n" +
+                 "------------------------------------------------\n" +
+                 "10\t20\n10\t25\n10\t30\n", out);
+    out = TestMapReduceLocal.readFile("out/part-r-00001");
+    assertEquals("------------------------------------------------\n" +
+                 "-3\t23\n" +
+                 "------------------------------------------------\n" +
+                 "-1\t-4\n-1\t-2\n-1\t10\n-1\t300\n" +
+                 "------------------------------------------------\n" +
+                 "5\t10\n", out);
   }
 }
