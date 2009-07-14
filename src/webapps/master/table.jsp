@@ -67,13 +67,12 @@
     %> Compact request accepted. <%
   }
 %>
-<p>This page will refresh in 5 seconds.
+<p>Reload.
 </body>
 <%
 } else {
 %>
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-      <meta http-equiv="refresh" content="30"/>
 <title>Table: <%= tableName %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>

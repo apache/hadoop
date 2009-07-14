@@ -265,6 +265,7 @@ Release 0.20.0 - Unreleased
    HBASE-1650  HBASE-1551 broke the ability to manage non-regionserver
                start-up/shut down. ie: you cant start/stop thrift on a cluster
                anymore
+   HBASE-1658  Remove UI refresh -- its annoying
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
