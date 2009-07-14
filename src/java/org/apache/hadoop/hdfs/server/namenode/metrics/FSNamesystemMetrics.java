@@ -27,6 +27,7 @@ import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 
 /**
  * 
@@ -59,6 +60,8 @@ public class FSNamesystemMetrics implements Updater {
   final MetricsIntValue scheduledReplicationBlocks = new MetricsIntValue("ScheduledReplicationBlocks", registry);
   final MetricsIntValue missingBlocks = new MetricsIntValue("MissingBlocks", registry);    
   final MetricsIntValue blockCapacity = new MetricsIntValue("BlockCapacity", registry);
+  public final MetricsTimeVaryingInt numExpiredHeartbeats = 
+                          new MetricsTimeVaryingInt("ExpiredHeartbeats", registry);
 
   private final FSNamesystem fsNameSystem;
 

@@ -2225,6 +2225,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
              it.hasNext();) {
           DatanodeDescriptor nodeInfo = it.next();
           if (isDatanodeDead(nodeInfo)) {
+            myFSMetrics.numExpiredHeartbeats.inc();
             foundDead = true;
             nodeID = nodeInfo;
             break;

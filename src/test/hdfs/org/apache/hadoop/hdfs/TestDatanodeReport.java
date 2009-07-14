@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
 
 /**
  * This test ensures the all types of data node report work correctly.
@@ -40,6 +41,7 @@ public class TestDatanodeReport extends TestCase {
   public void testDatanodeReport() throws Exception {
     conf.setInt(
         "heartbeat.recheck.interval", 500); // 0.5s
+    conf.setLong("dfs.heartbeat.interval", 1L);
     MiniDFSCluster cluster = 
       new MiniDFSCluster(conf, NUM_OF_DATANODES, true, null);
     try {
@@ -73,6 +75,11 @@ public class TestDatanodeReport extends TestCase {
                    NUM_OF_DATANODES-1);
       assertEquals(client.datanodeReport(DatanodeReportType.ALL).length,
                    NUM_OF_DATANODES);
+
+      Thread.sleep(5000);
+      FSNamesystemMetrics fsMetrics = 
+                     cluster.getNameNode().getNamesystem().getFSNamesystemMetrics();
+      assertEquals(1,fsMetrics.numExpiredHeartbeats.getCurrentIntervalValue());
     }finally {
       cluster.shutdown();
     }
