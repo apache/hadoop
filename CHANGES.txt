@@ -1014,6 +1014,9 @@ Release 0.20.1 - Unreleased
     HADOOP-6139. Fix the FsShell help messages for rm and rmr.  (Jakob Homan
     via szetszwo)
 
+    HADOOP-6145. Fix FsShell rm/rmr error messages when there is a FNFE.
+    (Jakob Homan via szetszwo)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
