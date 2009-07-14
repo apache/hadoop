@@ -260,6 +260,8 @@ Release 0.20.0 - Unreleased
    HBASE-1646  Scan-s can't set a Filter (Doğacan Güney via Stack)
    HBASE-1649  ValueFilter may not reset its internal state
                (Doğacan Güney via Stack)
+   HBASE-1651 client is broken, it requests ROOT region location from ZK too
+              much
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

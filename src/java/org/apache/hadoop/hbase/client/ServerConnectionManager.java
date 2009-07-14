@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 
 /**
  * Used by server processes to expose HServerConnection method
- * setRootRegionLocation
+ * do can call {@link HConnectionManager#setRootRegionLocation}
  */
 public class ServerConnectionManager extends HConnectionManager {
   /*

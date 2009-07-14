@@ -65,6 +65,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
 public class HConnectionManager implements HConstants {
+  private static final Log LOG = LogFactory.getLog(HConnectionManager.class);
 
   /*
    * Not instantiable.
@@ -77,7 +78,7 @@ public class HConnectionManager implements HConstants {
   // instance. Note that although the Map is synchronized, the objects it 
   // contains are mutable and hence require synchronized access to them
   private static 
-  final Map<HBaseConfiguration, TableServers> HBASE_INSTANCES = 
+  final Map<HBaseConfiguration, TableServers> HBASE_INSTANCES =
     new WeakHashMap<HBaseConfiguration, TableServers>();
   
   /**
@@ -93,6 +94,7 @@ public class HConnectionManager implements HConstants {
       if (connection == null) {
         connection = new TableServers(conf);
         HBASE_INSTANCES.put(conf, connection);
+        LOG.debug("Created new HBASE_INSTANCES");
       }
     }
     return connection;
@@ -512,9 +514,9 @@ public class HConnectionManager implements HConstants {
           // second waits. The second thread will not do find.
           
           if (!useCache || rootRegionLocation == null) {
-            return locateRootRegion();
+            this.rootRegionLocation = locateRootRegion();
           }
-          return rootRegionLocation;
+          return this.rootRegionLocation;
         }        
       } else if (Bytes.equals(tableName, META_TABLE_NAME)) {
         synchronized (metaRegionLock) {
