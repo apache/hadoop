@@ -1045,7 +1045,16 @@ public class FsShell extends Configured implements Tool {
   /* delete a file */
   private void delete(Path src, FileSystem srcFs, boolean recursive, 
                       boolean skipTrash) throws IOException {
-    if (srcFs.isDirectory(src) && !recursive) {
+    FileStatus fs = null;
+    try {
+      fs = srcFs.getFileStatus(src);
+    } catch (FileNotFoundException fnfe) {
+      // Have to re-throw so that console output is as expected
+      throw new FileNotFoundException("cannot remove "
+          + src + ": No such file or directory.");
+    }
+
+    if (fs.isDir() && !recursive) {
       throw new IOException("Cannot remove directory \"" + src +
                             "\", use -rmr instead");
     }
@@ -1061,10 +1070,6 @@ public class FsShell extends Configured implements Tool {
     if (srcFs.delete(src, true)) {
       System.out.println("Deleted " + src);
     } else {
-      if (!srcFs.exists(src)) {
-        throw new FileNotFoundException("cannot remove "
-            + src + ": No such file or directory.");
-        }
       throw new IOException("Delete failed " + src);
     }
   }
