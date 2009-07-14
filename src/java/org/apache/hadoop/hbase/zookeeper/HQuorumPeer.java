@@ -213,7 +213,7 @@ public class HQuorumPeer implements HConstants {
     } catch (IOException e) {
       String msg = "fail to read properties from " + ZOOKEEPER_CONFIG_NAME;
       LOG.fatal(msg);
-      throw new IOException(msg);
+      throw new IOException(msg, e);
     }
     for (Entry<Object, Object> entry : properties.entrySet()) {
       String value = entry.getValue().toString().trim();
