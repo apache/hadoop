@@ -42,15 +42,11 @@ args="--config ${HBASE_CONF_DIR} $remote_cmd"
 
 command=$2
 case $command in
-  (regionserver)
-    exec "$bin/regionservers.sh" $args
-    ;;
   (zookeeper)
     exec "$bin/zookeepers.sh" $args
     ;;
   (*)
-    echo $usage
-    exit 1
+    exec "$bin/regionservers.sh" $args
     ;;
 esac
 
