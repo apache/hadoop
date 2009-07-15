@@ -199,3 +199,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-565. Fix partitioner to work with new API. (Owen O'Malley via
     cdouglas)
+    
+    MAPREDUCE-680. Fix so MRUnit can handle reuse of Writable objects.
+    (Aaron Kimball via johan)

@@ -18,6 +18,7 @@
 package org.apache.hadoop.mrunit;
 
 import org.apache.hadoop.mrunit.mock.TestMockReporter;
+import org.apache.hadoop.mrunit.mock.TestMockOutputCollector;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -36,6 +37,7 @@ public final class AllTests  {
     suite.addTestSuite(TestMapDriver.class);
     suite.addTestSuite(TestMapReduceDriver.class);
     suite.addTestSuite(TestMockReporter.class);
+    suite.addTestSuite(TestMockOutputCollector.class);
     suite.addTestSuite(TestReduceDriver.class);
     suite.addTestSuite(TestTestDriver.class);
     suite.addTestSuite(TestExample.class);
