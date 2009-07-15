@@ -476,10 +476,12 @@ Release 0.20.0 - Unreleased
    HBASE-1640  Allow passing arguments to jruby script run when run by bin/hbase shell
    HBASE-698   HLog recovery is not performed after master failure
    HBASE-1643  ScanDeleteTracker takes comparator but it unused
-   HBASE-1603  MR failed "RetriesExhaustedException: Trying to contact region server
-               Some server for region TestTable..." -- deubugging
+   HBASE-1603  MR failed "RetriesExhaustedException: Trying to contact region
+               server Some server for region TestTable..." -- deubugging
    HBASE-1470  hbase and HADOOP-4379, dhruba's flush/sync
    HBASE-1632  Write documentation for configuring/managing ZooKeeper with HBase
+   HBASE-1662  Tool to run major compaction on catalog regions when hbase is
+               shutdown
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

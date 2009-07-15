@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -1674,14 +1675,14 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private byte [] stopRow;
     
     RegionScanner(Scan scan) {
-      if(Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
+      if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
       } else {
         this.stopRow = scan.getStopRow();
       }
       
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-      for(Map.Entry<byte[], NavigableSet<byte[]>> entry : 
+      for (Map.Entry<byte[], NavigableSet<byte[]>> entry : 
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
         scanners.add(store.getScanner(scan, entry.getValue()));
@@ -1703,21 +1704,20 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     throws IOException {
       // This method should probably be reorganized a bit... has gotten messy
       KeyValue kv = this.storeHeap.peek();
-      if(kv == null) {
+      if (kv == null) {
         return false;
       }
       byte [] currentRow = kv.getRow();
       // See if we passed stopRow
-      if(stopRow != null &&
-          comparator.compareRows(stopRow, 0, stopRow.length, 
-              currentRow, 0, currentRow.length)
-          <= 0) {
+      if (stopRow != null &&
+        comparator.compareRows(stopRow, 0, stopRow.length,
+          currentRow, 0, currentRow.length) <= 0) {
         return false;
       }
       this.storeHeap.next(results);
       while(true) {
         kv = this.storeHeap.peek();
-        if(kv == null) {
+        if (kv == null) {
           return false;
         }
         byte [] row = kv.getRow();
@@ -2347,5 +2347,107 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       heapSize += store.heapSize();
     }
     return heapSize;
+  }
+
+  /*
+   * This method calls System.exit.
+   * @param message Message to print out.  May be null.
+   */
+  private static void printUsageAndExit(final String message) {
+    if (message != null && message.length() > 0) System.out.println(message);
+    System.out.println("Usage: HRegion CATLALOG_TABLE_DIR [major_compact]");
+    System.out.println("Options:");
+    System.out.println(" major_compact  Pass this option to major compact " +
+      "passed region.");
+    System.out.println("Default outputs scan of passed region.");
+    System.exit(1);
+  }
+
+  /*
+   * Process table.
+   * Do major compaction or list content.
+   * @param fs
+   * @param p
+   * @param log
+   * @param c
+   * @param majorCompact
+   * @throws IOException
+   */
+  private static void processTable(final FileSystem fs, final Path p,
+      final HLog log, final HBaseConfiguration c,
+      final boolean majorCompact)
+  throws IOException {
+    HRegion region = null;
+    String rootStr = Bytes.toString(HConstants.ROOT_TABLE_NAME);
+    String metaStr = Bytes.toString(HConstants.META_TABLE_NAME);
+    // Currently expects tables have one region only.
+    if (p.getName().startsWith(rootStr)) {
+      region = new HRegion(p, log, fs, c, HRegionInfo.ROOT_REGIONINFO, null);
+    } else if (p.getName().startsWith(metaStr)) {
+      region = new HRegion(p, log, fs, c, HRegionInfo.FIRST_META_REGIONINFO,
+          null);
+    } else {
+      throw new IOException("Not a known catalog table: " + p.toString());
+    }
+    try {
+      region.initialize(null, null);
+      if (majorCompact) {
+        region.compactStores(true);
+      } else {
+        // Default behavior
+        Scan scan = new Scan();
+        InternalScanner scanner = region.getScanner(scan);
+        try {
+          List<KeyValue> kvs = new ArrayList<KeyValue>();
+          boolean done = false;
+          do {
+            kvs.clear();
+            done = scanner.next(kvs);
+            if (kvs.size() > 0) LOG.info(kvs);
+          } while (done);
+        } finally {
+          scanner.close();
+        }
+      }
+    } finally {
+      region.close();
+    }
+  }
+
+  /**
+   * Facility for dumping and compacting catalog tables.
+   * Only does catalog tables since these are only tables we for sure know
+   * schema on.  For usage run:
+   * <pre>
+   *   ./bin/hbase org.apache.hadoop.hbase.regionserver.HRegion
+   * </pre>
+   * @param args
+   * @throws IOException 
+   */
+  public static void main(String[] args) throws IOException {
+    if (args.length < 1) {
+      printUsageAndExit(null);
+    }
+    boolean majorCompact = false;
+    if (args.length > 1) {
+      if (!args[1].toLowerCase().startsWith("major")) {
+        printUsageAndExit("ERROR: Unrecognized option <" + args[1] + ">");
+      }
+      majorCompact = true;
+    
+    }
+    Path tableDir  = new Path(args[0]);
+    HBaseConfiguration c = new HBaseConfiguration();
+    FileSystem fs = FileSystem.get(c);
+    Path logdir = new Path(c.get("hbase.tmp.dir"),
+      "hlog" + tableDir.getName() + System.currentTimeMillis());
+    HLog log = new HLog(fs, logdir, c, null);
+    try {
+      processTable(fs, tableDir, log, c, majorCompact);
+     } finally {
+       log.close();
+       BlockCache bc = StoreFile.getBlockCache(c);
+       if (bc != null) bc.shutdown();
+     }
   }
 }

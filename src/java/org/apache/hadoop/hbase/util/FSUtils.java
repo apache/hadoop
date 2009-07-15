@@ -274,29 +274,61 @@ public class FSUtils {
    * one file in them -- that is, they've been major compacted.  Looks
    * at root and meta tables too.
    * @param fs
-   * @param c
+   * @param hbaseRootDir
    * @return True if this hbase install is major compacted.
    * @throws IOException
    */
   public static boolean isMajorCompacted(final FileSystem fs,
-      final HBaseConfiguration c)
+      final Path hbaseRootDir)
   throws IOException {
     // Presumes any directory under hbase.rootdir is a table.
-    FileStatus [] directories =
-      fs.listStatus(new Path(c.get(HConstants.HBASE_DIR)), new PathFilter() {
-        public boolean accept(Path p) {
-          boolean isdir = false;
-          try {
-            isdir = fs.getFileStatus(p).isDir();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-          return isdir;
-        }
-    });    
+    FileStatus [] directories = fs.listStatus(hbaseRootDir, new DirFilter(fs));
     for (int i = 0; i < directories.length; i++) {
-      // TODO: check directories
+      // Skip the .log directory.  All others should be tables.  Inside a table,
+      // there are compaction.dir directories to skip.  Otherwise, all else
+      // should be regions.  Then in each region, should only be family
+      // directories.  Under each of these, should be one file only.
+      Path d = directories[i].getPath();
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+      FileStatus [] tablesubdirectories = fs.listStatus(d, new DirFilter(fs));
+      for (int j = 0; j < tablesubdirectories.length; j++) {
+        Path dd = tablesubdirectories[j].getPath();
+        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+        // Else its a region name.  Now look in region for families.
+        FileStatus [] familydirectories = fs.listStatus(dd, new DirFilter(fs));
+        for (int k = 0; k < familydirectories.length; k++) {
+          Path family = familydirectories[k].getPath();
+          // Now in family make sure only one file.
+          FileStatus [] familyStatus = fs.listStatus(family);
+          if (familyStatus.length > 1) {
+            LOG.debug(family.toString() + " has " + familyStatus.length +
+              " files.");
+            return false;
+          }
+        }
+      }
     }
     return true;
+  }
+
+  /**
+   * A {@link PathFilter} that returns directories.
+   */
+  public static class DirFilter implements PathFilter {
+    private final FileSystem fs;
+
+    public DirFilter(final FileSystem fs) {
+      this.fs = fs;
+    }
+
+    public boolean accept(Path p) {
+      boolean isdir = false;
+      try {
+        isdir = this.fs.getFileStatus(p).isDir();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      return isdir;
+    }
   }
 }
