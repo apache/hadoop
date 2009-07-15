@@ -295,7 +295,8 @@ public class FSUtils {
         }
     });    
     for (int i = 0; i < directories.length; i++) {
-      
+      // TODO: check directories
     }
+    return true;
   }
 }

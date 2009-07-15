@@ -217,7 +217,7 @@ public class Migrate extends Configured implements Tool {
       return;
     }
     // Before we start, make sure all is major compacted.
-    if (!allMajorCompacted()) {
+    if (!isMajorCompacted(fs, conf)) {
       String msg = "All tables must be major compacted before the migration can begin." +
         MIGRATION_LINK;
       System.out.println(msg);
@@ -294,7 +294,7 @@ set to control the master's address (not mandatory).
           return isdir;
         }
     });    
-    
+    return true;
   }
 
   /*
