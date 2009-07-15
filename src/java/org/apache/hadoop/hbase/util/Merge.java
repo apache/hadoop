@@ -345,8 +345,8 @@ public class Merge extends Configured implements Tool {
     tableName = Bytes.toBytes(remainingArgs[0]);
     isMetaTable = Bytes.compareTo(tableName, HConstants.META_TABLE_NAME) == 0;
     
-    region1 = Bytes.toBytes(remainingArgs[1]);
-    region2 = Bytes.toBytes(remainingArgs[2]);
+    region1 = Bytes.toBytesBinary(remainingArgs[1]);
+    region2 = Bytes.toBytesBinary(remainingArgs[2]);
     int status = 0;
     if (notInTable(tableName, region1) || notInTable(tableName, region2)) {
       status = -1;

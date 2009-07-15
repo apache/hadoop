@@ -266,6 +266,7 @@ Release 0.20.0 - Unreleased
                start-up/shut down. ie: you cant start/stop thrift on a cluster
                anymore
    HBASE-1658  Remove UI refresh -- its annoying
+   HBASE-1659  merge tool doesnt take binary regions with \x escape format
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
