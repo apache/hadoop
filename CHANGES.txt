@@ -99,6 +99,9 @@ Trunk (unreleased changes)
     MAPREDUCE-632. Merge TestCustomOutputCommitter with 
     TestCommandLineJobSubmission. (Jothi Padmanabhan via sharad)
 
+    MAPREDUCE-710. Sqoop should read and transmit passwords in a more secure
+    manner. (Aaron Kimball via tomwhite)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

@@ -20,6 +20,8 @@ package org.apache.hadoop.sqoop.manager;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.sqoop.ImportOptions;
 import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.util.Shell;
 
 /**
  * Manages local connections to MySQL databases
@@ -53,6 +56,43 @@ public class LocalMySQLManager extends MySQLManager {
 
   private static final String MYSQL_DUMP_CMD = "mysqldump";
   
+  /**
+   * Writes the user's password to a tmp file with 0600 permissions.
+   * @return the filename used.
+   */
+  private String writePasswordFile() throws IOException {
+    // Create the temp file to hold the user's password.
+    String tmpDir = options.getTempDir();
+    File tempFile = File.createTempFile("mysql-cnf",".cnf", new File(tmpDir));
+
+    // Set this file to be 0600. Java doesn't have a built-in mechanism for this
+    // so we need to go out to the shell to execute chmod.
+    ArrayList<String> chmodArgs = new ArrayList<String>();
+    chmodArgs.add("chmod");
+    chmodArgs.add("0600");
+    chmodArgs.add(tempFile.toString());
+    try {
+      Shell.execCommand("chmod", "0600", tempFile.toString());
+    } catch (IOException ioe) {
+      // Shell.execCommand will throw IOException on exit code != 0.
+      LOG.error("Could not chmod 0600 " + tempFile.toString());
+      throw new IOException("Could not ensure password file security.", ioe);
+    }
+
+    // If we're here, the password file is believed to be ours alone.
+    // The inability to set chmod 0600 inside Java is troublesome. We have to trust
+    // that the external 'chmod' program in the path does the right thing, and returns
+    // the correct exit status. But given our inability to re-read the permissions
+    // associated with a file, we'll have to make do with this.
+    String password = options.getPassword();
+    BufferedWriter w = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tempFile)));
+    w.write("[client]\n");
+    w.write("password=" + password + "\n");
+    w.close();
+
+    return tempFile.toString();
+  }
+
   /**
    * Import the table into HDFS by using mysqldump to pull out the data from
    * the database and upload the files directly to HDFS.
@@ -105,41 +145,43 @@ public class LocalMySQLManager extends MySQLManager {
     }
 
     LOG.info("Performing import of table " + tableName + " from database " + databaseName);
-
+    Process p = null;
     args.add(MYSQL_DUMP_CMD); // requires that this is on the path.
-    args.add("--skip-opt");
-    args.add("--compact");
-    args.add("--no-create-db");
-    args.add("--no-create-info");
-
-    String username = options.getUsername();
-    if (null != username) {
-      args.add("--user=" + username);
-    }
 
     String password = options.getPassword();
-    if (null != password) {
-      // TODO(aaron): This is really insecure.
-      args.add("--password=" + password);
-    }
-    
-    String whereClause = options.getWhereClause();
-    if (null != whereClause) {
-      // Don't use the --where="<whereClause>" version because spaces in it can confuse
-      // Java, and adding in surrounding quotes confuses Java as well.
-      args.add("-w");
-      args.add(whereClause);
-    }
+    String passwordFile = null;
 
-    args.add("--quick"); // no buffering
-    // TODO(aaron): Add a flag to allow --lock-tables instead for MyISAM data
-    args.add("--single-transaction"); 
-
-    args.add(databaseName);
-    args.add(tableName);
-    
-    Process p = null;
     try {
+      // --defaults-file must be the first argument.
+      if (null != password && password.length() > 0) {
+        passwordFile = writePasswordFile();
+        args.add("--defaults-file=" + passwordFile);
+      }
+
+      String whereClause = options.getWhereClause();
+      if (null != whereClause) {
+        // Don't use the --where="<whereClause>" version because spaces in it can confuse
+        // Java, and adding in surrounding quotes confuses Java as well.
+        args.add("-w");
+        args.add(whereClause);
+      }
+
+      args.add("--skip-opt");
+      args.add("--compact");
+      args.add("--no-create-db");
+      args.add("--no-create-info");
+      args.add("--quick"); // no buffering
+      // TODO(aaron): Add a flag to allow --lock-tables instead for MyISAM data
+      args.add("--single-transaction"); 
+
+      String username = options.getUsername();
+      if (null != username) {
+        args.add("--user=" + username);
+      }
+
+      args.add(databaseName);
+      args.add(tableName);
+
       // begin the import in an external process.
       LOG.debug("Starting mysqldump with arguments:");
       for (String arg : args) {
@@ -233,6 +275,14 @@ public class LocalMySQLManager extends MySQLManager {
           }
 
           break;
+        }
+      }
+
+      // Remove the password file.
+      if (null != passwordFile) {
+        if (!new File(passwordFile).delete()) {
+          LOG.error("Could not remove mysql password file " + passwordFile);
+          LOG.error("You should remove this file to protect your credentials.");
         }
       }
 

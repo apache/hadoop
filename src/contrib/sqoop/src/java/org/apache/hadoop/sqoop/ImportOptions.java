@@ -203,6 +203,14 @@ public class ImportOptions {
   }
 
   /**
+   * Allow the user to enter his password on the console without printing characters.
+   * @return the password as a string
+   */
+  private String securePasswordEntry() {
+    return new String(System.console().readPassword("Enter password: "));
+  }
+
+  /**
    * Print usage strings for the program's arguments.
    */
   public static void printUsage() {
@@ -213,6 +221,7 @@ public class ImportOptions {
     System.out.println("--driver (class-name)        Manually specify JDBC driver class to use");
     System.out.println("--username (username)        Set authentication username");
     System.out.println("--password (password)        Set authentication password");
+    System.out.println("-P                           Read password from console");
     System.out.println("--local                      Use local import fast path (mysql only)");
     System.out.println("");
     System.out.println("Import control options:");
@@ -294,7 +303,10 @@ public class ImportOptions {
             this.password = "";
           }
         } else if (args[i].equals("--password")) {
+          LOG.warn("Setting your password on the command-line is insecure. Consider using -P instead.");
           this.password = args[++i];
+        } else if (args[i].equals("-P")) {
+          this.password = securePasswordEntry();
         } else if (args[i].equals("--hadoop-home")) {
           this.hadoopHome = args[++i];
         } else if (args[i].equals("--hive-home")) {
@@ -505,5 +517,9 @@ public class ImportOptions {
 
   public void setUsername(String name) {
     this.username = name;
+  }
+
+  public void setPassword(String pass) {
+    this.password = pass;
   }
 }

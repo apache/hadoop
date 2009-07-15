@@ -20,6 +20,7 @@ package org.apache.hadoop.sqoop;
 
 import org.apache.hadoop.sqoop.hive.TestHiveImport;
 import org.apache.hadoop.sqoop.manager.LocalMySQLTest;
+import org.apache.hadoop.sqoop.manager.MySQLAuthTest;
 import org.apache.hadoop.sqoop.manager.TestHsqldbManager;
 import org.apache.hadoop.sqoop.manager.TestSqlManager;
 import org.apache.hadoop.sqoop.orm.TestClassWriter;
@@ -48,6 +49,7 @@ public final class AllTests  {
     suite.addTestSuite(TestOrderBy.class);
     suite.addTestSuite(TestWhere.class);
     suite.addTestSuite(LocalMySQLTest.class);
+    suite.addTestSuite(MySQLAuthTest.class);
     suite.addTestSuite(TestHiveImport.class);
 
     return suite;

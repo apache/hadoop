@@ -29,6 +29,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
@@ -41,43 +43,45 @@ import org.apache.hadoop.sqoop.ImportOptions;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 
 /**
- * Test the LocalMySQLManager implementation.
- * This differs from MySQLManager only in its importTable() method, which
- * uses mysqldump instead of mapreduce+DBInputFormat.
+ * Test authentication and remote access to direct mysqldump-based imports.
  *
  * Since this requires a MySQL installation on your local machine to use, this
  * class is named in such a way that Hadoop's default QA process does not run
- * it. You need to run this manually with -Dtestcase=LocalMySQLTest.
+ * it. You need to run this manually with -Dtestcase=MySQLAuthTest
  *
  * You need to put MySQL's Connector/J JDBC driver library into a location
  * where Hadoop will be able to access it (since this library cannot be checked
  * into Apache's tree for licensing reasons).
  *
- * You should also create a database named 'sqooptestdb' and authorize yourself:
+ * You need to create a database used by Sqoop for password tests:
  *
- * CREATE DATABASE sqooptestdb;
+ * CREATE DATABASE sqooppasstest;
  * use mysql;
- * GRANT ALL PRIVILEGES ON sqooptestdb.* TO 'yourusername'@'localhost';
+ * GRANT ALL PRIVILEGES on sqooppasstest.* TO 'sqooptest'@'localhost' IDENTIFIED BY '12345';
  * flush privileges;
  *
  */
-public class LocalMySQLTest extends ImportJobTestCase {
+public class MySQLAuthTest extends ImportJobTestCase {
 
-  public static final Log LOG = LogFactory.getLog(LocalMySQLTest.class.getName());
+  public static final Log LOG = LogFactory.getLog(MySQLAuthTest.class.getName());
 
   static final String HOST_URL = "jdbc:mysql://localhost/";
 
-  static final String MYSQL_DATABASE_NAME = "sqooptestdb";
-  static final String TABLE_NAME = "EMPLOYEES";
-  static final String CONNECT_STRING = HOST_URL + MYSQL_DATABASE_NAME;
+  static final String AUTH_TEST_DATABASE = "sqooppasstest";
+  static final String AUTH_TEST_USER = "sqooptest";
+  static final String AUTH_TEST_PASS = "12345";
+  static final String AUTH_TABLE_NAME = "authtest";
+  static final String AUTH_CONNECT_STRING = HOST_URL + AUTH_TEST_DATABASE;
 
   // instance variables populated during setUp, used during tests
   private LocalMySQLManager manager;
 
   @Before
   public void setUp() {
-    ImportOptions options = new ImportOptions(CONNECT_STRING, TABLE_NAME);
-    options.setUsername(getCurrentUser());
+    ImportOptions options = new ImportOptions(AUTH_CONNECT_STRING, AUTH_TABLE_NAME);
+    options.setUsername(AUTH_TEST_USER);
+    options.setPassword(AUTH_TEST_PASS);
+
     manager = new LocalMySQLManager(options);
 
     Connection connection = null;
@@ -89,20 +93,13 @@ public class LocalMySQLTest extends ImportJobTestCase {
       st = connection.createStatement();
 
       // create the database table and populate it with data. 
-      st.executeUpdate("DROP TABLE IF EXISTS " + TABLE_NAME);
-      st.executeUpdate("CREATE TABLE " + TABLE_NAME + " ("
+      st.executeUpdate("DROP TABLE IF EXISTS " + AUTH_TABLE_NAME);
+      st.executeUpdate("CREATE TABLE " + AUTH_TABLE_NAME + " ("
           + "id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, "
-          + "name VARCHAR(24) NOT NULL, "
-          + "start_date DATE, "
-          + "salary FLOAT, "
-          + "dept VARCHAR(32))");
+          + "name VARCHAR(24) NOT NULL)");
 
-      st.executeUpdate("INSERT INTO " + TABLE_NAME + " VALUES("
-          + "NULL,'Aaron','2009-05-14',1000000.00,'engineering')");
-      st.executeUpdate("INSERT INTO " + TABLE_NAME + " VALUES("
-          + "NULL,'Bob','2009-04-20',400.00,'sales')");
-      st.executeUpdate("INSERT INTO " + TABLE_NAME + " VALUES("
-          + "NULL,'Fred','2009-01-23',15.00,'marketing')");
+      st.executeUpdate("INSERT INTO " + AUTH_TABLE_NAME + " VALUES("
+          + "NULL,'Aaron')");
       connection.commit();
     } catch (SQLException sqlE) {
       LOG.error("Encountered SQL Exception: " + sqlE);
@@ -133,53 +130,6 @@ public class LocalMySQLTest extends ImportJobTestCase {
     }
   }
 
-  /** @return the current username. */
-  private String getCurrentUser() {
-    // First, check the $USER environment variable.
-    String envUser = System.getenv("USER");
-    if (null != envUser) {
-      return envUser;
-    }
-
-    // Try `whoami`
-    String [] whoamiArgs = new String[1];
-    whoamiArgs[0] = "whoami";
-    Process p = null;
-    BufferedReader r = null;
-    try {
-      p = Runtime.getRuntime().exec(whoamiArgs);
-      InputStream is = p.getInputStream();
-      r = new BufferedReader(new InputStreamReader(is));
-      return r.readLine();
-    } catch (IOException ioe) {
-      LOG.error("IOException reading from `whoami`: " + ioe.toString());
-      return null;
-    } finally {
-      // close our stream.
-      if (null != r) {
-        try {
-          r.close();
-        } catch (IOException ioe) {
-          LOG.warn("IOException closing input stream from `whoami`: " + ioe.toString());
-        }
-      }
-
-      // wait for whoami to exit.
-      while (p != null) {
-        try {
-          int ret = p.waitFor();
-          if (0 != ret) {
-            LOG.error("whoami exited with error status " + ret);
-            // suppress original return value from this method.
-            return null; 
-          }
-        } catch (InterruptedException ie) {
-          continue; // loop around.
-        }
-      }
-    }
-  }
-
   private String [] getArgv(boolean includeHadoopFlags) {
     ArrayList<String> args = new ArrayList<String>();
 
@@ -189,22 +139,26 @@ public class LocalMySQLTest extends ImportJobTestCase {
     }
 
     args.add("--table");
-    args.add(TABLE_NAME);
+    args.add(AUTH_TABLE_NAME);
     args.add("--warehouse-dir");
     args.add(getWarehouseDir());
     args.add("--connect");
-    args.add(CONNECT_STRING);
+    args.add(AUTH_CONNECT_STRING);
     args.add("--local");
     args.add("--username");
-    args.add(getCurrentUser());
-    args.add("--where");
-    args.add("id > 1");
+    args.add(AUTH_TEST_USER);
+    args.add("--password");
+    args.add(AUTH_TEST_PASS);
 
     return args.toArray(new String[0]);
   }
 
+  /**
+   * Connect to a db and ensure that password-based authentication
+   * succeeds.
+   */
   @Test
-  public void testLocalBulkImport() {
+  public void testAuthAccess() {
     String [] argv = getArgv(true);
     try {
       runImport(argv);
@@ -215,7 +169,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
     }
 
     Path warehousePath = new Path(this.getWarehouseDir());
-    Path tablePath = new Path(warehousePath, TABLE_NAME);
+    Path tablePath = new Path(warehousePath, AUTH_TABLE_NAME);
     Path filePath = new Path(tablePath, "data-00000");
 
     File f = new File(filePath.toString());
@@ -224,8 +178,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
     try {
       // Read through the file and make sure it's all there.
       r = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
-      assertEquals("2,'Bob','2009-04-20',400,'sales'", r.readLine());
-      assertEquals("3,'Fred','2009-01-23',15,'marketing'", r.readLine());
+      assertEquals("1,'Aaron'", r.readLine());
     } catch (IOException ioe) {
       LOG.error("Got IOException verifying results: " + ioe.toString());
       ioe.printStackTrace();
