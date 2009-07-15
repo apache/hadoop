@@ -56,7 +56,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
   extends Mapper<K1, V1, K2, V2> {
 
   private static final Log LOG = LogFactory.getLog(MultithreadedMapper.class);
-  private Class<Mapper<K1,V1,K2,V2>> mapClass;
+  private Class<? extends Mapper<K1,V1,K2,V2>> mapClass;
   private Context outer;
   private List<MapRunner> runners;
 
@@ -108,7 +108,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
    */
   public static <K1,V1,K2,V2> 
   void setMapperClass(Job job, 
-                      Class<Mapper<K1,V1,K2,V2>> cls) {
+                      Class<? extends Mapper<K1,V1,K2,V2>> cls) {
     if (MultithreadedMapper.class.isAssignableFrom(cls)) {
       throw new IllegalArgumentException("Can't have recursive " + 
                                          "MultithreadedMapper instances.");
@@ -134,7 +134,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
     for(int i=0; i < numberOfThreads; ++i) {
       MapRunner thread = new MapRunner(context);
       thread.start();
-      runners.set(i, thread);
+      runners.add(i, thread);
     }
     for(int i=0; i < numberOfThreads; ++i) {
       MapRunner thread = runners.get(i);

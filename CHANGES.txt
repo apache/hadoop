@@ -178,6 +178,9 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-565. Fix partitioner to work with new API. (Owen O'Malley via
     cdouglas)
 
+    MAPREDUCE-465. Fix a bug in MultithreadedMapRunner. (Amareshwari 
+    Sriramadasu via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
