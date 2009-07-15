@@ -20,14 +20,13 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,30 +41,32 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
 
 /**
- * Runs migration of filesystem from hbase 0.x to 0.x
+ * Runs migration of filesystem from hbase 0.19 to hbase 0.20.
+ * Not part of general test suite because takes time.
  */
 public class MigrationTest extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(MigrationTest.class);
-  
-  // This is the name of the table that is in the data file.
-  private static final String TABLENAME = "TestUpgrade";
-  
-  // The table has two columns
-  private static final byte [][] TABLENAME_COLUMNS =
-    {Bytes.toBytes("column_a:"), Bytes.toBytes("column_b:")};
 
   // Expected count of rows in migrated table.
-  private static final int EXPECTED_COUNT = 17576;
+  private static final int EXPECTED_COUNT = 3;
 
   /**
-   * Test migration. To be used in future migrations
+   * Test migration.
    * @throws IOException 
    */
-  public void testUpgrade() throws IOException {
+  public void testMigration() throws IOException {
+    Path rootdir = getUnitTestdir(getName());
+    FileSystem fs = FileSystem.get(this.conf);
+    Path hbasedir = loadTestData(fs, rootdir);
+    assertTrue(fs.exists(hbasedir));
+    listPaths(fs, hbasedir, -1);
+    Migrate migrator = new Migrate(this.conf);
+    Path qualified = fs.makeQualified(hbasedir);
+    String uri = qualified.toString();
+    this.conf.set("hbase.rootdir", uri);
+    migrator.run(new String [] {"upgrade"});
   }
   
   /*
@@ -74,24 +75,18 @@ public class MigrationTest extends HBaseTestCase {
    * @param rootDir
    * @throws IOException
    */
-  private void loadTestData(final FileSystem dfs, final Path rootDir)
+  private Path loadTestData(final FileSystem dfs, final Path rootDir)
   throws IOException {
-    FileSystem localfs = FileSystem.getLocal(conf);
-    // Get path for zip file.  If running this test in eclipse, define
-    // the system property src.testdata for your test run.
-    String srcTestdata = System.getProperty("src.testdata");
-    if (srcTestdata == null) {
-      throw new NullPointerException("Define src.test system property");
+    String hbasedir = "hbase-0.19-two-small-tables";
+    InputStream is = this.getClass().getClassLoader().
+      getResourceAsStream("data/" + hbasedir + ".zip");
+    ZipInputStream zip = new ZipInputStream(is);
+    try {
+      unzip(zip, dfs, rootDir);
+    } finally {
+      zip.close();
     }
-    Path data = new Path(srcTestdata, "HADOOP-2478-testdata-v0.1.zip");
-    if (!localfs.exists(data)) {
-      throw new FileNotFoundException(data.toString());
-    }
-    FSDataInputStream hs = localfs.open(data);
-    ZipInputStream zip = new ZipInputStream(hs);
-    unzip(zip, dfs, rootDir);
-    zip.close();
-    hs.close();
+    return new Path(rootDir, hbasedir);
   }
 
   /*
@@ -116,6 +111,7 @@ public class MigrationTest extends HBaseTestCase {
       assertTrue(hb.isMasterRunning());
       HTableDescriptor [] tables = hb.listTables();
       boolean foundTable = false;
+      /*
       for (int i = 0; i < tables.length; i++) {
         if (Bytes.equals(Bytes.toBytes(TABLENAME), tables[i].getName())) {
           foundTable = true;
@@ -148,6 +144,8 @@ public class MigrationTest extends HBaseTestCase {
       } finally {
         s.close();
       }
+      
+    */
     } finally {
       HConnectionManager.deleteConnectionInfo(conf, false);
       cluster.shutdown();

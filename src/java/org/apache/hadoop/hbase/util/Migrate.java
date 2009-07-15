@@ -26,8 +26,10 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -86,7 +88,7 @@ public class Migrate extends Configured implements Tool {
   private static final float HBASE_0_1_VERSION = 0.1f;
   
   // Filesystem version we can migrate from
-  private static final int PREVIOUS_VERSION = 4;
+  private static final int PREVIOUS_VERSION = 6;
   
   private static final String MIGRATION_LINK = 
     " See http://wiki.apache.org/hadoop/Hbase/HowToMigrate for more information.";
@@ -185,14 +187,14 @@ public class Migrate extends Configured implements Tool {
       if (version == HBASE_0_1_VERSION ||
           Integer.valueOf(versionStr).intValue() < PREVIOUS_VERSION) {
         String msg = "Cannot upgrade from " + versionStr + " to " +
-        HConstants.FILE_SYSTEM_VERSION + " you must install hbase-0.2.x, run " +
+        HConstants.FILE_SYSTEM_VERSION + " you must install an earlier hbase, run " +
         "the upgrade tool, reinstall this version and run this utility again." +
         MIGRATION_LINK;
         System.out.println(msg);
         throw new IOException(msg);
       }
 
-      migrate4To6();
+      migrate6to7();
 
       if (!readOnly) {
         // Set file system version
@@ -209,17 +211,31 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  // Move the fileystem version from 4 to 6.
-  // In here we rewrite the catalog table regions so they keep 10 versions
-  // instead of 1.
-  private void migrate4To6() throws IOException {
+  // Move the fileystem version from 6 to 7.
+  private void migrate6to7() throws IOException {
     if (this.readOnly && this.migrationNeeded) {
       return;
     }
+    // Before we start, make sure all is major compacted.
+    if (!allMajorCompacted()) {
+      String msg = "All tables must be major compacted before the migration can begin." +
+        MIGRATION_LINK;
+      System.out.println(msg);
+      throw new IOException(msg);
+    }
     final MetaUtils utils = new MetaUtils(this.conf);
     try {
-      // These two operations are effectively useless.  -ROOT- is hardcode,
-      // at least until hbase 0.20.0 when we store it out in ZK.
+      // Preperation
+      // TODO: Fail if not all major compacted first
+      
+      // TODO: Set the .META. and -ROOT- to flush at 16k?  32k?
+      // TODO: Enable block cache on all tables
+      // TODO: Rewrite MEMCACHE_FLUSHSIZE as MEMSTORE_FLUSHSIZE – name has changed. 
+      // TODO: Remove tableindexer 'index' attribute index from TableDescriptor (See HBASE-1586) 
+      // TODO: TODO: Move of in-memory parameter from table to column family (from HTD to HCD). 
+      // TODO: Purge isInMemory, etc., methods from HTD as part of migration. 
+      // TODO: Clean up old region log files (HBASE-698) 
+      
       updateVersions(utils.getRootRegion().getRegionInfo());
       enableBlockCache(utils.getRootRegion().getRegionInfo());
       // Scan the root region
@@ -235,9 +251,50 @@ public class Migrate extends Configured implements Tool {
           return true;
         }
       });
+      LOG.info("TODO: Note on make sure not using old hbase-default.xml");
+      /*
+       * hbase.master / hbase.master.hostname are obsolete, that's replaced by
+hbase.cluster.distributed. This config must be set to "true" to have a
+fully-distributed cluster and the server lines in zoo.cfg must not
+point to "localhost".
+
+The clients must have a valid zoo.cfg in their classpath since we
+don't provide the master address.
+
+hbase.master.dns.interface and hbase.master.dns.nameserver should be
+set to control the master's address (not mandatory).
+       */
+      LOG.info("TODO: Note on zookeeper config. before starting:");
     } finally {
       utils.shutdown();
     }
+  }
+
+  /**
+   * Runs through the hbase rootdir and checks all stores have only
+   * one file in them -- that is, they've been major compacted.  Looks
+   * at root and meta tables too.
+   * @param fs
+   * @param c
+   * @return True if this hbase install is major compacted.
+   * @throws IOException
+   */
+  public static boolean isMajorCompacted(final FileSystem fs,
+      final HBaseConfiguration c)
+  throws IOException {
+    FileStatus [] directories =
+      fs.listStatus(new Path(c.get(HConstants.HBASE_DIR)), new PathFilter() {
+        public boolean accept(Path p) {
+          boolean isdir = false;
+          try {
+            isdir = fs.getFileStatus(p).isDir();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+          return isdir;
+        }
+    });    
+    
   }
 
   /*

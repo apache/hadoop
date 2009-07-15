@@ -29,8 +29,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -264,5 +266,36 @@ public class FSUtils {
     Path rootRegionDir =
       HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO);
     return fs.exists(rootRegionDir);
+  }
+
+
+  /**
+   * Runs through the hbase rootdir and checks all stores have only
+   * one file in them -- that is, they've been major compacted.  Looks
+   * at root and meta tables too.
+   * @param fs
+   * @param c
+   * @return True if this hbase install is major compacted.
+   * @throws IOException
+   */
+  public static boolean isMajorCompacted(final FileSystem fs,
+      final HBaseConfiguration c)
+  throws IOException {
+    // Presumes any directory under hbase.rootdir is a table.
+    FileStatus [] directories =
+      fs.listStatus(new Path(c.get(HConstants.HBASE_DIR)), new PathFilter() {
+        public boolean accept(Path p) {
+          boolean isdir = false;
+          try {
+            isdir = fs.getFileStatus(p).isDir();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+          return isdir;
+        }
+    });    
+    for (int i = 0; i < directories.length; i++) {
+      
+    }
   }
 }

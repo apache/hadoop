@@ -47,8 +47,9 @@ public interface HConstants {
    * Version 4 supports only one kind of bloom filter.
    * Version 5 changes versions in catalog table regions.
    * Version 6 enables blockcaching on catalog tables.
+   * Version 7 introduces hfile -- hbase 0.19 to 0.20..
    */
-  public static final String FILE_SYSTEM_VERSION = "6";
+  public static final String FILE_SYSTEM_VERSION = "7";
   
   // Configuration parameters
   
