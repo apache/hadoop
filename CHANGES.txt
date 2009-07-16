@@ -214,3 +214,7 @@ Trunk (unreleased changes)
     
     MAPREDUCE-680. Fix so MRUnit can handle reuse of Writable objects.
     (Aaron Kimball via johan)
+
+    MAPREDUCE-18. Puts some checks for cross checking whether a reduce
+    task gets the correct shuffle data. (Ravi Gummadi via ddas)
+
