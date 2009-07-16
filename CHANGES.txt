@@ -105,6 +105,9 @@ Trunk (unreleased changes)
     MAPREDUCE-627. Improves execution time of TestTrackerBlacklistAcrossJobs.
     (Jothi Padmanabhan via ddas)
 
+    MAPREDUCE-630. Improves execution time of TestKillCompletedJob.
+    (Jothi Padmanabhan via ddas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
