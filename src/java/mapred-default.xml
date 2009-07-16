@@ -359,6 +359,24 @@
 </property>
 
 <property>
+  <name>mapred.shuffle.connect.timeout</name>
+  <value>180000</value>
+  <description>Expert: Cluster-wide configuration. The maximum amount of
+  time (in milli seconds) reduce task spends in trying to connect to a
+  tasktracker for getting map output.
+  </description>
+</property>
+
+<property>
+  <name>mapred.shuffle.read.timeout</name>
+  <value>30000</value>
+  <description>Expert: Cluster-wide configuration. The maximum amount of time
+  (in milli seconds) reduce task waits for map output data to be available
+  for reading after obtaining connection.
+  </description>
+</property>
+
+<property>
   <name>mapred.task.timeout</name>
   <value>600000</value>
   <description>The number of milliseconds before a task will be

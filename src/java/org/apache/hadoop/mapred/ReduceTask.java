@@ -1140,6 +1140,8 @@ class ReduceTask extends Task {
       private final static int UNIT_CONNECT_TIMEOUT = 30 * 1000;
       // default read timeout (in milliseconds)
       private final static int DEFAULT_READ_TIMEOUT = 3 * 60 * 1000;
+      private final int shuffleConnectionTimeout;
+      private final int shuffleReadTimeout;
 
       private MapOutputLocation currentLocation = null;
       private int id = nextMapOutputCopierId++;
@@ -1154,6 +1156,11 @@ class ReduceTask extends Task {
         setName("MapOutputCopier " + reduceTask.getTaskID() + "." + id);
         LOG.debug(getName() + " created");
         this.reporter = reporter;
+        
+        shuffleConnectionTimeout =
+          job.getInt("mapred.shuffle.connect.timeout", STALLED_COPY_TIMEOUT);
+        shuffleReadTimeout =
+          job.getInt("mapred.shuffle.read.timeout", DEFAULT_READ_TIMEOUT);
         
         if (job.getCompressMapOutput()) {
           Class<? extends CompressionCodec> codecClass =
@@ -1373,8 +1380,8 @@ class ReduceTask extends Task {
         // Connect
         URLConnection connection = 
           mapOutputLoc.getOutputLocation().openConnection();
-        InputStream input = getInputStream(connection, STALLED_COPY_TIMEOUT,
-                                           DEFAULT_READ_TIMEOUT); 
+        InputStream input = getInputStream(connection, shuffleConnectionTimeout,
+                                           shuffleReadTimeout); 
 
         //We will put a file in memory if it meets certain criteria:
         //1. The size of the (decompressed) file should be less than 25% of 
@@ -1477,8 +1484,8 @@ class ReduceTask extends Task {
           // Reconnect
           try {
             connection = mapOutputLoc.getOutputLocation().openConnection();
-            input = getInputStream(connection, STALLED_COPY_TIMEOUT, 
-                                   DEFAULT_READ_TIMEOUT);
+            input = getInputStream(connection, shuffleConnectionTimeout, 
+                                   shuffleReadTimeout);
           } catch (IOException ioe) {
             LOG.info("Failed reopen connection to fetch map-output from " + 
                      mapOutputLoc.getHost());

@@ -111,6 +111,9 @@ Trunk (unreleased changes)
     MAPREDUCE-626. Improves the execution time of TestLostTracker.
     (Jothi Padmanabhan via ddas)
 
+    MAPREDUCE-353. Makes the shuffle read and connection timeouts
+    configurable. (Ravi Gummadi via ddas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
