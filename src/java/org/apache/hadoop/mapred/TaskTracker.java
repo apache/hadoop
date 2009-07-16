@@ -2926,13 +2926,9 @@ public class TaskTracker
          * Read the index file to get the information about where
          * the map-output for the given reducer is available. 
          */
-        IndexRecord info = 
+       IndexRecord info = 
           tracker.indexCache.getIndexInformation(mapId, reduce,indexFileName);
           
-        //set the custom "from-map-task" http header to the map task from which
-        //the map output data is being transferred
-        response.setHeader(FROM_MAP_TASK, mapId);
-        
         //set the custom "Raw-Map-Output-Length" http header to 
         //the raw (decompressed) length
         response.setHeader(RAW_MAP_OUTPUT_LENGTH,
@@ -2943,10 +2939,6 @@ public class TaskTracker
         response.setHeader(MAP_OUTPUT_LENGTH,
             Long.toString(info.partLength));
 
-        //set the custom "for-reduce-task" http header to the reduce task number
-        //for which this map output is being transferred
-        response.setHeader(FOR_REDUCE_TASK, Integer.toString(reduce));
-        
         //use the same buffersize as used for reading the data from disk
         response.setBufferSize(MAX_BYTES_TO_READ);
         
