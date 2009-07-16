@@ -61,7 +61,6 @@ public class MigrationTest extends HBaseTestCase {
     FileSystem fs = FileSystem.get(this.conf);
     Path hbasedir = loadTestData(fs, rootdir);
     assertTrue(fs.exists(hbasedir));
-    listPaths(fs, hbasedir, -1);
     Migrate migrator = new Migrate(this.conf);
     Path qualified = fs.makeQualified(hbasedir);
     String uri = qualified.toString();

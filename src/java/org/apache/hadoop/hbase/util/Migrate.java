@@ -184,9 +184,9 @@ public class Migrate extends Configured implements Tool {
       if (version == HBASE_0_1_VERSION ||
           Integer.valueOf(versionStr).intValue() < PREVIOUS_VERSION) {
         String msg = "Cannot upgrade from " + versionStr + " to " +
-        HConstants.FILE_SYSTEM_VERSION + " you must install an earlier hbase, run " +
-        "the upgrade tool, reinstall this version and run this utility again." +
-        MIGRATION_LINK;
+          HConstants.FILE_SYSTEM_VERSION + " you must install an earlier hbase, run " +
+          "the upgrade tool, reinstall this version and run this utility again." +
+          MIGRATION_LINK;
         System.out.println(msg);
         throw new IOException(msg);
       }
@@ -217,13 +217,26 @@ public class Migrate extends Configured implements Tool {
     Path hbaseRootDir = new Path(conf.get(HConstants.HBASE_DIR));
     boolean pre020 = FSUtils.isPre020FileLayout(fs, hbaseRootDir);
     if (pre020) {
+      LOG.info("Checking pre020 filesystem is major compacted");
       if (!FSUtils.isMajorCompactedPre020(fs, hbaseRootDir)) {
         String msg = "All tables must be major compacted before migration." +
           MIGRATION_LINK;
         System.out.println(msg);
         throw new IOException(msg);
       }
-      // TODO: Rewrite regions.
+      rewrite(fs, hbaseRootDir);
+    }
+    LOG.info("Checking filesystem is major compacted");
+    // Below check is good for both making sure that we are major compacted
+    // but will also fail if not all dirs were rewritten.
+    if (!FSUtils.isMajorCompacted(fs, hbaseRootDir)) {
+      LOG.info("Checking filesystem is major compacted");
+      if (!FSUtils.isMajorCompacted(fs, hbaseRootDir)) {
+        String msg = "All tables must be major compacted before migration." +
+          MIGRATION_LINK;
+        System.out.println(msg);
+        throw new IOException(msg);
+      }
     }
     // TOOD: Verify all has been brought over from old to new layout.
     final MetaUtils utils = new MetaUtils(this.conf);
@@ -268,6 +281,15 @@ set to control the master's address (not mandatory).
     } finally {
       utils.shutdown();
     }
+  }
+  
+  /*
+   * Rewrite all under hbase root dir.
+   * @param fs
+   * @param hbaseRootDir
+   */
+  private void rewrite(final FileSystem fs, final Path hbaseRootDir) {
+    
   }
 
   /*
