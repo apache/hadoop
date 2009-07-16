@@ -268,7 +268,6 @@ public class FSUtils {
     return fs.exists(rootRegionDir);
   }
 
-
   /**
    * Runs through the hbase rootdir and checks all stores have only
    * one file in them -- that is, they've been major compacted.  Looks
@@ -300,6 +299,67 @@ public class FSUtils {
           Path family = familydirectories[k].getPath();
           // Now in family make sure only one file.
           FileStatus [] familyStatus = fs.listStatus(family);
+          if (familyStatus.length > 1) {
+            LOG.debug(family.toString() + " has " + familyStatus.length +
+              " files.");
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Expects to find -ROOT- directory.
+   * @param fs
+   * @param hbaseRootDir
+   * @return True if this a pre020 layout.
+   * @throws IOException
+   */
+  public static boolean isPre020FileLayout(final FileSystem fs,
+    final Path hbaseRootDir)
+  throws IOException {
+    Path mapfiles = new Path(new Path(new Path(hbaseRootDir, "-ROOT-"),
+      "70236052"), "mapfiles");
+    return fs.exists(mapfiles);
+  }
+
+  /**
+   * Runs through the hbase rootdir and checks all stores have only
+   * one file in them -- that is, they've been major compacted.  Looks
+   * at root and meta tables too.  This version differs from
+   * {@link #isMajorCompacted(FileSystem, Path)} in that it expects a
+   * pre-0.20.0 hbase layout on the filesystem.  Used migrating.
+   * @param fs
+   * @param hbaseRootDir
+   * @return True if this hbase install is major compacted.
+   * @throws IOException
+   */
+  public static boolean isMajorCompactedPre020(final FileSystem fs,
+      final Path hbaseRootDir)
+  throws IOException {
+    // Presumes any directory under hbase.rootdir is a table.
+    FileStatus [] directories = fs.listStatus(hbaseRootDir, new DirFilter(fs));
+    for (int i = 0; i < directories.length; i++) {
+      // Inside a table, there are compaction.dir directories to skip.
+      // Otherwise, all else should be regions.  Then in each region, should
+      // only be family directories.  Under each of these, should be a mapfile
+      // and info directory and in these only one file.
+      Path d = directories[i].getPath();
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+      FileStatus [] tablesubdirectories = fs.listStatus(d, new DirFilter(fs));
+      for (int j = 0; j < tablesubdirectories.length; j++) {
+        Path dd = tablesubdirectories[j].getPath();
+        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+        // Else its a region name.  Now look in region for families.
+        FileStatus [] familydirectories = fs.listStatus(dd, new DirFilter(fs));
+        for (int k = 0; k < familydirectories.length; k++) {
+          Path family = familydirectories[k].getPath();
+          // Now in family, there are 'mapfile' and 'info' subdirs.  Just
+          // look in the 'mapfile' subdir.
+          FileStatus [] familyStatus =
+            fs.listStatus(new Path(family, "mapfiles"));
           if (familyStatus.length > 1) {
             LOG.debug(family.toString() + " has " + familyStatus.length +
               " files.");

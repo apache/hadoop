@@ -26,10 +26,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,7 +35,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -217,17 +214,20 @@ public class Migrate extends Configured implements Tool {
       return;
     }
     // Before we start, make sure all is major compacted.
-    if (!isMajorCompacted(fs, conf)) {
-      String msg = "All tables must be major compacted before the migration can begin." +
-        MIGRATION_LINK;
-      System.out.println(msg);
-      throw new IOException(msg);
+    Path hbaseRootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    boolean pre020 = FSUtils.isPre020FileLayout(fs, hbaseRootDir);
+    if (pre020) {
+      if (!FSUtils.isMajorCompactedPre020(fs, hbaseRootDir)) {
+        String msg = "All tables must be major compacted before migration." +
+          MIGRATION_LINK;
+        System.out.println(msg);
+        throw new IOException(msg);
+      }
+      // TODO: Rewrite regions.
     }
+    // TOOD: Verify all has been brought over from old to new layout.
     final MetaUtils utils = new MetaUtils(this.conf);
     try {
-      // Preperation
-      // TODO: Fail if not all major compacted first
-      
       // TODO: Set the .META. and -ROOT- to flush at 16k?  32k?
       // TODO: Enable block cache on all tables
       // TODO: Rewrite MEMCACHE_FLUSHSIZE as MEMSTORE_FLUSHSIZE – name has changed. 
@@ -268,33 +268,6 @@ set to control the master's address (not mandatory).
     } finally {
       utils.shutdown();
     }
-  }
-
-  /**
-   * Runs through the hbase rootdir and checks all stores have only
-   * one file in them -- that is, they've been major compacted.  Looks
-   * at root and meta tables too.
-   * @param fs
-   * @param c
-   * @return True if this hbase install is major compacted.
-   * @throws IOException
-   */
-  public static boolean isMajorCompacted(final FileSystem fs,
-      final HBaseConfiguration c)
-  throws IOException {
-    FileStatus [] directories =
-      fs.listStatus(new Path(c.get(HConstants.HBASE_DIR)), new PathFilter() {
-        public boolean accept(Path p) {
-          boolean isdir = false;
-          try {
-            isdir = fs.getFileStatus(p).isDir();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-          return isdir;
-        }
-    });    
-    return true;
   }
 
   /*
