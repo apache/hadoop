@@ -222,41 +222,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * not flushed.
    */
   private boolean flushRegion(HRegion region, boolean removeFromQueue) {
-    int count = 0;
-    boolean triggered = false;
-    boolean finished = false;
-    while (count++ < (blockingWaitTime / 500)) {
-      finished = true;
-      for (Store hstore: region.stores.values()) {
-        if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
-          // only log once
-          if (!triggered) {
-            LOG.info("Too many store files for region " + region + ": " +
-              hstore.getStorefilesCount() + ", requesting compaction and " +
-              "waiting");
-            this.server.compactSplitThread.compactionRequested(region, getName());
-            triggered = true;
-          }
-          // pending compaction, not finished
-          finished = false;
-          try {
-            Thread.sleep(500);
-          } catch (InterruptedException e) {
-            // ignore
-          }
-        }
-      }
-      if (triggered && finished) {
-        LOG.info("Compaction has completed, we waited " + (count * 500) + "ms, "
-            + "finishing flush of region " + region);
-        break;
-      }
-    }
-    if (triggered && !finished) {
-      LOG.warn("Tried to hold up flushing for compactions of region " + region +
-          " but have waited longer than " + blockingWaitTime + "ms, continuing");
-    }
-
+    checkStoreFileCount(region);
     synchronized (regionsInQueue) {
       // See comment above for removeFromQueue on why we do not
       // take the region out of the set. If removeFromQueue is true, remove it
@@ -297,7 +263,53 @@ class MemStoreFlusher extends Thread implements FlushRequester {
 
     return true;
   }
-  
+
+  /*
+   * If too many store files already, schedule a compaction and pause a while
+   * before going on with compaction.
+   * @param region Region to check.
+   */
+  private void checkStoreFileCount(final HRegion region) {
+    // If catalog region, do not ever hold up writes (isMetaRegion returns
+    // true if ROOT or META region).
+    if (region.getRegionInfo().isMetaRegion()) return;
+
+    int count = 0;
+    boolean triggered = false;
+    boolean finished = false;
+    while (count++ < (blockingWaitTime / 500)) {
+      finished = true;
+      for (Store hstore: region.stores.values()) {
+        if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
+          // only log once
+          if (!triggered) {
+            LOG.info("Too many store files for region " + region + ": " +
+              hstore.getStorefilesCount() + ", requesting compaction and " +
+              "waiting");
+            this.server.compactSplitThread.compactionRequested(region, getName());
+            triggered = true;
+          }
+          // pending compaction, not finished
+          finished = false;
+          try {
+            Thread.sleep(500);
+          } catch (InterruptedException e) {
+            // ignore
+          }
+        }
+      }
+      if (triggered && finished) {
+        LOG.info("Compaction has completed, we waited " + (count * 500) + "ms, "
+            + "finishing flush of region " + region);
+        break;
+      }
+    }
+    if (triggered && !finished) {
+      LOG.warn("Tried to hold up flushing for compactions of region " + region +
+          " but have waited longer than " + blockingWaitTime + "ms, continuing");
+    }
+  }
+
   /**
    * Check if the regionserver's memstore memory usage is greater than the 
    * limit. If so, flush regions with the biggest memstores until we're down

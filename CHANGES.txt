@@ -270,6 +270,7 @@ Release 0.20.0 - Unreleased
    HBASE-1663  Request compaction only once instead of every time 500ms each
                time we cycle the hstore.getStorefilesCount() >
                this.blockingStoreFilesNumber loop
+   HBASE-1058  Disable 1058 on catalog tables
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
