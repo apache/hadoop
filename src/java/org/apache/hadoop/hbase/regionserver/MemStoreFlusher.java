@@ -229,13 +229,12 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       finished = true;
       for (Store hstore: region.stores.values()) {
         if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
-          // always request a compaction
-          server.compactSplitThread.compactionRequested(region, getName());
           // only log once
           if (!triggered) {
             LOG.info("Too many store files for region " + region + ": " +
               hstore.getStorefilesCount() + ", requesting compaction and " +
               "waiting");
+            this.server.compactSplitThread.compactionRequested(region, getName());
             triggered = true;
           }
           // pending compaction, not finished
@@ -247,16 +246,17 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           }
         }
       }
-      if(triggered && finished) {
+      if (triggered && finished) {
         LOG.info("Compaction has completed, we waited " + (count * 500) + "ms, "
             + "finishing flush of region " + region);
         break;
       }
     }
-    if(triggered && !finished) {
+    if (triggered && !finished) {
       LOG.warn("Tried to hold up flushing for compactions of region " + region +
           " but have waited longer than " + blockingWaitTime + "ms, continuing");
     }
+
     synchronized (regionsInQueue) {
       // See comment above for removeFromQueue on why we do not
       // take the region out of the set. If removeFromQueue is true, remove it

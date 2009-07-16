@@ -267,6 +267,9 @@ Release 0.20.0 - Unreleased
                anymore
    HBASE-1658  Remove UI refresh -- its annoying
    HBASE-1659  merge tool doesnt take binary regions with \x escape format
+   HBASE-1663  Request compaction only once instead of every time 500ms each
+               time we cycle the hstore.getStorefilesCount() >
+               this.blockingStoreFilesNumber loop
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
