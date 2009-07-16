@@ -32,6 +32,473 @@ public final class StorageClusterStatusMessage {
       return org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_fieldAccessorTable;
     }
     
+    public static final class Region extends
+        com.google.protobuf.GeneratedMessage {
+      // Use Region.newBuilder() to construct.
+      private Region() {}
+      
+      private static final Region defaultInstance = new Region();
+      public static Region getDefaultInstance() {
+        return defaultInstance;
+      }
+      
+      public Region getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+      
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Region_descriptor;
+      }
+      
+      @Override
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Region_fieldAccessorTable;
+      }
+      
+      // required bytes name = 1;
+      public static final int NAME_FIELD_NUMBER = 1;
+      private boolean hasName;
+      private com.google.protobuf.ByteString name_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasName() { return hasName; }
+      public com.google.protobuf.ByteString getName() { return name_; }
+      
+      // optional int32 stores = 2;
+      public static final int STORES_FIELD_NUMBER = 2;
+      private boolean hasStores;
+      private int stores_ = 0;
+      public boolean hasStores() { return hasStores; }
+      public int getStores() { return stores_; }
+      
+      // optional int32 storefiles = 3;
+      public static final int STOREFILES_FIELD_NUMBER = 3;
+      private boolean hasStorefiles;
+      private int storefiles_ = 0;
+      public boolean hasStorefiles() { return hasStorefiles; }
+      public int getStorefiles() { return storefiles_; }
+      
+      // optional int32 storefileSizeMB = 4;
+      public static final int STOREFILESIZEMB_FIELD_NUMBER = 4;
+      private boolean hasStorefileSizeMB;
+      private int storefileSizeMB_ = 0;
+      public boolean hasStorefileSizeMB() { return hasStorefileSizeMB; }
+      public int getStorefileSizeMB() { return storefileSizeMB_; }
+      
+      // optional int32 memstoreSizeMB = 5;
+      public static final int MEMSTORESIZEMB_FIELD_NUMBER = 5;
+      private boolean hasMemstoreSizeMB;
+      private int memstoreSizeMB_ = 0;
+      public boolean hasMemstoreSizeMB() { return hasMemstoreSizeMB; }
+      public int getMemstoreSizeMB() { return memstoreSizeMB_; }
+      
+      // optional int32 storefileIndexSizeMB = 6;
+      public static final int STOREFILEINDEXSIZEMB_FIELD_NUMBER = 6;
+      private boolean hasStorefileIndexSizeMB;
+      private int storefileIndexSizeMB_ = 0;
+      public boolean hasStorefileIndexSizeMB() { return hasStorefileIndexSizeMB; }
+      public int getStorefileIndexSizeMB() { return storefileIndexSizeMB_; }
+      
+      @Override
+      public final boolean isInitialized() {
+        if (!hasName) return false;
+        return true;
+      }
+      
+      @Override
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        if (hasName()) {
+          output.writeBytes(1, getName());
+        }
+        if (hasStores()) {
+          output.writeInt32(2, getStores());
+        }
+        if (hasStorefiles()) {
+          output.writeInt32(3, getStorefiles());
+        }
+        if (hasStorefileSizeMB()) {
+          output.writeInt32(4, getStorefileSizeMB());
+        }
+        if (hasMemstoreSizeMB()) {
+          output.writeInt32(5, getMemstoreSizeMB());
+        }
+        if (hasStorefileIndexSizeMB()) {
+          output.writeInt32(6, getStorefileIndexSizeMB());
+        }
+        getUnknownFields().writeTo(output);
+      }
+      
+      private int memoizedSerializedSize = -1;
+      @Override
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+      
+        size = 0;
+        if (hasName()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(1, getName());
+        }
+        if (hasStores()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(2, getStores());
+        }
+        if (hasStorefiles()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(3, getStorefiles());
+        }
+        if (hasStorefileSizeMB()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(4, getStorefileSizeMB());
+        }
+        if (hasMemstoreSizeMB()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(5, getMemstoreSizeMB());
+        }
+        if (hasStorefileIndexSizeMB()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(6, getStorefileIndexSizeMB());
+        }
+        size += getUnknownFields().getSerializedSize();
+        memoizedSerializedSize = size;
+        return size;
+      }
+      
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeDelimitedFrom(input).buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeDelimitedFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      
+      public static Builder newBuilder() { return new Builder(); }
+      public Builder newBuilderForType() { return new Builder(); }
+      public static Builder newBuilder(org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region prototype) {
+        return new Builder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+      
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessage.Builder<Builder> {
+        // Construct using org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.newBuilder()
+        private Builder() {}
+        
+        org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region result = new org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region();
+        
+        @Override
+        protected org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region internalGetResult() {
+          return result;
+        }
+        
+        @Override
+        public Builder clear() {
+          result = new org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region();
+          return this;
+        }
+        
+        @Override
+        public Builder clone() {
+          return new Builder().mergeFrom(result);
+        }
+        
+        @Override
+        public com.google.protobuf.Descriptors.Descriptor
+            getDescriptorForType() {
+          return org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.getDescriptor();
+        }
+        
+        public org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region getDefaultInstanceForType() {
+          return org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.getDefaultInstance();
+        }
+        
+        public org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region build() {
+          if (result != null && !isInitialized()) {
+            throw new com.google.protobuf.UninitializedMessageException(
+              result);
+          }
+          return buildPartial();
+        }
+        
+        private org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region buildParsed()
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          if (!isInitialized()) {
+            throw new com.google.protobuf.UninitializedMessageException(
+              result).asInvalidProtocolBufferException();
+          }
+          return buildPartial();
+        }
+        
+        public org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region buildPartial() {
+          if (result == null) {
+            throw new IllegalStateException(
+              "build() has already been called on this Builder.");  }
+          org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region returnMe = result;
+          result = null;
+          return returnMe;
+        }
+        
+        @Override
+        public Builder mergeFrom(com.google.protobuf.Message other) {
+          if (other instanceof org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region) {
+            return mergeFrom((org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region)other);
+          } else {
+            super.mergeFrom(other);
+            return this;
+          }
+        }
+        
+        public Builder mergeFrom(org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region other) {
+          if (other == org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.getDefaultInstance()) return this;
+          if (other.hasName()) {
+            setName(other.getName());
+          }
+          if (other.hasStores()) {
+            setStores(other.getStores());
+          }
+          if (other.hasStorefiles()) {
+            setStorefiles(other.getStorefiles());
+          }
+          if (other.hasStorefileSizeMB()) {
+            setStorefileSizeMB(other.getStorefileSizeMB());
+          }
+          if (other.hasMemstoreSizeMB()) {
+            setMemstoreSizeMB(other.getMemstoreSizeMB());
+          }
+          if (other.hasStorefileIndexSizeMB()) {
+            setStorefileIndexSizeMB(other.getStorefileIndexSizeMB());
+          }
+          this.mergeUnknownFields(other.getUnknownFields());
+          return this;
+        }
+        
+        @Override
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input)
+            throws java.io.IOException {
+          return mergeFrom(input,
+            com.google.protobuf.ExtensionRegistry.getEmptyRegistry());
+        }
+        
+        @Override
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistry extensionRegistry)
+            throws java.io.IOException {
+          com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+            com.google.protobuf.UnknownFieldSet.newBuilder(
+              this.getUnknownFields());
+          while (true) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              default: {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
+                  this.setUnknownFields(unknownFields.build());
+                  return this;
+                }
+                break;
+              }
+              case 10: {
+                setName(input.readBytes());
+                break;
+              }
+              case 16: {
+                setStores(input.readInt32());
+                break;
+              }
+              case 24: {
+                setStorefiles(input.readInt32());
+                break;
+              }
+              case 32: {
+                setStorefileSizeMB(input.readInt32());
+                break;
+              }
+              case 40: {
+                setMemstoreSizeMB(input.readInt32());
+                break;
+              }
+              case 48: {
+                setStorefileIndexSizeMB(input.readInt32());
+                break;
+              }
+            }
+          }
+        }
+        
+        
+        // required bytes name = 1;
+        public boolean hasName() {
+          return result.hasName();
+        }
+        public com.google.protobuf.ByteString getName() {
+          return result.getName();
+        }
+        public Builder setName(com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  result.hasName = true;
+          result.name_ = value;
+          return this;
+        }
+        public Builder clearName() {
+          result.hasName = false;
+          result.name_ = com.google.protobuf.ByteString.EMPTY;
+          return this;
+        }
+        
+        // optional int32 stores = 2;
+        public boolean hasStores() {
+          return result.hasStores();
+        }
+        public int getStores() {
+          return result.getStores();
+        }
+        public Builder setStores(int value) {
+          result.hasStores = true;
+          result.stores_ = value;
+          return this;
+        }
+        public Builder clearStores() {
+          result.hasStores = false;
+          result.stores_ = 0;
+          return this;
+        }
+        
+        // optional int32 storefiles = 3;
+        public boolean hasStorefiles() {
+          return result.hasStorefiles();
+        }
+        public int getStorefiles() {
+          return result.getStorefiles();
+        }
+        public Builder setStorefiles(int value) {
+          result.hasStorefiles = true;
+          result.storefiles_ = value;
+          return this;
+        }
+        public Builder clearStorefiles() {
+          result.hasStorefiles = false;
+          result.storefiles_ = 0;
+          return this;
+        }
+        
+        // optional int32 storefileSizeMB = 4;
+        public boolean hasStorefileSizeMB() {
+          return result.hasStorefileSizeMB();
+        }
+        public int getStorefileSizeMB() {
+          return result.getStorefileSizeMB();
+        }
+        public Builder setStorefileSizeMB(int value) {
+          result.hasStorefileSizeMB = true;
+          result.storefileSizeMB_ = value;
+          return this;
+        }
+        public Builder clearStorefileSizeMB() {
+          result.hasStorefileSizeMB = false;
+          result.storefileSizeMB_ = 0;
+          return this;
+        }
+        
+        // optional int32 memstoreSizeMB = 5;
+        public boolean hasMemstoreSizeMB() {
+          return result.hasMemstoreSizeMB();
+        }
+        public int getMemstoreSizeMB() {
+          return result.getMemstoreSizeMB();
+        }
+        public Builder setMemstoreSizeMB(int value) {
+          result.hasMemstoreSizeMB = true;
+          result.memstoreSizeMB_ = value;
+          return this;
+        }
+        public Builder clearMemstoreSizeMB() {
+          result.hasMemstoreSizeMB = false;
+          result.memstoreSizeMB_ = 0;
+          return this;
+        }
+        
+        // optional int32 storefileIndexSizeMB = 6;
+        public boolean hasStorefileIndexSizeMB() {
+          return result.hasStorefileIndexSizeMB();
+        }
+        public int getStorefileIndexSizeMB() {
+          return result.getStorefileIndexSizeMB();
+        }
+        public Builder setStorefileIndexSizeMB(int value) {
+          result.hasStorefileIndexSizeMB = true;
+          result.storefileIndexSizeMB_ = value;
+          return this;
+        }
+        public Builder clearStorefileIndexSizeMB() {
+          result.hasStorefileIndexSizeMB = false;
+          result.storefileIndexSizeMB_ = 0;
+          return this;
+        }
+      }
+      
+      static {
+        org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.getDescriptor();
+      }
+    }
+    
     public static final class Node extends
         com.google.protobuf.GeneratedMessage {
       // Use Node.newBuilder() to construct.
@@ -64,35 +531,52 @@ public final class StorageClusterStatusMessage {
       public boolean hasName() { return hasName; }
       public java.lang.String getName() { return name_; }
       
-      // optional int64 startCode = 4;
-      public static final int STARTCODE_FIELD_NUMBER = 4;
+      // optional int64 startCode = 2;
+      public static final int STARTCODE_FIELD_NUMBER = 2;
       private boolean hasStartCode;
       private long startCode_ = 0L;
       public boolean hasStartCode() { return hasStartCode; }
       public long getStartCode() { return startCode_; }
       
-      // optional int32 requests = 2;
-      public static final int REQUESTS_FIELD_NUMBER = 2;
+      // optional int32 requests = 3;
+      public static final int REQUESTS_FIELD_NUMBER = 3;
       private boolean hasRequests;
       private int requests_ = 0;
       public boolean hasRequests() { return hasRequests; }
       public int getRequests() { return requests_; }
       
-      // repeated bytes regions = 3;
-      public static final int REGIONS_FIELD_NUMBER = 3;
-      private java.util.List<com.google.protobuf.ByteString> regions_ =
+      // optional int32 heapSizeMB = 4;
+      public static final int HEAPSIZEMB_FIELD_NUMBER = 4;
+      private boolean hasHeapSizeMB;
+      private int heapSizeMB_ = 0;
+      public boolean hasHeapSizeMB() { return hasHeapSizeMB; }
+      public int getHeapSizeMB() { return heapSizeMB_; }
+      
+      // optional int32 maxHeapSizeMB = 5;
+      public static final int MAXHEAPSIZEMB_FIELD_NUMBER = 5;
+      private boolean hasMaxHeapSizeMB;
+      private int maxHeapSizeMB_ = 0;
+      public boolean hasMaxHeapSizeMB() { return hasMaxHeapSizeMB; }
+      public int getMaxHeapSizeMB() { return maxHeapSizeMB_; }
+      
+      // repeated .org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatus.Region regions = 6;
+      public static final int REGIONS_FIELD_NUMBER = 6;
+      private java.util.List<org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region> regions_ =
         java.util.Collections.emptyList();
-      public java.util.List<com.google.protobuf.ByteString> getRegionsList() {
+      public java.util.List<org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region> getRegionsList() {
         return regions_;
       }
       public int getRegionsCount() { return regions_.size(); }
-      public com.google.protobuf.ByteString getRegions(int index) {
+      public org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region getRegions(int index) {
         return regions_.get(index);
       }
       
       @Override
       public final boolean isInitialized() {
         if (!hasName) return false;
+        for (org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region element : getRegionsList()) {
+          if (!element.isInitialized()) return false;
+        }
         return true;
       }
       
@@ -102,14 +586,20 @@ public final class StorageClusterStatusMessage {
         if (hasName()) {
           output.writeString(1, getName());
         }
-        if (hasRequests()) {
-          output.writeInt32(2, getRequests());
-        }
-        for (com.google.protobuf.ByteString element : getRegionsList()) {
-          output.writeBytes(3, element);
-        }
         if (hasStartCode()) {
-          output.writeInt64(4, getStartCode());
+          output.writeInt64(2, getStartCode());
+        }
+        if (hasRequests()) {
+          output.writeInt32(3, getRequests());
+        }
+        if (hasHeapSizeMB()) {
+          output.writeInt32(4, getHeapSizeMB());
+        }
+        if (hasMaxHeapSizeMB()) {
+          output.writeInt32(5, getMaxHeapSizeMB());
+        }
+        for (org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region element : getRegionsList()) {
+          output.writeMessage(6, element);
         }
         getUnknownFields().writeTo(output);
       }
@@ -125,22 +615,25 @@ public final class StorageClusterStatusMessage {
           size += com.google.protobuf.CodedOutputStream
             .computeStringSize(1, getName());
         }
-        if (hasRequests()) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeInt32Size(2, getRequests());
-        }
-        {
-          int dataSize = 0;
-          for (com.google.protobuf.ByteString element : getRegionsList()) {
-            dataSize += com.google.protobuf.CodedOutputStream
-              .computeBytesSizeNoTag(element);
-          }
-          size += dataSize;
-          size += 1 * getRegionsList().size();
-        }
         if (hasStartCode()) {
           size += com.google.protobuf.CodedOutputStream
-            .computeInt64Size(4, getStartCode());
+            .computeInt64Size(2, getStartCode());
+        }
+        if (hasRequests()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(3, getRequests());
+        }
+        if (hasHeapSizeMB()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(4, getHeapSizeMB());
+        }
+        if (hasMaxHeapSizeMB()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(5, getMaxHeapSizeMB());
+        }
+        for (org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region element : getRegionsList()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(6, element);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -296,9 +789,15 @@ public final class StorageClusterStatusMessage {
           if (other.hasRequests()) {
             setRequests(other.getRequests());
           }
+          if (other.hasHeapSizeMB()) {
+            setHeapSizeMB(other.getHeapSizeMB());
+          }
+          if (other.hasMaxHeapSizeMB()) {
+            setMaxHeapSizeMB(other.getMaxHeapSizeMB());
+          }
           if (!other.regions_.isEmpty()) {
             if (result.regions_.isEmpty()) {
-              result.regions_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+              result.regions_ = new java.util.ArrayList<org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region>();
             }
             result.regions_.addAll(other.regions_);
           }
@@ -341,15 +840,25 @@ public final class StorageClusterStatusMessage {
                 break;
               }
               case 16: {
+                setStartCode(input.readInt64());
+                break;
+              }
+              case 24: {
                 setRequests(input.readInt32());
                 break;
               }
-              case 26: {
-                addRegions(input.readBytes());
+              case 32: {
+                setHeapSizeMB(input.readInt32());
                 break;
               }
-              case 32: {
-                setStartCode(input.readInt64());
+              case 40: {
+                setMaxHeapSizeMB(input.readInt32());
+                break;
+              }
+              case 50: {
+                org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.Builder subBuilder = org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.newBuilder();
+                input.readMessage(subBuilder, extensionRegistry);
+                addRegions(subBuilder.buildPartial());
                 break;
               }
             }
@@ -378,7 +887,7 @@ public final class StorageClusterStatusMessage {
           return this;
         }
         
-        // optional int64 startCode = 4;
+        // optional int64 startCode = 2;
         public boolean hasStartCode() {
           return result.hasStartCode();
         }
@@ -396,7 +905,7 @@ public final class StorageClusterStatusMessage {
           return this;
         }
         
-        // optional int32 requests = 2;
+        // optional int32 requests = 3;
         public boolean hasRequests() {
           return result.hasRequests();
         }
@@ -414,37 +923,84 @@ public final class StorageClusterStatusMessage {
           return this;
         }
         
-        // repeated bytes regions = 3;
-        public java.util.List<com.google.protobuf.ByteString> getRegionsList() {
+        // optional int32 heapSizeMB = 4;
+        public boolean hasHeapSizeMB() {
+          return result.hasHeapSizeMB();
+        }
+        public int getHeapSizeMB() {
+          return result.getHeapSizeMB();
+        }
+        public Builder setHeapSizeMB(int value) {
+          result.hasHeapSizeMB = true;
+          result.heapSizeMB_ = value;
+          return this;
+        }
+        public Builder clearHeapSizeMB() {
+          result.hasHeapSizeMB = false;
+          result.heapSizeMB_ = 0;
+          return this;
+        }
+        
+        // optional int32 maxHeapSizeMB = 5;
+        public boolean hasMaxHeapSizeMB() {
+          return result.hasMaxHeapSizeMB();
+        }
+        public int getMaxHeapSizeMB() {
+          return result.getMaxHeapSizeMB();
+        }
+        public Builder setMaxHeapSizeMB(int value) {
+          result.hasMaxHeapSizeMB = true;
+          result.maxHeapSizeMB_ = value;
+          return this;
+        }
+        public Builder clearMaxHeapSizeMB() {
+          result.hasMaxHeapSizeMB = false;
+          result.maxHeapSizeMB_ = 0;
+          return this;
+        }
+        
+        // repeated .org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatus.Region regions = 6;
+        public java.util.List<org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region> getRegionsList() {
           return java.util.Collections.unmodifiableList(result.regions_);
         }
         public int getRegionsCount() {
           return result.getRegionsCount();
         }
-        public com.google.protobuf.ByteString getRegions(int index) {
+        public org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region getRegions(int index) {
           return result.getRegions(index);
         }
-        public Builder setRegions(int index, com.google.protobuf.ByteString value) {
+        public Builder setRegions(int index, org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region value) {
           if (value == null) {
-    throw new NullPointerException();
-  }
-  result.regions_.set(index, value);
+            throw new NullPointerException();
+          }
+          result.regions_.set(index, value);
           return this;
         }
-        public Builder addRegions(com.google.protobuf.ByteString value) {
+        public Builder setRegions(int index, org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.Builder builderForValue) {
+          result.regions_.set(index, builderForValue.build());
+          return this;
+        }
+        public Builder addRegions(org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region value) {
           if (value == null) {
-    throw new NullPointerException();
-  }
-  if (result.regions_.isEmpty()) {
-            result.regions_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+            throw new NullPointerException();
+          }
+          if (result.regions_.isEmpty()) {
+            result.regions_ = new java.util.ArrayList<org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region>();
           }
           result.regions_.add(value);
           return this;
         }
-        public Builder addAllRegions(
-            java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        public Builder addRegions(org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.Builder builderForValue) {
           if (result.regions_.isEmpty()) {
-            result.regions_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+            result.regions_ = new java.util.ArrayList<org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region>();
+          }
+          result.regions_.add(builderForValue.build());
+          return this;
+        }
+        public Builder addAllRegions(
+            java.lang.Iterable<? extends org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region> values) {
+          if (result.regions_.isEmpty()) {
+            result.regions_ = new java.util.ArrayList<org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region>();
           }
           super.addAll(values, result.regions_);
           return this;
@@ -954,6 +1510,11 @@ public final class StorageClusterStatusMessage {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Region_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Region_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Node_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -969,14 +1530,20 @@ public final class StorageClusterStatusMessage {
     java.lang.String descriptorData =
       "\n!StorageClusterStatusMessage.proto\0223org" +
       ".apache.hadoop.hbase.stargate.protobuf.g" +
-      "enerated\"\220\002\n\024StorageClusterStatus\022a\n\tliv" +
+      "enerated\"\232\004\n\024StorageClusterStatus\022a\n\tliv" +
       "eNodes\030\001 \003(\0132N.org.apache.hadoop.hbase.s" +
       "targate.protobuf.generated.StorageCluste" +
       "rStatus.Node\022\021\n\tdeadNodes\030\002 \003(\t\022\017\n\007regio" +
       "ns\030\003 \001(\005\022\020\n\010requests\030\004 \001(\005\022\023\n\013averageLoa" +
-      "d\030\005 \001(\001\032J\n\004Node\022\014\n\004name\030\001 \002(\t\022\021\n\tstartCo" +
-      "de\030\004 \001(\003\022\020\n\010requests\030\002 \001(\005\022\017\n\007regions\030\003 " +
-      "\003(\014";
+      "d\030\005 \001(\001\032\211\001\n\006Region\022\014\n\004name\030\001 \002(\014\022\016\n\006stor" +
+      "es\030\002 \001(\005\022\022\n\nstorefiles\030\003 \001(\005\022\027\n\017storefil" +
+      "eSizeMB\030\004 \001(\005\022\026\n\016memstoreSizeMB\030\005 \001(\005\022\034\n" +
+      "\024storefileIndexSizeMB\030\006 \001(\005\032\307\001\n\004Node\022\014\n\004" +
+      "name\030\001 \002(\t\022\021\n\tstartCode\030\002 \001(\003\022\020\n\010request" +
+      "s\030\003 \001(\005\022\022\n\nheapSizeMB\030\004 \001(\005\022\025\n\rmaxHeapSi" +
+      "zeMB\030\005 \001(\005\022a\n\007regions\030\006 \003(\0132P.org.apache" +
+      ".hadoop.hbase.stargate.protobuf.generate" +
+      "d.StorageClusterStatus.Region";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
@@ -990,12 +1557,20 @@ public final class StorageClusterStatusMessage {
               new java.lang.String[] { "LiveNodes", "DeadNodes", "Regions", "Requests", "AverageLoad", },
               org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.class,
               org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Builder.class);
-          internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Node_descriptor =
+          internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Region_descriptor =
             internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_descriptor.getNestedTypes().get(0);
+          internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Region_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Region_descriptor,
+              new java.lang.String[] { "Name", "Stores", "Storefiles", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", },
+              org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.class,
+              org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.Builder.class);
+          internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Node_descriptor =
+            internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_descriptor.getNestedTypes().get(1);
           internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Node_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_stargate_protobuf_generated_StorageClusterStatus_Node_descriptor,
-              new java.lang.String[] { "Name", "StartCode", "Requests", "Regions", },
+              new java.lang.String[] { "Name", "StartCode", "Requests", "HeapSizeMB", "MaxHeapSizeMB", "Regions", },
               org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Node.class,
               org.apache.hadoop.hbase.stargate.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Node.Builder.class);
           return null;

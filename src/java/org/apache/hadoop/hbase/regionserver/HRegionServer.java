@@ -759,18 +759,21 @@ public class HRegionServer implements HConstants, HRegionInterface,
     byte[] name = r.getRegionName();
     int stores = 0;
     int storefiles = 0;
+    int storefileSizeMB = 0;
     int memstoreSizeMB = (int)(r.memstoreSize.get()/1024/1024);
     int storefileIndexSizeMB = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
       for (Store store: r.stores.values()) {
         storefiles += store.getStorefilesCount();
+        storefileSizeMB += 
+          (int)(store.getStorefilesSize()/1024/1024);
         storefileIndexSizeMB += 
           (int)(store.getStorefilesIndexSize()/1024/1024);
       }
     }
-    return new HServerLoad.RegionLoad(name, stores, storefiles, memstoreSizeMB,
-      storefileIndexSizeMB);
+    return new HServerLoad.RegionLoad(name, stores, storefiles,
+      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB);
   }
  
   /**

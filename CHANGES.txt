@@ -102,8 +102,8 @@ Release 0.20.0 - Unreleased
    HBASE-1292  php thrift's getRow() would throw an exception if the row does
                not exist (Rong-en Fan via Stack)
    HBASE-1340  Fix new javadoc warnings (Evgeny Ryabitskiy via Stack)
-   HBASE-1287  Partitioner class not used in TableMapReduceUtil.initTableReduceJob()
-               (Lars George and Billy Pearson via Stack)
+   HBASE-1287  Partitioner class not used in TableMapReduceUtil
+               .initTableReduceJob() (Lars George and Billy Pearson via Stack)
    HBASE-1320  hbase-1234 broke filter tests
    HBASE-1355  [performance] Cache family maxversions; we were calculating on
                each access
@@ -238,16 +238,17 @@ Release 0.20.0 - Unreleased
    HBASE-1437  broken links in hbase.org
    HBASE-1582  Translate ColumnValueFilter and RowFilterSet to the new Filter
                interface
-   HBASE-1594  Fix scan addcolumns after hbase-1385 commit (broken hudson build)
+   HBASE-1594  Fix scan addcolumns after hbase-1385 commit (broke hudson build)
    HBASE-1595  hadoop-default.xml and zoo.cfg in hbase jar
    HBASE-1602  HRegionServer won't go down since we added in new LruBlockCache
    HBASE-1608  TestCachedBlockQueue failing on some jvms (Jon Gray via Stack)
    HBASE-1615  HBASE-1597 introduced a bug when compacting after a split
                (Jon Gray via Stack)
-   HBASE-1616  Unit test of compacting referenced StoreFiles (Jon Gray via Stack)
+   HBASE-1616  Unit test of compacting referenced StoreFiles (Jon Gray via
+               Stack)
    HBASE-1618  Investigate further into the MemStoreFlusher StoreFile limit
                (Jon Gray via Stack)
-   HBASE-1625  Adding check to Put.add(KeyValue kv), to see that it has the same
+   HBASE-1625  Adding check to Put.add(KeyValue), to see that it has the same
                row as when instantiated (Erik Holstad via Stack)
    HBASE-1629  HRS unable to contact master
    HBASE-1633  Can't delete in TRUNK shell; makes it hard doing admin repairs
@@ -453,7 +454,8 @@ Release 0.20.0 - Unreleased
                (Erik Holstad via Stack)
    HBASE-1584  Put add methods should return this for ease of use (Be
                consistant with Get) (Clint Morgan via Stack)
-   HBASE-1581  Run major compaction on .META. when table is dropped or truncated
+   HBASE-1581  Run major compaction on .META. when table is dropped or
+               truncated
    HBASE-1587  Update ganglia config and doc to account for ganglia 3.1 and
                hadoop-4675
    HBASE-1589  Up zk maxClientCnxns from default of 10 to 20 or 30 or so
@@ -469,23 +471,25 @@ Release 0.20.0 - Unreleased
    HBASE-1218  Implement in-memory column (Jon Gray via Stack)
    HBASE-1606  Remove zoo.cfg, put config options into hbase-site.xml
    HBASE-1575  HMaster does not handle ZK session expiration
-   HBASE-1620  Need to use special StoreScanner constructor for major compactions
-               (passed sf, no caching, etc) (Jon Gray via Stack)
+   HBASE-1620  Need to use special StoreScanner constructor for major
+               compactions (passed sf, no caching, etc) (Jon Gray via Stack)
    HBASE-1624  Don't sort Puts if only one in list in HCM#processBatchOfRows
    HBASE-1626  Allow emitting Deletes out of new TableReducer
                (Lars George via Stack)
    HBASE-1551  HBase should manage multiple node ZooKeeper quorum
    HBASE-1637  Delete client class methods should return itself like Put, Get,
                Scan (Jon Gray via Nitay)
-   HBASE-1640  Allow passing arguments to jruby script run when run by bin/hbase shell
+   HBASE-1640  Allow passing arguments to jruby script run when run by hbase
+               shell
    HBASE-698   HLog recovery is not performed after master failure
    HBASE-1643  ScanDeleteTracker takes comparator but it unused
    HBASE-1603  MR failed "RetriesExhaustedException: Trying to contact region
                server Some server for region TestTable..." -- deubugging
    HBASE-1470  hbase and HADOOP-4379, dhruba's flush/sync
-   HBASE-1632  Write documentation for configuring/managing ZooKeeper with HBase
+   HBASE-1632  Write documentation for configuring/managing ZooKeeper
    HBASE-1662  Tool to run major compaction on catalog regions when hbase is
                shutdown
+   HBASE-1665  expose more load information to the client side
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

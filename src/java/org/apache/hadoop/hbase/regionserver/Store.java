@@ -1406,6 +1406,22 @@ public class Store implements HConstants, HeapSize {
   }
 
   /**
+   * @return The size of the store files, in bytes.
+   */
+  long getStorefilesSize() {
+    long size = 0;
+    for (StoreFile s: storefiles.values()) {
+      Reader r = s.getReader();
+      if (r == null) {
+        LOG.warn("StoreFile " + s + " has a null Reader");
+        continue;
+      }
+      size += r.length();
+    }
+    return size;
+  }
+
+  /**
    * @return The size of the store file indexes, in bytes.
    */
   long getStorefilesIndexSize() {

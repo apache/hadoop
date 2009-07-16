@@ -71,10 +71,17 @@ import com.google.protobuf.ByteString;
  *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="startCode" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="requests" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="heapSizeMB" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="maxHeapSizeMB" type="int"&gt;&lt;/attribute&gt;
  * &lt;/complexType&gt;
  *
  * &lt;complexType name="Region"&gt;
  *   &lt;attribute name="name" type="base64Binary"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="stores" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="storefiles" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="storefileSizeMB" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="memstoreSizeMB" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="storefileIndexSizeMB" type="int"&gt;&lt;/attribute&gt;
  * &lt;/complexType&gt;
  * </pre>
  */
@@ -93,6 +100,11 @@ public class StorageClusterStatusModel
 	   */
 	  public static class Region {
 	    private byte[] name;
+	    private int stores;
+	    private int storefiles;
+	    private int storefileSizeMB;
+	    private int memstoreSizeMB;
+	    private int storefileIndexSizeMB;
 
 	    /**
 	     * Default constructor
@@ -108,6 +120,25 @@ public class StorageClusterStatusModel
 	    }
 
 	    /**
+	     * Constructor
+	     * @param name the region name
+	     * @param stores the number of stores
+	     * @param storefiles the number of store files
+	     * @param storefileSizeMB total size of store files, in MB
+	     * @param memstoreSizeMB total size of memstore, in MB
+	     * @param storefileIndexSizeMB, total size of store file indexes, in MB
+	     */
+	    public Region(byte[] name, int stores, int storefiles,
+          int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB) {
+        this.name = name;
+        this.stores = stores;
+        this.storefiles = storefiles;
+        this.storefileSizeMB = storefileSizeMB;
+        this.memstoreSizeMB = memstoreSizeMB;
+        this.storefileIndexSizeMB = storefileIndexSizeMB;
+      }
+
+      /**
 	     * @return the region name
 	     */
 	    @XmlAttribute
@@ -116,24 +147,103 @@ public class StorageClusterStatusModel
 	    }
 
 	    /**
+	     * @return the number of stores 
+	     */
+	    @XmlAttribute
+	    public int getStores() {
+        return stores;
+      }
+
+      /**
+       * @return the number of store files 
+       */
+      @XmlAttribute
+      public int getStorefiles() {
+        return storefiles;
+      }
+
+      /**
+       * @return the total size of store files, in MB
+       */
+      @XmlAttribute
+      public int getStorefileSizeMB() {
+        return storefileSizeMB;
+      }
+
+      /**
+       * @return memstore size, in MB
+       */
+      @XmlAttribute
+      public int getMemstoreSizeMB() {
+        return memstoreSizeMB;
+      }
+
+      /**
+       * @return the total size of store file indexes, in MB
+       */
+      @XmlAttribute
+      public int getStorefileIndexSizeMB() {
+        return storefileIndexSizeMB;
+      }
+
+      /**
 	     * @param name the region name
 	     */
 	    public void setName(byte[] name) {
 	      this.name = name;
 	    }
+
+	    /**
+	     * @param stores the number of stores
+	     */
+      public void setStores(int stores) {
+        this.stores = stores;
+      }
+
+      /**
+       * @param storefiles the number of store files
+       */
+      public void setStorefiles(int storefiles) {
+        this.storefiles = storefiles;
+      }
+
+      /**
+       * @param storefileSizeMB total size of store files, in MB
+       */
+      public void setStorefileSizeMB(int storefileSizeMB) {
+        this.storefileSizeMB = storefileSizeMB;
+      }
+
+      /**
+       * @param memstoreSizeMB memstore size, in MB
+       */
+      public void setMemstoreSizeMB(int memstoreSizeMB) {
+        this.memstoreSizeMB = memstoreSizeMB;
+      }
+
+      /**
+       * @param storefileIndexSizeMB total size of store file indexes, in MB
+       */
+      public void setStorefileIndexSizeMB(int storefileIndexSizeMB) {
+        this.storefileIndexSizeMB = storefileIndexSizeMB;
+      }
 	  }
 
 	  private String name;
     private long startCode;
     private int requests;
+    private int heapSizeMB;
+    private int maxHeapSizeMB;
     private List<Region> regions = new ArrayList<Region>();
 
     /**
      * Add a region name to the list
      * @param name the region name
      */
-    public void addRegion(byte[] name) {
-      regions.add(new Region(name));
+    public void addRegion(byte[] name, int stores, int storefiles,
+        int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB) {
+      regions.add(new Region(name, stores, storefiles, storefileSizeMB,
+        memstoreSizeMB, storefileIndexSizeMB));
     }
 
     /**
@@ -176,6 +286,22 @@ public class StorageClusterStatusModel
     }
 
     /**
+     * @return the current heap size, in MB
+     */
+    @XmlAttribute
+    public int getHeapSizeMB() {
+      return heapSizeMB;
+    }
+
+    /**
+     * @return the maximum heap size, in MB
+     */
+    @XmlAttribute
+    public int getMaxHeapSizeMB() {
+      return maxHeapSizeMB;
+    }
+
+    /**
      * @return the list of regions served by the region server
      */
     @XmlElement(name="Region")
@@ -206,6 +332,20 @@ public class StorageClusterStatusModel
     }
 
     /**
+     * @param heapSizeMB the current heap size, in MB
+     */
+    public void setHeapSizeMB(int heapSizeMB) {
+      this.heapSizeMB = heapSizeMB;
+    }
+
+    /**
+     * @param maxHeapSizeMB the maximum heap size, in MB
+     */
+    public void setMaxHeapSizeMB(int maxHeapSizeMB) {
+      this.maxHeapSizeMB = maxHeapSizeMB;
+    }
+
+    /**
      * @param regions a list of regions served by the region server
      */
     public void setRegions(List<Region> regions) {
@@ -231,9 +371,14 @@ public class StorageClusterStatusModel
 	 * Add a live node to the cluster representation.
 	 * @param name the region server name
 	 * @param startCode the region server's start code
+	 * @param heapSizeMB the current heap size, in MB
+	 * @param maxHeapSizeMB the maximum heap size, in MB
 	 */
-	public Node addLiveNode(String name, long startCode) {
+	public Node addLiveNode(String name, long startCode, int heapSizeMB,
+	    int maxHeapSizeMB) {
 	  Node node = new Node(name, startCode);
+	  node.setHeapSizeMB(heapSizeMB);
+	  node.setMaxHeapSizeMB(maxHeapSizeMB);
 	  liveNodes.add(node);
 	  return node;
 	}
@@ -367,10 +512,24 @@ public class StorageClusterStatusModel
         sb.append(node.requests);
         sb.append(", regions=");
         sb.append(node.regions.size());
+        sb.append("\n        heapSizeMB=");
+        sb.append(node.heapSizeMB);
+        sb.append("\n        maxHeapSizeMB=");
+        sb.append(node.maxHeapSizeMB);
         sb.append("\n\n");
         for (Node.Region region: node.regions) {
           sb.append("        ");
           sb.append(Bytes.toString(region.name));
+          sb.append("\n            stores=");
+          sb.append(region.stores);
+          sb.append("\n            storefiless=");
+          sb.append(region.storefiles);
+          sb.append("\n            storefileSizeMB=");
+          sb.append(region.storefileSizeMB);
+          sb.append("\n            memstoreSizeMB=");
+          sb.append(region.memstoreSizeMB);
+          sb.append("\n            storefileIndexSizeMB=");
+          sb.append(region.storefileIndexSizeMB);
           sb.append('\n');
         }
         sb.append('\n');
@@ -401,8 +560,18 @@ public class StorageClusterStatusModel
       nodeBuilder.setName(node.name);
       nodeBuilder.setStartCode(node.startCode);
       nodeBuilder.setRequests(node.requests);
+      nodeBuilder.setHeapSizeMB(node.heapSizeMB);
+      nodeBuilder.setMaxHeapSizeMB(node.maxHeapSizeMB);
       for (Node.Region region: node.regions) {
-        nodeBuilder.addRegions(ByteString.copyFrom(region.name));
+        StorageClusterStatus.Region.Builder regionBuilder =
+          StorageClusterStatus.Region.newBuilder();
+        regionBuilder.setName(ByteString.copyFrom(region.name));
+        regionBuilder.setStores(region.stores);
+        regionBuilder.setStorefiles(region.storefiles);
+        regionBuilder.setStorefileSizeMB(region.storefileSizeMB);
+        regionBuilder.setMemstoreSizeMB(region.memstoreSizeMB);
+        regionBuilder.setStorefileIndexSizeMB(region.storefileIndexSizeMB);
+        nodeBuilder.addRegions(regionBuilder);
       }
       builder.addLiveNodes(nodeBuilder);
     }
@@ -429,11 +598,18 @@ public class StorageClusterStatusModel
     for (StorageClusterStatus.Node node: builder.getLiveNodesList()) {
       long startCode = node.hasStartCode() ? node.getStartCode() : -1;
       StorageClusterStatusModel.Node nodeModel = 
-        addLiveNode(node.getName(), startCode);
+        addLiveNode(node.getName(), startCode, node.getHeapSizeMB(),
+          node.getMaxHeapSizeMB());
       int requests = node.hasRequests() ? node.getRequests() : 0;
       nodeModel.setRequests(requests);
-      for (ByteString region: node.getRegionsList()) {
-        nodeModel.addRegion(region.toByteArray());
+      for (StorageClusterStatus.Region region: node.getRegionsList()) {
+        nodeModel.addRegion(
+          region.getName().toByteArray(),
+          region.getStores(),
+          region.getStorefiles(),
+          region.getStorefileSizeMB(),
+          region.getMemstoreSizeMB(),
+          region.getStorefileIndexSizeMB());
       }
     }
     for (String node: builder.getDeadNodesList()) {

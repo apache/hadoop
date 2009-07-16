@@ -19,11 +19,21 @@
 package org.apache.hadoop.hbase.stargate.protobuf.generated;
 
 message StorageClusterStatus {
+  message Region {
+    required bytes name = 1;
+    optional int32 stores = 2;
+    optional int32 storefiles = 3;
+    optional int32 storefileSizeMB = 4;
+    optional int32 memstoreSizeMB = 5;
+    optional int32 storefileIndexSizeMB = 6;
+  }
   message Node {
     required string name = 1;    // name:port
-    optional int64 startCode = 4;
-    optional int32 requests = 2;
-    repeated bytes regions = 3;
+    optional int64 startCode = 2;
+    optional int32 requests = 3;
+    optional int32 heapSizeMB = 4;
+    optional int32 maxHeapSizeMB = 5;
+    repeated Region regions = 6;
   }
   // node status
   repeated Node liveNodes = 1;
