@@ -73,11 +73,12 @@ public class FakeObjectUtilities {
     @Override
     public synchronized void initTasks() throws IOException {
       maps = new TaskInProgress[numMapTasks];
+      JobClient.RawSplit[] splits = new JobClient.RawSplit[numMapTasks];
       for (int i = 0; i < numMapTasks; i++) {
-        JobClient.RawSplit split = new JobClient.RawSplit();
-        split.setLocations(new String[0]);
+        splits[i] = new JobClient.RawSplit();
+        splits[i].setLocations(new String[0]);
         maps[i] = new TaskInProgress(getJobID(), "test", 
-            split, jobtracker, getJobConf(), this, i, 1);
+            splits[i], jobtracker, getJobConf(), this, i, 1);
         nonLocalMaps.add(maps[i]);
       }
       reduces = new TaskInProgress[numReduceTasks];
@@ -88,6 +89,7 @@ public class FakeObjectUtilities {
         nonRunningReduces.add(reduces[i]);
       }
       tasksInited.set(true);
+      nonRunningMapCache = createCache(splits, maxLevel);
     }
     
     private TaskAttemptID findTask(String trackerName, String trackerHost,
@@ -175,7 +177,7 @@ public class FakeObjectUtilities {
               : Phase.REDUCE, new Counters());
       updateTaskStatus(tip, status);
     }
-    
+
     public void cleanUpMetrics() {
     }
     

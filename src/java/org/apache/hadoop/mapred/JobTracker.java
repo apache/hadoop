@@ -344,60 +344,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           // for a task tracker.
           //
           Thread.sleep(tasktrackerExpiryInterval / 3);
-
-          //
-          // Loop through all expired items in the queue
-          //
-          // Need to lock the JobTracker here since we are
-          // manipulating it's data-structures via
-          // ExpireTrackers.run -> JobTracker.lostTaskTracker ->
-          // JobInProgress.failedTask -> JobTracker.markCompleteTaskAttempt
-          // Also need to lock JobTracker before locking 'taskTracker' &
-          // 'trackerExpiryQueue' to prevent deadlock:
-          // @see {@link JobTracker.processHeartbeat(TaskTrackerStatus, boolean)} 
-          synchronized (JobTracker.this) {
-            synchronized (taskTrackers) {
-              synchronized (trackerExpiryQueue) {
-                long now = clock.getTime();
-                TaskTrackerStatus leastRecent = null;
-                while ((trackerExpiryQueue.size() > 0) &&
-                       (leastRecent = trackerExpiryQueue.first()) != null &&
-                       ((now - leastRecent.getLastSeen()) > tasktrackerExpiryInterval)) {
-                        
-                  // Remove profile from head of queue
-                  trackerExpiryQueue.remove(leastRecent);
-                  String trackerName = leastRecent.getTrackerName();
-                        
-                  // Figure out if last-seen time should be updated, or if tracker is dead
-                  TaskTracker current = getTaskTracker(trackerName);
-                  TaskTrackerStatus newProfile = 
-                    (current == null ) ? null : current.getStatus();
-                  // Items might leave the taskTracker set through other means; the
-                  // status stored in 'taskTrackers' might be null, which means the
-                  // tracker has already been destroyed.
-                  if (newProfile != null) {
-                    if ((now - newProfile.getLastSeen()) > tasktrackerExpiryInterval) {
-                      // Remove completely after marking the tasks as 'KILLED'
-                      lostTaskTracker(current);
-                      // tracker is lost, and if it is blacklisted, remove 
-                      // it from the count of blacklisted trackers in the cluster
-                      if (isBlacklisted(trackerName)) {
-                        faultyTrackers.numBlacklistedTrackers -= 1;
-                      }
-                      updateTaskTrackerStatus(trackerName, null);
-                      statistics.taskTrackerRemoved(trackerName);
-                      // remove the mapping from the hosts list
-                      String hostname = newProfile.getHost();
-                      hostnameToTaskTracker.get(hostname).remove(trackerName);
-                    } else {
-                      // Update time by inserting latest profile
-                      trackerExpiryQueue.add(newProfile);
-                    }
-                  }
-                }
-              }
-            }
-          }
+          checkExpiredTrackers();
         } catch (InterruptedException iex) {
           break;
         } catch (Exception t) {
@@ -406,7 +353,65 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
     }
-        
+  }
+  
+  void checkExpiredTrackers() {
+    //
+    // Loop through all expired items in the queue
+    //
+    // Need to lock the JobTracker here since we are
+    // manipulating it's data-structures via
+    // ExpireTrackers.run -> JobTracker.lostTaskTracker ->
+    // JobInProgress.failedTask -> JobTracker.markCompleteTaskAttempt
+    // Also need to lock JobTracker before locking 'taskTracker' &
+    // 'trackerExpiryQueue' to prevent deadlock:
+    // @see {@link JobTracker.processHeartbeat(TaskTrackerStatus, boolean)} 
+    synchronized (JobTracker.this) {
+      synchronized (taskTrackers) {
+        synchronized (trackerExpiryQueue) {
+          long now = clock.getTime();
+          TaskTrackerStatus leastRecent = null;
+          while ((trackerExpiryQueue.size() > 0) &&
+              (leastRecent = trackerExpiryQueue.first()) != null &&
+              ((now - leastRecent.getLastSeen()) > 
+                  tasktrackerExpiryInterval)) {
+
+            // Remove profile from head of queue
+            trackerExpiryQueue.remove(leastRecent);
+            String trackerName = leastRecent.getTrackerName();
+
+            // Figure out if last-seen time should be updated, or if 
+            // tracker is dead
+            TaskTracker current = getTaskTracker(trackerName);
+            TaskTrackerStatus newProfile = 
+              (current == null ) ? null : current.getStatus();
+            // Items might leave the taskTracker set through other means; the
+            // status stored in 'taskTrackers' might be null, which means the
+            // tracker has already been destroyed.
+            if (newProfile != null) {
+              if ((now - newProfile.getLastSeen()) >
+                  tasktrackerExpiryInterval) {
+                // Remove completely after marking the tasks as 'KILLED'
+                lostTaskTracker(current);
+                // tracker is lost, and if it is blacklisted, remove 
+                // it from the count of blacklisted trackers in the cluster
+                if (isBlacklisted(trackerName)) {
+                  faultyTrackers.numBlacklistedTrackers -= 1;
+                }
+                updateTaskTrackerStatus(trackerName, null);
+                statistics.taskTrackerRemoved(trackerName);
+                // remove the mapping from the hosts list
+                String hostname = newProfile.getHost();
+                hostnameToTaskTracker.get(hostname).remove(trackerName);
+              } else {
+                // Update time by inserting latest profile
+                trackerExpiryQueue.add(newProfile);
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   ///////////////////////////////////////////////////////
@@ -2035,6 +2040,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return NetUtils.createSocketAddr(jobTrackerStr);
   }
 
+  void  startExpireTrackersThread() {
+    this.expireTrackersThread = new Thread(this.expireTrackers, "expireTrackers");
+    this.expireTrackersThread.start();
+  }
+
   /**
    * Run forever
    */
@@ -2065,9 +2075,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // disallowed trackers
     refreshHosts();
     
-    this.expireTrackersThread = new Thread(this.expireTrackers,
-                                          "expireTrackers");
-    this.expireTrackersThread.start();
+    startExpireTrackersThread();
+
     this.retireJobsThread = new Thread(this.retireJobs, "retireJobs");
     this.retireJobsThread.start();
     expireLaunchingTaskThread.start();
@@ -2103,15 +2112,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       LOG.info("Stopping interTrackerServer");
       this.interTrackerServer.stop();
     }
-    if (this.expireTrackersThread != null && this.expireTrackersThread.isAlive()) {
-      LOG.info("Stopping expireTrackers");
-      this.expireTrackersThread.interrupt();
-      try {
-        this.expireTrackersThread.join();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
-    }
+
+    stopExpireTrackersThread();
+
     if (this.retireJobsThread != null && this.retireJobsThread.isAlive()) {
       LOG.info("Stopping retirer");
       this.retireJobsThread.interrupt();
@@ -2146,6 +2149,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     LOG.info("stopped all jobtracker services");
     return;
   }
+
+  void stopExpireTrackersThread() {
+    if (this.expireTrackersThread != null && this.expireTrackersThread.isAlive()) {
+      LOG.info("Stopping expireTrackers");
+      this.expireTrackersThread.interrupt();
+      try {
+        this.expireTrackersThread.join();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
+    }
+  }
+
     
   ///////////////////////////////////////////////////////
   // Maintain lookup tables; called by JobInProgress

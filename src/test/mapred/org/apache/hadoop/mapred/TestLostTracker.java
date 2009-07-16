@@ -17,163 +17,77 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import java.io.IOException;
 
 import junit.framework.TestCase;
-import java.io.*;
 
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
+import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
+
+/**
+ * A test to verify JobTracker's resilience to lost task trackers. 
+ * 
+ */
+@SuppressWarnings("deprecation")
 public class TestLostTracker extends TestCase {
-  final Path testDir = new Path("/jt-lost-tt");
-  final Path inDir = new Path(testDir, "input");
-  final Path shareDir = new Path(testDir, "share");
-  final Path outputDir = new Path(testDir, "output");
+
+  FakeJobInProgress job;
+  static FakeJobTracker jobTracker;
+ 
+  static FakeClock clock;
   
-  private JobConf configureJob(JobConf conf, int maps, int reduces,
-                               String mapSignal, String redSignal) 
-  throws IOException {
-    UtilsForTests.configureWaitingJobConf(conf, inDir, outputDir, 
-        maps, reduces, "test-lost-tt", 
-        mapSignal, redSignal);
-    return conf;
+  static String trackers[] = new String[] {"tracker_tracker1:1000",
+      "tracker_tracker2:1000"};
+
+  @Override
+  protected void setUp() throws Exception {
+    JobConf conf = new JobConf();
+    conf.set("mapred.job.tracker", "localhost:0");
+    conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+    conf.setLong("mapred.tasktracker.expiry.interval", 1000);
+    jobTracker = new FakeJobTracker(conf, (clock = new FakeClock()), trackers);
+    jobTracker.startExpireTrackersThread();
   }
   
-  public void testLostTracker(MiniDFSCluster dfs,
-                              MiniMRCluster mr) 
-  throws IOException {
-    FileSystem fileSys = dfs.getFileSystem();
-    JobConf jobConf = mr.createJobConf();
-    int numMaps = 10;
-    int numReds = 1;
-    String mapSignalFile = UtilsForTests.getMapSignalFile(shareDir);
-    String redSignalFile = UtilsForTests.getReduceSignalFile(shareDir);
-    
-    // Configure the job
-    JobConf job = configureJob(jobConf, numMaps, numReds, 
-                               mapSignalFile, redSignalFile);
-      
-    fileSys.delete(shareDir, true);
-    
-    // Submit the job   
-    JobClient jobClient = new JobClient(job);
-    RunningJob rJob = jobClient.submitJob(job);
-    JobID id = rJob.getID();
-    
-    // wait for the job to be inited
-    mr.initializeJob(id);
-    
-    // Make sure that the master job is 50% completed
-    while (UtilsForTests.getJobStatus(jobClient, id).mapProgress() 
-           < 0.5f) {
-      UtilsForTests.waitFor(10);
-    }
-
-    // get a completed task on 1st tracker 
-    TaskAttemptID taskid = mr.getTaskTrackerRunner(0).getTaskTracker().
-                              getNonRunningTasks().get(0).getTaskID();
-
-    // Kill the 1st tasktracker
-    mr.stopTaskTracker(0);
-
-    // Signal all the maps to complete
-    UtilsForTests.signalTasks(dfs, fileSys, true, mapSignalFile, redSignalFile);
-    
-    // Signal the reducers to complete
-    UtilsForTests.signalTasks(dfs, fileSys, false, mapSignalFile, 
-                              redSignalFile);
-    // wait till the job is done
-    UtilsForTests.waitTillDone(jobClient);
-
-    // Check if the tasks on the lost tracker got killed and re-executed
-    assertEquals(jobClient.getClusterStatus().getTaskTrackers(), 1);
-    assertEquals(JobStatus.SUCCEEDED, rJob.getJobState());
-    TaskInProgress tip = mr.getJobTrackerRunner().getJobTracker().
-                         getTip(taskid.getTaskID());
-    assertTrue(tip.isComplete());
-    assertEquals(tip.numKilledTasks(), 1);
-    
-    // check if the task statuses for the tasks are sane
-    JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
-    for (TaskInProgress taskInProgress : jt.getJob(id).getMapTasks()) {
-      testTaskStatuses(taskInProgress.getTaskStatuses());
-    }
-    
-    // validate the history file
-    TestJobHistory.validateJobHistoryFileFormat(id, job, "SUCCESS", true);
-    TestJobHistory.validateJobHistoryFileContent(mr, rJob, job);
-  }
-  
-  private void testTaskStatuses(TaskStatus[] tasks) {
-    for (TaskStatus status : tasks) {
-      assertTrue("Invalid start time " + status.getStartTime(), 
-                 status.getStartTime() > 0);
-      assertTrue("Invalid finish time " + status.getFinishTime(), 
-                 status.getFinishTime() > 0);
-      assertTrue("Start time (" + status.getStartTime() + ") is greater than " 
-                 + "the finish time (" + status.getFinishTime() + ")", 
-                 status.getStartTime() <= status.getFinishTime());
-      assertNotNull("Task phase information is null", status.getPhase());
-      assertNotNull("Task run-state information is null", status.getRunState());
-      assertNotNull("TaskTracker information is null", status.getTaskTracker());
-    }
+  @Override
+  protected void tearDown() throws Exception {
+    jobTracker.stopExpireTrackersThread();
   }
 
   public void testLostTracker() throws IOException {
-    String namenode = null;
-    MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
-    FileSystem fileSys = null;
+    // Tracker 0 contacts JT
+    FakeObjectUtilities.establishFirstContact(jobTracker, trackers[0]);
 
-    try {
-      Configuration conf = new Configuration();
-      conf.setBoolean("dfs.replication.considerLoad", false);
-      dfs = new MiniDFSCluster(conf, 1, true, null, null);
-      dfs.waitActive();
-      fileSys = dfs.getFileSystem();
-      
-      // clean up
-      fileSys.delete(testDir, true);
-      
-      if (!fileSys.mkdirs(inDir)) {
-        throw new IOException("Mkdirs failed to create " + inDir.toString());
-      }
+    TaskAttemptID[] tid = new TaskAttemptID[2];
+    JobConf conf = new JobConf();
+    conf.setNumMapTasks(1);
+    conf.setNumReduceTasks(1);
+    FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
+    job.initTasks();
+    
+    // Tracker 0 gets the map task
+    tid[0] = job.findMapTask(trackers[0]);
 
-      // Write the input file
-      UtilsForTests.writeFile(dfs.getNameNode(), conf, 
-                              new Path(inDir + "/file"), (short)1);
+    job.finishTask(tid[0]);
 
-      dfs.startDataNodes(conf, 1, true, null, null, null, null);
-      dfs.waitActive();
+    // Advance clock. Tracker 0 would have got lost
+    clock.advance(8 * 1000);
 
-      namenode = (dfs.getFileSystem()).getUri().getHost() + ":" 
-                 + (dfs.getFileSystem()).getUri().getPort();
+    jobTracker.checkExpiredTrackers();
+    
+    // Tracker 1 establishes contact with JT 
+    FakeObjectUtilities.establishFirstContact(jobTracker, trackers[1]);
+    
+    // Tracker1 should get assigned the lost map task
+    tid[1] =  job.findMapTask(trackers[1]);
 
-      JobConf jtConf = new JobConf();
-      jtConf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
-      jtConf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
-      jtConf.setLong("mapred.tasktracker.expiry.interval", 10 * 1000);
-      jtConf.setInt("mapred.reduce.copy.backoff", 4);
-      
-      mr = new MiniMRCluster(2, namenode, 1, null, null, jtConf);
-      
-      // Test Lost tracker case
-      testLostTracker(dfs, mr);
-    } finally {
-      if (mr != null) {
-        try {
-          mr.shutdown();
-        } catch (Exception e) {}
-      }
-      if (dfs != null) {
-        try {
-          dfs.shutdown();
-        } catch (Exception e) {}
-      }
-    }
-  }
-
-  public static void main(String[] args) throws IOException {
-    new TestLostTracker().testLostTracker();
+    assertNotNull("Map Task from Lost Tracker did not get reassigned", tid[1]);
+    
+    assertEquals("Task ID of reassigned map task does not match",
+        tid[0].getTaskID().toString(), tid[1].getTaskID().toString());
+    
+    job.finishTask(tid[1]);
+    
   }
 }
