@@ -272,6 +272,7 @@ Release 0.20.0 - Unreleased
                time we cycle the hstore.getStorefilesCount() >
                this.blockingStoreFilesNumber loop
    HBASE-1058  Disable 1058 on catalog tables
+   HBASE-1583  Start/Stop of large cluster untenable
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

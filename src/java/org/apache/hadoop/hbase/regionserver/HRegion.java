@@ -343,6 +343,20 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       " available; sequence id is " + this.minSequenceId);
   }
 
+  /**
+   * @return True if this region has references.
+   */
+  boolean hasReferences() {
+    for (Map.Entry<byte [], Store> e: this.stores.entrySet()) {
+      for (Map.Entry<Long, StoreFile> ee:
+          e.getValue().getStorefiles().entrySet()) {
+        // Found a reference, return.
+        if (ee.getValue().isReference()) return true;
+      }
+    }
+    return false;
+  }
+
   /*
    * Write out an info file under the region directory.  Useful recovering
    * mangled regions.
@@ -747,6 +761,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    */
   byte [] compactStores(final boolean majorCompaction)
   throws IOException {
+    if (this.closing.get() || this.closed.get()) {
+      LOG.debug("Skipping compaction on " + this + " because closing/closed");
+      return null;
+    }
     splitsAndClosesLock.readLock().lock();
     try {
       byte [] splitRow = null;
@@ -1487,12 +1505,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   private boolean isFlushSize(final long size) {
     return size > this.memstoreFlushSize;
   }
-  
+
   // Do any reconstruction needed from the log
   protected void doReconstructionLog(Path oldLogFile, long minSeqId, long maxSeqId,
     Progressable reporter)
   throws UnsupportedEncodingException, IOException {
     // Nothing to do (Replaying is done in HStores)
+    // Used by subclasses; e.g. THBase.
   }
 
   protected Store instantiateHStore(Path baseDir, 

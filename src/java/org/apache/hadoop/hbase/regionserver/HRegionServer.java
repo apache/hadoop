@@ -1553,9 +1553,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if (region == null) {
       try {
         region = instantiateRegion(regionInfo);
-        // Startup a compaction early if one is needed.
-        this.compactSplitThread.
-          compactionRequested(region, "Region open check");
+        // Startup a compaction early if one is needed, if region has references.
+        if (region.hasReferences()) {
+          this.compactSplitThread.compactionRequested(region,
+            "Region has references on open");
+        }
       } catch (Throwable e) {
         Throwable t = cleanup(e,
           "Error opening " + regionInfo.getRegionNameAsString());
