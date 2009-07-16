@@ -19,33 +19,28 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.UtilsForTests.RandomInputFormat;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.lib.NullOutputFormat;
-
 import junit.framework.TestCase;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapred.lib.NullOutputFormat;
 
 public class TestTrackerBlacklistAcrossJobs extends TestCase {
   private static final String hosts[] = new String[] {
     "host1.rack.com", "host2.rack.com", "host3.rack.com"
   };
-  final Path inDir = new Path("/testing");
-  final Path outDir = new Path("/output");
 
   public static class FailOnHostMapper extends MapReduceBase
-    implements Mapper<Text, Text, Text, Text> {
+    implements Mapper<NullWritable, NullWritable, NullWritable, NullWritable> {
     String hostname = "";
     
     public void configure(JobConf job) {
       this.hostname = job.get("slave.host.name");
     }
     
-    public void map(Text key, Text value,
-                    OutputCollector<Text, Text> output,
+    public void map(NullWritable key, NullWritable value,
+                    OutputCollector<NullWritable, NullWritable> output,
                     Reporter reporter)
     throws IOException {
       if (this.hostname.equals(hosts[0])) {
@@ -54,23 +49,16 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
       }
     }
   }
-  
+
   public void testBlacklistAcrossJobs() throws IOException {
-    MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
     Configuration conf = new Configuration();
-    // setup dfs and input
-    dfs = new MiniDFSCluster(conf, 1, true, null, hosts);
-    fileSys = dfs.getFileSystem();
-    if (!fileSys.mkdirs(inDir)) {
-      throw new IOException("Mkdirs failed to create " + inDir.toString());
-    }
-    UtilsForTests.writeFile(dfs.getNameNode(), conf, 
-                                 new Path(inDir + "/file"), (short) 1);
+    fileSys = FileSystem.get(conf);
     // start mr cluster
     JobConf jtConf = new JobConf();
     jtConf.setInt("mapred.max.tracker.blacklists", 1);
+
     mr = new MiniMRCluster(3, fileSys.getUri().toString(),
                            1, null, hosts, jtConf);
 
@@ -78,21 +66,19 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     JobConf mrConf = mr.createJobConf();
     JobConf job = new JobConf(mrConf);
     job.setInt("mapred.max.tracker.failures", 1);
-    job.setNumMapTasks(30);
+    job.setNumMapTasks(6);
     job.setNumReduceTasks(0);
     job.setMapperClass(FailOnHostMapper.class);
-    job.setMapOutputKeyClass(Text.class);
-    job.setMapOutputValueClass(Text.class);
+    job.setMapOutputKeyClass(NullWritable.class);
+    job.setMapOutputValueClass(NullWritable.class);
     job.setOutputFormat(NullOutputFormat.class);
-    job.setInputFormat(RandomInputFormat.class);
-    FileInputFormat.setInputPaths(job, inDir);
-    FileOutputFormat.setOutputPath(job, outDir);
+    job.setInputFormat(TestMapCollection.FakeIF.class);
     
     // run the job
     JobClient jc = new JobClient(mrConf);
     RunningJob running = JobClient.runJob(job);
     assertEquals("Job failed", JobStatus.SUCCEEDED, running.getJobState());
-    assertEquals("Didn't blacklist the host", 1, 
+    assertEquals("Did not blacklist the host", 1, 
       jc.getClusterStatus().getBlacklistedTrackers());
     assertEquals("Fault count should be 1", 1, mr.getFaultCount(hosts[0]));
 
@@ -103,5 +89,8 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     assertEquals("Didn't blacklist the host", 1,
       jc.getClusterStatus().getBlacklistedTrackers());
     assertEquals("Fault count should be 1", 1, mr.getFaultCount(hosts[0]));
+
+    if (fileSys != null) { fileSys.close(); }
+    if (mr!= null) { mr.shutdown(); }
   }
 }
