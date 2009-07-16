@@ -45,5 +45,15 @@ interface MRConstants {
    */
   public static final String RAW_MAP_OUTPUT_LENGTH = "Raw-Map-Output-Length";
 
+  /**
+   * The map task from which the map output data is being transferred
+   */
+  public static final String FROM_MAP_TASK = "from-map-task";
+  
+  /**
+   * The reduce task number for which this map output is being transferred
+   */
+  public static final String FOR_REDUCE_TASK = "for-reduce-task";
+  
   public static final String WORKDIR = "work";
 }
