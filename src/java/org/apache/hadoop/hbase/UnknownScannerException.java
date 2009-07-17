@@ -21,7 +21,10 @@ package org.apache.hadoop.hbase;
 
 
 /**
- * Thrown if a region server is passed an unknown scanner id
+ * Thrown if a region server is passed an unknown scanner id.
+ * Usually means the client has take too long between checkins and so the
+ * scanner lease on the serverside has expired OR the serverside is closing
+ * down and has cancelled all leases.
  */
 public class UnknownScannerException extends DoNotRetryIOException {
   private static final long serialVersionUID = 993179627856392526L;

@@ -491,6 +491,8 @@ Release 0.20.0 - Unreleased
    HBASE-1662  Tool to run major compaction on catalog regions when hbase is
                shutdown
    HBASE-1665  expose more load information to the client side
+   HBASE-1609  We wait on leases to expire before regionserver goes down.
+               Rather, just let client fail
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

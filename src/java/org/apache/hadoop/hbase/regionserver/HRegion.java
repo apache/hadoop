@@ -30,7 +30,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -198,7 +197,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     new ReentrantReadWriteLock();
   private final Object splitLock = new Object();
   private long minSequenceId;
-  final AtomicInteger activeScannerCount = new AtomicInteger(0);
   
   /**
    * Name of the region info file that resides just under the region directory.
@@ -466,19 +464,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       newScannerLock.writeLock().lock();
       try {
-        // Wait for active scanners to finish. The write lock we hold will
-        // prevent new scanners from being created.
-        synchronized (activeScannerCount) {
-          while (activeScannerCount.get() != 0) {
-            LOG.debug("waiting for " + activeScannerCount.get() +
-                " scanners to finish");
-            try {
-              activeScannerCount.wait();
-            } catch (InterruptedException e) {
-              // continue
-            }
-          }
-        }
         splitsAndClosesLock.writeLock().lock();
         LOG.debug("Updates disabled for region, no outstanding scanners on " +
           this);
@@ -1690,8 +1675,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * It is used to combine scanners from multiple Stores (aka column families).
    */
   class RegionScanner implements InternalScanner {
-    private KeyValueHeap storeHeap;
-    private byte [] stopRow;
+    private final KeyValueHeap storeHeap;
+    private final byte [] stopRow;
     
     RegionScanner(Scan scan) {
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
@@ -1708,10 +1693,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       this.storeHeap = 
         new KeyValueHeap(scanners.toArray(new KeyValueScanner[0]), comparator);
-      
-      // As we have now successfully completed initialization, increment the
-      // activeScanner count.
-      activeScannerCount.incrementAndGet();
     }
 
     /**
@@ -1763,23 +1744,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     }
 
     public void close() {
-      try {
-        storeHeap.close();
-      } finally {
-        synchronized (activeScannerCount) {
-          int count = activeScannerCount.decrementAndGet();
-          if (count < 0) {
-            LOG.error("active scanner count less than zero: " + count +
-                " resetting to zero");
-            activeScannerCount.set(0);
-            count = 0;
-          }
-          if (count == 0) {
-            activeScannerCount.notifyAll();
-          }
-        }
-      }
+      storeHeap.close();
     }
+
     /**
      * 
      * @param scanner to be closed
