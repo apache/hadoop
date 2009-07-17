@@ -54,7 +54,7 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 public class CreateEditsLog {
   static final String BASE_PATH = "/createdViaInjectingInEditsLog";
   static final String EDITS_DIR = "/tmp/EditsLogOut";
-  static String edits_dir = "file:// " + EDITS_DIR; // process as URI
+  static String edits_dir = EDITS_DIR;
   static final public long BLOCK_GENERATION_STAMP =
     GenerationStamp.FIRST_VALID_STAMP;
   
@@ -198,15 +198,8 @@ public class CreateEditsLog {
       }
     }
     
-    FSImage fsImage = null;
-    try {
-      fsImage = new FSImage(new URI(edits_dir));
-    } catch (URISyntaxException use) {
-      throw new IOException("Error while processing URI: " + edits_dir + 
-          ". The full error message was: " + use.getMessage());
-    }
+    FSImage fsImage = new FSImage(editsLogDir.getAbsoluteFile().toURI());
     FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
-
 
     FSEditLog editLog = fsImage.getEditLog();
     editLog.createEditLogFile(fsImage.getFsEditName());

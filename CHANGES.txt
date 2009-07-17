@@ -83,6 +83,9 @@ Trunk (unreleased changes)
     HDFS-445. pread() does not pick up changes to block locations. 
     (Kan Zhang via rangadi) 
 
+    HDFS-463. CreateEditLog utility broken after HDFS-396 (URI for
+    FSImage). (Suresh Srinivas via rangadi)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
