@@ -1472,61 +1472,7 @@ public class TestHRegion extends HBaseTestCase {
       }
     }
   }
-  
-  
-  /**
-   * Test for HBASE-810
-   * @throws Exception
-   */
-  public void testScanSplitOnRegion() throws Exception {
-    byte [] tableName = Bytes.toBytes("testtable");
 
-    HBaseConfiguration hc = initSplit();
-    //Setting up region
-    String method = this.getName();
-    initHRegion(tableName, method, hc, new byte [][] {fam3});
-
-    try {
-      addContent(region, fam3);
-      region.flushcache();
-      final byte [] midkey = region.compactStores();
-      assertNotNull(midkey);
-      Scan scan = new Scan();
-      scan.addFamily(fam3);
-      final InternalScanner s = region.getScanner(scan);
-      final HRegion regionForThread = region;
-
-      Thread splitThread = new Thread() {
-        @Override
-        public void run() {
-          try {
-            split(regionForThread, midkey);
-          } catch (IOException e) {
-            fail("Unexpected exception " + e);
-          } 
-        }
-      };
-      splitThread.start();
-      for(int i = 0; i < 6; i++) {
-        try {
-          Put put = new Put(region.getRegionInfo().getStartKey());
-          put.add(fam3, null, Bytes.toBytes("val"));
-          region.put(put);
-          Thread.sleep(1000);
-        }
-        catch (InterruptedException e) {
-          fail("Unexpected exception " + e);
-        }
-      }
-      s.next(new ArrayList<KeyValue>());
-      s.close();
-    } catch(UnknownScannerException ex) {
-      ex.printStackTrace();
-      fail("Got the " + ex);
-    } 
-  }
-  
-  
   private void assertGet(final HRegion r, final byte [] family, final byte [] k)
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
