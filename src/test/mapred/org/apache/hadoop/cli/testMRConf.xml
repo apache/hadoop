@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="testConf.xsl"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
 
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
 <configuration>
   <!-- Normal mode is test. To run just the commands and dump the output
        to the log, set it to nocompare -->
@@ -53,7 +68,7 @@
       <test-commands>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName dest/test.har /dir0/ </archive-command>
+        <archive-command>-fs NAMENODE -archiveName dest/test.har -p / dir0/ </archive-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmr /dir0 /dest</command>
@@ -61,11 +76,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>archive -archiveName NAME &lt;src&gt;\* &lt;dest&gt;</expected-output>
+          <expected-output>archive -archiveName NAME -p &lt;parent path&gt; &lt;src&gt;\* &lt;dest&gt;</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>Invalid usage.</expected-output>
+          <expected-output>Invalid name for archives. dest/test.har</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -81,8 +96,8 @@
         <command>-fs NAMENODE -touchz /dir0/dir1/file2</command>
         <command>-fs NAMENODE -touchz /dir0/dir2/file1</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /dest</archive-command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /dest</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /dest</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /dest</archive-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmr /dir0 /dest</command>
@@ -90,7 +105,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>Invalid Output.</expected-output>
+          <expected-output>Invalid Output: /dest/dir0.har</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -105,7 +120,7 @@
         <command>-fs NAMENODE -touchz /dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz /dir0/dir1/file2</command>
         <command>-fs NAMENODE -touchz /dir0/dir2/file1</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /dir0/</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /dir0/</archive-command>
         <command>-fs NAMENODE -ls /dir0/</command>
       </test-commands>
       <cleanup-commands>
@@ -147,7 +162,7 @@
         <command>-fs NAMENODE -touchz /dir0/dir1/file2</command>
         <command>-fs NAMENODE -touchz /dir0/dir2/file1</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /file1</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /file1</archive-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmr /*</command>
@@ -155,7 +170,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>Invalid Output.</expected-output>
+          <expected-output>Invalid Output: /file1/dir0.har</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -171,7 +186,7 @@
         <command>-fs NAMENODE -touchz /dir0/dir1/file2</command>
         <command>-fs NAMENODE -touchz /dir0/dir2/file1</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /dest</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /dest</archive-command>
         <command>-fs NAMENODE -rm har:///dest/dir0.har/dir0/file0</command>
       </test-commands>
       <cleanup-commands>
@@ -196,7 +211,7 @@
         <command>-fs NAMENODE -touchz /dir0/dir1/file2</command>
         <command>-fs NAMENODE -touchz /dir0/dir2/file1</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /dest</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /dest</archive-command>
         <command>-fs NAMENODE -mv har:///dest/dir0.har/dir0/file0 har:///dest/dir0.har/dir0/file1</command>
       </test-commands>
       <cleanup-commands>
@@ -225,7 +240,7 @@
         <command>-fs NAMENODE -touchz /dir0/dir1/file2</command>
         <command>-fs NAMENODE -touchz /dir0/dir2/file1</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /dest</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /dest</archive-command>
         <command>-fs NAMENODE -count har:///dest/dir0.har/dir0/file0</command>
       </test-commands>
       <cleanup-commands>
@@ -244,7 +259,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0 </archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p /dir0 </archive-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmr /*</command>
@@ -252,7 +267,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>archive -archiveName NAME &lt;src&gt;\* &lt;dest&gt;</expected-output>
+          <expected-output>archive -archiveName NAME -p &lt;parent path&gt; &lt;src&gt;\* &lt;dest&gt;</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
@@ -266,7 +281,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
-        <archive-command>-fs NAMENODE -archiveName /dir0 /dest </archive-command>
+        <archive-command>-fs NAMENODE -archiveName -p / dir0 /dest </archive-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmr /*</command>
@@ -274,11 +289,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>archive -archiveName NAME &lt;src&gt;\* &lt;dest&gt;</expected-output>
+          <expected-output>archive -archiveName NAME -p &lt;parent path&gt; &lt;src&gt;\* &lt;dest&gt;</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>Invalid usage.</expected-output>
+          <expected-output>archive -archiveName NAME -p &lt;parent path&gt; &lt;src&gt;* &lt;dest&gt;</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -291,7 +306,7 @@
         <command>-fs NAMENODE -touchz /dir0/file1</command>
         <command>-fs NAMENODE -touchz /dir0/file2</command>
         <command>-fs NAMENODE -mkdir /dir1</command>
-        <archive-command>-fs NAMENODE -archiveName test.har /dir0/file* /dir1</archive-command>
+        <archive-command>-fs NAMENODE -archiveName test.har -p / dir0/file* /dir1</archive-command>
         <command>-fs NAMENODE -ls /dir1</command>
       </test-commands>
       <cleanup-commands>
@@ -318,7 +333,7 @@
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -touchz /dir1/file1</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName test.har /dir* /dest </archive-command>
+        <archive-command>-fs NAMENODE -archiveName test.har -p / dir* /dest </archive-command>
         <command>-fs NAMENODE -ls /dest</command>
       </test-commands>
       <cleanup-commands>
@@ -341,7 +356,7 @@
       <test-commands>
         <command>-fs NAMENODE -touchz /file0</command>
         <command>-fs NAMENODE -mkdir /dir1</command>
-        <archive-command>-fs NAMENODE -archiveName test.har /file0 /dir1</archive-command>
+        <archive-command>-fs NAMENODE -archiveName test.har -p / file0 /dir1</archive-command>
         <command>-fs NAMENODE -ls /dir1</command>
       </test-commands>
       <cleanup-commands>
@@ -364,7 +379,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName test.har /dir0 /dest </archive-command>
+        <archive-command>-fs NAMENODE -archiveName test.har -p / dir0 /dest </archive-command>
         <command>-fs NAMENODE -ls /dest</command>
       </test-commands>
       <cleanup-commands>
@@ -385,7 +400,7 @@
     <test> <!-- TESTED -->
       <description>Archive: Invalid Source is specified</description>
       <test-commands>
-        <archive-command>-fs NAMENODE -archiveName test.har file0 /dest </archive-command>
+        <archive-command>-fs NAMENODE -archiveName test.har -p file0 /dest </archive-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmr /*</command>
@@ -403,19 +418,19 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName test /dir0 /dest </archive-command>
+        <archive-command>-fs NAMENODE -archiveName test -p / dir0 /dest </archive-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmr /*</command>
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>archive -archiveName NAME &lt;src&gt;* &lt;dest&gt;</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>archive -archiveName NAME -p &lt;parent path&gt; &lt;src&gt;\* &lt;dest&gt;</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>Invalid name for archives. test</expected-output>
+          <expected-output>archive -archiveName NAME -p &lt;parent path&gt; &lt;src&gt;* &lt;dest&gt;</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -425,7 +440,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName test.har /dir0 /dest </archive-command>
+        <archive-command>-fs NAMENODE -archiveName test.har -p / dir0 /dest </archive-command>
         <command>-fs NAMENODE -rmr /dest/test.har</command>
         <command>-fs NAMENODE -ls /dest/</command>
       </test-commands>
@@ -445,7 +460,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName test.har /dir0 /dest </archive-command>
+        <archive-command>-fs NAMENODE -archiveName test.har -p / dir0 /dest </archive-command>
         <command>-fs NAMENODE -mv /dest/test.har /dest/test1.har</command>
         <command>-fs NAMENODE -ls /dest/</command>
       </test-commands>
@@ -475,7 +490,7 @@
         <command>-fs NAMENODE -touchz /dir0/dir1/file2</command>
         <command>-fs NAMENODE -touchz /dir0/dir2/file1</command>
         <command>-fs NAMENODE -mkdir /dest</command>
-        <archive-command>-fs NAMENODE -archiveName dir0.har /dir0/ /dest</archive-command>
+        <archive-command>-fs NAMENODE -archiveName dir0.har -p / dir0/ /dest</archive-command>
         <command>-fs NAMENODE -lsr har:///dest/dir0.har/dir0</command>
       </test-commands>
       <cleanup-commands>

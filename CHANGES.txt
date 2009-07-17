@@ -114,6 +114,9 @@ Trunk (unreleased changes)
     MAPREDUCE-353. Makes the shuffle read and connection timeouts
     configurable. (Ravi Gummadi via ddas)
 
+    MAPREDUCE-739. Allow relative paths to be created in archives. (Mahadev
+    Konar via cdouglas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
