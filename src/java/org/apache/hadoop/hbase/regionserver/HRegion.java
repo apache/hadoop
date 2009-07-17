@@ -1241,12 +1241,12 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       Integer lid = getLock(lockid, row);
       byte [] now = Bytes.toBytes(System.currentTimeMillis());
       try {
-        for(Map.Entry<byte[], List<KeyValue>> entry : 
-          put.getFamilyMap().entrySet()) {
+        for (Map.Entry<byte[], List<KeyValue>> entry : 
+            put.getFamilyMap().entrySet()) {
           byte [] family = entry.getKey();
           checkFamily(family);
           List<KeyValue> puts = entry.getValue();
-          if(updateKeys(puts, now)) {
+          if (updateKeys(puts, now)) {
             put(family, puts, writeToWAL);
           }
         }

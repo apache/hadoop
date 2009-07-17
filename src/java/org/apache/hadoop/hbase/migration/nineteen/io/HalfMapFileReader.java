@@ -17,15 +17,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.migration.nineteen.io;
 
 import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.migration.nineteen.HStoreKey;
+import org.apache.hadoop.hbase.migration.nineteen.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -44,7 +48,9 @@ import org.apache.hadoop.io.WritableComparable;
  * <p>This file is not splitable.  Calls to {@link #midKey()} return null.
  */
 //TODO should be fixed generic warnings from MapFile methods
-public class HalfMapFileReader extends HBaseMapFile.HBaseReader {
+public class HalfMapFileReader extends BloomFilterMapFile.Reader {
+  private static final Log LOG = LogFactory.getLog(HalfMapFileReader.class);
+
   private final boolean top;
   private final HStoreKey midkey;
   private boolean firstNextCall = true;
@@ -63,7 +69,7 @@ public class HalfMapFileReader extends HBaseMapFile.HBaseReader {
       final WritableComparable<HStoreKey> mk,
       final HRegionInfo hri)
   throws IOException {
-    this(fs, dirName, conf, r, mk, false, hri);
+    this(fs, dirName, conf, r, mk, false, false, hri);
   }
   
   /**
@@ -72,23 +78,25 @@ public class HalfMapFileReader extends HBaseMapFile.HBaseReader {
    * @param conf
    * @param r
    * @param mk
+   * @param filter
    * @param blockCacheEnabled
    * @param hri
    * @throws IOException
    */
   public HalfMapFileReader(final FileSystem fs, final String dirName, 
       final Configuration conf, final Range r,
-      final WritableComparable<HStoreKey> mk,
+      final WritableComparable<HStoreKey> mk, final boolean filter,
       final boolean blockCacheEnabled,
       final HRegionInfo hri)
   throws IOException {
-    super(fs, dirName, conf, blockCacheEnabled, hri);
+    super(fs, dirName, conf, filter, blockCacheEnabled, hri);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't
     // have an actual midkey themselves. No midkey is how we indicate file is
     // not splittable.
     this.midkey = new HStoreKey((HStoreKey)mk);
+    this.midkey.setHRegionInfo(hri);
     // Is it top or bottom half?
     this.top = Reference.isTopFileRegion(r);
   }
@@ -144,6 +152,8 @@ public class HalfMapFileReader extends HBaseMapFile.HBaseReader {
       // greater.
       closest = (key.compareTo(this.midkey) < 0)?
         this.midkey: super.getClosest(key, val);
+      // we know that we just went past the midkey
+      firstNextCall = false;
     } else {
       // We're serving bottom of the file.
       if (key.compareTo(this.midkey) < 0) {
@@ -188,7 +198,12 @@ public class HalfMapFileReader extends HBaseMapFile.HBaseReader {
       }
     }
     boolean result = super.next(key, val);
-    if (!top && key.compareTo(midkey) >= 0) {
+    int cmpresult = key.compareTo(midkey);
+
+    if (top && cmpresult < 0) {
+      LOG.error("BUG BUG BUG. HalfMapFileReader wanted to return key out of range. DANGER");
+      throw new IOException("BUG BUG BUG. HalfMapFileReader wanted to return key out of range. DANGER");
+    } else if (!top && cmpresult >= 0) {
       result = false;
     }
     return result;

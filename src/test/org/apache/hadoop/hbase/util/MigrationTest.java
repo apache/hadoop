@@ -58,14 +58,14 @@ public class MigrationTest extends HBaseTestCase {
    */
   public void testMigration() throws IOException {
     Path rootdir = getUnitTestdir(getName());
-    FileSystem fs = FileSystem.get(this.conf);
     Path hbasedir = loadTestData(fs, rootdir);
     assertTrue(fs.exists(hbasedir));
     Migrate migrator = new Migrate(this.conf);
     Path qualified = fs.makeQualified(hbasedir);
     String uri = qualified.toString();
     this.conf.set("hbase.rootdir", uri);
-    migrator.run(new String [] {"upgrade"});
+    int result = migrator.run(new String [] {"upgrade"});
+    assertEquals(0, result);
   }
   
   /*

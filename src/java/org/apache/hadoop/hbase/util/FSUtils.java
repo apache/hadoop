@@ -281,22 +281,22 @@ public class FSUtils {
       final Path hbaseRootDir)
   throws IOException {
     // Presumes any directory under hbase.rootdir is a table.
-    FileStatus [] directories = fs.listStatus(hbaseRootDir, new DirFilter(fs));
-    for (int i = 0; i < directories.length; i++) {
+    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
+    for (int i = 0; i < tableDirs.length; i++) {
       // Skip the .log directory.  All others should be tables.  Inside a table,
       // there are compaction.dir directories to skip.  Otherwise, all else
       // should be regions.  Then in each region, should only be family
       // directories.  Under each of these, should be one file only.
-      Path d = directories[i].getPath();
+      Path d = tableDirs[i].getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
-      FileStatus [] tablesubdirectories = fs.listStatus(d, new DirFilter(fs));
-      for (int j = 0; j < tablesubdirectories.length; j++) {
-        Path dd = tablesubdirectories[j].getPath();
+      FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
+      for (int j = 0; j < regionDirs.length; j++) {
+        Path dd = regionDirs[j].getPath();
         if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
         // Else its a region name.  Now look in region for families.
-        FileStatus [] familydirectories = fs.listStatus(dd, new DirFilter(fs));
-        for (int k = 0; k < familydirectories.length; k++) {
-          Path family = familydirectories[k].getPath();
+        FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+        for (int k = 0; k < familyDirs.length; k++) {
+          Path family = familyDirs[k].getPath();
           // Now in family make sure only one file.
           FileStatus [] familyStatus = fs.listStatus(family);
           if (familyStatus.length > 1) {
@@ -320,8 +320,8 @@ public class FSUtils {
   public static boolean isPre020FileLayout(final FileSystem fs,
     final Path hbaseRootDir)
   throws IOException {
-    Path mapfiles = new Path(new Path(new Path(hbaseRootDir, "-ROOT-"),
-      "70236052"), "mapfiles");
+    Path mapfiles = new Path(new Path(new Path(new Path(hbaseRootDir, "-ROOT-"),
+      "70236052"), "info"), "mapfiles");
     return fs.exists(mapfiles);
   }
 
@@ -340,22 +340,38 @@ public class FSUtils {
       final Path hbaseRootDir)
   throws IOException {
     // Presumes any directory under hbase.rootdir is a table.
-    FileStatus [] directories = fs.listStatus(hbaseRootDir, new DirFilter(fs));
-    for (int i = 0; i < directories.length; i++) {
+    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
+    for (int i = 0; i < tableDirs.length; i++) {
       // Inside a table, there are compaction.dir directories to skip.
       // Otherwise, all else should be regions.  Then in each region, should
       // only be family directories.  Under each of these, should be a mapfile
       // and info directory and in these only one file.
-      Path d = directories[i].getPath();
+      Path d = tableDirs[i].getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
-      FileStatus [] tablesubdirectories = fs.listStatus(d, new DirFilter(fs));
-      for (int j = 0; j < tablesubdirectories.length; j++) {
-        Path dd = tablesubdirectories[j].getPath();
+      FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
+      for (int j = 0; j < regionDirs.length; j++) {
+        Path dd = regionDirs[j].getPath();
         if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
         // Else its a region name.  Now look in region for families.
-        FileStatus [] familydirectories = fs.listStatus(dd, new DirFilter(fs));
-        for (int k = 0; k < familydirectories.length; k++) {
-          Path family = familydirectories[k].getPath();
+        FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+        for (int k = 0; k < familyDirs.length; k++) {
+          Path family = familyDirs[k].getPath();
+          FileStatus [] infoAndMapfile = fs.listStatus(family);
+          // Assert that only info and mapfile in family dir.
+          if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
+            LOG.debug(family.toString() +
+              " has more than just info and mapfile: " + infoAndMapfile.length);
+            return false;
+          }
+          // Make sure directory named info or mapfile.
+          for (int ll = 0; ll < 2; ll++) {
+            if (infoAndMapfile[ll].getPath().getName().equals("info") ||
+                infoAndMapfile[ll].getPath().getName().equals("mapfiles"))
+              continue;
+            LOG.debug("Unexpected directory name: " +
+              infoAndMapfile[ll].getPath());
+            return false;
+          }
           // Now in family, there are 'mapfile' and 'info' subdirs.  Just
           // look in the 'mapfile' subdir.
           FileStatus [] familyStatus =

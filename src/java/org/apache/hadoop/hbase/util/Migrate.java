@@ -20,12 +20,14 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.FSUtils.DirFilter;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -224,7 +227,7 @@ public class Migrate extends Configured implements Tool {
         System.out.println(msg);
         throw new IOException(msg);
       }
-      rewrite(fs, hbaseRootDir);
+      rewrite(hbaseRootDir);
     }
     LOG.info("Checking filesystem is major compacted");
     // Below check is good for both making sure that we are major compacted
@@ -285,10 +288,57 @@ set to control the master's address (not mandatory).
   
   /*
    * Rewrite all under hbase root dir.
+   * Presumes that {@link FSUtils#isMajorCompactedPre020(FileSystem, Path)}
+   * has been run before this method is called.
    * @param fs
    * @param hbaseRootDir
+   * @throws IOException
    */
-  private void rewrite(final FileSystem fs, final Path hbaseRootDir) {
+  private void rewrite(final Path hbaseRootDir) throws IOException {
+    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
+    for (int i = 0; i < tableDirs.length; i++) {
+      // Inside a table, there are compaction.dir directories to skip.
+      // Otherwise, all else should be regions.  Then in each region, should
+      // only be family directories.  Under each of these, should be a mapfile
+      // and info directory and in these only one file.
+      Path d = tableDirs[i].getPath();
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+      FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
+      for (int j = 0; j < regionDirs.length; j++) {
+        Path dd = regionDirs[j].getPath();
+        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+        // Else its a region name.  Now look in region for families.
+        FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+        for (int k = 0; k < familyDirs.length; k++) {
+          Path family = familyDirs[k].getPath();
+          Path mfdir = new Path(family, "mapfiles");
+          FileStatus [] mfs = fs.listStatus(mfdir);
+          if (mfs.length > 1) {
+            throw new IOException("Should only be one directory in: " + mfdir);
+          }
+          Path mf = mfs[0].getPath();
+          Path infofile = new Path(new Path(family, "info"), mf.getName());
+          rewrite(this.fs, mf, infofile);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Rewrite the passed mapfile
+   * @param mapfiledir
+   * @param infofile
+   * @throws IOExcepion
+   */
+  public static void rewrite (final FileSystem fs, final Path mapfiledir,
+      final Path infofile)
+  throws IOException {
+    if (!fs.exists(mapfiledir)) {
+      throw new FileNotFoundException(mapfiledir.toString());
+    }
+    if (!fs.exists(infofile)) {
+      throw new FileNotFoundException(infofile.toString());
+    }
     
   }
 

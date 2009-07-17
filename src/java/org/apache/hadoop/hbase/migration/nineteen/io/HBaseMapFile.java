@@ -17,16 +17,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.migration.nineteen.io;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.migration.nineteen.HStoreKey;
+import org.apache.hadoop.io.MapFile;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -72,10 +73,10 @@ public class HBaseMapFile extends MapFile {
     public HBaseReader(FileSystem fs, String dirName, Configuration conf,
         boolean blockCacheEnabled, HRegionInfo hri)
     throws IOException {
-      super(fs, dirName, new HStoreKey.HStoreKeyComparator(), 
+      super(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), 
           conf, false); // defer opening streams
       this.blockCacheEnabled = blockCacheEnabled;
-      open(fs, dirName, new HStoreKey.HStoreKeyComparator(), conf);
+      open(fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri), conf);
       
       // Force reading of the mapfile index by calling midKey. Reading the
       // index will bring the index into memory over here on the client and
@@ -86,29 +87,8 @@ public class HBaseMapFile extends MapFile {
       // resources (See HADOOP-2341). midKey() goes to index. Does not seek.
       midKey();
     }
-
-    @Override
-    protected org.apache.hadoop.hbase.io.SequenceFile.Reader createDataFileReader(
-        FileSystem fs, Path dataFile, Configuration conf)
-    throws IOException {
-      if (!blockCacheEnabled) {
-        return super.createDataFileReader(fs, dataFile, conf);
-      }
-      final int blockSize = conf.getInt("hbase.hstore.blockCache.blockSize",
-        64 * 1024);
-      return new SequenceFile.Reader(fs, dataFile,  conf) {
-        @Override
-        protected FSDataInputStream openFile(FileSystem fs, Path file,
-          int bufferSize, long length)
-        throws IOException {
-          return new FSDataInputStream(new BlockFSInputStream(
-                  super.openFile(fs, file, bufferSize, length), length,
-                  blockSize));
-        }
-      };
-    }
   }
-  
+
   public static class HBaseWriter extends MapFile.Writer {
     /**
      * @param conf
@@ -121,7 +101,7 @@ public class HBaseMapFile extends MapFile {
     public HBaseWriter(Configuration conf, FileSystem fs, String dirName,
         SequenceFile.CompressionType compression, final HRegionInfo hri)
     throws IOException {
-      super(conf, fs, dirName, new HStoreKey.HStoreKeyComparator(),
+      super(conf, fs, dirName, new HStoreKey.HStoreKeyWritableComparator(hri),
          VALUE_CLASS, compression);
       // Default for mapfiles is 128.  Makes random reads faster if we
       // have more keys indexed and we're not 'next'-ing around in the
