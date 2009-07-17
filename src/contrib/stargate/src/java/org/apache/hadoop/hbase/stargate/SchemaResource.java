@@ -23,18 +23,18 @@ package org.apache.hadoop.hbase.stargate;
 import java.io.IOException;
 import java.util.Map;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.xml.namespace.QName;
 
 import org.apache.commons.logging.Log;
@@ -66,12 +66,12 @@ public class SchemaResource implements Constants {
 
   private HTableDescriptor getTableSchema() throws IOException,
       TableNotFoundException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool(this.table);
-    HTable table = pool.get();
+    HTablePool pool = RESTServlet.getInstance().getTablePool();
+    HTable table = pool.getTable(this.table);
     try {
       return table.getTableDescriptor();
     } finally {
-      pool.put(table);
+      pool.putTable(table);
     }
   }
 

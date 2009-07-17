@@ -36,8 +36,8 @@ public class RowResultGenerator extends ResultGenerator {
 
   public RowResultGenerator(String tableName, RowSpec rowspec)
       throws IllegalArgumentException, IOException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool(tableName); 
-    HTable table = pool.get();
+    HTablePool pool = RESTServlet.getInstance().getTablePool(); 
+    HTable table = pool.getTable(tableName);
     try {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
@@ -56,7 +56,7 @@ public class RowResultGenerator extends ResultGenerator {
         valuesI = result.list().iterator();
       }
     } finally {
-      pool.put(table);
+      pool.putTable(table);
     }
   }
 

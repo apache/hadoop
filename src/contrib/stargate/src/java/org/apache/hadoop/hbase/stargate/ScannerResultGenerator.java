@@ -46,8 +46,8 @@ public class ScannerResultGenerator extends ResultGenerator {
 
   public ScannerResultGenerator(String tableName, RowSpec rowspec)
       throws IllegalArgumentException, IOException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool(tableName); 
-    HTable table = pool.get();
+    HTablePool pool = RESTServlet.getInstance().getTablePool(); 
+    HTable table = pool.getTable(tableName);
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {
@@ -70,7 +70,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       id = Long.toString(System.currentTimeMillis()) +
              Integer.toHexString(scanner.hashCode());
     } finally {
-      pool.put(table);
+      pool.putTable(table);
     }
   }
 

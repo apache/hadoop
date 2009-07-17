@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
 
@@ -45,6 +44,7 @@ public class RESTServlet extends ServletAdaptor {
   private static RESTServlet instance;
 
   private final HBaseConfiguration conf;
+  private final HTablePool pool;
   protected Map<String,Integer> maxAgeMap = 
     Collections.synchronizedMap(new HashMap<String,Integer>());
 
@@ -65,16 +65,17 @@ public class RESTServlet extends ServletAdaptor {
    */
   public RESTServlet() throws IOException {
     this.conf = new HBaseConfiguration();
+    this.pool = new HTablePool(conf, 10);
   }
 
 
   /**
-   * Get or create a table pool for the given table. 
+   * Get a table pool for the given table. 
    * @param name the table name
    * @return the table pool
    */
-  protected HTablePool getTablePool(String name) {
-    return HTablePool.getPool(conf, Bytes.toBytes(name));
+  protected HTablePool getTablePool() {
+    return pool;
   }
 
   /**
@@ -95,11 +96,10 @@ public class RESTServlet extends ServletAdaptor {
     if (i != null) {
       return i.intValue();
     }
-    HTablePool pool = this.getTablePool(tableName);
-    HTable table = pool.get();
-    if (table != null) {
+    HTable table = pool.getTable(tableName);
+    try {
       int maxAge = DEFAULT_MAX_AGE;
-      for (HColumnDescriptor family:
+      for (HColumnDescriptor family : 
           table.getTableDescriptor().getFamilies()) {
         int ttl = family.getTimeToLive();
         if (ttl < 0) {
@@ -111,8 +111,9 @@ public class RESTServlet extends ServletAdaptor {
       }
       maxAgeMap.put(tableName, maxAge);
       return maxAge;
+    } finally {
+      pool.putTable(table);
     }
-    return DEFAULT_MAX_AGE;
   }
 
   /**

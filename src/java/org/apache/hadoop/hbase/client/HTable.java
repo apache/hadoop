@@ -38,11 +38,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
@@ -108,7 +103,7 @@ public class HTable {
   }
 
   /**
-   * Creates an object to access a HBase table
+   * Creates an object to access a HBase table.
    * 
    * @param conf configuration object
    * @param tableName name of the table
@@ -116,15 +111,19 @@ public class HTable {
    */
   public HTable(HBaseConfiguration conf, final byte [] tableName)
   throws IOException {
-    this.connection = HConnectionManager.getConnection(conf);
     this.tableName = tableName;
+    if (conf == null) {
+      this.scannerTimeout = 0;
+      this.connection = null;
+      return;
+    }
+    this.connection = HConnectionManager.getConnection(conf);
     this.scannerTimeout =
       conf.getInt("hbase.regionserver.lease.period", 60 * 1000);
     this.configuration = conf;
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
     this.writeBuffer = new ArrayList<Put>();
-    this.writeBufferSize = 
-      this.configuration.getLong("hbase.client.write.buffer", 2097152);
+    this.writeBufferSize = conf.getLong("hbase.client.write.buffer", 2097152);
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 1);

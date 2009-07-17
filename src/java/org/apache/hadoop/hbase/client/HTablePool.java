@@ -17,136 +17,108 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-/* using a stack instead of a FIFO might have some small positive performance
-   impact wrt. cache */
-import java.util.Deque;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * A simple pool of HTable instances.
- * <p>
- * The default pool size is 10.
+ * A simple pool of HTable instances.<p>
+ * 
+ * Each HTablePool acts as a pool for all tables.  To use, instantiate an
+ * HTablePool and use {@link #getTable(String)} to get an HTable from the pool.
+ * Once you are done with it, return it to the pool with {@link #putTable(HTable)}.<p>
+ * 
+ * A pool can be created with a <i>maxSize</i> which defines the most HTable
+ * references that will ever be retained for each table.  Otherwise the default
+ * is {@link Integer#MAX_VALUE}.<p>
  */
 public class HTablePool {
-  private static final Map<byte[], HTablePool> poolMap = 
-    new TreeMap<byte[], HTablePool>(Bytes.BYTES_COMPARATOR);
-
+  private final Map<String, LinkedList<HTable>> tables = 
+      Collections.synchronizedMap(new HashMap<String, LinkedList<HTable>>());
   private final HBaseConfiguration config;
-  private final byte[] tableName;
-  private final Deque<HTable> pool;
   private final int maxSize;
 
   /**
-   * Get a shared table pool.
-   * @param config
-   * @param tableName the table name
-   * @return the table pool
+   * Default Constructor.  Default HBaseConfiguration and no limit on pool size.
    */
-  public static HTablePool getPool(HBaseConfiguration config, 
-      byte[] tableName) {
-    return getPool(config, tableName, 10);
+  public HTablePool() {
+    this(new HBaseConfiguration(), Integer.MAX_VALUE);
   }
 
   /**
-   * Get a shared table pool.
-   * @param tableName the table name
-   * @return the table pool
+   * Constructor to set maximum versions and use the specified configuration.
+   * @param config configuration
+   * @param maxSize maximum number of references to keep for each table
    */
-  public static HTablePool getPool(byte[] tableName) {
-    return getPool(new HBaseConfiguration(), tableName, 10);
-  }
-
-  /**
-   * Get a shared table pool.
-   * <p>
-   * NOTE: <i>maxSize</i> is advisory. If the pool does not yet exist, a new
-   * shared pool will be allocated with <i>maxSize</i> as the size limit.
-   * However, if the shared pool already exists, and was created with a 
-   * different (or default) value for <i>maxSize</i>, it will not be changed.
-   * @param config HBase configuration
-   * @param tableName the table name
-   * @param maxSize the maximum size of the pool
-   * @return the table pool
-   */
-  public static HTablePool getPool(HBaseConfiguration config, byte[] tableName,
-      int maxSize) {
-    synchronized (poolMap) {
-      HTablePool pool = poolMap.get(tableName);
-      if (pool == null) {
-        pool = new HTablePool(config, tableName, maxSize);
-        poolMap.put(tableName, pool);
-      }
-      return pool;
-    }
-  }
-
-  /**
-   * Constructor 
-   * @param config HBase configuration
-   * @param tableName the table name
-   * @param maxSize maximum pool size
-   */
-  public HTablePool(HBaseConfiguration config, byte[] tableName,
-      int maxSize) {
+  public HTablePool(HBaseConfiguration config, int maxSize) {
     this.config = config;
-    this.tableName = tableName;
     this.maxSize = maxSize;
-    this.pool = new ArrayDeque<HTable>(this.maxSize);
   }
 
   /**
-   * Constructor
-   * @param tableName the table name
-   * @param maxSize maximum pool size
+   * Get a reference to the specified table from the pool.<p>
+   * 
+   * Create a new one if one is not available.
+   * @param tableName
+   * @return a reference to the specified table
+   * @throws RuntimeException if there is a problem instantiating the HTable
    */
-  public HTablePool(byte[] tableName, int maxSize) {
-    this(new HBaseConfiguration(), tableName, maxSize);
-  }
-
-  /**
-   * Constructor
-   * @param tableName the table name
-   */
-  public HTablePool(byte[] tableName) {
-    this(new HBaseConfiguration(), tableName, 10);
-  }
-
-  /**
-   * Get a HTable instance, possibly from the pool, if one is available.
-   * @return HTable a HTable instance
-   * @throws IOException
-   */
-  public HTable get() throws IOException {
-    synchronized (pool) {
-      // peek then pop inside a synchronized block avoids the overhead of a
-      // NoSuchElementException
-      HTable table = pool.peek();
-      if (table != null) {
-        return pool.pop();
-      }
+  public HTable getTable(String tableName) {
+    LinkedList<HTable> queue = tables.get(tableName);
+    if(queue == null) {
+      queue = new LinkedList<HTable>();
+      tables.put(tableName, queue);
+      return newHTable(tableName);
     }
-    return new HTable(config, tableName);
+    HTable table;
+    synchronized(queue) {
+      table = queue.poll();
+    }
+    if(table == null) {
+      return newHTable(tableName);
+    }
+    return table;
   }
 
   /**
-   * Return a HTable instance to the pool.
-   * @param table a HTable instance
+   * Get a reference to the specified table from the pool.<p>
+   * 
+   * Create a new one if one is not available.
+   * @param tableName
+   * @return a reference to the specified table
+   * @throws RuntimeException if there is a problem instantiating the HTable
    */
-  public void put(HTable table) {
-    synchronized (pool) {
-      if (pool.size() < maxSize) {
-        pool.push(table);
-      }
+  public HTable getTable(byte [] tableName) {
+    return getTable(Bytes.toString(tableName));
+  }
+
+  /**
+   * Puts the specified HTable back into the pool.<p>
+   * 
+   * If the pool already contains <i>maxSize</i> references to the table,
+   * then nothing happens.
+   * @param table
+   */
+  public void putTable(HTable table) {
+    LinkedList<HTable> queue = tables.get(Bytes.toString(table.getTableName()));
+    synchronized(queue) {
+      if(queue.size() >= maxSize) return;
+      queue.add(table);
     }
   }
 
+  private HTable newHTable(String tableName) {
+    try {
+      return new HTable(config, Bytes.toBytes(tableName));
+    } catch(IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
 }

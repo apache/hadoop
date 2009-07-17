@@ -23,23 +23,22 @@ package org.apache.hadoop.hbase.stargate;
 import java.io.IOException;
 import java.util.List;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
@@ -136,14 +135,14 @@ public class RowResource implements Constants {
   private Response update(CellSetModel model, boolean replace) {
     HTablePool pool;
     try {
-      pool = RESTServlet.getInstance().getTablePool(this.table);
+      pool = RESTServlet.getInstance().getTablePool();
     } catch (IOException e) {
       throw new WebApplicationException(e, 
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
     HTable table = null;
     try {
-      table = pool.get();
+      table = pool.getTable(this.table);
       for (RowModel row: model.getRows()) {
         Put put = new Put(row.getKey());
         for (CellModel cell: row.getCells()) {
@@ -167,7 +166,7 @@ public class RowResource implements Constants {
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {
-        pool.put(table);
+        pool.putTable(table);
       }
     }
   }
@@ -176,7 +175,7 @@ public class RowResource implements Constants {
       boolean replace) {
     HTablePool pool;
     try {
-      pool = RESTServlet.getInstance().getTablePool(this.table);
+      pool = RESTServlet.getInstance().getTablePool();
     } catch (IOException e) {
       throw new WebApplicationException(e, 
                   Response.Status.INTERNAL_SERVER_ERROR);
@@ -212,7 +211,7 @@ public class RowResource implements Constants {
       } else {
         put.add(parts[0], parts[1], message);
       }
-      table = pool.get();
+      table = pool.getTable(this.table);
       table.put(put);
       if (LOG.isDebugEnabled()) {
         LOG.debug("PUT " + put.toString());
@@ -224,7 +223,7 @@ public class RowResource implements Constants {
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {
-        pool.put(table);
+        pool.putTable(table);
       }
     }
   }
@@ -287,14 +286,14 @@ public class RowResource implements Constants {
     }
     HTablePool pool;
     try {
-      pool = RESTServlet.getInstance().getTablePool(this.table);
+      pool = RESTServlet.getInstance().getTablePool();
     } catch (IOException e) {
       throw new WebApplicationException(e, 
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
     HTable table = null;
     try {
-      table = pool.get();
+      table = pool.getTable(this.table);
       table.delete(delete);
       if (LOG.isDebugEnabled()) {
         LOG.debug("DELETE " + delete.toString());
@@ -305,7 +304,7 @@ public class RowResource implements Constants {
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {
-        pool.put(table);
+        pool.putTable(table);
       }
     }
     return Response.ok().build();
