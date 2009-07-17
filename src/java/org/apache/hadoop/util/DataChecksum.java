@@ -51,7 +51,7 @@ public class DataChecksum implements Checksum {
       return new DataChecksum( CHECKSUM_NULL, new ChecksumNull(), 
                                CHECKSUM_NULL_SIZE, bytesPerChecksum );
     case CHECKSUM_CRC32 :
-      return new DataChecksum( CHECKSUM_CRC32, new CRC32(), 
+      return new DataChecksum( CHECKSUM_CRC32, new PureJavaCrc32(), 
                                CHECKSUM_CRC32_SIZE, bytesPerChecksum );
     default:
       return null;  

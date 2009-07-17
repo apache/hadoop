@@ -475,6 +475,9 @@ Trunk (unreleased changes)
     HADOOP-6142. Update documentation and use of harchives for relative paths
     added in MAPREDUCE-739. (Mahadev Konar via cdouglas)
 
+    HADOOP-6148. Implement a fast, pure Java CRC32 calculator which outperforms
+    java.util.zip.CRC32.  (Todd Lipcon and Scott Carey via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
