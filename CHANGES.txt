@@ -478,6 +478,8 @@ Trunk (unreleased changes)
     HADOOP-6148. Implement a fast, pure Java CRC32 calculator which outperforms
     java.util.zip.CRC32.  (Todd Lipcon and Scott Carey via szetszwo)
 
+    HADOOP-6146. Upgrade to JetS3t version 0.7.1. (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
