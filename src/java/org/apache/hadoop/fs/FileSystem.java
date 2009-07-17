@@ -500,8 +500,9 @@ public abstract class FileSystem extends Configured implements Closeable {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getDefault(),
-        overwrite, bufferSize, replication, blockSize, progress);
+    return this.create(f, FsPermission.getDefault(), overwrite ? EnumSet
+        .of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE), bufferSize,
+        replication, blockSize, progress);
   }
 
   /**

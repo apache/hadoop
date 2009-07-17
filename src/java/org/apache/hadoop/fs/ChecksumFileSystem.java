@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.zip.CRC32;
 
 import org.apache.commons.logging.Log;
@@ -360,14 +361,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      boolean overwrite, int bufferSize, short replication, long blockSize,
+      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     Path parent = f.getParent();
     if (parent != null && !mkdirs(parent)) {
       throw new IOException("Mkdirs failed to create " + parent);
     }
     final FSDataOutputStream out = new FSDataOutputStream(
-        new ChecksumFSOutputSummer(this, f, overwrite, bufferSize, replication,
+        new ChecksumFSOutputSummer(this, f, flag.contains(CreateFlag.OVERWRITE), bufferSize, replication,
             blockSize, progress), null);
     if (permission != null) {
       setPermission(f, permission);

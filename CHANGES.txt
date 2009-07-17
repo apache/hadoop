@@ -880,6 +880,9 @@ Trunk (unreleased changes)
     HADOOP-6137. Fix project specific test-patch requirements
     (Giridharan Kesavan)
 
+    HADOOP-6138. Eliminate the depracate warnings introduced by H-5438.
+    (He Yongqiang via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

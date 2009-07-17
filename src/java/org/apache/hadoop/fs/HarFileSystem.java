@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -580,7 +581,7 @@ public class HarFileSystem extends FilterFileSystem {
   
   public FSDataOutputStream create(Path f,
       FsPermission permission,
-      boolean overwrite,
+      EnumSet<CreateFlag> flag,
       int bufferSize,
       short replication,
       long blockSize,
