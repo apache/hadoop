@@ -472,6 +472,9 @@ Trunk (unreleased changes)
     HADOOP-6099. The RPC module can be configured to not send period pings.
     The default behaviour of sending periodic pings remain unchanged. (dhruba)
 
+    HADOOP-6142. Update documentation and use of harchives for relative paths
+    added in MAPREDUCE-739. (Mahadev Konar via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
