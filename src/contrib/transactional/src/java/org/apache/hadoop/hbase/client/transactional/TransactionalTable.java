@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -41,6 +42,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TransactionalTable extends HTable {
 
+  private static final byte RPC_CODE = 100;
+  static {
+    HBaseRPC.addToMap(TransactionalRegionInterface.class, RPC_CODE);
+  }
+  
   /**
    * @param conf
    * @param tableName

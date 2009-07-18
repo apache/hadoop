@@ -274,6 +274,8 @@ Release 0.20.0 - Unreleased
    HBASE-1058  Disable 1058 on catalog tables
    HBASE-1583  Start/Stop of large cluster untenable
    HBASE-1668  hbase-1609 broke TestHRegion.testScanSplitOnRegion unit test
+   HBASE-1669  need dynamic extensibility of HBaseRPC code maps and interface
+               lists (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
