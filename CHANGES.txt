@@ -13,6 +13,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    MAPREDUCE-546. Provide sample fair scheduler config file in conf/ and use
+    it by default if no other config file is specified. (Matei Zaharia)
+
     MAPREDUCE-551. Preemption support in the Fair Scheduler. (Matei Zaharia)
 
     HADOOP-5887. Sqoop should create tables in Hive metastore after importing

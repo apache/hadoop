@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -87,7 +89,11 @@ public class PoolManager {
   // below half its fair share for this long, it is allowed to preempt tasks.
   private long fairSharePreemptionTimeout = Long.MAX_VALUE;
   
-  private String allocFile; // Path to XML file containing allocations
+  private Object allocFile; // Path to XML file containing allocations. This
+                            // is either a URL to specify a classpath resource
+                            // (if the fair-scheduler.xml on the classpath is
+                            // used) or a String to specify an absolute path (if
+                            // mapred.fairscheduler.allocation.file is used).
   private String poolNameProperty; // Jobconf property to use for determining a
                                    // job's pool name (default: user.name)
   
@@ -103,8 +109,14 @@ public class PoolManager {
         "mapred.fairscheduler.poolnameproperty", "user.name");
     this.allocFile = conf.get("mapred.fairscheduler.allocation.file");
     if (allocFile == null) {
-      LOG.warn("No mapred.fairscheduler.allocation.file given in jobconf - " +
-          "the fair scheduler will not use any queues.");
+      // No allocation file specified in jobconf. Use the default allocation
+      // file, fair-scheduler.xml, looking for it on the classpath.
+      allocFile = new Configuration().getResource("fair-scheduler.xml");
+      if (allocFile == null) {
+        LOG.error("The fair scheduler allocation file fair-scheduler.xml was "
+            + "not found on the classpath, and no other config file is given "
+            + "through mapred.fairscheduler.allocation.file.");
+      }
     }
     reloadAllocs();
     lastSuccessfulReload = System.currentTimeMillis();
@@ -133,8 +145,16 @@ public class PoolManager {
     if (time > lastReloadAttempt + ALLOC_RELOAD_INTERVAL) {
       lastReloadAttempt = time;
       try {
-        File file = new File(allocFile);
-        long lastModified = file.lastModified();
+        // Get last modified time of alloc file depending whether it's a String
+        // (for a path name) or an URL (for a classloader resource)
+        long lastModified;
+        if (allocFile instanceof String) {
+          File file = new File((String) allocFile);
+          lastModified = file.lastModified();
+        } else { // allocFile is an URL
+          URLConnection conn = ((URL) allocFile).openConnection();
+          lastModified = conn.getLastModified();
+        }
         if (lastModified > lastSuccessfulReload &&
             time > lastModified + ALLOC_RELOAD_WAIT) {
           reloadAllocs();
@@ -197,7 +217,12 @@ public class PoolManager {
       DocumentBuilderFactory.newInstance();
     docBuilderFactory.setIgnoringComments(true);
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-    Document doc = builder.parse(new File(allocFile));
+    Document doc;
+    if (allocFile instanceof String) {
+      doc = builder.parse(new File((String) allocFile));
+    } else {
+      doc = builder.parse(allocFile.toString());
+    }
     Element root = doc.getDocumentElement();
     if (!"allocations".equals(root.getTagName()))
       throw new AllocationConfigurationException("Bad fair scheduler config " + 
