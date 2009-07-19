@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred.jobcontrol;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,7 +52,7 @@ public class Job extends ControlledJob {
   @SuppressWarnings("unchecked")
   public Job(JobConf jobConf, ArrayList<?> dependingJobs) throws IOException {
     super(new org.apache.hadoop.mapreduce.Job(jobConf), 
-          (ArrayList<ControlledJob>) dependingJobs);
+          (List<ControlledJob>) dependingJobs);
   }
 
   public Job(JobConf conf) throws IOException {

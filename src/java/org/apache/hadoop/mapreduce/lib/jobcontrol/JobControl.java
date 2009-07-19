@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.jobcontrol;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob.State;
@@ -73,7 +74,7 @@ public class JobControl implements Runnable {
     this.runnerState = ThreadState.READY;
   }
 	
-  private static ArrayList<ControlledJob> toArrayList(
+  private static List<ControlledJob> toList(
                    Map<String, ControlledJob> jobs) {
     ArrayList<ControlledJob> retv = new ArrayList<ControlledJob>();
     synchronized (jobs) {
@@ -87,33 +88,33 @@ public class JobControl implements Runnable {
   /**
    * @return the jobs in the waiting state
    */
-  public ArrayList<ControlledJob> getWaitingJobList() {
-    return toArrayList(this.waitingJobs);
+  public List<ControlledJob> getWaitingJobList() {
+    return toList(this.waitingJobs);
   }
 	
   /**
    * @return the jobs in the running state
    */
-  public ArrayList<ControlledJob> getRunningJobList() {
-    return toArrayList(this.runningJobs);
+  public List<ControlledJob> getRunningJobList() {
+    return toList(this.runningJobs);
   }
 	
   /**
    * @return the jobs in the ready state
    */
-  public ArrayList<ControlledJob> getReadyJobsList() {
-    return toArrayList(this.readyJobs);
+  public List<ControlledJob> getReadyJobsList() {
+    return toList(this.readyJobs);
   }
 	
   /**
    * @return the jobs in the success state
    */
-  public ArrayList<ControlledJob> getSuccessfulJobList() {
-    return toArrayList(this.successfulJobs);
+  public List<ControlledJob> getSuccessfulJobList() {
+    return toList(this.successfulJobs);
   }
 	
-  public ArrayList<ControlledJob> getFailedJobList() {
-    return toArrayList(this.failedJobs);
+  public List<ControlledJob> getFailedJobList() {
+    return toList(this.failedJobs);
   }
 	
   private String getNextJobID() {

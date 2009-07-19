@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,14 +55,14 @@ public class ControlledJob {
   // some info for human consumption, e.g. the reason why the job failed
   private String message;
   // the jobs the current job depends on
-  private ArrayList<ControlledJob> dependingJobs;
+  private List<ControlledJob> dependingJobs;
 	
   /** 
    * Construct a job.
    * @param job a mapreduce job to be executed.
    * @param dependingJobs an array of jobs the current job depends on
    */
-  public ControlledJob(Job job, ArrayList<ControlledJob> dependingJobs) 
+  public ControlledJob(Job job, List<ControlledJob> dependingJobs) 
       throws IOException {
     this.job = job;
     this.dependingJobs = dependingJobs;
@@ -188,7 +189,7 @@ public class ControlledJob {
   /**
    * @return the depending jobs of this job
    */
-  public ArrayList<ControlledJob> getDependentJobs() {
+  public List<ControlledJob> getDependentJobs() {
     return this.dependingJobs;
   }
   

@@ -11,6 +11,9 @@ Trunk (unreleased changes)
     and org.apache.hadoop.examples.AggregateWordHistogram to use new 
     mapreduce api. (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-245. Change Job and jobcontrol classes to use the List interface
+    rather than ArrayList in APIs. (Tom White via cdouglas)
+
   NEW FEATURES
 
     MAPREDUCE-546. Provide sample fair scheduler config file in conf/ and use

@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -77,7 +78,7 @@ public class TestMapReduceJobControl extends HadoopTestCase {
    */
   private JobControl createDependencies(Configuration conf, Job job1) 
       throws Exception {
-    ArrayList<ControlledJob> dependingJobs = null;
+    List<ControlledJob> dependingJobs = null;
     cjob1 = new ControlledJob(job1, dependingJobs);
     Job job2 = MapReduceTestUtil.createCopyJob(conf, outdir_2, indir);
     cjob2 = new ControlledJob(job2, dependingJobs);
