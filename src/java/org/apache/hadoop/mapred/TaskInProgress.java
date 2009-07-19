@@ -1253,4 +1253,8 @@ class TaskInProgress {
   TreeMap<TaskAttemptID, String> getActiveTasks() {
     return activeTasks;
   }
+
+  int getNumSlotsRequired() {
+    return numSlotsRequired;
+  }
 }

@@ -48,6 +48,22 @@ public class JobStatus implements Writable, Cloneable {
   public static final int PREP = 4;
   public static final int KILLED = 5;
 
+  private static final String UNKNOWN = "UNKNOWN";
+  private static final String[] runStates =
+      {UNKNOWN, "RUNNING", "SUCCEEDED", "FAILED", "PREP", "KILLED"};
+  
+  /**
+   * Helper method to get human-readable state of the job.
+   * @param state job state
+   * @return human-readable state of the job
+   */
+  public static String getJobRunState(int state) {
+    if (state < 1 || state >= runStates.length) {
+      return UNKNOWN;
+    }
+    return runStates[state];
+  }
+  
   private JobID jobid;
   private float mapProgress;
   private float reduceProgress;
