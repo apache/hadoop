@@ -59,8 +59,6 @@ import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.sun.corba.se.spi.ior.MakeImmutable;
-
 
 /**
  * a archive creation utility.
