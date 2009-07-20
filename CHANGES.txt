@@ -480,6 +480,8 @@ Trunk (unreleased changes)
 
     HADOOP-6146. Upgrade to JetS3t version 0.7.1. (tomwhite)
 
+    HADOOP-6161. Add get/setEnum methods to Configuration. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
