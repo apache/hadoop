@@ -276,6 +276,7 @@ Release 0.20.0 - Unreleased
    HBASE-1668  hbase-1609 broke TestHRegion.testScanSplitOnRegion unit test
    HBASE-1669  need dynamic extensibility of HBaseRPC code maps and interface
                lists (Clint Morgan via Stack)
+   HBASE-1359  After a large truncating table HBase becomes unresponsive
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
