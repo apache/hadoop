@@ -233,3 +233,6 @@ Trunk (unreleased changes)
     MAPREDUCE-771. Fix scheduling of setup and cleanup tasks to use
     free slots instead of tasks for scheduling. (yhemanth)
 
+    MAPREDUCE-430. Fix bug related to Task getting stuck due to
+    OutOfMemoryErrors. (Amar Kamat via sharad)
+
