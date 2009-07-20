@@ -2570,24 +2570,13 @@ public class TaskTracker
 
 
   /** 
-   * A reduce-task failed to shuffle the map-outputs. Kill the task.
-   */  
-  public synchronized void shuffleError(TaskAttemptID taskId, String message) 
-  throws IOException { 
-    LOG.fatal("Task: " + taskId + " - Killed due to Shuffle Failure: " + message);
-    TaskInProgress tip = runningTasks.get(taskId);
-    tip.reportDiagnosticInfo("Shuffle Error: " + message);
-    purgeTask(tip, true);
-  }
-
-  /** 
    * A child task had a local filesystem error. Kill the task.
    */  
-  public synchronized void fsError(TaskAttemptID taskId, String message) 
+  public synchronized void taskError(TaskAttemptID taskId, String message) 
   throws IOException {
-    LOG.fatal("Task: " + taskId + " - Killed due to FSError: " + message);
+    LOG.fatal("Task: " + taskId + " - Killed due to : " + message);
     TaskInProgress tip = runningTasks.get(taskId);
-    tip.reportDiagnosticInfo("FSError: " + message);
+    tip.reportDiagnosticInfo(message);
     purgeTask(tip, true);
   }
 
