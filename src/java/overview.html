@@ -50,11 +50,13 @@
   <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>
   for how to up the limit.  Also, as of 0.18.x hadoop, datanodes have an upper-bound
       on the number of threads they will support (<code>dfs.datanode.max.xcievers</code>).
-      Default is 256.  If loading lots of data into hbase, up this limit on your
-      hadoop cluster.
+      Default is 256.  Up this limit on your hadoop cluster.
       <li>The clocks on cluster members should be in basic alignments.  Some skew is tolerable but
       wild skew can generate odd behaviors.  Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
       on your cluster, or an equivalent.</li>
+      <li>HBase servers put up 10 listeners for incoming connections by default.  Up this
+      number if you have a dataset of any substance by setting hbase.regionserver.handler.count
+      in your hbase-site.xml.</li>
       <li>This is a list of patches we recommend you apply to your running Hadoop cluster:
       <ul>
       <li><a hef="https://issues.apache.org/jira/browse/HADOOP-4681">HADOOP-4681 <i>"DFSClient block read failures cause open DFSInputStream to become unusable"</i></a>. This patch will help with the ever-popular, "No live nodes contain current block".
