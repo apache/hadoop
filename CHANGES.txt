@@ -230,3 +230,6 @@ Trunk (unreleased changes)
     MAPREDUCE-18. Puts some checks for cross checking whether a reduce
     task gets the correct shuffle data. (Ravi Gummadi via ddas)
 
+    MAPREDUCE-771. Fix scheduling of setup and cleanup tasks to use
+    free slots instead of tasks for scheduling. (yhemanth)
+
