@@ -126,6 +126,9 @@ Trunk (unreleased changes)
     MAPREDUCE-739. Allow relative paths to be created in archives. (Mahadev
     Konar via cdouglas)
 
+    MAPREDUCE-772. Merge HADOOP-4010 changes to LineRecordReader into mapreduce
+    package. (Abdul Qadeer via cdouglas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
