@@ -19,9 +19,11 @@
 package org.apache.hadoop.mapred.lib.db;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.InputFormat;
@@ -46,15 +48,16 @@ public class DBInputFormat<T  extends DBWritable>
    * key and DBWritables as value.  
    */
   protected class DBRecordReader extends
-      org.apache.hadoop.mapreduce.lib.db.DBInputFormat<T>.DBRecordReader
+      org.apache.hadoop.mapreduce.lib.db.DBRecordReader<T>
       implements RecordReader<LongWritable, T> {
     /**
      * @param split The InputSplit to read data for
      * @throws SQLException 
      */
     protected DBRecordReader(DBInputSplit split, Class<T> inputClass, 
-      JobConf job) throws SQLException {
-     super(split, inputClass, job);
+        JobConf job, Connection conn, DBConfiguration dbConfig, String cond,
+        String [] fields, String table) throws SQLException {
+      super(split, inputClass, job, conn, dbConfig, cond, fields, table);
     }
 
     /** {@inheritDoc} */
@@ -74,6 +77,45 @@ public class DBInputFormat<T  extends DBWritable>
     /** {@inheritDoc} */
     public boolean next(LongWritable key, T value) throws IOException {
       return super.next(key, value);
+    }
+  }
+
+  /**
+   * A RecordReader implementation that just passes through to a wrapped
+   * RecordReader built with the new API.
+   */
+  private static class DBRecordReaderWrapper<T extends DBWritable>
+      implements RecordReader<LongWritable, T> {
+
+    private org.apache.hadoop.mapreduce.lib.db.DBRecordReader<T> rr;
+    
+    public DBRecordReaderWrapper(
+        org.apache.hadoop.mapreduce.lib.db.DBRecordReader<T> inner) {
+      this.rr = inner;
+    }
+
+    public void close() throws IOException {
+      rr.close();
+    }
+
+    public LongWritable createKey() {
+      return new LongWritable();
+    }
+
+    public T createValue() {
+      return rr.createValue();
+    }
+
+    public float getProgress() throws IOException {
+      return rr.getProgress();
+    }
+    
+    public long getPos() throws IOException {
+      return rr.getPos();
+    }
+
+    public boolean next(LongWritable key, T value) throws IOException {
+      return rr.next(key, value);
     }
   }
 
@@ -116,13 +158,11 @@ public class DBInputFormat<T  extends DBWritable>
   public RecordReader<LongWritable, T> getRecordReader(InputSplit split,
       JobConf job, Reporter reporter) throws IOException {
 
-    Class inputClass = super.getDBConf().getInputClass();
-    try {
-      return new DBRecordReader((DBInputSplit) split, inputClass, job);
-    }
-    catch (SQLException ex) {
-      throw new IOException(ex.getMessage());
-    }
+    // wrap the DBRR in a shim class to deal with API differences.
+    return new DBRecordReaderWrapper<T>(
+        (org.apache.hadoop.mapreduce.lib.db.DBRecordReader<T>) 
+        createDBRecordReader(
+          (org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit) split, job));
   }
 
   /** {@inheritDoc} */
