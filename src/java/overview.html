@@ -37,10 +37,10 @@
   </li>
       <li>HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
       Clients and Servers now must know where their ZooKeeper Quorum locations before
-      they can do anything else.
-      In basic standalone and pseudo-distributed modes, HBase manages a ZooKeeper instance
-      for you but it is required that you run a ZooKeeper Quorum when running HBase
-      fully distributed (More on this below). The Zookeeper addition changes
+      they can do anything else.  By default, HBase will manage a single ZooKeeper instance for you.
+      In basic standalone and pseudo-distributed modes this is usually enough, but for fully
+      distributed mode you should configure a ZooKeeper quorum (more info below).
+      The Zookeeper addition changes
       how some core HBase configuration is done.
       </li>
   <li>Hosts must be able to resolve the fully-qualified domain name of the master.</li>
