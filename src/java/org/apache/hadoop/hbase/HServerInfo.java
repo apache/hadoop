@@ -38,7 +38,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private long startCode;
   private HServerLoad load;
   private int infoPort;
-  private transient volatile String serverName = null;
+  private String serverName = null;
   private String name;
 
   /** default constructor - used by Writable */

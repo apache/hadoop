@@ -280,19 +280,20 @@ public class HRegionServer implements HConstants, HRegionInterface,
   /**
    * Creates all of the state that needs to be reconstructed in case we are
    * doing a restart. This is shared between the constructor and restart().
+   * Both call it.
    * @throws IOException
    */
   private void reinitialize() throws IOException {
-    abortRequested = false;
-    stopRequested.set(false);
-    shutdownHDFS.set(true);
+    this.abortRequested = false;
+    this.stopRequested.set(false);
+    this.shutdownHDFS.set(true);
 
     // Server to handle client requests
     this.server = HBaseRPC.getServer(this, address.getBindAddress(), 
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
     this.server.setErrorHandler(this);
-    // Address is givin a default IP for the moment. Will be changed after
+    // Address is giving a default IP for the moment. Will be changed after
     // calling the master.
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(address.getBindAddress(),
@@ -302,11 +303,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
     }
-
     reinitializeThreads();
-
     reinitializeZooKeeper();
-
     int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
     for(int i = 0; i < nbBlocks; i++)  {
       reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
@@ -387,11 +385,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   private void restart() {
     LOG.info("Restarting Region Server");
-
     shutdownHDFS.set(false);
     abort();
     Threads.shutdown(regionServerThread);
-
     boolean done = false;
     while (!done) {
       try {
@@ -401,7 +397,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
         LOG.debug("Error trying to reinitialize ZooKeeper", e);
       }
     }
-
     Thread t = new Thread(this);
     String name = regionServerThread.getName();
     t.setName(name);
@@ -717,10 +712,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       // Master may have sent us a new address with the other configs.
       // Update our address in this case. See HBASE-719
-      if(conf.get("hbase.regionserver.address") != null)
-        serverInfo.setServerAddress(new HServerAddress
-            (conf.get("hbase.regionserver.address"), 
-            serverInfo.getServerAddress().getPort()));
+      String hra = conf.get("hbase.regionserver.address");
+      if (address != null) {
+        HServerAddress hsa = new HServerAddress (hra,
+          this.serverInfo.getServerAddress().getPort());
+        LOG.info("Master passed us address to use. Was=" +
+          this.serverInfo.getServerAddress() + ", Now=" + hra);
+        this.serverInfo.setServerAddress(hsa);
+      }
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included.  Set 'fs.default.name'
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
@@ -1043,7 +1042,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   private HLog setupHLog() throws RegionServerRunningException,
     IOException {
     
-    Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(serverInfo));
+    Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(this.serverInfo));
     if (LOG.isDebugEnabled()) {
       LOG.debug("Log dir " + logdir);
     }
@@ -1184,7 +1183,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
           LOG.info("Failed binding http info server to port: " + port);
           port++;
           // update HRS server info
-          serverInfo.setInfoPort(port);
+          this.serverInfo.setInfoPort(port);
         }
       } 
     }
@@ -1204,7 +1203,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // a thread.
     this.server.start();
     LOG.info("HRegionServer started at: " +
-        serverInfo.getServerAddress().toString());
+      this.serverInfo.getServerAddress().toString());
   }
 
   /*
@@ -1351,12 +1350,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
         boolean startCodeOk = false; 
         while(!startCodeOk) {
           serverInfo.setStartCode(System.currentTimeMillis());
-          startCodeOk = zooKeeperWrapper.writeRSLocation(serverInfo);
+          startCodeOk = zooKeeperWrapper.writeRSLocation(this.serverInfo);
           if(!startCodeOk) {
            LOG.debug("Start code already taken, trying another one");
           }
         }
-        result = this.hbaseMaster.regionServerStartup(serverInfo);
+        result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
       } catch (Leases.LeaseStillHeldException e) {
         LOG.info("Lease " + e.getName() + " already held on master. Check " +
@@ -1898,8 +1897,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
       try {
         checkOpen();
       } catch (IOException e) {
-        // If checkOpen failed, cancel this lease; filesystem is gone or we're
-        // closing or something.
+        // If checkOpen failed, server not running or filesystem gone, 
+        // cancel this lease; filesystem is gone or we're closing or something.
         this.leases.cancelLease(scannerName);
         throw e;
       }
@@ -1932,11 +1931,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
       synchronized(scanners) {
         s = scanners.remove(scannerName);
       }
-      if(s == null) {
-        throw new UnknownScannerException(scannerName);
+      if (s != null) {
+        s.close();
+        this.leases.cancelLease(scannerName);
       }
-      s.close();
-      this.leases.cancelLease(scannerName);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -2113,13 +2111,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
         region.releaseRowLock(r);
       }
     }
-  }
-
-  /**
-   * @return Info on this server.
-   */
-  public HServerInfo getServerInfo() {
-    return this.serverInfo;
   }
 
   /** @return the info server */
@@ -2471,8 +2462,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public HServerInfo getHServerInfo() throws IOException {
     return serverInfo;
   }
-  
-  
+
   /**
    * @param args
    */

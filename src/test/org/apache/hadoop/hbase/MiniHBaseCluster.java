@@ -112,7 +112,11 @@ public class MiniHBaseCluster implements HConstants {
    */
   public void abortRegionServer(int serverNumber) {
     HRegionServer server = getRegionServer(serverNumber);
-    LOG.info("Aborting " + server.getServerInfo().toString());
+    try {
+      LOG.info("Aborting " + server.getHServerInfo().toString());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
     server.abort();
   }
 

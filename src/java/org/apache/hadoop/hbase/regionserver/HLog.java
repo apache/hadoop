@@ -1004,6 +1004,7 @@ public class HLog implements HConstants, Syncable {
       splits = new ArrayList<Path>(logWriters.size());
       for (WriterAndPath wap : logWriters.values()) {
         wap.w.close();
+        LOG.debug("Closed " + wap.p);
         splits.add(wap.p);
       }
     }

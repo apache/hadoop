@@ -183,10 +183,9 @@ class ServerManager implements HConstants {
     if (storedInfo != null && !master.closed.get()) {
       // The startup message was from a known server with the same name.
       // Timeout the old one right away.
-      HServerAddress root = master.getRootRegionLocation();
+      master.getRootRegionLocation();
       try {
-        master.toDoQueue.put(
-            new ProcessServerShutdown(master, storedInfo));
+        master.toDoQueue.put(new ProcessServerShutdown(master, storedInfo));
       } catch (InterruptedException e) {
         LOG.error("Insertion into toDoQueue was interrupted", e);
       }
@@ -261,7 +260,7 @@ class ServerManager implements HConstants {
     }
 
     if (master.shutdownRequested.get()) {
-      if(quiescedServers.get() >= serversToServerInfo.size()) {
+      if (quiescedServers.get() >= serversToServerInfo.size()) {
         // If the only servers we know about are meta servers, then we can
         // proceed with shutdown
         LOG.info("All user tables quiesced. Proceeding with shutdown");
@@ -290,13 +289,13 @@ class ServerManager implements HConstants {
     HServerInfo storedInfo = serversToServerInfo.get(info.getServerName());
     if (storedInfo == null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("received server report from unknown server: " +
-            info.getServerName());
+        LOG.debug("Received report from unknown server -- telling it " +
+          "to " + CALL_SERVER_STARTUP + ": " + info.getServerName());
       }
 
       // The HBaseMaster may have been restarted.
       // Tell the RegionServer to start over and call regionServerStartup()
-      return new HMsg[]{CALL_SERVER_STARTUP};
+      return new HMsg[] {CALL_SERVER_STARTUP};
     } else if (storedInfo.getStartCode() != info.getStartCode()) {
       // This state is reachable if:
       //
@@ -317,7 +316,7 @@ class ServerManager implements HConstants {
         serversToServerInfo.notifyAll();
       }
       
-      return new HMsg[]{REGIONSERVER_STOP};
+      return new HMsg[] {REGIONSERVER_STOP};
     } else {
       return processRegionServerAllsWell(info, mostLoadedRegions, msgs);
     }
@@ -372,13 +371,12 @@ class ServerManager implements HConstants {
    * @return
    * @throws IOException
    */
-  private HMsg[] processRegionServerAllsWell(HServerInfo serverInfo, HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
+  private HMsg[] processRegionServerAllsWell(HServerInfo serverInfo,
+      final HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
   throws IOException {
-
     // Refresh the info object and the load information
     serverAddressToServerInfo.put(serverInfo.getServerAddress(), serverInfo);
     serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
-
     HServerLoad load = serversToLoad.get(serverInfo.getServerName());
     if (load != null) {
       this.master.getMetrics().incrementRequests(load.getNumberOfRequests());
@@ -436,8 +434,9 @@ class ServerManager implements HConstants {
     int openingCount = 0;
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
-      LOG.info("Received " + incomingMsgs[i] + " from " +
-        serverInfo.getServerName() + "; " + (i + 1) + " of " + incomingMsgs.length);
+      LOG.info("Processing " + incomingMsgs[i] + " from " +
+        serverInfo.getServerName() + "; " + (i + 1) + " of " +
+        incomingMsgs.length);
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
           openingCount++;

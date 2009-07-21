@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
+  import="java.io.IOException"
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
   import="org.apache.hadoop.hbase.regionserver.HRegion"
@@ -10,7 +11,12 @@
   import="org.apache.hadoop.hbase.HServerLoad"
   import="org.apache.hadoop.hbase.HRegionInfo" %><%
   HRegionServer regionServer = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
-  HServerInfo serverInfo = regionServer.getServerInfo();
+  HServerInfo serverInfo = null;
+  try {
+    serverInfo = regionServer.getHServerInfo();
+  } catch (IOException e) {
+    e.printStackTrace();
+  }
   RegionServerMetrics metrics = regionServer.getMetrics();
   Collection<HRegionInfo> onlineRegions = regionServer.getSortedOnlineRegionInfos();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;

@@ -463,7 +463,7 @@ public class StoreFile implements HConstants {
    * @param mc True if this file is product of a major compaction
    * @throws IOException
    */
-  static void appendMetadata(final HFile.Writer w, final long maxSequenceId,
+  public static void appendMetadata(final HFile.Writer w, final long maxSequenceId,
     final boolean mc)
   throws IOException {
     w.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));

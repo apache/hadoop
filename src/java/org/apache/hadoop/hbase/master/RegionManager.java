@@ -1369,8 +1369,8 @@ class RegionManager implements HConstants {
       int numSrvRegs = srvLoad.getNumberOfRegions();
       if (numSrvRegs > avgLoadPlusSlop) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Server is overloaded. Server load: " + numSrvRegs +
-              " avg: " + avgLoad + ", slop: " + this.slop);
+          LOG.debug("Server is overloaded: load=" + numSrvRegs +
+              ", avg=" + avgLoad + ", slop=" + this.slop);
         }
         return numSrvRegs - (int)Math.ceil(avgLoad);
       }

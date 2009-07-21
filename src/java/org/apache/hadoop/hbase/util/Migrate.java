@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.commons.cli.Options;
@@ -34,10 +33,17 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.migration.nineteen.io.BloomFilterMapFile;
+import org.apache.hadoop.hbase.migration.nineteen.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.FSUtils.DirFilter;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -244,16 +250,7 @@ public class Migrate extends Configured implements Tool {
     // TOOD: Verify all has been brought over from old to new layout.
     final MetaUtils utils = new MetaUtils(this.conf);
     try {
-      // TODO: Set the .META. and -ROOT- to flush at 16k?  32k?
-      // TODO: Enable block cache on all tables
-      // TODO: Rewrite MEMCACHE_FLUSHSIZE as MEMSTORE_FLUSHSIZE – name has changed. 
-      // TODO: Remove tableindexer 'index' attribute index from TableDescriptor (See HBASE-1586) 
-      // TODO: TODO: Move of in-memory parameter from table to column family (from HTD to HCD). 
-      // TODO: Purge isInMemory, etc., methods from HTD as part of migration. 
-      // TODO: Clean up old region log files (HBASE-698) 
-      
-      updateVersions(utils.getRootRegion().getRegionInfo());
-      enableBlockCache(utils.getRootRegion().getRegionInfo());
+      rewriteHRegionInfo(utils.getRootRegion().getRegionInfo());
       // Scan the root region
       utils.scanRootRegion(new MetaUtils.ScannerListener() {
         public boolean processRow(HRegionInfo info)
@@ -262,8 +259,7 @@ public class Migrate extends Configured implements Tool {
             migrationNeeded = true;
             return false;
           }
-          updateVersions(utils.getRootRegion(), info);
-          enableBlockCache(utils.getRootRegion(), info);
+          rewriteHRegionInfo(utils.getRootRegion(), info);
           return true;
         }
       });
@@ -316,9 +312,7 @@ set to control the master's address (not mandatory).
           if (mfs.length > 1) {
             throw new IOException("Should only be one directory in: " + mfdir);
           }
-          Path mf = mfs[0].getPath();
-          Path infofile = new Path(new Path(family, "info"), mf.getName());
-          rewrite(this.fs, mf, infofile);
+          rewrite(this.conf, this.fs, mfs[0].getPath());
         }
       }
     }
@@ -326,20 +320,60 @@ set to control the master's address (not mandatory).
   
   /**
    * Rewrite the passed mapfile
-   * @param mapfiledir
-   * @param infofile
+   * @param fs
+   * @param mf
    * @throws IOExcepion
    */
-  public static void rewrite (final FileSystem fs, final Path mapfiledir,
-      final Path infofile)
+  public static void rewrite (final HBaseConfiguration conf, final FileSystem fs,
+    final Path mf)
   throws IOException {
-    if (!fs.exists(mapfiledir)) {
-      throw new FileNotFoundException(mapfiledir.toString());
+    Path familydir = mf.getParent().getParent();
+    Path regiondir = familydir.getParent();
+    Path basedir = regiondir.getParent();
+    if (HStoreFile.isReference(mf)) {
+      throw new IOException(mf.toString() + " is Reference");
     }
-    if (!fs.exists(infofile)) {
-      throw new FileNotFoundException(infofile.toString());
+    HStoreFile hsf = new HStoreFile(conf, fs, basedir,
+      Integer.parseInt(regiondir.getName()),
+      Bytes.toBytes(familydir.getName()), Long.parseLong(mf.getName()), null);
+    BloomFilterMapFile.Reader src = hsf.getReader(fs, false, false);
+    HFile.Writer tgt = StoreFile.getWriter(fs, familydir);
+    // From old 0.19 HLogEdit.
+    ImmutableBytesWritable deleteBytes =
+      new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes("UTF-8"));
+
+    try {
+      while (true) {
+        HStoreKey key = new HStoreKey();
+        ImmutableBytesWritable value = new ImmutableBytesWritable();
+        if (!src.next(key, value)) {
+          break;
+        }
+        byte [][] parts = KeyValue.parseColumn(key.getColumn());
+        KeyValue kv = deleteBytes.equals(value)?
+            new KeyValue(key.getRow(), parts[0], parts[1], 
+                key.getTimestamp(), KeyValue.Type.Delete):
+              new KeyValue(key.getRow(), parts[0], parts[1], 
+                key.getTimestamp(), value.get());
+         tgt.append(kv);
+      }
+      long seqid = hsf.loadInfo(fs);
+      StoreFile.appendMetadata(tgt, seqid, 
+          hsf.isMajorCompaction());
+      // Success, delete src.
+      src.close();
+      tgt.close();
+      hsf.delete();
+      // If we rewrote src, delete mapfiles and info dir.
+      fs.delete(mf.getParent(), true);
+      fs.delete(new Path(familydir, "info"), true);
+      LOG.info("Rewrote " + mf.toString() + " as " + tgt.toString());
+    } catch (IOException e) {
+      // If error, delete tgt.
+      src.close();
+      tgt.close();
+      fs.delete(tgt.getPath(), true);
     }
-    
   }
 
   /*
@@ -347,9 +381,9 @@ set to control the master's address (not mandatory).
    * @param mr
    * @param oldHri
    */
-  void enableBlockCache(HRegion mr, HRegionInfo oldHri)
+  void rewriteHRegionInfo(HRegion mr, HRegionInfo oldHri)
   throws IOException {
-    if (!enableBlockCache(oldHri)) {
+    if (!rewriteHRegionInfo(oldHri)) {
       return;
     }
     Put put = new Put(oldHri.getRegionName());
@@ -363,7 +397,7 @@ set to control the master's address (not mandatory).
    * @param hri Update versions.
    * @param true if we changed value
    */
-  private boolean enableBlockCache(final HRegionInfo hri) {
+  private boolean rewriteHRegionInfo(final HRegionInfo hri) {
     boolean result = false;
     HColumnDescriptor hcd =
       hri.getTableDesc().getFamily(HConstants.CATALOG_FAMILY);
@@ -374,6 +408,17 @@ set to control the master's address (not mandatory).
     // Set blockcache enabled.
     hcd.setBlockCacheEnabled(true);
     return true;
+    
+    // TODO: Rewrite MEMCACHE_FLUSHSIZE as MEMSTORE_FLUSHSIZE – name has changed. 
+    // TODO: Remove tableindexer 'index' attribute index from TableDescriptor (See HBASE-1586) 
+    // TODO: TODO: Move of in-memory parameter from table to column family (from HTD to HCD). 
+    // TODO: Purge isInMemory, etc., methods from HTD as part of migration. 
+    
+
+    // TODO: Set the .META. and -ROOT- to flush at 16k?  32k?
+    // TODO: Enable block cache on all tables
+
+    // TODO: Clean up old region log files (HBASE-698) 
   }
 
 

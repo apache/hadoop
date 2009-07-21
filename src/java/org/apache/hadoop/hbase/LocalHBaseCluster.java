@@ -195,9 +195,11 @@ public class LocalHBaseCluster implements HConstants {
     while (regionServerThread.isAlive()) {
       try {
         LOG.info("Waiting on " +
-          regionServerThread.getRegionServer().getServerInfo().toString());
+          regionServerThread.getRegionServer().getHServerInfo().toString());
         regionServerThread.join();
       } catch (InterruptedException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
         e.printStackTrace();
       }
     }

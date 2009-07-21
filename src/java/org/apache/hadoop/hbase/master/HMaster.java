@@ -719,7 +719,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
-    return serverManager.regionServerReport(serverInfo, msgs, 
+    return serverManager.regionServerReport(serverInfo, msgs,
       mostLoadedRegions);
   }
 

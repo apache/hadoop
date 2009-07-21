@@ -23,6 +23,8 @@ import java.io.DataInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +45,9 @@ import org.apache.hadoop.io.SequenceFile;
 /**
  * A HStore data file.  HStores usually have one or more of these files.  They
  * are produced by flushing the memcache to disk.
+ * 
+ * <p>This one has been doctored to be used in migrations.  Private and
+ * protecteds have been made public, etc.
  *
  * <p>Each HStore maintains a bunch of different data files. The filename is a
  * mix of the parent dir, the region name, the column name, and a file
@@ -110,14 +115,14 @@ public class HStoreFile implements HConstants {
    * @param colFamily name of the column family
    * @param fileId file identifier
    * @param ref Reference to another HStoreFile.
-   * @param hri The region info for this file (HACK HBASE-868). TODO: Fix.
+   * @param encodedName Encoded name.
    * @throws IOException
    */
-  HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
-      final HRegionInfo hri, byte [] colFamily, long fileId,
+  public HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
+      final int encodedName, byte [] colFamily, long fileId,
       final Reference ref)
   throws IOException {
-    this(conf, fs, basedir, hri, colFamily, fileId, ref, false);
+    this(conf, fs, basedir, encodedName, colFamily, fileId, ref, false);
   }
   
   /**
@@ -127,20 +132,21 @@ public class HStoreFile implements HConstants {
    * @param colFamily name of the column family
    * @param fileId file identifier
    * @param ref Reference to another HStoreFile.
-   * @param hri The region info for this file (HACK HBASE-868). TODO: Fix.
+   * @param encodedName Encoded name.
    * @param mc Try if this file was result of a major compression.
    * @throws IOException
    */
   HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
-      final HRegionInfo hri, byte [] colFamily, long fileId,
+      final int encodedName, byte [] colFamily, long fileId,
       final Reference ref, final boolean mc)
   throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.basedir = basedir;
-    this.encodedRegionName = hri.getEncodedName();
+    this.encodedRegionName = encodedName;
     this.colFamily = colFamily;
-    this.hri = hri;
+    // NOT PASSED IN MIGRATIONS
+    this.hri = null;
     
     long id = fileId;
     if (id == -1) {
@@ -164,6 +170,27 @@ public class HStoreFile implements HConstants {
     return reference != null;
   }
   
+
+  private static final Pattern REF_NAME_PARSER =
+    Pattern.compile("^(\\d+)(?:\\.(.+))?$");
+
+  /**
+   * @param p Path to check.
+   * @return True if the path has format of a HStoreFile reference.
+   */
+  public static boolean isReference(final Path p) {
+    return isReference(p, REF_NAME_PARSER.matcher(p.getName()));
+  }
+
+  private static boolean isReference(final Path p, final Matcher m) {
+    if (m == null || !m.matches()) {
+      LOG.warn("Failed match of store file name " + p.toString());
+      throw new RuntimeException("Failed match of store file name " +
+          p.toString());
+    }
+    return m.groupCount() > 1 && m.group(2) != null;
+  }
+
   Reference getReference() {
     return reference;
   }
@@ -316,7 +343,7 @@ public class HStoreFile implements HConstants {
    * @return The sequence id contained in the info file
    * @throws IOException
    */
-  long loadInfo(final FileSystem filesystem) throws IOException {
+  public long loadInfo(final FileSystem filesystem) throws IOException {
     Path p = null;
     if (isReference()) {
       p = getInfoFilePath(reference.getEncodedRegionName(),

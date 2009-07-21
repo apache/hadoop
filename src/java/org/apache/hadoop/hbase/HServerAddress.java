@@ -163,7 +163,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   }
 
   public void write(DataOutput out) throws IOException {
-    if(address == null) {
+    if (address == null) {
       out.writeUTF("");
       out.writeInt(0);
       

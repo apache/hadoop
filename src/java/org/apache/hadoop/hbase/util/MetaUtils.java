@@ -195,8 +195,7 @@ public class MetaUtils {
 
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    InternalScanner rootScanner = 
-      rootRegion.getScanner(scan);
+    InternalScanner rootScanner = this.rootRegion.getScanner(scan);
 
     try {
       List<KeyValue> results = new ArrayList<KeyValue>();
