@@ -25,6 +25,7 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
+import org.apache.hadoop.mapreduce.TaskType;
 
 /** 
  * Utilities used in unit test.
@@ -94,7 +95,7 @@ public class FakeObjectUtilities {
     
     private TaskAttemptID findTask(String trackerName, String trackerHost,
         Collection<TaskInProgress> nonRunningTasks, 
-        Collection<TaskInProgress> runningTasks)
+        Collection<TaskInProgress> runningTasks, TaskType taskType)
     throws IOException {
       TaskInProgress tip = null;
       Iterator<TaskInProgress> iter = nonRunningTasks.iterator();
@@ -110,7 +111,8 @@ public class FakeObjectUtilities {
       }
       if (tip == null) {
         if (getJobConf().getSpeculativeExecution()) {
-          tip = findSpeculativeTask(runningTasks, trackerName, trackerHost);
+          tip = findSpeculativeTask(runningTasks, trackerName, trackerHost,
+              taskType);
         }
       }
       if (tip != null) {
@@ -131,14 +133,14 @@ public class FakeObjectUtilities {
     throws IOException {
       return findTask(trackerName, 
           JobInProgress.convertTrackerNameToHostName(trackerName),
-          nonLocalMaps, nonLocalRunningMaps);
+          nonLocalMaps, nonLocalRunningMaps, TaskType.MAP);
     }
 
     public TaskAttemptID findReduceTask(String trackerName) 
     throws IOException {
       return findTask(trackerName, 
           JobInProgress.convertTrackerNameToHostName(trackerName),
-          nonRunningReduces, runningReduces);
+          nonRunningReduces, runningReduces, TaskType.REDUCE);
     }
 
     public void finishTask(TaskAttemptID taskId) {

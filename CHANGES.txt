@@ -239,3 +239,6 @@ Trunk (unreleased changes)
     MAPREDUCE-430. Fix bug related to Task getting stuck due to
     OutOfMemoryErrors. (Amar Kamat via sharad)
 
+    MAPREDUCE-717. Fixes some corner case issues in speculative 
+    execution heuristics. (Devaraj Das)
+

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +78,7 @@ class TaskInProgress {
   private double progress = 0;
   private double oldProgressRate;
   private String state = "";
-  private long dispatchTime = 0;   // most recent time task attempt given to TT
+  private long lastDispatchTime = 0;   // most recent time task attempt given to TT
   private long execStartTime = 0;  // when we started first task-attempt
   private long execFinishTime = 0;
   private int completes = 0;
@@ -127,6 +128,9 @@ class TaskInProgress {
   private TaskAttemptID taskToCommit;
   
   private Counters counters = new Counters();
+  
+  private HashMap<TaskAttemptID, Long> dispatchTimeMap = 
+    new HashMap<TaskAttemptID, Long>();
   
 
   /**
@@ -237,15 +241,24 @@ class TaskInProgress {
   /**
    * Return the dispatch time
    */
-  public long getDispatchTime(){
-    return this.dispatchTime;
+  public long getDispatchTime(TaskAttemptID taskid){
+    Long l = dispatchTimeMap.get(taskid);
+    if (l != null) {
+      return l.longValue();
+    }
+    return 0;
+  }
+
+  public long getLastDispatchTime(){
+    return this.lastDispatchTime;
   }
   
   /**
    * Set the dispatch time
    */
-  public void setDispatchTime(long disTime){
-    this.dispatchTime = disTime;
+  public void setDispatchTime(TaskAttemptID taskid, long disTime){
+    dispatchTimeMap.put(taskid, disTime);
+    this.lastDispatchTime = disTime;
   }
   
   /**
@@ -581,8 +594,9 @@ class TaskInProgress {
     // but finishTime has to be updated.
     if (!isCleanupAttempt(taskid)) {
       taskStatuses.put(taskid, status);
-      if ((isMapTask() && job.hasSpeculativeMaps()) || 
-          (!isMapTask() && job.hasSpeculativeReduces())) {
+      //we don't want to include setup tasks in the task execution stats
+      if (!isJobSetupTask() && ((isMapTask() && job.hasSpeculativeMaps()) || 
+          (!isMapTask() && job.hasSpeculativeReduces()))) {
         long now = JobTracker.getClock().getTime();
         double oldProgRate = getOldProgressRate();
         double currProgRate = getCurrentProgressRate(now);
@@ -906,7 +920,7 @@ class TaskInProgress {
     }
     return (!skipping && isRunnable() && isRunning() &&
         activeTasks.size() <= MAX_TASK_EXECS &&
-        currentTime - dispatchTime >= SPECULATIVE_LAG &&
+        currentTime - lastDispatchTime >= SPECULATIVE_LAG &&
         completes == 0 && !isOnlyCommitPending() &&
         (taskStats.mean() - getCurrentProgressRate(currentTime) >
               taskStats.std() * job.getSlowTaskThreshold()));
@@ -939,13 +953,13 @@ class TaskInProgress {
 
     //keep track of the last time we started an attempt at this TIP
     //used to calculate the progress rate of this TIP
-    setDispatchTime(JobTracker.getClock().getTime());
+    setDispatchTime(taskid, JobTracker.getClock().getTime());
  
     //set this the first time we run a taskAttempt in this TIP
     //each Task attempt has its own TaskStatus, which tracks that
     //attempts execStartTime, thus this startTime is TIP wide.
     if (0 == execStartTime){
-      setExecStartTime(dispatchTime);
+      setExecStartTime(lastDispatchTime);
     }
     return addRunningTask(taskid, taskTracker);
   }
@@ -1139,12 +1153,14 @@ class TaskInProgress {
   public double getCurrentProgressRate(long currentTime) {
     double bestProgressRate = 0;
     for (TaskStatus ts : taskStatuses.values()){
-      double progressRate = ts.getProgress()/Math.max(1,
-          currentTime - dispatchTime);
-      if ((ts.getRunState() == TaskStatus.State.RUNNING  || 
-          ts.getRunState() == TaskStatus.State.SUCCEEDED) &&
-          progressRate > bestProgressRate){
-        bestProgressRate = progressRate;
+      if (ts.getRunState() == TaskStatus.State.RUNNING  || 
+          ts.getRunState() == TaskStatus.State.SUCCEEDED ||
+          ts.getRunState() == TaskStatus.State.COMMIT_PENDING) {
+        double progressRate = ts.getProgress()/Math.max(1,
+            currentTime - getDispatchTime(ts.getTaskID()));
+        if (progressRate > bestProgressRate){
+          bestProgressRate = progressRate;
+        }
       }
     }
     return bestProgressRate;

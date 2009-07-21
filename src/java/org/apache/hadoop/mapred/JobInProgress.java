@@ -363,8 +363,10 @@ public class JobInProgress {
     this.jobMetrics.setTag("sessionId", conf.getSessionId());
     this.jobMetrics.setTag("jobName", conf.getJobName());
     this.jobMetrics.setTag("jobId", jobid.toString());
-    hasSpeculativeMaps = conf.getMapSpeculativeExecution();
-    hasSpeculativeReduces = conf.getReduceSpeculativeExecution();
+    if (!hasRestarted()) { //This is temporary until we fix the restart model
+      hasSpeculativeMaps = conf.getMapSpeculativeExecution();
+      hasSpeculativeReduces = conf.getReduceSpeculativeExecution();
+    }
     this.maxLevel = jobtracker.getNumTaskCacheLevels();
     this.anyCacheLevel = this.maxLevel+1;
     this.nonLocalMaps = new LinkedList<TaskInProgress>();
@@ -1913,16 +1915,17 @@ public class JobInProgress {
    * @param list pool of tasks to choose from
    * @param taskTrackerName the name of the TaskTracker asking for a task
    * @param taskTrackerHost the hostname of the TaskTracker asking for a task
+   * @param taskType the type of task (MAP/REDUCE) that we are considering
    * @return the TIP to speculatively re-execute
    */
   protected synchronized TaskInProgress findSpeculativeTask(
       Collection<TaskInProgress> list, String taskTrackerName, 
-      String taskTrackerHost) {
+      String taskTrackerHost, TaskType taskType) {
     if (list.isEmpty()) {
       return null;
     }
     long now = JobTracker.getClock().getTime();
-    if (isSlowTracker(taskTrackerName) || atSpeculativeCap(list)) {
+    if (isSlowTracker(taskTrackerName) || atSpeculativeCap(list, taskType)) {
       return null;
     }
     // List of speculatable candidates, start with all, and chop it down
@@ -2141,7 +2144,7 @@ public class JobInProgress {
     
     ///////// Select a TIP to run on
     TaskInProgress tip = findSpeculativeTask(allTips, taskTrackerName, 
-        taskTrackerHost);
+        taskTrackerHost, TaskType.MAP);
     
     if (tip != null) {
       LOG.info("Choosing map task " + tip.getTIPId() + 
@@ -2209,7 +2212,7 @@ public class JobInProgress {
   private synchronized TaskInProgress getSpeculativeReduce(
       String taskTrackerName, String taskTrackerHost) {
     TaskInProgress tip = findSpeculativeTask(
-        runningReduces, taskTrackerName, taskTrackerHost);
+        runningReduces, taskTrackerName, taskTrackerHost, TaskType.REDUCE);
     if (tip != null) {
       LOG.info("Choosing reduce task " + tip.getTIPId() + 
           " for speculative execution");
@@ -2223,31 +2226,32 @@ public class JobInProgress {
      * Check to see if the maximum number of speculative tasks are
      * already being executed currently.
      * @param tasks the set of tasks to test
+     * @param type the type of task (MAP/REDUCE) that we are considering
      * @return has the cap been reached?
      */
-   private boolean atSpeculativeCap(Collection<TaskInProgress> tasks) {
+   private boolean atSpeculativeCap(Collection<TaskInProgress> tasks, 
+       TaskType type) {
      float numTasks = tasks.size();
      if (numTasks == 0){
        return true; // avoid divide by zero
      }
-
+     int speculativeTaskCount = type == TaskType.MAP ? speculativeMapTasks 
+         : speculativeReduceTasks;
      //return true if totalSpecTask < max(10, 0.01 * total-slots, 
      //                                   0.1 * total-running-tasks)
 
-     if (speculativeMapTasks + speculativeReduceTasks < MIN_SPEC_CAP) {
+     if (speculativeTaskCount < MIN_SPEC_CAP) {
        return false; // at least one slow tracker's worth of slots(default=10)
      }
      ClusterStatus c = jobtracker.getClusterStatus(false); 
-     int numSlots = c.getMaxMapTasks() + c.getMaxReduceTasks();
-     if ((float)(speculativeMapTasks + speculativeReduceTasks) < 
-       numSlots * MIN_SLOTS_CAP) {
+     int numSlots = (type == TaskType.MAP ? c.getMaxMapTasks() : c.getMaxReduceTasks());
+     if ((float)speculativeTaskCount < numSlots * MIN_SLOTS_CAP) {
        return false;
      }
-     boolean atCap = (((float)(speculativeMapTasks+
-         speculativeReduceTasks)/numTasks) >= speculativeCap);
+     boolean atCap = (((float)(speculativeTaskCount)/numTasks) >= speculativeCap);
      if (LOG.isDebugEnabled()) {
        LOG.debug("SpeculativeCap is "+speculativeCap+", specTasks/numTasks is " +
-           ((float)(speculativeMapTasks+speculativeReduceTasks)/numTasks)+
+           ((float)(speculativeTaskCount)/numTasks)+
            ", so atSpecCap() is returning "+atCap);
      }
      return atCap;
@@ -2355,8 +2359,8 @@ public class JobInProgress {
     }
     private void sub(double oldNum) {
       this.count--;
-      this.sum -= oldNum;
-      this.sumSquares -= oldNum * oldNum;
+      this.sum = Math.max(this.sum -= oldNum, 0.0d);
+      this.sumSquares = Math.max(this.sumSquares -= oldNum * oldNum, 0.0d);
     }
     
     public double mean() {
@@ -2365,7 +2369,7 @@ public class JobInProgress {
   
     public double var() {
       // E(X^2) - E(X)^2
-      return (sumSquares/count) - mean() * mean();
+      return Math.max((sumSquares/count) - mean() * mean(), 0.0d);
     }
     
     public double std() {
@@ -2511,7 +2515,7 @@ public class JobInProgress {
       runningMapTasks -= 1;
       finishedMapTasks += 1;
       metrics.completeMap(taskid);
-      if (hasSpeculativeMaps) {
+      if (!tip.isJobSetupTask() && hasSpeculativeMaps) {
         updateTaskTrackerStats(tip,ttStatus,trackerMapStats,mapTaskStats);
       }
       // remove the completed map from the resp running caches
@@ -2523,7 +2527,7 @@ public class JobInProgress {
       runningReduceTasks -= 1;
       finishedReduceTasks += 1;
       metrics.completeReduce(taskid);
-      if (hasSpeculativeReduces) {
+      if (!tip.isJobSetupTask() && hasSpeculativeReduces) {
         updateTaskTrackerStats(tip,ttStatus,trackerReduceStats,reduceTaskStats);
       }
       // remove the completed reduces from the running reducers set
@@ -2542,7 +2546,7 @@ public class JobInProgress {
   
   private void updateTaskTrackerStats(TaskInProgress tip, TaskTrackerStatus ttStatus, 
       Map<String,DataStatistics> trackerStats, DataStatistics overallStats) {
-    float tipDuration = tip.getExecFinishTime()-tip.getDispatchTime();
+    float tipDuration = tip.getExecFinishTime()-tip.getDispatchTime(tip.getSuccessfulTaskid());
     DataStatistics ttStats = 
       trackerStats.get(ttStatus.getTrackerName());
     double oldMean = 0.0d;
@@ -2773,12 +2777,14 @@ public class JobInProgress {
     if (wasSpeculating) {
       if (tip.isMapTask()) {
         speculativeMapTasks--;
-        LOG.debug("Decrement count. Current speculativeMap task count: " +
-            speculativeMapTasks);
+        LOG.debug("Decremented count for " + 
+            tip.getTIPId()+"/"+tip.getJob().getJobID() + 
+          ". Current speculativeMap task count: " + speculativeMapTasks);
       } else {
         speculativeReduceTasks--;
-        LOG.debug("Decremented count. Current speculativeReduce task count: " + 
-            speculativeReduceTasks);
+        LOG.debug("Decremented count for " +
+            tip.getTIPId()+"/"+tip.getJob().getJobID() +
+          ". Current speculativeReduce task count: " + speculativeReduceTasks);
       }
     }
   }

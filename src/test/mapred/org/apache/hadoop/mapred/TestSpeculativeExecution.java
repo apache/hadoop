@@ -34,9 +34,8 @@ public class TestSpeculativeExecution extends TestCase {
   static FakeJobTracker jobTracker;
   static class SpecFakeClock extends FakeClock {
     long SPECULATIVE_LAG = TaskInProgress.SPECULATIVE_LAG;
-    @Override
-    public void advance(long millis) {
-      time += millis + SPECULATIVE_LAG;
+    public void advanceBySpeculativeLag() {
+      time += SPECULATIVE_LAG;
     }
   };
   static SpecFakeClock clock;
@@ -124,6 +123,7 @@ public class TestSpeculativeExecution extends TestCase {
     clock.advance(1000);
     job.finishTask(taskAttemptID[1]);
     clock.advance(20000);
+    clock.advanceBySpeculativeLag();
     //we should get a speculative task now
     taskAttemptID[5] = job.findReduceTask(trackers[4]);
     assertEquals(taskAttemptID[5].getTaskID().getId(),2);
@@ -157,12 +157,12 @@ public class TestSpeculativeExecution extends TestCase {
     job.finishTask(taskAttemptID[0]);
     job.finishTask(taskAttemptID[1]);
     job.finishTask(taskAttemptID[2]);
-    clock.advance(28000);
+    clock.advance(250000);
     taskAttemptID[4] = job.findMapTask(trackers[3]);
-    clock.advance(5000);
+    clock.advanceBySpeculativeLag();
     //by doing the above clock adjustments, we bring the progress rate of 
-    //taskID 3 lower than 4. For taskID 3, the rate is 85/35000
-    //and for taskID 4, the rate is 20/5000. But when we ask for a spec task
+    //taskID 3 lower than 4. For taskID 3, the rate is 85/317000
+    //and for taskID 4, the rate is 20/65000. But when we ask for a spec task
     //now, we should get back taskID 4 (since that is expected to complete
     //later than taskID 3).
     job.progressMade(taskAttemptID[3], 0.85f);
@@ -186,7 +186,7 @@ public class TestSpeculativeExecution extends TestCase {
     //Tests the fact that the max tasks launched is 10
     assertEquals(speculativeCap(1200,1150,20), 10);
     //Tests the fact that the max tasks launched is 0.01 * #slots
-    assertEquals(speculativeCap(1200,1150,2000), 20);
+    assertEquals(speculativeCap(1200,1150,4000), 20);
   }
   
   private int speculativeCap(int totalTasks, int numEarlyComplete, int slots)
@@ -207,6 +207,9 @@ public class TestSpeculativeExecution extends TestCase {
     for (i = 0; i < numEarlyComplete; i++) {
       job.finishTask(taskAttemptID[i]);
     }
+
+    clock.advanceBySpeculativeLag();
+
     for (i = numEarlyComplete; i < totalTasks; i++) {
       job.progressMade(taskAttemptID[i], 0.85f);
     }
