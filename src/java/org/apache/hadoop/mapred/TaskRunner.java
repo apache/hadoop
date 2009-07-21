@@ -347,19 +347,15 @@ abstract class TaskRunner extends Thread {
               exitCode + ".");
         }
       }
-    } catch (Error e) {
-      String error = "Error";
-      if (e instanceof FSError) {
-        error = "FSError";
-      }
-      LOG.fatal(error, e);
+    } catch (FSError e) {
+      LOG.fatal("FSError", e);
       try {
-        tracker.taskError(t.getTaskID(), e.getMessage());
+        tracker.fsError(t.getTaskID(), e.getMessage());
       } catch (IOException ie) {
-        LOG.fatal(t.getTaskID()+" reporting " + error, ie);
+        LOG.fatal(t.getTaskID()+" reporting FSError", ie);
       }
     } catch (Throwable throwable) {
-      LOG.warn(t.getTaskID() + " : " + errorInfo, throwable);
+      LOG.warn(t.getTaskID() + errorInfo, throwable);
       Throwable causeThrowable = new Throwable(errorInfo, throwable);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       causeThrowable.printStackTrace(new PrintStream(baos));
