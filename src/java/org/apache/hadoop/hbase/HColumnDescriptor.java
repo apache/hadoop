@@ -391,7 +391,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /** @return compression type being used for the column family */
   @TOJSON
   public Compression.Algorithm getCompression() {
-    return Compression.Algorithm.valueOf(getValue(COMPRESSION));
+    String n = getValue(COMPRESSION);
+    return Compression.Algorithm.valueOf(n.toUpperCase());
   }
   
   /** @return maximum number of versions */

@@ -21,6 +21,8 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
@@ -29,6 +31,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +43,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.migration.nineteen.io.BloomFilterMapFile;
 import org.apache.hadoop.hbase.migration.nineteen.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -249,6 +253,7 @@ public class Migrate extends Configured implements Tool {
     }
     // TOOD: Verify all has been brought over from old to new layout.
     final MetaUtils utils = new MetaUtils(this.conf);
+    final List<HRegionInfo> metas = new ArrayList<HRegionInfo>();
     try {
       rewriteHRegionInfo(utils.getRootRegion().getRegionInfo());
       // Scan the root region
@@ -259,29 +264,53 @@ public class Migrate extends Configured implements Tool {
             migrationNeeded = true;
             return false;
           }
+          metas.add(info);
           rewriteHRegionInfo(utils.getRootRegion(), info);
           return true;
         }
       });
-      LOG.info("TODO: Note on make sure not using old hbase-default.xml");
-      /*
-       * hbase.master / hbase.master.hostname are obsolete, that's replaced by
-hbase.cluster.distributed. This config must be set to "true" to have a
-fully-distributed cluster and the server lines in zoo.cfg must not
-point to "localhost".
-
-The clients must have a valid zoo.cfg in their classpath since we
-don't provide the master address.
-
-hbase.master.dns.interface and hbase.master.dns.nameserver should be
-set to control the master's address (not mandatory).
-       */
-      LOG.info("TODO: Note on zookeeper config. before starting:");
+      // Scan meta.
+      for (HRegionInfo hri: metas) {
+        final HRegionInfo metahri = hri;
+        utils.scanMetaRegion(hri, new MetaUtils.ScannerListener() {
+          public boolean processRow(HRegionInfo info) throws IOException {
+            if (readOnly && !migrationNeeded) {
+              migrationNeeded = true;
+              return false;
+            }
+            rewriteHRegionInfo(utils.getMetaRegion(metahri), info);
+            return true;
+          }
+        });
+      }
+      cleanOldLogFiles(hbaseRootDir);
     } finally {
       utils.shutdown();
     }
   }
-  
+
+  /*
+   * Remove old log files.
+   * @param fs
+   * @param hbaseRootDir
+   * @throws IOException
+   */
+  private void cleanOldLogFiles(final Path hbaseRootDir)
+  throws IOException {
+    FileStatus [] oldlogfiles = fs.listStatus(hbaseRootDir, new PathFilter () {
+      public boolean accept(Path p) {
+        return p.getName().startsWith("log_");
+      }
+    });
+    // Return if nothing to do.
+    if (oldlogfiles.length <= 0) return;
+    LOG.info("Removing " + oldlogfiles.length + " old logs file clutter");
+    for (int i = 0; i < oldlogfiles.length; i++) {
+      fs.delete(oldlogfiles[i].getPath(), true);
+      LOG.info("Deleted: " + oldlogfiles[i].getPath());
+    }
+  }
+
   /*
    * Rewrite all under hbase root dir.
    * Presumes that {@link FSUtils#isMajorCompactedPre020(FileSystem, Path)}
@@ -390,7 +419,6 @@ set to control the master's address (not mandatory).
     put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
         Writables.getBytes(oldHri));
     mr.put(put);
-    LOG.info("Enabled blockcache on " + oldHri.getRegionNameAsString());
   }
 
   /*
@@ -399,26 +427,25 @@ set to control the master's address (not mandatory).
    */
   private boolean rewriteHRegionInfo(final HRegionInfo hri) {
     boolean result = false;
+    // Set flush size at 32k if a catalog table.
+    int catalogMemStoreFlushSize = 32 * 1024;
+    if (hri.isMetaRegion() &&
+        hri.getTableDesc().getMemStoreFlushSize() != catalogMemStoreFlushSize) {
+      hri.getTableDesc().setMemStoreFlushSize(catalogMemStoreFlushSize);
+      result = true;
+    }
     HColumnDescriptor hcd =
       hri.getTableDesc().getFamily(HConstants.CATALOG_FAMILY);
     if (hcd == null) {
       LOG.info("No info family in: " + hri.getRegionNameAsString());
       return result;
     }
-    // Set blockcache enabled.
+    // Set block cache on all tables.
     hcd.setBlockCacheEnabled(true);
+    // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
+    // Any other compression we are turning off.  Have user enable it.
+    hcd.setCompressionType(Algorithm.NONE);
     return true;
-    
-    // TODO: Rewrite MEMCACHE_FLUSHSIZE as MEMSTORE_FLUSHSIZE – name has changed. 
-    // TODO: Remove tableindexer 'index' attribute index from TableDescriptor (See HBASE-1586) 
-    // TODO: TODO: Move of in-memory parameter from table to column family (from HTD to HCD). 
-    // TODO: Purge isInMemory, etc., methods from HTD as part of migration. 
-    
-
-    // TODO: Set the .META. and -ROOT- to flush at 16k?  32k?
-    // TODO: Enable block cache on all tables
-
-    // TODO: Clean up old region log files (HBASE-698) 
   }
 
 

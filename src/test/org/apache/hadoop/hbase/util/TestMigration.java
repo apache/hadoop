@@ -36,18 +36,21 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * Runs migration of filesystem from hbase 0.19 to hbase 0.20.
  * Not part of general test suite because takes time.
  */
-public class MigrationTest extends HBaseTestCase {
-  private static final Log LOG = LogFactory.getLog(MigrationTest.class);
+public class TestMigration extends HBaseTestCase {
+  private static final Log LOG = LogFactory.getLog(TestMigration.class);
 
   // Expected count of rows in migrated table.
   private static final int EXPECTED_COUNT = 3;
@@ -55,8 +58,9 @@ public class MigrationTest extends HBaseTestCase {
   /**
    * Test migration.
    * @throws IOException 
+   * @throws InterruptedException 
    */
-  public void testMigration() throws IOException {
+  public void testMigration() throws IOException, InterruptedException {
     Path rootdir = getUnitTestdir(getName());
     Path hbasedir = loadTestData(fs, rootdir);
     assertTrue(fs.exists(hbasedir));
@@ -66,6 +70,7 @@ public class MigrationTest extends HBaseTestCase {
     this.conf.set("hbase.rootdir", uri);
     int result = migrator.run(new String [] {"upgrade"});
     assertEquals(0, result);
+    verify();
   }
   
   /*
@@ -92,42 +97,50 @@ public class MigrationTest extends HBaseTestCase {
    * Verify can read the migrated table.
    * @throws IOException
    */
-  private void verify() throws IOException {
+  private void verify() throws IOException, InterruptedException {
     // Delete any cached connections.  Need to do this because connection was
     // created earlier when no master was around.  The fact that there was no
     // master gets cached.  Need to delete so we go get master afresh.
     HConnectionManager.deleteConnectionInfo(conf, false);
-    
     LOG.info("Start a cluster against migrated FS");
     // Up number of retries.  Needed while cluster starts up. Its been set to 1
     // above.
     final int retries = 5;
     this.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER_KEY, retries);
-    
+    // Note that this is done before we create the MiniHBaseCluster because we
+    // need to edit the config to add the ZooKeeper servers.
+    MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster();
+    int clientPort =
+      zooKeeperCluster.startup(new java.io.File(this.testDir.toString()));
+    conf.set("hbase.zookeeper.property.clientPort",
+      Integer.toString(clientPort));
     MiniHBaseCluster cluster = new MiniHBaseCluster(this.conf, 1);
     try {
       HBaseAdmin hb = new HBaseAdmin(this.conf);
       assertTrue(hb.isMasterRunning());
       HTableDescriptor [] tables = hb.listTables();
+      assertEquals(2, tables.length);
       boolean foundTable = false;
-      /*
+      // Just look at table 'a'.
+      final String tablenameStr = "a";
+      final byte [] tablename = Bytes.toBytes(tablenameStr);
       for (int i = 0; i < tables.length; i++) {
-        if (Bytes.equals(Bytes.toBytes(TABLENAME), tables[i].getName())) {
+        byte [] tableName = tables[i].getName();
+        if (Bytes.equals(tablename, tables[i].getName())) {
           foundTable = true;
           break;
         }
       }
       assertTrue(foundTable);
-      LOG.info(TABLENAME + " exists.  Now waiting till startcode " +
+      LOG.info(tablenameStr + " exists.  Now waiting till startcode " +
         "changes before opening a scanner");
       waitOnStartCodeChange(retries);
       // Delete again so we go get it all fresh.
       HConnectionManager.deleteConnectionInfo(conf, false);
-      HTable t = new HTable(this.conf, TABLENAME);
+      HTable t = new HTable(this.conf, tablename);
       int count = 0;
       LOG.info("OPENING SCANNER");
       Scan scan = new Scan();
-      scan.addColumns(TABLENAME_COLUMNS);
       ResultScanner s = t.getScanner(scan);
       try {
         for (Result r: s) {
@@ -135,19 +148,19 @@ public class MigrationTest extends HBaseTestCase {
             break;
           }
           count++;
-          if (count % 1000 == 0 && count > 0) {
-            LOG.info("Iterated over " + count + " rows.");
-          }
         }
         assertEquals(EXPECTED_COUNT, count);
       } finally {
         s.close();
       }
-      
-    */
     } finally {
       HConnectionManager.deleteConnectionInfo(conf, false);
       cluster.shutdown();
+      try {
+        zooKeeperCluster.shutdown();
+      } catch (IOException e) {
+        LOG.warn("Shutting down ZooKeeper cluster", e);
+      }
     }
   }
 
@@ -220,6 +233,7 @@ public class MigrationTest extends HBaseTestCase {
     }
   }
   
+  @SuppressWarnings("unused")
   private void listPaths(FileSystem filesystem, Path dir, int rootdirlength)
   throws IOException {
     FileStatus[] stats = filesystem.listStatus(dir);
