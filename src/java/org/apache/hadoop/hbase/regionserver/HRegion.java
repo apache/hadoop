@@ -2313,7 +2313,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (3 * Bytes.SIZEOF_LONG) + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
-      (21 * ClassSize.REFERENCE) + ClassSize.OBJECT);
+      (20 * ClassSize.REFERENCE) + ClassSize.OBJECT);
   
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) + 

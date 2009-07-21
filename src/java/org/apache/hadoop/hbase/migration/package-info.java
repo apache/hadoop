@@ -21,4 +21,4 @@
 Provides classes from old hbase versions used migrating data.
 Nineteen package has classes from hbase 0.19.
 */
-package org.apache.hadoop.hbase.migration.nineteen;
+package org.apache.hadoop.hbase.migration;
