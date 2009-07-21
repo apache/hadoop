@@ -333,9 +333,13 @@ class LocalJobRunner implements JobSubmissionProtocol {
       }
     }
 
-    public void taskError(TaskAttemptID taskId, String message) 
+    public synchronized void fsError(TaskAttemptID taskId, String message) 
     throws IOException {
-      LOG.fatal("Error: "+ message + "from task: " + taskId);
+      LOG.fatal("FSError: "+ message + "from task: " + taskId);
+    }
+
+    public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
+      LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
     }
     
     public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 

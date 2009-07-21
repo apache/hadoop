@@ -376,8 +376,8 @@ class ReduceTask extends Task {
         if(reduceCopier.mergeThrowable instanceof FSError) {
           LOG.error("Task: " + getTaskID() + " - FSError: " + 
               StringUtils.stringifyException(reduceCopier.mergeThrowable));
-          umbilical.taskError(getTaskID(), 
-              "(FSError) " + reduceCopier.mergeThrowable.getMessage());
+          umbilical.fsError(getTaskID(), 
+              reduceCopier.mergeThrowable.getMessage());
         }
         throw new IOException("Task: " + getTaskID() + 
             " - The reduce copier failed", reduceCopier.mergeThrowable);
@@ -1214,8 +1214,7 @@ class ReduceTask extends Task {
             LOG.error("Task: " + reduceTask.getTaskID() + " - FSError: " + 
                       StringUtils.stringifyException(e));
             try {
-              umbilical.taskError(reduceTask.getTaskID(), "(FSError) " 
-                                  + e.getMessage());
+              umbilical.fsError(reduceTask.getTaskID(), e.getMessage());
             } catch (IOException io) {
               LOG.error("Could not notify TT of FSError: " + 
                       StringUtils.stringifyException(io));
@@ -2092,9 +2091,9 @@ class ReduceTask extends Task {
                   LOG.fatal("Shuffle failed with too many fetch failures " + 
                             "and insufficient progress!" +
                             "Killing task " + getTaskID() + ".");
-                  umbilical.taskError(getTaskID(), "(Shuffle Error) " 
-                                      + "Exceeded MAX_FAILED_UNIQUE_FETCHES;"
-                                      + " bailing-out.");
+                  umbilical.shuffleError(getTaskID(), 
+                                         "Exceeded MAX_FAILED_UNIQUE_FETCHES;"
+                                         + " bailing-out.");
                 }
               }
                 

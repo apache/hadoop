@@ -51,9 +51,12 @@ public class IsolationRunner {
       LOG.info("Task " + taskid + " reporting done.");
     }
 
-    public void taskError(TaskAttemptID taskId, String message) 
-    throws IOException {
-      LOG.info("Task " + taskId + " reporting task error: " + message);
+    public void fsError(TaskAttemptID taskId, String message) throws IOException {
+      LOG.info("Task " + taskId + " reporting file system error: " + message);
+    }
+
+    public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
+      LOG.info("Task " + taskId + " reporting shuffle error: " + message);
     }
 
     public JvmTask getTask(JVMId jvmId) throws IOException {

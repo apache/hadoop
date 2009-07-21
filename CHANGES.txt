@@ -184,9 +184,6 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-18. Puts some checks to detect cases where jetty serves up
     incorrect output during shuffle. (Ravi Gummadi via ddas)
 
-    MAPREDUCE-430. Fix bug related to Task getting stuck due to
-    OutOfMemoryErrors. (Amar Kamat via sharad)
-
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

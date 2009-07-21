@@ -180,13 +180,9 @@ class Child {
           break;
         }
       }
-    } catch (Error e) {
-      String error = "Error";
-      if (e instanceof FSError) {
-       error = "FSError";
-      }
-      LOG.fatal(error + " from child", e);
-      umbilical.taskError(taskid, e.getMessage());
+    } catch (FSError e) {
+      LOG.fatal("FSError from child", e);
+      umbilical.fsError(taskid, e.getMessage());
     } catch (Throwable throwable) {
       LOG.warn("Error running child", throwable);
       try {

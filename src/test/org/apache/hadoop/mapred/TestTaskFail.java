@@ -49,9 +49,7 @@ public class TestTaskFail extends TestCase {
         throw new IOException();
       } else if (taskid.endsWith("_1")) {
         System.exit(-1);
-      } else if (taskid.endsWith("_2")) {
-        throw new OutOfMemoryError();
-      }
+      } 
     }
   }
 
@@ -108,57 +106,46 @@ public class TestTaskFail extends TestCase {
     return new JobClient(conf).submitJob(conf);
   }
   
-  private void validateAttempt(TaskInProgress tip, TaskAttemptID attemptId, 
-                               TaskStatus ts, boolean isCleanup) 
-  throws IOException {
-    assertEquals(tip.isCleanupAttempt(attemptId), isCleanup);
-    assertTrue(ts != null);
-    assertEquals(TaskStatus.State.FAILED, ts.getRunState());
-    // validate tasklogs for task attempt
-    String log = TestMiniMRMapRedDebugScript.readTaskLog(
-                      TaskLog.LogName.STDERR, attemptId, false);
-    assertTrue(log.contains(taskLog));
-    if (!isCleanup) {
-      // validate task logs: tasklog should contain both task logs
-      // and cleanup logs
-      assertTrue(log.contains(cleanupLog));
-    } else {
-      // validate tasklogs for cleanup attempt
-      log = TestMiniMRMapRedDebugScript.readTaskLog(
-                 TaskLog.LogName.STDERR, attemptId, true);
-      assertTrue(log.contains(cleanupLog));
-    }
-  }
-
   private void validateJob(RunningJob job, MiniMRCluster mr) 
   throws IOException {
     assertEquals(JobStatus.SUCCEEDED, job.getJobState());
 	    
     JobID jobId = job.getID();
     // construct the task id of first map task
-    // this should not be cleanup attempt since the first attempt 
-    // fails with an exception
     TaskAttemptID attemptId = 
       new TaskAttemptID(new TaskID(jobId, true, 0), 0);
     TaskInProgress tip = mr.getJobTrackerRunner().getJobTracker().
                             getTip(attemptId.getTaskID());
+    // this should not be cleanup attempt since the first attempt 
+    // fails with an exception
+    assertTrue(!tip.isCleanupAttempt(attemptId));
     TaskStatus ts = 
       mr.getJobTrackerRunner().getJobTracker().getTaskStatus(attemptId);
-    validateAttempt(tip, attemptId, ts, false);
+    assertTrue(ts != null);
+    assertEquals(TaskStatus.State.FAILED, ts.getRunState());
+    // validate task logs: tasklog should contain both task logs
+    // and cleanup logs
+    String log = TestMiniMRMapRedDebugScript.readTaskLog(
+                      TaskLog.LogName.STDERR, attemptId, false);
+    assertTrue(log.contains(taskLog));
+    assertTrue(log.contains(cleanupLog));
     
     attemptId =  new TaskAttemptID(new TaskID(jobId, true, 0), 1);
     // this should be cleanup attempt since the second attempt fails
     // with System.exit
-
+    assertTrue(tip.isCleanupAttempt(attemptId));
     ts = mr.getJobTrackerRunner().getJobTracker().getTaskStatus(attemptId);
+    assertTrue(ts != null);
+    assertEquals(TaskStatus.State.FAILED, ts.getRunState());
+    // validate tasklogs for task attempt
+    log = TestMiniMRMapRedDebugScript.readTaskLog(
+               TaskLog.LogName.STDERR, attemptId, false);
+    assertTrue(log.contains(taskLog));
 
-    validateAttempt(tip, attemptId, ts, true);
- 
-    attemptId =  new TaskAttemptID(new TaskID(jobId, true, 0), 2);
-    // this should be cleanup attempt since the third attempt fails
-    // with OutOfMemory
-    ts = mr.getJobTrackerRunner().getJobTracker().getTaskStatus(attemptId);
-    validateAttempt(tip, attemptId, ts, true);
+    // validate tasklogs for cleanup attempt
+    log = TestMiniMRMapRedDebugScript.readTaskLog(
+               TaskLog.LogName.STDERR, attemptId, true);
+    assertTrue(log.contains(cleanupLog));
   }
   
   public void testWithDFS() throws IOException {
