@@ -244,7 +244,6 @@ public class Migrate extends Configured implements Tool {
         throw new IOException(msg);
       }
     }
-    // TOOD: Verify all has been brought over from old to new layout.
     final MetaUtils utils = new MetaUtils(this.conf);
     final List<HRegionInfo> metas = new ArrayList<HRegionInfo>();
     try {
@@ -264,14 +263,14 @@ public class Migrate extends Configured implements Tool {
       });
       // Scan meta.
       for (HRegionInfo hri: metas) {
-        final HRegionInfo metahri = hri;
-        utils.scanMetaRegion(hri, new MetaUtils.ScannerListener() {
+        final HRegion h = utils.getMetaRegion(hri);
+        utils.scanMetaRegion(h, new MetaUtils.ScannerListener() {
           public boolean processRow(HRegionInfo info) throws IOException {
             if (check && !migrationNeeded) {
               migrationNeeded = true;
               return false;
             }
-            rewriteHRegionInfo(utils.getMetaRegion(metahri), info);
+            rewriteHRegionInfo(h, info);
             return true;
           }
         });
@@ -341,7 +340,7 @@ public class Migrate extends Configured implements Tool {
   }
   
   /**
-   * Rewrite the passed mapfile
+   * Rewrite the passed 0.19 mapfile as a 0.20 file.
    * @param fs
    * @param mf
    * @throws IOExcepion

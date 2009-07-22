@@ -42,8 +42,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -124,7 +122,7 @@ public class MetaUtils {
     HRegion meta = metaRegions.get(metaInfo.getRegionName());
     if (meta == null) {
       meta = openMetaRegion(metaInfo);
-          LOG.info("META OPEN " + meta.toString());
+      LOG.info("OPENING META " + meta.toString());
       this.metaRegions.put(metaInfo.getRegionName(), meta);
     }
     return meta;
@@ -147,7 +145,7 @@ public class MetaUtils {
     }
     try {
       for (HRegion r: metaRegions.values()) {
-          LOG.info("META CLOSE " + r.toString());
+        LOG.info("CLOSING META " + r.toString());
         r.close();
       }
     } catch (IOException e) {
@@ -230,6 +228,9 @@ public class MetaUtils {
    * TODO: Use Visitor rather than Listener pattern.  Allow multiple Visitors.
    * Use this everywhere we scan meta regions: e.g. in metascanners, in close
    * handling, etc.  Have it pass in the whole row, not just HRegionInfo.
+   * <p>Use for reading meta only.  Does not close region when done.
+   * Use {@link #getMetaRegion(HRegionInfo)} instead if writing.  Adds
+   * meta region to list that will get a close on {@link #shutdown()}.
    * 
    * @param metaRegionInfo HRegionInfo for meta region
    * @param listener method to be called for each meta region found
@@ -255,8 +256,7 @@ public class MetaUtils {
     
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    InternalScanner metaScanner = 
-      m.getScanner(scan);
+    InternalScanner metaScanner = m.getScanner(scan);
     
     try {
       List<KeyValue> results = new ArrayList<KeyValue>();

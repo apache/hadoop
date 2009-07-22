@@ -193,11 +193,24 @@ public class FSUtils {
    */
   public static void setVersion(FileSystem fs, Path rootdir) 
   throws IOException {
+    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION);
+  }
+
+  /**
+   * Sets version of file system
+   * 
+   * @param fs
+   * @param rootdir
+   * @param version
+   * @throws IOException
+   */
+  public static void setVersion(FileSystem fs, Path rootdir, String version) 
+  throws IOException {
     FSDataOutputStream s =
       fs.create(new Path(rootdir, HConstants.VERSION_FILE_NAME));
-    s.writeUTF(HConstants.FILE_SYSTEM_VERSION);
+    s.writeUTF(version);
     s.close();
-    LOG.debug("Created version file to: " + rootdir.toString());
+    LOG.debug("Created version file at " + rootdir.toString() + " set its version at:" + version);
   }
 
   /**
