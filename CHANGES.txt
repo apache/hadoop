@@ -250,3 +250,7 @@ Trunk (unreleased changes)
 
     MAPREDUCE-735. Fixes a problem in the KeyFieldHelper to do with 
     the end index for some inputs (Amar Kamat via ddas)
+
+    MAPREDUCE-682. Removes reservations on tasktrackers which are
+    blacklisted. (Sreekanth Ramakrishnan via yhemanth)
+
