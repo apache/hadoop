@@ -124,6 +124,7 @@ public class MetaUtils {
     HRegion meta = metaRegions.get(metaInfo.getRegionName());
     if (meta == null) {
       meta = openMetaRegion(metaInfo);
+          LOG.info("META OPEN " + meta.toString());
       this.metaRegions.put(metaInfo.getRegionName(), meta);
     }
     return meta;
@@ -146,6 +147,7 @@ public class MetaUtils {
     }
     try {
       for (HRegion r: metaRegions.values()) {
+          LOG.info("META CLOSE " + r.toString());
         r.close();
       }
     } catch (IOException e) {
