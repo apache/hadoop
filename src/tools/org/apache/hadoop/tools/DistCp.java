@@ -37,6 +37,7 @@ import java.util.StringTokenizer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -362,7 +363,7 @@ public class DistCp implements Tool {
           srcstat.getReplication(): destFileSys.getDefaultReplication();
       long blockSize = preseved.contains(FileAttribute.BLOCK_SIZE)?
           srcstat.getBlockSize(): destFileSys.getDefaultBlockSize();
-      return destFileSys.create(f, permission, true, sizeBuf, replication,
+      return destFileSys.create(f, permission, EnumSet.of(CreateFlag.OVERWRITE), sizeBuf, replication,
           blockSize, reporter);
     }
 

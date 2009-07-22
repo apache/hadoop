@@ -256,3 +256,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-743. Fixes a problem to do with progress reporting
     in the map phase. (Ravi Gummadi via ddas)
+
+    MAPREDUCE-765. Eliminate the deprecated warnings introduced by H-5438.
+    (He Yongqiang via szetszwo)

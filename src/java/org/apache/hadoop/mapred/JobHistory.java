@@ -28,6 +28,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -37,6 +38,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -1057,7 +1059,7 @@ public class JobHistory {
               JT_FS.getConf().getInt("io.file.buffer.size", 4096);
             out = JT_FS.create(logFile, 
                             new FsPermission(HISTORY_FILE_PERMISSION),
-                            true, 
+                            EnumSet.of(CreateFlag.OVERWRITE), 
                             defaultBufferSize, 
                             JT_FS.getDefaultReplication(), 
                             jobHistoryBlockSize, null);
@@ -1142,7 +1144,7 @@ public class JobHistory {
           if (!JT_FS.exists(jobFilePath)) {
             jobFileOut = JT_FS.create(jobFilePath, 
                                    new FsPermission(HISTORY_FILE_PERMISSION),
-                                   true, 
+                                   EnumSet.of(CreateFlag.OVERWRITE), 
                                    defaultBufferSize, 
                                    JT_FS.getDefaultReplication(), 
                                    JT_FS.getDefaultBlockSize(), null);
