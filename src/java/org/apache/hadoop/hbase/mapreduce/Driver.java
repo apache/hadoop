@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.hbase.migration.nineteen.HStoreFileToStoreFile;
 import org.apache.hadoop.util.ProgramDriver;
 
 /**
@@ -34,6 +35,9 @@ public class Driver {
     ProgramDriver pgd = new ProgramDriver();
     pgd.addClass(RowCounter.NAME, RowCounter.class,
       "Count rows in HBase table");
+    pgd.addClass(HStoreFileToStoreFile.JOBNAME,
+      HStoreFileToStoreFile.class,
+      "Bulk convert 0.19 HStoreFiles to 0.20 StoreFiles");
     pgd.driver(args);
   }
 }

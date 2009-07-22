@@ -1,5 +1,5 @@
 /*
- * Copyright 2009The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +19,8 @@
  */
 /**
 Provides classes from old hbase versions used migrating data.
-Nineteen package has classes from hbase 0.19.
+Nineteen package has classes from hbase 0.19.  See
+&lt;a href="http://wiki.apache.org/hadoop/Hbase/HowToMigrate">How to Migrate&lt;/a>
+for more on migrations.
 */
 package org.apache.hadoop.hbase.migration;

@@ -124,5 +124,4 @@ public class RowCounter {
     Job job = createSubmittableJob(conf, otherArgs);
     System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
-  
 }
