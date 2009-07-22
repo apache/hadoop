@@ -129,6 +129,9 @@ Trunk (unreleased changes)
     MAPREDUCE-772. Merge HADOOP-4010 changes to LineRecordReader into mapreduce
     package. (Abdul Qadeer via cdouglas)
 
+    MAPREDUCE-785. Separate sub-test of TestReduceFetch to be included in
+    MR-670. (Jothi Padmanabhan via cdouglas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
