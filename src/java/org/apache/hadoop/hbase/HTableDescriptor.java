@@ -351,6 +351,13 @@ ISerializable {
   }
 
   /**
+   * @param key Key whose key and value we're to remove from HTD parameters.
+   */
+  public void remove(final byte [] key) {
+    values.remove(new ImmutableBytesWritable(key));
+  }
+
+  /**
    * @return true if all columns in the table should be read only
    */
   public boolean isReadOnly() {

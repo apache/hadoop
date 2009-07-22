@@ -427,14 +427,14 @@ public class Migrate extends Configured implements Tool {
       hri.getTableDesc().setMemStoreFlushSize(catalogMemStoreFlushSize);
       result = true;
     }
+    // Remove the old MEMCACHE_FLUSHSIZE if present
+    hri.getTableDesc().remove(Bytes.toBytes("MEMCACHE_FLUSHSIZE"));
     for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
       // Set block cache on all tables.
       hcd.setBlockCacheEnabled(true);
       // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
       // Any other compression we are turning off.  Have user enable it.
       hcd.setCompressionType(Algorithm.NONE);
-      // Remove the old MEMCACHE_FLUSHSIZE if present
-      hcd.remove(Bytes.toBytes("MEMCACHE_FLUSHSIZE"));
       result = true;
     }
     return result;
