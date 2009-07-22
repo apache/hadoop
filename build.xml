@@ -95,6 +95,9 @@
   <property name="test.hdfs.with.mr.build.classes" value="${test.build.dir}/hdfs-with-mr/classes"/>
   <property name="test.hdfs.with.mr.classpath.id" value="test.hdfs.with.mr.classpath"/>
 
+  <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
+  <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
+
   <property name="web.src.dir" value="${basedir}/src/web"/>
   <property name="src.webapps" value="${basedir}/src/webapps"/>
 
@@ -129,7 +132,7 @@
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
 	
-  <!-- IVY properteis set here -->
+  <!-- IVY properties set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
@@ -551,51 +554,61 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="run-test-hdfs" depends="compile-hdfs-test" description="Run hdfs unit tests">
-    <delete dir="${test.build.data}"/>
-    <mkdir dir="${test.build.data}"/>
-    <delete dir="${test.log.dir}"/>
-    <mkdir dir="${test.log.dir}"/>
-    <copy file="${test.src.dir}/hadoop-policy.xml" 
-      todir="${test.build.extraconf}" />
-    <copy file="${test.src.dir}/fi-site.xml"
-      todir="${test.build.extraconf}" />
-    <junit showoutput="${test.output}"
-      printsummary="${test.junit.printsummary}"
-      haltonfailure="${test.junit.haltonfailure}"
-      fork="yes"
-      forkmode="${test.junit.fork.mode}"
-      maxmemory="${test.junit.maxmemory}"
-      dir="${basedir}" timeout="${test.timeout}"
-      errorProperty="tests.failed" failureProperty="tests.failed">
-      <sysproperty key="test.build.data" value="${test.build.data}"/>
-      <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
-      <sysproperty key="test.debug.data" value="${test.debug.data}"/>
-      <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
-      <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-      <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
-      <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
-      <classpath refid="test.classpath"/>
-      <!-- Pass probability specifications to the spawn JVM -->
-      <syspropertyset id="FaultProbabilityProperties">
-        <propertyref regex="fi.*"/>
-      </syspropertyset>
-      <formatter type="${test.junit.output.format}" />
-      <batchtest todir="${test.build.dir}" unless="testcase">
-        <fileset dir="${test.src.dir}/hdfs"
-           includes="**/${test.include}.java"
-           excludes="**/${test.exclude}.java" />
-        <fileset dir="${test.src.dir}/aop"
-          includes="**/${test.include}.java"
-          excludes="**/${test.exclude}.java" />
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
-        <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
-      </batchtest>
-    </junit>
-    <antcall target="checkfailure"/>
-  </target>  
+  <macrodef name="macro-test-runner">
+    <attribute name="test.file" />
+    <sequential>
+      <delete dir="${test.build.data}"/>
+      <mkdir dir="${test.build.data}"/>
+      <delete dir="${test.log.dir}"/>
+      <mkdir dir="${test.log.dir}"/>
+      <copy file="${test.src.dir}/hadoop-policy.xml" 
+        todir="${test.build.extraconf}" />
+      <copy file="${test.src.dir}/fi-site.xml"
+        todir="${test.build.extraconf}" />
+      <junit showoutput="${test.output}"
+        printsummary="${test.junit.printsummary}"
+        haltonfailure="${test.junit.haltonfailure}"
+        fork="yes"
+        forkmode="${test.junit.fork.mode}"
+        maxmemory="${test.junit.maxmemory}"
+        dir="${basedir}" timeout="${test.timeout}"
+        errorProperty="tests.failed" failureProperty="tests.failed">
+        <sysproperty key="test.build.data" value="${test.build.data}"/>
+        <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
+        <sysproperty key="test.debug.data" value="${test.debug.data}"/>
+        <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
+        <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+        <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
+        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
+        <classpath refid="test.classpath"/>
+        <!-- Pass probability specifications to the spawn JVM -->
+        <syspropertyset id="FaultProbabilityProperties">
+          <propertyref regex="fi.*"/>
+        </syspropertyset>
+        <formatter type="${test.junit.output.format}" />
+        <batchtest todir="${test.build.dir}" unless="testcase">
+          <fileset dir="${test.src.dir}/hdfs" excludes="**/${test.exclude}.java">
+             <patternset>
+               <includesfile name="@{test.file}"/>
+             </patternset>
+         </fileset>
+        </batchtest>
+        <batchtest todir="${test.build.dir}" if="testcase">
+          <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
+          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
+        </batchtest>
+      </junit>
+      <antcall target="checkfailure"/>
+    </sequential>
+  </macrodef>
+
+  <target name="run-test-hdfs" depends="compile-hdfs-test" description="Run full set of hdfs unit tests">
+    <macro-test-runner test.file="${test.hdfs.all.tests.file}" />
+  </target>
+
+  <target name="run-commit-test" depends="compile-hdfs-test" description="Run approximate 10-minute set of unit tests prior to commiting">
+     <macro-test-runner test.file="${test.hdfs.commit.tests.file}" />
+  </target>
 
   <target name="run-test-hdfs-with-mr" depends="compile-hdfs-with-mr-test" description="Run hdfs unit tests that require mapred">
 
