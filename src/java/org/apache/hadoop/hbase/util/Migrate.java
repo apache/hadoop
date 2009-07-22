@@ -88,11 +88,8 @@ public class Migrate extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Migrate.class);
   private final HBaseConfiguration conf;
   private FileSystem fs;
-  
-  // Gets set by migration methods if we are in readOnly mode.
   boolean migrationNeeded = false;
-
-  boolean readOnly = false;
+  boolean check = false;
 
   // Filesystem version of hbase 0.1.x.
   private static final float HBASE_0_1_VERSION = 0.1f;
@@ -175,12 +172,9 @@ public class Migrate extends Configured implements Tool {
     if (!verifyFilesystem()) {
       return -3;
     }
-    if (!notRunning()) {
-      return -4;
-    }
 
     try {
-      LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
+      LOG.info("Starting upgrade" + (check ? " check" : ""));
 
       // See if there is a file system version file
       String versionStr = FSUtils.getVersion(fs, FSUtils.getRootDir(this.conf));
@@ -203,10 +197,9 @@ public class Migrate extends Configured implements Tool {
         System.out.println(msg);
         throw new IOException(msg);
       }
-
+      this.migrationNeeded = true;
       migrate6to7();
-
-      if (!readOnly) {
+      if (!check) {
         // Set file system version
         LOG.info("Setting file system version.");
         FSUtils.setVersion(fs, FSUtils.getRootDir(this.conf));
@@ -216,14 +209,14 @@ public class Migrate extends Configured implements Tool {
       }
       return 0;
     } catch (Exception e) {
-      LOG.fatal("Upgrade" +  (readOnly ? " check" : "") + " failed", e);
+      LOG.fatal("Upgrade" +  (check ? " check" : "") + " failed", e);
       return -1;
     }
   }
   
   // Move the fileystem version from 6 to 7.
   private void migrate6to7() throws IOException {
-    if (this.readOnly && this.migrationNeeded) {
+    if (this.check && this.migrationNeeded) {
       return;
     }
     // Before we start, make sure all is major compacted.
@@ -260,7 +253,7 @@ public class Migrate extends Configured implements Tool {
       utils.scanRootRegion(new MetaUtils.ScannerListener() {
         public boolean processRow(HRegionInfo info)
         throws IOException {
-          if (readOnly && !migrationNeeded) {
+          if (check && !migrationNeeded) {
             migrationNeeded = true;
             return false;
           }
@@ -274,7 +267,7 @@ public class Migrate extends Configured implements Tool {
         final HRegionInfo metahri = hri;
         utils.scanMetaRegion(hri, new MetaUtils.ScannerListener() {
           public boolean processRow(HRegionInfo info) throws IOException {
-            if (readOnly && !migrationNeeded) {
+            if (check && !migrationNeeded) {
               migrationNeeded = true;
               return false;
             }
@@ -434,17 +427,13 @@ public class Migrate extends Configured implements Tool {
       hri.getTableDesc().setMemStoreFlushSize(catalogMemStoreFlushSize);
       result = true;
     }
-    HColumnDescriptor hcd =
-      hri.getTableDesc().getFamily(HConstants.CATALOG_FAMILY);
-    if (hcd == null) {
-      LOG.info("No info family in: " + hri.getRegionNameAsString());
-      return result;
+    for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+      // Set block cache on all tables.
+      hcd.setBlockCacheEnabled(true);
+      // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
+      // Any other compression we are turning off.  Have user enable it.
+      hcd.setCompressionType(Algorithm.NONE);
     }
-    // Set block cache on all tables.
-    hcd.setBlockCacheEnabled(true);
-    // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
-    // Any other compression we are turning off.  Have user enable it.
-    hcd.setCompressionType(Algorithm.NONE);
     return true;
   }
 
@@ -503,7 +492,7 @@ public class Migrate extends Configured implements Tool {
       return -1;
     }
     if (remainingArgs[0].compareTo("check") == 0) {
-      this.readOnly = true;
+      this.check = true;
     } else if (remainingArgs[0].compareTo("upgrade") != 0) {
       usage();
       return -1;
