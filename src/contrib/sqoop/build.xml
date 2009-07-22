@@ -29,6 +29,7 @@ to call at top-level: ant deploy-contrib compile-core-test
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     -->
   <!-- Override with our own version so we can set hadoop.alt.classpath   -->
+  <!-- and Hadoop logger properties                                       -->
   <!-- ================================================================== -->
   <target name="test" depends="compile-test, compile" if="test.available">
     <echo message="contrib: ${name}"/>
@@ -58,6 +59,10 @@ to call at top-level: ant deploy-contrib compile-core-test
       -->
       <sysproperty key="hadoop.alt.classpath"
         value="${hadoop.root}/build/classes" />
+
+      <!-- we want more log4j output when running unit tests -->
+      <sysproperty key="hadoop.root.logger"
+        value="DEBUG,console" />
 
       <!-- requires fork=yes for:
         relative File paths to use the specified user.dir

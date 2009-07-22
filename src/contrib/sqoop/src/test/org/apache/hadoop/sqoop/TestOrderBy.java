@@ -35,8 +35,6 @@ import org.apache.hadoop.sqoop.util.ClassLoaderStack;
 
 /**
  * Test that --order-by works
- * 
- *
  */
 public class TestOrderBy extends ImportJobTestCase {
 
@@ -152,11 +150,11 @@ public class TestOrderBy extends ImportJobTestCase {
 
   public void testOrderByFirstCol() throws IOException {
     String orderByCol = "INTFIELD1";
-    runOrderByTest(orderByCol, "1,8", HsqldbTestServer.getFirstColSum());
+    runOrderByTest(orderByCol, "1,8\n", HsqldbTestServer.getFirstColSum());
   }
 
   public void testOrderBySecondCol() throws IOException {
     String orderByCol = "INTFIELD2";
-    runOrderByTest(orderByCol, "7,2", HsqldbTestServer.getFirstColSum());
+    runOrderByTest(orderByCol, "7,2\n", HsqldbTestServer.getFirstColSum());
   }
 }

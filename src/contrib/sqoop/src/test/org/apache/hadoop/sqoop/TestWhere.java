@@ -38,8 +38,6 @@ import org.apache.hadoop.sqoop.util.ClassLoaderStack;
  * Methods essentially copied out of the other Test* classes.
  * TODO(kevin or aaron): Factor out these common test methods
  * so that every new Test* class doesn't need to copy the code.
- * 
- *
  */
 public class TestWhere extends ImportJobTestCase {
 
@@ -97,8 +95,8 @@ public class TestWhere extends ImportJobTestCase {
     return Integer.parseInt(parts[0]);
   }
 
-  public void runWhereTest(String whereClause, String firstValStr, int numExpectedResults, int expectedSum)
-      throws IOException {
+  public void runWhereTest(String whereClause, String firstValStr, int numExpectedResults,
+      int expectedSum) throws IOException {
 
     String [] columns = HsqldbTestServer.getFieldNames();
     ClassLoader prevClassLoader = null;
@@ -160,11 +158,11 @@ public class TestWhere extends ImportJobTestCase {
 
   public void testSingleClauseWhere() throws IOException {
     String whereClause = "INTFIELD2 > 4";
-    runWhereTest(whereClause, "1,8", 2, 4);
+    runWhereTest(whereClause, "1,8\n", 2, 4);
   }
 
   public void testMultiClauseWhere() throws IOException {
     String whereClause = "INTFIELD1 > 4 AND INTFIELD2 < 3";
-    runWhereTest(whereClause, "7,2", 1, 7);
+    runWhereTest(whereClause, "7,2\n", 1, 7);
   }
 }

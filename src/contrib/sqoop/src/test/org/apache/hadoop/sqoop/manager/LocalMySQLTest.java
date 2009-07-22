@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.sqoop.ImportOptions;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
+import org.apache.hadoop.sqoop.util.FileListing;
 
 /**
  * Test the LocalMySQLManager implementation.
@@ -180,13 +181,11 @@ public class LocalMySQLTest extends ImportJobTestCase {
     }
   }
 
-  private String [] getArgv(boolean includeHadoopFlags) {
+  private String [] getArgv(boolean mysqlOutputDelims) {
     ArrayList<String> args = new ArrayList<String>();
 
-    if (includeHadoopFlags) {
-      args.add("-D");
-      args.add("fs.default.name=file:///");
-    }
+    args.add("-D");
+    args.add("fs.default.name=file:///");
 
     args.add("--table");
     args.add(TABLE_NAME);
@@ -200,12 +199,27 @@ public class LocalMySQLTest extends ImportJobTestCase {
     args.add("--where");
     args.add("id > 1");
 
+    if (mysqlOutputDelims) {
+      args.add("--mysql-delimiters");
+    }
+
     return args.toArray(new String[0]);
   }
 
-  @Test
-  public void testLocalBulkImport() {
-    String [] argv = getArgv(true);
+  private void doLocalBulkImport(boolean mysqlOutputDelims, String [] expectedResults)
+      throws IOException {
+
+    Path warehousePath = new Path(this.getWarehouseDir());
+    Path tablePath = new Path(warehousePath, TABLE_NAME);
+    Path filePath = new Path(tablePath, "data-00000");
+
+    File tableFile = new File(tablePath.toString());
+    if (tableFile.exists() && tableFile.isDirectory()) {
+      // remove the directory before running the import.
+      FileListing.recursiveDeleteDir(tableFile);
+    }
+
+    String [] argv = getArgv(mysqlOutputDelims);
     try {
       runImport(argv);
     } catch (IOException ioe) {
@@ -214,18 +228,15 @@ public class LocalMySQLTest extends ImportJobTestCase {
       fail(ioe.toString());
     }
 
-    Path warehousePath = new Path(this.getWarehouseDir());
-    Path tablePath = new Path(warehousePath, TABLE_NAME);
-    Path filePath = new Path(tablePath, "data-00000");
-
     File f = new File(filePath.toString());
     assertTrue("Could not find imported data file", f.exists());
     BufferedReader r = null;
     try {
       // Read through the file and make sure it's all there.
       r = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
-      assertEquals("2,'Bob','2009-04-20',400,'sales'", r.readLine());
-      assertEquals("3,'Fred','2009-01-23',15,'marketing'", r.readLine());
+      for (String expectedLine : expectedResults) {
+        assertEquals(expectedLine, r.readLine());
+      }
     } catch (IOException ioe) {
       LOG.error("Got IOException verifying results: " + ioe.toString());
       ioe.printStackTrace();
@@ -233,5 +244,27 @@ public class LocalMySQLTest extends ImportJobTestCase {
     } finally {
       IOUtils.closeStream(r);
     }
+  }
+
+  @Test
+  public void testLocalBulkImportWithDefaultDelims() throws IOException {
+    // no quoting of strings allowed.
+    String [] expectedResults = {
+        "2,Bob,2009-04-20,400,sales",
+        "3,Fred,2009-01-23,15,marketing"
+    };
+
+    doLocalBulkImport(false, expectedResults);
+  }
+
+  @Test
+  public void testLocalBulkImportWithMysqlQuotes() throws IOException {
+    // mysql quotes all string-based output.
+    String [] expectedResults = {
+        "2,'Bob','2009-04-20',400,'sales'",
+        "3,'Fred','2009-01-23',15,'marketing'"
+    };
+
+    doLocalBulkImport(true, expectedResults);
   }
 }

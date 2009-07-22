@@ -100,6 +100,20 @@ public class ImportOptions {
   private String packageName; // package to prepend to auto-named classes.
   private String className; // package+class to apply to individual table import.
 
+  private char inputFieldDelim;
+  private char inputRecordDelim;
+  private char inputEnclosedBy;
+  private char inputEscapedBy;
+  private boolean inputMustBeEnclosed;
+
+  private char outputFieldDelim;
+  private char outputRecordDelim;
+  private char outputEnclosedBy;
+  private char outputEscapedBy;
+  private boolean outputMustBeEnclosed;
+
+  private boolean areDelimsManuallySet;
+
   private static final String DEFAULT_CONFIG_FILE = "sqoop.properties";
 
   public ImportOptions() {
@@ -199,6 +213,20 @@ public class ImportOptions {
     this.jarOutputDir = tmpDir + "sqoop/compile";
     this.layout = FileLayout.TextFile;
 
+    this.inputFieldDelim = '\000';
+    this.inputRecordDelim = '\000';
+    this.inputEnclosedBy = '\000';
+    this.inputEscapedBy = '\000';
+    this.inputMustBeEnclosed = false;
+
+    this.outputFieldDelim = ',';
+    this.outputRecordDelim = '\n';
+    this.outputEnclosedBy = '\000';
+    this.outputEscapedBy = '\000';
+    this.outputMustBeEnclosed = false;
+
+    this.areDelimsManuallySet = false;
+
     loadFromProperties();
   }
 
@@ -236,7 +264,24 @@ public class ImportOptions {
     System.out.println("--as-textfile                Imports data as plain text (default)");
     System.out.println("--all-tables                 Import all tables in database");
     System.out.println("                             (Ignores --table, --columns and --order-by)");
-    System.out.println("--hive-import                If set, then import the table into Hive");
+    System.out.println("--hive-import                If set, then import the table into Hive.");
+    System.out.println("                    (Uses Hive's default delimiters if none are set.)");
+    System.out.println("");
+    System.out.println("Output line formatting options:");
+    System.out.println("--fields-terminated-by (char)    Sets the field separator character");
+    System.out.println("--lines-terminated-by (char)     Sets the end-of-line character");
+    System.out.println("--optionally-enclosed-by (char)  Sets a field enclosing character");
+    System.out.println("--enclosed-by (char)             Sets a required field enclosing char");
+    System.out.println("--escaped-by (char)              Sets the escape character");
+    System.out.println("--mysql-delimiters               Uses MySQL's default delimiter set");
+    System.out.println("  fields: ,  lines: \\n  escaped-by: \\  optionally-enclosed-by: '");
+    System.out.println("");
+    System.out.println("Input parsing options:");
+    System.out.println("--input-fields-terminated-by (char)    Sets the input field separator");
+    System.out.println("--input-lines-terminated-by (char)     Sets the input end-of-line char");
+    System.out.println("--input-optionally-enclosed-by (char)  Sets a field enclosing character");
+    System.out.println("--input-enclosed-by (char)             Sets a required field encloser");
+    System.out.println("--input-escaped-by (char)              Sets the input escape character");
     System.out.println("");
     System.out.println("Code generation options:");
     System.out.println("--outdir (dir)               Output directory for generated code");
@@ -258,6 +303,85 @@ public class ImportOptions {
         + "and either --table or --all-tables.");
     System.out.println("Alternatively, you can specify --generate-only or one of the additional");
     System.out.println("commands.");
+  }
+
+  /**
+   * Given a string containing a single character or an escape sequence representing
+   * a char, return that char itself.
+   *
+   * Normal literal characters return themselves: "x" -&gt; 'x', etc.
+   * Strings containing a '\' followed by one of t, r, n, or b escape to the usual
+   * character as seen in Java: "\n" -&gt; (newline), etc.
+   *
+   * Strings like "\0ooo" return the character specified by the octal sequence 'ooo'
+   * Strings like "\0xhhh" or "\0Xhhh" return the character specified by the hex sequence 'hhh'
+   */
+  static char toChar(String charish) throws InvalidOptionsException {
+    if (null == charish) {
+      throw new InvalidOptionsException("Character argument expected." 
+          + "\nTry --help for usage instructions.");
+    } else if (charish.startsWith("\\0x") || charish.startsWith("\\0X")) {
+      if (charish.length() == 3) {
+        throw new InvalidOptionsException("Base-16 value expected for character argument."
+          + "\nTry --help for usage instructions.");
+      } else {
+        String valStr = charish.substring(3);
+        int val = Integer.parseInt(valStr, 16);
+        return (char) val;
+      }
+    } else if (charish.startsWith("\\0")) {
+      if (charish.equals("\\0")) {
+        // it's just '\0', which we can take as shorthand for nul.
+        return '\000';
+      } else {
+        // it's an octal value.
+        String valStr = charish.substring(2);
+        int val = Integer.parseInt(valStr, 8);
+        return (char) val;
+      }
+    } else if (charish.startsWith("\\")) {
+      if (charish.length() == 1) {
+        // it's just a '\'. Keep it literal.
+        return '\\';
+      } else if (charish.length() > 2) {
+        // we don't have any 3+ char escape strings. 
+        throw new InvalidOptionsException("Cannot understand character argument: " + charish
+            + "\nTry --help for usage instructions.");
+      } else {
+        // this is some sort of normal 1-character escape sequence.
+        char escapeWhat = charish.charAt(1);
+        switch(escapeWhat) {
+        case 'b':
+          return '\b';
+        case 'n':
+          return '\n';
+        case 'r':
+          return '\r';
+        case 't':
+          return '\t';
+        case '\"':
+          return '\"';
+        case '\'':
+          return '\'';
+        case '\\':
+          return '\\';
+        default:
+          throw new InvalidOptionsException("Cannot understand character argument: " + charish
+              + "\nTry --help for usage instructions.");
+        }
+      }
+    } else if (charish.length() == 0) {
+      throw new InvalidOptionsException("Character argument expected." 
+          + "\nTry --help for usage instructions.");
+    } else {
+      // it's a normal character.
+      if (charish.length() > 1) {
+        LOG.warn("Character argument " + charish + " has multiple characters; "
+            + "only the first will be used.");
+      }
+
+      return charish.charAt(0);
+    }
   }
 
   /**
@@ -313,6 +437,42 @@ public class ImportOptions {
           this.hiveHome = args[++i];
         } else if (args[i].equals("--hive-import")) {
           this.hiveImport = true;
+        } else if (args[i].equals("--fields-terminated-by")) {
+          this.outputFieldDelim = ImportOptions.toChar(args[++i]);
+          this.areDelimsManuallySet = true;
+        } else if (args[i].equals("--lines-terminated-by")) {
+          this.outputRecordDelim = ImportOptions.toChar(args[++i]);
+          this.areDelimsManuallySet = true;
+        } else if (args[i].equals("--optionally-enclosed-by")) {
+          this.outputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.outputMustBeEnclosed = false;
+          this.areDelimsManuallySet = true;
+        } else if (args[i].equals("--enclosed-by")) {
+          this.outputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.outputMustBeEnclosed = true;
+          this.areDelimsManuallySet = true;
+        } else if (args[i].equals("--escaped-by")) {
+          this.outputEscapedBy = ImportOptions.toChar(args[++i]);
+          this.areDelimsManuallySet = true;
+        } else if (args[i].equals("--mysql-delimiters")) {
+          this.outputFieldDelim = ',';
+          this.outputRecordDelim = '\n';
+          this.outputEnclosedBy = '\'';
+          this.outputEscapedBy = '\\';
+          this.outputMustBeEnclosed = false;
+          this.areDelimsManuallySet = true;
+        } else if (args[i].equals("--input-fields-terminated-by")) {
+          this.inputFieldDelim = ImportOptions.toChar(args[++i]);
+        } else if (args[i].equals("--input-lines-terminated-by")) {
+          this.inputRecordDelim = ImportOptions.toChar(args[++i]);
+        } else if (args[i].equals("--input-optionally-enclosed-by")) {
+          this.inputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.inputMustBeEnclosed = false;
+        } else if (args[i].equals("--input-enclosed-by")) {
+          this.inputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.inputMustBeEnclosed = true;
+        } else if (args[i].equals("--input-escaped-by")) {
+          this.inputEscapedBy = ImportOptions.toChar(args[++i]);
         } else if (args[i].equals("--outdir")) {
           this.codeOutputDir = args[++i];
         } else if (args[i].equals("--as-sequencefile")) {
@@ -380,6 +540,30 @@ public class ImportOptions {
     } else if (this.className != null && this.packageName != null) {
       throw new InvalidOptionsException(
           "--class-name overrides --package-name. You cannot use both." + HELP_STR);
+    }
+
+    if (this.hiveImport) {
+      if (!areDelimsManuallySet) {
+        // user hasn't manually specified delimiters, and wants to import straight to Hive.
+        // Use Hive-style delimiters.
+        LOG.info("Using Hive-specific delimiters for output. You can override");
+        LOG.info("delimiters with --fields-terminated-by, etc.");
+        this.outputFieldDelim = (char)0x1; // ^A
+        this.outputRecordDelim = '\n';
+        this.outputEnclosedBy = '\000'; // no enclosing in Hive.
+        this.outputEscapedBy = '\000'; // no escaping in Hive
+        this.outputMustBeEnclosed = false;
+      }
+
+      if (this.getOutputEscapedBy() != '\000') {
+        LOG.warn("Hive does not support escape characters in fields;");
+        LOG.warn("parse errors in Hive may result from using --escaped-by.");
+      }
+
+      if (this.getOutputEnclosedBy() != '\000') {
+        LOG.warn("Hive does not support quoted strings; parse errors");
+        LOG.warn("in Hive may result from using --enclosed-by.");
+      }
     }
   }
 
@@ -521,5 +705,102 @@ public class ImportOptions {
 
   public void setPassword(String pass) {
     this.password = pass;
+  }
+
+  /**
+   * @return the field delimiter to use when parsing lines. Defaults to the field delim
+   * to use when printing lines
+   */
+  public char getInputFieldDelim() {
+    if (inputFieldDelim == '\000') {
+      return this.outputFieldDelim;
+    } else {
+      return this.inputFieldDelim;
+    }
+  }
+
+  /**
+   * @return the record delimiter to use when parsing lines. Defaults to the record delim
+   * to use when printing lines.
+   */
+  public char getInputRecordDelim() {
+    if (inputRecordDelim == '\000') {
+      return this.outputRecordDelim;
+    } else {
+      return this.inputRecordDelim;
+    }
+  }
+
+  /**
+   * @return the character that may enclose fields when parsing lines. Defaults to the
+   * enclosing-char to use when printing lines.
+   */
+  public char getInputEnclosedBy() {
+    if (inputEnclosedBy == '\000') {
+      return this.outputEnclosedBy;
+    } else {
+      return this.inputEnclosedBy;
+    }
+  }
+
+  /**
+   * @return the escape character to use when parsing lines. Defaults to the escape
+   * character used when printing lines.
+   */
+  public char getInputEscapedBy() {
+    if (inputEscapedBy == '\000') {
+      return this.outputEscapedBy;
+    } else {
+      return this.inputEscapedBy;
+    }
+  }
+
+  /**
+   * @return true if fields must be enclosed by the --enclosed-by character when parsing.
+   * Defaults to false. Set true when --input-enclosed-by is used.
+   */
+  public boolean isInputEncloseRequired() {
+    if (inputEnclosedBy == '\000') {
+      return this.outputMustBeEnclosed;
+    } else {
+      return this.inputMustBeEnclosed;
+    }
+  }
+
+  /**
+   * @return the character to print between fields when importing them to text.
+   */
+  public char getOutputFieldDelim() {
+    return this.outputFieldDelim;
+  }
+
+
+  /**
+   * @return the character to print between records when importing them to text.
+   */
+  public char getOutputRecordDelim() {
+    return this.outputRecordDelim;
+  }
+
+  /**
+   * @return a character which may enclose the contents of fields when imported to text.
+   */
+  public char getOutputEnclosedBy() {
+    return this.outputEnclosedBy;
+  }
+
+  /**
+   * @return a character which signifies an escape sequence when importing to text.
+   */
+  public char getOutputEscapedBy() {
+    return this.outputEscapedBy;
+  }
+
+  /**
+   * @return true if fields imported to text must be enclosed by the EnclosedBy char.
+   * default is false; set to true if --enclosed-by is used instead of --optionally-enclosed-by.
+   */
+  public boolean isOutputEncloseRequired() {
+    return this.outputMustBeEnclosed;
   }
 }

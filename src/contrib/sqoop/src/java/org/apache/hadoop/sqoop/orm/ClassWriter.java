@@ -23,6 +23,9 @@ import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.manager.SqlManager;
 import org.apache.hadoop.sqoop.lib.BigDecimalSerializer;
 import org.apache.hadoop.sqoop.lib.JdbcWritableBridge;
+import org.apache.hadoop.sqoop.lib.FieldFormatter;
+import org.apache.hadoop.sqoop.lib.RecordParser;
+import org.apache.hadoop.sqoop.lib.SqoopRecord;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -52,7 +55,7 @@ public class ClassWriter {
    *
    *  If the way that we generate classes, bump this number.
    */
-  public static final int CLASS_WRITER_VERSION = 1;
+  public static final int CLASS_WRITER_VERSION = 2;
 
   private ImportOptions options;
   private ConnManager connManager;
@@ -375,8 +378,31 @@ public class ClassWriter {
   private void generateToString(Map<String, Integer> columnTypes, String [] colNames,
       StringBuilder sb) {
 
+    // Embed the delimiters into the class, as characters...
+    sb.append("  private static final char __OUTPUT_FIELD_DELIM_CHAR = " +
+        + (int)options.getOutputFieldDelim() + ";\n");
+    sb.append("  private static final char __OUTPUT_RECORD_DELIM_CHAR = " 
+        + (int)options.getOutputRecordDelim() + ";\n");
+
+    // as strings...
+    sb.append("  private static final String __OUTPUT_FIELD_DELIM = \"\" + (char) "
+        + (int) options.getOutputFieldDelim() + ";\n");
+    sb.append("  private static final String __OUTPUT_RECORD_DELIM = \"\" + (char) " 
+        + (int) options.getOutputRecordDelim() + ";\n");
+    sb.append("  private static final String __OUTPUT_ENCLOSED_BY = \"\" + (char) " 
+        + (int) options.getOutputEnclosedBy() + ";\n");
+    sb.append("  private static final String __OUTPUT_ESCAPED_BY = \"\" + (char) " 
+        + (int) options.getOutputEscapedBy() + ";\n");
+
+    // and some more options.
+    sb.append("  private static final boolean __OUTPUT_ENCLOSE_REQUIRED = " 
+        + options.isOutputEncloseRequired() + ";\n");
+    sb.append("  private static final char [] __OUTPUT_DELIMITER_LIST = { "
+        + "__OUTPUT_FIELD_DELIM_CHAR, __OUTPUT_RECORD_DELIM_CHAR };\n\n");
+
+    // The actual toString() method itself follows.
     sb.append("  public String toString() {\n");
-    sb.append("    StringBuilder sb = new StringBuilder();\n");
+    sb.append("    StringBuilder __sb = new StringBuilder();\n");
 
     boolean first = true;
     for (String col : colNames) {
@@ -388,8 +414,8 @@ public class ClassWriter {
       }
 
       if (!first) {
-        // TODO(aaron): Support arbitrary record delimiters
-        sb.append("    sb.append(\",\");\n");
+        // print inter-field tokens.
+        sb.append("    __sb.append(__OUTPUT_FIELD_DELIM);\n");
       }
 
       first = false;
@@ -400,12 +426,130 @@ public class ClassWriter {
         continue;
       }
 
-      sb.append("    sb.append(" + stringExpr + ");\n");
+      sb.append("    __sb.append(FieldFormatter.escapeAndEnclose(" + stringExpr 
+          + ", __OUTPUT_ESCAPED_BY, __OUTPUT_ENCLOSED_BY, __OUTPUT_DELIMITER_LIST, "
+          + "__OUTPUT_ENCLOSE_REQUIRED));\n");
 
     }
 
-    sb.append("    return sb.toString();\n");
+    sb.append("    __sb.append(__OUTPUT_RECORD_DELIM);\n");
+    sb.append("    return __sb.toString();\n");
     sb.append("  }\n");
+  }
+
+
+
+  /**
+   * Helper method for generateParser(). Writes out the parse() method for one particular
+   * type we support as an input string-ish type.
+   */
+  private void generateParseMethod(String typ, StringBuilder sb) {
+    sb.append("  public void parse(" + typ + " __record) throws RecordParser.ParseError {\n");
+    sb.append("    if (null == this.__parser) {\n");
+    sb.append("      this.__parser = new RecordParser(__INPUT_FIELD_DELIM_CHAR, ");
+    sb.append("__INPUT_RECORD_DELIM_CHAR, __INPUT_ENCLOSED_BY_CHAR, __INPUT_ESCAPED_BY_CHAR, ");
+    sb.append("__INPUT_ENCLOSE_REQUIRED);\n");
+    sb.append("    }\n");
+    sb.append("    List<String> __fields = this.__parser.parseRecord(__record);\n");
+    sb.append("    __loadFromFields(__fields);\n");
+    sb.append("  }\n\n");
+  }
+
+  /**
+   * Helper method for parseColumn(). Interpret the string 'null' as a null
+   * for a particular column.
+   */
+  private void parseNullVal(String colName, StringBuilder sb) {
+    sb.append("    if (__cur_str.equals(\"null\")) { this.");
+    sb.append(colName);
+    sb.append(" = null; } else {\n");
+  }
+
+  /**
+   * Helper method for generateParser(). Generates the code that loads one field of
+   * a specified name and type from the next element of the field strings list.
+   */
+  private void parseColumn(String colName, int colType, StringBuilder sb) {
+    // assume that we have __it and __cur_str vars, based on __loadFromFields() code.
+    sb.append("    __cur_str = __it.next();\n");
+    String javaType = SqlManager.toJavaType(colType);
+
+    parseNullVal(colName, sb);
+    if (javaType.equals("String")) {
+      // TODO(aaron): Distinguish between 'null' and null. Currently they both set the
+      // actual object to null.
+      sb.append("      this." + colName + " = __cur_str;\n");
+    } else if (javaType.equals("Integer")) {
+      sb.append("      this." + colName + " = Integer.valueOf(__cur_str);\n");
+    } else if (javaType.equals("Long")) {
+      sb.append("      this." + colName + " = Long.valueOf(__cur_str);\n");
+    } else if (javaType.equals("Float")) {
+      sb.append("      this." + colName + " = Float.valueOf(__cur_str);\n");
+    } else if (javaType.equals("Double")) {
+      sb.append("      this." + colName + " = Double.valueOf(__cur_str);\n");
+    } else if (javaType.equals("Boolean")) {
+      sb.append("      this." + colName + " = Boolean.valueOf(__cur_str);\n");
+    } else if (javaType.equals("java.sql.Date")) {
+      sb.append("      this." + colName + " = java.sql.Date.valueOf(__cur_str);\n");
+    } else if (javaType.equals("java.sql.Time")) {
+      sb.append("      this." + colName + " = java.sql.Time.valueOf(__cur_str);\n");
+    } else if (javaType.equals("java.sql.Timestamp")) {
+      sb.append("      this." + colName + " = java.sql.Timestamp.valueOf(__cur_str);\n");
+    } else if (javaType.equals("java.math.BigDecimal")) {
+      sb.append("      this." + colName + " = new java.math.BigDecimal(__cur_str);\n");
+    } else {
+      LOG.error("No parser available for Java type " + javaType);
+    }
+
+    sb.append("    }\n\n"); // the closing '{' based on code in parseNullVal();
+  }
+
+  /**
+   * Generate the parse() method
+   * @param columnTypes - mapping from column names to sql types
+   * @param colNames - ordered list of column names for table.
+   * @param sb - StringBuilder to append code to
+   */
+  private void generateParser(Map<String, Integer> columnTypes, String [] colNames,
+      StringBuilder sb) {
+
+    // Embed into the class the delimiter characters to use when parsing input records.
+    // Note that these can differ from the delims to use as output via toString(), if
+    // the user wants to use this class to convert one format to another.
+    sb.append("  private static final char __INPUT_FIELD_DELIM_CHAR = " +
+        + (int)options.getInputFieldDelim() + ";\n");
+    sb.append("  private static final char __INPUT_RECORD_DELIM_CHAR = " 
+        + (int)options.getInputRecordDelim() + ";\n");
+    sb.append("  private static final char __INPUT_ENCLOSED_BY_CHAR = " 
+        + (int)options.getInputEnclosedBy() + ";\n");
+    sb.append("  private static final char __INPUT_ESCAPED_BY_CHAR = " 
+        + (int)options.getInputEscapedBy() + ";\n");
+    sb.append("  private static final boolean __INPUT_ENCLOSE_REQUIRED = " 
+        + options.isInputEncloseRequired() + ";\n");
+
+
+    // The parser object which will do the heavy lifting for field splitting.
+    sb.append("  private RecordParser __parser;\n"); 
+
+    // Generate wrapper methods which will invoke the parser.
+    generateParseMethod("Text", sb);
+    generateParseMethod("CharSequence", sb);
+    generateParseMethod("byte []", sb);
+    generateParseMethod("char []", sb);
+    generateParseMethod("ByteBuffer", sb);
+    generateParseMethod("CharBuffer", sb);
+
+    // The wrapper methods call __loadFromFields() to actually interpret the raw
+    // field data as string, int, boolean, etc. The generation of this method is
+    // type-dependent for the fields.
+    sb.append("  private void __loadFromFields(List<String> fields) {\n");
+    sb.append("    Iterator<String> __it = fields.listIterator();\n");
+    sb.append("    String __cur_str;\n");
+    for (String colName : colNames) {
+      int colType = columnTypes.get(colName);
+      parseColumn(colName, colType, sb);
+    }
+    sb.append("  }\n\n");
   }
 
   /**
@@ -534,18 +678,25 @@ public class ClassWriter {
     sb.append("import org.apache.hadoop.io.Writable;\n");
     sb.append("import org.apache.hadoop.mapred.lib.db.DBWritable;\n");
     sb.append("import " + JdbcWritableBridge.class.getCanonicalName() + ";\n");
+    sb.append("import " + FieldFormatter.class.getCanonicalName() + ";\n");
+    sb.append("import " + RecordParser.class.getCanonicalName() + ";\n");
+    sb.append("import " + SqoopRecord.class.getCanonicalName() + ";\n");
     sb.append("import java.sql.PreparedStatement;\n");
     sb.append("import java.sql.ResultSet;\n");
     sb.append("import java.sql.SQLException;\n");
     sb.append("import java.io.DataInput;\n");
     sb.append("import java.io.DataOutput;\n");
     sb.append("import java.io.IOException;\n");
+    sb.append("import java.nio.ByteBuffer;\n");
+    sb.append("import java.nio.CharBuffer;\n");
     sb.append("import java.sql.Date;\n");
     sb.append("import java.sql.Time;\n");
     sb.append("import java.sql.Timestamp;\n");
+    sb.append("import java.util.Iterator;\n");
+    sb.append("import java.util.List;\n");
 
     String className = tableNameInfo.getShortClassForTable(tableName);
-    sb.append("public class " + className + " implements DBWritable, Writable {\n");
+    sb.append("public class " + className + " implements DBWritable, SqoopRecord, Writable {\n");
     sb.append("  public static final int PROTOCOL_VERSION = " + CLASS_WRITER_VERSION + ";\n");
     generateFields(columnTypes, colNames, sb);
     generateDbRead(columnTypes, colNames, sb);
@@ -553,6 +704,7 @@ public class ClassWriter {
     generateHadoopRead(columnTypes, colNames, sb);
     generateHadoopWrite(columnTypes, colNames, sb);
     generateToString(columnTypes, colNames, sb);
+    generateParser(columnTypes, colNames, sb);
     // TODO(aaron): Generate hashCode(), compareTo(), equals() so it can be a WritableComparable
 
     sb.append("}\n");

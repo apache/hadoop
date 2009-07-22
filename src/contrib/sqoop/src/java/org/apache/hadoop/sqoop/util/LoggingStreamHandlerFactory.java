@@ -45,8 +45,16 @@ public class LoggingStreamHandlerFactory implements StreamHandlerFactory {
     }
   }
 
+  private Thread child;
+
   public void processStream(InputStream is) {
-    new LoggingThread(is).start();
+    child = new LoggingThread(is);
+    child.start();
+  }
+
+  public int join() throws InterruptedException {
+    child.join();
+    return 0; // always successful.
   }
 
   /**

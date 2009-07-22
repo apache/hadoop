@@ -149,6 +149,7 @@ public class MySQLAuthTest extends ImportJobTestCase {
     args.add(AUTH_TEST_USER);
     args.add("--password");
     args.add(AUTH_TEST_PASS);
+    args.add("--mysql-delimiters");
 
     return args.toArray(new String[0]);
   }

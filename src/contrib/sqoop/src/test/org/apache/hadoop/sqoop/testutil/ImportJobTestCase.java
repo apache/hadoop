@@ -372,10 +372,12 @@ public class ImportJobTestCase extends TestCase {
       assertTrue("Error: " + dataFilePath.toString() + " does not exist", f.exists());
 
       Object readValue = SeqFileReader.getFirstValue(dataFilePath.toString());
+      // add trailing '\n' to expected value since SqoopRecord.toString() encodes the record delim
       if (null == expectedVal) {
-        assertEquals("Error validating result from SeqFile", "null", readValue.toString());
+        assertEquals("Error validating result from SeqFile", "null\n", readValue.toString());
       } else {
-        assertEquals("Error validating result from SeqFile", expectedVal, readValue.toString());
+        assertEquals("Error validating result from SeqFile", expectedVal + "\n",
+            readValue.toString());
       }
     } catch (IOException ioe) {
       fail("IOException: " + ioe.toString());

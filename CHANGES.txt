@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     MAPREDUCE-740. Log a job-summary at the end of a job, while allowing it
     to be configured to use a custom appender if desired. (acmurthy)
 
+    MAPREDUCE-705. User-configurable quote and delimiter characters for Sqoop
+    records and record reparsing. (Aaron Kimball via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via

@@ -42,7 +42,7 @@ public class TestHiveImport extends ImportJobTestCase {
    * Create the argv to pass to Sqoop
    * @return the argv as an array of strings.
    */
-  private String [] getArgv(boolean includeHadoopFlags) {
+  private String [] getArgv(boolean includeHadoopFlags, String [] moreArgs) {
     ArrayList<String> args = new ArrayList<String>();
 
     if (includeHadoopFlags) {
@@ -64,13 +64,19 @@ public class TestHiveImport extends ImportJobTestCase {
     args.add("--order-by");
     args.add(getColNames()[0]);
 
+    if (null != moreArgs) {
+      for (String arg: moreArgs) {
+        args.add(arg);
+      }
+    }
+
     return args.toArray(new String[0]);
   }
 
-  private ImportOptions getImportOptions() {
+  private ImportOptions getImportOptions(String [] extraArgs) {
     ImportOptions opts = new ImportOptions();
     try {
-      opts.parse(getArgv(false));
+      opts.parse(getArgv(false, extraArgs));
     } catch (ImportOptions.InvalidOptionsException ioe) {
       fail("Invalid options: " + ioe.toString());
     }
@@ -79,7 +85,7 @@ public class TestHiveImport extends ImportJobTestCase {
   }
 
   private void runImportTest(String tableName, String [] types, String [] values,
-      String verificationScript) throws IOException {
+      String verificationScript, String [] extraArgs) throws IOException {
 
     // create a table and populate it with a row...
     setCurTableName(tableName);
@@ -87,14 +93,14 @@ public class TestHiveImport extends ImportJobTestCase {
     
     // set up our mock hive shell to compare our generated script
     // against the correct expected one.
-    ImportOptions options = getImportOptions();
+    ImportOptions options = getImportOptions(extraArgs);
     String hiveHome = options.getHiveHome();
     assertNotNull("hive.home was not set", hiveHome);
     Path testDataPath = new Path(new Path(hiveHome), "scripts/" + verificationScript);
     System.setProperty("expected.script", testDataPath.toString());
 
     // verify that we can import it correctly into hive.
-    runImport(getArgv(true));
+    runImport(getArgv(true, extraArgs));
   }
 
   /** Test that strings and ints are handled in the normal fashion */
@@ -102,7 +108,7 @@ public class TestHiveImport extends ImportJobTestCase {
   public void testNormalHiveImport() throws IOException {
     String [] types = { "VARCHAR(32)", "INTEGER", "CHAR(64)" };
     String [] vals = { "'test'", "42", "'somestring'" };
-    runImportTest("NORMAL_HIVE_IMPORT", types, vals, "normalImport.q");
+    runImportTest("NORMAL_HIVE_IMPORT", types, vals, "normalImport.q", null);
   }
 
   /** Test that dates are coerced properly to strings */
@@ -110,7 +116,7 @@ public class TestHiveImport extends ImportJobTestCase {
   public void testDate() throws IOException {
     String [] types = { "VARCHAR(32)", "DATE" };
     String [] vals = { "'test'", "'2009-05-12'" };
-    runImportTest("DATE_HIVE_IMPORT", types, vals, "dateImport.q");
+    runImportTest("DATE_HIVE_IMPORT", types, vals, "dateImport.q", null);
   }
 
   /** Test that NUMERICs are coerced to doubles */
@@ -118,7 +124,7 @@ public class TestHiveImport extends ImportJobTestCase {
   public void testNumeric() throws IOException {
     String [] types = { "NUMERIC", "CHAR(64)" };
     String [] vals = { "3.14159", "'foo'" };
-    runImportTest("NUMERIC_HIVE_IMPORT", types, vals, "numericImport.q");
+    runImportTest("NUMERIC_HIVE_IMPORT", types, vals, "numericImport.q", null);
   }
 
   /** If bin/hive returns an error exit status, we should get an IOException */
@@ -129,12 +135,21 @@ public class TestHiveImport extends ImportJobTestCase {
     String [] types = { "NUMERIC", "CHAR(64)" };
     String [] vals = { "3.14159", "'foo'" };
     try {
-      runImportTest("FAILING_HIVE_IMPORT", types, vals, "failingImport.q");
+      runImportTest("FAILING_HIVE_IMPORT", types, vals, "failingImport.q", null);
       // If we get here, then the run succeeded -- which is incorrect.
       fail("FAILING_HIVE_IMPORT test should have thrown IOException");
     } catch (IOException ioe) {
       // expected; ok.
     }
+  }
+
+  /** Test that we can set delimiters how we want them */
+  @Test
+  public void testCustomDelimiters() throws IOException {
+    String [] types = { "VARCHAR(32)", "INTEGER", "CHAR(64)" };
+    String [] vals = { "'test'", "42", "'somestring'" };
+    String [] extraArgs = { "--fields-terminated-by", ",", "--lines-terminated-by", "|" };
+    runImportTest("CUSTOM_DELIM_IMPORT", types, vals, "customDelimImport.q", extraArgs);
   }
 
 }

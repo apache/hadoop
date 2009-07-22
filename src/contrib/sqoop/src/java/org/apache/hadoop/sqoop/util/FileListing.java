@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 /**
 * Recursive file listing under a specified directory.
@@ -101,4 +102,27 @@ public final class FileListing {
       throw new IllegalArgumentException("Directory cannot be read: " + aDirectory);
     }
   }
+
+  /**
+   * Recursively delete a directory and all its children
+   * @param aStartingDir is a valid directory.
+   */
+  public static void recursiveDeleteDir(File dir) throws IOException {
+    if (!dir.exists()) {
+      throw new FileNotFoundException(dir.toString() + " does not exist");
+    }
+
+    if (dir.isDirectory()) {
+      // recursively descend into all children and delete them.
+      File [] children = dir.listFiles();
+      for (File child : children) {
+        recursiveDeleteDir(child);
+      }
+    }
+
+    if (!dir.delete()) {
+      throw new IOException("Could not remove: " + dir);
+    }
+  }
 }
+

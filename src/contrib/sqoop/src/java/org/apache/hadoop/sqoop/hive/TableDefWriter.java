@@ -115,8 +115,11 @@ public class TableDefWriter {
       sb.append("COMMENT 'Imported by sqoop on " + curDateStr + "' ");
     }
 
-    sb.append("ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' ");
-    sb.append("LINES TERMINATED BY '\\n' STORED AS TEXTFILE");
+    sb.append("ROW FORMAT DELIMITED FIELDS TERMINATED BY '\\0");
+    sb.append(Integer.toOctalString((int) options.getOutputFieldDelim()));
+    sb.append("' LINES TERMINATED BY '\\0");
+    sb.append(Integer.toOctalString((int) options.getOutputRecordDelim()));
+    sb.append("' STORED AS TEXTFILE");
 
     LOG.debug("Create statement: " + sb.toString());
     return sb.toString();

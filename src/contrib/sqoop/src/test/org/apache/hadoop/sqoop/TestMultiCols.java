@@ -28,8 +28,6 @@ import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
  * some of which may contain null values.
  *
  * Also test loading only selected columns from the db.
- * 
- *
  */
 public class TestMultiCols extends ImportJobTestCase {
 

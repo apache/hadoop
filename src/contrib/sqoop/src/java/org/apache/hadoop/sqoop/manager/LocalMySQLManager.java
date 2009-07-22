@@ -29,8 +29,11 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.CharBuffer;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +41,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.lib.FieldFormatter;
+import org.apache.hadoop.sqoop.lib.RecordParser;
 import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.util.PerfCounters;
+import org.apache.hadoop.sqoop.util.StreamHandlerFactory;
 import org.apache.hadoop.util.Shell;
 
 /**
@@ -50,11 +57,289 @@ public class LocalMySQLManager extends MySQLManager {
 
   public static final Log LOG = LogFactory.getLog(LocalMySQLManager.class.getName());
 
+  // StreamHandlers used to import data from mysqldump directly into HDFS.
+
+  /**
+   * Copies data directly from mysqldump into HDFS, after stripping some
+   * header and footer characters that are attached to each line in mysqldump.
+   */
+  static class CopyingStreamHandlerFactory implements StreamHandlerFactory {
+    private final BufferedWriter writer;
+    private final PerfCounters counters;
+
+    CopyingStreamHandlerFactory(final BufferedWriter w, final PerfCounters ctrs) {
+      this.writer = w;
+      this.counters = ctrs;
+    }
+
+    private CopyingStreamThread child;
+
+    public void processStream(InputStream is) {
+      child = new CopyingStreamThread(is, writer, counters);
+      child.start();
+    }
+
+    public int join() throws InterruptedException {
+      child.join();
+      if (child.isErrored()) {
+        return 1;
+      } else {
+        return 0;
+      }
+    }
+
+    private static class CopyingStreamThread extends Thread {
+      public static final Log LOG = LogFactory.getLog(CopyingStreamThread.class.getName());
+
+      private final BufferedWriter writer;
+      private final InputStream stream;
+      private final PerfCounters counters;
+
+      private boolean error;
+
+      CopyingStreamThread(final InputStream is, final BufferedWriter w, final PerfCounters ctrs) {
+        this.writer = w;
+        this.stream = is;
+        this.counters = ctrs;
+      }
+
+      public boolean isErrored() {
+        return error;
+      }
+
+      public void run() {
+        BufferedReader r = null;
+        BufferedWriter w = this.writer;
+
+        try {
+          r = new BufferedReader(new InputStreamReader(this.stream));
+
+          // Actually do the read/write transfer loop here.
+          int preambleLen = -1; // set to this for "undefined"
+          while (true) {
+            String inLine = r.readLine();
+            if (null == inLine) {
+              break; // EOF.
+            }
+
+            // this line is of the form "INSERT .. VALUES ( actual value text );"
+            // strip the leading preamble up to the '(' and the trailing ');'.
+            if (preambleLen == -1) {
+              // we haven't determined how long the preamble is. It's constant
+              // across all lines, so just figure this out once.
+              String recordStartMark = "VALUES (";
+              preambleLen = inLine.indexOf(recordStartMark) + recordStartMark.length();
+            }
+
+            // chop off the leading and trailing text as we write the
+            // output to HDFS.
+            int len = inLine.length() - 2 - preambleLen;
+            w.write(inLine, preambleLen, len);
+            w.newLine();
+            counters.addBytes(1 + len);
+          }
+        } catch (IOException ioe) {
+          LOG.error("IOException reading from mysqldump: " + ioe.toString());
+          // flag this error so we get an error status back in the caller.
+          error = true;
+        } finally {
+          if (null != r) {
+            try {
+              r.close();
+            } catch (IOException ioe) {
+              LOG.info("Error closing FIFO stream: " + ioe.toString());
+            }
+          }
+
+          if (null != w) {
+            try {
+              w.close();
+            } catch (IOException ioe) {
+              LOG.info("Error closing HDFS stream: " + ioe.toString());
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+  /**
+   * The ReparsingStreamHandler will instantiate a RecordParser to read mysqldump's
+   * output, and re-emit the text in the user's specified output format.
+   */
+  static class ReparsingStreamHandlerFactory implements StreamHandlerFactory {
+    private final BufferedWriter writer;
+    private final ImportOptions options;
+    private final PerfCounters counters;
+
+    ReparsingStreamHandlerFactory(final BufferedWriter w, final ImportOptions opts, 
+        final PerfCounters ctrs) {
+      this.writer = w;
+      this.options = opts;
+      this.counters = ctrs;
+    }
+
+    private ReparsingStreamThread child;
+
+    public void processStream(InputStream is) {
+      child = new ReparsingStreamThread(is, writer, options, counters);
+      child.start();
+    }
+
+    public int join() throws InterruptedException {
+      child.join();
+      if (child.isErrored()) {
+        return 1;
+      } else {
+        return 0;
+      }
+    }
+
+    private static class ReparsingStreamThread extends Thread {
+      public static final Log LOG = LogFactory.getLog(ReparsingStreamThread.class.getName());
+
+      private final BufferedWriter writer;
+      private final ImportOptions options;
+      private final InputStream stream;
+      private final PerfCounters counters;
+
+      private boolean error;
+
+      ReparsingStreamThread(final InputStream is, final BufferedWriter w,
+          final ImportOptions opts, final PerfCounters ctrs) {
+        this.writer = w;
+        this.options = opts;
+        this.stream = is;
+        this.counters = ctrs;
+      }
+
+      private static final char MYSQL_FIELD_DELIM = ',';
+      private static final char MYSQL_RECORD_DELIM = '\n';
+      private static final char MYSQL_ENCLOSE_CHAR = '\'';
+      private static final char MYSQL_ESCAPE_CHAR = '\\';
+      private static final boolean MYSQL_ENCLOSE_REQUIRED = false;
+
+      private static final RecordParser MYSQLDUMP_PARSER;
+
+      static {
+        // build a record parser for mysqldump's format
+        MYSQLDUMP_PARSER = new RecordParser(MYSQL_FIELD_DELIM, MYSQL_RECORD_DELIM,
+            MYSQL_ENCLOSE_CHAR, MYSQL_ESCAPE_CHAR, MYSQL_ENCLOSE_REQUIRED);
+      }
+
+      public boolean isErrored() {
+        return error;
+      }
+
+      public void run() {
+        BufferedReader r = null;
+        BufferedWriter w = this.writer;
+
+        try {
+          r = new BufferedReader(new InputStreamReader(this.stream));
+
+          char outputFieldDelim = options.getOutputFieldDelim();
+          char outputRecordDelim = options.getOutputRecordDelim();
+          String outputEnclose = "" + options.getOutputEnclosedBy();
+          String outputEscape = "" + options.getOutputEscapedBy();
+          boolean outputEncloseRequired = options.isOutputEncloseRequired(); 
+          char [] encloseFor = { outputFieldDelim, outputRecordDelim };
+
+          // Actually do the read/write transfer loop here.
+          int preambleLen = -1; // set to this for "undefined"
+          while (true) {
+            String inLine = r.readLine();
+            if (null == inLine) {
+              break; // EOF.
+            }
+
+            // this line is of the form "INSERT .. VALUES ( actual value text );"
+            // strip the leading preamble up to the '(' and the trailing ');'.
+            if (preambleLen == -1) {
+              // we haven't determined how long the preamble is. It's constant
+              // across all lines, so just figure this out once.
+              String recordStartMark = "VALUES (";
+              preambleLen = inLine.indexOf(recordStartMark) + recordStartMark.length();
+            }
+
+            // Wrap the input string in a char buffer that ignores the leading and trailing
+            // text.
+            CharBuffer charbuf = CharBuffer.wrap(inLine, preambleLen, inLine.length() - 2);
+
+            // Pass this along to the parser
+            List<String> fields = null;
+            try {
+              fields = MYSQLDUMP_PARSER.parseRecord(charbuf);
+            } catch (RecordParser.ParseError pe) {
+              LOG.warn("ParseError reading from mysqldump: " + pe.toString() + "; record skipped");
+            }
+
+            // For all of the output fields, emit them using the delimiters the user chooses.
+            boolean first = true;
+            int recordLen = 1; // for the delimiter.
+            for (String field : fields) {
+              if (!first) {
+                w.write(outputFieldDelim);
+              } else {
+                first = false;
+              }
+
+              String fieldStr = FieldFormatter.escapeAndEnclose(field, outputEscape, outputEnclose,
+                  encloseFor, outputEncloseRequired);
+              w.write(fieldStr);
+              recordLen += fieldStr.length();
+            }
+
+            w.write(outputRecordDelim);
+            counters.addBytes(recordLen);
+          }
+        } catch (IOException ioe) {
+          LOG.error("IOException reading from mysqldump: " + ioe.toString());
+          // flag this error so the parent can handle it appropriately.
+          error = true;
+        } finally {
+          if (null != r) {
+            try {
+              r.close();
+            } catch (IOException ioe) {
+              LOG.info("Error closing FIFO stream: " + ioe.toString());
+            }
+          }
+
+          if (null != w) {
+            try {
+              w.close();
+            } catch (IOException ioe) {
+              LOG.info("Error closing HDFS stream: " + ioe.toString());
+            }
+          }
+        }
+      }
+    }
+  }
+
+
   public LocalMySQLManager(final ImportOptions options) {
     super(options, false);
   }
 
   private static final String MYSQL_DUMP_CMD = "mysqldump";
+
+  /**
+   * @return true if the user's output delimiters match those used by mysqldump.
+   * fields: ,
+   * lines: \n
+   * optional-enclose: \'
+   * escape: \\
+   */
+  private boolean outputDelimsAreMySQL() {
+    return options.getOutputFieldDelim() == ','
+        && options.getOutputRecordDelim() == '\n'
+        && options.getOutputEnclosedBy() == '\''
+        && options.getOutputEscapedBy() == '\\'
+        && !options.isOutputEncloseRequired(); // encloser is optional
+  }
   
   /**
    * Writes the user's password to a tmp file with 0600 permissions.
@@ -145,12 +430,15 @@ public class LocalMySQLManager extends MySQLManager {
     }
 
     LOG.info("Performing import of table " + tableName + " from database " + databaseName);
-    Process p = null;
     args.add(MYSQL_DUMP_CMD); // requires that this is on the path.
 
     String password = options.getPassword();
     String passwordFile = null;
 
+    
+    Process p = null;
+    StreamHandlerFactory streamHandler = null;
+    PerfCounters counters = new PerfCounters();
     try {
       // --defaults-file must be the first argument.
       if (null != password && password.length() > 0) {
@@ -187,83 +475,54 @@ public class LocalMySQLManager extends MySQLManager {
       for (String arg : args) {
         LOG.debug("  " + arg);
       }
-      
-      p = Runtime.getRuntime().exec(args.toArray(new String[0]));
-      
-      // read from the pipe, into HDFS.
-      InputStream is = p.getInputStream();
-      OutputStream os = null;
 
-      BufferedReader r = null;
-      BufferedWriter w = null;
-
-      try {
-        r = new BufferedReader(new InputStreamReader(is));
-
-        // create the paths/files in HDFS 
-        FileSystem fs = FileSystem.get(conf);
-        String warehouseDir = options.getWarehouseDir();
-        Path destDir = null;
-        if (null != warehouseDir) {
-          destDir = new Path(new Path(warehouseDir), tableName);
-        } else {
-          destDir = new Path(tableName);
-        }
-
-        LOG.debug("Writing to filesystem: " + conf.get("fs.default.name"));
-        LOG.debug("Creating destination directory " + destDir);
-        fs.mkdirs(destDir);
-        Path destFile = new Path(destDir, "data-00000");
-        LOG.debug("Opening output file: " + destFile);
-        if (fs.exists(destFile)) {
-          Path canonicalDest = destFile.makeQualified(fs);
-          throw new IOException("Destination file " + canonicalDest + " already exists");
-        }
-
-        os = fs.create(destFile);
-        w = new BufferedWriter(new OutputStreamWriter(os));
-
-        // Actually do the read/write transfer loop here.
-        int preambleLen = -1; // set to this for "undefined"
-        while (true) {
-          String inLine = r.readLine();
-          if (null == inLine) {
-            break; // EOF.
-          }
-
-          // this line is of the form "INSERT .. VALUES ( actual value text );"
-          // strip the leading preamble up to the '(' and the trailing ');'.
-          if (preambleLen == -1) {
-            // we haven't determined how long the preamble is. It's constant
-            // across all lines, so just figure this out once.
-            String recordStartMark = "VALUES (";
-            preambleLen = inLine.indexOf(recordStartMark) + recordStartMark.length();
-          }
-
-          // chop off the leading and trailing text as we write the
-          // output to HDFS.
-          w.write(inLine, preambleLen, inLine.length() - 2 - preambleLen);
-          w.newLine();
-        }
-      } finally {
-        LOG.info("Transfer loop complete.");
-        if (null != r) {
-          try {
-            r.close();
-          } catch (IOException ioe) {
-            LOG.info("Error closing FIFO stream: " + ioe.toString());
-          }
-        }
-
-        if (null != w) {
-          try {
-            w.close();
-          } catch (IOException ioe) {
-            LOG.info("Error closing HDFS stream: " + ioe.toString());
-          }
-        }
+      FileSystem fs = FileSystem.get(conf);
+      String warehouseDir = options.getWarehouseDir();
+      Path destDir = null;
+      if (null != warehouseDir) {
+        destDir = new Path(new Path(warehouseDir), tableName);
+      } else {
+        destDir = new Path(tableName);
       }
+
+      LOG.debug("Writing to filesystem: " + conf.get("fs.default.name"));
+      LOG.debug("Creating destination directory " + destDir);
+      fs.mkdirs(destDir);
+      Path destFile = new Path(destDir, "data-00000");
+      LOG.debug("Opening output file: " + destFile);
+      if (fs.exists(destFile)) {
+        Path canonicalDest = destFile.makeQualified(fs);
+        throw new IOException("Destination file " + canonicalDest + " already exists");
+      }
+
+      // This writer will be closed by StreamHandlerFactory.
+      OutputStream os = fs.create(destFile);
+      BufferedWriter w = new BufferedWriter(new OutputStreamWriter(os));
+
+      // Actually start the mysqldump.
+      p = Runtime.getRuntime().exec(args.toArray(new String[0]));
+
+      // read from the stdout pipe into the HDFS writer.
+      InputStream is = p.getInputStream();
+
+      if (outputDelimsAreMySQL()) {
+        LOG.debug("Output delimiters conform to mysqldump; using straight copy"); 
+        streamHandler = new CopyingStreamHandlerFactory(w, counters);
+      } else {
+        LOG.debug("User-specified delimiters; using reparsing import");
+        LOG.info("Converting data to use specified delimiters.");
+        LOG.info("(For the fastest possible import, use");
+        LOG.info("--mysql-delimiters to specify the same field");
+        LOG.info("delimiters as are used by mysqldump.)");
+        streamHandler = new ReparsingStreamHandlerFactory(w, options, counters);
+      }
+
+      // Start an async thread to read and upload the whole stream.
+      counters.startClock();
+      streamHandler.processStream(is);
     } finally {
+
+      // block until the process is done.
       int result = 0;
       if (null != p) {
         while (true) {
@@ -286,10 +545,34 @@ public class LocalMySQLManager extends MySQLManager {
         }
       }
 
+      // block until the stream handler is done too.
+      int streamResult = 0;
+      if (null != streamHandler) {
+        while (true) {
+          try {
+            streamResult = streamHandler.join();
+          } catch (InterruptedException ie) {
+            // interrupted; loop around.
+            continue;
+          }
+
+          break;
+        }
+      }
+
+      LOG.info("Transfer loop complete.");
+
       if (0 != result) {
         throw new IOException("mysqldump terminated with status "
             + Integer.toString(result));
       }
+
+      if (0 != streamResult) {
+        throw new IOException("Encountered exception in stream handler");
+      }
+
+      counters.stopClock();
+      LOG.info("Transferred " + counters.toString());
     }
   }
 }

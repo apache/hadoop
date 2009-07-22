@@ -34,8 +34,16 @@ public class NullStreamHandlerFactory implements StreamHandlerFactory {
 
   public static final Log LOG = LogFactory.getLog(NullStreamHandlerFactory.class.getName());
 
+  private Thread child;
+
   public void processStream(InputStream is) {
-    new IgnoringThread(is).start();
+    child = new IgnoringThread(is);
+    child.start();
+  }
+
+  public int join() throws InterruptedException {
+    child.join();
+    return 0; // always successful.
   }
 
   /**
