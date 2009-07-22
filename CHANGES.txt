@@ -254,3 +254,5 @@ Trunk (unreleased changes)
     MAPREDUCE-682. Removes reservations on tasktrackers which are
     blacklisted. (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-743. Fixes a problem to do with progress reporting
+    in the map phase. (Ravi Gummadi via ddas)

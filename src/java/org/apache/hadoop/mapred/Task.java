@@ -427,7 +427,9 @@ abstract public class Task implements Writable, Configurable {
       setProgressFlag();
     }
     public void setProgress(float progress) {
-      taskProgress.set(progress);
+      // set current phase progress.
+      // This method assumes that task has phases.
+      taskProgress.phase().set(progress);
       // indicate that progress update needs to be sent
       setProgressFlag();
     }
@@ -568,6 +570,16 @@ abstract public class Task implements Writable, Configurable {
     taskStatus.setNextRecordRange(range);
     LOG.debug("sending reportNextRecordRange " + range);
     umbilical.reportNextRecordRange(taskId, range);
+  }
+
+  /**
+   * Create a TaskReporter and start communication thread
+   */
+  TaskReporter startReporter(final TaskUmbilicalProtocol umbilical) {  
+    // start thread that will handle communication with parent
+    TaskReporter reporter = new TaskReporter(getProgress(), umbilical);
+    reporter.startCommunicationThread();
+    return reporter;
   }
 
   /**

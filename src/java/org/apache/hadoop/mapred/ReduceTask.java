@@ -346,8 +346,8 @@ class ReduceTask extends Task {
       reducePhase = getProgress().addPhase("reduce");
     }
     // start thread that will handle communication with parent
-    TaskReporter reporter = new TaskReporter(getProgress(), umbilical);
-    reporter.startCommunicationThread();
+    TaskReporter reporter = startReporter(umbilical);
+    
     boolean useNewApi = job.getUseNewReducer();
     initialize(job, getJobID(), reporter, useNewApi);
 
@@ -539,8 +539,7 @@ class ReduceTask extends Task {
       }
       public boolean next() throws IOException {
         boolean ret = rawIter.next();
-        reducePhase.set(rawIter.getProgress().getProgress());
-        reporter.progress();
+        reporter.setProgress(rawIter.getProgress().getProgress());
         return ret;
       }
     };

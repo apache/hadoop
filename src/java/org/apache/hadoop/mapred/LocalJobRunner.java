@@ -56,6 +56,32 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return JobSubmissionProtocol.versionID;
   }
   
+  static RawSplit[] getRawSplits(JobContext jContext, JobConf job)
+      throws Exception {
+    JobConf jobConf = jContext.getJobConf();
+    org.apache.hadoop.mapreduce.InputFormat<?,?> input =
+      ReflectionUtils.newInstance(jContext.getInputFormatClass(), jobConf);
+
+    List<org.apache.hadoop.mapreduce.InputSplit> splits = input.getSplits(jContext);
+    RawSplit[] rawSplits = new RawSplit[splits.size()];
+    DataOutputBuffer buffer = new DataOutputBuffer();
+    SerializationFactory factory = new SerializationFactory(jobConf);
+    Serializer serializer = 
+      factory.getSerializer(splits.get(0).getClass());
+    serializer.open(buffer);
+    for (int i = 0; i < splits.size(); i++) {
+      buffer.reset();
+      serializer.serialize(splits.get(i));
+      RawSplit rawSplit = new RawSplit();
+      rawSplit.setClassName(splits.get(i).getClass().getName());
+      rawSplit.setDataLength(splits.get(i).getLength());
+      rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
+      rawSplit.setLocations(splits.get(i).getLocations());
+      rawSplits[i] = rawSplit;
+    }
+    return rawSplits;
+  }
+
   private class Job extends Thread
     implements TaskUmbilicalProtocol {
     private Path file;
@@ -115,27 +141,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         // split input into minimum number of splits
         RawSplit[] rawSplits;
         if (job.getUseNewMapper()) {
-          org.apache.hadoop.mapreduce.InputFormat<?,?> input =
-              ReflectionUtils.newInstance(jContext.getInputFormatClass(), jContext.getJobConf());
-                    
-          List<org.apache.hadoop.mapreduce.InputSplit> splits = input.getSplits(jContext);
-          rawSplits = new RawSplit[splits.size()];
-          DataOutputBuffer buffer = new DataOutputBuffer();
-          SerializationFactory factory = new SerializationFactory(conf);
-          Serializer serializer = 
-            factory.getSerializer(splits.get(0).getClass());
-          serializer.open(buffer);
-          for (int i = 0; i < splits.size(); i++) {
-            buffer.reset();
-            serializer.serialize(splits.get(i));
-            RawSplit rawSplit = new RawSplit();
-            rawSplit.setClassName(splits.get(i).getClass().getName());
-            rawSplit.setDataLength(splits.get(i).getLength());
-            rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-            rawSplit.setLocations(splits.get(i).getLocations());
-            rawSplits[i] = rawSplit;
-          }
-
+          rawSplits = getRawSplits(jContext, job);
         } else {
           InputSplit[] splits = job.getInputFormat().getSplits(job, 1);
           rawSplits = new RawSplit[splits.length];

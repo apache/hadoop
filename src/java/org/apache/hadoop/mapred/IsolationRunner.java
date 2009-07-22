@@ -51,7 +51,7 @@ public class IsolationRunner {
   private static final Log LOG = 
     LogFactory.getLog(IsolationRunner.class.getName());
 
-  private static class FakeUmbilical implements TaskUmbilicalProtocol {
+  static class FakeUmbilical implements TaskUmbilicalProtocol {
 
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TaskUmbilicalProtocol.versionID;

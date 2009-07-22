@@ -188,10 +188,10 @@ class MapTask extends Task {
      
     protected synchronized boolean moveToNext(K key, V value)
       throws IOException {
-      reporter.setProgress(getProgress());
       beforePos = getPos();
       boolean ret = rawIn.next(key, value);
       afterPos = getPos();
+      reporter.setProgress(getProgress());
       return ret;
     }
     
@@ -285,10 +285,8 @@ class MapTask extends Task {
       mapPhase = getProgress().addPhase("map", 0.667f);
       sortPhase  = getProgress().addPhase("sort", 0.333f);
     }
-    
-    // start thread that will handle communication with parent
-    TaskReporter reporter = new TaskReporter(getProgress(), umbilical);
-    reporter.startCommunicationThread();
+    TaskReporter reporter = startReporter(umbilical);
+ 
     boolean useNewApi = job.getUseNewMapper();
     initialize(job, getJobID(), reporter, useNewApi);
 
