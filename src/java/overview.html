@@ -37,11 +37,11 @@
   </li>
       <li>HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
       Clients and Servers now must know where their ZooKeeper Quorum locations before
-      they can do anything else.  By default, HBase will manage a single ZooKeeper instance for you.
+      they can do anything else (Usually they pick up this information from configuration
+      supplied on their CLASSPATH).  By default, HBase will manage a single ZooKeeper instance for you.
       In basic standalone and pseudo-distributed modes this is usually enough, but for fully
       distributed mode you should configure a ZooKeeper quorum (more info below).
-      The Zookeeper addition changes
-      how some core HBase configuration is done.
+      In addition ZooKeeper changes how some core HBase configuration is done.
       </li>
   <li>Hosts must be able to resolve the fully-qualified domain name of the master.</li>
   <li>HBase currently is a file handle hog.  The usual default of
@@ -339,6 +339,8 @@ For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summar
   <li><a href="http://hbase.org">HBase Home Page</a>
   <li><a href="http://wiki.apache.org/hadoop/Hbase">HBase Wiki</a>
   <li><a href="http://hadoop.apache.org/">Hadoop Home Page</a>
+  <li><a href="http://wiki.apache.org/hadoop/Hbase/MultipleMasters">Setting up Multiple HBase Masters</a>
+  <li><a href="http://wiki.apache.org/hadoop/Hbase/RollingRestart">Rolling Upgrades</a>
 </ul>
 
 </body>
