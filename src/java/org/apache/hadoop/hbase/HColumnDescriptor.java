@@ -381,6 +381,13 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   }
 
   /**
+   * @param key Key whose key and value we're to remove from HCD parameters.
+   */
+  public void remove(final byte [] key) {
+    values.remove(new ImmutableBytesWritable(key));
+  }
+
+  /**
    * @param key The key.
    * @param value The value.
    */

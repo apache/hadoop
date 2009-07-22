@@ -2042,10 +2042,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     String lockName = String.valueOf(lockId);
     Integer rl = null;
-    synchronized(rowlocks) {
+    synchronized (rowlocks) {
       rl = rowlocks.get(lockName);
     }
-    if(rl == null) {
+    if (rl == null) {
       throw new IOException("Invalid row lock");
     }
     this.leases.renewLease(lockName);

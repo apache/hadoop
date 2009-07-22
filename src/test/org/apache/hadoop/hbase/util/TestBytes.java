@@ -25,6 +25,17 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 public class TestBytes extends TestCase {
+  public void testNullHashCode() {
+    byte [] b = null;
+    Exception ee = null;
+    try {
+      Bytes.hashCode(b);
+    } catch (Exception e) {
+      ee = e;
+    }
+    assertNotNull(ee);
+  }
+
   public void testSplit() throws Exception {
     byte [] lowest = Bytes.toBytes("AAA");
     byte [] middle = Bytes.toBytes("CCC");

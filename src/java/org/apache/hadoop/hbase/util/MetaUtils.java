@@ -192,23 +192,33 @@ public class MetaUtils {
     if (this.rootRegion == null) {
       openRootRegion();
     }
+    scanMetaRegion(this.rootRegion, listener);
+  }
 
+  /**
+   * Scan the passed in metaregion <code>m</code> invoking the passed
+   * <code>listener</code> per row found.
+   * @param m
+   * @param listener
+   * @throws IOException
+   */
+  public void scanMetaRegion(final HRegion r, final ScannerListener listener)
+  throws IOException {
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    InternalScanner rootScanner = this.rootRegion.getScanner(scan);
-
+    InternalScanner s = r.getScanner(scan);
     try {
       List<KeyValue> results = new ArrayList<KeyValue>();
       boolean hasNext = true;
       do {
-        hasNext = rootScanner.next(results);
+        hasNext = s.next(results);
         HRegionInfo info = null;
         for (KeyValue kv: results) {
           info = Writables.getHRegionInfoOrNull(kv.getValue());
           if (info == null) {
-            LOG.warn("region info is null for row " +
-                Bytes.toString(kv.getRow()) + " in table " +
-                HConstants.ROOT_TABLE_NAME);
+            LOG.warn("Region info is null for row " +
+              Bytes.toString(kv.getRow()) + " in table " +
+              r.getTableDesc().getNameAsString());
           }
           continue;
         }
@@ -218,7 +228,7 @@ public class MetaUtils {
         results.clear();
       } while (hasNext);
     } finally {
-      rootScanner.close();
+      r.close();
     }
   }
 
@@ -242,46 +252,6 @@ public class MetaUtils {
     // Open meta region so we can scan it
     HRegion metaRegion = openMetaRegion(metaRegionInfo);
     scanMetaRegion(metaRegion, listener);
-  }
-
-  /**
-   * Scan the passed in metaregion <code>m</code> invoking the passed
-   * <code>listener</code> per row found.
-   * @param m
-   * @param listener
-   * @throws IOException
-   */
-  public void scanMetaRegion(final HRegion m, final ScannerListener listener)
-  throws IOException {
-    
-    Scan scan = new Scan();
-    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    InternalScanner metaScanner = m.getScanner(scan);
-    
-    try {
-      List<KeyValue> results = new ArrayList<KeyValue>();
-      while (metaScanner.next(results)) {
-        HRegionInfo info = null;
-        for (KeyValue kv: results) {
-          if(kv.matchingColumn(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER)) {
-            info = Writables.getHRegionInfoOrNull(kv.getValue());
-            if (info == null) {
-              LOG.warn("region info is null for row " +
-                Bytes.toString(kv.getRow()) +
-                " in table " + HConstants.META_TABLE_NAME);
-            }
-            break;
-          }
-        }
-        if (!listener.processRow(info)) {
-          break;
-        }
-        results.clear();
-      }
-    } finally {
-      metaScanner.close();
-    }
   }
 
   private synchronized HRegion openRootRegion() throws IOException {

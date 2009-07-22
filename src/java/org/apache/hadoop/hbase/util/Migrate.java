@@ -247,8 +247,9 @@ public class Migrate extends Configured implements Tool {
     final MetaUtils utils = new MetaUtils(this.conf);
     final List<HRegionInfo> metas = new ArrayList<HRegionInfo>();
     try {
+      // Rewrite root.
       rewriteHRegionInfo(utils.getRootRegion().getRegionInfo());
-      // Scan the root region
+      // Scan the root region to rewrite metas.
       utils.scanRootRegion(new MetaUtils.ScannerListener() {
         public boolean processRow(HRegionInfo info)
         throws IOException {
@@ -261,7 +262,7 @@ public class Migrate extends Configured implements Tool {
           return true;
         }
       });
-      // Scan meta.
+      // Scan meta to rewrite table stuff.
       for (HRegionInfo hri: metas) {
         final HRegion h = utils.getMetaRegion(hri);
         utils.scanMetaRegion(h, new MetaUtils.ScannerListener() {
@@ -432,8 +433,11 @@ public class Migrate extends Configured implements Tool {
       // Set compression to none.  Previous was 'none'.  Needs to be upper-case.
       // Any other compression we are turning off.  Have user enable it.
       hcd.setCompressionType(Algorithm.NONE);
+      // Remove the old MEMCACHE_FLUSHSIZE if present
+      hcd.remove(Bytes.toBytes("MEMCACHE_FLUSHSIZE"));
+      result = true;
     }
-    return true;
+    return result;
   }
 
 
