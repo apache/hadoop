@@ -133,6 +133,8 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     configure("-k10,10",2);
     
     localTestWithoutMRJob("-k9,9", 1);
+
+    localTestWithoutMRJob("-k9n", 1);
   }
   
   byte[] line1_bytes = line1.getBytes();

@@ -67,7 +67,7 @@ public class KeyFieldBasedPartitioner<K2, V2> implements Partitioner<K2, V2> {
 
     List <KeyDescription> allKeySpecs = keyFieldHelper.keySpecs();
     if (allKeySpecs.size() == 0) {
-      return (key.toString().hashCode() & Integer.MAX_VALUE) % numReduceTasks;
+      return getPartition(key.toString().hashCode(), numReduceTasks);
     }
 
     try {
@@ -96,7 +96,7 @@ public class KeyFieldBasedPartitioner<K2, V2> implements Partitioner<K2, V2> {
       currentHash = hashCode(keyBytes, startChar, endChar, 
           currentHash);
     }
-    return (currentHash & Integer.MAX_VALUE) % numReduceTasks;
+    return getPartition(currentHash, numReduceTasks);
   }
   
   protected int hashCode(byte[] b, int start, int end, int currentHash) {
@@ -106,4 +106,7 @@ public class KeyFieldBasedPartitioner<K2, V2> implements Partitioner<K2, V2> {
     return currentHash;
   }
 
+  protected int getPartition(int hash, int numReduceTasks) {
+    return (hash & Integer.MAX_VALUE) % numReduceTasks;
+  }
 }

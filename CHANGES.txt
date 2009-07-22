@@ -184,6 +184,9 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-18. Puts some checks to detect cases where jetty serves up
     incorrect output during shuffle. (Ravi Gummadi via ddas)
 
+    MAPREDUCE-735. Fixes a problem in the KeyFieldHelper to do with 
+    the end index for some inputs (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
