@@ -244,3 +244,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-716. Make DBInputFormat work with Oracle. (Aaron Kimball
     via tomwhite)
+
+    MAPREDUCE-735. Fixes a problem in the KeyFieldHelper to do with 
+    the end index for some inputs (Amar Kamat via ddas)
