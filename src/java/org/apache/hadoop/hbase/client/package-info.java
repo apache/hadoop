@@ -27,7 +27,29 @@ Provides HBase Client
 </ul>
 
  <h2><a name="overview">Overview</a></h2>
- <p>
+ <p>To administer HBase, create and drop tables, list and alter tables, 
+ use {@link org.apache.hadoop.hbase.client.HBaseAdmin}.  Once created, table access is via an instance
+ of {@link org.apache.hadoop.hbase.client.HTable}.  You add content to a table a row at a time.  To insert,
+ create an instance of a {@link org.apache.hadoop.hbase.client.Put} object and after setting it appropriately,
+ commit your update using {@link org.apache.hadoop.hbase.client.HTable#put(Put)}.
+ To fetch your inserted
+ value, use {@link org.apache.hadoop.hbase.client.Get}.  The Get can be specified to be broad -- get all
+ on a particular row -- or narrow; return only a single cell value.  
+ When finished with your Get settings, invoke {@link org.apache.hadoop.hbase.client.HTable#get(Get)}.  Use
+ {@link org.apache.hadoop.hbase.client.Scan} to set up a scanner -- a Cursor-like access.  After
+ configuring your Scan instance, call {@link org.apache.hadoop.hbase.client.HTable#getScanner(Scan)} and then
+ invoke next on the returned object.  Both {@link org.apache.hadoop.hbase.client.HTable#get(Get)} and
+ {@link org.apache.hadoop.hbase.client.HTable#getScanner(Scan)} return a
+{@link org.apache.hadoop.hbase.client.Result}.
+A Result is a List of {@link org.apache.hadoop.hbase.KeyValue}s.  It has facility for packaging the return
+in different formats.
+ Use {@link org.apache.hadoop.hbase.client.Delete} to remove content.
+ You can remove individual cells or entire families, etc.  Pass it to
+ {@link org.apache.hadoop.hbase.client.HTable#delete(Delete)} to execute.
+ </p>
+ <p>Client code accessing a cluster finds the cluster by querying ZooKeeper.
+ This means that the ZooKeeper quorum to use must be on the client CLASSPATH.
+ Usually this means make sure the client can find your <code>hbase-site.xml</code>.
  </p>
  
 <h2><a name="client_example">Example API Usage</a></h2>

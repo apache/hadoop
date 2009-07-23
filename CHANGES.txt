@@ -278,6 +278,8 @@ Release 0.20.0 - Unreleased
                lists (Clint Morgan via Stack)
    HBASE-1359  After a large truncating table HBase becomes unresponsive
    HBASE-1215  0.19.0 -> 0.20.0 migration (hfile, HCD changes, HSK changes)
+   HBASE-1689  Fix javadoc warnings and add overview on client classes to
+               client package
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
