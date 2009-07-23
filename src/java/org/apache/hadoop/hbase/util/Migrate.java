@@ -101,12 +101,15 @@ public class Migrate extends Configured implements Tool {
     " See http://wiki.apache.org/hadoop/Hbase/HowToMigrate for more information.";
 
   /**
-   * @param conf
+   * Default constructor.
    */
   public Migrate() {
     super();
   }
 
+  /**
+   * @param conf
+   */
   public Migrate(final HBaseConfiguration c) {
     super(c);
   }
