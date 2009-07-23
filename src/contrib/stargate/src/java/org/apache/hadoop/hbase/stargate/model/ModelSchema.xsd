@@ -120,14 +120,23 @@
 
     <complexType name="Node">
     	<sequence>
-    		<element name="region" type="tns:Region" maxOccurs="unbounded" minOccurs="0"></element>
+    		<element name="region" type="tns:Region"
+    			maxOccurs="unbounded" minOccurs="0">
+    		</element>
     	</sequence>
     	<attribute name="name" type="string"></attribute>
     	<attribute name="startCode" type="int"></attribute>
     	<attribute name="requests" type="int"></attribute>
+    	<attribute name="heapSizeMB" type="int"></attribute>
+    	<attribute name="maxHeapSizeMB" type="int"></attribute>
     </complexType>
 
     <complexType name="Region">
     	<attribute name="name" type="base64Binary"></attribute>
+    	<attribute name="stores" type="int"></attribute>
+    	<attribute name="storefiles" type="int"></attribute>
+    	<attribute name="storefileSizeMB" type="int"></attribute>
+    	<attribute name="memstoreSizeMB" type="int"></attribute>
+    	<attribute name="storefileIndexSizeMB" type="int"></attribute>
     </complexType>
 </schema>
