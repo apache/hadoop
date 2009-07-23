@@ -45,6 +45,10 @@ Trunk (unreleased changes)
     HDFS-458. Create a new ant target, run-commit-test.  (Jakob Homan
     via szetszwo)
 
+    HDFS-493. Change build.xml so that the fault-injected tests are executed
+    only by the run-test-*-faul-inject targets.  (Konstantin Boudnik via
+    szetszwo)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

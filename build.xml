@@ -362,6 +362,8 @@
           description="Run Fault Injection related hdfs tests">
     <subant buildpath="build.xml" target="run-test-hdfs">
       <property name="build.dir" value="${build-fi.dir}"/>
+      <property name="test.fault.inject" value="yes"/>
+      <property name="test.include" value="TestFi*"/>
     </subant>
   </target>
 
@@ -369,6 +371,8 @@
           description="Run hdfs Fault Injection related unit tests that require mapred">
     <subant buildpath="build.xml" target="run-test-hdfs-with-mr">
       <property name="build.dir" value="${build-fi.dir}"/>
+      <property name="test.fault.inject" value="yes"/>
+      <property name="test.include" value="TestFi*"/>
     </subant>
   </target>
 
@@ -551,6 +555,35 @@
     </jar>
   </target>
 
+  <condition property="tests.notestcase">
+    <and>
+      <isfalse value="${test.fault.inject}"/>
+      <not>
+        <isset property="testcase"/>
+      </not>
+    </and>
+  </condition>
+  <condition property="tests.notestcase.fi">
+    <and>
+      <not>
+        <isset property="testcase" />
+      </not>
+      <istrue value="${test.fault.inject}" />
+    </and>
+  </condition>
+  <condition property="tests.testcase">
+    <and>
+      <isfalse value="${test.fault.inject}" />
+      <isset property="testcase" />
+    </and>
+  </condition>
+  <condition property="tests.testcase.fi">
+    <and>
+      <istrue value="${test.fault.inject}" />
+      <isset property="testcase" />
+    </and>
+  </condition>
+
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
@@ -586,15 +619,22 @@
           <propertyref regex="fi.*"/>
         </syspropertyset>
         <formatter type="${test.junit.output.format}" />
-        <batchtest todir="${test.build.dir}" unless="testcase">
+        <batchtest todir="${test.build.dir}" if="tests.notestcase">
           <fileset dir="${test.src.dir}/hdfs" excludes="**/${test.exclude}.java">
              <patternset>
                <includesfile name="@{test.file}"/>
              </patternset>
          </fileset>
         </batchtest>
-        <batchtest todir="${test.build.dir}" if="testcase">
+        <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
+          <fileset dir="${test.src.dir}/aop"
+            includes="**/${test.include}.java"
+            excludes="**/${test.exclude}.java" />
+        </batchtest>
+        <batchtest todir="${test.build.dir}" if="tests.testcase">
           <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
+        </batchtest>
+        <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
           <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
@@ -640,13 +680,21 @@
         <propertyref regex="fi.*"/>
       </syspropertyset>
       <formatter type="${test.junit.output.format}" />
-      <batchtest todir="${test.build.dir}" unless="testcase">
+      <batchtest todir="${test.build.dir}" if="tests.notestcase">
         <fileset dir="${test.src.dir}/hdfs-with-mr"
            includes="**/${test.include}.java"
-     excludes="**/${test.exclude}.java" />
+           excludes="**/${test.exclude}.java" />
       </batchtest>
-      <batchtest todir="${test.build.dir}" if="testcase">
+      <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
+        <fileset dir="${test.src.dir}/aop"
+          includes="**/${test.include}.java"
+          excludes="**/${test.exclude}.java" />
+      </batchtest>
+      <batchtest todir="${test.build.dir}" if="tests.testcase">
         <fileset dir="${test.src.dir}/hdfs-with-mr" includes="**/${testcase}.java"/>
+      </batchtest>
+      <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
+        <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
     <antcall target="checkfailure"/>
