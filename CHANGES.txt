@@ -280,6 +280,8 @@ Release 0.20.0 - Unreleased
    HBASE-1215  0.19.0 -> 0.20.0 migration (hfile, HCD changes, HSK changes)
    HBASE-1689  Fix javadoc warnings and add overview on client classes to
                client package
+   HBASE-1680  FilterList writable only works for HBaseObjectWritable
+               defined types (Clint Morgan via Stack and Jon Gray)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

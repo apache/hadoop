@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Implementation of {@link Filter} that represents an ordered List of Filters
@@ -211,7 +212,7 @@ public class FilterList implements Filter {
     out.writeByte(operator.ordinal());
     out.writeInt(filters.size());
     for (Filter filter : filters) {
-      HbaseObjectWritable.writeObject(out, filter, filter.getClass(), conf);
+      HbaseObjectWritable.writeObject(out, filter, Writable.class, conf);
     }
   }
 }
