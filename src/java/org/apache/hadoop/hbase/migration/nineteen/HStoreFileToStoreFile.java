@@ -115,7 +115,7 @@ public class HStoreFileToStoreFile extends Configured implements Tool {
           Path family = familyDirs[k].getPath();
           FileStatus [] infoAndMapfile = fs.listStatus(family);
           // Assert that only info and mapfile in family dir.
-          if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
+          if (infoAndMapfile.length != 2) {
             LOG.warn(family.toString() + " has more than just info and mapfile: " +
               infoAndMapfile.length + ". Continuing...");
             continue;
