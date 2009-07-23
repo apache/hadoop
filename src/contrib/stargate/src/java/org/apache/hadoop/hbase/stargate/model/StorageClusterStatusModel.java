@@ -126,7 +126,7 @@ public class StorageClusterStatusModel
 	     * @param storefiles the number of store files
 	     * @param storefileSizeMB total size of store files, in MB
 	     * @param memstoreSizeMB total size of memstore, in MB
-	     * @param storefileIndexSizeMB, total size of store file indexes, in MB
+	     * @param storefileIndexSizeMB total size of store file indexes, in MB
 	     */
 	    public Region(byte[] name, int stores, int storefiles,
           int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB) {

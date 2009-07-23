@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
  * cluster to be up to get a connection.
  */
 public interface ServerConnection extends HConnection {
-
   /**
    * Set root region location in connection
    * @param rootRegion

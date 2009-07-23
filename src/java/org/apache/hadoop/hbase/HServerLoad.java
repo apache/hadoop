@@ -348,14 +348,14 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   }
 
   /**
-   * @returns the amount of heap in use, in MB
+   * @return the amount of heap in use, in MB
    */
   public int getUsedHeapMB() {
     return usedHeapMB;
   }
 
   /**
-   * @returns the maximum allowable heap size, in MB
+   * @return the maximum allowable heap size, in MB
    */
   public int getMaxHeapMB() {
     return maxHeapMB;

@@ -99,7 +99,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
 
   /**
    * Add a column family to the table descriptor
-   * @param object the column family model
+   * @param family the column family model
    */
   public void addColumnFamily(ColumnSchemaModel family) {
     columns.add(family);

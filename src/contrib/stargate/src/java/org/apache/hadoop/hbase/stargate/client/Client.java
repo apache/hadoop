@@ -267,7 +267,7 @@ public class Client {
 
   /**
    * Send a GET request
-   * @param cluster the cluster definition
+   * @param c the cluster definition
    * @param path the path or URI
    * @param headers the HTTP headers to include in the request
    * @return a Response object with response detail

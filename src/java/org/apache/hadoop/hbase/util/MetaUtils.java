@@ -198,7 +198,7 @@ public class MetaUtils {
   /**
    * Scan the passed in metaregion <code>m</code> invoking the passed
    * <code>listener</code> per row found.
-   * @param m
+   * @param r
    * @param listener
    * @throws IOException
    */

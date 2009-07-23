@@ -71,7 +71,6 @@ public class RESTServlet extends ServletAdaptor {
 
   /**
    * Get a table pool for the given table. 
-   * @param name the table name
    * @return the table pool
    */
   protected HTablePool getTablePool() {
