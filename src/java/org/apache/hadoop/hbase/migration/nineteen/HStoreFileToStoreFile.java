@@ -37,7 +37,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
@@ -104,24 +104,27 @@ public class HStoreFileToStoreFile {
           FileStatus [] infoAndMapfile = fs.listStatus(family);
           // Assert that only info and mapfile in family dir.
           if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
-            throw new IOException(family.toString() +
-              " has more than just info and mapfile: " + infoAndMapfile.length);
+            LOG.warn(family.toString() +
+              " has more than just info and mapfile: " + infoAndMapfile.length + ". Continuing...");
+            continue;
           }
           // Make sure directory named info or mapfile.
           for (int ll = 0; ll < 2; ll++) {
             if (infoAndMapfile[ll].getPath().getName().equals("info") ||
                 infoAndMapfile[ll].getPath().getName().equals("mapfiles"))
               continue;
-            throw new IOException("Unexpected directory name: " +
-              infoAndMapfile[ll].getPath());
+            LOG.warn("Unexpected directory name: " +
+              infoAndMapfile[ll].getPath() + ". Continuing...");
+            continue;
           }
           // Now in family, there are 'mapfile' and 'info' subdirs.  Just
           // look in the 'mapfile' subdir.
           FileStatus [] familyStatus =
             fs.listStatus(new Path(family, "mapfiles"));
           if (familyStatus.length > 1) {
-            throw new IOException(family.toString() + " has " + familyStatus.length +
-              " files.");
+            LOG.warn(family.toString() + " has " + familyStatus.length +
+              " files.  Continuing...");
+            continue;
           }
           if (familyStatus.length == 1) {
             // If we got here, then this is good.  Add the mapfile to out
@@ -153,7 +156,7 @@ public class HStoreFileToStoreFile {
     job.setJobName(JOBNAME);
     job.setMapperClass(Map.class);
     job.setNumReduceTasks(0);
-    FileInputFormat.setInputPaths(job, input);
+    TextInputFormat.setInputPaths(job, input);
     Path output = new Path(args[1]);
     FileOutputFormat.setOutputPath(job, output);
     System.exit(job.waitForCompletion(true) ? 0 : 1);
