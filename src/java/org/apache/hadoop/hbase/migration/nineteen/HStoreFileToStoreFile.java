@@ -66,9 +66,6 @@ public class HStoreFileToStoreFile {
   private static void writeInputFiles(final HBaseConfiguration conf,
       final FileSystem fs, final Path dir)
   throws IOException {
-    if (!FSUtils.isPre020FileLayout(fs, FSUtils.getRootDir(conf))) {
-      throw new IOException("Not a pre-0.20 filesystem");
-    }
     if (fs.exists(dir)) {
       throw new IOException("Input exists -- please specify empty input dir");
     }
