@@ -69,71 +69,84 @@ public class HStoreFileToStoreFile {
     if (fs.exists(dir)) {
       throw new IOException("Input exists -- please specify empty input dir");
     }
-    FSDataOutputStream out = fs.create(new Path(dir, "mapfiles"));
+    gathermapfiles(conf, fs, dir);
+  }
+  
+  private static void gathermapfiles(final HBaseConfiguration conf,
+      final FileSystem fs, final Path dir)
+  throws IOException {
+    int index = 0;
+    FSDataOutputStream out = getOut(fs, dir, index, null);
     try {
-      gathermapfiles(conf, fs, out);
+      // Presumes any directory under hbase.rootdir is a table.
+      FileStatus [] tableDirs =
+        fs.listStatus(FSUtils.getRootDir(conf), new DirFilter(fs));
+      for (int i = 0; i < tableDirs.length; i++) {
+        // Inside a table, there are compaction.dir directories to skip.
+        // Otherwise, all else should be regions.  Then in each region, should
+        // only be family directories.  Under each of these, should be a mapfile
+        // and info directory and in these only one file.
+        Path d = tableDirs[i].getPath();
+        if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+        FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
+        for (int j = 0; j < regionDirs.length; j++) {
+          Path dd = regionDirs[j].getPath();
+          if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+          // Else its a region name.  Now look in region for families.
+          FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+          for (int k = 0; k < familyDirs.length; k++) {
+            Path family = familyDirs[k].getPath();
+            FileStatus [] infoAndMapfile = fs.listStatus(family);
+            // Assert that only info and mapfile in family dir.
+            if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
+              LOG.warn(family.toString() +
+                  " has more than just info and mapfile: " + infoAndMapfile.length + ". Continuing...");
+              continue;
+            }
+            // Make sure directory named info or mapfile.
+            for (int ll = 0; ll < 2; ll++) {
+              if (infoAndMapfile[ll].getPath().getName().equals("info") ||
+                  infoAndMapfile[ll].getPath().getName().equals("mapfiles"))
+                continue;
+              LOG.warn("Unexpected directory name: " +
+                  infoAndMapfile[ll].getPath() + ". Continuing...");
+              continue;
+            }
+            // Now in family, there are 'mapfile' and 'info' subdirs.  Just
+            // look in the 'mapfile' subdir.
+            FileStatus [] familyStatus =
+              fs.listStatus(new Path(family, "mapfiles"));
+            if (familyStatus.length > 1) {
+              LOG.warn(family.toString() + " has " + familyStatus.length +
+              " files.  Continuing...");
+              continue;
+            }
+            if (familyStatus.length == 1) {
+              // If we got here, then this is good.  Add the mapfile to out
+              String str = familyStatus[0].getPath().makeQualified(fs).toString();
+              LOG.info(str);
+              out.write(Bytes.toBytes(str + "\n"));
+              if (index++ % 100 == 0) {
+                if (index != 0) {
+                  out = getOut(fs, dir, index, out);
+                }
+              }
+            } else {
+              LOG.warn("Empty store " + family.toString());
+            }
+          }
+        }
+      }
     } finally {
       out.close();
     }
   }
   
-  private static void gathermapfiles(final HBaseConfiguration conf,
-      final FileSystem fs, final FSDataOutputStream out)
+  private static FSDataOutputStream getOut(final FileSystem fs, final Path dir,
+      final int index, FSDataOutputStream out)
   throws IOException {
-    // Presumes any directory under hbase.rootdir is a table.
-    FileStatus [] tableDirs =
-      fs.listStatus(FSUtils.getRootDir(conf), new DirFilter(fs));
-    for (int i = 0; i < tableDirs.length; i++) {
-      // Inside a table, there are compaction.dir directories to skip.
-      // Otherwise, all else should be regions.  Then in each region, should
-      // only be family directories.  Under each of these, should be a mapfile
-      // and info directory and in these only one file.
-      Path d = tableDirs[i].getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
-      FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
-      for (int j = 0; j < regionDirs.length; j++) {
-        Path dd = regionDirs[j].getPath();
-        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
-        // Else its a region name.  Now look in region for families.
-        FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
-        for (int k = 0; k < familyDirs.length; k++) {
-          Path family = familyDirs[k].getPath();
-          FileStatus [] infoAndMapfile = fs.listStatus(family);
-          // Assert that only info and mapfile in family dir.
-          if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
-            LOG.warn(family.toString() +
-              " has more than just info and mapfile: " + infoAndMapfile.length + ". Continuing...");
-            continue;
-          }
-          // Make sure directory named info or mapfile.
-          for (int ll = 0; ll < 2; ll++) {
-            if (infoAndMapfile[ll].getPath().getName().equals("info") ||
-                infoAndMapfile[ll].getPath().getName().equals("mapfiles"))
-              continue;
-            LOG.warn("Unexpected directory name: " +
-              infoAndMapfile[ll].getPath() + ". Continuing...");
-            continue;
-          }
-          // Now in family, there are 'mapfile' and 'info' subdirs.  Just
-          // look in the 'mapfile' subdir.
-          FileStatus [] familyStatus =
-            fs.listStatus(new Path(family, "mapfiles"));
-          if (familyStatus.length > 1) {
-            LOG.warn(family.toString() + " has " + familyStatus.length +
-              " files.  Continuing...");
-            continue;
-          }
-          if (familyStatus.length == 1) {
-            // If we got here, then this is good.  Add the mapfile to out
-            String str = familyStatus[0].getPath().makeQualified(fs).toString();
-            LOG.info(str);
-            out.write(Bytes.toBytes(str + "\n"));
-          } else {
-            LOG.warn("Empty store " + family.toString());
-          }
-        }
-      }
-    }
+    if (out == null) out.close();
+    return fs.create(new Path(dir, "mapfiles-" + index));
   }
 
   public static void main(String[] args) throws Exception {
