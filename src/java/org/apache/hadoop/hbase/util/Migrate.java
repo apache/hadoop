@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.migration.nineteen.io.BloomFilterMapFile;
@@ -86,7 +87,6 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class Migrate extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Migrate.class);
-  private final HBaseConfiguration conf;
   private FileSystem fs;
   boolean migrationNeeded = false;
   boolean check = false;
@@ -100,26 +100,24 @@ public class Migrate extends Configured implements Tool {
   private static final String MIGRATION_LINK = 
     " See http://wiki.apache.org/hadoop/Hbase/HowToMigrate for more information.";
 
-  /** default constructor */
-  public Migrate() {
-    this(new HBaseConfiguration());
-  }
-  
   /**
    * @param conf
    */
-  public Migrate(HBaseConfiguration conf) {
-    super(conf);
-    this.conf = conf;
+  public Migrate() {
+    super();
   }
-  
+
+  public Migrate(final HBaseConfiguration c) {
+    super(c);
+  }
+
   /*
    * Sets the hbase rootdir as fs.default.name.
    * @return True if succeeded.
    */
   private boolean setFsDefaultName() {
     // Validate root directory path
-    Path rd = new Path(conf.get(HConstants.HBASE_DIR));
+    Path rd = new Path(getConf().get(HConstants.HBASE_DIR));
     try {
       // Validate root directory path
       FSUtils.validateRootPath(rd);
@@ -129,7 +127,7 @@ public class Migrate extends Configured implements Tool {
           " configuration parameter '" + HConstants.HBASE_DIR + "'", e);
       return false;
     }
-    this.conf.set("fs.default.name", rd.toString());
+    getConf().set("fs.default.name", rd.toString());
     return true;
   }
 
@@ -139,7 +137,7 @@ public class Migrate extends Configured implements Tool {
   private boolean verifyFilesystem() {
     try {
       // Verify file system is up.
-      fs = FileSystem.get(conf);                        // get DFS handle
+      fs = FileSystem.get(getConf());                        // get DFS handle
       LOG.info("Verifying that file system is available..");
       FSUtils.checkFileSystemAvailable(fs);
       return true;
@@ -154,7 +152,7 @@ public class Migrate extends Configured implements Tool {
     LOG.info("Verifying that HBase is not running...." +
           "Trys ten times  to connect to running master");
     try {
-      HBaseAdmin.checkHBaseAvailable(conf);
+      HBaseAdmin.checkHBaseAvailable((HBaseConfiguration)getConf());
       LOG.fatal("HBase cluster must be off-line.");
       return false;
     } catch (MasterNotRunningException e) {
@@ -177,7 +175,8 @@ public class Migrate extends Configured implements Tool {
       LOG.info("Starting upgrade" + (check ? " check" : ""));
 
       // See if there is a file system version file
-      String versionStr = FSUtils.getVersion(fs, FSUtils.getRootDir(this.conf));
+      String versionStr = FSUtils.getVersion(fs,
+        FSUtils.getRootDir((HBaseConfiguration)getConf()));
       if (versionStr == null) {
         throw new IOException("File system version file " +
             HConstants.VERSION_FILE_NAME +
@@ -202,7 +201,7 @@ public class Migrate extends Configured implements Tool {
       if (!check) {
         // Set file system version
         LOG.info("Setting file system version.");
-        FSUtils.setVersion(fs, FSUtils.getRootDir(this.conf));
+        FSUtils.setVersion(fs, FSUtils.getRootDir((HBaseConfiguration)getConf()));
         LOG.info("Upgrade successful.");
       } else if (this.migrationNeeded) {
         LOG.info("Upgrade needed.");
@@ -220,7 +219,7 @@ public class Migrate extends Configured implements Tool {
       return;
     }
     // Before we start, make sure all is major compacted.
-    Path hbaseRootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    Path hbaseRootDir = new Path(getConf().get(HConstants.HBASE_DIR));
     boolean pre020 = FSUtils.isPre020FileLayout(fs, hbaseRootDir);
     if (pre020) {
       LOG.info("Checking pre020 filesystem is major compacted");
@@ -244,7 +243,7 @@ public class Migrate extends Configured implements Tool {
         throw new IOException(msg);
       }
     }
-    final MetaUtils utils = new MetaUtils(this.conf);
+    final MetaUtils utils = new MetaUtils((HBaseConfiguration)getConf());
     final List<HRegionInfo> metas = new ArrayList<HRegionInfo>();
     try {
       // Rewrite root.
@@ -334,12 +333,20 @@ public class Migrate extends Configured implements Tool {
           if (mfs.length > 1) {
             throw new IOException("Should only be one directory in: " + mfdir);
           }
-          rewrite(this.conf, this.fs, mfs[0].getPath());
+          if (mfs.length == 0) {
+            // Special case.  Empty region.  Remove the mapfiles and info dirs.
+            Path infodir = new Path(family, "info");
+            LOG.info("Removing " + mfdir + " and " + infodir + " because empty");
+            fs.delete(mfdir, true);
+            fs.delete(infodir, true);
+          } else {
+            rewrite((HBaseConfiguration)getConf(), this.fs, mfs[0].getPath());
+          }
         }
       }
     }
   }
-  
+
   /**
    * Rewrite the passed 0.19 mapfile as a 0.20 file.
    * @param fs
@@ -359,11 +366,12 @@ public class Migrate extends Configured implements Tool {
       Integer.parseInt(regiondir.getName()),
       Bytes.toBytes(familydir.getName()), Long.parseLong(mf.getName()), null);
     BloomFilterMapFile.Reader src = hsf.getReader(fs, false, false);
-    HFile.Writer tgt = StoreFile.getWriter(fs, familydir);
+    HFile.Writer tgt = StoreFile.getWriter(fs, familydir,
+      conf.getInt("hfile.min.blocksize.size", 64*1024),
+      Compression.Algorithm.NONE, getComparator(basedir));
     // From old 0.19 HLogEdit.
     ImmutableBytesWritable deleteBytes =
       new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes("UTF-8"));
-
     try {
       while (true) {
         HStoreKey key = new HStoreKey();
@@ -396,6 +404,13 @@ public class Migrate extends Configured implements Tool {
       tgt.close();
       fs.delete(tgt.getPath(), true);
     }
+  }
+
+  private static KeyValue.KeyComparator getComparator(final Path tabledir) {
+    String tablename = tabledir.getName();
+    return tablename.equals("-ROOT-")? KeyValue.META_KEY_COMPARATOR:
+      tablename.equals(".META.")? KeyValue.META_KEY_COMPARATOR:
+        KeyValue.KEY_COMPARATOR;
   }
 
   /*
@@ -523,7 +538,7 @@ public class Migrate extends Configured implements Tool {
   public static void main(String[] args) {
     int status = 0;
     try {
-      status = ToolRunner.run(new Migrate(), args);
+      status = ToolRunner.run(new HBaseConfiguration(), new Migrate(), args);
     } catch (Exception e) {
       LOG.error(e);
       status = -1;
