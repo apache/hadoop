@@ -152,6 +152,9 @@ Trunk (unreleased changes)
     HADOOP-5976. Add a new command, classpath, to the hadoop script.  (Owen
     O'Malley and Gary Murry via szetszwo)
 
+    HADOOP-6120. Add support for Avro specific and reflect data.
+    (sharad via cutting)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

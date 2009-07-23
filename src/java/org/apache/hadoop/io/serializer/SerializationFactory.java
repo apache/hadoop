@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
+import org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -50,7 +52,9 @@ public class SerializationFactory extends Configured {
   public SerializationFactory(Configuration conf) {
     super(conf);
     for (String serializerName : conf.getStrings("io.serializations", 
-      new String[]{"org.apache.hadoop.io.serializer.WritableSerialization"})) {
+      new String[]{WritableSerialization.class.getName(), 
+        AvroSpecificSerialization.class.getName(), 
+        AvroReflectSerialization.class.getName()})) {
       add(conf, serializerName);
     }
   }

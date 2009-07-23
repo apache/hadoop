@@ -23,25 +23,18 @@ import static org.apache.hadoop.io.TestGenericWritable.CONF_TEST_VALUE;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.TestGenericWritable.Baz;
 import org.apache.hadoop.io.TestGenericWritable.FooGenericWritable;
-import org.apache.hadoop.util.GenericsUtil;
 
 public class TestWritableSerialization extends TestCase {
 
   private static final Configuration conf = new Configuration();
-  
-  static {
-    conf.set("io.serializations"
-        , "org.apache.hadoop.io.serializer.WritableSerialization");
-  }
-  
+
   public void testWritableSerialization() throws Exception {
     Text before = new Text("test writable"); 
-    testSerialization(conf, before);
+    Text after = SerializationTestUtil.testSerialization(conf, before);
+    assertEquals(before, after);
   }
   
   
@@ -56,40 +49,8 @@ public class TestWritableSerialization extends TestCase {
     generic.setConf(conf);
     Baz baz = new Baz();
     generic.set(baz);
-    Baz result = testSerialization(conf, baz);
+    Baz result = SerializationTestUtil.testSerialization(conf, baz);
+    assertEquals(baz, result);
     assertNotNull(result.getConf());
   }
-  
-  /**
-   * A utility that tests serialization/deserialization. 
-   * @param <K> the class of the item
-   * @param conf configuration to use, "io.serializations" is read to 
-   * determine the serialization
-   * @param before item to (de)serialize
-   * @return deserialized item
-   */
-  public static<K> K testSerialization(Configuration conf, K before) 
-    throws Exception {
-    
-    SerializationFactory factory = new SerializationFactory(conf);
-    Serializer<K> serializer 
-      = factory.getSerializer(GenericsUtil.getClass(before));
-    Deserializer<K> deserializer 
-      = factory.getDeserializer(GenericsUtil.getClass(before));
-   
-    DataOutputBuffer out = new DataOutputBuffer();
-    serializer.open(out);
-    serializer.serialize(before);
-    serializer.close();
-    
-    DataInputBuffer in = new DataInputBuffer();
-    in.reset(out.getData(), out.getLength());
-    deserializer.open(in);
-    K after = deserializer.deserialize(null);
-    deserializer.close();
-    
-    assertEquals(before, after);
-    return after;
-  }
-  
 }

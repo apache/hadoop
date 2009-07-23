@@ -416,11 +416,22 @@
 	         includes="**/*.jr" />
     </recordcc>
   </target>
-  
+
+  <target name="generate-avro-records" depends="init, ivy-retrieve-test">
+    <taskdef name="schema" classname="org.apache.avro.specific.SchemaTask">
+      <classpath refid="test.core.classpath"/>
+    </taskdef>
+    <schema destdir="${test.generated.dir}">
+      <fileset dir="${test.src.dir}">
+        <include name="**/*.avsc" />
+      </fileset>
+    </schema>
+  </target>
+
   <!-- ================================================================== -->
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
-  <target name="compile-core-test" depends="compile-core-classes, ivy-retrieve-test, generate-test-records">
+  <target name="compile-core-test" depends="compile-core-classes, ivy-retrieve-test, generate-test-records, generate-avro-records">
     <mkdir dir="${test.core.build.classes}"/>
     <javac 
      encoding="${build.encoding}" 
