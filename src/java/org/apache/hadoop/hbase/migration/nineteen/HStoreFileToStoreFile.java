@@ -133,9 +133,10 @@ public class HStoreFileToStoreFile extends Configured implements Tool {
           // look in the 'mapfile' subdir.
           Path mfsdir = new Path(family, "mapfiles");
           FileStatus [] familyStatus = fs.listStatus(mfsdir);
-          if (familyStatus.length > 1) {
-            LOG.warn(family.toString() + " has " + familyStatus.length +
-            " files.  Continuing...");
+          if (familyStatus == null || familyStatus.length > 1) {
+            LOG.warn(family.toString() + " has " +
+              ((familyStatus == null) ? "null": familyStatus.length) +
+              " files.  Continuing...");
             continue;
           }
           if (familyStatus.length == 1) {
