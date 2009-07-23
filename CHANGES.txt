@@ -503,6 +503,7 @@ Release 0.20.0 - Unreleased
    HBASE-1609  We wait on leases to expire before regionserver goes down.
                Rather, just let client fail
    HBASE-1655  Usability improvements to HTablePool (Ken Weiner via jgray)
+   HBASE-1688  Improve javadocs in Result and KeyValue
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

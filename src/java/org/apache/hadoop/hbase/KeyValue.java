@@ -33,8 +33,15 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
 /**
- * An HBase Key/Value.  Instances of this class are immutable.  They are not
- * comparable but Comparators are provided  Comparators change with context,
+ * An HBase Key/Value.
+ * 
+ * <p>If being used client-side, the primary methods to access individual fields
+ * are {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()}, 
+ * {@link #getTimestamp()}, and {@link #getValue()}.  These methods allocate new
+ * byte arrays and return copies so they should be avoided server-side.
+ * 
+ * <p>Instances of this class are immutable.  They are not
+ * comparable but Comparators are provided.  Comparators change with context,
  * whether user table or a catalog table comparison context.  Its
  * important that you use the appropriate comparator comparing rows in
  * particular.  There are Comparators for KeyValue instances and then for
@@ -860,7 +867,11 @@ public class KeyValue implements Writable, HeapSize {
   //---------------------------------------------------------------------------
   
   /**
-   * @return Copy of the key portion only.  Used compacting and testing.
+   * Do not use unless you have to.  Used internally for compacting and testing.
+   * 
+   * Use {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()}, and 
+   * {@link #getValue()} if accessing a KeyValue client-side.
+   * @return Copy of the key portion only.
    */
   public byte [] getKey() {
     int keylength = getKeyLength();
@@ -883,8 +894,11 @@ public class KeyValue implements Writable, HeapSize {
   }
   
   /**
-   * Do not use this unless you have to.
-   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
+   * Primarily for use client-side.  Returns the row of this KeyValue in a new
+   * byte array.<p>
+   * 
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   * lengths instead.
    * @return Row in a new byte array.
    */
   public byte [] getRow() {
@@ -896,6 +910,7 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * 
    * @return Timestamp
    */
   public long getTimestamp() {
@@ -941,8 +956,11 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Do not use this unless you have to.
-   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
+   * Primarily for use client-side.  Returns the column of this KeyValue in the
+   * deprecated format: <i>family:qualifier</i>, and in a new byte array.<p>
+   * 
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   * lengths instead.
    * @return Returns column. Makes a copy.  Inserts delimiter.
    */
   public byte [] getColumn() {
@@ -957,8 +975,11 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Do not use this unless you have to.
-   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
+   * Primarily for use client-side.  Returns the family of this KeyValue in a 
+   * new byte array.<p>
+   * 
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   * lengths instead.
    * @return Returns family. Makes a copy.
    */
   public byte [] getFamily() {
@@ -970,7 +991,11 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Do not use this unless you have to.
+   * Primarily for use client-side.  Returns the column qualifier of this 
+   * KeyValue in a new byte array.<p>
+   * 
+   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
+   * lengths instead.
    * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
    * @return Returns qualifier. Makes a copy.
    */
