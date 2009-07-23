@@ -69,11 +69,6 @@ import org.apache.hadoop.hbase.util.Hash;
  *
  * @version 1.0 - 7 Feb. 07
  * 
- * @see org.onelab.filter.Filter The general behavior of a filter
- * @see org.onelab.filter.BloomFilter A Bloom filter
- * @see org.onelab.filter.RemoveScheme The different selective clearing algorithms
- * 
- * @see <a href="http://www-rp.lip6.fr/site_npa/site_rp/_publications/740-rbf_cameraready.pdf">Retouched Bloom Filters: Allowing Networked Applications to Trade Off Selected False Positives Against False Negatives</a>
  */
 public final class RetouchedBloomFilter extends BloomFilter
 implements RemoveScheme {

@@ -55,8 +55,6 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * The general behavior of a key that must be stored in a filter.
- * 
- * @see org.onelab.filter.Filter The general behavior of a filter
  */
 public class Key implements WritableComparable {
   /** Byte value of key */

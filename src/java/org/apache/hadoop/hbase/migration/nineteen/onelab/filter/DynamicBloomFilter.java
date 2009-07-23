@@ -81,10 +81,6 @@ import org.apache.hadoop.hbase.util.Hash;
  *
  * @version 1.0 - 6 Feb. 07
  * 
- * @see org.onelab.filter.Filter The general behavior of a filter
- * @see org.onelab.filter.BloomFilter A Bloom filter
- * 
- * @see <a href="http://www.cse.fau.edu/~jie/research/publications/Publication_files/infocom2006.pdf">Theory and Network Applications of Dynamic Bloom Filters</a>
  */
 public class DynamicBloomFilter extends Filter {
   /** 

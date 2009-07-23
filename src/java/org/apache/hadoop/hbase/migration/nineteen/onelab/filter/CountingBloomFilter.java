@@ -66,9 +66,6 @@ import org.apache.hadoop.hbase.util.Hash;
  *
  * @version 1.1 - 19 Jan. 08
  * 
- * @see org.onelab.filter.Filter The general behavior of a filter
- * 
- * @see <a href="http://portal.acm.org/citation.cfm?id=343571.343572">Summary cache: a scalable wide-area web cache sharing protocol</a>
  */
 public final class CountingBloomFilter extends Filter {
   /** Storage for the counting buckets */

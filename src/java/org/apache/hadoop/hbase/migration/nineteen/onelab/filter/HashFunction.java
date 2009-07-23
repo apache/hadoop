@@ -56,14 +56,7 @@ import org.apache.hadoop.hbase.util.Hash;
  * <p>
  * It is based on the SHA-1 algorithm. 
  * 
- * @see org.onelab.filter.Filter The general behavior of a filter
- *
  * @version 1.0 - 2 Feb. 07
- * 
- * @see org.onelab.filter.Key The general behavior of a key being stored in a filter
- * @see org.onelab.filter.Filter The general behavior of a filter
- * 
- * @see <a href="http://www.itl.nist.gov/fipspubs/fip180-1.htm">SHA-1 algorithm</a>
  */
 public final class HashFunction {
   /** The number of hashed values. */

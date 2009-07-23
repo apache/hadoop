@@ -123,10 +123,14 @@ public class HStoreFileToStoreFile {
             throw new IOException(family.toString() + " has " + familyStatus.length +
               " files.");
           }
-          // If we got here, then this is good.  Add the mapfile to out
-          String str = familyStatus[0].getPath().makeQualified(fs).toString();
-          LOG.info(str);
-          out.write(Bytes.toBytes(str + "\n"));
+          if (familyStatus.length == 1) {
+            // If we got here, then this is good.  Add the mapfile to out
+            String str = familyStatus[0].getPath().makeQualified(fs).toString();
+            LOG.info(str);
+            out.write(Bytes.toBytes(str + "\n"));
+          } else {
+            LOG.warn("Empty store " + family.toString());
+          }
         }
       }
     }

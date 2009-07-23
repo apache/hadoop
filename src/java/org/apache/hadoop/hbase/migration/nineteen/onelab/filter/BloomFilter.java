@@ -70,10 +70,6 @@ import org.apache.hadoop.hbase.util.Hash;
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @version 1.0 - 2 Feb. 07
- * 
- * @see org.onelab.filter.Filter The general behavior of a filter
- * 
- * @see <a href="http://portal.acm.org/citation.cfm?id=362692&dl=ACM&coll=portal">Space/Time Trade-Offs in Hash Coding with Allowable Errors</a>
  */
 public class BloomFilter extends Filter {
   private static final byte[] bitvalues = new byte[] {

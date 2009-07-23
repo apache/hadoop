@@ -69,12 +69,7 @@ import org.apache.hadoop.io.Writable;
  * <p>
  * It must be extended in order to define the real behavior.
  * 
- * @see org.onelab.filter.Filter The general behavior of a filter
- *
  * @version 1.0 - 2 Feb. 07
- * 
- * @see org.onelab.filter.Key The general behavior of a key
- * @see org.onelab.filter.HashFunction A hash function
  */
 public abstract class Filter implements Writable {
   private static final int VERSION = -1; // negative to accommodate for old format 
