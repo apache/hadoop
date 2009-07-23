@@ -65,7 +65,9 @@ public class JtaXAResource implements XAResource {
     } catch (CommitUnsuccessfulException e) {
       throw new XAException(XAException.XA_RBROLLBACK);
     } catch (IOException e) {
-      throw new XAException(XAException.XA_RBPROTO); // FIXME correct code?
+      XAException xae = new XAException(XAException.XAER_RMERR);
+      xae.initCause(e);
+      throw xae;
     } finally {
       threadLocalTransactionState.remove();
     }
@@ -85,7 +87,9 @@ public class JtaXAResource implements XAResource {
       try {
         transactionManager.abort(state);
       } catch (IOException e) {
-        throw new RuntimeException(e); // FIXME, should be an XAException?
+        XAException xae = new XAException(XAException.XAER_RMERR);
+        xae.initCause(e);
+        throw xae;
       }
     }
   }
@@ -108,9 +112,13 @@ public class JtaXAResource implements XAResource {
     try {
       status = this.transactionManager.prepareCommit(state);
     } catch (CommitUnsuccessfulException e) {
-      throw new XAException(XAException.XA_HEURRB); // FIXME correct code?
+      XAException xae = new XAException(XAException.XA_HEURRB);
+      xae.initCause(e);
+      throw xae;
     } catch (IOException e) {
-      throw new XAException(XAException.XA_RBPROTO); // FIXME correct code?
+      XAException xae = new XAException(XAException.XAER_RMERR);
+      xae.initCause(e);
+      throw xae;
     }
 
     switch (status) {
@@ -119,7 +127,7 @@ public class JtaXAResource implements XAResource {
     case TransactionalRegionInterface.COMMIT_OK_READ_ONLY:
       return XAResource.XA_RDONLY;
     default:
-      throw new XAException(XAException.XA_RBPROTO); // FIXME correct code?
+      throw new XAException(XAException.XA_RBPROTO); 
     }
   }
 

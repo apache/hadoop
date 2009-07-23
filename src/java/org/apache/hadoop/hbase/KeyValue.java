@@ -620,6 +620,9 @@ public class KeyValue implements Writable, HeapSize {
   //---------------------------------------------------------------------------
   
   public String toString() {
+    if (this.bytes == null || this.bytes.length == 0) {
+      return "empty";
+    }
     return keyToString(this.bytes, this.offset + ROW_OFFSET, getKeyLength()) +
       "/vlen=" + getValueLength();
   }

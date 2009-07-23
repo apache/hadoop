@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.transactional;
 
+import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableSet;
@@ -30,6 +32,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -37,10 +40,14 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Holds the state of a transaction.
+ * Holds the state of a transaction. This includes a buffer of all writes, a
+ * record of all reads / scans, and information about which other transactions
+ * we need to check against.
  */
 class TransactionState {
 
@@ -70,8 +77,8 @@ class TransactionState {
     protected byte[] endRow;
 
     public ScanRange(byte[] startRow, byte[] endRow) {
-      this.startRow = startRow;
-      this.endRow = endRow;
+      this.startRow = startRow == HConstants.EMPTY_START_ROW ? null : startRow;
+      this.endRow = endRow == HConstants.EMPTY_END_ROW ? null : endRow;
     }
 
     /**
@@ -104,8 +111,9 @@ class TransactionState {
   private Status status;
   private SortedSet<byte[]> readSet = new TreeSet<byte[]>(
       Bytes.BYTES_COMPARATOR);
-  private List<Put> writeSet = new LinkedList<Put>();
-  private List<ScanRange> scanSet = new LinkedList<ScanRange>();
+  private List<Put> puts = new LinkedList<Put>();
+  private List<ScanRange> scans = new LinkedList<ScanRange>();
+  private List<Delete> deletes = new LinkedList<Delete>();
   private Set<TransactionState> transactionsToCheck = new HashSet<TransactionState>();
   private int startSequenceNumber;
   private Integer sequenceNumber;
@@ -128,15 +136,19 @@ class TransactionState {
   }
 
   void addWrite(final Put write) {
-    writeSet.add(write);
+    puts.add(write);
+  }
+  
+  boolean hasWrite() {
+    return puts.size() > 0 || deletes.size() > 0;
   }
 
-  List<Put> getWriteSet() {
-    return writeSet;
+  List<Put> getPuts() {
+    return puts;
   }
   
   void addDelete(final Delete delete) {
-    throw new UnsupportedOperationException("NYI");
+    deletes.add(delete);
   }
 
   /**
@@ -149,9 +161,11 @@ class TransactionState {
    */
   Result localGet(Get get) {
     
+    // TODO take deletes into account as well
+    
     List<KeyValue> localKVs = new LinkedList<KeyValue>();
     
-    for (Put put : writeSet) {
+    for (Put put : puts) {
       if (!Bytes.equals(get.getRow(), put.getRow())) {
         continue;
       }
@@ -203,7 +217,7 @@ class TransactionState {
       return false; // Cannot conflict with aborted transactions
     }
 
-    for (Put otherUpdate : checkAgainst.getWriteSet()) {
+    for (Put otherUpdate : checkAgainst.getPuts()) {
       if (this.getReadSet().contains(otherUpdate.getRow())) {
         LOG.debug("Transaction [" + this.toString()
             + "] has read which conflicts with [" + checkAgainst.toString()
@@ -211,7 +225,7 @@ class TransactionState {
             + Bytes.toString(otherUpdate.getRow()) + "]");
         return true;
       }
-      for (ScanRange scanRange : this.scanSet) {
+      for (ScanRange scanRange : this.scans) {
         if (scanRange.contains(otherUpdate.getRow())) {
           LOG.debug("Transaction [" + this.toString()
               + "] has scan which conflicts with [" + checkAgainst.toString()
@@ -289,9 +303,9 @@ class TransactionState {
     result.append(" read Size: ");
     result.append(readSet.size());
     result.append(" scan Size: ");
-    result.append(scanSet.size());
+    result.append(scans.size());
     result.append(" write Size: ");
-    result.append(writeSet.size());
+    result.append(puts.size());
     result.append(" startSQ: ");
     result.append(startSequenceNumber);
     if (sequenceNumber != null) {
@@ -328,7 +342,7 @@ class TransactionState {
         scanRange.startRow == null ? "null" : Bytes
             .toString(scanRange.startRow), scanRange.endRow == null ? "null"
             : Bytes.toString(scanRange.endRow)));
-    scanSet.add(scanRange);
+    scans.add(scanRange);
   }
   
   int getCommitPendingWaits() {
@@ -338,4 +352,106 @@ class TransactionState {
   void incrementCommitPendingWaits() {
     this.commitPendingWaits++;
   }
+
+  /** Get deleteSet.
+   * @return deleteSet
+   */
+   List<Delete> getDeleteSet() {
+    return deletes;
+  }
+
+  /** Set deleteSet.
+   * @param deleteSet the deleteSet to set
+   */
+   void setDeleteSet(List<Delete> deleteSet) {
+    this.deletes = deleteSet;
+  }
+
+   /** Get a scanner to go through the puts from this transaction. Used to weave together the local trx puts with the global state.
+    * 
+    * @return scanner
+    */
+   KeyValueScanner getScanner() {
+     return new PutScanner();
+   }
+   
+   /** Scanner of the puts that occur during this transaction.
+    * 
+    * @author clint.morgan
+    *
+    */
+   private class PutScanner implements KeyValueScanner, InternalScanner {
+
+     private NavigableSet<KeyValue> kvSet;
+     private Iterator<KeyValue> iterator;
+     private boolean didHasNext = false;
+     private KeyValue next = null;
+     
+     
+     PutScanner() {
+       kvSet = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+       for (Put put : puts) {
+         for (List<KeyValue> putKVs : put.getFamilyMap().values()) {
+           kvSet.addAll(putKVs);
+         }
+       }
+       iterator = kvSet.iterator();
+     }
+     
+    public void close() {
+      // Nothing to close
+    }
+
+    public KeyValue next() {
+      getNext();
+      didHasNext = false;
+      return next;
+    }
+
+    public KeyValue peek() {
+      getNext();
+      return next;
+    }
+
+    public boolean seek(KeyValue key) {
+      iterator = kvSet.headSet(key).iterator();
+
+      getNext();
+      return next != null;
+    }
+     
+    private KeyValue getNext() {
+      if (didHasNext) {
+        return next;
+      }
+      didHasNext = true;
+      if (iterator.hasNext()) {
+      next = iterator.next(); }
+      else {
+        next= null;
+      }
+      return next;
+    }
+
+    public boolean next(List<KeyValue> results) throws IOException {
+        KeyValue peek = this.peek();
+        if (peek == null) {
+          return false;
+        }
+        byte [] row = peek.getRow();
+        results.add(peek);
+        while (true){
+          if (this.peek() == null) {
+            break;
+          }
+          if (!Bytes.equals(row, this.peek().getRow())) {
+            break;
+          }
+          results.add(this.next());
+        }
+        return true;
+        
+    }
+    
+   }
 }

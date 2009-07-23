@@ -73,8 +73,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
 
     IndexedTableDescriptor indexDesc = new IndexedTableDescriptor(desc);
     // Create a new index that does lexicographic ordering on COL_A
-    IndexSpecification colAIndex = new IndexSpecification(INDEX_COL_A,
-        COL_A);
+    IndexSpecification colAIndex = new IndexSpecification(INDEX_COL_A, COL_A);
     indexDesc.addIndex(colAIndex);
 
     admin = new IndexedTableAdmin(conf);
@@ -98,10 +97,11 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     writeInitalRows();
     assertRowsInOrder(NUM_ROWS);
   }
-  
-  private void assertRowsInOrder(int numRowsExpected) throws IndexNotFoundException, IOException {
-    ResultScanner scanner = table.getIndexedScanner(INDEX_COL_A,
-        HConstants.EMPTY_START_ROW, null, null, null);
+
+  private void assertRowsInOrder(int numRowsExpected)
+      throws IndexNotFoundException, IOException {
+    ResultScanner scanner = table.getIndexedScanner(INDEX_COL_A, null, null,
+        null, null, null);
     int numRows = 0;
     byte[] lastColA = null;
     for (Result rowResult : scanner) {
@@ -115,7 +115,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
       numRows++;
     }
     scanner.close();
-    Assert.assertEquals(numRowsExpected, numRows);  
+    Assert.assertEquals(numRowsExpected, numRows);
   }
 
   public void testMultipleWrites() throws IOException {

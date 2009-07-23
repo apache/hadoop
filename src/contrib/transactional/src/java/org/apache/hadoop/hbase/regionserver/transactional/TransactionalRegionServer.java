@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.transactional.TransactionalRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
@@ -53,6 +54,11 @@ import org.apache.hadoop.util.Progressable;
  */
 public class TransactionalRegionServer extends HRegionServer implements
     TransactionalRegionInterface {
+  
+  static {
+    TransactionalRPC.initialize();
+  }
+
   private static final String LEASE_TIME = "hbase.transaction.leasetime";
   private static final int DEFAULT_LEASE_TIME = 60 * 1000;
   private static final int LEASE_CHECK_FREQUENCY = 1000;

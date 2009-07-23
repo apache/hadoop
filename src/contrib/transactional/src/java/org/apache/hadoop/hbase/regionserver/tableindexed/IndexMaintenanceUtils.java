@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.client.tableindexed.IndexedTable;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**

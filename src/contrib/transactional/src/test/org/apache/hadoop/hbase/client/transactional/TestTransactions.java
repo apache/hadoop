@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.client.transactional;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -29,6 +31,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionalRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,7 +99,7 @@ public class TestTransactions extends HBaseClusterTestCase {
     transactionManager.tryCommit(transactionState2);
   }
 
-  public void TestTwoTransactionsWithConflict() throws IOException,
+  public void testTwoTransactionsWithConflict() throws IOException,
       CommitUnsuccessfulException {
     TransactionState transactionState1 = makeTransaction1();
     TransactionState transactionState2 = makeTransaction2();
@@ -110,14 +114,73 @@ public class TestTransactions extends HBaseClusterTestCase {
     }
   }
 
+  public void testGetAfterPut() throws IOException {
+    TransactionState transactionState = transactionManager.beginTransaction();
+
+    int originalValue = Bytes.toInt(table.get(transactionState,
+        new Get(ROW1).addColumn(COL_A)).value());
+    int newValue = originalValue + 1;
+
+    table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
+        .toBytes(newValue)));
+
+    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(COL_A));
+    Assert.assertEquals(newValue, Bytes.toInt(row1_A.value()));
+  }
+
+  public void testScanAfterUpdatePut() throws IOException {
+    TransactionState transactionState = transactionManager.beginTransaction();
+
+    int originalValue = Bytes.toInt(table.get(transactionState,
+        new Get(ROW1).addColumn(COL_A)).value());
+    int newValue = originalValue + 1;
+    table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
+        .toBytes(newValue)));
+
+    ResultScanner scanner = table.getScanner(transactionState, new Scan()
+        .addFamily(FAMILY));
+
+    Result result = scanner.next();
+    Assert.assertNotNull(result);
+
+    Assert.assertEquals(Bytes.toString(ROW1), Bytes.toString(result.getRow()));
+    Assert.assertEquals(newValue, Bytes.toInt(result.value()));
+
+    result = scanner.next();
+    Assert.assertNull(result);
+
+  }
+
+  public void testScanAfterNewPut() throws IOException {
+    TransactionState transactionState = transactionManager.beginTransaction();
+
+    int row2Value = 199;
+    table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, Bytes
+        .toBytes(row2Value)));
+
+    ResultScanner scanner = table.getScanner(transactionState, new Scan()
+        .addFamily(FAMILY));
+
+    Result result = scanner.next();
+    Assert.assertNotNull(result);
+    Assert.assertEquals(Bytes.toString(ROW1), Bytes.toString(result.getRow()));
+
+    result = scanner.next();
+    Assert.assertNotNull(result);
+    Assert.assertEquals(Bytes.toString(ROW2), Bytes.toString(result.getRow()));
+    Assert.assertEquals(row2Value, Bytes.toInt(result.value()));
+  }
+
   // Read from ROW1,COL_A and put it in ROW2_COLA and ROW3_COLA
   private TransactionState makeTransaction1() throws IOException {
     TransactionState transactionState = transactionManager.beginTransaction();
 
     Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(COL_A));
 
-    table.put(new Put(ROW2).add(FAMILY, QUAL_A, row1_A.getValue(COL_A)));
-    table.put(new Put(ROW3).add(FAMILY, QUAL_A, row1_A.getValue(COL_A)));
+    table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, row1_A
+        .getValue(COL_A)));
+    table.put(transactionState, new Put(ROW3).add(FAMILY, QUAL_A, row1_A
+        .getValue(COL_A)));
 
     return transactionState;
   }
@@ -130,7 +193,8 @@ public class TestTransactions extends HBaseClusterTestCase {
 
     int value = Bytes.toInt(row1_A.getValue(COL_A));
 
-    table.put(new Put(ROW1).add(FAMILY, QUAL_A, Bytes.toBytes(value + 1)));
+    table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
+        .toBytes(value + 1)));
 
     return transactionState;
   }

@@ -31,7 +31,6 @@ import java.util.NavigableSet;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.client.tableindexed.IndexedTableDescriptor;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionalRegion;
@@ -148,24 +146,6 @@ class IndexedRegion extends TransactionalRegion {
     }
   }
   
-  private void updateIndexes(Delete delete) {
-    // FIXME
-    // Handle delete batch updates. Go back and get the next older values
-//    for (BatchOperation op : batchUpdate) {
-//      if (!op.isPut()) { 
-//        Cell current = oldColumnCells.get(op.getColumn());
-//        if (current != null) {
-//          // TODO: Fix this profligacy!!! St.Ack
-//          Cell [] older = Cell.createSingleCellArray(super.get(batchUpdate.getRow(),
-//              op.getColumn(), current.getTimestamp(), 1));
-//          if (older != null && older.length > 0) {
-//            newColumnValues.put(op.getColumn(), older[0].getValue());
-//          }
-//        }
-//      }
-//    }
-  }
-
   /** Return the columns needed for the update. */
   private NavigableSet<byte[]> getColumnsForIndexes(Collection<IndexSpecification> indexes) {
     NavigableSet<byte[]> neededColumns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);

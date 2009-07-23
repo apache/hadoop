@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionState.Status;
 import org.apache.hadoop.util.Progressable;
@@ -201,13 +202,12 @@ public class TransactionalRegion extends HRegion {
     TransactionState state = new TransactionState(transactionId, super.getLog()
         .getSequenceNumber(), super.getRegionInfo());
 
-    // Order is important here ...
-    List<TransactionState> commitPendingCopy = new LinkedList<TransactionState>(
+    state.setStartSequenceNumber(nextSequenceId.get());
+    List<TransactionState> commitPendingCopy = new ArrayList<TransactionState>(
         commitPendingTransactions);
     for (TransactionState commitPending : commitPendingCopy) {
       state.addTransactionToCheck(commitPending);
     }
-    state.setStartSequenceNumber(nextSequenceId.get());
 
     synchronized (transactionsById) {
       transactionsById.put(key, state);
@@ -271,7 +271,9 @@ public class TransactionalRegion extends HRegion {
 
     TransactionState state = getTransactionState(transactionId);
     state.addScan(scan);
-    return new ScannerWrapper(transactionId, super.getScanner(scan));
+    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(1);
+    scanners.add(state.getScanner());
+    return super.getScanner(scan, scanners);
   }
 
   /**
@@ -310,7 +312,6 @@ public class TransactionalRegion extends HRegion {
 
   /**
    * Add a delete to the transaction. Does not get applied until commit process.
-   * FIXME, not sure about this approach
    * 
    * @param transactionId
    * @param delete
@@ -350,7 +351,7 @@ public class TransactionalRegion extends HRegion {
           + ". Voting for commit");
 
       // If there are writes we must keep record off the transaction
-      if (state.getWriteSet().size() > 0) {
+      if (state.hasWrite()) {
         // Order is important
         state.setStatus(Status.COMMIT_PENDING);
         commitPendingTransactions.add(state);
@@ -403,20 +404,19 @@ public class TransactionalRegion extends HRegion {
    * @throws IOException
    */
   public void commit(final long transactionId) throws IOException {
-    // Not checking closing...
     TransactionState state;
     try {
       state = getTransactionState(transactionId);
     } catch (UnknownTransactionException e) {
       LOG.fatal("Asked to commit unknown transaction: " + transactionId
           + " in region " + super.getRegionInfo().getRegionNameAsString());
-      // FIXME Write to the transaction log that this transaction was corrupted
+      // TODO. Anything to handle here?
       throw e;
     }
 
     if (!state.getStatus().equals(Status.COMMIT_PENDING)) {
       LOG.fatal("Asked to commit a non pending transaction");
-      // FIXME Write to the transaction log that this transaction was corrupted
+      // TODO. Anything to handle here?
       throw new IOException("commit failure");
     }
 
@@ -461,17 +461,21 @@ public class TransactionalRegion extends HRegion {
 
     this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
 
-    for (Put update : state.getWriteSet()) {
+    for (Put update : state.getPuts()) {
       this.put(update, false); // Don't need to WAL these
-      // FIME, maybe should be walled so we don't need to look so far back.
+    }
+    
+    for (Delete delete : state.getDeleteSet()) {
+      this.delete(delete, null, false);
     }
 
     state.setStatus(Status.COMMITED);
-    if (state.getWriteSet().size() > 0
+    if (state.hasWrite()
         && !commitPendingTransactions.remove(state)) {
       LOG
           .fatal("Commiting a non-query transaction that is not in commitPendingTransactions");
-      throw new IOException("commit failure"); // FIXME, how to handle?
+      // Something has gone really wrong.
+      throw new IOException("commit failure"); 
     }
     retireTransaction(state);
   }
@@ -480,11 +484,11 @@ public class TransactionalRegion extends HRegion {
   public List<StoreFile> close(boolean abort) throws IOException {
     prepareToClose();
     if (!commitPendingTransactions.isEmpty()) {
-      // FIXME, better way to handle?
       LOG.warn("Closing transactional region ["
           + getRegionInfo().getRegionNameAsString() + "], but still have ["
           + commitPendingTransactions.size()
-          + "] transactions  that are pending commit");
+          + "] transactions  that are pending commit.");
+      // TODO resolve from the Global Trx Log.
     }
     return super.close(abort);
   }
@@ -495,7 +499,7 @@ public class TransactionalRegion extends HRegion {
   }
 
   boolean closing = false;
-
+  private static final int CLOSE_WAIT_ON_COMMIT_PENDING = 1000;
   /**
    * Get ready to close.
    * 
@@ -511,10 +515,10 @@ public class TransactionalRegion extends HRegion {
           + commitPendingTransactions.size()
           + "] transactions that are pending commit. Sleeping");
       for (TransactionState s : commitPendingTransactions) {
-        LOG.info(s.toString());
+        LOG.info("commit pending: " + s.toString());
       }
       try {
-        Thread.sleep(200);
+        Thread.sleep(CLOSE_WAIT_ON_COMMIT_PENDING);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
@@ -698,35 +702,6 @@ public class TransactionalRegion extends HRegion {
       default:
         LOG.warn("Unexpected status on expired lease");
       }
-    }
-  }
-
-  /** Wrapper which keeps track of rows returned by scanner. */
-  private class ScannerWrapper implements InternalScanner {
-    private long transactionId;
-    private InternalScanner scanner;
-
-    /**
-     * @param transactionId
-     * @param scanner
-     * @throws UnknownTransactionException
-     */
-    public ScannerWrapper(final long transactionId,
-        final InternalScanner scanner) throws UnknownTransactionException {
-
-      this.transactionId = transactionId;
-      this.scanner = scanner;
-    }
-
-    public void close() throws IOException {
-      scanner.close();
-    }
-
-    public boolean next(List<KeyValue> results) throws IOException {
-      boolean result = scanner.next(results);
-      TransactionState state = getTransactionState(transactionId);
-      // FIXME need to weave in new stuff from this transaction too.
-      return result;
     }
   }
 }

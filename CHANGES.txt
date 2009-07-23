@@ -282,6 +282,8 @@ Release 0.20.0 - Unreleased
                client package
    HBASE-1680  FilterList writable only works for HBaseObjectWritable
                defined types (Clint Morgan via Stack and Jon Gray)
+   HBASE-1607  transactions / indexing fixes: trx deletes not handeled, index
+               scan can't specify stopRow (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

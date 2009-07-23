@@ -41,10 +41,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * 
  */
 public class TransactionalTable extends HTable {
-
-  private static final byte RPC_CODE = 100;
+  
   static {
-    HBaseRPC.addToMap(TransactionalRegionInterface.class, RPC_CODE);
+    TransactionalRPC.initialize();
   }
   
   /**

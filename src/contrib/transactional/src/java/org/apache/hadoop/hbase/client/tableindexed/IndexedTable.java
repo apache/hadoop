@@ -30,7 +30,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -39,14 +38,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.transactional.TransactionalTable;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** HTable extended with indexed support. */
 public class IndexedTable extends TransactionalTable {
 
-  // FIXME, these belong elsewhere
+  // TODO move these schema constants elsewhere
   public static final byte[] INDEX_COL_FAMILY_NAME = Bytes.toBytes("__INDEX__");
   public static final byte[] INDEX_COL_FAMILY = Bytes.add(
       INDEX_COL_FAMILY_NAME, new byte[] { HStoreKey.COLUMN_FAMILY_DELIMITER });
@@ -79,6 +76,7 @@ public class IndexedTable extends TransactionalTable {
    * 
    * @param indexId the id of the index to use
    * @param indexStartRow (created from the IndexKeyGenerator)
+   * @param indexStopRow (created from the IndexKeyGenerator)
    * @param indexColumns in the index table
    * @param indexFilter filter to run on the index'ed table. This can only use
    * columns that have been added to the index.
@@ -87,7 +85,7 @@ public class IndexedTable extends TransactionalTable {
    * @throws IOException
    * @throws IndexNotFoundException
    */
-  public ResultScanner getIndexedScanner(String indexId, final byte[] indexStartRow,
+  public ResultScanner getIndexedScanner(String indexId, final byte[] indexStartRow,  final byte[] indexStopRow,
       byte[][] indexColumns, final Filter indexFilter,
       final byte[][] baseColumns) throws IOException, IndexNotFoundException {
     IndexSpecification indexSpec = this.indexedTableDescriptor.getIndex(indexId);
@@ -114,9 +112,15 @@ public class IndexedTable extends TransactionalTable {
       allIndexColumns[allColumns.length] = INDEX_BASE_ROW_COLUMN;
     }
 
-    Scan indexScan = new Scan(indexStartRow);
-    //indexScan.setFilter(filter); // FIXME
+    Scan indexScan = new Scan();
+    indexScan.setFilter(indexFilter);
     indexScan.addColumns(allIndexColumns);
+    if (indexStartRow != null) {
+      indexScan.setStartRow(indexStartRow);
+    }
+    if (indexStopRow != null) {
+      indexScan.setStopRow(indexStopRow);
+    }
     ResultScanner indexScanner = indexTable.getScanner(indexScan);
 
     return new ScannerWrapper(indexScanner, baseColumns);
@@ -173,8 +177,6 @@ public class IndexedTable extends TransactionalTable {
         byte[] baseRow = row.getValue(INDEX_BASE_ROW_COLUMN);
         LOG.debug("next index row [" + Bytes.toString(row.getRow())
             + "] -> base row [" + Bytes.toString(baseRow) + "]");
-        HbaseMapWritable<byte[], Cell> colValues =
-          new HbaseMapWritable<byte[], Cell>();
         Result baseResult = null;
         if (columns != null && columns.length > 0) {
           LOG.debug("Going to base table for remaining columns");

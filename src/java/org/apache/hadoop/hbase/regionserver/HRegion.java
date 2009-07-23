@@ -1063,6 +1063,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    */
   public InternalScanner getScanner(Scan scan)
   throws IOException {
+   return getScanner(scan, null);
+  }
+  
+  protected InternalScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
     newScannerLock.readLock().lock();
     try {
       if (this.closed.get()) {
@@ -1078,7 +1082,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           scan.addFamily(family);
         }
       }
-      return new RegionScanner(scan);
+      return new RegionScanner(scan, additionalScanners);
       
     } finally {
       newScannerLock.readLock().unlock();
@@ -1677,8 +1681,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   class RegionScanner implements InternalScanner {
     private final KeyValueHeap storeHeap;
     private final byte [] stopRow;
-    
-    RegionScanner(Scan scan) {
+
+    RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
       } else {
@@ -1686,6 +1690,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
+      if (additionalScanners != null) {
+        scanners.addAll(additionalScanners);
+      }
       for (Map.Entry<byte[], NavigableSet<byte[]>> entry : 
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
@@ -1693,6 +1700,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       this.storeHeap = 
         new KeyValueHeap(scanners.toArray(new KeyValueScanner[0]), comparator);
+    }
+    
+    RegionScanner(Scan scan) {
+      this(scan, null);
     }
 
     /**

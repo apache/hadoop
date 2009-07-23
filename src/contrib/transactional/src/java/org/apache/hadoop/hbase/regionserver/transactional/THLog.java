@@ -70,7 +70,7 @@ class THLog extends HLog {
 
   public void writeDeleteToLog(HRegionInfo regionInfo, final long transactionId, final Delete delete)
       throws IOException {
-    // FIXME
+    this.append(regionInfo, delete, transactionId);
   }
 
   public void writeCommitToLog(HRegionInfo regionInfo, final long transactionId) throws IOException {
@@ -112,7 +112,7 @@ class THLog extends HLog {
   public void append(HRegionInfo regionInfo, Put update, long transactionId)
       throws IOException {
 
-    long commitTime = System.currentTimeMillis(); // FIXME ?
+    long commitTime = System.currentTimeMillis(); 
 
     THLogKey key = new THLogKey(regionInfo.getRegionName(), regionInfo
         .getTableDesc().getName(), -1, commitTime, THLogKey.TrxOp.OP,
@@ -123,10 +123,45 @@ class THLog extends HLog {
     }
   }
 
+  /**
+   * Write a transactional delete to the log.
+   * 
+   * @param regionInfo
+   * @param now
+   * @param update
+   * @param transactionId
+   * @throws IOException
+   */
+  public void append(HRegionInfo regionInfo, Delete delete, long transactionId)
+      throws IOException {
+
+    long commitTime = System.currentTimeMillis(); 
+
+    THLogKey key = new THLogKey(regionInfo.getRegionName(), regionInfo
+        .getTableDesc().getName(), -1, commitTime, THLogKey.TrxOp.OP,
+        transactionId);
+
+    for (KeyValue value : convertToKeyValues(delete)) {
+      super.append(regionInfo, key, value);
+    }
+  }
+
+  
   private List<KeyValue> convertToKeyValues(Put update) {
     List<KeyValue> edits = new ArrayList<KeyValue>();
 
     for (List<KeyValue> kvs : update.getFamilyMap().values()) {
+      for (KeyValue kv : kvs) {
+        edits.add(kv);
+      }
+    }
+    return edits;
+  }
+  
+  private List<KeyValue> convertToKeyValues(Delete delete) {
+    List<KeyValue> edits = new ArrayList<KeyValue>();
+
+    for (List<KeyValue> kvs : delete.getFamilyMap().values()) {
       for (KeyValue kv : kvs) {
         edits.add(kv);
       }

@@ -36,6 +36,10 @@ import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
  * 
  */
 public class TransactionManager {
+  static {
+    TransactionalRPC.initialize();
+  }
+
   static final Log LOG = LogFactory.getLog(TransactionManager.class);
 
   private final HConnection connection;
@@ -123,7 +127,6 @@ public class TransactionManager {
       LOG.debug("Commit of transaction [" + transactionState.getTransactionId()
           + "] was unsucsessful", e);
       // This happens on a NSRE that is triggered by a split
-      // FIXME, but then abort fails
       try {
         abort(transactionState);
       } catch (Exception abortException) {
@@ -177,7 +180,6 @@ public class TransactionManager {
       LOG.debug("Commit of transaction [" + transactionState.getTransactionId()
           + "] was unsucsessful", e);
       // This happens on a NSRE that is triggered by a split
-      // FIXME, but then abort fails
       try {
         abort(transactionState);
       } catch (Exception abortException) {
