@@ -135,6 +135,9 @@ Trunk (unreleased changes)
     MAPREDUCE-785. Separate sub-test of TestReduceFetch to be included in
     MR-670. (Jothi Padmanabhan via cdouglas)
 
+    MAPREDUCE-784. Modify TestUserDefinedCounters to use LocalJobRunner 
+    instead of MiniMR. (Jothi Padmanabhan via sharad)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

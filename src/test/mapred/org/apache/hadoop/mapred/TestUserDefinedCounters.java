@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -25,6 +26,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import junit.framework.TestCase;
+
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -32,8 +36,16 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 
-public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
+public class TestUserDefinedCounters extends TestCase {
   
+  private static String TEST_ROOT_DIR =
+    new File(System.getProperty("test.build.data", "/tmp")).toURI()
+    .toString().replace(' ', '+');
+
+  private final Path INPUT_DIR = new Path(TEST_ROOT_DIR + "/input");
+  private final Path OUTPUT_DIR = new Path(TEST_ROOT_DIR + "/out");
+  private final Path INPUT_FILE = new Path(INPUT_DIR , "inp");
+
   enum EnumCounter { MAP_RECORDS }
   
   static class CountingMapper<K, V> extends IdentityMapper<K, V> {
@@ -48,17 +60,27 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
 
   }
   
-  public void testMapReduceJob() throws Exception {
-    OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
+  private void cleanAndCreateInput(FileSystem fs) throws IOException {
+    fs.delete(INPUT_FILE, true);
+    fs.delete(OUTPUT_DIR, true);
+
+    OutputStream os = fs.create(INPUT_FILE);
+
     Writer wr = new OutputStreamWriter(os);
     wr.write("hello1\n");
     wr.write("hello2\n");
     wr.write("hello3\n");
     wr.write("hello4\n");
     wr.close();
+  }
 
-    JobConf conf = createJobConf();
-    conf.setJobName("counters");
+  public void testMapReduceJob() throws Exception {
+
+    JobConf conf = new JobConf(TestUserDefinedCounters.class);
+    conf.setJobName("UserDefinedCounters");
+    
+    FileSystem fs = FileSystem.get(conf);
+    cleanAndCreateInput(fs);
     
     conf.setInputFormat(TextInputFormat.class);
 
@@ -72,17 +94,16 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
     conf.setMapperClass(CountingMapper.class);
     conf.setReducerClass(IdentityReducer.class);
 
-    FileInputFormat.setInputPaths(conf, getInputDir());
+    FileInputFormat.setInputPaths(conf, INPUT_DIR);
 
-    FileOutputFormat.setOutputPath(conf, getOutputDir());
+    FileOutputFormat.setOutputPath(conf, OUTPUT_DIR);
 
     RunningJob runningJob = JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-                           getFileSystem().listStatus(getOutputDir(),
-                           new OutputLogFilter()));
+        fs.listStatus(OUTPUT_DIR, new OutputLogFilter()));
     if (outputFiles.length > 0) {
-      InputStream is = getFileSystem().open(outputFiles[0]);
+      InputStream is = fs.open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));
       String line = reader.readLine();
       int counter = 0;
