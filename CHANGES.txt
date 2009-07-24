@@ -891,6 +891,9 @@ Trunk (unreleased changes)
     HADOOP-6132. RPC client create an extra connection because of incorrect
     key for connection cache. (Kan Zhang via rangadi)
 
+    HADOOP-6150. Users should be able to instantiate comparator using TFile
+    API. (Hong Tang via rangadi)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
