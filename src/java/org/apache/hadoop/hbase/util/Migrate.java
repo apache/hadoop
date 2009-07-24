@@ -108,7 +108,7 @@ public class Migrate extends Configured implements Tool {
   }
 
   /**
-   * @param conf
+   * @param c
    */
   public Migrate(final HBaseConfiguration c) {
     super(c);

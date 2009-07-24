@@ -24,6 +24,16 @@
 <body bgcolor="white">
 <a href="http://hbase.org">HBase</a> is a scalable, distributed database built on <a href="http://hadoop.apache.org/core">Hadoop Core</a>.
 
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#requirements">Requirements</a></li>
+<li><a href="#getting_started" >Getting Started</a></li>
+<li><a href="#runandconfirm">Running and Confirming Your Installation</a></li>
+<li><a href="#upgrading" >Upgrading</a></li>
+<li><a href="#client_example">Example API Usage</a></li>
+<li><a href="#related" >Related Documentation</a></li>
+</ul>
+
 <h2><a name="requirements">Requirements</a></h2>
 <ul>
   <li>Java 1.6.x, preferably from <a href="http://www.java.com/en/download/">Sun</a>.
@@ -102,20 +112,20 @@ Whatever your mode, define <code>${HBASE_HOME}</code> to be the location of the 
 set the heapsize for HBase, etc.  At a minimum, set <code>JAVA_HOME</code> to point at the root of
 your Java installation.
 </p>
-<h2><a name="standalone">Standalone Mode</a></h2>
+<h3><a name="standalone">Standalone Mode</a></h3>
 <p>
 If you are running a standalone operation, there should be nothing further to configure; proceed to
 <a href=#runandconfirm>Running and Confirming Your Installation</a>.  If you are running a distributed 
 operation, continue reading.
 </p>
 
-<h2><a name="distributed">Distributed Operation: Pseudo- and Fully-Distributed Modes</a></h2>
+<h3><a name="distributed">Distributed Operation: Pseudo- and Fully-Distributed Modes</a></h3>
 <p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS).
 See the Hadoop <a href="http://lucene.apache.org/hadoop/api/overview-summary.html#overview_description">
 requirements and instructions</a> for how to set up a DFS.
 </p>
 
-<h3><a name="pseudo-distrib">Pseudo-Distributed Operation</a></h3>
+<h4><a name="pseudo-distrib">Pseudo-Distributed Operation</a></h4>
 <p>A pseudo-distributed operation is simply a distributed operation run on a single host.  
 Once you have confirmed your DFS setup, configuring HBase for use on one host requires modification of 
 <code>${HBASE_HOME}/conf/hbase-site.xml</code>, which needs to be pointed at the running Hadoop DFS instance.  
@@ -330,7 +340,7 @@ the HBase version. It does not change your install unless you explicitly ask it 
 </p>
 
 <h2><a name="client_example">Example API Usage</a></h2>
-For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summary.html#client_example">org.apache.hadoop.hbase.client</a> documentation.
+For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summary.html#package_description">org.apache.hadoop.hbase.client</a> documentation.
 
 <p>If your client is NOT Java, consider the Thrift or REST libraries.</p>
 
@@ -341,6 +351,8 @@ For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summar
   <li><a href="http://hadoop.apache.org/">Hadoop Home Page</a>
   <li><a href="http://wiki.apache.org/hadoop/Hbase/MultipleMasters">Setting up Multiple HBase Masters</a>
   <li><a href="http://wiki.apache.org/hadoop/Hbase/RollingRestart">Rolling Upgrades</a>
+  <li><a href="org/apache/hadoop/hbase/client/transactional/package-summary.html#package_description">Transactional HBase</a>
+  <li><a href="org/apache/hadoop/hbase/client/tableindexed/package-summary.html">Table Indexed HBase</a>
 </ul>
 
 </body>
