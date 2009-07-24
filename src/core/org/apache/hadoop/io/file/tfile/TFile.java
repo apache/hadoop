@@ -161,6 +161,17 @@ public class TFile {
   /** comparator prefix: java class */
   public static final String COMPARATOR_JCLASS = "jclass:";
 
+  /**
+   * Make a raw comparator from a string name.
+   * 
+   * @param name
+   *          Comparator name
+   * @return A RawComparable comparator.
+   */
+  static public Comparator<RawComparable> makeComparator(String name) {
+    return TFileMeta.makeComparator(name);
+  }
+
   // Prevent the instantiation of TFiles
   private TFile() {
     // nothing
@@ -1944,7 +1955,7 @@ public class TFile {
     }
 
     @SuppressWarnings("unchecked")
-    private static BytesComparator makeComparator(String comparator) {
+    static BytesComparator makeComparator(String comparator) {
       if (comparator.length() == 0) {
         // unsorted keys
         return null;

@@ -187,6 +187,9 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-735. Fixes a problem in the KeyFieldHelper to do with 
     the end index for some inputs (Amar Kamat via ddas)
 
+    HADOOP-6150. Users should be able to instantiate comparator using TFile
+    API. (Hong Tang via rangadi)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
