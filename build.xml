@@ -517,9 +517,7 @@
     </subant> 
   </target>
 
-  <!-- REENABLE!!! <target name="test" depends="test-core, test-contrib"
-  -->
-  <target name="test" depends="test-core"
+  <target name="test" depends="test-core, test-contrib"
     description="Run core, contrib unit tests">
   </target>
 
