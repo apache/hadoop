@@ -508,6 +508,7 @@ Release 0.20.0 - Unreleased
    HBASE-1688  Improve javadocs in Result and KeyValue
    HBASE-1694  Add TOC to 'Getting Started', add references to THBase and
                ITHBase
+   HBASE-1699  Remove hbrep example as it's too out of date
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
