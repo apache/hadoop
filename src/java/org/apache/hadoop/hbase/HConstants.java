@@ -135,15 +135,7 @@ public interface HConstants {
   
   /** Default size of a reservation block   */
   static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
-  
-  /** Default number of threads to use when log splitting 
-   *  to rewrite the logs. More means faster but bigger mem consumption */
-  static final int DEFAULT_NUMBER_LOG_WRITER_THREAD = 10;
-  
-  /** Default number of logs to read concurrently
-   *  when log splitting. More means faster but bigger mem consumption  */
-  static final int DEFAULT_NUMBER_CONCURRENT_LOG_READS = 10;
-  
+
   /** Maximum value length, enforced on KeyValue construction */
   static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE;
   

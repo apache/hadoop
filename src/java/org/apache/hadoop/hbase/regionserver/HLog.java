@@ -838,16 +838,26 @@ public class HLog implements HConstants, Syncable {
     final Map<byte [], WriterAndPath> logWriters =
       new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR);
     List<Path> splits = null;
+    
+    // Number of threads to use when log splitting to rewrite the logs.
+    // More means faster but bigger mem consumption.
+    int logWriterThreads =
+      conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
+    
+    // Number of logs to read concurrently when log splitting.
+    // More means faster but bigger mem consumption  */
+    int concurrentLogReads =
+      conf.getInt("hbase.regionserver.hlog.splitlog.reader.threads", 3);
+
     try {
       int maxSteps = Double.valueOf(Math.ceil((logfiles.length * 1.0) / 
-          DEFAULT_NUMBER_CONCURRENT_LOG_READS)).intValue();
+          concurrentLogReads)).intValue();
       for(int step = 0; step < maxSteps; step++) {
         final Map<byte[], LinkedList<HLogEntry>> logEntries = 
           new TreeMap<byte[], LinkedList<HLogEntry>>(Bytes.BYTES_COMPARATOR);
         // Stop at logfiles.length when it's the last step
         int endIndex = step == maxSteps - 1? logfiles.length: 
-          step * DEFAULT_NUMBER_CONCURRENT_LOG_READS +
-          DEFAULT_NUMBER_CONCURRENT_LOG_READS;
+          step * concurrentLogReads + concurrentLogReads;
         for (int i = (step * 10); i < endIndex; i++) {
           // Check for possibly empty file. With appends, currently Hadoop 
           // reports a zero length even if the file has been sync'd. Revisit if
@@ -915,8 +925,8 @@ public class HLog implements HConstants, Syncable {
             fs.delete(logfiles[i].getPath(), true);
           }
         }
-        ExecutorService threadPool = 
-          Executors.newFixedThreadPool(DEFAULT_NUMBER_LOG_WRITER_THREAD);
+        ExecutorService threadPool =
+          Executors.newFixedThreadPool(logWriterThreads);
         for (final byte[] key : logEntries.keySet()) {
           Thread thread = new Thread(Bytes.toString(key)) {
             @Override
