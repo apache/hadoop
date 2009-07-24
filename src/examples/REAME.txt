@@ -1,2 +1,1 @@
-Example code.  Includes thrift clients and uploader examples including
-a script to replicate a postgres database in hbase by Tim Sell.
+Example code.  Includes thrift clients and mapreduce uploader examples.
