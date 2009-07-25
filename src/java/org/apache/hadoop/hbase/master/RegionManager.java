@@ -82,6 +82,8 @@ class RegionManager implements HConstants {
     new ConcurrentSkipListMap<byte [], MetaRegion>(Bytes.BYTES_COMPARATOR);
 
   private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
+  
+  private static final byte [] META_REGION_PREFIX = Bytes.toBytes(".META.,");
 
   /**
    * Map of region name to RegionState for regions that are in transition such as
@@ -692,13 +694,19 @@ class RegionManager implements HConstants {
   /**
    * Get metaregion that would host passed in row.
    * @param row Row need to know all the meta regions for
-   * @return set of MetaRegion objects that contain the table
+   * @return MetaRegion for passed row.
    * @throws NotAllMetaRegionsOnlineException
    */
   public MetaRegion getMetaRegionForRow(final byte [] row)
   throws NotAllMetaRegionsOnlineException {
     if (!areAllMetaRegionsOnline()) {
       throw new NotAllMetaRegionsOnlineException();
+    }
+    // Row might be in -ROOT- table.  If so, return -ROOT- region.
+    int prefixlen = META_REGION_PREFIX.length;
+    if (row.length > prefixlen &&
+     Bytes.compareTo(META_REGION_PREFIX, 0, prefixlen, row, 0, prefixlen) == 0) {
+    	return new MetaRegion(this.master.getRootRegionLocation(), HRegionInfo.ROOT_REGIONINFO);
     }
     return this.onlineMetaRegions.floorEntry(row).getValue();
   }

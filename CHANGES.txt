@@ -284,6 +284,7 @@ Release 0.20.0 - Unreleased
                defined types (Clint Morgan via Stack and Jon Gray)
    HBASE-1607  transactions / indexing fixes: trx deletes not handeled, index
                scan can't specify stopRow (Clint Morgan via Stack)
+   HBASE-1693  NPE close_region ".META." in shell
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

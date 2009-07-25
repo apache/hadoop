@@ -13,6 +13,8 @@ include_class('java.lang.Boolean') {|package,name| "J#{name}" }
 
 import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.client.HTable
+import org.apache.hadoop.hbase.client.Get
+import org.apache.hadoop.hbase.client.Put
 import org.apache.hadoop.hbase.client.Delete
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.io.BatchUpdate
@@ -144,13 +146,16 @@ module HBase
       now = Time.now 
       meta = HTable.new(HConstants::META_TABLE_NAME)
       bytes = Bytes.toBytes(regionName)
-      hriBytes = meta.get(bytes, HConstants::COL_REGIONINFO).getValue()
+      g = Get.new(bytes)
+      g.addColumn(HConstants::CATALOG_FAMILY,
+        HConstants::REGIONINFO_QUALIFIER)
+      hriBytes = meta.get(g).value()
       hri = Writables.getWritable(hriBytes, HRegionInfo.new());
       hri.setOffline(onOrOff)
-      p hri
-      bu = BatchUpdate.new(bytes)
-      bu.put(HConstants::COL_REGIONINFO, Writables.getBytes(hri))
-      meta.commit(bu);
+      put = Put.new(bytes)
+      put.add(HConstants::CATALOG_FAMILY,
+        HConstants::REGIONINFO_QUALIFIER, Writables.getBytes(hri))
+      meta.put(put);
       @formatter.header()
       @formatter.footer(now)
     end

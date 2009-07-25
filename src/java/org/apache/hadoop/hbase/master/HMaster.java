@@ -950,10 +950,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   throws IOException {
     MetaRegion meta = this.regionManager.getMetaRegionForRow(row);
     HRegionInterface srvr = getMETAServer(meta);
-
     Get get = new Get(row);
     get.addFamily(family);
-    
     return srvr.get(meta.getRegionName(), get);
   }
   
