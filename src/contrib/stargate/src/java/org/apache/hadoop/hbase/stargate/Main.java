@@ -24,17 +24,11 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Handler;
-import org.mortbay.jetty.NCSARequestLog;
 import org.mortbay.jetty.Server;
-import org.mortbay.jetty.deployer.WebAppDeployer;
-import org.mortbay.jetty.handler.ContextHandlerCollection;
-import org.mortbay.jetty.handler.DefaultHandler;
-import org.mortbay.jetty.handler.HandlerCollection;
-import org.mortbay.jetty.handler.RequestLogHandler;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.thread.QueuedThreadPool;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
+
+import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
  * Main class for launching Stargate as a servlet hosted by an embedded Jetty
@@ -58,45 +52,23 @@ public class Main {
       port = Integer.valueOf(cmd.getOptionValue("p"));
     }
 
-    /*
-     * poached from:
-     * http://jetty.mortbay.org/xref/org/mortbay/jetty/example/LikeJettyXml.html
-     */
-    String jetty_home = ".";
-    Server server = new Server();
+    // set up the Jersey servlet container for Jetty
+    ServletHolder sh = new ServletHolder(ServletContainer.class);
+    sh.setInitParameter(
+      "com.sun.jersey.config.property.resourceConfigClass",
+      ResourceConfig.class.getCanonicalName());
+    sh.setInitParameter("com.sun.jersey.config.property.packages",
+      "jetty");
 
-    QueuedThreadPool threadPool = new QueuedThreadPool();
-    threadPool.setMaxThreads(100);
-    server.setThreadPool(threadPool);
+    // set up Jetty and run the embedded server
 
-    Connector connector = new SelectChannelConnector();
-    connector.setPort(port);
-    connector.setMaxIdleTime(30000);
-    server.setConnectors(new Connector[] { connector });
-
-    HandlerCollection handlers = new HandlerCollection();
-    ContextHandlerCollection contexts = new ContextHandlerCollection();
-    RequestLogHandler requestLogHandler = new RequestLogHandler();
-    handlers.setHandlers(new Handler[] { contexts, new DefaultHandler(), 
-    										requestLogHandler });
-    server.setHandler(handlers);
-
-    WebAppDeployer deployer1 = new WebAppDeployer();
-    deployer1.setContexts(contexts);
-    deployer1.setWebAppDir(jetty_home + "/webapps");
-    deployer1.setParentLoaderPriority(false);
-    deployer1.setExtract(true);
-    deployer1.setAllowDuplicates(false);
-    // deployer1.setDefaultsDescriptor(jetty_home + "/etc/webdefault.xml");
-    server.addLifeCycle(deployer1);
-
-    NCSARequestLog requestLog = new NCSARequestLog(jetty_home 
-    		+ "/logs/jetty-yyyy_mm_dd.log");
-    requestLog.setExtended(false);
-    requestLogHandler.setRequestLog(requestLog);
-    
+    Server server = new Server(port);
+    server.setSendServerVersion(false);
+    server.setSendDateHeader(false);
     server.setStopAtShutdown(true);
-    server.setSendServerVersion(true);
+      // set up context
+    Context context = new Context(server, "/", Context.SESSIONS);
+    context.addServlet(sh, "/*");
     server.start();
     server.join();
   }
