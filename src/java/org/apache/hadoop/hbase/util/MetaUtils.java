@@ -228,7 +228,7 @@ public class MetaUtils {
         results.clear();
       } while (hasNext);
     } finally {
-      r.close();
+      s.close();
     }
   }
 
