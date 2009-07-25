@@ -511,6 +511,7 @@ Release 0.20.0 - Unreleased
    HBASE-1699  Remove hbrep example as it's too out of date
                (Tim Sell via Stack)
    HBASE-1683  OOME on master splitting logs; stuck, won't go down
+   HBASE-1704  Better zk error when failed connect
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

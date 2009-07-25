@@ -348,9 +348,11 @@ public class ZooKeeperWrapper implements HConstants {
     } catch (KeeperException.NoNodeException e) {
       return ensureParentExists(znode) && ensureExists(znode);
     } catch (KeeperException e) {
-      LOG.warn("Failed to create " + znode + ":", e);
+      LOG.warn("Failed to create " + znode +
+        " -- check quorum servers, currenty=" + this.quorumServers, e);
     } catch (InterruptedException e) {
-      LOG.warn("Failed to create " + znode + ":", e);
+      LOG.warn("Failed to create " + znode +
+        " -- check quorum servers, currenty=" + this.quorumServers, e);
     }
     return false;
   }
