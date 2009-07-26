@@ -26,7 +26,55 @@
 This package provides "Stargate" -- a RESTful Web service front end for HBase.
 <p>
 
-<!-- TABLE OF CONTENTS -->
+<h2>Table Of Contents</h2>
+<ol>
+<li><a href="#deployment">Deployment</a></li>
+  <ol type="a">
+  <li><a href="#deployment_daemon">Daemon</a></li>
+  <li><a href="#deployment_servlet">Servlet</a></li>
+  </ol>
+<li><a href="#rest">Representational State Transfer</a></li>
+<li><a href="#identifiers">Resource Identifiers</a></li>
+<li><a href="#operations">Operations</a></li>
+  <ol type="a">
+  <li><a href="#operation_version">Query Software Version</a></li>
+  <li><a href="#operation_storage_cluster_version">Query Storage Cluster Version</a></li>
+  <li><a href="#operation_storage_cluster_status">Query Storage Cluster Status</a></li>
+  <li><a href="#operation_query_tables">Query Table List</a></li>
+  <li><a href="#operation_query_schema">Query Table Schema</a></li>
+  <li><a href="#operation_create_schema">Create Table Or Update Table Schema</a></li>
+  <li><a href="#operation_table_metadata">Query Table Metadata</a></li>
+  <li><a href="#operation_delete_table">Delete Table</a></li>
+  <li><a href="#operation_cell_query_single">Cell Query (Single Value)</a></li>
+  <li><a href="#operation_cell_query_multiple">Cell or Row Query (Multiple Values)</a></li>
+  <li><a href="#operation_cell_store_single">Cell Store (Single)</a></li>
+  <li><a href="#operation_cell_store_multiple">Cell Store (Multiple)</a></li>
+  <li><a href="#operation_delete">Row, Column, or Cell Delete</a></li>
+  <li><a href="#operation_scanner_create">Scanner Creation</a></li>
+  <li><a href="#operation_scanner_next">Scanner Get Next</a></li>
+  <li><a href="#operation_scanner_delete">Scanner Deletion</a></li>
+  </ol>
+  <li><a href="#xmlschema">XML Schema</a></li>
+  <li><a href="#pbufschema">Protobufs Schema</a></li>
+</ol>
+
+<p>
+<a name="deployment">
+<h2>Deployment</h2>
+</a>
+<p>
+
+<p>
+<a name="deployment_daemon">
+<h3>Daemon</h3>
+</a>
+<p>
+
+<p>
+<a name=deployment_servlet">
+<h3>Servlet</h3>
+</a>
+<p>
 
 <p>
 <a name="rest">
@@ -153,10 +201,14 @@ Address with table, row, column (and optional qualifier), and optional timestamp
 <p>
 
 <p>
+<a name="operations">
 <h2>Operations</h2>
+</a>
 <p>
 
+<a name="operation_version">
 <h3>Query Software Version</h3>
+</a>
 <p>
 <pre>
 GET /version
@@ -192,6 +244,7 @@ Cache-Control: no-cache<br>
 Content-Type: text/xml<br>
 Content-Length: 212<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;Version Stargate="0.0.1" OS="Linux 2.6.18-128.1.6.el5.centos.plusxen amd64"<br>
  JVM="Sun Microsystems Inc. 1.6.0_13-11.3-b02" Jetty="6.1.14" Jersey="1.1.0-e<br>
 a"/&gt;<br>
@@ -226,7 +279,54 @@ Content-Type: application/x-protobuf<br>
 </blockquote>
 <p>
 
+<a name="operation_storage_cluster_version">
 <h3>Query Storage Cluster Version</h3>
+</a>
+<p>
+<pre>
+GET /version/cluster
+</pre>
+<p>
+Returns version information regarding the HBase cluster backing the Stargate instance.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl http://localhost:8000/version/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 6<br>
+Cache-Control: no-cache<br>
+Content-Type: text/plain<br>
+<br>
+0.20.0<br>
+<br>
+% curl -H "Accept: text/xml" http://localhost:8000/version/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 94<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;ClusterVersion&gt;0.20.0&lt;/ClusterVersion&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/version/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+"0.20.0"<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_storage_cluster_status">
+<h3>Query Storage Cluster Status</h3>
+</a>
 <p>
 <pre>
 GET /status/cluster
@@ -275,6 +375,7 @@ Cache-Control: no-cache<br>
 Content-Type: text/xml<br>
 Content-Length: 1301<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;ClusterStatus requests="1" regions="13" averageLoad="13.0"&gt;&lt;DeadNodes/&gt;&lt;LiveN<br>
 odes&gt;&lt;Node startCode="1244960965781" requests="1" name="test:37154"&gt;&lt;Region na<br>
 me="dXJscyxodHRwfHd3dy5sZWdhY3kuY29tfDgwfHNpdGU9TGVnYWN5fGFhbXN6PTMwMHgyNTB8YX<br>
@@ -319,8 +420,9 @@ TE4Nw=="}]}}}<br>
 </blockquote>
 <p>
 
-
+<a name="operation_query_tables">
 <h3>Query Table List</h3>
+</a>
 <p>
 <pre>
 GET /
@@ -355,6 +457,7 @@ Cache-Control: no-cache<br>
 Content-Type: text/xml<br>
 Content-Length: 121<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;TableList&gt;&lt;table name="content"/&gt;&lt;table name="urls"/&gt;&lt;/TableList&gt;<br>
 <br>
 % curl -H "Accept: application/json" http://localhost:8000/<br>
@@ -378,7 +481,9 @@ Content-Type: application/x-protobuf<br>
 </blockquote>
 <p>
 
+<a name="operation_query_schema">
 <h3>Query Table Schema</h3>
+</a>
 <p>
 <pre>
 GET /&lt;table&gt;/schema
@@ -420,6 +525,7 @@ Cache-Control: no-cache<br>
 Content-Type: text/xml<br>
 Content-Length: 618<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;TableSchema name="content" IS_META="false" IS_ROOT="false"&gt;&lt;ColumnSchema nam<br>
 e="content" BLOCKSIZE="65536" BLOOMFILTER="false" BLOCKCACHE="false" COMPRESS<br>
 ION="GZ" LENGTH="2147483647" VERSIONS="1" TTL="-1" IN_MEMORY="false"/&gt;&lt;Column<br>
@@ -462,10 +568,13 @@ Content-Type: application/x-protobuf<br>
 </blockquote>
 <p>
 
+<a name="operation_create_schema">
 <h3>Create Table Or Update Table Schema</h3>
+</a>
 <p>
 <pre>
 PUT /&lt;table&gt;/schema
+
 POST /&lt;table&gt;/schema
 </pre>
 <p>
@@ -478,13 +587,15 @@ in the desired encoding.
 Set Content-Type header to <tt>text/xml</tt> if the desired encoding is XML.
 Set Content-Type header to <tt>application/json</tt> if the desired encoding
 is JSON.
-Set Content-Type header to <tt>application/x-protobuf</tt>tt> if the desired
+Set Content-Type header to <tt>application/x-protobuf</tt> if the desired
 encoding is protobufs.
 If not successful, returns appropriate HTTP error status code.
 If successful, returns HTTP 200 status.
 <p>
 
+<a name="operation_table_metadata">
 <h3>Query Table Metadata</h3>
+</a>
 <p>
 <pre>
 GET /&lt;table&gt;/regions
@@ -509,6 +620,7 @@ Cache-Control: no-cache<br>
 Content-Type: text/xml<br>
 Content-Length: 1555<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;TableInfo name="content"&gt;&lt;Region location="test:51025" endKey="M2VmMTZkNzc2Nj<br>
 AzYmY5YjllNzc1YzljZWI2NDg2MGY=" startKey="" id="1244851999187" name="content,,<br>
 1244851999187"/&gt;&lt;Region location="test:51025" endKey="NjAxMjkyYTgzOWI5NWU1MDIw<br>
@@ -574,7 +686,9 @@ Content-Type: application/x-protobuf<br>
 </blockquote>
 <p>
 
+<a name="operation_delete_table">
 <h3>Delete Table</h3>
+</a>
 <p>
 <pre>
 DELETE /&lt;table&gt;/schema
@@ -599,7 +713,9 @@ Content-Length: 0<br>
 </blockquote>
 <p>
 
+<a name="operation_cell_query_single">
 <h3>Cell Query (Single Value)</h3>
+</a>
 <p>
 <pre>
 GET /&lt;table&gt;/&lt;row&gt;/
@@ -615,7 +731,8 @@ If not successful, returns appropriate HTTP error status code.
 If successful, returns HTTP 200 status and cell data in the response body in
 the requested encoding. If the encoding is binary, returns row, column, and
 timestamp in X headers: <tt>X-Row</tt>, <tt>X-Column</tt>, and 
-<tt>X-Timestamp</tt>, respectively.
+<tt>X-Timestamp</tt>, respectively. Depending on the precision of the resource
+specification, some of the X-headers may be elided as redundant.
 <p>
 Examples:
 <p>
@@ -628,6 +745,7 @@ Cache-Control: max-age=14400<br>
 Content-Type: text/xml<br>
 Content-Length: 521<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;CellSet&gt;&lt;Row key="MDAwMTI2MTRmN2Q0M2RmNjQxODUyMzQ0NWE2Nzg3ZDY="&gt;&lt;Cell timesta<br>
 mp="1244880122250" column="Y29udGVudDpyYXc="&gt;PCFET0NUWVBFIEhUTUwgUFVCTElDICItL<br>
 y9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDEgTW92ZWQgUGV<br>
@@ -676,7 +794,9 @@ Content-Type: application/octet-stream<br>
 </blockquote>
 <p>
 
+<a name="operation_cell_query_multiple">
 <h3>Cell or Row Query (Multiple Values)</h3>
+</a>
 <p>
 <pre>
 GET /&lt;table&gt;/&lt;row&gt;
@@ -689,11 +809,19 @@ GET /&lt;table&gt;/&lt;row&gt;
 Retrieves one or more cells from a full row, or one or more specified columns
 in the row, with optional filtering via timestamp, and an optional restriction
 on the maximum number of versions to return.
-Set Accept header to <tt>text/xml for XML</tt> reply.
+Set Accept header to <tt>text/xml</tt> for XML reply.
 Set Accept header to <tt>application/json</tt> for JSON reply.
 Set Accept header to <tt>application/x-protobuf</tt> for protobufs.
+Set Accept header to <tt>application/octet-stream</tt> for binary.
 If not successful, returns appropriate HTTP error status code.
 If successful, returns row results in the requested encoding. 
+<p>
+NOTE: If binary encoding is requested, only one cell can be returned, the 
+first to match the resource specification. The row, column, and timestamp
+associated with the cell will be transmitted in X headers: <tt>X-Row</tt>,
+<tt>X-Column</tt>, and <tt>X-Timestamp</tt>, respectively. Depending on the
+precision of the resource specification, some of the X-headers may be elided
+as redundant.
 <p>
 <b>Suffix Globbing</b>
 <p>
@@ -720,6 +848,7 @@ Cache-Control: max-age=14400<br>
 Content-Type: text/xml<br>
 Transfer-Encoding: chunked<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;CellSet&gt;&lt;Row key="aHR0cHx3d3cudGVsZWdyYXBoLmNvLnVrfDgwfG5ld3N8d29ybGRuZXdzfG5<br>
 vcnRoYW1lcmljYXx1c2F8NTQ5MTI4NHxBcm5vbGQtU2Nod2FyemVuZWdnZXItdW52ZWlscy1wYXBlc<br>
 mxlc3MtY2xhc3Nyb29tcy1wbGFuLmh0bWw="&gt;&lt;Cell timestamp="1244701257843" column="a<br>
@@ -797,7 +926,9 @@ Content-Type: application/x-protobuf<br>
 </blockquote>
 <p>
 
-<h3>Cell Store (Single Value)</h3>
+<a name="operation_cell_store_single">
+<h3>Cell Store (Single)</h3>
+</a>
 <p>
 <pre>
 PUT /&lt;table&gt;/&lt;row&gt;/&lt;column&gt;( : &lt;qualifier&gt; )? ( / &lt;timestamp&gt; )?
@@ -814,6 +945,11 @@ Set Content-Type header to <tt>application/octet-stream</tt> for binary encoding
 When using binary encoding, optionally, set X-Timestamp header to the desired
 timestamp.
 <p>
+PUT and POST operations are equivalent here: Specified addresses without
+existing data will create new values. Specified addresses with existing data 
+will create new versions, overwriting an existing version if all of { row,
+column:qualifer, timestamp } match that of the existing value.
+<p>
 See "Cell Query (Single Value)" section for encoding examples.
 <p>
 Examples:
@@ -828,7 +964,9 @@ Content-Length: 0<br>
 </blockquote>
 <p>
 
-<h3>Cell Store (Batched)</h3>
+<a name="operation_cell_store_multiple">
+<h3>Cell Store (Multiple)</h3>
+</a>
 <p>
 <pre>
 PUT /&lt;table&gt;/&lt;false-row-key&gt;
@@ -842,11 +980,19 @@ multiple values to a table in batch. If not successful, returns appropriate
 HTTP error status code. If successful, returns HTTP 200 status.
 Set Content-Type to <tt>text/xml</tt> for XML encoding.
 Set Content-Type header to <tt>application/x-protobuf</tt> for protobufs encoding.
-Supply commit data in the PUT or POST body. See "Cell or Row Query (Multiple
-Values)" for encoding examples.
+Supply commit data in the PUT or POST body. 
+<p>
+PUT and POST operations are equivalent here: Specified addresses without
+existing data will create new values. Specified addresses with existing data 
+will create new versions, overwriting an existing version if all of { row,
+column:qualifer, timestamp } match that of the existing value.
+<p>
+See "Cell or Row Query (Multiple Values)" for encoding examples.
 <p>
 
+<a name="operation_delete">
 <h3>Row, Column, or Cell Delete</h3>
+</a>
 <p>
 <pre>
 DELETE /&lt;table>/&lt;row&gt;
@@ -862,16 +1008,17 @@ NOTE: <tt>DELETE /&lt;table&gt;</tt> will not work.
 Use <tt>DELETE /&lt;table&gt;/schema</tt> instead.
 <p>
 
+<a name="operation_scanner_create">
 <h3>Scanner Creation</h3>
+</a>
 <p>
 <pre>
-PUT /&lt;table>&gt;scanner
+PUT /&lt;table&gt;/scanner
 
-POST /&lt;table>&gt;scanner
+POST /&lt;table&gt;/scanner
 </pre>
 <p>
 Allocates a new table scanner.
-Use a Cache-Control header directive of "no-cache".
 If not successful, returns appropriate HTTP error status code.
 If successful, returns HTTP 201 status (created) and the URI which should be
 used to address the scanner, e.g.
@@ -895,7 +1042,9 @@ Content-Length: 0<br>
 </blockquote>
 <p>
 
-<h3>Scanner Get Next </h3>
+<a name="operation_scanner_next">
+<h3>Scanner Get Next</h3>
+</a>
 <p>
 <pre>
 GET /&lt;table&gt;/scanner/&lt;scanner-id&gt;
@@ -911,7 +1060,9 @@ Otherwise, returns HTTP 200 status and row and cell data in the response body.
 See examples from the "Cell or Row Query (Multiple Values)" section.
 <p>
 NOTE: The binary encoding option returns only one cell regardless of the 
-batching parameter supplied during scanner creation.
+batching parameter supplied during scanner creation. The row, column, and
+timestamp associated with the cell are transmitted as X-headers: 
+<tt>X-Row</tt>, <tt>X-Column</tt>, and <tt>X-Timestamp</tt> respectively.
 <p>
 Examples:
 <p>
@@ -924,6 +1075,7 @@ Cache-Control: no-cache<br>
 Content-Type: text/xml<br>
 Content-Length: 589<br>
 <br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
 &lt;CellSet&gt;&lt;Row key="MDAyMDFjMTAwNjk4ZGNkYjU5MDQxNTVkZGQ3OGRlZTk="&gt;&lt;Cell timesta<br>
 mp="1244701281234" column="Y29udGVudDpyYXc="&gt;PCFET0NUWVBFIEhUTUwgUFVCTElDICItL<br>
 y9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT40MDQgTm90IEZvdW5<br>
@@ -974,7 +1126,9 @@ Content-Type: application/octet-stream<br>
 </blockquote>
 <p>
 
+<a name="operation_scanner_delete">
 <h3>Scanner Deletion</h3>
+</a>
 <p>
 <pre>
 DELETE /&lt;table&gt;/scanner/&lt;scanner-id&gt;
