@@ -353,8 +353,12 @@ public class HConnectionManager implements HConstants {
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         public boolean processRow(Result result) throws IOException {
           try {
-            HRegionInfo info = Writables.getHRegionInfo(
-              result.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
+            byte[] value =
+              result.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+            HRegionInfo info = null;
+            if (value != null) {
+              info = Writables.getHRegionInfo(value);
+            }
             // Only examine the rows where the startKey is zero length
             if (info != null && info.getStartKey().length == 0) {
               uniqueTables.add(info.getTableDesc());
