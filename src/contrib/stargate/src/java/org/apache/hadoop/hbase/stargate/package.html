@@ -28,6 +28,7 @@ This package provides "Stargate" -- a RESTful Web service front end for HBase.
 
 <h2>Table Of Contents</h2>
 <ol>
+<li><a href="#status">Status</a></li>
 <li><a href="#deployment">Deployment</a></li>
   <ol type="a">
   <li><a href="#deployment_daemon">Daemon</a></li>
@@ -59,6 +60,21 @@ This package provides "Stargate" -- a RESTful Web service front end for HBase.
 </ol>
 
 <p>
+<a name="status">
+<h2>Status</h2>
+</a>
+<p>
+Stargate is alpha quality software. It has received testing under controlled
+conditions and functions correctly given well formed input. It is bundled with
+a suite of unit tests which form the basis for correctness and regression
+testing but the coverage of this suite is basic. Stargate has not yet been
+tested under high load conditions. No comprehensive performance measurements
+have been made.
+<p>
+Performance testing and tuning, and increased test suite coverage including
+deliberately corrupted inputs are both on the roadmap toward beta quality. 
+
+<p>
 <a name="deployment">
 <h2>Deployment</h2>
 </a>
@@ -69,11 +85,141 @@ This package provides "Stargate" -- a RESTful Web service front end for HBase.
 <h3>Daemon</h3>
 </a>
 <p>
+Stargate can run as a daemon which starts an embedded Jetty servlet container
+and deploys the servlet into it.
+<p>
+<ol>
+<li>Place the Stargate jar in either the HBase installation root directory or
+<tt>lib/</tt> directories.</li><p>
+<li>Copy the jars from <tt>contrib/stargate/lib/</tt> into the <tt>lib/</tt>
+directory of the HBase installation.</li><p>
+<li>Start the embedded Jetty servlet container:
+  <p>
+  <ul>
+  <li>In the foreground:
+  <blockquote>
+  <tt>
+  % ./bin/hbase org.apache.hadoop.hbase.stargate.Main -p &lt;<i>port</i>&gt;
+  </tt>
+  </blockquote>
+  <p>
+  where &lt;<i>port</i>&gt; is optional, and is the port the connector should
+  listen on. (Default is 8080.)
+  </li>
+  <p>
+  <li>In the background:
+  <blockquote>
+  <tt>
+  % ./bin/hbase-daemon.sh start org.apache.hadoop.hbase.stargate.Main -p &lt;<i>port</i>&gt;
+  </tt>
+  </blockquote>
+  <p>
+  where &lt;<i>port</i>&gt; is optional, and is the port the connector should
+  listen on. (Default is 8080.)
+  </li>
+  </ul>
+</li>
+</ol>
 
 <p>
 <a name=deployment_servlet">
 <h3>Servlet</h3>
 </a>
+<p>
+Stargate is also packaged as a Java web application (WAR) which can be
+deployed into any servlet API compliant container, such as Tomcat, Jetty, 
+Glassfish, etc. 
+<p>
+<ol>
+<li>Copy the HBase jar from the HBase installation root directory and all jars
+from the HBase <tt>lib/</tt> and <tt>contrib/stargate/lib/</tt> directories to
+somewhere on the servlet container's classpath, into a shared deployment lib
+directory for example.</li><p>
+<li>Drop the Stargate WAR where container expects it.</li><p>
+<li>Configure the servlet. An example for Jetty follows:
+<p>
+<blockquote>
+<b>web.xml</b><p>
+<pre>
+&lt;!DOCTYPE web-app PUBLIC
+"-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+"http://java.sun.com/dtd/web-app_2_3.dtd"&gt;
+ 
+&lt;web-app&gt;
+    &lt;display-name&gt;
+        HBase Stargate
+    &lt;/display-name&gt;
+    
+    &lt;servlet&gt;
+        &lt;servlet-name&gt;api&lt;/servlet-name&gt;
+        &lt;servlet-class&gt;org.apache.hadoop.hbase.stargate.RESTServlet&lt;/servlet-class&gt;
+        &lt;load-on-startup&gt;1&lt;/load-on-startup&gt;
+        
+        &lt;init-param&gt;
+            &lt;param-name&gt;com.sun.jersey.config.property.packages&lt;/param-name&gt;
+            &lt;param-value&gt;org.apache.hadoop.hbase.stargate&lt;/param-value&gt;
+        &lt;/init-param&gt;
+        &lt;init-param&gt;
+            &lt;param-name&gt;com.sun.jersey.config.property.resourceConfigClass&lt;/param-name&gt;
+            &lt;param-value&gt;com.sun.jersey.api.core.PackagesResourceConfig&lt;/param-value&gt;
+        &lt;/init-param&gt;
+    &lt;/servlet&gt;
+    
+    &lt;servlet-mapping&gt;
+        &lt;servlet-name&gt;api&lt;/servlet-name&gt;
+        &lt;url-pattern&gt;/*&lt;/url-pattern&gt;
+    &lt;/servlet-mapping&gt;
+&lt;/web-app&gt;
+</pre>
+</blockquote>
+<p>
+<blockquote>
+<b>jetty.xml</b><br>
+<pre>
+&lt;!DOCTYPE Configure PUBLIC "-//Mort Bay Consulting//DTD Configure//EN" 
+    "http://jetty.mortbay.org/configure.dtd"&gt;
+ 
+&lt;Configure id="Server" class="org.mortbay.jetty.Server"&gt;
+    &lt;Call name="addConnector"&gt;
+        &lt;Arg&gt;
+            &lt;New class="org.mortbay.jetty.nio.SelectChannelConnector"&gt;
+                &lt;Set name="port"&gt;
+                    8080
+                &lt;/Set&gt;
+            &lt;/New&gt;
+        &lt;/Arg&gt;
+    &lt;/Call&gt;
+    
+    &lt;Set name="handler"&gt;
+        &lt;New id="Handlers" class="org.mortbay.jetty.handler.HandlerCollection"&gt;
+            &lt;Array type="org.mortbay.jetty.Handler"&gt;
+                &lt;Set name="handlers"&gt;
+                    &lt;Item&gt;
+                        &lt;New id="Contexts" class="org.mortbay.jetty.handler.ContextHandlerCollection"/&gt;
+                    &lt;/Item&gt;
+                &lt;/Set&gt;
+            &lt;/Array&gt;
+        &lt;/New&gt;
+    &lt;/Set&gt;
+    
+    &lt;Call name="addLifeCycle"&gt;
+        &lt;Arg&gt;
+            &lt;New class="org.mortbay.jetty.deployer.WebAppDeployer"&gt;
+                &lt;Set name="contexts"&gt;
+                    &lt;Ref id="Contexts"/&gt;
+                &lt;/Set&gt;
+                &lt;Set name="webAppDir"&gt;
+                    &lt;SystemProperty name="jetty.home" default="."/&gt;/webapps
+                &lt;/Set&gt;
+            &lt;/New&gt;
+        &lt;/Arg&gt;
+    &lt;/Call&gt;
+&lt;/Configure&gt;
+</pre>
+</blockquote>
+
+</li><p>
+</ol>
 <p>
 
 <p>
