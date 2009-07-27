@@ -135,6 +135,18 @@ for f in $HADOOP_CORE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+if [ -d "$HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Core/common" ]; then
+for f in $HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Core/common/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+fi
+
+if [ -d "$HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Hdfs/common" ]; then
+for f in $HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Hdfs/common/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+fi
+
 if [ -d "$HADOOP_CORE_HOME/build/ivy/lib/Hadoop/common" ]; then
 for f in $HADOOP_CORE_HOME/build/ivy/lib/Hadoop/common/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
