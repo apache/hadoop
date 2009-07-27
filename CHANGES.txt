@@ -138,6 +138,9 @@ Trunk (unreleased changes)
     MAPREDUCE-784. Modify TestUserDefinedCounters to use LocalJobRunner 
     instead of MiniMR. (Jothi Padmanabhan via sharad)
 
+    HADOOP-6160. Fix releaseaudit target to run on specific directories. 
+    (gkesavan)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
