@@ -30,6 +30,7 @@
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <title>HBase Master: <%= master.getMasterAddress().getHostname()%>:<%= master.getMasterAddress().getPort() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
+</head>
 <body>
 
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
