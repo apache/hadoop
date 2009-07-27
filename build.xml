@@ -1129,12 +1129,19 @@
   <!-- ================================================================== -->
   <!-- Perform audit activities for the release                           -->
   <!-- ================================================================== -->
-  <target name="releaseaudit" depends="package,ivy-retrieve-releaseaudit" description="Release Audit activities">
-    <fail unless="rat.present" message="Failed to load class [${rat.reporting.classname}]."/>
-    <java classname="${rat.reporting.classname}" fork="true">
-      <classpath refid="releaseaudit-classpath"/>
-      <arg value="${build.dir}/${final.name}"/>
-    </java>
+  <target name="rats-taskdef" depends="ivy-retrieve-releaseaudit">
+     <typedef format="xml" resource="org/apache/rat/anttasks/antlib.xml" uri="antlib:org.apache.rat.anttasks"
+      classpathref="releaseaudit-classpath"/>
+  </target>
+
+  <target name="releaseaudit" depends="package, rats-taskdef" description="Release Audit activities">
+   <rat:report xmlns:rat="antlib:org.apache.rat.anttasks">
+      <fileset dir="${dist.dir}">
+        <exclude name="CHANGES.txt"/>
+        <exclude name="docs/"/>
+        <exclude name="lib/jdiff/"/>
+      </fileset>
+    </rat:report>
   </target>
 
   <!-- ================================================================== -->
@@ -1408,8 +1415,6 @@
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" />
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
-    <available classname="${rat.reporting.classname}" 
-      classpathref="releaseaudit-classpath" property="rat.present" value="true"/>
   </target>
 
   <target name="ivy-report" depends="ivy-resolve-releaseaudit"
