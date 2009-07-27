@@ -141,6 +141,9 @@ Trunk (unreleased changes)
     HADOOP-6160. Fix releaseaudit target to run on specific directories. 
     (gkesavan)
 
+    MAPREDUCE-782. Use PureJavaCrc32 in SpillRecord.  (Todd Lipcon via
+    szetszwo)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
