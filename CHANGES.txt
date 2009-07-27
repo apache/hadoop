@@ -286,6 +286,7 @@ Release 0.20.0 - Unreleased
                scan can't specify stopRow (Clint Morgan via Stack)
    HBASE-1693  NPE close_region ".META." in shell
    HBASE-1706  META row with missing HRI breaks UI
+   HBASE-1709  Thrift getRowWithColumns doesn't accept column-family only
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

@@ -346,7 +346,11 @@ public class ThriftServer {
         Get get = new Get(row);
         for(byte [] column : columnArr) {
           byte [][] famAndQf = KeyValue.parseColumn(column);
-          get.addColumn(famAndQf[0], famAndQf[1]);
+          if (famAndQf[1] == null || famAndQf[1].length == 0) {
+              get.addFamily(famAndQf[0]);
+          } else {
+              get.addColumn(famAndQf[0], famAndQf[1]);
+          }
         }
         get.setTimeRange(Long.MIN_VALUE, timestamp);
         Result result = table.get(get);
