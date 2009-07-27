@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.ERROR;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.SUCCESS;
+import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
+
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -36,11 +40,11 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
-import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
 
 /** A class that receives a block and writes to its own disk, meanwhile
  * may copies it to another site. If a throttler is provided,
@@ -823,7 +827,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             }
 
             replyOut.writeLong(expected);
-            replyOut.writeShort(DataTransferProtocol.OP_STATUS_SUCCESS);
+            SUCCESS.write(replyOut);
             replyOut.flush();
         } catch (Exception e) {
           if (running) {
@@ -854,7 +858,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
         try {
-            short op = DataTransferProtocol.OP_STATUS_SUCCESS;
+            DataTransferProtocol.Status op = SUCCESS;
             boolean didRead = false;
             long expected = -2;
             try { 
@@ -919,7 +923,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             }
             
             if (!didRead) {
-              op = DataTransferProtocol.OP_STATUS_ERROR;
+              op = ERROR;
             }
             
             // If this is the last packet in block, then close block
@@ -948,7 +952,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
             // send my status back to upstream datanode
             replyOut.writeLong(expected); // send seqno upstream
-            replyOut.writeShort(DataTransferProtocol.OP_STATUS_SUCCESS);
+            SUCCESS.write(replyOut);
 
             LOG.debug("PacketResponder " + numTargets + 
                       " for block " + block +
@@ -958,18 +962,18 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             // forward responses from downstream datanodes.
             for (int i = 0; i < numTargets && datanode.shouldRun; i++) {
               try {
-                if (op == DataTransferProtocol.OP_STATUS_SUCCESS) {
-                  op = mirrorIn.readShort();
-                  if (op != DataTransferProtocol.OP_STATUS_SUCCESS) {
+                if (op == SUCCESS) {
+                  op = Status.read(mirrorIn);
+                  if (op != SUCCESS) {
                     LOG.debug("PacketResponder for block " + block +
                               ": error code received from downstream " +
                               " datanode[" + i + "] " + op);
                   }
                 }
               } catch (Throwable e) {
-                op = DataTransferProtocol.OP_STATUS_ERROR;
+                op = ERROR;
               }
-              replyOut.writeShort(op);
+              op.write(replyOut);
             }
             replyOut.flush();
             LOG.debug("PacketResponder " + block + " " + numTargets + 
@@ -982,7 +986,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             // If we forwarded an error response from a downstream datanode
             // and we are acting on behalf of a client, then we quit. The 
             // client will drive the recovery mechanism.
-            if (op == DataTransferProtocol.OP_STATUS_ERROR && receiver.clientName.length() > 0) {
+            if (op == ERROR && receiver.clientName.length() > 0) {
               running = false;
             }
         } catch (IOException e) {

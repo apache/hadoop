@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.REPLACE_BLOCK;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.*;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -44,7 +47,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.datanode.BlockTransferThrottler;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessToken;
@@ -227,7 +229,7 @@ public class TestBlockReplacement extends TestCase {
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
     out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
-    out.writeByte(DataTransferProtocol.OP_REPLACE_BLOCK);
+    REPLACE_BLOCK.write(out);
     out.writeLong(block.getBlockId());
     out.writeLong(block.getGenerationStamp());
     Text.writeString(out, source.getStorageID());
@@ -237,11 +239,7 @@ public class TestBlockReplacement extends TestCase {
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());
 
-    short status = reply.readShort();
-    if(status == DataTransferProtocol.OP_STATUS_SUCCESS) {
-      return true;
-    }
-    return false;
+    return DataTransferProtocol.Status.read(reply) == SUCCESS;
   }
 
   /**

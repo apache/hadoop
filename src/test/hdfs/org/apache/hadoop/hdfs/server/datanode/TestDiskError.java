@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.WRITE_BLOCK;
+
 import java.io.DataOutputStream;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+
+import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,8 +36,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessToken;
-
-import junit.framework.TestCase;
 
 /** Test if a datanode can correctly handle errors during block read/write*/
 public class TestDiskError extends TestCase {
@@ -112,7 +114,7 @@ public class TestDiskError extends TestCase {
           s.getOutputStream());
 
       out.writeShort( DataTransferProtocol.DATA_TRANSFER_VERSION );
-      out.write( DataTransferProtocol.OP_WRITE_BLOCK );
+      WRITE_BLOCK.write(out);
       out.writeLong( block.getBlock().getBlockId());
       out.writeLong( block.getBlock().getGenerationStamp() );
       out.writeInt(1);

@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessToken;
@@ -42,39 +45,136 @@ public interface DataTransferProtocol {
    */
   public static final int DATA_TRANSFER_VERSION = 16;
 
-  // Processed at datanode stream-handler
-  public static final byte OP_WRITE_BLOCK = (byte) 80;
-  public static final byte OP_READ_BLOCK = (byte) 81;
-  /**
-   * @deprecated As of version 15, OP_READ_METADATA is no longer supported
-   */
-  @Deprecated public static final byte OP_READ_METADATA = (byte) 82;
-  public static final byte OP_REPLACE_BLOCK = (byte) 83;
-  public static final byte OP_COPY_BLOCK = (byte) 84;
-  public static final byte OP_BLOCK_CHECKSUM = (byte) 85;
+  /** Operation */
+  public enum Op {
+    WRITE_BLOCK((byte)80),
+    READ_BLOCK((byte)81),
+    READ_METADATA((byte)82),
+    REPLACE_BLOCK((byte)83),
+    COPY_BLOCK((byte)84),
+    BLOCK_CHECKSUM((byte)85);
+
+    /** The code for this operation. */
+    public final byte code;
+    
+    private Op(byte code) {
+      this.code = code;
+    }
+    
+    private static final int FIRST_CODE = values()[0].code;
+    /** Return the object represented by the code. */
+    private static Op valueOf(byte code) {
+      final int i = (code & 0xff) - FIRST_CODE;
+      return i < 0 || i >= values().length? null: values()[i];
+    }
+
+    /** Read from in */
+    public static Op read(DataInput in) throws IOException {
+      return valueOf(in.readByte());
+    }
+
+    /** Write to out */
+    public void write(DataOutput out) throws IOException {
+      out.write(code);
+    }
+  };
+
+  /** Status */
+  public enum Status {
+    SUCCESS(0),
+    ERROR(1),
+    ERROR_CHECKSUM(2),
+    ERROR_INVALID(3),
+    ERROR_EXISTS(4),
+    ERROR_ACCESS_TOKEN(5),
+    CHECKSUM_OK(6);
+
+    /** The code for this operation. */
+    private final int code;
+    
+    private Status(int code) {
+      this.code = code;
+    }
+
+    private static final int FIRST_CODE = values()[0].code;
+    /** Return the object represented by the code. */
+    private static Status valueOf(int code) {
+      final int i = code - FIRST_CODE;
+      return i < 0 || i >= values().length? null: values()[i];
+    }
+
+    /** Read from in */
+    public static Status read(DataInput in) throws IOException {
+      return valueOf(in.readShort());
+    }
+
+    /** Write to out */
+    public void write(DataOutput out) throws IOException {
+      out.writeShort(code);
+    }
+
+    /** Write to out */
+    public void writeOutputStream(OutputStream out) throws IOException {
+      out.write(new byte[] {(byte)(code >>> 8), (byte)code});
+    }
+  };
   
-  public static final int OP_STATUS_SUCCESS = 0;  
-  public static final int OP_STATUS_ERROR = 1;  
-  public static final int OP_STATUS_ERROR_CHECKSUM = 2;  
-  public static final int OP_STATUS_ERROR_INVALID = 3;  
-  public static final int OP_STATUS_ERROR_EXISTS = 4;  
-  public static final int OP_STATUS_ERROR_ACCESS_TOKEN = 5;
-  public static final int OP_STATUS_CHECKSUM_OK = 6;
+  /** @deprecated Deprecated at 0.21.  Use Op.WRITE_BLOCK instead. */
+  @Deprecated
+  public static final byte OP_WRITE_BLOCK = Op.WRITE_BLOCK.code;
+  /** @deprecated Deprecated at 0.21.  Use Op.READ_BLOCK instead. */
+  @Deprecated
+  public static final byte OP_READ_BLOCK = Op.READ_BLOCK.code;
+  /** @deprecated As of version 15, OP_READ_METADATA is no longer supported. */
+  @Deprecated
+  public static final byte OP_READ_METADATA = Op.READ_METADATA.code;
+  /** @deprecated Deprecated at 0.21.  Use Op.REPLACE_BLOCK instead. */
+  @Deprecated
+  public static final byte OP_REPLACE_BLOCK = Op.REPLACE_BLOCK.code;
+  /** @deprecated Deprecated at 0.21.  Use Op.COPY_BLOCK instead. */
+  @Deprecated
+  public static final byte OP_COPY_BLOCK = Op.COPY_BLOCK.code;
+  /** @deprecated Deprecated at 0.21.  Use Op.BLOCK_CHECKSUM instead. */
+  @Deprecated
+  public static final byte OP_BLOCK_CHECKSUM = Op.BLOCK_CHECKSUM.code;
+
+
+  /** @deprecated Deprecated at 0.21.  Use Status.SUCCESS instead. */
+  @Deprecated
+  public static final int OP_STATUS_SUCCESS = Status.SUCCESS.code;  
+  /** @deprecated Deprecated at 0.21.  Use Status.ERROR instead. */
+  @Deprecated
+  public static final int OP_STATUS_ERROR = Status.ERROR.code;
+  /** @deprecated Deprecated at 0.21.  Use Status.ERROR_CHECKSUM instead. */
+  @Deprecated
+  public static final int OP_STATUS_ERROR_CHECKSUM = Status.ERROR_CHECKSUM.code;
+  /** @deprecated Deprecated at 0.21.  Use Status.ERROR_INVALID instead. */
+  @Deprecated
+  public static final int OP_STATUS_ERROR_INVALID = Status.ERROR_INVALID.code;
+  /** @deprecated Deprecated at 0.21.  Use Status.ERROR_EXISTS instead. */
+  @Deprecated
+  public static final int OP_STATUS_ERROR_EXISTS = Status.ERROR_EXISTS.code;
+  /** @deprecated Deprecated at 0.21.  Use Status.ERROR_ACCESS_TOKEN instead.*/
+  @Deprecated
+  public static final int OP_STATUS_ERROR_ACCESS_TOKEN = Status.ERROR_ACCESS_TOKEN.code;
+  /** @deprecated Deprecated at 0.21.  Use Status.CHECKSUM_OK instead. */
+  @Deprecated
+  public static final int OP_STATUS_CHECKSUM_OK = Status.CHECKSUM_OK.code;
 
 
   /** Sender */
   public static class Sender {
     /** Initialize a operation. */
-    public static void op(DataOutputStream out, int op) throws IOException {
+    public static void op(DataOutputStream out, Op op) throws IOException {
       out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
-      out.write(op);
+      op.write(out);
     }
 
     /** Send OP_READ_BLOCK */
     public static void opReadBlock(DataOutputStream out,
         long blockId, long blockGs, long blockOffset, long blockLen,
         String clientName, AccessToken accessToken) throws IOException {
-      op(out, OP_READ_BLOCK);
+      op(out, Op.READ_BLOCK);
 
       out.writeLong(blockId);
       out.writeLong(blockGs);
@@ -90,7 +190,7 @@ public interface DataTransferProtocol {
         long blockId, long blockGs, int pipelineSize, boolean isRecovery,
         String client, DatanodeInfo src, DatanodeInfo[] targets,
         AccessToken accesstoken) throws IOException {
-      op(out, OP_WRITE_BLOCK);
+      op(out, Op.WRITE_BLOCK);
 
       out.writeLong(blockId);
       out.writeLong(blockGs);
@@ -114,7 +214,7 @@ public interface DataTransferProtocol {
     public static void opReplaceBlock(DataOutputStream out,
         long blockId, long blockGs, String storageId, DatanodeInfo src,
         AccessToken accesstoken) throws IOException {
-      op(out, OP_REPLACE_BLOCK);
+      op(out, Op.REPLACE_BLOCK);
 
       out.writeLong(blockId);
       out.writeLong(blockGs);
@@ -127,7 +227,7 @@ public interface DataTransferProtocol {
     /** Send OP_COPY_BLOCK */
     public static void opCopyBlock(DataOutputStream out,
         long blockId, long blockGs, AccessToken accesstoken) throws IOException {
-      op(out, OP_COPY_BLOCK);
+      op(out, Op.COPY_BLOCK);
 
       out.writeLong(blockId);
       out.writeLong(blockGs);
@@ -138,7 +238,7 @@ public interface DataTransferProtocol {
     /** Send OP_BLOCK_CHECKSUM */
     public static void opBlockChecksum(DataOutputStream out,
         long blockId, long blockGs, AccessToken accesstoken) throws IOException {
-      op(out, OP_BLOCK_CHECKSUM);
+      op(out, Op.BLOCK_CHECKSUM);
 
       out.writeLong(blockId);
       out.writeLong(blockGs);
@@ -150,12 +250,12 @@ public interface DataTransferProtocol {
   /** Receiver */
   public static abstract class Receiver {
     /** Initialize a operation. */
-    public final byte op(DataInputStream in) throws IOException {
+    public final Op op(DataInputStream in) throws IOException {
       final short version = in.readShort();
       if (version != DATA_TRANSFER_VERSION) {
         throw new IOException( "Version Mismatch" );
       }
-      return in.readByte();
+      return Op.read(in);
     }
 
     /** Receive OP_READ_BLOCK */

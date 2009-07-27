@@ -99,6 +99,9 @@ Trunk (unreleased changes)
     HDFS-484. Fix bin-package and package target to package jar files.
     (gkesavan)
 
+    HDFS-501. Use enum to define the constants in DataTransferProtocol.
+    (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
