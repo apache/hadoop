@@ -322,7 +322,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
 
     // A slightly customized ColumnDescriptor (only 2 versions)
     ColumnDescriptor cDescB = new ColumnDescriptor(columnBname, 2, "NONE", 
-        false, 2147483647, "NONE", 0, 0, false, -1);
+        false, "NONE", 0, 0, false, -1);
     cDescriptors.add(cDescB);
 
     return cDescriptors;

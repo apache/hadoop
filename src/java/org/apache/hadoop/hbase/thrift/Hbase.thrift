@@ -74,12 +74,11 @@ struct ColumnDescriptor {
   2:i32 maxVersions = 3,
   3:string compression = "NONE",
   4:bool inMemory = 0,
-  5:i32 maxValueLength = 2147483647,
-  6:string bloomFilterType = "NONE",
-  7:i32 bloomFilterVectorSize = 0,
-  8:i32 bloomFilterNbHashes = 0,
-  9:bool blockCacheEnabled = 0,
-  10:i32 timeToLive = -1
+  5:string bloomFilterType = "NONE",
+  6:i32 bloomFilterVectorSize = 0,
+  7:i32 bloomFilterNbHashes = 0,
+  8:bool blockCacheEnabled = 0,
+  9:i32 timeToLive = -1
 }
 
 /**
@@ -461,6 +460,20 @@ service Hbase {
                                 2:Text startRow,
                                 3:Text stopRow, 
                                 4:list<Text> columns)
+    throws (1:IOError io)
+
+  /**
+   * Open a scanner for a given prefix.  That is all rows will have the specified
+   * prefix. No other rows will be returned.
+   *
+   * @param tableName name of table
+   * @param startAndPrefix the prefix (and thus start row) of the keys you want
+   * @param columns the columns you want returned
+   * @return scanner id to use with other scanner calls
+   */
+  ScannerID scannerOpenWithPrefix(1:Text tableName,
+                                  2:Text startAndPrefix,
+                                  3:list<Text> columns)
     throws (1:IOError io)
 
   /** 

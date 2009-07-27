@@ -521,6 +521,7 @@ Release 0.20.0 - Unreleased
                (Tim Sell via Stack)
    HBASE-1683  OOME on master splitting logs; stuck, won't go down
    HBASE-1704  Better zk error when failed connect
+   HBASE-1714  Thrift server: prefix scan API
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

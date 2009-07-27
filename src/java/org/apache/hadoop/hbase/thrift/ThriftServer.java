@@ -35,6 +35,9 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -603,7 +606,24 @@ public class ThriftServer {
         throw new IOError(e.getMessage());
       }
     }
-    
+
+    @Override
+    public int scannerOpenWithPrefix(byte[] tableName, byte[] startAndPrefix, List<byte[]> columns) throws IOError, TException {
+      try {
+        HTable table = getTable(tableName);
+        byte [][] columnsArray = null;
+        columnsArray = columns.toArray(new byte[0][]);
+        Scan scan = new Scan(startAndPrefix);
+        scan.addColumns(columnsArray);
+        Filter f = new WhileMatchFilter(
+            new PrefixFilter(startAndPrefix));
+        scan.setFilter(f);
+        return addScanner(table.getScanner(scan));
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
     public int scannerOpenTs(byte[] tableName, byte[] startRow,
         List<byte[]> columns, long timestamp) throws IOError, TException {
       try {

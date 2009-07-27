@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -106,21 +107,22 @@ implements InputFormat<ImmutableBytesWritable, RowResult> {
     public void restart(byte[] firstRow) throws IOException {
       if ((endRow != null) && (endRow.length > 0)) {
         if (trrRowFilter != null) {
-          final Set<RowFilterInterface> rowFiltersSet =
-            new HashSet<RowFilterInterface>();
-          rowFiltersSet.add(new WhileMatchRowFilter(new StopRowFilter(endRow)));
-          rowFiltersSet.add(trrRowFilter);
-          Scan scan = new Scan(startRow);
+          Scan scan = new Scan(firstRow, endRow);
           scan.addColumns(trrInputColumns);
-//          scan.setFilter(new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL,
-//              rowFiltersSet));
+          scan.setOldFilter(trrRowFilter);
           this.scanner = this.htable.getScanner(scan);
         } else {
+          LOG.debug("TIFB.restart, firstRow: " +
+              Bytes.toStringBinary(firstRow) + ", endRow: " +
+              Bytes.toStringBinary(endRow));
           Scan scan = new Scan(firstRow, endRow);
           scan.addColumns(trrInputColumns);
           this.scanner = this.htable.getScanner(scan);
         }
       } else {
+        LOG.debug("TIFB.restart, firstRow: " +
+            Bytes.toStringBinary(firstRow) + ", no endRow");
+
         Scan scan = new Scan(firstRow);
         scan.addColumns(trrInputColumns);
 //        scan.setFilter(trrRowFilter);

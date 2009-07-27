@@ -228,6 +228,11 @@ public class Delete implements Writable {
     familyMap.put(family, list);
     return this;
   }
+
+  public void deleteColumns(byte [] column) {
+    byte [][] parts = KeyValue.parseColumn(column);
+    this.deleteColumns(parts[0], parts[1]);
+  }
   
   /**
    * Delete the latest version of the specified column, given in
