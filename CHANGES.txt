@@ -190,6 +190,9 @@ Release 0.20.1 - Unreleased
     HADOOP-6150. Users should be able to instantiate comparator using TFile
     API. (Hong Tang via rangadi)
 
+    MAPREDUCE-383. Fix a bug in Pipes combiner due to bytes count not 
+    getting reset after the spill. (Christian Kunz via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
