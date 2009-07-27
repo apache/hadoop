@@ -437,18 +437,31 @@ public class ThriftServer {
       mutateRowTs(tableName, row, mutations, HConstants.LATEST_TIMESTAMP);
     }
     
-    public void mutateRowTs(byte[] tableName, byte[] row,
+    public void mutateRowTs(byte[] tableName, byte[] row, 
         List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument {
       HTable table = null;
       try {
         table = getTable(tableName);
         Put put = new Put(row);
         put.setTimeStamp(timestamp);
+
+        Delete delete = new Delete(row);
+
         for (Mutation m : mutations) {
-          byte [][] famAndQf = KeyValue.parseColumn(m.column);
-          put.add(famAndQf[0], famAndQf[1], m.value);
+          byte[][] famAndQf = KeyValue.parseColumn(m.column);
+          if (m.isDelete) {
+            if (famAndQf[1].length == 0)
+              delete.deleteFamily(famAndQf[0], timestamp);
+            else
+              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+          } else {
+            put.add(famAndQf[0], famAndQf[1], m.value);
+          }
         }
-        table.put(put);
+        if (!delete.isEmpty())
+          table.delete(delete);
+        if (!put.isEmpty())
+          table.put(put);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
@@ -460,7 +473,7 @@ public class ThriftServer {
         throws IOError, IllegalArgument, TException {
       mutateRowsTs(tableName, rowBatches, HConstants.LATEST_TIMESTAMP);
     }
- 
+
     public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp)
         throws IOError, IllegalArgument, TException {
       List<Put> puts = new ArrayList<Put>();
@@ -473,9 +486,13 @@ public class ThriftServer {
         Put put = new Put(row);
         put.setTimeStamp(timestamp);
         for (Mutation m : mutations) {
-          byte [][] famAndQf = KeyValue.parseColumn(m.column);
+          byte[][] famAndQf = KeyValue.parseColumn(m.column);
           if (m.isDelete) {
-            delete.deleteColumns(famAndQf[0], famAndQf[1]);
+            // no qualifier, family only.
+            if (famAndQf[1].length == 0)
+              delete.deleteFamily(famAndQf[0], timestamp);
+            else
+              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
           } else {
             put.add(famAndQf[0], famAndQf[1], m.value);
           }

@@ -291,6 +291,8 @@ Release 0.20.0 - Unreleased
    HBASE-1692  Web UI is extremely slow / freezes up if you have many tables
    HBASE-1686  major compaction can create empty store files, causing AIOOB
                when trying to read
+   HBASE-1705  Thrift server: deletes in mutateRow/s don't delete
+               (Tim Sell and Ryan Rawson via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
