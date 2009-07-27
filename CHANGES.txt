@@ -93,6 +93,9 @@ Trunk (unreleased changes)
     HDFS-463. CreateEditLog utility broken after HDFS-396 (URI for
     FSImage). (Suresh Srinivas via rangadi)
 
+    HDFS-484. Fix bin-package and package target to package jar files.
+    (gkesavan)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

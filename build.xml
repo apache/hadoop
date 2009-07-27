@@ -1004,7 +1004,7 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}-*.jar"/>
+      <fileset file="${build.dir}/${name}-*.jar"/>
     </copy>
 
     <copy todir="${dist.dir}/conf">
@@ -1087,7 +1087,7 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}-*.jar"/>
+      <fileset file="${build.dir}/${name}-*.jar"/>
     </copy>
     
     <copy todir="${dist.dir}/conf">
