@@ -30,19 +30,6 @@
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <title>HBase Master: <%= master.getMasterAddress().getHostname()%>:<%= master.getMasterAddress().getPort() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
-<link rel="stylesheet" type="text/css" href="/static/jquery.treeview.css" />
-<script src="/static/scripts/jquery-1.3.1.min.js" type="text/javascript"></script>
-<script src="/static/scripts/jquery.cookie.js" type="text/javascript"></script>
-<script src="/static/scripts/jquery.treeview.pack.js" type="text/javascript"></script>
-<script>
-$(document).ready(function(){
-   $("#tables").treeview({
-       control: "#tablecontrol",
-       persist: "cookie"
-   });
-});</script>
-</head>
-
 <body>
 
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
@@ -80,55 +67,11 @@ $(document).ready(function(){
 <h2>User Tables</h2>
 <% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables(); 
    if(tables != null && tables.length > 0) { %>
-<div id="tablecontrol">
-  <a title="Collapse the entire tree below" href="#"><img src="/static/images/minus.gif" /> Collapse All</a>
-  <a title="Expand the entire tree below" href="#"><img src="/static/images/plus.gif" /> Expand All</a>
-  <a style="display: none" title="Toggle the tree below, opening closed branches, closing open branches" href="#"> Toggle All </a>
-</div>
-<br/>
-<ul id="tables">
-<%   for(HTableDescriptor htDesc : tables) { %>
-<li class="closed"><span>&nbsp;<a href="/table.jsp?name=<%= htDesc.getNameAsString() %>"><%= htDesc.getNameAsString() %></a></span>
-<ul>
-<li><span>&nbsp;Parameters</span>
-<ul>
-<%     Map<ImmutableBytesWritable, ImmutableBytesWritable> vals = htDesc.getValues();
-       if (vals.size() > 0) {
-         for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: vals.entrySet()) { %>
-<li>&nbsp; <%= Bytes.toString(e.getKey().get()).toLowerCase() %>: <%= Bytes.toString(e.getValue().get()).toLowerCase() %> </li>
-<%       }
-       } else { %>
-<li>&nbsp; none</li>
-<%       } %>
-</ul>
-</li>
-
-<li><span>&nbsp;Families</span>
-<ul>
-<%     Collection<HColumnDescriptor> cols = htDesc.getFamilies();
-       if (cols.size() > 0) {
-         for (HColumnDescriptor hcd: htDesc.getFamilies()) { %>
-<li><span>&nbsp;Name: <%= hcd.getNameAsString() %> </span>
-<ul>
-<%         for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: hcd.getValues().entrySet()) { %>
-<li>&nbsp; <%= Bytes.toString(e.getKey().get()).toLowerCase() %>: <%= Bytes.toString(e.getValue().get()).toLowerCase() %> </li>
-<%         } %>
-</ul>
-<%       } %>
-</li>
-<%     } else { %>
-<li>&nbsp;none</li>
-<%     }%>
-</ul>
-</li>  
-
-</ul>
-</li>
-
-
+<table>
+<tr><th>Table</th><th>Description</th></tr>
+<%   for(HTableDescriptor htDesc : tables ) { %>
+<tr><td><a href=/table.jsp?name=<%= htDesc.getNameAsString() %>><%= htDesc.getNameAsString() %></a> </td><td><%= htDesc.toString() %></td></tr>
 <%   }  %>
-
-</ul>
 
 <p> <%= tables.length %> table(s) in set.</p>
 </table>

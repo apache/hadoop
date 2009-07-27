@@ -287,6 +287,9 @@ Release 0.20.0 - Unreleased
    HBASE-1693  NPE close_region ".META." in shell
    HBASE-1706  META row with missing HRI breaks UI
    HBASE-1709  Thrift getRowWithColumns doesn't accept column-family only
+               (Mathias Lehmann via Stack)
+   HBASE-1692  Web UI is extremely slow / freezes up if you have many tables
+   
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
