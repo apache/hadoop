@@ -112,11 +112,10 @@ public class SchemaResource implements Constants {
     }
   }
 
-  private Response update(TableSchemaModel model, boolean replace,
-      UriInfo uriInfo) {
-    // NOTE: 'replace' is currently ignored... we always replace the schema
+  private Response replace(byte[] tableName, TableSchemaModel model,
+      UriInfo uriInfo, HBaseAdmin admin) {
     try {
-      HTableDescriptor htd = new HTableDescriptor(table);
+      HTableDescriptor htd = new HTableDescriptor(tableName);
       for (Map.Entry<QName,Object> e: model.getAny().entrySet()) {
         htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }
@@ -127,21 +126,65 @@ public class SchemaResource implements Constants {
         }
         htd.addFamily(hcd);
       }
-      RESTServlet server = RESTServlet.getInstance();
-      HBaseAdmin admin = new HBaseAdmin(server.getConfiguration());
-      if (admin.tableExists(table)) {
-        admin.disableTable(table);
-        admin.modifyTable(Bytes.toBytes(table), htd);
-        server.invalidateMaxAge(table);
-        admin.enableTable(table);
-        return Response.ok().build();
-      } else {
+      if (admin.tableExists(tableName)) {
+        admin.disableTable(tableName);
+        admin.modifyTable(tableName, htd);
+        admin.enableTable(tableName);
+      } else try {
         admin.createTable(htd);
-        return Response.created(uriInfo.getAbsolutePath()).build();
+      } catch (TableExistsException e) {
+        // race, someone else created a table with the same name
+        throw new WebApplicationException(e, Response.Status.NOT_MODIFIED);
       }
-    } catch (TableExistsException e) {
-      // race, someone else created a table with the same name
-      throw new WebApplicationException(e, Response.Status.NOT_MODIFIED);
+      return Response.created(uriInfo.getAbsolutePath()).build();
+    } catch (IOException e) {
+      throw new WebApplicationException(e, 
+            Response.Status.SERVICE_UNAVAILABLE);
+    }      
+  } 
+
+  private Response update(byte[] tableName, TableSchemaModel model,
+      UriInfo uriInfo, HBaseAdmin admin) {
+    try {
+      HTableDescriptor htd = admin.getTableDescriptor(tableName);
+      admin.disableTable(tableName);
+      try {
+        for (ColumnSchemaModel family: model.getColumns()) {
+          HColumnDescriptor hcd = new HColumnDescriptor(family.getName());
+          for (Map.Entry<QName,Object> e: family.getAny().entrySet()) {
+            hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
+          }
+          if (htd.hasFamily(hcd.getName())) {
+            admin.modifyColumn(tableName, hcd.getName(), hcd);
+          } else {
+            admin.addColumn(model.getName(), hcd);            
+          }
+        }
+      } catch (IOException e) {
+        throw new WebApplicationException(e, 
+            Response.Status.INTERNAL_SERVER_ERROR);
+      } finally {
+        admin.enableTable(tableName);
+      }
+      return Response.ok().build();
+    } catch (IOException e) {
+      throw new WebApplicationException(e,
+          Response.Status.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  private Response update(TableSchemaModel model, boolean replace,
+      UriInfo uriInfo) {
+    try {
+      RESTServlet server = RESTServlet.getInstance();
+      server.invalidateMaxAge(model.getName());
+      HBaseAdmin admin = new HBaseAdmin(server.getConfiguration());
+      byte[] tableName = Bytes.toBytes(model.getName());
+      if (replace || !admin.tableExists(tableName)) {
+        return replace(tableName, model, uriInfo, admin);
+      } else {
+        return update(tableName, model, uriInfo, admin);
+      }
     } catch (IOException e) {
       throw new WebApplicationException(e, 
             Response.Status.SERVICE_UNAVAILABLE);
