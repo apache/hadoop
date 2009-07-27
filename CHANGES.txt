@@ -289,7 +289,8 @@ Release 0.20.0 - Unreleased
    HBASE-1709  Thrift getRowWithColumns doesn't accept column-family only
                (Mathias Lehmann via Stack)
    HBASE-1692  Web UI is extremely slow / freezes up if you have many tables
-   
+   HBASE-1686  major compaction can create empty store files, causing AIOOB
+               when trying to read
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

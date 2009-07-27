@@ -643,6 +643,7 @@ public class KeyValue implements Writable, HeapSize {
    * @return Key as a String.
    */
   public static String keyToString(final byte [] b, final int o, final int l) {
+    if (b == null) return "";
     int rowlength = Bytes.toShort(b, o);
     String row = Bytes.toStringBinary(b, o + Bytes.SIZEOF_SHORT, rowlength);
     int columnoffset = o + Bytes.SIZEOF_SHORT + 1 + rowlength;

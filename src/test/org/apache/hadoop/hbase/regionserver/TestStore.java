@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -16,10 +18,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Progressable;
-
-import junit.framework.TestCase;
 
 /**
  * Test class fosr the Store 
@@ -87,6 +88,38 @@ public class TestStore extends TestCase {
   //////////////////////////////////////////////////////////////////////////////
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Test for hbase-1686.
+   * @throws IOException
+   */
+  public void testEmptyStoreFile() throws IOException {
+    init(this.getName());
+    // Write a store file.
+    this.store.add(new KeyValue(row, family, qf1, null));
+    this.store.add(new KeyValue(row, family, qf2, null));
+    flush(1);
+    // Now put in place an empty store file.  Its a little tricky.  Have to
+    // do manually with hacked in sequence id.
+    StoreFile f = this.store.getStorefiles().firstEntry().getValue();
+    Path storedir = f.getPath().getParent();
+    long seqid = f.getMaxSequenceId();
+    HBaseConfiguration c = new HBaseConfiguration();
+    FileSystem fs = FileSystem.get(c);
+    Writer w = StoreFile.getWriter(fs, storedir);
+    StoreFile.appendMetadata(w, seqid + 1);
+    w.close();
+    this.store.close();
+    // Reopen it... should pick up two files
+    this.store = new Store(storedir.getParent().getParent(),
+      this.store.getHRegionInfo(),
+      this.store.getFamily(), fs, null, c, null);
+    System.out.println(this.store.getHRegionInfo().getEncodedName());
+    assertEquals(2, this.store.getStorefilesCount());
+    this.store.get(get, qualifiers, result);
+    assertEquals(1, result.size());
+  }
+
   /**
    * Getting data from memstore only
    * @throws IOException

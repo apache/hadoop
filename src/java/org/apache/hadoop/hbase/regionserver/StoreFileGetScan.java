@@ -62,7 +62,7 @@ public class StoreFileGetScan {
   public void get(List<KeyValue> result) throws IOException {
     for(HFileScanner scanner : this.scanners) {
       this.matcher.update();
-      if(getStoreFile(scanner, result) || matcher.isDone()) {
+      if (getStoreFile(scanner, result) || matcher.isDone()) {
         return;
       }
     }
@@ -77,11 +77,13 @@ public class StoreFileGetScan {
    */
   public boolean getStoreFile(HFileScanner scanner, List<KeyValue> result) 
   throws IOException {
-    if(scanner.seekTo(startKey.getBuffer(), startKey.getKeyOffset(),
+    if (scanner.seekTo(startKey.getBuffer(), startKey.getKeyOffset(),
         startKey.getKeyLength()) == -1) {
       // No keys in StoreFile at or after specified startKey
       // First row may be = our row, so we have to check anyways.
       byte [] firstKey = scanner.getReader().getFirstKey();
+      // Key may be null if storefile is empty.
+      if (firstKey == null) return false;
       short rowLen = Bytes.toShort(firstKey, 0, Bytes.SIZEOF_SHORT);
       int rowOffset = Bytes.SIZEOF_SHORT;
       if (this.matcher.rowComparator.compareRows(firstKey, rowOffset, rowLen,

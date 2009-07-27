@@ -974,13 +974,13 @@ public class HFile {
     }
 
     /**
-     * @return First key in the file.
+     * @return First key in the file.  May be null if file has no entries.
      */
     public byte [] getFirstKey() {
       if (blockIndex == null) {
         throw new RuntimeException("Block index not loaded");
       }
-      return blockIndex.blockKeys[0];
+      return this.blockIndex.isEmpty()? null: this.blockIndex.blockKeys[0];
     }
 
     public int getEntries() {
@@ -991,13 +991,13 @@ public class HFile {
     }
 
     /**
-     * @return Last key in the file.
+     * @return Last key in the file.  May be null if file has no entries.
      */
     public byte [] getLastKey() {
       if (!isFileInfoLoaded()) {
         throw new RuntimeException("Load file info first");
       }
-      return this.lastkey;
+      return this.blockIndex.isEmpty()? null: this.lastkey;
     }
 
     /**

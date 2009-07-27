@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,12 +29,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+
 
 /**
  * Test compactions
@@ -83,7 +88,41 @@ public class TestCompaction extends HBaseTestCase {
     }
     super.tearDown();
   }
-  
+
+  /**
+   * Test that on a major compaction, if all cells are expired or deleted, then
+   * we'll end up with no product.  Make sure scanner over region returns
+   * right answer in this case - and that it just basically works.
+   * @throws IOException
+   */
+  public void testMajorCompactingToNoOutput() throws IOException {
+    createStoreFile(r);
+    for (int i = 0; i < COMPACTION_THRESHOLD; i++) {
+      createStoreFile(r);
+    }
+    // Now delete everything.
+    InternalScanner s = r.getScanner(new Scan());
+    do {
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      boolean result = s.next(results);
+      r.delete(new Delete(results.get(0).getRow()), null, false);
+      if (!result) break;
+    } while(true);
+    // Flush
+    r.flushcache();
+    // Major compact.
+    r.compactStores(true);
+    s = r.getScanner(new Scan());
+    int counter = 0;
+    do {
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      boolean result = s.next(results);
+      if (!result) break;
+      counter++;
+    } while(true);
+    assertEquals(0, counter);
+  }
+
   /**
    * Run compaction and flushing memstore
    * Assert deletes get cleaned up.
@@ -195,7 +234,7 @@ public class TestCompaction extends HBaseTestCase {
     count = count();
     assertTrue(count == 0);
   }
-  
+
   private int count() throws IOException {
     int count = 0;
     for (StoreFile f: this.r.stores.

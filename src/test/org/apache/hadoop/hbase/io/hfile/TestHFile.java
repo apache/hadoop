@@ -52,6 +52,21 @@ public class TestHFile extends HBaseTestCase {
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
 
+  /**
+   * Test empty HFile.
+   * Test all features work reasonably when hfile is empty of entries.
+   * @throws IOException 
+   */
+  public void testEmptyHFile() throws IOException {
+    Path f = new Path(ROOT_DIR, getName());
+    Writer w = new Writer(this.fs, f);
+    w.close();
+    Reader r = new Reader(fs, f, null, false);
+    r.loadFileInfo();
+    assertNull(r.getFirstKey());
+    assertNull(r.getLastKey());
+  }
+
   // write some records into the tfile
   // write them twice
   private int writeSomeRecords(Writer writer, int start, int n)
@@ -213,7 +228,7 @@ public class TestHFile extends HBaseTestCase {
     reader.loadFileInfo();
     assertNull(reader.getMetaBlock("non-existant"));
   }
-  
+
   /**
    * Make sure the orginals for our compression libs doesn't change on us.
    */
