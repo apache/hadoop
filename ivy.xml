@@ -228,8 +228,8 @@
       name="junit"
       rev="${junit.version}"
       conf="common->default"/>
-    <dependency org="com.google.code.p.arat"
-      name="rat-lib"
+    <dependency org="org.apache.rat"
+      name="apache-rat-tasks"
       rev="${rats-lib.version}"
       conf="releaseaudit->default"/>
     <dependency org="commons-lang"

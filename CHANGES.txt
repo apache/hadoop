@@ -485,6 +485,9 @@ Trunk (unreleased changes)
 
     HADOOP-6161. Add get/setEnum methods to Configuration. (cdouglas)
 
+    HADOOP-6160. Fix releaseaudit target to run on specific directories.
+    (gkesavan)
+     
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
