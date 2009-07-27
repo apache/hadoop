@@ -151,7 +151,11 @@ public class Get implements Writable {
   public Get addColumn(final byte [] column) {
     if (column == null) return this;
     byte [][] split = KeyValue.parseColumn(column);
-    addColumn(split[0], split[1]);
+    if (split.length > 1 && split[1] != null && split[1].length > 0) {
+      addColumn(split[0], split[1]);
+    } else {
+      addFamily(split[0]);
+    }
     return this;
   }
 
