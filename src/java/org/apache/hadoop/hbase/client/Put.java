@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -77,7 +78,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     if(row == null || row.length > HConstants.MAX_ROW_LENGTH) {
       throw new IllegalArgumentException("Row key is invalid");
     }
-    this.row = row;
+    this.row = Arrays.copyOf(row, row.length);
     if(rowLock != null) {
       this.lockId = rowLock.getLockId();
     }
@@ -136,12 +137,14 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     KeyValue kv = new KeyValue(this.row, family, qualifier, ts, 
       KeyValue.Type.Put, value); 
     list.add(kv);
-    familyMap.put(family, list);
+    familyMap.put(kv.getFamily(), list);
     return this;
   }
   
   /**
-   * Add the specified KeyValue to this Put operation.
+   * Add the specified KeyValue to this Put operation.  Operation assumes that 
+   * the passed KeyValue is immutable and its backing array will not be modified
+   * for the duration of this Put.
    * @param kv
    */
   public Put add(KeyValue kv) throws IOException{
@@ -152,7 +155,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     }
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length, 
-    		kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
+        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
     if(res != 0) {
     	throw new IOException("The row in the recently added KeyValue " + 
     			Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(), 
