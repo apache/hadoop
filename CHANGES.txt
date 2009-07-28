@@ -298,6 +298,8 @@ Release 0.20.0 - Unreleased
    HBASE-1671  HBASE-1609 broke scanners riding across splits
    HBASE-1717  Put on client-side uses passed-in byte[]s rather than always
                using copies
+   HBASE-1647  Filter#filterRow is called too often, filters rows it shouldn't
+               have (Doğacan Güney via Ryan Rawson and Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

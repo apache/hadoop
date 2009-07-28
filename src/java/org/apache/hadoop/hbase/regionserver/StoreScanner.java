@@ -162,20 +162,12 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
           continue;
           
         case DONE:
-          if (matcher.filterEntireRow()) {
-            // nuke all results, and then return.
-            results.clear();
-          }
 
           // copy jazz
           outResult.addAll(results);
           return true;
 
         case DONE_SCAN:
-          if (matcher.filterEntireRow()) {
-            // nuke all results, and then return.
-            results.clear();
-          }
           close();
 
           // copy jazz
@@ -201,11 +193,6 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
         default:
           throw new RuntimeException("UNEXPECTED");
       }
-    }
- 
-    if (matcher.filterEntireRow()) {
-      // nuke all results, and then return.
-      results.clear();
     }
     
     if (!results.isEmpty()) {

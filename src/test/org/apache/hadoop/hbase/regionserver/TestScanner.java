@@ -38,6 +38,14 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
+import org.apache.hadoop.hbase.filter.InclusiveStopRowFilter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.PrefixRowFilter;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -109,7 +117,7 @@ public class TestScanner extends HBaseTestCase {
         count++;
       }
       s.close();
-      assertEquals(1, count);
+      assertEquals(0, count);
       // Now do something a bit more imvolved.
       scan = new Scan(startrow, stoprow);
       scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -130,6 +138,69 @@ public class TestScanner extends HBaseTestCase {
       // We got something back.
       assertTrue(count > 10);
       s.close();
+    } finally {
+      this.r.close();
+      this.r.getLog().closeAndDelete();
+      shutdownDfs(this.cluster);
+    }
+  }
+  
+  void rowPrefixFilter(Scan scan) throws IOException {
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    scan.addFamily(HConstants.CATALOG_FAMILY);
+    InternalScanner s = r.getScanner(scan);
+    boolean hasMore = true;
+    while (hasMore) {
+      hasMore = s.next(results);
+      for (KeyValue kv : results) {
+        assertEquals((byte)'a', kv.getRow()[0]);
+        assertEquals((byte)'b', kv.getRow()[1]);
+      }
+      results.clear();
+    }
+    s.close();
+  }
+  
+  void rowInclusiveStopFilter(Scan scan, byte[] stopRow) throws IOException {
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    scan.addFamily(HConstants.CATALOG_FAMILY);
+    InternalScanner s = r.getScanner(scan);
+    boolean hasMore = true;
+    while (hasMore) {
+      hasMore = s.next(results);
+      for (KeyValue kv : results) {
+        assertTrue(Bytes.compareTo(kv.getRow(), stopRow) <= 0);
+      }
+      results.clear();
+    }
+    s.close();
+  }
+  
+  public void testFilters() throws IOException {
+    try {
+      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
+      addContent(this.r, HConstants.CATALOG_FAMILY);
+      Filter newFilter = new PrefixFilter(Bytes.toBytes("ab"));
+      Scan scan = new Scan();
+      scan.setFilter(newFilter);
+      rowPrefixFilter(scan);
+      RowFilterInterface oldFilter = new PrefixRowFilter(Bytes.toBytes("ab"));
+      scan = new Scan();
+      scan.setOldFilter(oldFilter);
+      rowPrefixFilter(scan);
+      
+      byte[] stopRow = Bytes.toBytes("bbc");
+      newFilter = new WhileMatchFilter(new InclusiveStopFilter(stopRow));
+      scan = new Scan();
+      scan.setFilter(newFilter);
+      rowInclusiveStopFilter(scan, stopRow);
+      
+      oldFilter = new WhileMatchRowFilter(
+          new InclusiveStopRowFilter(stopRow));
+      scan = new Scan();
+      scan.setOldFilter(oldFilter);
+      rowInclusiveStopFilter(scan, stopRow);
+      
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
@@ -316,7 +387,6 @@ public class TestScanner extends HBaseTestCase {
             String server = Bytes.toString(val);
             assertEquals(0, server.compareTo(serverName));
           }
-          results.clear();
         }
       } finally {
         InternalScanner s = scanner;

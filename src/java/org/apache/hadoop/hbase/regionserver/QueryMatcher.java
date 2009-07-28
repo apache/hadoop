@@ -325,7 +325,6 @@ public class QueryMatcher {
   public void reset() {
     this.deletes.reset();
     this.columns.reset();
-    if (this.filter != null) this.filter.reset();
   }
 
   /**
