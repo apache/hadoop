@@ -20,25 +20,23 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import junit.framework.TestCase;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.*;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 
+import junit.framework.TestCase;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestStoreScanner extends TestCase {
 
   final byte [] CF = Bytes.toBytes("cf");
-  
+
   /**
    * Test utility for building a NavigableSet for scanners.
    * @param strCols
@@ -67,9 +65,9 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
     StoreScanner scan =
-        new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-            KeyValue.COMPARATOR, getCols("a"),
-            scanners);
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
+          KeyValue.COMPARATOR, getCols("a"),
+          scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
@@ -98,9 +96,9 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
     StoreScanner scan =
-        new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-            KeyValue.COMPARATOR, getCols("a"),
-            scanners);
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
+          KeyValue.COMPARATOR, getCols("a"),
+          scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     scan.next(results);
@@ -130,8 +128,8 @@ public class TestStoreScanner extends TestCase {
     };
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     StoreScanner scan =
-        new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            getCols("a"), scanners);
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          getCols("a"), scanners);
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertFalse(scan.next(results));
@@ -153,9 +151,9 @@ public class TestStoreScanner extends TestCase {
     };
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     StoreScanner scan =
-        new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            getCols("a"), scanners);
-    
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          getCols("a"), scanners);
+
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
@@ -183,8 +181,8 @@ public class TestStoreScanner extends TestCase {
         new KeyValueScanFixture(KeyValue.COMPARATOR, kvs2)
     };
     StoreScanner scan =
-        new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            getCols("a"), scanners);
+      new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          getCols("a"), scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     // the two put at ts=now will be masked by the 1 delete, and
     // since the scan default returns 1 version we'll return the newest
@@ -211,8 +209,8 @@ public class TestStoreScanner extends TestCase {
     };
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
     StoreScanner scan =
-        new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            getCols("a"), scanners);
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          getCols("a"), scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -221,17 +219,17 @@ public class TestStoreScanner extends TestCase {
   }
 
   public void testWildCardOneVersionScan() throws IOException {
-   KeyValue [] kvs = new KeyValue [] {
-       KeyValueTestUtil.create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"),
-       KeyValueTestUtil.create("R1", "cf", "b", 1, KeyValue.Type.Put, "dont-care"),
-       KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.DeleteColumn, "dont-care"),
-   };
+    KeyValue [] kvs = new KeyValue [] {
+        KeyValueTestUtil.create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R1", "cf", "b", 1, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.DeleteColumn, "dont-care"),
+    };
     KeyValueScanner [] scanners = new KeyValueScanner[] {
         new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
     };
     StoreScanner scan =
-        new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            null, scanners);
+      new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          null, scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -261,8 +259,8 @@ public class TestStoreScanner extends TestCase {
         new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
     };
     StoreScanner scan =
-        new StoreScanner(new Scan().setMaxVersions(2), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            null, scanners);
+      new StoreScanner(new Scan().setMaxVersions(2), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          null, scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
@@ -291,8 +289,8 @@ public class TestStoreScanner extends TestCase {
         new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
     };
     StoreScanner scan =
-        new StoreScanner(new Scan().setMaxVersions(Integer.MAX_VALUE), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            null, scanners);
+      new StoreScanner(new Scan().setMaxVersions(Integer.MAX_VALUE), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          null, scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
@@ -314,8 +312,8 @@ public class TestStoreScanner extends TestCase {
         new KeyValueScanFixture(KeyValue.COMPARATOR, kvs),
     };
     StoreScanner scan =
-        new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-           null, scanners);
+      new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          null, scanners);
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
@@ -339,9 +337,9 @@ public class TestStoreScanner extends TestCase {
         new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
     };
     StoreScanner scan =
-        new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            getCols("a", "d"), scanners);
-    
+      new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          getCols("a", "d"), scanners);
+
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -352,156 +350,8 @@ public class TestStoreScanner extends TestCase {
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[kvs.length-1], results.get(0));
-    
+
     results.clear();
     assertEquals(false, scan.next(results));
   }
-
-  KeyValue [] stdKvs = new KeyValue[] {
-      KeyValueTestUtil.create("R:1", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "b", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "d", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "e", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "f", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "g", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "h", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
-
-      // 9...
-      KeyValueTestUtil.create("R:2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:2", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:2", "cf", "c", 10, KeyValue.Type.Put, "dont-care"),
-
-      // 12...
-      KeyValueTestUtil.create("R:3", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:3", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:3", "cf", "c", 10, KeyValue.Type.Put, "dont-care"),
-
-      // 15 ...
-      KeyValueTestUtil.create("R:4", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:4", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:4", "cf", "c", 10, KeyValue.Type.Put, "dont-care"),
-
-      // 18 ..
-      KeyValueTestUtil.create("R:5", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:5", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-
-      // 20...
-      KeyValueTestUtil.create("R:6", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:6", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-
-      // 22...
-      KeyValueTestUtil.create("R:7", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:7", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-
-      // 24...
-      KeyValueTestUtil.create("R:8", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-      KeyValueTestUtil.create("R:8", "cf", "c", 11, KeyValue.Type.Put, "dont-care"),
-
-      // 26 ..
-      KeyValueTestUtil.create("RA:1", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-
-      // 27...
-      KeyValueTestUtil.create("RA:2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-
-      // 28..
-      KeyValueTestUtil.create("RA:3", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
-  };
-  private StoreScanner getTestScanner(Scan s, NavigableSet<byte[]> cols) {
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, stdKvs)
-    };
-    
-    return new StoreScanner(s, CF, Long.MAX_VALUE, KeyValue.COMPARATOR, cols,
-        scanners);
-  }
-
-
-  // Test new and old row prefix filters.
-  public void testNewRowPrefixFilter() throws IOException {
-     Filter f = new WhileMatchFilter(
-        new PrefixFilter(Bytes.toBytes("R:")));
-    Scan s = new Scan(Bytes.toBytes("R:7"));
-    s.setFilter(f);
-
-    rowPrefixFilter(s);
-  }
-  
-  public void testOldRowPrefixFilter() throws IOException {
-    RowFilterInterface f = new WhileMatchRowFilter(
-        new PrefixRowFilter(Bytes.toBytes("R:")));
-    Scan s = new Scan(Bytes.toBytes("R:7"));
-    s.setOldFilter(f);
-
-    rowPrefixFilter(s);
-
-  }
-  public void rowPrefixFilter(Scan s) throws IOException {
-
-    StoreScanner scan = getTestScanner(s, null);
-
-    List<KeyValue> results = new ArrayList<KeyValue>();
-    assertTrue(scan.next(results));
-    assertEquals(2, results.size());
-    assertEquals(stdKvs[22], results.get(0));
-    assertEquals(stdKvs[23], results.get(1));
-    results.clear();
-
-    assertTrue(scan.next(results));
-    assertEquals(2, results.size());
-    assertEquals(stdKvs[24], results.get(0));
-    assertEquals(stdKvs[25], results.get(1));
-    results.clear();
-
-    assertFalse(scan.next(results));
-    assertEquals(0, results.size());
-  }
-
-  // Test new and old row-inclusive stop filter.
-  public void testNewRowInclusiveStopFilter() throws IOException {
-    Filter f = new WhileMatchFilter(new InclusiveStopFilter(Bytes.toBytes("R:3")));
-    Scan scan = new Scan();
-    scan.setFilter(f);
-
-    rowInclusiveStopFilter(scan);
-  }
-
-  public void testOldRowInclusiveTopFilter() throws IOException {
-    RowFilterInterface f = new WhileMatchRowFilter(
-        new InclusiveStopRowFilter(Bytes.toBytes("R:3")));
-    Scan scan = new Scan();
-    scan.setOldFilter(f);
-
-    rowInclusiveStopFilter(scan);
-  }
-
-  public void rowInclusiveStopFilter(Scan scan) throws IOException {
-    StoreScanner s = getTestScanner(scan, getCols("a"));
-
-    // read crap.
-    List<KeyValue> results = new ArrayList<KeyValue>();
-    assertTrue(s.next(results));
-    assertEquals(1, results.size());
-    assertEquals(stdKvs[0], results.get(0));
-    results.clear();
-
-    assertTrue(s.next(results));
-    assertEquals(1, results.size());
-    assertEquals(stdKvs[9], results.get(0));
-    results.clear();
-
-    assertTrue(s.next(results));
-    assertEquals(1, results.size());
-    assertEquals(stdKvs[12], results.get(0));
-    results.clear();
-
-    // without aggressive peeking, the scanner doesnt know if the next row is good or not
-    // under the affects of a filter.
-    assertFalse(s.next(results));
-    assertEquals(0, results.size());
-  }
-
-
-
 }

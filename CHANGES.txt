@@ -295,6 +295,8 @@ Release 0.20.0 - Unreleased
                (Tim Sell and Ryan Rawson via Stack)
    HBASE-1703  ICVs across /during a flush can cause multiple keys with the 
                same TS (bad)
+   HBASE-1647  Filter#filterRow is called too often, filters rows it
+               shouldn't have
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

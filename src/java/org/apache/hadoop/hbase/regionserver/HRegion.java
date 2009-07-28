@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -1681,8 +1683,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   class RegionScanner implements InternalScanner {
     private final KeyValueHeap storeHeap;
     private final byte [] stopRow;
+    private Filter filter;
+    private RowFilterInterface oldFilter;
+    private List<KeyValue> results = new ArrayList<KeyValue>();
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
+      this.filter = scan.getFilter();
+      this.oldFilter = scan.getOldFilter();
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
       } else {
@@ -1706,46 +1713,74 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       this(scan, null);
     }
 
+    private void resetFilters() {
+      if (filter != null) {
+        filter.reset();
+      }
+      if (oldFilter != null) {
+        oldFilter.reset();
+      }
+    }
+
     /**
      * Get the next row of results from this region.
      * @param results list to append results to
      * @return true if there are more rows, false if scanner is done
      */
-    public boolean next(List<KeyValue> results)
-    throws IOException {
+    @Override
+    public boolean next(List<KeyValue> outResults) throws IOException {
+      results.clear();
+      boolean returnResult = nextInternal();
+      if (!returnResult && filter != null && filter.filterRow()) {
+        results.clear();
+      }
+      outResults.addAll(results);
+      resetFilters();
+      return returnResult;
+    }
+
+    private boolean nextInternal() throws IOException {
       // This method should probably be reorganized a bit... has gotten messy
-      KeyValue kv = this.storeHeap.peek();
-      if (kv == null) {
-        return false;
-      }
-      byte [] currentRow = kv.getRow();
-      // See if we passed stopRow
-      if (stopRow != null &&
-        comparator.compareRows(stopRow, 0, stopRow.length,
-          currentRow, 0, currentRow.length) <= 0) {
-        return false;
-      }
-      this.storeHeap.next(results);
+      KeyValue kv;
+      byte[] currentRow = null;
+      boolean filterCurrentRow = false;
       while(true) {
         kv = this.storeHeap.peek();
         if (kv == null) {
           return false;
         }
         byte [] row = kv.getRow();
+        if (filterCurrentRow && Bytes.equals(currentRow, row)) {
+          // filter all columns until row changes
+          this.storeHeap.next(results);
+          results.clear();
+          continue;
+        }
+        // see if current row should be filtered based on row key
+        if ((filter != null && filter.filterRowKey(row, 0, row.length)) ||
+            (oldFilter != null && oldFilter.filterRowKey(row, 0, row.length))) {
+          this.storeHeap.next(results);
+          results.clear();
+          resetFilters();
+          filterCurrentRow = true;
+          currentRow = row;
+          continue;
+        }
         if(!Bytes.equals(currentRow, row)) {
-          // Next row:
-
-          // what happens if there are _no_ results:
-          if (results.isEmpty()) {
-            // Continue on the next row:
-            currentRow = row;
-
-            // But did we pass the stop row?
-            if (stopRow != null &&
-                comparator.compareRows(stopRow, 0, stopRow.length,
-                    currentRow, 0, currentRow.length) <= 0) {
-              return false;
-            }
+          // Continue on the next row:
+          currentRow = row;
+          filterCurrentRow = false;
+          // See if we passed stopRow
+          if(stopRow != null &&
+              comparator.compareRows(stopRow, 0, stopRow.length, 
+                  currentRow, 0, currentRow.length) <= 0) {
+            return false;
+          }
+          // if there are _no_ results or current row should be filtered
+          if (results.isEmpty() || filter != null && filter.filterRow()) {
+            // make sure results is empty
+            results.clear();
+            resetFilters();
             continue;
           }
           return true;
