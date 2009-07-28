@@ -102,6 +102,9 @@ Trunk (unreleased changes)
     HDFS-501. Use enum to define the constants in DataTransferProtocol.
     (szetszwo)
 
+    HDFS-490. Eliminate the deprecated warnings introduced by H-5438.
+    (He Yongqiang via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

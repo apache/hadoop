@@ -18,6 +18,7 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -86,7 +87,7 @@ public class TestPermission extends TestCase {
 
       FsPermission filePerm = new FsPermission((short)0444);
       FSDataOutputStream out = fs.create(new Path("/b1/b2/b3.txt"), filePerm,
-          true, conf.getInt("io.file.buffer.size", 4096),
+          EnumSet.of(CreateFlag.OVERWRITE), conf.getInt("io.file.buffer.size", 4096),
           fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
       out.write(123);
       out.close();

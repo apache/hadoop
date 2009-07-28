@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.Random;
 
 import javax.security.auth.login.LoginException;
@@ -159,9 +160,9 @@ public class TestDFSPermission extends TestCase {
     // create the file/directory
     switch (op) {
     case CREATE:
-      FSDataOutputStream out = fs.create(name, permission, true, conf.getInt(
-          "io.file.buffer.size", 4096), fs.getDefaultReplication(), fs
-          .getDefaultBlockSize(), null);
+      FSDataOutputStream out = fs.create(name, permission, EnumSet.of(CreateFlag.OVERWRITE), 
+          conf.getInt("io.file.buffer.size", 4096),
+          fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
       out.close();
       break;
     case MKDIRS:
