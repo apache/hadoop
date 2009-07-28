@@ -58,7 +58,7 @@ public class MemStore implements HeapSize {
 
   private final long ttl;
 
-  // MemStore.  Use a SkipListMap rather than SkipListSet because of the
+  // MemStore.  Use a KeyValueSkipListSet rather than SkipListSet because of the
   // better semantics.  The Map will overwrite if passed a key it already had
   // whereas the Set will not add new KV if key is same though value might be
   // different.  Value is not important -- just make sure always same
@@ -575,7 +575,7 @@ public class MemStore implements HeapSize {
    * @return true if done with store (early-out), false if not
    * @throws IOException
    */
-  private boolean internalGet(final NavigableSet<KeyValue> set,
+  boolean internalGet(final NavigableSet<KeyValue> set,
       final QueryMatcher matcher, final List<KeyValue> result)
   throws IOException {
     if(set.isEmpty()) return false;

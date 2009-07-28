@@ -1607,22 +1607,46 @@ public class Store implements HConstants, HeapSize {
 
     // Setting up the QueryMatcher
     Get get = new Get(row);
-    NavigableSet<byte[]> qualifiers = 
+    NavigableSet<byte[]> qualifiers =
       new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     qualifiers.add(qualifier);
     QueryMatcher matcher = new QueryMatcher(get, f, qualifiers, this.ttl,
       keyComparator, 1);
-    
-    // Read from memstore
-    if (this.memstore.get(matcher, result)) {
+
+    boolean newTs = true;
+    KeyValue kv = null;
+    // Read from memstore first:
+    this.memstore.internalGet(this.memstore.kvset,
+                                  matcher, result);
+    if (!result.isEmpty()) {
+      kv = result.get(0).clone();
+      newTs = false;
+    } else {
+      // try the snapshot.
+      this.memstore.internalGet(this.memstore.snapshot,
+          matcher, result);
+      if (!result.isEmpty()) {
+        kv = result.get(0).clone();
+      }
+    }
+
+    if (kv != null) {
       // Received early-out from memstore
       // Make a copy of the KV and increment it
-      KeyValue kv = result.get(0).clone();
       byte [] buffer = kv.getBuffer();
       int valueOffset = kv.getValueOffset();
       value = Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG) + amount;
       Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0,
         Bytes.SIZEOF_LONG);
+      if (newTs) {
+        long currTs = System.currentTimeMillis();
+        if (currTs == kv.getTimestamp()) {
+          currTs++; // just in case something wacky happens.
+        }
+        byte [] stampBytes = Bytes.toBytes(currTs);
+        Bytes.putBytes(buffer, kv.getTimestampOffset(), stampBytes, 0,
+            Bytes.SIZEOF_LONG);
+      }
       return new ICVResult(value, 0, kv);
     }
     // Check if we even have storefiles

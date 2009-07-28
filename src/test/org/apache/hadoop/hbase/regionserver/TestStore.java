@@ -1,15 +1,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListSet;
-
 import junit.framework.TestCase;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -21,6 +12,15 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Progressable;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * Test class fosr the Store 
@@ -242,7 +242,7 @@ public class TestStore extends TestCase {
     this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
     
     Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
-    assertEquals(vas.value, value+amount);
+    assertEquals(value+amount, vas.value);
     store.add(vas.kv);
     Get get = new Get(row);
     get.addColumn(family, qf1);
@@ -360,6 +360,46 @@ public class TestStore extends TestCase {
     List<KeyValue> result = new ArrayList<KeyValue>();
     this.store.get(get, qualifiers, result);
     assertEquals(amount, Bytes.toLong(result.get(0).getValue()));
+  }
+
+  public void testIncrementColumnValue_ICVDuringFlush()
+    throws IOException {
+    init(this.getName());
+
+    long value = 1L;
+    long amount = 3L;
+    this.store.add(new KeyValue(row, family, qf1,
+        System.currentTimeMillis(),
+        Bytes.toBytes(value)));
+
+    // snapshot the store.
+    this.store.snapshot();
+
+    // incrment during the snapshot...
+
+    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
+
+    // then flush.
+    this.store.flushCache(id++);
+    assertEquals(1, this.store.getStorefiles().size());
+    assertEquals(0, this.store.memstore.kvset.size());
+
+    Get get = new Get(row);
+    get.addColumn(family, qf1);
+    get.setMaxVersions(); // all versions.
+    List<KeyValue> results = new ArrayList<KeyValue>();
+
+    NavigableSet<byte[]> cols = new TreeSet<byte[]>();
+    cols.add(qf1);
+
+    this.store.get(get, cols, results);
+    // only one, because Store.ICV doesnt add to memcache.
+    assertEquals(1, results.size());
+
+    // but the timestamps should be different...
+    long icvTs = vas.kv.getTimestamp();
+    long storeTs = results.get(0).getTimestamp();
+    assertTrue(icvTs != storeTs);
   }
   
 }

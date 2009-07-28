@@ -293,6 +293,8 @@ Release 0.20.0 - Unreleased
                when trying to read
    HBASE-1705  Thrift server: deletes in mutateRow/s don't delete
                (Tim Sell and Ryan Rawson via Stack)
+   HBASE-1703  ICVs across /during a flush can cause multiple keys with the 
+               same TS (bad)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
