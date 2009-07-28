@@ -729,7 +729,7 @@ public class HFile {
     }
 
     protected String toStringLastKey() {
-      return KeyValue.keyToString(getFirstKey());
+      return KeyValue.keyToString(getLastKey());
     }
 
     public long length() {

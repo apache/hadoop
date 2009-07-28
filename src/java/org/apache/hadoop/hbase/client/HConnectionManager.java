@@ -65,8 +65,6 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
 public class HConnectionManager implements HConstants {
-  private static final Log LOG = LogFactory.getLog(HConnectionManager.class);
-
   /*
    * Not instantiable.
    */
@@ -94,7 +92,6 @@ public class HConnectionManager implements HConstants {
       if (connection == null) {
         connection = new TableServers(conf);
         HBASE_INSTANCES.put(conf, connection);
-        LOG.debug("Created new HBASE_INSTANCES");
       }
     }
     return connection;
@@ -131,7 +128,7 @@ public class HConnectionManager implements HConstants {
 
   /* Encapsulates finding the servers for an HBase instance */
   private static class TableServers implements ServerConnection, HConstants, Watcher {
-    private static final Log LOG = LogFactory.getLog(TableServers.class);
+    static final Log LOG = LogFactory.getLog(TableServers.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
     private final int numRetries;
@@ -353,8 +350,7 @@ public class HConnectionManager implements HConstants {
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         public boolean processRow(Result result) throws IOException {
           try {
-            byte[] value =
-              result.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+            byte[] value = result.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
             HRegionInfo info = null;
             if (value != null) {
               info = Writables.getHRegionInfo(value);
@@ -411,9 +407,7 @@ public class HConnectionManager implements HConstants {
       scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       ScannerCallable s = new ScannerCallable(this, 
           (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
-              HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME),
-          scan.getStartRow(),
-           scan);
+              HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME), scan);
       try {
         // Open scanner
         getRegionServerWithRetries(s);
@@ -542,7 +536,7 @@ public class HConnectionManager implements HConstants {
       */
     private HRegionLocation locateRegionInMeta(final byte [] parentTable,
       final byte [] tableName, final byte [] row, boolean useCache)
-    throws IOException{
+    throws IOException {
       HRegionLocation location = null;
       // If supposed to be using the cache, then check it for a possible hit.
       // Otherwise, delete any existing cached location so it won't interfere.
@@ -969,7 +963,7 @@ public class HConnectionManager implements HConstants {
           throw (DoNotRetryIOException) t;
         }
       }
-      return null;    
+      return null;
     }
 
     private HRegionLocation

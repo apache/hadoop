@@ -188,7 +188,7 @@ public class HLog implements HConstants, Syncable {
    * @param listener
    * @throws IOException
    */
-  public HLog(final FileSystem fs, final Path dir, final Configuration conf,
+  public HLog(final FileSystem fs, final Path dir, final HBaseConfiguration conf,
     final LogRollListener listener)
   throws IOException {
     super();
@@ -219,7 +219,7 @@ public class HLog implements HConstants, Syncable {
       ", optionallogflushinternal=" + this.optionalFlushInterval + "ms");
     rollWriter();
     // Test if syncfs is available.
-    this.append = conf.getBoolean("dfs.support.append", false);
+    this.append = isAppend(conf);
     Method m = null;
     if (this.append) {
       try {
@@ -784,7 +784,7 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
-      final FileSystem fs, final Configuration conf)
+      final FileSystem fs, final HBaseConfiguration conf)
   throws IOException {
     long millis = System.currentTimeMillis();
     List<Path> splits = null;
@@ -833,7 +833,8 @@ public class HLog implements HConstants, Syncable {
    * @return List of splits made.
    */
   private static List<Path> splitLog(final Path rootDir,
-    final FileStatus [] logfiles, final FileSystem fs, final Configuration conf)
+    final FileStatus [] logfiles, final FileSystem fs,
+    final HBaseConfiguration conf)
   throws IOException {
     final Map<byte [], WriterAndPath> logWriters =
       new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR);
@@ -848,11 +849,12 @@ public class HLog implements HConstants, Syncable {
     // More means faster but bigger mem consumption  */
     int concurrentLogReads =
       conf.getInt("hbase.regionserver.hlog.splitlog.reader.threads", 3);
-
+    // Is append supported?
+    boolean append = isAppend(conf);
     try {
       int maxSteps = Double.valueOf(Math.ceil((logfiles.length * 1.0) / 
           concurrentLogReads)).intValue();
-      for(int step = 0; step < maxSteps; step++) {
+      for (int step = 0; step < maxSteps; step++) {
         final Map<byte[], LinkedList<HLogEntry>> logEntries = 
           new TreeMap<byte[], LinkedList<HLogEntry>>(Bytes.BYTES_COMPARATOR);
         // Stop at logfiles.length when it's the last step
@@ -867,7 +869,6 @@ public class HLog implements HConstants, Syncable {
             LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length +
               ": " + logfiles[i].getPath() + ", length=" + logfiles[i].getLen());
           }
-          boolean append = conf.getBoolean("dfs.support.append", false);
           recoverLog(fs, logfiles[i].getPath(), append);
           SequenceFile.Reader in = null;
           int count = 0;
@@ -1022,6 +1023,24 @@ public class HLog implements HConstants, Syncable {
   }
 
   /**
+   * @param conf
+   * @return True if append enabled and we have the syncFs in our path.
+   */
+  private static boolean isAppend(final HBaseConfiguration conf) {
+      boolean append = conf.getBoolean("dfs.support.append", false);
+      if (append) {
+        try {
+          SequenceFile.Writer.class.getMethod("syncFs", new Class<?> []{});
+          append = true;
+        } catch (SecurityException e) {
+        } catch (NoSuchMethodException e) {
+          append = false;
+        }
+      }
+      return append;
+    }
+
+  /**
    * Utility class that lets us keep track of the edit with it's key
    * Only used when splitting logs
    */
@@ -1158,10 +1177,9 @@ public class HLog implements HConstants, Syncable {
         System.exit(-1);
       }
     }
-    Configuration conf = new HBaseConfiguration();
+    HBaseConfiguration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
     Path baseDir = new Path(conf.get(HBASE_DIR));
-
     for (int i = 1; i < args.length; i++) {
       Path logPath = new Path(args[i]);
       if (!fs.exists(logPath)) {

@@ -49,7 +49,7 @@ class MetaScanner implements HConstants {
     ScannerCallable callable = null;
     do {
       Scan scan = new Scan(startRow).addFamily(CATALOG_FAMILY);
-      callable = new ScannerCallable(connection, META_TABLE_NAME, scan.getStartRow(), scan);
+      callable = new ScannerCallable(connection, META_TABLE_NAME, scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
       try {

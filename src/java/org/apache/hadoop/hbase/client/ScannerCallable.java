@@ -1,3 +1,4 @@
+
 /**
  * Copyright 2008 The Apache Software Foundation
  *
@@ -22,7 +23,12 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.ipc.RemoteException;
+import org.mortbay.log.Log;
 
 
 /**
@@ -34,20 +40,16 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   private boolean instantiated = false;
   private boolean closed = false;
   private Scan scan;
-  private byte [] startRow;
   private int caching = 1;
 
   /**
    * @param connection
    * @param tableName
-   * @param startRow
    * @param scan
    */
-  public ScannerCallable (HConnection connection, byte [] tableName,
-      byte [] startRow, Scan scan) {
-    super(connection, tableName, startRow);
+  public ScannerCallable (HConnection connection, byte [] tableName, Scan scan) {
+    super(connection, tableName, scan.getStartRow());
     this.scan = scan;
-    this.startRow = startRow;
   }
   
   /**
@@ -67,18 +69,42 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    */
   public Result [] call() throws IOException {
     if (scannerId != -1L && closed) {
-      server.close(scannerId);
-      scannerId = -1L;
+      close();
     } else if (scannerId == -1L && !closed) {
-      // open the scanner
-      scannerId = openScanner();
+      this.scannerId = openScanner();
     } else {
-      Result [] rrs = server.next(scannerId, caching);
+      Result [] rrs = null;
+      try {
+        rrs = server.next(scannerId, caching);
+      } catch (IOException e) {
+    	IOException ioe = null;
+        if (e instanceof RemoteException) {
+          ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
+        }
+        if (ioe != null && ioe instanceof NotServingRegionException) {
+          // Throw a DNRE so that we break out of cycle of calling NSRE
+          // when what we need is to open scanner against new location.
+          // Attach NSRE to signal client that it needs to resetup scanner.
+          throw new DoNotRetryIOException("Reset scanner", ioe);
+        }
+      }
       return rrs == null || rrs.length == 0? null: rrs;
     }
     return null;
   }
   
+  private void close() {
+	if (this.scannerId == -1L) {
+	  return;
+	}
+	try {
+		this.server.close(this.scannerId);
+	} catch (IOException e) {
+		Log.warn("Ignore, probably already closed", e);
+	}
+	this.scannerId = -1L;
+  }
+
   protected long openScanner() throws IOException {
     return server.openScanner(
         this.location.getRegionInfo().getRegionName(), scan);

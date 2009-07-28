@@ -110,7 +110,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * master as a region to close if the carrying regionserver is overloaded.
    * Once set, it is never cleared.
    */
-  private final AtomicBoolean closing = new AtomicBoolean(false);
+  final AtomicBoolean closing = new AtomicBoolean(false);
   private final RegionHistorian historian;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1671,8 +1671,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     return this.basedir;
   }
 
-  
-  //TODO
   /**
    * RegionScanner is an iterator through a bunch of rows in an HRegion.
    * <p>
@@ -1710,9 +1708,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
      * Get the next row of results from this region.
      * @param results list to append results to
      * @return true if there are more rows, false if scanner is done
+     * @throws NotServerRegionException If this region is closing or closed
      */
     public boolean next(List<KeyValue> results)
     throws IOException {
+      if (closing.get() || closed.get()) {
+        close();
+        throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
+          " is closing=" + closing.get() + " or closed=" + closed.get());
+      }
       // This method should probably be reorganized a bit... has gotten messy
       KeyValue kv = this.storeHeap.peek();
       if (kv == null) {

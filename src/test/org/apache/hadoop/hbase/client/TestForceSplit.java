@@ -21,7 +21,10 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -34,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Tests forced splitting of HTable
  */
 public class TestForceSplit extends HBaseClusterTestCase {
+  static final Log LOG = LogFactory.getLog(TestForceSplit.class);
   private static final byte[] tableName = Bytes.toBytes("test");
   private static final byte[] columnName = Bytes.toBytes("a:");
 
@@ -44,7 +48,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
   }
 
   /**
-   * the test
+   * Tests forcing split from client and having scanners successfully ride over split.
    * @throws Exception 
    * @throws IOException
    */
@@ -55,7 +59,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
     htd.addFamily(new HColumnDescriptor(columnName));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(htd);
-    HTable table = new HTable(conf, tableName);
+    final HTable table = new HTable(conf, tableName);
     byte[] k = new byte[3];
     int rowCount = 0;
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
@@ -88,28 +92,47 @@ public class TestForceSplit extends HBaseClusterTestCase {
     scanner.close();
     assertEquals(rowCount, rows);
     
-    // tell the master to split the table
-    admin.split(Bytes.toString(tableName));
-
-    // give some time for the split to happen
-    Thread.sleep(15 * 1000);
-
-    // check again    table = new HTable(conf, tableName);
-    m = table.getRegionsInfo();
-    System.out.println("Regions after split (" + m.size() + "): " + m);
-    // should have two regions now
-    assertTrue(m.size() == 2);
-    
-    // Verify row count
+    // Have an outstanding scan going on to make sure we can scan over splits.
     scan = new Scan();
     scanner = table.getScanner(scan);
-    rows = 0;
-    for(Result result : scanner) {
+    // Scan first row so we are into first region before split happens.
+    scanner.next();
+
+    final AtomicInteger count = new AtomicInteger(0);
+    Thread t = new Thread("CheckForSplit") {
+      public void run() {
+        for (int i = 0; i < 20; i++) {
+          try {
+            sleep(1000);
+          } catch (InterruptedException e) {
+            continue;
+          }
+          // check again    table = new HTable(conf, tableName);
+          Map<HRegionInfo, HServerAddress> regions = null;
+          try {
+            regions = table.getRegionsInfo();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+          if (regions == null) continue;
+          count.set(regions.size());
+          if (count.get() >= 2) break;
+          LOG.debug("Cycle waiting on split");
+        }
+      }
+    };
+    t.start();
+    // tell the master to split the table
+    admin.split(Bytes.toString(tableName));
+    t.join();
+
+    // Verify row count
+    rows = 1; // We counted one row above.
+    for (Result result : scanner) {
       rows++;
-      if(rows > rowCount) {
+      if (rows > rowCount) {
         scanner.close();
-        assertTrue("Have already scanned more rows than expected (" + 
-            rowCount + ")", false);
+        assertTrue("Scanned more than expected (" + rowCount + ")", false);
       }
     }
     scanner.close();

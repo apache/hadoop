@@ -42,4 +42,12 @@ public class DoNotRetryIOException extends IOException {
   public DoNotRetryIOException(String message) {
     super(message);
   }
+
+  /**
+   * @param message
+   * @param cause
+   */
+  public DoNotRetryIOException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

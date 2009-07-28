@@ -31,9 +31,8 @@ class TransactionScannerCallable extends ScannerCallable {
   private TransactionState transactionState;
 
   TransactionScannerCallable(final TransactionState transactionState,
-      final HConnection connection, final byte[] tableName,
-      final byte[] startRow, Scan scan) {
-    super(connection, tableName,  startRow, scan);
+      final HConnection connection, final byte[] tableName, Scan scan) {
+    super(connection, tableName,  scan);
     this.transactionState = transactionState;
   }
 

@@ -29,6 +29,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -54,7 +56,6 @@ import org.apache.hadoop.hbase.util.Writables;
 /**
  * Used to communicate with a single HBase table
  * TODO: checkAndSave in oldAPI
- * TODO: Converting filters
  * TODO: Regex deletes.
  */
 public class HTable {
@@ -1778,13 +1779,18 @@ public class HTable {
    */
   protected class ClientScanner implements ResultScanner {
     private final Log CLIENT_LOG = LogFactory.getLog(this.getClass());
+    // HEADSUP: The scan internal start row can change as we move through table.
     private Scan scan;
     private boolean closed = false;
+    // Current region scanner is against.  Gets cleared if current region goes
+    // wonky: e.g. if it splits on us.
     private HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
     private final LinkedList<Result> cache = new LinkedList<Result>();
-    private final int scannerCaching = HTable.this.scannerCaching;
+    private final int caching = HTable.this.scannerCaching;
     private long lastNext;
+    // Keep lastResult returned successfully in case we have to reset scanner.
+    private Result lastResult = null;
     
     protected ClientScanner(final Scan scan) {
       if (CLIENT_LOG.isDebugEnabled()) {
@@ -1804,7 +1810,7 @@ public class HTable {
     }
 
     public void initialize() throws IOException {
-      nextScanner(this.scannerCaching);
+      nextScanner(this.caching);
     }
 
     protected Scan getScan() {
@@ -1814,10 +1820,12 @@ public class HTable {
     protected long getTimestamp() {
       return lastNext;
     }
-    
+
     /*
-     * Gets a scanner for the next region.
-     * Returns false if there are no more scanners.
+     * Gets a scanner for the next region.  If this.currentRegion != null, then
+     * we will move to the endrow of this.currentRegion.  Else we will get
+     * scanner at the scan.getStartRow().
+     * @param nbRows
      */
     private boolean nextScanner(int nbRows) throws IOException {
       // Close the previous scanner if it's open
@@ -1826,38 +1834,38 @@ public class HTable {
         getConnection().getRegionServerWithRetries(callable);
         this.callable = null;
       }
-
+      
+      // Where to start the next scanner
+      byte [] localStartKey = null;
+      
       // if we're at the end of the table, then close and return false
       // to stop iterating
-      if (currentRegion != null) {
+      if (this.currentRegion != null) {
         if (CLIENT_LOG.isDebugEnabled()) {
-          CLIENT_LOG.debug("Advancing forward from region " + currentRegion);
+          CLIENT_LOG.debug("Finished with region " + this.currentRegion);
         }
-
-        byte [] endKey = currentRegion.getEndKey();
+        byte [] endKey = this.currentRegion.getEndKey();
         if (endKey == null ||
             Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY) ||
             filterSaysStop(endKey)) {
           close();
           return false;
         }
-      } 
-
-      HRegionInfo oldRegion = this.currentRegion;
-      byte [] localStartKey = 
-        oldRegion == null ? scan.getStartRow() : oldRegion.getEndKey();
+        localStartKey = endKey;
+      } else {
+        localStartKey = this.scan.getStartRow();
+      }
 
       if (CLIENT_LOG.isDebugEnabled()) {
         CLIENT_LOG.debug("Advancing internal scanner to startKey at '" +
           Bytes.toStringBinary(localStartKey) + "'");
-      }
-            
+      }            
       try {
         callable = getScannerCallable(localStartKey, nbRows);
-        // open a scanner on the region server starting at the 
+        // Open a scanner on the region server starting at the 
         // beginning of the region
         getConnection().getRegionServerWithRetries(callable);
-        currentRegion = callable.getHRegionInfo();
+        this.currentRegion = callable.getHRegionInfo();
       } catch (IOException e) {
         close();
         throw e;
@@ -1867,8 +1875,9 @@ public class HTable {
     
     protected ScannerCallable getScannerCallable(byte [] localStartKey,
         int nbRows) {
+      scan.setStartRow(localStartKey);
       ScannerCallable s = new ScannerCallable(getConnection(), 
-          getTableName(), localStartKey, scan);
+        getTableName(), scan);
       s.setCaching(nbRows);
       return s;
     }
@@ -1915,13 +1924,35 @@ public class HTable {
       }
       if (cache.size() == 0) {
         Result [] values = null;
-        int countdown = this.scannerCaching;
+        int countdown = this.caching;
         // We need to reset it if it's a new callable that was created 
         // with a countdown in nextScanner
-        callable.setCaching(this.scannerCaching);
+        callable.setCaching(this.caching);
+        // This flag is set when we want to skip the result returned.  We do
+        // this when we reset scanner because it split under us.
+        boolean skipFirst = false;
         do {
           try {
             values = getConnection().getRegionServerWithRetries(callable);
+            if (skipFirst) {
+              skipFirst = false;
+              // Reget.
+              values = getConnection().getRegionServerWithRetries(callable);
+            }
+          } catch (DoNotRetryIOException e) {
+            Throwable cause = e.getCause();
+            if (cause == null || !(cause instanceof NotServingRegionException)) {
+              throw e;
+            }
+            // Else, its signal from depths of ScannerCallable that we got an
+            // NSRE on a next and that we need to reset the scanner.
+            this.scan.setStartRow(this.lastResult.getRow());
+            // Clear region as flag to nextScanner to use this.scan.startRow.
+            this.currentRegion = null;
+            // Skip first row returned.  We already let it out on previous
+            // invocation.
+            skipFirst = true;
+            continue;
           } catch (IOException e) {
             if (e instanceof UnknownScannerException &&
                 lastNext + scannerTimeout < System.currentTimeMillis()) {
@@ -1936,6 +1967,7 @@ public class HTable {
             for (Result rs : values) {
               cache.add(rs);
               countdown--;
+              this.lastResult = rs;
             }
           }
         } while (countdown > 0 && nextScanner(countdown));
@@ -1965,7 +1997,7 @@ public class HTable {
       }
       return resultSets.toArray(new Result[resultSets.size()]);
     }
-    
+
     public void close() {
       if (callable != null) {
         callable.setClose();
@@ -1998,7 +2030,7 @@ public class HTable {
               return next != null;
             } catch (IOException e) {
               throw new RuntimeException(e);
-            }            
+            }
           }
           return true;
         }
