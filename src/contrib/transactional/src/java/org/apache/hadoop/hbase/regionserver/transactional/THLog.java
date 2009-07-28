@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -42,7 +42,7 @@ import org.apache.hadoop.io.SequenceFile;
  */
 class THLog extends HLog {
 
-  public THLog(FileSystem fs, Path dir, Configuration conf,
+  public THLog(FileSystem fs, Path dir, HBaseConfiguration conf,
       LogRollListener listener) throws IOException {
     super(fs, dir, conf, listener);
   }
