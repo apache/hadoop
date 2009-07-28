@@ -114,6 +114,16 @@ public class ScanQueryMatcher extends QueryMatcher {
     if (this.stickyNextRow)
         return MatchCode.SEEK_NEXT_ROW;
 
+    // Give the row filter a chance to do it's job.
+    if (filter != null && filter.filterRowKey(bytes, offset, rowLength)) {
+      stickyNextRow = true; // optimize to keep from calling the filter too much.
+      return MatchCode.SEEK_NEXT_ROW;
+    } else if (oldFilter != null && oldFilter.filterRowKey(bytes, offset, rowLength)) {
+      stickyNextRow = true;
+      return MatchCode.SEEK_NEXT_ROW;
+    }
+
+
     if (this.columns.done()) {
       stickyNextRow = true;
       return MatchCode.SEEK_NEXT_ROW;
@@ -190,6 +200,16 @@ public class ScanQueryMatcher extends QueryMatcher {
   }
 
   /**
+   * If the row was otherwise going to be included, call this to last-minute
+   * check.
+   * 
+   * @return <code>true</code> if the row should be filtered.
+   */
+  public boolean filterEntireRow() {
+    return filter == null? false: filter.filterRow();
+  }
+
+  /**
    * Set current row
    * @param row
    */
@@ -203,5 +223,7 @@ public class ScanQueryMatcher extends QueryMatcher {
   public void reset() {
     super.reset();
     stickyNextRow = false;
+    if (filter != null)
+      filter.reset();
   }
 }
