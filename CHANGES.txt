@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 
     HDFS-508. Factor out BlockInfo from BlocksMap. (shv)
 
+    HDFS-510. Rename DatanodeBlockInfo to be ReplicaInfo.
+    (Hairong Kuang via shv)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

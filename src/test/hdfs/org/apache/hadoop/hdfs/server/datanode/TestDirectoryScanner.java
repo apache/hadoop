@@ -67,7 +67,7 @@ public class TestDirectoryScanner extends TestCase {
   /** Truncate a block file */
   private long truncateBlockFile() throws IOException {
     synchronized (fds) {
-      for (Entry<Block, DatanodeBlockInfo> entry : fds.volumeMap.entrySet()) {
+      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
         Block b = entry.getKey();
         File f = entry.getValue().getFile();
         File mf = FSDataset.getMetaFile(f, b);
@@ -87,7 +87,7 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete a block file */
   private long deleteBlockFile() {
     synchronized(fds) {
-      for (Entry<Block, DatanodeBlockInfo> entry : fds.volumeMap.entrySet()) {
+      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
         Block b = entry.getKey();
         File f = entry.getValue().getFile();
         File mf = FSDataset.getMetaFile(f, b);
@@ -104,7 +104,7 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete block meta file */
   private long deleteMetaFile() {
     synchronized(fds) {
-      for (Entry<Block, DatanodeBlockInfo> entry : fds.volumeMap.entrySet()) {
+      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
         Block b = entry.getKey();
         String blkfile = entry.getValue().getFile().getAbsolutePath();
         long genStamp = b.getGenerationStamp();
@@ -126,7 +126,7 @@ public class TestDirectoryScanner extends TestCase {
     while (true) {
       id = rand.nextLong();
       Block b = new Block(id);
-      DatanodeBlockInfo info = null;
+      ReplicaInfo info = null;
       synchronized(fds) {
         info = fds.volumeMap.get(b);
       }
@@ -326,7 +326,7 @@ public class TestDirectoryScanner extends TestCase {
   private void verifyAddition(long blockId, long genStamp, long size) {
     Block memBlock = fds.getBlockKey(blockId);
     assertNotNull(memBlock);
-    DatanodeBlockInfo blockInfo;
+    ReplicaInfo blockInfo;
     synchronized(fds) {
       blockInfo = fds.volumeMap.get(memBlock);
     }
