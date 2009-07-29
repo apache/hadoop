@@ -144,7 +144,7 @@ public class Store implements HConstants, HeapSize {
    * Constructor
    * @param basedir qualified path under which the region directory lives;
    * generally the table subdirectory
-   * @param info HRegionInfo for this region
+   * @param region
    * @param family HColumnDescriptor for this column
    * @param fs file system object
    * @param reconstructionLog existing log file to apply if any
