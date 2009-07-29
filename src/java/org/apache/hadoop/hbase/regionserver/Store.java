@@ -295,6 +295,7 @@ public class Store implements HConstants, HeapSize {
     // TODO: This could grow large and blow heap out.  Need to get it into
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
+    long firstSeqIdInLog = -1;
     // TODO: Move this memstoring over into MemStore.
     KeyValueSkipListSet reconstructedCache =
       new KeyValueSkipListSet(this.comparator);
@@ -309,6 +310,9 @@ public class Store implements HConstants, HeapSize {
       int reportInterval =
         this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
       while (logReader.next(key, val)) {
+        if (firstSeqIdInLog == -1) {
+          firstSeqIdInLog = key.getLogSeqNum();
+        }
         maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
         if (key.getLogSeqNum() <= maxSeqID) {
           skippedEdits++;
@@ -335,7 +339,9 @@ public class Store implements HConstants, HeapSize {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
-          " because sequence id <= " + maxSeqID);
+          "; store maxSeqID=" + maxSeqID +
+          ", firstSeqIdInLog=" + firstSeqIdInLog +
+          ", maxSeqIdInLog=" + maxSeqIdInLog);
       }
     } finally {
       logReader.close();

@@ -417,7 +417,17 @@ public class HRegionServer implements HConstants, HRegionInterface,
     regionServerThread = Thread.currentThread();
     boolean quiesceRequested = false;
     try {
-      init(reportForDuty());
+      MapWritable w = null;
+      while (!stopRequested.get()) {
+        w = reportForDuty();
+        if (w != null) {
+          init(w);
+          break;
+        }
+        sleeper.sleep();
+        LOG.warn("No response from master on reportForDuty. Sleeping and " +
+          "then trying again.");
+      }
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {

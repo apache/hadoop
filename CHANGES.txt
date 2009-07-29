@@ -304,6 +304,8 @@ Release 0.20.0 - Unreleased
                data to be used
    HBASE-1573  Holes in master state change; updated startcode and server
                go into .META. but catalog scanner just got old values (redux)
+   HBASE-1534  Got ZooKeeper event, state: Disconnected on HRS and then NPE
+               on reinit
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

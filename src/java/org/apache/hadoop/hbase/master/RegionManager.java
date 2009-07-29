@@ -240,10 +240,9 @@ class RegionManager implements HConstants {
 
     int nRegionsToAssign = regionsToAssign.size();
     int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
-    LOG.debug("multi assing for " + info + ": nregions to assign: "
-        + nRegionsToAssign
-        +" and nregions: " + nregions
-        + " metaAssign: " + isMetaAssign);
+    LOG.debug("Assigning for " + info + ": total nregions to assign=" +
+      nRegionsToAssign + ", nregions to reach balance=" + nregions +
+      ", isMetaAssign=" + isMetaAssign);
     nRegionsToAssign -= nregions;
     if (nRegionsToAssign > 0 || isMetaAssign) {
       // We still have more regions to assign. See how many we can assign
