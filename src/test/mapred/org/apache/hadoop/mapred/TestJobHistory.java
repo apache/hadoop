@@ -905,7 +905,7 @@ public class TestJobHistory extends TestCase {
    * @param id job id
    * @param conf job conf
    */
-  private static void validateJobHistoryUserLogLocation(JobID id, JobConf conf) 
+  static void validateJobHistoryUserLogLocation(JobID id, JobConf conf) 
           throws IOException  {
     // Get the history file name
     Path doneDir = JobHistory.getCompletedJobHistoryLocation();

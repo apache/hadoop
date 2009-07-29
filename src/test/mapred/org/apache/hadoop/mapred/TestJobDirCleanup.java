@@ -37,7 +37,7 @@ public class TestJobDirCleanup extends TestCase {
   //end of the job (indirectly testing whether all tasktrackers
   //got a KillJobAction).
   private static final Log LOG =
-        LogFactory.getLog(TestEmptyJob.class.getName());
+    LogFactory.getLog(TestEmptyJob.class.getName());
   private void runSleepJob(JobConf conf) throws Exception {
     String[] args = { "-m", "1", "-r", "10", "-mt", "1000", "-rt", "10000" };
     ToolRunner.run(conf, new SleepJob(), args);
@@ -49,7 +49,6 @@ public class TestJobDirCleanup extends TestCase {
     FileSystem fileSys = null;
     try {
       final int taskTrackers = 10;
-      final int jobTrackerPort = 60050;
       Configuration conf = new Configuration();
       JobConf mrConf = new JobConf();
       mrConf.set("mapred.tasktracker.reduce.tasks.maximum", "1");
@@ -61,24 +60,36 @@ public class TestJobDirCleanup extends TestCase {
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       JobConf jobConf = mr.createJobConf();
       runSleepJob(jobConf);
-      for(int i=0; i < taskTrackers; ++i) {
-        String jobDirStr = mr.getTaskTrackerLocalDir(i)+
-                           "/taskTracker/jobcache";
-        File jobDir = new File(jobDirStr);
-        String[] contents = jobDir.list();
-        while (contents.length > 0) {
-          try {
-            Thread.sleep(1000);
-            LOG.warn(jobDir +" not empty yet");
-            contents = jobDir.list();
-          } catch (InterruptedException ie){}
-        }
-      }
+      verifyJobDirCleanup(mr, taskTrackers);
     } catch (Exception ee){
+      assertTrue(false);
     } finally {
       if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown(); }
+    }
+  }
+
+  static void verifyJobDirCleanup(MiniMRCluster mr, int numTT)
+  throws IOException {
+    for(int i=0; i < numTT; ++i) {
+      String jobDirStr = mr.getTaskTrackerLocalDir(i)+
+      "/taskTracker/jobcache";
+      File jobDir = new File(jobDirStr);
+      String[] contents = jobDir.list();
+      if (contents == null || contents.length == 0) {
+        return;
+      }
+      while (contents.length > 0) {
+        try {
+          Thread.sleep(1000);
+          LOG.warn(jobDir +" not empty yet, contents are");
+          for (String s: contents) {
+            LOG.info(s);
+          }
+          contents = jobDir.list();
+        } catch (InterruptedException ie){}
+      }
     }
   }
 }

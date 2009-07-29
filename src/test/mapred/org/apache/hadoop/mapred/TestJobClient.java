@@ -71,7 +71,7 @@ public class TestJobClient extends ClusterMapReduceTestCase {
     return JobClient.runJob(conf).getID().toString();
   }
   
-  private int runTool(Configuration conf, Tool tool, String[] args, OutputStream out) throws Exception {
+  static int runTool(Configuration conf, Tool tool, String[] args, OutputStream out) throws Exception {
     PrintStream oldOut = System.out;
     PrintStream newOut = new PrintStream(out, true);
     try {
@@ -95,14 +95,14 @@ public class TestJobClient extends ClusterMapReduceTestCase {
 
   public void testJobList() throws Exception {
     String jobId = runJob();
-    verifyJobPriority(jobId, "HIGH");
+    verifyJobPriority(jobId, "HIGH", createJobConf());
   }
 
-  private void verifyJobPriority(String jobId, String priority)
+  static void verifyJobPriority(String jobId, String priority, JobConf conf)
                             throws Exception {
     PipedInputStream pis = new PipedInputStream();
     PipedOutputStream pos = new PipedOutputStream(pis);
-    int exitCode = runTool(createJobConf(), new JobClient(),
+    int exitCode = runTool(conf, new JobClient(),
         new String[] { "-list", "all" },
         pos);
     assertEquals("Exit code", 0, exitCode);
@@ -125,6 +125,6 @@ public class TestJobClient extends ClusterMapReduceTestCase {
         new String[] { "-set-priority", jobId, "VERY_LOW" },
         new ByteArrayOutputStream());
     assertEquals("Exit code", 0, exitCode);
-    verifyJobPriority(jobId, "VERY_LOW");
+    verifyJobPriority(jobId, "VERY_LOW", createJobConf());
   }
 }

@@ -115,10 +115,14 @@ public class TestUserDefinedCounters extends TestCase {
       reader.close();
       assertEquals(4, counter);
     }
-    
-    assertEquals(4,
+    verifyCounters(runningJob, 4);
+  }
+  
+  public static void verifyCounters(RunningJob runningJob, int expected)
+  throws IOException {
+    assertEquals(expected,
         runningJob.getCounters().getCounter(EnumCounter.MAP_RECORDS));
-    assertEquals(4,
+    assertEquals(expected,
         runningJob.getCounters().getGroup("StringCounter")
         .getCounter("MapRecords"));
   }

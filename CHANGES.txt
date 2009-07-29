@@ -153,6 +153,9 @@ Trunk (unreleased changes)
     MAPREDUCE-628. Improves the execution time of TestJobInProgress.
     (Jothi Padmanabhan via ddas)
 
+    MAPREDUCE-793. Creates a new test that consolidates a few tests to
+    include in the commit-test list. (Jothi Padmanabhan via ddas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
