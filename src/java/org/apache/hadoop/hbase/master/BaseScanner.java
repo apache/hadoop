@@ -347,14 +347,11 @@ abstract class BaseScanner extends Chore implements HConstants {
     HServerInfo storedInfo = null;
     synchronized (this.master.regionManager) {
       /* We don't assign regions that are offline, in transition or were on
-       * a dead server (unless they have an empty serverName which would imply
-       * they haven't been assigned in the first place OR it was closed from
-       * the shell with 'close_region' which deletes server and startcode
-       * from .META. so region gets reassigned). Regions that were on a dead
-       * server will get reassigned by ProcessServerShutdown
+       * a dead server. Regions that were on a dead server will get reassigned
+       * by ProcessServerShutdown
        */
       if (info.isOffline() ||
-        (serverName != null && this.master.regionManager.regionIsInTransition(info.getRegionNameAsString())) ||
+        this.master.regionManager.regionIsInTransition(info.getRegionNameAsString()) ||
           (serverName != null && this.master.serverManager.isDead(serverName))) {
         return;
       }
@@ -368,8 +365,8 @@ abstract class BaseScanner extends Chore implements HConstants {
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionNameAsString() +
-            " is not valid; " + " Server '" + serverAddress + "' startCode: " +
-            startCode + " unknown.");
+            " is not valid; " + " serverAddress=" + serverAddress +
+            ", startCode=" + startCode + " unknown.");
         }
         // Now get the region assigned
         this.master.regionManager.setUnassigned(info, true);

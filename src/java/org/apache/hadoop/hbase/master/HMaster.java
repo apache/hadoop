@@ -688,7 +688,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         DEFAULT_HOST)) {
       String rsAddress = HBaseServer.getRemoteAddress();
       serverInfo.setServerAddress(new HServerAddress(rsAddress,
-      serverInfo.getServerAddress().getPort()));
+        serverInfo.getServerAddress().getPort()));
     }
     // Register with server manager
     this.serverManager.regionServerStartup(serverInfo);
@@ -1025,10 +1025,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         servername = 
           Bytes.toString(rr.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
       }
+      // Need to make up a HServerInfo 'servername' for that is how
+      // items are keyed in regionmanager Maps.
+      HServerAddress addr = new HServerAddress(servername);
+      long startCode =
+        Bytes.toLong(rr.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
+      String name = HServerInfo.getServerName(addr, startCode);
       LOG.info("Marking " + hri.getRegionNameAsString() +
-        " as closed on " + servername + "; cleaning SERVER + STARTCODE; " +
+        " as closing on " + name + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");
-      this.regionManager.setClosing(servername, hri, hri.isOffline());
+      this.regionManager.setClosing(name, hri, hri.isOffline());
       MetaRegion meta = this.regionManager.getMetaRegionForRow(regionname);
       HRegionInterface srvr = getMETAServer(meta);
       HRegion.cleanRegionInMETA(srvr, meta.getRegionName(), hri);

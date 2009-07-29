@@ -302,6 +302,8 @@ Release 0.20.0 - Unreleased
                have (Doğacan Güney via Ryan Rawson and Stack)
    HBASE-1718  Reuse of KeyValue during log replay could cause the wrong
                data to be used
+   HBASE-1573  Holes in master state change; updated startcode and server
+               go into .META. but catalog scanner just got old values (redux)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
