@@ -283,3 +283,7 @@ Trunk (unreleased changes)
 
     MAPREDUCE-383. Fix a bug in Pipes combiner due to bytes count not 
     getting reset after the spill. (Christian Kunz via sharad)
+
+    MAPREDUCE-809. Fix job-summary logs to correctly record status of FAILED
+    and KILLED jobs. 
+
