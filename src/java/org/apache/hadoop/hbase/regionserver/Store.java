@@ -329,6 +329,8 @@ public class Store implements HConstants, HeapSize {
         if (reporter != null && (editsCount % reportInterval) == 0) {
           reporter.progress();
         }
+        // Instantiate a new KeyValue to perform Writable on
+        val = new KeyValue();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +

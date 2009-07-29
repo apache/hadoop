@@ -300,6 +300,8 @@ Release 0.20.0 - Unreleased
                using copies
    HBASE-1647  Filter#filterRow is called too often, filters rows it shouldn't
                have (Doğacan Güney via Ryan Rawson and Stack)
+   HBASE-1718  Reuse of KeyValue during log replay could cause the wrong
+               data to be used
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
