@@ -69,7 +69,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final int NO_HASH = -1;
   private volatile int encodedName = NO_HASH;
-  private boolean splitRequest = false;
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -454,17 +453,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     
     // Compare end keys.
     return Bytes.compareTo(this.endKey, o.endKey);
-  }
-
-  /**
-   * For internal use in forcing splits ahead of file size limit.
-   * @param b
-   * @return previous value
-   */
-  public boolean shouldSplit(boolean b) {
-    boolean old = this.splitRequest;
-    this.splitRequest = b;
-    return old;
   }
 
   /**

@@ -95,7 +95,7 @@ public class Store implements HConstants, HeapSize {
   protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final Path homedir;
-  private final HRegionInfo regioninfo;
+  private final HRegion region;
   private final HColumnDescriptor family;
   final FileSystem fs;
   private final HBaseConfiguration conf;
@@ -154,13 +154,14 @@ public class Store implements HConstants, HeapSize {
    * failed.  Can be null.
    * @throws IOException
    */
-  protected Store(Path basedir, HRegionInfo info, HColumnDescriptor family,
+  protected Store(Path basedir, HRegion region, HColumnDescriptor family,
     FileSystem fs, Path reconstructionLog, HBaseConfiguration conf,
     final Progressable reporter)
-  throws IOException {  
+  throws IOException {
+    HRegionInfo info = region.regionInfo;
     this.homedir = getStoreHomedir(basedir, info.getEncodedName(),
       family.getName());
-    this.regioninfo = info;
+    this.region = region;
     this.family = family;
     this.fs = fs;
     this.conf = conf;
@@ -317,7 +318,7 @@ public class Store implements HConstants, HeapSize {
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         if (/* commented out for now - stack via jgray key.isTransactionEntry() || */
             val.matchingFamily(HLog.METAFAMILY) ||
-          !Bytes.equals(key.getRegionName(), regioninfo.getRegionName()) ||
+          !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
           !val.matchingFamily(family.getName())) {
           continue;
         }
@@ -536,7 +537,7 @@ public class Store implements HConstants, HeapSize {
         ", sequenceid=" + logCacheFlushId +
         ", memsize=" + StringUtils.humanReadableInt(flushed) +
         ", filesize=" + StringUtils.humanReadableInt(r.length()) +
-        " to " + this.regioninfo.getRegionNameAsString());
+        " to " + this.region.regionInfo.getRegionNameAsString());
     }
     return sf;
   }
@@ -637,7 +638,7 @@ public class Store implements HConstants, HeapSize {
    * @throws IOException
    */
   StoreSize compact(final boolean mc) throws IOException {
-    boolean forceSplit = this.regioninfo.shouldSplit(false);
+    boolean forceSplit = this.region.shouldSplit(false);
     boolean majorcompaction = mc;
     synchronized (compactLock) {
       // filesToCompact are sorted oldest to newest.
@@ -868,13 +869,17 @@ public class Store implements HConstants, HeapSize {
           more = scanner.next(kvs);
           // output to writer:
           for (KeyValue kv : kvs) {
-            if (writer == null) writer = getWriter(this.regionCompactionDir);
+            if (writer == null) {
+              writer = getWriter(this.regionCompactionDir);
+            }
             writer.append(kv);
           }
           kvs.clear();
         }
       } finally {
-        if (scanner != null) scanner.close();
+        if (scanner != null) {
+          scanner.close();
+        }
       }
     } else {
       MinorCompactingStoreScanner scanner = null;
@@ -1473,8 +1478,12 @@ public class Store implements HConstants, HeapSize {
     }
   }
 
+  HRegion getHRegion() {
+    return this.region;
+  }
+
   HRegionInfo getHRegionInfo() {
-    return this.regioninfo;
+    return this.region.regionInfo;
   }
 
   /**

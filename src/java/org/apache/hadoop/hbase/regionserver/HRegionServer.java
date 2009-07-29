@@ -1482,7 +1482,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
             case MSG_REGION_SPLIT:
               region = getRegion(info.getRegionName());
               region.flushcache();
-              region.regionInfo.shouldSplit(true);
+              region.shouldSplit(true);
               // force a compaction; split will be side-effect.
               compactSplitThread.compactionRequested(region,
                 e.msg.getType().name());

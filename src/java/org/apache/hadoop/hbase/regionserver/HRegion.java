@@ -199,6 +199,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     new ReentrantReadWriteLock();
   private final Object splitLock = new Object();
   private long minSequenceId;
+  private boolean splitRequest;
   
   /**
    * Name of the region info file that resides just under the region directory.
@@ -1507,7 +1508,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   protected Store instantiateHStore(Path baseDir, 
     HColumnDescriptor c, Path oldLogFile, Progressable reporter)
   throws IOException {
-    return new Store(baseDir, this.regionInfo, c, this.fs, oldLogFile,
+    return new Store(baseDir, this, c, this.fs, oldLogFile,
       this.conf, reporter);
   }
 
@@ -2447,6 +2448,17 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     } finally {
       region.close();
     }
+  }
+
+  /**
+   * For internal use in forcing splits ahead of file size limit.
+   * @param b
+   * @return previous value
+   */
+  public boolean shouldSplit(boolean b) {
+    boolean old = this.splitRequest;
+    this.splitRequest = b;
+    return old;
   }
 
   /**

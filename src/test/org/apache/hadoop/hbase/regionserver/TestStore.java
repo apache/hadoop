@@ -70,17 +70,22 @@ public class TestStore extends TestCase {
   private void init(String methodName) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
+    Path logdir = new Path(DIR+methodName+"/logs");
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     HBaseConfiguration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
     Path reconstructionLog = null; 
     Progressable reporter = null;
 
+    fs.delete(logdir, true);
+
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-
-    store = new Store(basedir, info, hcd, fs, reconstructionLog, conf,
+    HLog hlog = new HLog(fs, logdir, conf, null);
+    HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
+    
+    store = new Store(basedir, region, hcd, fs, reconstructionLog, conf,
         reporter);
   }
 
@@ -112,7 +117,7 @@ public class TestStore extends TestCase {
     this.store.close();
     // Reopen it... should pick up two files
     this.store = new Store(storedir.getParent().getParent(),
-      this.store.getHRegionInfo(),
+      this.store.getHRegion(),
       this.store.getFamily(), fs, null, c, null);
     System.out.println(this.store.getHRegionInfo().getEncodedName());
     assertEquals(2, this.store.getStorefilesCount());

@@ -533,6 +533,8 @@ Release 0.20.0 - Unreleased
    HBASE-1683  OOME on master splitting logs; stuck, won't go down
    HBASE-1704  Better zk error when failed connect
    HBASE-1714  Thrift server: prefix scan API
+   HBASE-1719  hold a reference to the region in stores instead of only the
+               region info
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
