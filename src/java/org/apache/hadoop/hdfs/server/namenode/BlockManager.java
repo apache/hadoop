@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.security.AccessTokenHandler;
@@ -1051,7 +1050,7 @@ public class BlockManager {
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
     synchronized (namesystem) {
       neededReplications.clear();
-      for (BlocksMap.BlockInfo block : blocksMap.getBlocks()) {
+      for (BlockInfo block : blocksMap.getBlocks()) {
         INodeFile fileINode = block.getINode();
         if (fileINode == null) {
           // block does not belong to any file
@@ -1415,13 +1414,13 @@ public class BlockManager {
     blocksMap.removeBlock(block);
   }
   
-  public int getCapacity() {
+  int getCapacity() {
     synchronized(namesystem) {
       return blocksMap.getCapacity();
     }
   }
   
-  public float getLoadFactor() {
+  float getLoadFactor() {
     return blocksMap.getLoadFactor();
   }
 }

@@ -48,9 +48,11 @@ Trunk (unreleased changes)
     HDFS-493. Change build.xml so that the fault-injected tests are executed
     only by the run-test-*-faul-inject targets.  (Konstantin Boudnik via
     szetszwo)
-   
+
     HADOOP-6160. Fix releaseaudit target to run on specific directories.
     (gkesavan)
+
+    HDFS-508. Factor out BlockInfo from BlocksMap. (shv)
 
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
