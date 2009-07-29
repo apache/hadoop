@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.mapreduce.lib.input;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,34 +26,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * An {@link InputFormat} that delegates behaviour of paths to multiple other
+ * An {@link InputFormat} that delegates behavior of paths to multiple other
  * InputFormats.
  * 
- * @see MultipleInputs#addInputPath(JobConf, Path, Class, Class)
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.DelegatingInputFormat} instead
+ * @see MultipleInputs#addInputPath(Job, Path, Class, Class)
  */
-@Deprecated
-public class DelegatingInputFormat<K, V> implements InputFormat<K, V> {
+public class DelegatingInputFormat<K, V> extends InputFormat<K, V> {
 
-  public InputSplit[] getSplits(JobConf conf, int numSplits) throws IOException {
-
-    JobConf confCopy = new JobConf(conf);
+  @SuppressWarnings("unchecked")
+  public List<InputSplit> getSplits(JobContext job) 
+      throws IOException, InterruptedException {
+    Configuration conf = job.getConfiguration();
+    Job jobCopy =new Job(conf);
     List<InputSplit> splits = new ArrayList<InputSplit>();
-    Map<Path, InputFormat> formatMap = MultipleInputs.getInputFormatMap(conf);
+    Map<Path, InputFormat> formatMap = 
+      MultipleInputs.getInputFormatMap(job);
     Map<Path, Class<? extends Mapper>> mapperMap = MultipleInputs
-       .getMapperTypeMap(conf);
+       .getMapperTypeMap(job);
     Map<Class<? extends InputFormat>, List<Path>> formatPaths
         = new HashMap<Class<? extends InputFormat>, List<Path>>();
 
@@ -89,21 +90,25 @@ public class DelegatingInputFormat<K, V> implements InputFormat<K, V> {
 
       // Now each set of paths that has a common InputFormat and Mapper can
       // be added to the same job, and split together.
-      for (Entry<Class<? extends Mapper>, List<Path>> mapEntry : mapperPaths
-         .entrySet()) {
+      for (Entry<Class<? extends Mapper>, List<Path>> mapEntry :
+          mapperPaths.entrySet()) {
        paths = mapEntry.getValue();
        Class<? extends Mapper> mapperClass = mapEntry.getKey();
 
        if (mapperClass == null) {
-         mapperClass = conf.getMapperClass();
+         try {
+           mapperClass = job.getMapperClass();
+         } catch (ClassNotFoundException e) {
+           throw new IOException("Mapper class is not found", e);
+         }
        }
 
-       FileInputFormat.setInputPaths(confCopy, paths.toArray(new Path[paths
+       FileInputFormat.setInputPaths(jobCopy, paths.toArray(new Path[paths
            .size()]));
 
        // Get splits for each input path and tag with InputFormat
        // and Mapper types by wrapping in a TaggedInputSplit.
-       InputSplit[] pathSplits = format.getSplits(confCopy, numSplits);
+       List<InputSplit> pathSplits = format.getSplits(jobCopy);
        for (InputSplit pathSplit : pathSplits) {
          splits.add(new TaggedInputSplit(pathSplit, conf, format.getClass(),
              mapperClass));
@@ -111,20 +116,20 @@ public class DelegatingInputFormat<K, V> implements InputFormat<K, V> {
       }
     }
 
-    return splits.toArray(new InputSplit[splits.size()]);
+    return splits;
   }
 
   @SuppressWarnings("unchecked")
-  public RecordReader<K, V> getRecordReader(InputSplit split, JobConf conf,
-      Reporter reporter) throws IOException {
+  public RecordReader<K, V> createRecordReader(InputSplit split,
+      TaskAttemptContext context) throws IOException, InterruptedException {
 
     // Find the InputFormat and then the RecordReader from the
     // TaggedInputSplit.
-
     TaggedInputSplit taggedInputSplit = (TaggedInputSplit) split;
     InputFormat<K, V> inputFormat = (InputFormat<K, V>) ReflectionUtils
-       .newInstance(taggedInputSplit.getInputFormatClass(), conf);
-    return inputFormat.getRecordReader(taggedInputSplit.getInputSplit(), conf,
-       reporter);
+      .newInstance(taggedInputSplit.getInputFormatClass(),
+         context.getConfiguration());
+    return inputFormat.createRecordReader(taggedInputSplit.getInputSplit(),
+      context);
   }
 }

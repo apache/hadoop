@@ -16,35 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.mapreduce.lib.input;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * An {@link InputSplit} that tags another InputSplit with extra data for use
  * by {@link DelegatingInputFormat}s and {@link DelegatingMapper}s.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.TaggedInputSplit} instead
  */
-@Deprecated
-class TaggedInputSplit implements Configurable, InputSplit {
+class TaggedInputSplit extends InputSplit implements Configurable, Writable {
 
   private Class<? extends InputSplit> inputSplitClass;
 
   private InputSplit inputSplit;
 
+  @SuppressWarnings("unchecked")
   private Class<? extends InputFormat> inputFormatClass;
 
+  @SuppressWarnings("unchecked")
   private Class<? extends Mapper> mapperClass;
 
   private Configuration conf;
@@ -61,6 +66,7 @@ class TaggedInputSplit implements Configurable, InputSplit {
    * @param inputFormatClass The InputFormat class to use for this job
    * @param mapperClass The Mapper class to use for this job
    */
+  @SuppressWarnings("unchecked")
   public TaggedInputSplit(InputSplit inputSplit, Configuration conf,
       Class<? extends InputFormat> inputFormatClass,
       Class<? extends Mapper> mapperClass) {
@@ -85,6 +91,7 @@ class TaggedInputSplit implements Configurable, InputSplit {
    * 
    * @return The InputFormat class to use
    */
+  @SuppressWarnings("unchecked")
   public Class<? extends InputFormat> getInputFormatClass() {
     return inputFormatClass;
   }
@@ -94,26 +101,31 @@ class TaggedInputSplit implements Configurable, InputSplit {
    * 
    * @return The Mapper class to use
    */
+  @SuppressWarnings("unchecked")
   public Class<? extends Mapper> getMapperClass() {
     return mapperClass;
   }
 
-  public long getLength() throws IOException {
+  public long getLength() throws IOException, InterruptedException {
     return inputSplit.getLength();
   }
 
-  public String[] getLocations() throws IOException {
+  public String[] getLocations() throws IOException, InterruptedException {
     return inputSplit.getLocations();
   }
 
   @SuppressWarnings("unchecked")
   public void readFields(DataInput in) throws IOException {
     inputSplitClass = (Class<? extends InputSplit>) readClass(in);
+    inputFormatClass = (Class<? extends InputFormat<?, ?>>) readClass(in);
+    mapperClass = (Class<? extends Mapper<?, ?, ?, ?>>) readClass(in);
     inputSplit = (InputSplit) ReflectionUtils
        .newInstance(inputSplitClass, conf);
-    inputSplit.readFields(in);
-    inputFormatClass = (Class<? extends InputFormat>) readClass(in);
-    mapperClass = (Class<? extends Mapper>) readClass(in);
+    SerializationFactory factory = new SerializationFactory(conf);
+    Deserializer deserializer = factory.getDeserializer(inputSplitClass);
+    deserializer.open((DataInputStream)in);
+    inputSplit = (InputSplit)deserializer.deserialize(inputSplit);
+    deserializer.close();
   }
 
   private Class<?> readClass(DataInput in) throws IOException {
@@ -125,11 +137,17 @@ class TaggedInputSplit implements Configurable, InputSplit {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, inputSplitClass.getName());
-    inputSplit.write(out);
     Text.writeString(out, inputFormatClass.getName());
     Text.writeString(out, mapperClass.getName());
+    SerializationFactory factory = new SerializationFactory(conf);
+    Serializer serializer = 
+          factory.getSerializer(inputSplitClass);
+    serializer.open((DataOutputStream)out);
+    serializer.serialize(inputSplit);
+    serializer.close();
   }
 
   public Configuration getConf() {

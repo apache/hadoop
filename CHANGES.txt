@@ -144,6 +144,9 @@ Trunk (unreleased changes)
     MAPREDUCE-782. Use PureJavaCrc32 in SpillRecord.  (Todd Lipcon via
     szetszwo)
 
+    MAPREDUCE-369. Change org.apache.hadoop.mapred.lib.MultipleInputs to 
+    use new api. (Amareshwari Sriramadasu via sharad)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

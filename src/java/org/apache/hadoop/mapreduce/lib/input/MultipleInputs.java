@@ -15,80 +15,83 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.mapreduce.lib.input;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * This class supports MapReduce jobs that have multiple input paths with
  * a different {@link InputFormat} and {@link Mapper} for each path 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.MultipleInputs} instead
  */
-@Deprecated
 public class MultipleInputs {
   /**
    * Add a {@link Path} with a custom {@link InputFormat} to the list of
    * inputs for the map-reduce job.
    * 
-   * @param conf The configuration of the job
+   * @param job The {@link Job}
    * @param path {@link Path} to be added to the list of inputs for the job
    * @param inputFormatClass {@link InputFormat} class to use for this path
    */
-  public static void addInputPath(JobConf conf, Path path,
+  @SuppressWarnings("unchecked")
+  public static void addInputPath(Job job, Path path,
       Class<? extends InputFormat> inputFormatClass) {
-
     String inputFormatMapping = path.toString() + ";"
        + inputFormatClass.getName();
+    Configuration conf = job.getConfiguration();
     String inputFormats = conf.get("mapred.input.dir.formats");
     conf.set("mapred.input.dir.formats",
        inputFormats == null ? inputFormatMapping : inputFormats + ","
            + inputFormatMapping);
 
-    conf.setInputFormat(DelegatingInputFormat.class);
+    job.setInputFormatClass(DelegatingInputFormat.class);
   }
 
   /**
    * Add a {@link Path} with a custom {@link InputFormat} and
    * {@link Mapper} to the list of inputs for the map-reduce job.
    * 
-   * @param conf The configuration of the job
+   * @param job The {@link Job}
    * @param path {@link Path} to be added to the list of inputs for the job
    * @param inputFormatClass {@link InputFormat} class to use for this path
    * @param mapperClass {@link Mapper} class to use for this path
    */
-  public static void addInputPath(JobConf conf, Path path,
+  @SuppressWarnings("unchecked")
+  public static void addInputPath(Job job, Path path,
       Class<? extends InputFormat> inputFormatClass,
       Class<? extends Mapper> mapperClass) {
 
-    addInputPath(conf, path, inputFormatClass);
-
+    addInputPath(job, path, inputFormatClass);
+    Configuration conf = job.getConfiguration();
     String mapperMapping = path.toString() + ";" + mapperClass.getName();
     String mappers = conf.get("mapred.input.dir.mappers");
     conf.set("mapred.input.dir.mappers", mappers == null ? mapperMapping
        : mappers + "," + mapperMapping);
 
-    conf.setMapperClass(DelegatingMapper.class);
+    job.setMapperClass(DelegatingMapper.class);
   }
 
   /**
    * Retrieves a map of {@link Path}s to the {@link InputFormat} class
    * that should be used for them.
    * 
-   * @param conf The confuration of the job
+   * @param job The {@link JobContext}
    * @see #addInputPath(JobConf, Path, Class)
    * @return A map of paths to inputformats for the job
    */
-  static Map<Path, InputFormat> getInputFormatMap(JobConf conf) {
+  @SuppressWarnings("unchecked")
+  static Map<Path, InputFormat> getInputFormatMap(JobContext job) {
     Map<Path, InputFormat> m = new HashMap<Path, InputFormat>();
+    Configuration conf = job.getConfiguration();
     String[] pathMappings = conf.get("mapred.input.dir.formats").split(",");
     for (String pathMapping : pathMappings) {
       String[] split = pathMapping.split(";");
@@ -108,22 +111,26 @@ public class MultipleInputs {
    * Retrieves a map of {@link Path}s to the {@link Mapper} class that
    * should be used for them.
    * 
-   * @param conf The confuration of the job
+   * @param job The {@link JobContext}
    * @see #addInputPath(JobConf, Path, Class, Class)
    * @return A map of paths to mappers for the job
    */
   @SuppressWarnings("unchecked")
-  static Map<Path, Class<? extends Mapper>> getMapperTypeMap(JobConf conf) {
+  static Map<Path, Class<? extends Mapper>> 
+      getMapperTypeMap(JobContext job) {
+    Configuration conf = job.getConfiguration();
     if (conf.get("mapred.input.dir.mappers") == null) {
       return Collections.emptyMap();
     }
-    Map<Path, Class<? extends Mapper>> m = new HashMap<Path, Class<? extends Mapper>>();
+    Map<Path, Class<? extends Mapper>> m = 
+      new HashMap<Path, Class<? extends Mapper>>();
     String[] pathMappings = conf.get("mapred.input.dir.mappers").split(",");
     for (String pathMapping : pathMappings) {
       String[] split = pathMapping.split(";");
       Class<? extends Mapper> mapClass;
       try {
-       mapClass = (Class<? extends Mapper>) conf.getClassByName(split[1]);
+       mapClass = 
+         (Class<? extends Mapper>) conf.getClassByName(split[1]);
       } catch (ClassNotFoundException e) {
        throw new RuntimeException(e);
       }
