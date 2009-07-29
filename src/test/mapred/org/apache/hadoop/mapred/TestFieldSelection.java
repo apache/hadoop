@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.lib.*;
+import org.apache.hadoop.mapreduce.lib.fieldsel.TestMRFieldSelection;
+
 import junit.framework.TestCase;
 import java.text.NumberFormat;
 
@@ -50,39 +52,9 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     StringBuffer inputData = new StringBuffer();
     StringBuffer expectedOutput = new StringBuffer();
 
+    TestMRFieldSelection.constructInputOutputData(inputData,
+      expectedOutput, numOfInputLines);
     FSDataOutputStream fileOut = fs.create(new Path(INPUT_DIR, inputFile));
-    for (int i = 0; i < numOfInputLines; i++) {
-        inputData.append(idFormat.format(i));
-        inputData.append("-").append(idFormat.format(i+1));
-        inputData.append("-").append(idFormat.format(i+2));
-        inputData.append("-").append(idFormat.format(i+3));
-        inputData.append("-").append(idFormat.format(i+4));
-        inputData.append("-").append(idFormat.format(i+5));
-        inputData.append("-").append(idFormat.format(i+6));
-        inputData.append("\n");
-
-
-        expectedOutput.append(idFormat.format(i+3));
-        expectedOutput.append("-" ).append (idFormat.format(i+2));
-        expectedOutput.append("-" ).append (idFormat.format(i+1));
-        expectedOutput.append("-" ).append (idFormat.format(i+5));
-        expectedOutput.append("-" ).append (idFormat.format(i+6));
-
-        expectedOutput.append("-" ).append (idFormat.format(i+6));
-        expectedOutput.append("-" ).append (idFormat.format(i+5));
-        expectedOutput.append("-" ).append (idFormat.format(i+1));
-        expectedOutput.append("-" ).append (idFormat.format(i+2));
-        expectedOutput.append("-" ).append (idFormat.format(i+3));
-
-        expectedOutput.append("-" ).append (idFormat.format(i+0));
-        expectedOutput.append("-" ).append (idFormat.format(i+1));
-        expectedOutput.append("-" ).append (idFormat.format(i+2));
-        expectedOutput.append("-" ).append (idFormat.format(i+3));
-        expectedOutput.append("-" ).append (idFormat.format(i+4));
-        expectedOutput.append("-" ).append (idFormat.format(i+5));
-        expectedOutput.append("-" ).append (idFormat.format(i+6));
-        expectedOutput.append("\n");
-    }
     fileOut.write(inputData.toString().getBytes("utf-8"));
     fileOut.close();
 

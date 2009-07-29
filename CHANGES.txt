@@ -147,6 +147,9 @@ Trunk (unreleased changes)
     MAPREDUCE-369. Change org.apache.hadoop.mapred.lib.MultipleInputs to 
     use new api. (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-373. Change org.apache.hadoop.mapred.lib.FieldSelectionMapReduce
+    to use new api. (Amareshwari Sriramadasu via sharad)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
