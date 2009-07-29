@@ -150,6 +150,9 @@ Trunk (unreleased changes)
     MAPREDUCE-373. Change org.apache.hadoop.mapred.lib.FieldSelectionMapReduce
     to use new api. (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-628. Improves the execution time of TestJobInProgress.
+    (Jothi Padmanabhan via ddas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

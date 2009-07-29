@@ -24,6 +24,7 @@ import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapreduce.TaskType;
 
@@ -66,33 +67,57 @@ public class FakeObjectUtilities {
 
   static class FakeJobInProgress extends JobInProgress {
     JobClient.RawSplit[] rawSplits;
+    @SuppressWarnings("deprecation")
     FakeJobInProgress(JobConf jobConf, JobTracker tracker) throws IOException {
       super(new JobID(jtIdentifier, ++jobCounter), jobConf, tracker);
-      //initObjects(tracker, numMaps, numReduces);
+      Path jobFile = new Path("Dummy");
+      this.profile = new JobProfile(jobConf.getUser(), getJobID(), 
+          jobFile.toString(), null, jobConf.getJobName(),
+          jobConf.getQueueName());
     }
 
     @Override
     public synchronized void initTasks() throws IOException {
-      maps = new TaskInProgress[numMapTasks];
+     
+      JobClient.RawSplit[] splits = createSplits();
+      numMapTasks = splits.length;
+      createMapTasks(null, splits);
+      nonRunningMapCache = createCache(splits, maxLevel);
+      createReduceTasks(null);
+      tasksInited.set(true);
+      this.status.setRunState(JobStatus.RUNNING);
+    }
+    
+    @Override
+    JobClient.RawSplit[] createSplits(){
       JobClient.RawSplit[] splits = new JobClient.RawSplit[numMapTasks];
       for (int i = 0; i < numMapTasks; i++) {
         splits[i] = new JobClient.RawSplit();
         splits[i].setLocations(new String[0]);
+      }
+      return splits;
+    }
+    
+    @Override
+    void createMapTasks(String ignored, JobClient.RawSplit[] splits) {
+      maps = new TaskInProgress[numMapTasks];
+      for (int i = 0; i < numMapTasks; i++) {
         maps[i] = new TaskInProgress(getJobID(), "test", 
             splits[i], jobtracker, getJobConf(), this, i, 1);
-        nonLocalMaps.add(maps[i]);
       }
+    }
+
+    @Override
+    void createReduceTasks(String ignored) {
       reduces = new TaskInProgress[numReduceTasks];
       for (int i = 0; i < numReduceTasks; i++) {
         reduces[i] = new TaskInProgress(getJobID(), "test", 
-                                        numMapTasks, i, 
-                                        jobtracker, getJobConf(), this, 1);
+            numMapTasks, i, 
+            jobtracker, getJobConf(), this, 1);
         nonRunningReduces.add(reduces[i]);
       }
-      tasksInited.set(true);
-      nonRunningMapCache = createCache(splits, maxLevel);
     }
-    
+
     private TaskAttemptID findTask(String trackerName, String trackerHost,
         Collection<TaskInProgress> nonRunningTasks, 
         Collection<TaskInProgress> runningTasks, TaskType taskType)

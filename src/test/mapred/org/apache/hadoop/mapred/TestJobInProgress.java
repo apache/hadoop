@@ -16,263 +16,273 @@
  * limitations under the License.
  */
 
+/**
+ * TestJobInProgress is a unit test to test consistency of JobInProgress class
+ * data structures under different conditions (speculation/locality) and at
+ * different stages (tasks are running/pending/killed)
+ */
+
 package org.apache.hadoop.mapred;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
+
+import junit.extensions.TestSetup;
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.RandomWriter;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.UtilsForTests;
-import org.apache.hadoop.mapred.lib.IdentityMapper;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
+import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.mapred.TaskStatus.Phase;
+import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.StaticMapping;
 
-import junit.framework.TestCase;
-
+@SuppressWarnings("deprecation")
 public class TestJobInProgress extends TestCase {
   static final Log LOG = LogFactory.getLog(TestJobInProgress.class);
 
-  private MiniMRCluster mrCluster;
+  static FakeJobTracker jobTracker;
 
-  private MiniDFSCluster dfsCluster;
-  JobTracker jt;
-  private static Path TEST_DIR = 
-    new Path(System.getProperty("test.build.data","/tmp"), "jip-testing");
-  private static int numSlaves = 4;
+  static String trackers[] = new String[] {
+    "tracker_tracker1.r1.com:1000", 
+    "tracker_tracker2.r1.com:1000",
+    "tracker_tracker3.r2.com:1000",
+    "tracker_tracker4.r3.com:1000"
+  };
 
-  public static class FailMapTaskJob extends MapReduceBase implements
-      Mapper<LongWritable, Text, Text, IntWritable> {
+  static String[] hosts = new String[] {
+    "tracker1.r1.com",
+    "tracker2.r1.com",
+    "tracker3.r2.com",
+    "tracker4.r3.com"
+  };
 
-    @Override
-    public void map(LongWritable key, Text value,
-        OutputCollector<Text, IntWritable> output, Reporter reporter)
-        throws IOException {
-      // reporter.incrCounter(TaskCounts.LaunchedTask, 1);
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        throw new IllegalArgumentException("Interrupted MAP task");
+  static String[] racks = new String[] { "/r1", "/r1", "/r2", "/r3" };
+
+  static int numUniqueHosts = hosts.length;
+  static int clusterSize = trackers.length;
+
+  public static Test suite() {
+    TestSetup setup = new TestSetup(new TestSuite(TestJobInProgress.class)) {
+      protected void setUp() throws Exception {
+        JobConf conf = new JobConf();
+        conf.set("mapred.job.tracker", "localhost:0");
+        conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+        conf.setClass("topology.node.switch.mapping.impl", 
+            StaticMapping.class, DNSToSwitchMapping.class);
+        jobTracker = new FakeJobTracker(conf, new FakeClock(), trackers);
+        // Set up the Topology Information
+        for (int i = 0; i < hosts.length; i++) {
+          StaticMapping.addNodeToRack(hosts[i], racks[i]);
+        }
+        for (String s: trackers) {
+          FakeObjectUtilities.establishFirstContact(jobTracker, s);
+        }
       }
-      throw new IllegalArgumentException("Failing MAP task");
-    }
+    };
+    return setup;
   }
 
-  // Suppressing waring as we just need to write a failing reduce task job
-  // We don't need to bother about the actual key value pairs which are passed.
-  @SuppressWarnings("unchecked")
-  public static class FailReduceTaskJob extends MapReduceBase implements
-      Reducer {
+  static class MyFakeJobInProgress extends FakeJobInProgress {
 
-    @Override
-    public void reduce(Object key, Iterator values, OutputCollector output,
-        Reporter reporter) throws IOException {
-      // reporter.incrCounter(TaskCounts.LaunchedTask, 1);
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        throw new IllegalArgumentException("Failing Reduce task");
-      }
-      throw new IllegalArgumentException("Failing Reduce task");
+    MyFakeJobInProgress(JobConf jc, JobTracker jt) throws IOException {
+      super(jc, jt);
     }
 
-  }
+    @Override
+    JobClient.RawSplit[] createSplits() {
+      // Set all splits to reside on one host. This will ensure that 
+      // one tracker gets data local, one gets rack local and two others
+      // get non-local maps
+      RawSplit[] splits = new RawSplit[numMapTasks];
+      String[] splitHosts0 = new String[] { hosts[0] };
+      for (int i = 0; i < numMapTasks; i++) {
+        splits[i] = new RawSplit();
+        splits[i].setDataLength(0);
+        splits[i].setLocations(splitHosts0);
+      }
+      return splits;
+    }
 
-  @Override
-  protected void setUp() throws Exception {
-    // TODO Auto-generated method stub
-    super.setUp();
-    Configuration conf = new Configuration();
-    dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);
-    mrCluster = new MiniMRCluster(numSlaves, dfsCluster.getFileSystem()
-        .getUri().toString(), 1);
-    jt = mrCluster.getJobTrackerRunner().getJobTracker();
+    private void makeRunning(TaskAttemptID taskId, TaskInProgress tip, 
+        String taskTracker) {
+      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
+          0.0f, 1, TaskStatus.State.RUNNING, "", "", taskTracker,
+          tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
+      updateTaskStatus(tip, status);
+    }
+
+    private TaskInProgress getTipForTaskID(TaskAttemptID tid, boolean isMap) {
+      TaskInProgress result = null;
+      TaskID id = tid.getTaskID();
+      TaskInProgress[] arrayToLook = isMap ? maps : reduces;
+
+      for (int i = 0; i < arrayToLook.length; i++) {
+        TaskInProgress tip = arrayToLook[i];
+        if (tip.getTIPId() == id) {
+          result = tip;
+          break;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Find a new Map or a reduce task and mark it as running on the specified
+     * tracker
+     */
+    public TaskAttemptID findAndRunNewTask(boolean isMap, 
+        String tt, String host,
+        int clusterSize,
+        int numUniqueHosts)
+    throws IOException {
+      TaskTrackerStatus tts = new TaskTrackerStatus(tt, host);
+      Task task = isMap ? 
+          obtainNewMapTask(tts, clusterSize, numUniqueHosts) : 
+            obtainNewReduceTask(tts, clusterSize, numUniqueHosts);
+          TaskAttemptID tid = task.getTaskID();
+          makeRunning(task.getTaskID(), getTipForTaskID(tid, isMap), tt);
+          return tid;
+    }
   }
 
   public void testPendingMapTaskCount() throws Exception {
-    launchTask(FailMapTaskJob.class, IdentityReducer.class);
-    checkTaskCounts();
-  }
-  
-  public void testPendingReduceTaskCount() throws Exception {
-    launchTask(IdentityMapper.class, FailReduceTaskJob.class);
-    checkTaskCounts();
+
+    int numMaps = 4;
+    int numReds = 4;
+
+    JobConf conf = new JobConf();
+    conf.setNumMapTasks(numMaps);
+    conf.setNumReduceTasks(numReds);
+    conf.setSpeculativeExecution(false);
+    conf.setBoolean(
+        "mapred.committer.job.setup.cleanup.needed", false);
+    MyFakeJobInProgress job1 = new MyFakeJobInProgress(conf, jobTracker);
+    job1.initTasks();
+
+    TaskAttemptID[] tid = new TaskAttemptID[numMaps];
+
+    for (int i = 0; i < numMaps; i++) {
+      tid[i] = job1.findAndRunNewTask(true, trackers[i], hosts[i],
+          clusterSize, numUniqueHosts);
+    }
+
+    // Fail all maps
+    for (int i = 0; i < numMaps; i++) {
+      job1.failTask(tid[i]);
+    }
+
+    MyFakeJobInProgress job2 = new MyFakeJobInProgress(conf, jobTracker);
+    job2.initTasks();
+
+    for (int i = 0; i < numMaps; i++) {
+      tid[i] = job2.findAndRunNewTask(true, trackers[i], hosts[i],
+          clusterSize, numUniqueHosts);
+      job2.finishTask(tid[i]);
+    }
+
+    for (int i = 0; i < numReds/2; i++) {
+      tid[i] = job2.findAndRunNewTask(false, trackers[i], hosts[i],
+          clusterSize, numUniqueHosts);
+    }
+
+    for (int i = 0; i < numReds/4; i++) {
+      job2.finishTask(tid[i]);
+    }
+
+    for (int i = numReds/4; i < numReds/2; i++) {
+      job2.failTask(tid[i]);
+    }
+
+    // Job1. All Maps have failed, no reduces have been scheduled
+    checkTaskCounts(job1, 0, numMaps, 0, numReds);
+
+    // Job2. All Maps have completed. One reducer has completed, one has 
+    // failed and two others have not been scheduled
+    checkTaskCounts(job2, 0, 0, 0, 3 * numReds / 4);
   }
 
   /**
    * Test if running tasks are correctly maintained for various types of jobs
    */
-  private void testRunningTaskCount(boolean speculation, boolean locality)
-  throws Exception {
-    LOG.info("Testing running jobs with speculation : " + speculation 
-             + ", locality : " + locality);
-    // cleanup
-    dfsCluster.getFileSystem().delete(TEST_DIR, true);
-    
-    final Path mapSignalFile = new Path(TEST_DIR, "map-signal");
-    final Path redSignalFile = new Path(TEST_DIR, "reduce-signal");
-    
-    // configure a waiting job with 2 maps and 2 reducers
-    JobConf job = 
-      configure(UtilsForTests.WaitingMapper.class, IdentityReducer.class, 1, 1,
-                locality);
-    job.set(UtilsForTests.getTaskSignalParameter(true), mapSignalFile.toString());
-    job.set(UtilsForTests.getTaskSignalParameter(false), redSignalFile.toString());
-    
-    // Disable slow-start for reduces since this maps don't complete 
-    // in these test-cases...
-    job.setFloat("mapred.reduce.slowstart.completed.maps", 0.0f);
-    
-    // test jobs with speculation
-    job.setSpeculativeExecution(speculation);
-    JobClient jc = new JobClient(job);
-    RunningJob running = jc.submitJob(job);
-    JobTracker jobtracker = mrCluster.getJobTrackerRunner().getJobTracker();
-    JobInProgress jip = jobtracker.getJob(running.getID());
-    LOG.info("Running job " + jip.getJobID());
-    
-    // wait
-    LOG.info("Waiting for job " + jip.getJobID() + " to be ready");
-    waitTillReady(jip, job);
-    
+  static void testRunningTaskCount(boolean speculation)  throws Exception {
+    LOG.info("Testing running jobs with speculation : " + speculation); 
+
+    JobConf conf = new JobConf();
+    conf.setNumMapTasks(2);
+    conf.setNumReduceTasks(2);
+    conf.setSpeculativeExecution(speculation);
+    MyFakeJobInProgress jip = new MyFakeJobInProgress(conf, jobTracker);
+    jip.initTasks();
+
+    TaskAttemptID[] tid = new TaskAttemptID[4];
+
+    for (int i = 0; i < 2; i++) {
+      tid[i] = jip.findAndRunNewTask(true, trackers[i], hosts[i],
+          clusterSize, numUniqueHosts);
+    }
+
     // check if the running structures are populated
     Set<TaskInProgress> uniqueTasks = new HashSet<TaskInProgress>();
     for (Map.Entry<Node, Set<TaskInProgress>> s : 
-           jip.getRunningMapCache().entrySet()) {
+      jip.getRunningMapCache().entrySet()) {
       uniqueTasks.addAll(s.getValue());
     }
-    
+
     // add non local map tasks
     uniqueTasks.addAll(jip.getNonLocalRunningMaps());
-    
+
     assertEquals("Running map count doesnt match for jobs with speculation " 
-                 + speculation + ", and locality " + locality,
-                 jip.runningMaps(), uniqueTasks.size());
+        + speculation,
+        jip.runningMaps(), uniqueTasks.size());
 
-    assertEquals("Running reducer count doesnt match for jobs with speculation "
-                 + speculation + ", and locality " + locality,
-                 jip.runningReduces(), jip.getRunningReduces().size());
-    
-    // signal the tasks
-    LOG.info("Signaling the tasks");
-    UtilsForTests.signalTasks(dfsCluster, dfsCluster.getFileSystem(),
-                              mapSignalFile.toString(), 
-                              redSignalFile.toString(), numSlaves);
-    
-    // wait for the job to complete
-    LOG.info("Waiting for job " + jip.getJobID() + " to be complete");
-    UtilsForTests.waitTillDone(jc);
-    
-    // cleanup
-    dfsCluster.getFileSystem().delete(TEST_DIR, true);
-  }
-  
-  // wait for the job to start
-  private void waitTillReady(JobInProgress jip, JobConf job) {
-    // wait for all the maps to get scheduled
-    while (jip.runningMaps() < job.getNumMapTasks()) {
-      UtilsForTests.waitFor(10);
+    for (int i = 0; i < 2; i++ ) {
+      tid[i] = jip.findAndRunNewTask(false, trackers[i], hosts[i],
+          clusterSize, numUniqueHosts);
     }
-    
-    // wait for all the reducers to get scheduled
-    while (jip.runningReduces() < job.getNumReduceTasks()) {
-      UtilsForTests.waitFor(10);
-    }
+
+    assertEquals("Running reducer count doesnt match for" +
+        " jobs with speculation "
+        + speculation,
+        jip.runningReduces(), jip.getRunningReduces().size());
+
   }
-  
+
   public void testRunningTaskCount() throws Exception {
-    // test with spec = false and locality=true
-    testRunningTaskCount(false, true);
-    
-    // test with spec = true and locality=true
-    testRunningTaskCount(true, true);
-    
-    // test with spec = false and locality=false
-    testRunningTaskCount(false, false);
-    
-    // test with spec = true and locality=false
-    testRunningTaskCount(true, false);
-  }
-  
-  @Override
-  protected void tearDown() throws Exception {
-    mrCluster.shutdown();
-    dfsCluster.shutdown();
-    super.tearDown();
-  }
-  
+    // test with spec = false 
+    testRunningTaskCount(false);
 
-  void launchTask(Class MapClass,Class ReduceClass) throws Exception{
-    JobConf job = configure(MapClass, ReduceClass, 5, 10, true);
-    try {
-      JobClient.runJob(job);
-    } catch (IOException ioe) {}
-  }
-  
-  @SuppressWarnings("unchecked")
-  JobConf configure(Class MapClass,Class ReduceClass, int maps, int reducers,
-                    boolean locality) 
-  throws Exception {
-    JobConf jobConf = mrCluster.createJobConf();
-    final Path inDir = new Path("./failjob/input");
-    final Path outDir = new Path("./failjob/output");
-    String input = "Test failing job.\n One more line";
-    FileSystem inFs = inDir.getFileSystem(jobConf);
-    FileSystem outFs = outDir.getFileSystem(jobConf);
-    outFs.delete(outDir, true);
-    if (!inFs.mkdirs(inDir)) {
-      throw new IOException("create directory failed" + inDir.toString());
-    }
+    // test with spec = true
+    testRunningTaskCount(true);
 
-    DataOutputStream file = inFs.create(new Path(inDir, "part-0"));
-    file.writeBytes(input);
-    file.close();
-    jobConf.setJobName("failmaptask");
-    if (locality) {
-      jobConf.setInputFormat(TextInputFormat.class);
-    } else {
-      jobConf.setInputFormat(UtilsForTests.RandomInputFormat.class);
-    }
-    jobConf.setOutputKeyClass(Text.class);
-    jobConf.setOutputValueClass(Text.class);
-    jobConf.setMapperClass(MapClass);
-    jobConf.setCombinerClass(ReduceClass);
-    jobConf.setReducerClass(ReduceClass);
-    FileInputFormat.setInputPaths(jobConf, inDir);
-    FileOutputFormat.setOutputPath(jobConf, outDir);
-    jobConf.setNumMapTasks(maps);
-    jobConf.setNumReduceTasks(reducers);
-    return jobConf; 
   }
 
-  void checkTaskCounts() {
-    JobStatus[] status = jt.getAllJobs();
-    for (JobStatus js : status) {
-      JobInProgress jip = jt.getJob(js.getJobID());
-      Counters counter = jip.getJobCounters();
-      long totalTaskCount = counter
-          .getCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
-          + counter.getCounter(JobCounter.TOTAL_LAUNCHED_REDUCES);
-      while (jip.getNumTaskCompletionEvents() < totalTaskCount) {
-        assertEquals(true, (jip.runningMaps() >= 0));
-        assertEquals(true, (jip.pendingMaps() >= 0));
-        assertEquals(true, (jip.runningReduces() >= 0));
-        assertEquals(true, (jip.pendingReduces() >= 0));
-      }
-    }
+  static void checkTaskCounts(JobInProgress jip, int runningMaps,
+      int pendingMaps, int runningReduces, int pendingReduces) {
+    Counters counter = jip.getJobCounters();
+    long totalTaskCount = counter.getCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+    + counter.getCounter(JobCounter.TOTAL_LAUNCHED_REDUCES);
+
+    LOG.info("totalTaskCount is " + totalTaskCount);
+    LOG.info(" Running Maps:" + jip.runningMaps() +
+        " Pending Maps:" + jip.pendingMaps() + 
+        " Running Reds:" + jip.runningReduces() + 
+        " Pending Reds:" + jip.pendingReduces());
+
+    assertEquals(jip.getNumTaskCompletionEvents(),totalTaskCount);
+    assertEquals(runningMaps, jip.runningMaps());
+    assertEquals(pendingMaps, jip.pendingMaps());
+    assertEquals(runningReduces, jip.runningReduces());
+    assertEquals(pendingReduces, jip.pendingReduces());
   }
-  
+
 }
