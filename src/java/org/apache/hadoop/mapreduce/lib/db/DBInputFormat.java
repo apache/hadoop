@@ -176,7 +176,8 @@ public class DBInputFormat<T extends DBWritable>
   protected RecordReader<LongWritable, T> createDBRecordReader(DBInputSplit split,
       Configuration conf) throws IOException {
 
-    Class inputClass = dbConf.getInputClass();
+    @SuppressWarnings("unchecked")
+    Class<T> inputClass = (Class<T>) (dbConf.getInputClass());
     try {
       // use database product name to determine appropriate record reader.
       if (dbProductName.startsWith("ORACLE")) {

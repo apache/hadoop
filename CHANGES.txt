@@ -288,5 +288,7 @@ Trunk (unreleased changes)
     getting reset after the spill. (Christian Kunz via sharad)
 
     MAPREDUCE-809. Fix job-summary logs to correctly record status of FAILED
-    and KILLED jobs. 
+    and KILLED jobs.  (acmurthy)
 
+    MAPREDUCE-792. Fix unchecked warnings in DBInputFormat.  (Aaron Kimball
+    via szetszwo)
