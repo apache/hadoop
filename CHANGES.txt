@@ -57,6 +57,9 @@ Trunk (unreleased changes)
     HDFS-510. Rename DatanodeBlockInfo to be ReplicaInfo.
     (Jakob Homan & Hairong Kuang via shv)
 
+    HDFS-500. Deprecate NameNode methods deprecated in NameNodeProtocol.
+    (Jakob Homan via shv)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

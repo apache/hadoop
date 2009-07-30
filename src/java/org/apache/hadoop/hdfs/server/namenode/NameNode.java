@@ -818,6 +818,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * Returns the size of the current edit log.
    */
+  @Deprecated
   public long getEditLogSize() throws IOException {
     return namesystem.getEditLogSize();
   }
@@ -825,6 +826,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * Roll the edit log.
    */
+  @Deprecated
   public CheckpointSignature rollEditLog() throws IOException {
     return namesystem.rollEditLog();
   }
@@ -832,6 +834,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * Roll the image 
    */
+  @Deprecated
   public void rollFsImage() throws IOException {
     namesystem.rollFSImage();
   }
@@ -1150,9 +1153,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       case FORMAT:
         boolean aborted = format(conf, true);
         System.exit(aborted ? 1 : 0);
+        return null; // avoid javac warning
       case FINALIZE:
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
+        return null; // avoid javac warning
       case BACKUP:
       case CHECKPOINT:
         return new BackupNode(conf, startOpt.toNodeRole());
