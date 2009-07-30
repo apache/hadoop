@@ -31,6 +31,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.mrunit.types.Pair;
 import org.junit.Before;
@@ -233,5 +234,45 @@ public class TestMapReduceDriver extends TestCase {
     assertListEquals(expected, outputs);
   }
 
+  // Test "combining" with an IdentityReducer. Result should be the same.
+  @Test
+  public void testIdentityCombiner() {
+    driver
+            .withCombiner(new IdentityReducer<Text, LongWritable>())
+            .withInput(new Text("foo"), new LongWritable(FOO_IN_A))
+            .withInput(new Text("foo"), new LongWritable(FOO_IN_B))
+            .withInput(new Text("bar"), new LongWritable(BAR_IN))
+            .withOutput(new Text("bar"), new LongWritable(BAR_IN))
+            .withOutput(new Text("foo"), new LongWritable(FOO_OUT))
+            .runTest();
+  }
+
+  // Test "combining" with another LongSumReducer. Result should be the same.
+  @Test
+  public void testLongSumCombiner() {
+    driver
+            .withCombiner(new LongSumReducer<Text>())
+            .withInput(new Text("foo"), new LongWritable(FOO_IN_A))
+            .withInput(new Text("foo"), new LongWritable(FOO_IN_B))
+            .withInput(new Text("bar"), new LongWritable(BAR_IN))
+            .withOutput(new Text("bar"), new LongWritable(BAR_IN))
+            .withOutput(new Text("foo"), new LongWritable(FOO_OUT))
+            .runTest();
+  }
+
+  // Test "combining" with another LongSumReducer, and with the Reducer
+  // set to IdentityReducer. Result should be the same.
+  @Test
+  public void testLongSumCombinerAndIdentityReduce() {
+    driver
+            .withCombiner(new LongSumReducer<Text>())
+            .withReducer(new IdentityReducer<Text, LongWritable>())
+            .withInput(new Text("foo"), new LongWritable(FOO_IN_A))
+            .withInput(new Text("foo"), new LongWritable(FOO_IN_B))
+            .withInput(new Text("bar"), new LongWritable(BAR_IN))
+            .withOutput(new Text("bar"), new LongWritable(BAR_IN))
+            .withOutput(new Text("foo"), new LongWritable(FOO_OUT))
+            .runTest();
+  }
 }
 

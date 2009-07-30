@@ -35,6 +35,7 @@ import org.apache.hadoop.mrunit.types.Pair;
 
 /**
  * Harness that allows you to test a Mapper and a Reducer instance together
+ * (along with an optional combiner).
  * You provide the input key and value that should be sent to the Mapper, and
  * outputs you expect to be sent by the Reducer to the collector for those
  * inputs. By calling runTest(), the harness will deliver the input to the
@@ -42,6 +43,9 @@ import org.apache.hadoop.mrunit.types.Pair;
  * them), and will check the Reducer's outputs against the expected results.
  * This is designed to handle a single (k, v)* -> (k, v)* case from the
  * Mapper/Reducer pair, representing a single unit test.
+ *
+ * If a combiner is specified, then it will be run exactly once after
+ * the Mapper and before the Reducer.
  */
 public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
     extends TestDriver<K1, V1, K3, V3> {
@@ -50,6 +54,7 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
 
   private Mapper<K1, V1, K2, V2> myMapper;
   private Reducer<K2, V2, K3, V3> myReducer;
+  private Reducer<K2, V2, K2, V2> myCombiner;
 
   private List<Pair<K1, V1>> inputList;
 
@@ -57,6 +62,15 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
                          final Reducer<K2, V2, K3, V3> r) {
     myMapper = m;
     myReducer = r;
+    inputList = new ArrayList<Pair<K1, V1>>();
+  }
+
+  public MapReduceDriver(final Mapper<K1, V1, K2, V2> m,
+                         final Reducer<K2, V2, K3, V3> r,
+                         final Reducer<K2, V2, K2, V2> c) {
+    myMapper = m;
+    myReducer = r;
+    myCombiner = c;
     inputList = new ArrayList<Pair<K1, V1>>();
   }
 
@@ -108,6 +122,32 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
    */
   public Reducer<K2, V2, K3, V3> getReducer() {
     return myReducer;
+  }
+
+  /**
+   * Sets the reducer object to use as a combiner for this test
+   * @param c The combiner object to use
+   */
+  public void setCombiner(Reducer<K2, V2, K2, V2> c) {
+    myCombiner = c;
+  }
+
+  /**
+   * Identical to setCombiner(), but with fluent programming style
+   * @param c The Combiner to use
+   * @return this
+   */
+  public MapReduceDriver<K1, V1, K2, V2, K3, V3> withCombiner(
+          Reducer<K2, V2, K2, V2> c) {
+    setCombiner(c);
+    return this;
+  }
+
+  /**
+   * @return the Combiner object being used for this test
+   */
+  public Reducer<K2, V2, K2, V2> getCombiner() {
+    return myCombiner;
   }
 
   /**
@@ -257,6 +297,31 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
     return this;
   }
 
+  /** The private class to manage starting the reduce phase is used for type
+      genericity reasons. This class is used in the run() method. */
+  private class ReducePhaseRunner<OUTKEY, OUTVAL> {
+    private List<Pair<OUTKEY, OUTVAL>> runReduce(
+        List<Pair<K2, List<V2>>> inputs, Reducer<K2, V2, OUTKEY, OUTVAL> reducer)
+        throws IOException {
+
+      List<Pair<OUTKEY, OUTVAL>> reduceOutputs = new ArrayList<Pair<OUTKEY, OUTVAL>>();
+
+      for (Pair<K2, List<V2>> input : inputs) {
+        K2 inputKey = input.getFirst();
+        List<V2> inputValues = input.getSecond();
+        StringBuilder sb = new StringBuilder();
+        formatValueList(inputValues, sb);
+        LOG.debug("Reducing input (" + inputKey.toString() + ", "
+            + sb.toString() + ")");
+
+        reduceOutputs.addAll(new ReduceDriver<K2, V2, OUTKEY, OUTVAL>(reducer)
+                .withInputKey(inputKey).withInputValues(inputValues).run());
+      }
+
+      return reduceOutputs;
+    }
+  }
+
   public List<Pair<K3, V3>> run() throws IOException {
 
     List<Pair<K2, V2>> mapOutputs = new ArrayList<Pair<K2, V2>>();
@@ -269,22 +334,16 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
               input).run());
     }
 
-    List<Pair<K2, List<V2>>> reduceInputs = shuffle(mapOutputs);
-    List<Pair<K3, V3>> reduceOutputs = new ArrayList<Pair<K3, V3>>();
-
-    for (Pair<K2, List<V2>> input : reduceInputs) {
-      K2 inputKey = input.getFirst();
-      List<V2> inputValues = input.getSecond();
-      StringBuilder sb = new StringBuilder();
-      formatValueList(inputValues, sb);
-      LOG.debug("Reducing input (" + inputKey.toString() + ", "
-          + sb.toString() + ")");
-
-      reduceOutputs.addAll(new ReduceDriver<K2, V2, K3, V3>(myReducer)
-              .withInputKey(inputKey).withInputValues(inputValues).run());
+    if (myCombiner != null) {
+      // User has specified a combiner. Run this and replace the mapper outputs
+      // with the result of the combiner.
+      LOG.debug("Starting combine phase with combiner: " + myCombiner);
+      mapOutputs = new ReducePhaseRunner<K2, V2>().runReduce(shuffle(mapOutputs), myCombiner);
     }
 
-    return reduceOutputs;
+    // Run the reduce phase.
+    LOG.debug("Starting reduce phase with reducer: " + myReducer);
+    return new ReducePhaseRunner<K3, V3>().runReduce(shuffle(mapOutputs), myReducer);
   }
 
   @Override
