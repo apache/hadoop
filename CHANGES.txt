@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     HDFS-490. Eliminate the deprecated warnings introduced by H-5438.
     (He Yongqiang via szetszwo)
 
+    HDFS-119. Fix a bug in logSync(), which causes NameNode block forever.
+    (Suresh Srinivas via shv)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
