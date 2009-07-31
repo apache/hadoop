@@ -126,7 +126,7 @@ IFS=
 if [ -d "$HADOOP_CORE_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME
 fi
-for f in $HADOOP_CORE_HOME/hadoop-*-core.jar; do
+for f in $HADOOP_CORE_HOME/hadoop-core-*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
