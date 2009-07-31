@@ -581,7 +581,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * return the length of the added block; 0 if the block is not added
    */
   private long addBlock(Block block, List<BlockWithLocations> results) {
-    ArrayList<String> machineSet = blockManager.addBlock(block);
+    ArrayList<String> machineSet = blockManager.getValidLocations(block);
     if(machineSet.size() == 0) {
       return 0;
     } else {
@@ -1337,7 +1337,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public synchronized void markBlockAsCorrupt(Block blk, DatanodeInfo dn)
     throws IOException {
-    blockManager.markBlockAsCorrupt(blk, dn);
+    blockManager.findAndMarkBlockAsCorrupt(blk, dn);
   }
 
 

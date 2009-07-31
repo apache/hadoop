@@ -65,6 +65,8 @@ Trunk (unreleased changes)
 
     HDFS-496. Use PureJavaCrc32 in HDFS.  (Todd Lipcon via szetszwo)
 
+    HDFS-511. Remove redundant block searches in BlockManager. (shv)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

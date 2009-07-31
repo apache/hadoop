@@ -276,8 +276,7 @@ class FSDirectory implements Closeable {
                   fileNode.getPreferredBlockSize()*fileNode.getReplication());
       
       // associate the new list of blocks with this file
-      getBlockManager().addINode(block, fileNode);
-      BlockInfo blockInfo = getBlockManager().getStoredBlock(block);
+      BlockInfo blockInfo = getBlockManager().addINode(block, fileNode);
       fileNode.addBlock(blockInfo);
 
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
