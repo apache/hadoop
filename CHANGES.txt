@@ -60,6 +60,9 @@ Trunk (unreleased changes)
     HDFS-500. Deprecate NameNode methods deprecated in NameNodeProtocol.
     (Jakob Homan via shv)
 
+    HDFS-514. Change DFSClient.namenode from public to private.  (Bill Zeller
+    via szetszwo)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

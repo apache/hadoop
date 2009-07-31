@@ -171,7 +171,7 @@ public class TestReplication extends TestCase {
     fs.setReplication(file1, (short)2);
   
     // Now get block details and check if the block is corrupt
-    blocks = dfsClient.namenode.
+    blocks = dfsClient.getNamenode().
               getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
     while (blocks.get(0).isCorrupt() != true) {
       try {
@@ -179,7 +179,7 @@ public class TestReplication extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException ie) {
       }
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                 getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
     }
     replicaCount = blocks.get(0).getLocations().length;
@@ -321,10 +321,10 @@ public class TestReplication extends TestCase {
       out.write(buffer);
       out.close();
       
-      waitForBlockReplication(testFile, dfsClient.namenode, numDataNodes, -1);
+      waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, -1);
 
       // get first block of the file.
-      String block = dfsClient.namenode.
+      String block = dfsClient.getNamenode().
                        getBlockLocations(testFile, 0, Long.MAX_VALUE).
                        get(0).getBlock().getBlockName();
       
@@ -386,7 +386,7 @@ public class TestReplication extends TestCase {
                                   cluster.getNameNodePort()),
                                   conf);
       
-      waitForBlockReplication(testFile, dfsClient.namenode, numDataNodes, -1);
+      waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, -1);
       
     } finally {
       if (cluster != null) {
@@ -436,19 +436,19 @@ public class TestReplication extends TestCase {
     // block replication triggers corrupt block detection
     DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost", 
         cluster.getNameNodePort()), fs.getConf());
-    LocatedBlocks blocks = dfsClient.namenode.getBlockLocations(
+    LocatedBlocks blocks = dfsClient.getNamenode().getBlockLocations(
         fileName.toString(), 0, fileLen);
     if (lenDelta < 0) { // replica truncated
     	while (!blocks.get(0).isCorrupt() || 
     			REPLICATION_FACTOR != blocks.get(0).getLocations().length) {
     		Thread.sleep(100);
-    		blocks = dfsClient.namenode.getBlockLocations(
+    		blocks = dfsClient.getNamenode().getBlockLocations(
     				fileName.toString(), 0, fileLen);
     	}
     } else { // no corruption detected; block replicated
     	while (REPLICATION_FACTOR+1 != blocks.get(0).getLocations().length) {
     		Thread.sleep(100);
-    		blocks = dfsClient.namenode.getBlockLocations(
+    		blocks = dfsClient.getNamenode().getBlockLocations(
     				fileName.toString(), 0, fileLen);
     	}
     }

@@ -75,7 +75,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
 
       //get block info for the last block
       LocatedBlock locatedblock = TestInterDatanodeProtocol.getLastLocatedBlock(
-          dfs.dfs.namenode, filestr);
+          dfs.dfs.getNamenode(), filestr);
       DatanodeInfo[] datanodeinfos = locatedblock.getLocations();
       assertEquals(REPLICATION_NUM, datanodeinfos.length);
 

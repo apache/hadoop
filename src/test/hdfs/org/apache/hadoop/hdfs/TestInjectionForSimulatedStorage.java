@@ -148,7 +148,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       writeFile(cluster.getFileSystem(), testPath, numDataNodes);
 
       
-      waitForBlockReplication(testFile, dfsClient.namenode, numDataNodes, 20);
+      waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, 20);
 
       
       Block[][] blocksList = cluster.getAllBlockReports();
@@ -188,7 +188,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
                                   cluster.getNameNodePort()),
                                   conf);
       
-      waitForBlockReplication(testFile, dfsClient.namenode, numDataNodes, -1);
+      waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, -1);
       
     } finally {
       if (cluster != null) {

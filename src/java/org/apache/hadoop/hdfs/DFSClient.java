@@ -127,7 +127,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   public static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
-  public final ClientProtocol namenode;
+  final private ClientProtocol namenode;
   final private ClientProtocol rpcNamenode;
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
@@ -430,6 +430,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return create(src, overwrite, replication, blockSize, null);
   }
 
+  /**
+   * Get the namenode associated with this DFSClient object
+   * @return the namenode associated with this DFSClient object
+   */
+  public ClientProtocol getNamenode() {
+    return namenode;
+  }
+  
   
   /**
    * Create a new dfs file with the specified block replication 

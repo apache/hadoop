@@ -110,7 +110,7 @@ public class TestBlockReplacement extends TestCase {
       InetSocketAddress addr = new InetSocketAddress("localhost",
           cluster.getNameNodePort());
       DFSClient client = new DFSClient(addr, CONF);
-      List<LocatedBlock> locatedBlocks = client.namenode.
+      List<LocatedBlock> locatedBlocks = client.getNamenode().
         getBlockLocations("/tmp.txt", 0, DEFAULT_BLOCK_SIZE).getLocatedBlocks();
       assertEquals(1, locatedBlocks.size());
       LocatedBlock block = locatedBlocks.get(0);
@@ -194,7 +194,7 @@ public class TestBlockReplacement extends TestCase {
         Thread.sleep(100);
       } catch(InterruptedException e) {
       }
-      List<LocatedBlock> blocks = client.namenode.
+      List<LocatedBlock> blocks = client.getNamenode().
       getBlockLocations(fileName, 0, fileLen).getLocatedBlocks();
       assertEquals(1, blocks.size());
       DatanodeInfo[] nodes = blocks.get(0).getLocations();

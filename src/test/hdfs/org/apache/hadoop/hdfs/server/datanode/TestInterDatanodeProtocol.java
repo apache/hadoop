@@ -83,7 +83,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       assertTrue(dfs.getClient().exists(filestr));
 
       //get block info
-      LocatedBlock locatedblock = getLastLocatedBlock(dfs.getClient().namenode, filestr);
+      LocatedBlock locatedblock = getLastLocatedBlock(dfs.getClient().getNamenode(), filestr);
       DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
       assertTrue(datanodeinfo.length > 0);
 
