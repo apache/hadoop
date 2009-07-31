@@ -428,10 +428,6 @@ public class TestNodeRefresh extends TestCase {
     mr.stopJobTracker();
     mr.startJobTracker();
     
-    // start a tracker so that the jobs move to completion
-    String newTrackerHostName = getHostname(2);
-    mr.startTaskTracker(newTrackerHostName, null, 2, 1);
-
     // Wait for the JT to be ready
     UtilsForTests.waitForJobTracker(jobClient);
 
@@ -444,7 +440,7 @@ public class TestNodeRefresh extends TestCase {
     
     // check the cluster status and tracker size
     assertEquals("Tracker is not lost upon host decommissioning", 
-                 1, jt.getClusterStatus(false).getTaskTrackers());
+                 0, jt.getClusterStatus(false).getTaskTrackers());
     assertEquals("Excluded node count is incorrect", 
                  1, jt.getClusterStatus(false).getNumExcludedNodes());
     
@@ -454,6 +450,10 @@ public class TestNodeRefresh extends TestCase {
                   status.getHost().equals(hostToDecommission));
     }
 
+    // start a tracker so that the jobs move to completion
+    String newTrackerHostName = getHostname(2);
+    mr.startTaskTracker(newTrackerHostName, null, 2, 1);
+    
     // wait for the job
     job.waitForCompletion();
 

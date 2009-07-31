@@ -295,3 +295,7 @@ Trunk (unreleased changes)
 
     MAPREDUCE-792. Fix unchecked warnings in DBInputFormat.  (Aaron Kimball
     via szetszwo)
+
+    MAPREDUCE-760. Fix a timing issue in TestNodeRefresh. (Amar Kamat via 
+    sharad)
+
