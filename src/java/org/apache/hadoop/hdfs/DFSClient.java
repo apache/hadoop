@@ -50,7 +50,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.CRC32;
 
 import javax.net.SocketFactory;
 import javax.security.auth.login.LoginException;
@@ -110,6 +109,7 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.StringUtils;
 
 /********************************************************
@@ -2983,7 +2983,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     private DFSOutputStream(String src, long blockSize, Progressable progress,
         int bytesPerChecksum) throws IOException {
-      super(new CRC32(), bytesPerChecksum, 4);
+      super(new PureJavaCrc32(), bytesPerChecksum, 4);
       this.src = src;
       this.blockSize = blockSize;
       this.progress = progress;

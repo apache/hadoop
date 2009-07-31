@@ -63,6 +63,8 @@ Trunk (unreleased changes)
     HDFS-514. Change DFSClient.namenode from public to private.  (Bill Zeller
     via szetszwo)
 
+    HDFS-496. Use PureJavaCrc32 in HDFS.  (Todd Lipcon via szetszwo)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than
