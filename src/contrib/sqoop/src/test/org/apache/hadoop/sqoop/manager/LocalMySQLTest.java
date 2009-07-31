@@ -193,7 +193,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
     args.add(getWarehouseDir());
     args.add("--connect");
     args.add(CONNECT_STRING);
-    args.add("--local");
+    args.add("--direct");
     args.add("--username");
     args.add(getCurrentUser());
     args.add("--where");

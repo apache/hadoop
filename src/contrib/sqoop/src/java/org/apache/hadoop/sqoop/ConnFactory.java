@@ -71,7 +71,7 @@ public final class ConnFactory {
     }
 
     if (scheme.equals("jdbc:mysql:")) {
-      if (opts.isLocal()) {
+      if (opts.isDirect()) {
         return new LocalMySQLManager(opts);
       } else {
         return new MySQLManager(opts);

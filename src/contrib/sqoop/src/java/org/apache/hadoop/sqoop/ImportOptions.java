@@ -93,7 +93,7 @@ public class ImportOptions {
   private String driverClassName;
   private String warehouseDir;
   private FileLayout layout;
-  private boolean local; // if true and conn is mysql, use mysqldump.
+  private boolean direct; // if true and conn is mysql, use mysqldump.
   private String tmpDir; // where temp data goes; usually /tmp
   private String hiveHome;
   private boolean hiveImport;
@@ -161,10 +161,10 @@ public class ImportOptions {
       this.className = props.getProperty("java.classname", this.className);
       this.packageName = props.getProperty("java.packagename", this.packageName);
 
-      String localImport = props.getProperty("local.import",
-          Boolean.toString(this.local)).toLowerCase();
-      this.local = "true".equals(localImport) || "yes".equals(localImport)
-          || "1".equals(localImport);
+      String directImport = props.getProperty("direct.import",
+          Boolean.toString(this.direct)).toLowerCase();
+      this.direct = "true".equals(directImport) || "yes".equals(directImport)
+          || "1".equals(directImport);
 
       String hiveImportStr = props.getProperty("hive.import",
           Boolean.toString(this.hiveImport)).toLowerCase();
@@ -250,7 +250,7 @@ public class ImportOptions {
     System.out.println("--username (username)        Set authentication username");
     System.out.println("--password (password)        Set authentication password");
     System.out.println("-P                           Read password from console");
-    System.out.println("--local                      Use local import fast path (mysql only)");
+    System.out.println("--direct                     Use direct import fast path (mysql only)");
     System.out.println("");
     System.out.println("Import control options:");
     System.out.println("--table (tablename)          Table to read");
@@ -418,7 +418,11 @@ public class ImportOptions {
         } else if (args[i].equals("--all-tables")) {
           this.allTables = true;
         } else if (args[i].equals("--local")) {
-          this.local = true;
+          // TODO(aaron): Remove this after suitable deprecation time period.
+          LOG.warn("--local is deprecated; use --direct instead.");
+          this.direct = true;
+        } else if (args[i].equals("--direct")) {
+          this.direct = true;
         } else if (args[i].equals("--username")) {
           this.username = args[++i];
           if (null == this.password) {
@@ -614,8 +618,8 @@ public class ImportOptions {
     return password;
   }
 
-  public boolean isLocal() {
-    return local;
+  public boolean isDirect() {
+    return direct;
   }
 
   /**

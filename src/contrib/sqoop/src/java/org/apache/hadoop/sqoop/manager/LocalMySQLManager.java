@@ -49,9 +49,8 @@ import org.apache.hadoop.sqoop.util.StreamHandlerFactory;
 import org.apache.hadoop.util.Shell;
 
 /**
- * Manages local connections to MySQL databases
- * that are local to this machine -- so we can use mysqldump to get
- * really fast dumps.
+ * Manages direct connections to MySQL databases
+ * so we can use mysqldump to get really fast dumps.
  */
 public class LocalMySQLManager extends MySQLManager {
 
@@ -391,7 +390,7 @@ public class LocalMySQLManager extends MySQLManager {
       // TODO(aaron): Support SequenceFile-based load-in
       LOG.warn("File import layout " + options.getFileLayout()
           + " is not supported by");
-      LOG.warn("MySQL local import; import will proceed as text files.");
+      LOG.warn("MySQL direct import; import will proceed as text files.");
     }
 
     ArrayList<String> args = new ArrayList<String>();
@@ -461,6 +460,7 @@ public class LocalMySQLManager extends MySQLManager {
       args.add("--quick"); // no buffering
       // TODO(aaron): Add a flag to allow --lock-tables instead for MyISAM data
       args.add("--single-transaction"); 
+      // TODO(aaron): Add --host and --port arguments to support remote direct connects.
 
       String username = options.getUsername();
       if (null != username) {

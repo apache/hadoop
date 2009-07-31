@@ -144,7 +144,7 @@ public class MySQLAuthTest extends ImportJobTestCase {
     args.add(getWarehouseDir());
     args.add("--connect");
     args.add(AUTH_CONNECT_STRING);
-    args.add("--local");
+    args.add("--direct");
     args.add("--username");
     args.add(AUTH_TEST_USER);
     args.add("--password");

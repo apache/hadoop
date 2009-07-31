@@ -49,6 +49,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    MAPREDUCE-816. Rename "local" mysql import to "direct" in Sqoop.
+    (Aaron Kimball via matei)
+
     HADOOP-5967. Sqoop should only use a single map task. (Aaron Kimball via
     tomwhite)
 
