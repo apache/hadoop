@@ -127,8 +127,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   public static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
-  final private ClientProtocol namenode;
-  final private ClientProtocol rpcNamenode;
+  private ClientProtocol namenode;
+  private ClientProtocol rpcNamenode;
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
@@ -219,6 +219,29 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf,
                    FileSystem.Statistics stats)
     throws IOException {
+    this(conf, stats);
+    this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
+    this.namenode = createNamenode(this.rpcNamenode);
+  }
+
+  /** 
+   * Create a new DFSClient connected to the given namenode
+   * and rpcNamenode objects.
+   * 
+   * This constructor was written to allow easy testing of the DFSClient class.
+   * End users will most likely want to use one of the other constructors.
+   */
+  public DFSClient(ClientProtocol namenode, ClientProtocol rpcNamenode,
+                   Configuration conf, FileSystem.Statistics stats)
+    throws IOException {
+      this(conf, stats);
+      this.namenode = namenode;
+      this.rpcNamenode = rpcNamenode;
+  }
+
+  
+  private DFSClient(Configuration conf, FileSystem.Statistics stats)
+    throws IOException {
     this.conf = conf;
     this.stats = stats;
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
@@ -239,9 +262,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     } catch (LoginException e) {
       throw (IOException)(new IOException().initCause(e));
     }
-
-    this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
-    this.namenode = createNamenode(rpcNamenode);
 
     String taskId = conf.get("mapred.task.id");
     if (taskId != null) {
@@ -2856,7 +2876,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
 
       private LocatedBlock locateFollowingBlock(long start) throws IOException {
-        int retries = 5;
+        int retries = conf.getInt("dfs.client.block.write.locateFollowingBlock.retries", 5);
         long sleeptime = 400;
         while (true) {
           long localstart = System.currentTimeMillis();
@@ -2872,26 +2892,32 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               if (ue != e) { 
                 throw ue; // no need to retry these exceptions
               }
-
-              if (--retries == 0 && 
-                  !NotReplicatedYetException.class.getName().
+              
+              
+              if (NotReplicatedYetException.class.getName().
                   equals(e.getClassName())) {
-                throw e;
+                if (retries == 0) { 
+                  throw e;
+                } else {
+                  --retries;
+                  LOG.info(StringUtils.stringifyException(e));
+                  if (System.currentTimeMillis() - localstart > 5000) {
+                    LOG.info("Waiting for replication for "
+                        + (System.currentTimeMillis() - localstart) / 1000
+                        + " seconds");
+                  }
+                  try {
+                    LOG.warn("NotReplicatedYetException sleeping " + src
+                        + " retries left " + retries);
+                    Thread.sleep(sleeptime);
+                    sleeptime *= 2;
+                  } catch (InterruptedException ie) {
+                  }
+                }
               } else {
-                LOG.info(StringUtils.stringifyException(e));
-                if (System.currentTimeMillis() - localstart > 5000) {
-                  LOG.info("Waiting for replication for "
-                      + (System.currentTimeMillis() - localstart) / 1000
-                      + " seconds");
-                }
-                try {
-                  LOG.warn("NotReplicatedYetException sleeping " + src
-                      + " retries left " + retries);
-                  Thread.sleep(sleeptime);
-                  sleeptime *= 2;
-                } catch (InterruptedException ie) {
-                }
-              }                
+                throw e;
+              }
+
             }
           }
         } 
