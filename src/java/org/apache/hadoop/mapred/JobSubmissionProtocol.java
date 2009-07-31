@@ -62,9 +62,11 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 22: Added method getQueueAclsForCurrentUser to get queue acls info
    *             for a user
    * Version 23: Modified the JobQueueInfo class to inlucde queue state.
-   *             Part of HADOOP-5913.            
+   *             Part of HADOOP-5913.  
+   * Version 24: Modified ClusterStatus to include BlackListInfo class which 
+   *             encapsulates reasons and report for blacklisted node.          
    */
-  public static final long versionID = 23L;
+  public static final long versionID = 24L;
 
   /**
    * Allocate a name for the job.

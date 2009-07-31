@@ -48,6 +48,9 @@ import org.apache.hadoop.io.WritableUtils;
  *   <li>
  *   State of the <code>JobTracker</code>.
  *   </li>
+ *   <li>
+ *   Details regarding black listed trackers.
+ *   </li>
  * </ol></p>
  * 
  * <p>Clients can query for the latest <code>ClusterStatus</code>, via 
@@ -56,10 +59,116 @@ import org.apache.hadoop.io.WritableUtils;
  * @see JobClient
  */
 public class ClusterStatus implements Writable {
+  /**
+   * Class which encapsulates information about a blacklisted tasktracker.
+   *  
+   * The information includes the tasktracker's name and reasons for
+   * getting blacklisted. The toString method of the class will print
+   * the information in a whitespace separated fashion to enable parsing.
+   */
+  public static class BlackListInfo implements Writable {
 
+    private String trackerName;
+
+    private String reasonForBlackListing;
+    
+    private String blackListReport;
+    
+    BlackListInfo() {
+    }
+    
+
+    /**
+     * Gets the blacklisted tasktracker's name.
+     * 
+     * @return tracker's name.
+     */
+    public String getTrackerName() {
+      return trackerName;
+    }
+
+    /**
+     * Gets the reason for which the tasktracker was blacklisted.
+     * 
+     * @return reason which tracker was blacklisted
+     */
+    public String getReasonForBlackListing() {
+      return reasonForBlackListing;
+    }
+
+    /**
+     * Sets the blacklisted tasktracker's name.
+     * 
+     * @param trackerName of the tracker.
+     */
+    void setTrackerName(String trackerName) {
+      this.trackerName = trackerName;
+    }
+
+    /**
+     * Sets the reason for which the tasktracker was blacklisted.
+     * 
+     * @param reasonForBlackListing
+     */
+    void setReasonForBlackListing(String reasonForBlackListing) {
+      this.reasonForBlackListing = reasonForBlackListing;
+    }
+
+    /**
+     * Gets a descriptive report about why the tasktracker was blacklisted.
+     * 
+     * @return report describing why the tasktracker was blacklisted.
+     */
+    public String getBlackListReport() {
+      return blackListReport;
+    }
+
+    /**
+     * Sets a descriptive report about why the tasktracker was blacklisted.
+     * @param blackListReport report describing why the tasktracker 
+     *                        was blacklisted.
+     */
+    void setBlackListReport(String blackListReport) {
+      this.blackListReport = blackListReport;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      trackerName = Text.readString(in);
+      reasonForBlackListing = Text.readString(in);
+      blackListReport = Text.readString(in);
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      Text.writeString(out, trackerName);
+      Text.writeString(out, reasonForBlackListing);
+      Text.writeString(out, blackListReport);
+    }
+
+    @Override
+    /**
+     * Print information related to the blacklisted tasktracker in a
+     * whitespace separated fashion.
+     * 
+     * The method changes any newlines in the report describing why
+     * the tasktracker was blacklisted to a ':' for enabling better
+     * parsing.
+     */
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(trackerName);
+      sb.append("\t");
+      sb.append(reasonForBlackListing);
+      sb.append("\t");
+      sb.append(blackListReport.replace("\n", ":"));
+      return sb.toString();
+    }
+    
+  }
+  
   private int numActiveTrackers;
   private Collection<String> activeTrackers = new ArrayList<String>();
-  private Collection<String> blacklistedTrackers = new ArrayList<String>();
   private int numBlacklistedTrackers;
   private int numExcludedNodes;
   private long ttExpiryInterval;
@@ -70,6 +179,8 @@ public class ClusterStatus implements Writable {
   private JobTracker.State state;
   private long used_memory;
   private long max_memory;
+  private Collection<BlackListInfo> blacklistedTrackersInfo =
+    new ArrayList<BlackListInfo>();
 
   ClusterStatus() {}
   
@@ -134,7 +245,7 @@ public class ClusterStatus implements Writable {
    * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
    */
   ClusterStatus(Collection<String> activeTrackers, 
-      Collection<String> blacklistedTrackers,
+      Collection<BlackListInfo> blacklistedTrackers,
       long ttExpiryInterval,
       int maps, int reduces, int maxMaps, int maxReduces, 
       JobTracker.State state) {
@@ -142,11 +253,13 @@ public class ClusterStatus implements Writable {
          maxMaps, maxReduces, state, 0);
   }
 
+
   /**
    * Construct a new cluster status.
    * 
    * @param activeTrackers active tasktrackers in the cluster
-   * @param blacklistedTrackers blacklisted tasktrackers in the cluster
+   * @param blackListedTrackerInfo blacklisted tasktrackers information 
+   * in the cluster
    * @param ttExpiryInterval the tasktracker expiry interval
    * @param maps no. of currently running map-tasks in the cluster
    * @param reduces no. of currently running reduce-tasks in the cluster
@@ -155,16 +268,17 @@ public class ClusterStatus implements Writable {
    * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
    * @param numDecommissionNodes number of decommission trackers
    */
-  ClusterStatus(Collection<String> activeTrackers, 
-                Collection<String> blacklistedTrackers, long ttExpiryInterval,
-                int maps, int reduces, int maxMaps, int maxReduces, 
-                JobTracker.State state, int numDecommissionNodes) {
-    this(activeTrackers.size(), blacklistedTrackers.size(), ttExpiryInterval, 
-        maps, reduces, maxMaps, maxReduces, state, numDecommissionNodes);
+  
+  ClusterStatus(Collection<String> activeTrackers,
+      Collection<BlackListInfo> blackListedTrackerInfo, long ttExpiryInterval,
+      int maps, int reduces, int maxMaps, int maxReduces,
+      JobTracker.State state, int numDecommissionNodes) {
+    this(activeTrackers.size(), blackListedTrackerInfo.size(),
+        ttExpiryInterval, maps, reduces, maxMaps, maxReduces, state,
+        numDecommissionNodes);
     this.activeTrackers = activeTrackers;
-    this.blacklistedTrackers = blacklistedTrackers;
+    this.blacklistedTrackersInfo = blackListedTrackerInfo;
   }
-
 
   /**
    * Get the number of task trackers in the cluster.
@@ -190,6 +304,10 @@ public class ClusterStatus implements Writable {
    * @return the blacklisted task trackers in the cluster.
    */
   public Collection<String> getBlacklistedTrackerNames() {
+    ArrayList<String> blacklistedTrackers = new ArrayList<String>();
+    for(BlackListInfo bi : blacklistedTrackersInfo) {
+      blacklistedTrackers.add(bi.getTrackerName());
+    }
     return blacklistedTrackers;
   }
   
@@ -281,6 +399,16 @@ public class ClusterStatus implements Writable {
   public long getMaxMemory() {
     return max_memory;
   }
+  
+  /**
+   * Gets the list of blacklisted trackers along with reasons for blacklisting.
+   * 
+   * @return the collection of {@link BlackListInfo} objects. 
+   * 
+   */
+  public Collection<BlackListInfo> getBlackListedTrackersInfo() {
+    return blacklistedTrackersInfo;
+  }
 
   public void write(DataOutput out) throws IOException {
     if (activeTrackers.size() == 0) {
@@ -293,14 +421,14 @@ public class ClusterStatus implements Writable {
         Text.writeString(out, tracker);
       }
     }
-    if (blacklistedTrackers.size() == 0) {
+    if (blacklistedTrackersInfo.size() == 0) {
       out.writeInt(numBlacklistedTrackers);
-      out.writeInt(0);
+      out.writeInt(blacklistedTrackersInfo.size());
     } else {
-      out.writeInt(blacklistedTrackers.size());
-      out.writeInt(blacklistedTrackers.size());
-      for (String tracker : blacklistedTrackers) {
-        Text.writeString(out, tracker);
+      out.writeInt(blacklistedTrackersInfo.size());
+      out.writeInt(blacklistedTrackersInfo.size());
+      for (BlackListInfo tracker : blacklistedTrackersInfo) {
+        tracker.write(out);
       }
     }
     out.writeInt(numExcludedNodes);
@@ -324,11 +452,12 @@ public class ClusterStatus implements Writable {
       }
     }
     numBlacklistedTrackers = in.readInt();
-    numTrackerNames = in.readInt();
-    if (numTrackerNames > 0) {
-      for (int i = 0; i < numTrackerNames; i++) {
-        String name = Text.readString(in);
-        blacklistedTrackers.add(name);
+    int blackListTrackerInfoSize = in.readInt();
+    if(blackListTrackerInfoSize > 0) {
+      for (int i = 0; i < blackListTrackerInfoSize; i++) {
+        BlackListInfo info = new BlackListInfo();
+        info.readFields(in);
+        blacklistedTrackersInfo.add(info);
       }
     }
     numExcludedNodes = in.readInt();

@@ -63,6 +63,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.net.NetUtils;
@@ -1838,9 +1839,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   private void listBlacklistedTrackers() throws IOException {
     ClusterStatus c = jobSubmitClient.getClusterStatus(true);
-    Collection<String> trackers = c.getBlacklistedTrackerNames();
-    for (String trackerName : trackers) {
-      System.out.println(trackerName);
+    Collection<BlackListInfo> trackers = c.getBlackListedTrackersInfo();
+    if(trackers.size() > 0) {
+      System.out.println("BlackListedNode \t Reason \t Report");
+    }
+    for (BlackListInfo tracker : trackers) {
+      System.out.println(tracker.toString());
     }
   }
 

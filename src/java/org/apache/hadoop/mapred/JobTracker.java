@@ -60,6 +60,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
+import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
@@ -551,6 +552,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       for(String reasons : rfbMap.values()) {
         sb.append(reasons);
         sb.append("\n");
+      }
+      if (sb.length() > 0) {
+        sb.replace(sb.length()-1, sb.length(), "");
       }
       return sb.toString();
     }
@@ -3441,8 +3445,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     synchronized (taskTrackers) {
       if (detailed) {
         List<List<String>> trackerNames = taskTrackerNames();
+        Collection<BlackListInfo> blackListedTrackers = getBlackListedTrackers();
         return new ClusterStatus(trackerNames.get(0),
-            trackerNames.get(1),
+            blackListedTrackers,
             tasktrackerExpiryInterval,
             totalMaps,
             totalReduces,
@@ -4257,7 +4262,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
   
-  String getReasonsForBlacklisting(String host) {
+  String getFaultReport(String host) {
     FaultInfo fi = faultyTrackers.getFaultInfo(host, false);
     if (fi == null) {
       return "";
@@ -4265,7 +4270,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return fi.getTrackerFaultReport();
   }
 
-  /** Test Methods */
   Set<ReasonForBlackListing> getReasonForBlackList(String host) {
     FaultInfo fi = faultyTrackers.getFaultInfo(host, false);
     if (fi == null) {
@@ -4274,7 +4278,36 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return fi.getReasonforblacklisting();
   }
   
+  Collection<BlackListInfo> getBlackListedTrackers() {
+    Collection<BlackListInfo> blackListedTrackers = 
+      new ArrayList<BlackListInfo>();
+    for(TaskTrackerStatus tracker : blacklistedTaskTrackers()) {
+      String hostName = tracker.getHost();
+      BlackListInfo bi = new BlackListInfo();
+      bi.setTrackerName(tracker.getTrackerName());
+      Set<ReasonForBlackListing> rfbs = 
+        getReasonForBlackList(hostName);
+      StringBuffer sb = new StringBuffer();
+      for(ReasonForBlackListing rfb : rfbs) {
+        sb.append(rfb.toString());
+        sb.append(",");
+      }
+      if (sb.length() > 0) {
+        sb.replace(sb.length()-1, sb.length(), "");
+      }
+      bi.setReasonForBlackListing(sb.toString());
+      bi.setBlackListReport(
+          getFaultReport(hostName));
+      blackListedTrackers.add(bi);
+    }
+    return blackListedTrackers;
+  }
+  
+  /** Test method to increment the fault*/
+  
   void incrementFaults(String hostName) {
     faultyTrackers.incrementFaults(hostName);
   }
+  
+  
 }

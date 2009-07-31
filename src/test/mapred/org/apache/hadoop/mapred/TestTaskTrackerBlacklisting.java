@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,8 +31,8 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
+import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapred.JobTracker.ReasonForBlackListing;
-import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
@@ -254,9 +255,9 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     checkReasonForBlackListing(hosts[2], nodeUnHealthyReasonSet);
     for (int i = 0; i < hosts.length; i++) {
       //Replace new line as we are adding new line
-      //in getReasonsForBlacklisting
+      //in getFaultReport
       assertEquals("Blacklisting reason string not correct for host " + i,
-          jobTracker.getReasonsForBlacklisting(hosts[i]).replace("\n", ""),
+          jobTracker.getFaultReport(hosts[i]).replace("\n", ""),
           error);
     }
     status.setNodeHealthy(false);
@@ -268,15 +269,15 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     checkReasonForBlackListing(hosts[2], nodeUnHealthyReasonSet);
     for (int i = 0; i < hosts.length; i++) {
       //Replace new line as we are adding new line
-      //in getReasonsForBlacklisting
+      //in getFaultReport
       assertEquals("Blacklisting reason string not correct for host " + i,
-          jobTracker.getReasonsForBlacklisting(hosts[i]).replace("\n", ""),
+          jobTracker.getFaultReport(hosts[i]).replace("\n", ""),
           error1);
     }
     //clear the blacklisted trackers with node health reasons.
     sendHeartBeat(null, false);
   }
-
+  
   private TaskTrackerHealthStatus getUnhealthyNodeStatus(String error) {
     TaskTrackerHealthStatus status = new TaskTrackerHealthStatus();
     status.setNodeHealthy(false);
@@ -322,9 +323,78 @@ public class TestTaskTrackerBlacklisting extends TestCase {
         .getNumReservedTaskTrackersForMaps());
     assertEquals("Tracker 1 not unreserved for the job 1", 0, job
         .getNumReservedTaskTrackersForReduces());
-    //white list all trackers for health reasons
+    //white list all trackers for health reasons and failure counts
+    clock.jumpADay = true;
     sendHeartBeat(null, false);
-    clock.jumpADay = false;
+  }
+  
+  /**
+   * Test case to test if the cluster status is populated with the right
+   * blacklist information, which would be used by the {@link JobClient} to
+   * display information on the Command Line interface.
+   * 
+   */
+  public void testClusterStatusBlacklistedReason() throws Exception {
+    String error = "ERROR";
+    String errorWithNewLines = "ERROR\nERROR";
+    String expectedErrorReport = "ERROR:ERROR";
+    // Create an unhealthy tracker health status.
+    Collection<BlackListInfo> blackListedTrackerInfo = jobTracker
+        .getBlackListedTrackers();
+
+    assertTrue("The blacklisted tracker nodes is not empty.",
+        blackListedTrackerInfo.isEmpty());
+
+    TaskTrackerHealthStatus status = getUnhealthyNodeStatus(errorWithNewLines);
+    // make all tracker unhealthy
+    sendHeartBeat(status, false);
+    assertEquals("All trackers not blacklisted", jobTracker
+        .getBlacklistedTrackerCount(), 3);
+    // Verify the new method .getBlackListedTracker() which is
+    // used by the ClusterStatus to set the list of blacklisted
+    // tracker.
+    blackListedTrackerInfo = jobTracker.getBlackListedTrackers();
+
+    // Check if all the black listed tracker information is obtained
+    // in new method.
+    assertEquals("Blacklist tracker info does not contain all trackers", 3,
+        blackListedTrackerInfo.size());
+    // verify all the trackers are blacklisted for health reasons.
+    // Also check the health report.
+    for (BlackListInfo bi : blackListedTrackerInfo) {
+      assertEquals("Tracker not blacklisted for health reason",
+          ReasonForBlackListing.NODE_UNHEALTHY.toString().trim(), bi
+              .getReasonForBlackListing().trim());
+      assertTrue("Tracker blacklist report does not match", 
+          bi.toString().endsWith(expectedErrorReport));
+    }
+    // reset the tracker health status back to normal.
+    sendHeartBeat(null, false);
+    runBlackListingJob(jobTracker, trackers);
+    sendHeartBeat(status, false);
+    blackListedTrackerInfo = jobTracker.getBlackListedTrackers();
+    for (BlackListInfo bi : blackListedTrackerInfo) {
+      if (bi.getTrackerName().equals(trackers[0])) {
+        assertTrue(
+            "Reason for blacklisting of tracker 1 does not contain Unhealthy reasons",
+            bi.getReasonForBlackListing().contains(
+                ReasonForBlackListing.NODE_UNHEALTHY.toString().trim()));
+        assertTrue(
+            "Reason for blacklisting of tracker 1 does not contain Unhealthy reasons",
+            bi.getReasonForBlackListing().contains(
+                ReasonForBlackListing.EXCEEDING_FAILURES.toString().trim()));
+        assertTrue("Blacklist failure does not contain failure report string",
+            bi.getBlackListReport().contains("failures on the tracker"));
+      } else {
+        assertEquals("Tracker not blacklisted for health reason",
+            ReasonForBlackListing.NODE_UNHEALTHY.toString().trim(), bi
+                .getReasonForBlackListing().trim());
+      }
+      assertTrue("Tracker blacklist report does not match", bi
+          .getBlackListReport().trim().contains(error));
+    }
+    clock.jumpADay = true;
+    sendHeartBeat(null, false);
   }
 
   /**
@@ -333,7 +403,7 @@ public class TestTaskTrackerBlacklisting extends TestCase {
    * 
    * @param jobTracker JobTracker instance
    * @param trackers array of trackers, the method would blacklist
-   * first element of the arry
+   * first element of the array
    * @return A job in progress object.
    * @throws Exception
    */

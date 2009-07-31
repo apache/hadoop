@@ -117,7 +117,7 @@
                   "</td><td>" + healthString +
                   "</td><td>" + sinceHealthCheck); 
         if(type.equals("blacklisted")) {
-          out.print("</td><td>" + tracker.getReasonsForBlacklisting(tt.getHost()));
+          out.print("</td><td>" + tracker.getFaultReport(tt.getHost()));
         }
         for(StatisticsCollector.TimeWindow window : tracker.getStatistics().
           collector.DEFAULT_COLLECT_WINDOWS) {

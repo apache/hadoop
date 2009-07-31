@@ -14,6 +14,9 @@ Trunk (unreleased changes)
     MAPREDUCE-245. Change Job and jobcontrol classes to use the List interface
     rather than ArrayList in APIs. (Tom White via cdouglas)
 
+    MAPREDUCE-766. Enhanced list-blacklisted-trackers to display reasons
+    for blacklisting a node. (Sreekanth Ramakrishnan via yhemanth)
+
   NEW FEATURES
 
     MAPREDUCE-546. Provide sample fair scheduler config file in conf/ and use
