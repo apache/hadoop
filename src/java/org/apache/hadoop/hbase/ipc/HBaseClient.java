@@ -286,7 +286,7 @@ public class HBaseClient {
      * a header to the server and starts
      * the connection thread that waits for responses.
      */
-    protected synchronized void setupIOstreams() {
+    protected synchronized void setupIOstreams() throws IOException {
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
@@ -328,6 +328,8 @@ public class HBaseClient {
       } catch (IOException e) {
         markClosed(e);
         close();
+
+        throw e;
       }
     }
 

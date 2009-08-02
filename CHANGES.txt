@@ -310,6 +310,8 @@ Release 0.20.0 - Unreleased
                (Doğacan Güney via Stack)
    HBASE-1732  Flag to disable regionserver restart
    HBASE-1727  HTD and HCD versions need update
+   HBASE-1604  HBaseClient.getConnection() may return a broken connection
+               without throwing an exception (Eugene Kirpichov via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
