@@ -285,7 +285,7 @@ doesn't take ZooKeeper with it.
 see this configuration unless you do one of the following:
 <ul>
     <li>Add a pointer to your <code>HADOOP_CONF_DIR</code> to <code>CLASSPATH</code> in <code>hbase-env.sh</code></li>
-    <li>Add a copy of <code>hadoop-site.xml</code> to <code>${HBASE_HOME}/conf</code>, or</li>
+    <li>Add a copy of <code>hdfs-site.xml</code> (or <code>hadoop-site.xml</code>) to <code>${HBASE_HOME}/conf</code>, or</li>
     <li>If only a small set of HDFS client configurations, add them to <code>hbase-site.xml</code></li>
 </ul>
 An example of such an HDFS client configuration is <code>dfs.replication</code>.  If for example,
