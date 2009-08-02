@@ -308,6 +308,7 @@ Release 0.20.0 - Unreleased
                on reinit
    HBASE-1725  Old TableMap interface's definitions are not generic enough
                (Doğacan Güney via Stack)
+   HBASE-1732  Flag to disable regionserver restart
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
