@@ -51,8 +51,8 @@ ISerializable {
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
   // Version 4 adds indexes
-  // FIXME version 5 should remove indexes
-  public static final byte TABLE_DESCRIPTOR_VERSION = 4;
+  // Version 5 removed transactional pollution -- e.g. indexes
+  public static final byte TABLE_DESCRIPTOR_VERSION = 5;
 
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
   private String nameAsString = "";

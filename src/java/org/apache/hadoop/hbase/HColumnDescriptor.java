@@ -54,6 +54,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   // Time-to-live feature.  Version 4 was when we moved to byte arrays, HBASE-82.
   // Version 5 was when bloom filter descriptors were removed.
   // Version 6 adds metadata as a map where keys and values are byte[].
+  // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
   private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)7;
 
   /** 
