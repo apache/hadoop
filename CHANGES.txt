@@ -168,6 +168,9 @@ Trunk (unreleased changes)
     MAPREDUCE-656. Change org.apache.hadoop.mapred.SequenceFile* classes
     to use new mapreduce api. (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-670. Creates ant target for 10 mins patch test build.
+    (Jothi Padmanabhan via gkesavan)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
