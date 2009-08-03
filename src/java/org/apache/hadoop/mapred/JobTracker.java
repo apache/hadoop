@@ -4194,14 +4194,39 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         JobConf.normalizeMemoryConfigValue(conf.getLong(
             JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
-    limitMaxMemForMapTasks =
-        JobConf.normalizeMemoryConfigValue(conf.getLong(
+
+    if (conf.get(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY)+
+          " instead use "+JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY+
+          " and " + JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY
+      );
+
+      limitMaxMemForMapTasks = limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
+            JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+      if (limitMaxMemForMapTasks != JobConf.DISABLED_MEMORY_LIMIT &&
+        limitMaxMemForMapTasks >= 0) {
+        limitMaxMemForMapTasks = limitMaxMemForReduceTasks =
+          limitMaxMemForMapTasks /
+            (1024 * 1024); //Converting old values in bytes to MB
+      }
+    } else {
+      limitMaxMemForMapTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
             JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
-    limitMaxMemForReduceTasks =
-        JobConf.normalizeMemoryConfigValue(conf.getLong(
+      limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
             JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
+    }
+
     LOG.info(new StringBuilder().append("Scheduler configured with ").append(
         "(memSizeForMapSlotOnJT, memSizeForReduceSlotOnJT,").append(
         " limitMaxMemForMapTasks, limitMaxMemForReduceTasks) (").append(

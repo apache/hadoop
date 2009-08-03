@@ -305,3 +305,7 @@ Trunk (unreleased changes)
     MAPREDUCE-760. Fix a timing issue in TestNodeRefresh. (Amar Kamat via 
     sharad)
 
+    MAPREDUCE-40. Keep memory management backwards compatible for job
+    configuration parameters and limits. (Rahul Kumar Singh via yhemanth)
+
+    

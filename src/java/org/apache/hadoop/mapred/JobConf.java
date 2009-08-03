@@ -112,6 +112,34 @@ public class JobConf extends Configuration {
   }
 
   /**
+   * @deprecated
+   */
+  @Deprecated
+  public static final String MAPRED_TASK_MAXVMEM_PROPERTY =
+    "mapred.task.maxvmem";
+
+  /**
+   * @deprecated 
+   */
+  @Deprecated
+  public static final String UPPER_LIMIT_ON_TASK_VMEM_PROPERTY =
+    "mapred.task.limit.maxvmem";
+
+  /**
+   * @deprecated
+   */
+  @Deprecated
+  public static final String MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY =
+    "mapred.task.default.maxvmem";
+
+  /**
+   * @deprecated
+   */
+  @Deprecated
+  public static final String MAPRED_TASK_MAXPMEM_PROPERTY =
+    "mapred.task.maxpmem";
+
+  /**
    * A value which if set for memory related configuration options,
    * indicates that the options are turned off.
    */
@@ -1367,7 +1395,8 @@ public class JobConf extends Configuration {
    * 
    * @param uri the job end notification uri
    * @see JobStatus
-   * @see <a href="{@docRoot}/org/apache/hadoop/mapred/JobClient.html#JobCompletionAndChaining">Job Completion and Chaining</a>
+   * @see <a href="{@docRoot}/org/apache/hadoop/mapred/JobClient.html#
+   *       JobCompletionAndChaining">Job Completion and Chaining</a>
    */
   public void setJobEndNotificationURI(String uri) {
     set("job.end.notification.url", uri);
@@ -1392,21 +1421,46 @@ public class JobConf extends Configuration {
     return get("job.local.dir");
   }
 
-  long getMemoryForMapTask() {
-    return getLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY,
-        DISABLED_MEMORY_LIMIT);
+  public long getMemoryForMapTask() {
+    if (get(MAPRED_TASK_MAXVMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.MAPRED_TASK_MAXVMEM_PROPERTY)+
+          " instead use  "+JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY + " and "
+          + JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY);
+
+      long val = getLong(
+        MAPRED_TASK_MAXVMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
+      return (val == DISABLED_MEMORY_LIMIT) ? val :
+        ((val < 0) ? DISABLED_MEMORY_LIMIT : val / (1024 * 1024));
+    }
+    return getLong(
+      JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY,
+      DISABLED_MEMORY_LIMIT);
   }
 
-  void setMemoryForMapTask(long mem) {
+  public void setMemoryForMapTask(long mem) {
     setLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, mem);
   }
 
-  long getMemoryForReduceTask() {
-    return getLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
-        DISABLED_MEMORY_LIMIT);
+  public long getMemoryForReduceTask() {
+    if (get(MAPRED_TASK_MAXVMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.MAPRED_TASK_MAXVMEM_PROPERTY)+
+        " instead use  "+JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY + " and "
+        + JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY);
+      long val = getLong(
+        MAPRED_TASK_MAXVMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
+      return (val == DISABLED_MEMORY_LIMIT) ? val :
+        ((val < 0) ? DISABLED_MEMORY_LIMIT : val / (1024 * 1024));
+    }
+    return getLong(
+      JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
+      DISABLED_MEMORY_LIMIT);
   }
 
-  void setMemoryForReduceTask(long mem) {
+  public void setMemoryForReduceTask(long mem) {
     setLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, mem);
   }
 
@@ -1505,5 +1559,110 @@ public class JobConf extends Configuration {
     }
     return null;
   }
+
+
+  /**
+   * The maximum amount of memory any task of this job will use. See
+   * {@link #MAPRED_TASK_MAXVMEM_PROPERTY}
+   * <p/>
+   * mapred.task.maxvmem is split into
+   * mapred.job.map.memory.mb
+   * and mapred.job.map.memory.mb,mapred
+   * each of the new key are set
+   * as mapred.task.maxvmem / 1024
+   * as new values are in MB
+   *
+   * @return The maximum amount of memory any task of this job will use, in
+   *         bytes.
+   * @see #setMaxVirtualMemoryForTask(long)
+   * @deprecated Use {@link #getMemoryForMapTask()} and
+   *             {@link #getMemoryForReduceTask()}
+   */
+  @Deprecated
+  public long getMaxVirtualMemoryForTask() {
+    LOG.warn(
+      "getMaxVirtualMemoryForTask() is deprecated. " +
+      "Instead use getMemoryForMapTask() and getMemoryForReduceTask()");
+
+    if (get(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY) == null) {
+      if (get(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY) != null || get(
+        JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY) != null) {
+        long val = Math.max(getMemoryForMapTask(), getMemoryForReduceTask());
+        if (val == JobConf.DISABLED_MEMORY_LIMIT) {
+          return val;
+        } else {
+          if (val < 0) {
+            return JobConf.DISABLED_MEMORY_LIMIT;
+          }
+          return val * 1024 * 1024;
+          //Convert MB to byte as new value is in
+          // MB and old deprecated method returns bytes
+        }
+      }
+    }
+
+    return getLong(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
+  }
+
+  /**
+   * Set the maximum amount of memory any task of this job can use. See
+   * {@link #MAPRED_TASK_MAXVMEM_PROPERTY}
+   * <p/>
+   * mapred.task.maxvmem is split into
+   * mapred.job.map.memory.mb
+   * and mapred.job.map.memory.mb,mapred
+   * each of the new key are set
+   * as mapred.task.maxvmem / 1024
+   * as new values are in MB
+   *
+   * @param vmem Maximum amount of virtual memory in bytes any task of this job
+   *             can use.
+   * @see #getMaxVirtualMemoryForTask()
+   * @deprecated
+   *  Use {@link #setMemoryForMapTask(long mem)}  and
+   *  Use {@link #setMemoryForReduceTask(long mem)}
+   */
+  @Deprecated
+  public void setMaxVirtualMemoryForTask(long vmem) {
+    LOG.warn("setMaxVirtualMemoryForTask() is deprecated."+
+      "Instead use setMemoryForMapTask() and setMemoryForReduceTask()");
+    if(vmem != DISABLED_MEMORY_LIMIT && vmem < 0) {
+      setMemoryForMapTask(DISABLED_MEMORY_LIMIT);
+      setMemoryForReduceTask(DISABLED_MEMORY_LIMIT);
+    }
+
+    if(get(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY) == null) {
+      setMemoryForMapTask(vmem / (1024 * 1024)); //Changing bytes to mb
+      setMemoryForReduceTask(vmem / (1024 * 1024));//Changing bytes to mb
+    }else{
+      this.setLong(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY,vmem);
+    }
+  }
+
+  /**
+   * @deprecated this variable is deprecated and nolonger in use.
+   */
+  @Deprecated
+  public long getMaxPhysicalMemoryForTask() {
+    LOG.warn("The API getMaxPhysicalMemoryForTask() is deprecated."
+              + " Refer to the APIs getMemoryForMapTask() and"
+              + " getMemoryForReduceTask() for details.");
+    return -1;
+  }
+
+  /*
+   * @deprecated this
+   */
+  @Deprecated
+  public void setMaxPhysicalMemoryForTask(long mem) {
+    LOG.warn("The API setMaxPhysicalMemoryForTask() is deprecated."
+        + " The value set is ignored. Refer to "
+        + " setMemoryForMapTask() and setMemoryForReduceTask() for details.");
+  }
+
+  static String deprecatedString(String key) {
+    return "The variable " + key + " is no longer used";
+  }
+
 }
 

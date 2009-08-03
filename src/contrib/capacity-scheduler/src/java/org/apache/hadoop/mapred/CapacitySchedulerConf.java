@@ -49,13 +49,16 @@ class CapacitySchedulerConf {
    * {@link JobConf#setMaxVirtualMemoryForTask()}. This property thus provides
    * default value of physical memory for job's that don't explicitly specify
    * physical memory requirements.
-   * 
+   * <p/>
    * It defaults to {@link JobConf#DISABLED_MEMORY_LIMIT} and if not explicitly
    * set to a valid value, scheduler will not consider physical memory for
    * scheduling even if virtual memory based scheduling is enabled.
+   *
+   * @deprecated
    */
+  @Deprecated
   static String DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY =
-      "mapred.capacity-scheduler.task.default-pmem-percentage-in-vmem";
+    "mapred.capacity-scheduler.task.default-pmem-percentage-in-vmem";
 
   /**
    * Configuration that provides an upper limit on the maximum physical memory
@@ -65,9 +68,12 @@ class CapacitySchedulerConf {
    * by the scheduler. If it is set to {@link JobConf#DISABLED_MEMORY_LIMIT},
    * scheduler will not consider physical memory for scheduling even if virtual
    * memory based scheduling is enabled.
+   *
+   * @deprecated
    */
+  @Deprecated
   static final String UPPER_LIMIT_ON_TASK_PMEM_PROPERTY =
-      "mapred.capacity-scheduler.task.limit.maxpmem";
+    "mapred.capacity-scheduler.task.limit.maxpmem";
 
   /**
    *  Configuration that provides the maximum cap for the map task in a queue

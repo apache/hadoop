@@ -98,7 +98,19 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  *******************************************************/
 public class TaskTracker 
              implements MRConstants, TaskUmbilicalProtocol, Runnable {
-  
+  /**
+   * @deprecated
+   */
+  @Deprecated
+  static final String MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY =
+    "mapred.tasktracker.vmem.reserved";
+  /**
+   * @deprecated
+   */
+  @Deprecated
+  static final String MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY =
+    "mapred.tasktracker.pmem.reserved";
+
   static final long WAIT_FOR_DONE = 3 * 1000;
   private int httpPort;
 
@@ -551,13 +563,15 @@ public class TaskTracker
       startHealthMonitor(this.fConf);
     }
   }
-  
-  public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(Configuration conf) {
+
+  public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(
+    Configuration conf) {
     return conf.getClass("mapred.tasktracker.instrumentation",
         TaskTrackerMetricsInst.class, TaskTrackerInstrumentation.class);
   }
-  
-  public static void setInstrumentationClass(Configuration conf, Class<? extends TaskTrackerInstrumentation> t) {
+
+  public static void setInstrumentationClass(
+    Configuration conf, Class<? extends TaskTrackerInstrumentation> t) {
     conf.setClass("mapred.tasktracker.instrumentation",
         t, TaskTrackerInstrumentation.class);
   }
@@ -3059,6 +3073,35 @@ public class TaskTracker
    * Memory-related setup
    */
   private void initializeMemoryManagement() {
+
+    //handling @deprecated
+    if (fConf.get(MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          MAPRED_TASKTRACKER_VMEM_RESERVED_PROPERTY));
+    }
+
+    //handling @deprecated
+    if (fConf.get(MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY));
+    }
+
+    //handling @deprecated
+    if (fConf.get(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY));
+    }
+
+    //handling @deprecated
+    if (fConf.get(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY));
+    }
+
     Class<? extends MemoryCalculatorPlugin> clazz =
         fConf.getClass(MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
             null, MemoryCalculatorPlugin.class);
