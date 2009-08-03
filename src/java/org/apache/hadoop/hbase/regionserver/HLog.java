@@ -860,7 +860,7 @@ public class HLog implements HConstants, Syncable {
         // Stop at logfiles.length when it's the last step
         int endIndex = step == maxSteps - 1? logfiles.length: 
           step * concurrentLogReads + concurrentLogReads;
-        for (int i = (step * 10); i < endIndex; i++) {
+        for (int i = (step * concurrentLogReads); i < endIndex; i++) {
           // Check for possibly empty file. With appends, currently Hadoop 
           // reports a zero length even if the file has been sync'd. Revisit if
           // HADOOP-4751 is committed.

@@ -313,6 +313,8 @@ Release 0.20.0 - Unreleased
    HBASE-1604  HBaseClient.getConnection() may return a broken connection
                without throwing an exception (Eugene Kirpichov via Stack)
    HBASE-1737  Regions unbalanced when adding new node
+   HBASE-1739  hbase-1683 broke splitting; only split three logs no matter
+               what N was
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
