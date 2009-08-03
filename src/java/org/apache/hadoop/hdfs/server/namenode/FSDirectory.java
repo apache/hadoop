@@ -306,8 +306,10 @@ class FSDirectory implements Closeable {
    */
   void closeFile(String path, INodeFile file) {
     waitForReady();
+    long now = FSNamesystem.now();
     synchronized (rootDir) {
       // file is closed
+      file.setModificationTimeForce(now);
       fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "

@@ -183,6 +183,64 @@ public class TestSetTimes extends TestCase {
     }
   }
 
+  /**
+   * Tests mod time change at close in DFS.
+   */
+  public void testTimesAtClose() throws IOException {
+    Configuration conf = new Configuration();
+    final int MAX_IDLE_TIME = 2000; // 2s
+    int replicas = 1;
+
+    // parameter initialization
+    conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
+    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt("dfs.heartbeat.interval", 1);
+    conf.setInt("dfs.datanode.handler.count", 50);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
+    cluster.waitActive();
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+                                                     cluster.getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+    assertEquals("Number of Datanodes ", numDatanodes, info.length);
+    FileSystem fileSys = cluster.getFileSystem();
+    assertTrue(fileSys instanceof DistributedFileSystem);
+
+    try {
+      // create a new file and write to it
+      Path file1 = new Path("/simple.dat");
+      FSDataOutputStream stm = writeFile(fileSys, file1, replicas);
+      System.out.println("Created and wrote file simple.dat");
+      FileStatus statBeforeClose = fileSys.getFileStatus(file1);
+      long mtimeBeforeClose = statBeforeClose.getModificationTime();
+      String mdateBeforeClose = dateForm.format(new Date(
+                                                     mtimeBeforeClose));
+      System.out.println("mtime on " + file1 + " before close is "
+                  + mdateBeforeClose + " (" + mtimeBeforeClose + ")");
+      assertTrue(mtimeBeforeClose != 0);
+
+      //close file after writing
+      stm.close();
+      System.out.println("Closed file.");
+      FileStatus statAfterClose = fileSys.getFileStatus(file1);
+      long mtimeAfterClose = statAfterClose.getModificationTime();
+      String mdateAfterClose = dateForm.format(new Date(mtimeAfterClose));
+      System.out.println("mtime on " + file1 + " after close is "
+                  + mdateAfterClose + " (" + mtimeAfterClose + ")");
+      assertTrue(mtimeAfterClose != 0);
+      assertTrue(mtimeBeforeClose != mtimeAfterClose);
+
+      cleanupFile(fileSys, file1);
+    } catch (IOException e) {
+      info = client.datanodeReport(DatanodeReportType.ALL);
+      printDatanodeReport(info);
+      throw e;
+    } finally {
+      fileSys.close();
+      cluster.shutdown();
+    }
+  }
+
   public static void main(String[] args) throws Exception {
     new TestSetTimes().testTimes();
   }
