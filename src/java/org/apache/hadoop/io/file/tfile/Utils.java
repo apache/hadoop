@@ -353,6 +353,7 @@ public final class Utils {
     /**
      * Return a string representation of the version.
      */
+    @Override
     public String toString() {
       return new StringBuilder("v").append(major).append(".").append(minor)
           .toString();

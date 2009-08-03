@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
@@ -42,7 +43,7 @@ public class TestTFileJClassComparatorByteArrays extends TestTFileByteArrays {
   }
 }
 
-class MyComparator implements RawComparator<byte[]> {
+class MyComparator implements RawComparator<byte[]>, Serializable {
 
   @Override
   public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {

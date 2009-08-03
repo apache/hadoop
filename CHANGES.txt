@@ -487,7 +487,9 @@ Trunk (unreleased changes)
 
     HADOOP-6160. Fix releaseaudit target to run on specific directories.
     (gkesavan)
-     
+    
+    HADOOP-6169. Removing deprecated method calls in TFile. (hong tang via mahadev)
+ 
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

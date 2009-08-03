@@ -325,10 +325,7 @@ public class TFile {
             outIndex.close();
           }
 
-          if (writerBCF != null) {
-            writerBCF.close();
-            writerBCF = null;
-          }
+          writerBCF.close();
         }
       } finally {
         IOUtils.cleanup(LOG, blkAppender, writerBCF);
@@ -1583,8 +1580,8 @@ public class TFile {
          */
         public int getKey(BytesWritable key) throws IOException {
           key.setSize(getKeyLength());
-          getKey(key.get());
-          return key.getSize();
+          getKey(key.getBytes());
+          return key.getLength();
         }
 
         /**
@@ -1603,10 +1600,10 @@ public class TFile {
             int remain;
             while ((remain = valueBufferInputStream.getRemain()) > 0) {
               value.setSize(size + remain);
-              dis.readFully(value.get(), size, remain);
+              dis.readFully(value.getBytes(), size, remain);
               size += remain;
             }
-            return value.getSize();
+            return value.getLength();
           } finally {
             dis.close();
           }
@@ -1645,8 +1642,8 @@ public class TFile {
             while ((chunkSize = valueBufferInputStream.getRemain()) > 0) {
               chunkSize = Math.min(chunkSize, MAX_VAL_TRANSFER_BUF_SIZE);
               valTransferBuffer.setSize(chunkSize);
-              dis.readFully(valTransferBuffer.get(), 0, chunkSize);
-              out.write(valTransferBuffer.get(), 0, chunkSize);
+              dis.readFully(valTransferBuffer.getBytes(), 0, chunkSize);
+              out.write(valTransferBuffer.getBytes(), 0, chunkSize);
               size += chunkSize;
             }
             return size;

@@ -42,9 +42,9 @@ public class TestTFile extends TestCase {
       System.getProperty("test.build.data", "/tmp/tfile-test");
   private FileSystem fs;
   private Configuration conf;
-  private final int minBlockSize = 512;
-  private final int largeVal = 3 * 1024 * 1024;
-  private static String localFormatter = "%010d";
+  private static final int minBlockSize = 512;
+  private static final int largeVal = 3 * 1024 * 1024;
+  private static final String localFormatter = "%010d";
 
   @Override
   public void setUp() throws IOException {

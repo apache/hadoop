@@ -140,7 +140,7 @@ public class TestVLong extends TestCase {
     for (int i = 0; i < data.length; ++i) {
       int shift = rng.nextInt(Long.SIZE) + 1;
       long mask = (1L << shift) - 1;
-      long a = rng.nextInt() << 32;
+      long a = ((long) rng.nextInt()) << 32;
       long b = ((long) rng.nextInt()) & 0xffffffff;
       data[i] = (a + b) & mask;
     }

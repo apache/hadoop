@@ -34,7 +34,7 @@ public final class ByteArray implements RawComparable {
    * @param other
    */
   public ByteArray(BytesWritable other) {
-    this(other.get(), 0, other.getSize());
+    this(other.getBytes(), 0, other.getLength());
   }
 
   /**
