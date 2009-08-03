@@ -38,17 +38,16 @@ import org.apache.hadoop.conf.Configuration;
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
 public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
 
-  public RecordWriter<K, V> 
-         getRecordWriter(TaskAttemptContext context
-                         ) throws IOException, InterruptedException {
+  protected SequenceFile.Writer getSequenceWriter(TaskAttemptContext context,
+      Class<?> keyClass, Class<?> valueClass) 
+      throws IOException {
     Configuration conf = context.getConfiguration();
-    
+	    
     CompressionCodec codec = null;
     CompressionType compressionType = CompressionType.NONE;
     if (getCompressOutput(context)) {
       // find the kind of compression to do
       compressionType = getOutputCompressionType(context);
-
       // find the right codec
       Class<?> codecClass = getOutputCompressorClass(context, 
                                                      DefaultCodec.class);
@@ -58,13 +57,19 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
     // get the path of the temporary output file 
     Path file = getDefaultWorkFile(context, "");
     FileSystem fs = file.getFileSystem(conf);
-    final SequenceFile.Writer out = 
-      SequenceFile.createWriter(fs, conf, file,
-                                context.getOutputKeyClass(),
-                                context.getOutputValueClass(),
-                                compressionType,
-                                codec,
-                                context);
+    return SequenceFile.createWriter(fs, conf, file,
+             keyClass,
+             valueClass,
+             compressionType,
+             codec,
+             context);
+  }
+  
+  public RecordWriter<K, V> 
+         getRecordWriter(TaskAttemptContext context
+                         ) throws IOException, InterruptedException {
+    final SequenceFile.Writer out = getSequenceWriter(context,
+      context.getOutputKeyClass(), context.getOutputValueClass());
 
     return new RecordWriter<K, V>() {
 

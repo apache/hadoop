@@ -19,33 +19,25 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.DigestException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A class that allows a map/red job to work on a sample of sequence files.
  * The sample is decided by the filter class set by the job.
- * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter}
+ * instead
  */
-
+@Deprecated
 public class SequenceFileInputFilter<K, V>
   extends SequenceFileInputFormat<K, V> {
   
-  final private static String FILTER_CLASS = "sequencefile.filter.class";
-  final private static String FILTER_FREQUENCY
-    = "sequencefile.filter.frequency";
-  final private static String FILTER_REGEX = "sequencefile.filter.regex";
-    
+  final private static String FILTER_CLASS = org.apache.hadoop.mapreduce.lib.
+      input.SequenceFileInputFilter.FILTER_CLASS;
+
   public SequenceFileInputFilter() {
   }
     
@@ -78,54 +70,38 @@ public class SequenceFileInputFilter<K, V>
   /**
    * filter interface
    */
-  public interface Filter extends Configurable {
-    /** filter function
-     * Decide if a record should be filtered or not
-     * @param key record key
-     * @return true if a record is accepted; return false otherwise
-     */
-    public abstract boolean accept(Object key);
+  public interface Filter extends 
+      org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.Filter {
   }
     
   /**
    * base class for Filters
    */
-  public static abstract class FilterBase implements Filter {
-    Configuration conf;
-        
-    public Configuration getConf() {
-      return conf;
-    }
+  public static abstract class FilterBase extends org.apache.hadoop.mapreduce.
+      lib.input.SequenceFileInputFilter.FilterBase
+      implements Filter {
   }
     
   /** Records filter by matching key to regex
    */
   public static class RegexFilter extends FilterBase {
-    private Pattern p;
-    /** Define the filtering regex and stores it in conf
-     * @param conf where the regex is set
-     * @param regex regex used as a filter
-     */
+    org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.
+      RegexFilter rf;
     public static void setPattern(Configuration conf, String regex)
-      throws PatternSyntaxException {
-      try {
-        Pattern.compile(regex);
-      } catch (PatternSyntaxException e) {
-        throw new IllegalArgumentException("Invalid pattern: "+regex);
-      }
-      conf.set(FILTER_REGEX, regex);
+        throws PatternSyntaxException {
+      org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.
+        RegexFilter.setPattern(conf, regex);
     }
         
-    public RegexFilter() { }
+    public RegexFilter() { 
+      rf = new org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.
+             RegexFilter();
+    }
         
     /** configure the Filter by checking the configuration
      */
     public void setConf(Configuration conf) {
-      String regex = conf.get(FILTER_REGEX);
-      if (regex==null)
-        throw new RuntimeException(FILTER_REGEX + "not set");
-      this.p = Pattern.compile(regex);
-      this.conf = conf;
+      rf.setConf(conf);
     }
 
 
@@ -134,7 +110,7 @@ public class SequenceFileInputFilter<K, V>
      * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(Object)
      */
     public boolean accept(Object key) {
-      return p.matcher(key.toString()).matches();
+      return rf.accept(key);
     }
   }
 
@@ -144,33 +120,28 @@ public class SequenceFileInputFilter<K, V>
    * For example, if the frequency is 10, one out of 10 records is returned.
    */
   public static class PercentFilter extends FilterBase {
-    private int frequency;
-    private int count;
-
+    org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.
+	      PercentFilter pf;
     /** set the frequency and stores it in conf
      * @param conf configuration
      * @param frequency filtering frequencey
      */
-    public static void setFrequency(Configuration conf, int frequency){
-      if (frequency<=0)
-        throw new IllegalArgumentException(
-                                           "Negative " + FILTER_FREQUENCY + ": "+frequency);
-      conf.setInt(FILTER_FREQUENCY, frequency);
+    public static void setFrequency(Configuration conf, int frequency) {
+       org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.
+	      PercentFilter.setFrequency(conf, frequency);
     }
-        
-    public PercentFilter() { }
-        
+	        
+    public PercentFilter() { 
+      pf = new org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.
+        PercentFilter();
+    }
+	        
     /** configure the filter by checking the configuration
      * 
      * @param conf configuration
      */
     public void setConf(Configuration conf) {
-      this.frequency = conf.getInt("sequencefile.filter.frequency", 10);
-      if (this.frequency <=0) {
-        throw new RuntimeException(
-                                   "Negative "+FILTER_FREQUENCY+": "+this.frequency);
-      }
-      this.conf = conf;
+      pf.setConf(conf);
     }
 
     /** Filtering method
@@ -178,13 +149,7 @@ public class SequenceFileInputFilter<K, V>
      * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(Object)
      */
     public boolean accept(Object key) {
-      boolean accepted = false;
-      if (count == 0)
-        accepted = true;
-      if (++count == frequency) {
-        count = 0;
-      }
-      return accepted;
+      return pf.accept(key);
     }
   }
 
@@ -193,45 +158,30 @@ public class SequenceFileInputFilter<K, V>
    * MD5(key) % f == 0.
    */
   public static class MD5Filter extends FilterBase {
-    private int frequency;
-    private static final MessageDigest DIGESTER;
-    public static final int MD5_LEN = 16;
-    private byte [] digest = new byte[MD5_LEN];
-        
-    static {
-      try {
-        DIGESTER = MessageDigest.getInstance("MD5");
-      } catch (NoSuchAlgorithmException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-
+    public static final int MD5_LEN = org.apache.hadoop.mapreduce.lib.
+      input.SequenceFileInputFilter.MD5Filter.MD5_LEN;
+    org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.MD5Filter mf;
     /** set the filtering frequency in configuration
      * 
      * @param conf configuration
      * @param frequency filtering frequency
      */
-    public static void setFrequency(Configuration conf, int frequency){
-      if (frequency<=0)
-        throw new IllegalArgumentException(
-                                           "Negative " + FILTER_FREQUENCY + ": "+frequency);
-      conf.setInt(FILTER_FREQUENCY, frequency);
+    public static void setFrequency(Configuration conf, int frequency) {
+      org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFilter.MD5Filter.
+        setFrequency(conf, frequency);
     }
         
-    public MD5Filter() { }
+    public MD5Filter() { 
+      mf = new org.apache.hadoop.mapreduce.lib.input.
+        SequenceFileInputFilter.MD5Filter();
+    }
         
     /** configure the filter according to configuration
      * 
      * @param conf configuration
      */
     public void setConf(Configuration conf) {
-      this.frequency = conf.getInt(FILTER_FREQUENCY, 10);
-      if (this.frequency <=0) {
-        throw new RuntimeException(
-                                   "Negative "+FILTER_FREQUENCY+": "+this.frequency);
-      }
-      this.conf = conf;
+      mf.setConf(conf);
     }
 
     /** Filtering method
@@ -239,41 +189,7 @@ public class SequenceFileInputFilter<K, V>
      * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(Object)
      */
     public boolean accept(Object key) {
-      try {
-        long hashcode;
-        if (key instanceof Text) {
-          hashcode = MD5Hashcode((Text)key);
-        } else if (key instanceof BytesWritable) {
-          hashcode = MD5Hashcode((BytesWritable)key);
-        } else {
-          ByteBuffer bb;
-          bb = Text.encode(key.toString());
-          hashcode = MD5Hashcode(bb.array(), 0, bb.limit());
-        }
-        if (hashcode/frequency*frequency==hashcode)
-          return true;
-      } catch(Exception e) {
-        LOG.warn(e);
-        throw new RuntimeException(e);
-      }
-      return false;
-    }
-        
-    private long MD5Hashcode(Text key) throws DigestException {
-      return MD5Hashcode(key.getBytes(), 0, key.getLength());
-    }
-        
-    private long MD5Hashcode(BytesWritable key) throws DigestException {
-      return MD5Hashcode(key.getBytes(), 0, key.getLength());
-    }
-    synchronized private long MD5Hashcode(byte[] bytes, 
-                                          int start, int length) throws DigestException {
-      DIGESTER.update(bytes, 0, length);
-      DIGESTER.digest(digest, 0, MD5_LEN);
-      long hashcode=0;
-      for (int i = 0; i < 8; i++)
-        hashcode |= ((digest[i] & 0xffL) << (8*(7-i)));
-      return hashcode;
+      return mf.accept(key);
     }
   }
     

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapreduce.lib.input;
 
 import java.io.IOException;
 
@@ -25,20 +25,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
  * InputFormat reading keys, values from SequenceFiles in binary (raw)
  * format.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.SequenceFileAsBinaryInputFormat}
- * instead
  */
-@Deprecated
 public class SequenceFileAsBinaryInputFormat
     extends SequenceFileInputFormat<BytesWritable,BytesWritable> {
 
@@ -46,43 +40,51 @@ public class SequenceFileAsBinaryInputFormat
     super();
   }
 
-  public RecordReader<BytesWritable,BytesWritable> getRecordReader(
-      InputSplit split, JobConf job, Reporter reporter)
+  public RecordReader<BytesWritable,BytesWritable> createRecordReader(
+      InputSplit split, TaskAttemptContext context)
       throws IOException {
-    return new SequenceFileAsBinaryRecordReader(job, (FileSplit)split);
+    return new SequenceFileAsBinaryRecordReader();
   }
 
   /**
    * Read records from a SequenceFile as binary (raw) bytes.
    */
   public static class SequenceFileAsBinaryRecordReader
-      implements RecordReader<BytesWritable,BytesWritable> {
+      extends RecordReader<BytesWritable,BytesWritable> {
     private SequenceFile.Reader in;
     private long start;
     private long end;
     private boolean done = false;
     private DataOutputBuffer buffer = new DataOutputBuffer();
     private SequenceFile.ValueBytes vbytes;
+    private BytesWritable key = null;
+    private BytesWritable value = null;
 
-    public SequenceFileAsBinaryRecordReader(Configuration conf, FileSplit split)
-        throws IOException {
-      Path path = split.getPath();
+    public void initialize(InputSplit split, TaskAttemptContext context) 
+        throws IOException, InterruptedException {
+      Path path = ((FileSplit)split).getPath();
+      Configuration conf = context.getConfiguration();
       FileSystem fs = path.getFileSystem(conf);
       this.in = new SequenceFile.Reader(fs, path, conf);
-      this.end = split.getStart() + split.getLength();
-      if (split.getStart() > in.getPosition())
-        in.sync(split.getStart());                  // sync to start
+      this.end = ((FileSplit)split).getStart() + split.getLength();
+      if (((FileSplit)split).getStart() > in.getPosition()) {
+        in.sync(((FileSplit)split).getStart());    // sync to start
+      }
       this.start = in.getPosition();
       vbytes = in.createValueBytes();
       done = start >= end;
     }
-
-    public BytesWritable createKey() {
-      return new BytesWritable();
+    
+    @Override
+    public BytesWritable getCurrentKey() 
+        throws IOException, InterruptedException {
+      return key;
     }
-
-    public BytesWritable createValue() {
-      return new BytesWritable();
+    
+    @Override
+    public BytesWritable getCurrentValue() 
+        throws IOException, InterruptedException {
+      return value;
     }
 
     /**
@@ -104,24 +106,28 @@ public class SequenceFileAsBinaryInputFormat
     /**
      * Read raw bytes from a SequenceFile.
      */
-    public synchronized boolean next(BytesWritable key, BytesWritable val)
-        throws IOException {
-      if (done) return false;
+    public synchronized boolean nextKeyValue()
+        throws IOException, InterruptedException {
+      if (done) {
+        return false;
+      }
       long pos = in.getPosition();
       boolean eof = -1 == in.nextRawKey(buffer);
       if (!eof) {
+        if (key == null) {
+          key = new BytesWritable();
+        }
+        if (value == null) {
+          value = new BytesWritable();
+        }
         key.set(buffer.getData(), 0, buffer.getLength());
         buffer.reset();
         in.nextRawValue(vbytes);
         vbytes.writeUncompressedBytes(buffer);
-        val.set(buffer.getData(), 0, buffer.getLength());
+        value.set(buffer.getData(), 0, buffer.getLength());
         buffer.reset();
       }
       return !(done = (eof || (pos >= end && in.syncSeen())));
-    }
-
-    public long getPos() throws IOException {
-      return in.getPosition();
     }
 
     public void close() throws IOException {
@@ -132,7 +138,7 @@ public class SequenceFileAsBinaryInputFormat
      * Return the progress within the input split
      * @return 0.0 to 1.0 of the input byte range
      */
-    public float getProgress() throws IOException {
+    public float getProgress() throws IOException, InterruptedException {
       if (end == start) {
         return 0.0f;
       } else {

@@ -165,6 +165,9 @@ Trunk (unreleased changes)
     MAPREDUCE-797. Adds combiner support to MRUnit MapReduceDriver.
     (Aaron Kimball via johan)    
 
+    MAPREDUCE-656. Change org.apache.hadoop.mapred.SequenceFile* classes
+    to use new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

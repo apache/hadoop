@@ -52,6 +52,10 @@
        <Class name="~org.apache.hadoop.mapred.lib.aggregate.*" />
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.SequenceFileInputFilter$Filter" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
      <!--
        Ignore warnings for usage of System.exit. This is
        required and have been well thought out
