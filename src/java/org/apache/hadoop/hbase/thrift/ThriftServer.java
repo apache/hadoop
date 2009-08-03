@@ -341,7 +341,7 @@ public class ThriftServer {
         HTable table = getTable(tableName);
         if (columns == null) {
           Get get = new Get(row);
-          get.setTimeStamp(timestamp);
+          get.setTimeRange(Long.MIN_VALUE, timestamp);
           Result result = table.get(get);
           return ThriftUtilities.rowResultFromHBase(result.getRowResult());
         }
@@ -355,7 +355,7 @@ public class ThriftServer {
               get.addColumn(famAndQf[0], famAndQf[1]);
           }
         }
-        get.setTimeStamp(timestamp);
+        get.setTimeRange(Long.MIN_VALUE, timestamp);
         Result result = table.get(get);
         return ThriftUtilities.rowResultFromHBase(result.getRowResult());
       } catch (IOException e) {
