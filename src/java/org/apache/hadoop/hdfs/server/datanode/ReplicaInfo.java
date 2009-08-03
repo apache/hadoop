@@ -32,19 +32,19 @@ import org.apache.hadoop.io.IOUtils;
  * This class is used by the datanode to maintain the map from a block 
  * to its metadata.
  */
-class DatanodeBlockInfo {
+class ReplicaInfo {
 
   private FSVolume volume;       // volume where the block belongs
   private File     file;         // block file
   private boolean detached;      // copy-on-write done for block
 
-  DatanodeBlockInfo(FSVolume vol, File file) {
+  ReplicaInfo(FSVolume vol, File file) {
     this.volume = vol;
     this.file = file;
     detached = false;
   }
 
-  DatanodeBlockInfo(FSVolume vol) {
+  ReplicaInfo(FSVolume vol) {
     this.volume = vol;
     this.file = null;
     detached = false;

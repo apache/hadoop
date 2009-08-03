@@ -171,7 +171,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return Block.GRANDFATHER_GENERATION_STAMP;
     }
 
-    void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap, FSVolume volume) {
+    void getVolumeMap(HashMap<Block, ReplicaInfo> volumeMap, FSVolume volume) {
       if (children != null) {
         for (int i = 0; i < children.length; i++) {
           children[i].getVolumeMap(volumeMap, volume);
@@ -183,7 +183,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         if (Block.isBlockFilename(blockFiles[i])) {
           long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
           volumeMap.put(new Block(blockFiles[i], blockFiles[i].length(), genStamp), 
-                        new DatanodeBlockInfo(volume, blockFiles[i]));
+                        new ReplicaInfo(volume, blockFiles[i]));
         }
       }
     }
@@ -403,7 +403,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       DiskChecker.checkDir(tmpDir);
     }
       
-    void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
+    void getVolumeMap(HashMap<Block, ReplicaInfo> volumeMap) {
       dataDir.getVolumeMap(volumeMap, this);
     }
       
@@ -496,7 +496,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return remaining;
     }
       
-    synchronized void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
+    synchronized void getVolumeMap(HashMap<Block, ReplicaInfo> volumeMap) {
       for (int idx = 0; idx < volumes.length; idx++) {
         volumes[idx].getVolumeMap(volumeMap);
       }
@@ -653,7 +653,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   FSVolumeSet volumes;
   private HashMap<Block,ActiveFile> ongoingCreates = new HashMap<Block,ActiveFile>();
   private int maxBlocksPerDir = 0;
-  HashMap<Block,DatanodeBlockInfo> volumeMap = null;
+  HashMap<Block,ReplicaInfo> volumeMap = null;
   static  Random random = new Random();
 
   // Used for synchronizing access to usage stats
@@ -669,7 +669,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
     }
     volumes = new FSVolumeSet(volArray);
-    volumeMap = new HashMap<Block, DatanodeBlockInfo>();
+    volumeMap = new HashMap<Block, ReplicaInfo>();
     volumes.getVolumeMap(volumeMap);
     registerMBean(storage.getStorageID());
   }
@@ -742,7 +742,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   public synchronized BlockInputStreams getTmpInputStreams(Block b, 
                           long blkOffset, long ckoff) throws IOException {
 
-    DatanodeBlockInfo info = volumeMap.get(b);
+    ReplicaInfo info = volumeMap.get(b);
     if (info == null) {
       throw new IOException("Block " + b + " does not exist in volumeMap.");
     }
@@ -777,7 +777,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * @return - true if the specified block was detached
    */
   public boolean detachBlock(Block block, int numLinks) throws IOException {
-    DatanodeBlockInfo info = null;
+    ReplicaInfo info = null;
 
     synchronized (this) {
       info = volumeMap.get(block);
@@ -1006,12 +1006,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         v = volumes.getNextVolume(blockSize);
         // create temporary file to hold block in the designated volume
         f = createTmpFile(v, b);
-        volumeMap.put(b, new DatanodeBlockInfo(v));
+        volumeMap.put(b, new ReplicaInfo(v));
       } else if (f != null) {
         DataNode.LOG.info("Reopen already-open Block for append " + b);
         // create or reuse temporary file to hold block in the designated volume
         v = volumeMap.get(b).getVolume();
-        volumeMap.put(b, new DatanodeBlockInfo(v));
+        volumeMap.put(b, new ReplicaInfo(v));
       } else {
         // reopening block for appending to it.
         DataNode.LOG.info("Reopen Block for append " + b);
@@ -1042,7 +1042,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                   " to tmp dir " + f);
           }
         }
-        volumeMap.put(b, new DatanodeBlockInfo(v));
+        volumeMap.put(b, new ReplicaInfo(v));
       }
       if (f == null) {
         DataNode.LOG.warn("Block " + b + " reopen failed " +
@@ -1147,7 +1147,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         
     File dest = null;
     dest = v.addBlock(b, f);
-    volumeMap.put(b, new DatanodeBlockInfo(v, dest));
+    volumeMap.put(b, new ReplicaInfo(v, dest));
     ongoingCreates.remove(b);
   }
 
@@ -1248,7 +1248,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
   /** {@inheritDoc} */
   public void validateBlockMetadata(Block b) throws IOException {
-    DatanodeBlockInfo info = volumeMap.get(b);
+    ReplicaInfo info = volumeMap.get(b);
     if (info == null) {
       throw new IOException("Block " + b + " does not exist in volumeMap.");
     }
@@ -1306,7 +1306,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       FSVolume v;
       synchronized (this) {
         f = getFile(invalidBlks[i]);
-        DatanodeBlockInfo dinfo = volumeMap.get(invalidBlks[i]);
+        ReplicaInfo dinfo = volumeMap.get(invalidBlks[i]);
         if (dinfo == null) {
           DataNode.LOG.warn("Unexpected error trying to delete block "
                            + invalidBlks[i] + 
@@ -1369,7 +1369,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * Turn the block identifier into a filename.
    */
   public synchronized File getFile(Block b) {
-    DatanodeBlockInfo info = volumeMap.get(b);
+    ReplicaInfo info = volumeMap.get(b);
     if (info != null) {
       return info.getFile();
     }
@@ -1448,8 +1448,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * generation stamp</li>
    * <li>If the block length in memory does not match the actual block file length
    * then mark the block as corrupt and update the block length in memory</li>
-   * <li>If the file in {@link DatanodeBlockInfo} does not match the file on
-   * the disk, update {@link DatanodeBlockInfo} with the correct file</li>
+   * <li>If the file in {@link ReplicaInfo} does not match the file on
+   * the disk, update {@link ReplicaInfo} with the correct file</li>
    * </ul>
    *
    * @param blockId Block that differs
@@ -1472,7 +1472,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           Block.getGenerationStamp(diskMetaFile.getName()) :
             Block.GRANDFATHER_GENERATION_STAMP;
 
-      DatanodeBlockInfo memBlockInfo = volumeMap.get(block);
+      ReplicaInfo memBlockInfo = volumeMap.get(block);
       if (diskFile == null || !diskFile.exists()) {
         if (memBlockInfo == null) {
           // Block file does not exist and block does not exist in memory
@@ -1507,7 +1507,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
        */
       if (memBlockInfo == null) {
         // Block is missing in memory - add the block to volumeMap
-        DatanodeBlockInfo diskBlockInfo = new DatanodeBlockInfo(vol, diskFile);
+        ReplicaInfo diskBlockInfo = new ReplicaInfo(vol, diskFile);
         Block diskBlock = new Block(diskFile, diskFile.length(), diskGS);
         volumeMap.put(diskBlock, diskBlockInfo);
         if (datanode.blockScanner != null) {
@@ -1540,7 +1540,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
             + memFile.getAbsolutePath()
             + " does not exist. Updating it to the file found during scan "
             + diskFile.getAbsolutePath());
-        DatanodeBlockInfo info = volumeMap.remove(memBlock);
+        ReplicaInfo info = volumeMap.remove(memBlock);
         info.setFile(diskFile);
         memFile = diskFile;
 
@@ -1571,7 +1571,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           DataNode.LOG.warn("Updating generation stamp for block " + blockId
               + " from " + memBlock.getGenerationStamp() + " to " + gs);
 
-          DatanodeBlockInfo info = volumeMap.remove(memBlock);
+          ReplicaInfo info = volumeMap.remove(memBlock);
           memBlock.setGenerationStamp(gs);
           volumeMap.put(memBlock, info);
         }
@@ -1583,7 +1583,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         corruptBlock = new Block(memBlock);
         DataNode.LOG.warn("Updating size of block " + blockId + " from "
             + memBlock.getNumBytes() + " to " + memFile.length());
-        DatanodeBlockInfo info = volumeMap.remove(memBlock);
+        ReplicaInfo info = volumeMap.remove(memBlock);
         memBlock.setNumBytes(memFile.length());
         volumeMap.put(memBlock, info);
       }

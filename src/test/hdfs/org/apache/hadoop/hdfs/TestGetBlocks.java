@@ -76,7 +76,7 @@ public class TestGetBlocks extends TestCase {
       boolean notWritten;
       do {
         DFSClient dfsclient = new DFSClient(CONF);
-        locatedBlocks = dfsclient.namenode.
+        locatedBlocks = dfsclient.getNamenode().
           getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
         assertEquals(2, locatedBlocks.size());
         notWritten = false;

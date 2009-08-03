@@ -372,7 +372,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // verify that no blocks are associated with this file
       // bad block allocations were cleaned up earlier.
-      LocatedBlocks locations = client.namenode.getBlockLocations(
+      LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
       assertTrue("Error blocks were not cleaned up",
@@ -411,18 +411,18 @@ public class TestFileCreation extends junit.framework.TestCase {
       System.out.println("testFileCreationError2: "
                          + "Created file filestatus.dat with one replicas.");
 
-      LocatedBlocks locations = client.namenode.getBlockLocations(
+      LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("testFileCreationError2: "
           + "The file has " + locations.locatedBlockCount() + " blocks.");
 
       // add another block to the file
-      LocatedBlock location = client.namenode.addBlock(file1.toString(), 
+      LocatedBlock location = client.getNamenode().addBlock(file1.toString(), 
           client.clientName);
       System.out.println("testFileCreationError2: "
           + "Added block " + location.getBlock());
 
-      locations = client.namenode.getBlockLocations(file1.toString(), 
+      locations = client.getNamenode().getBlockLocations(file1.toString(), 
                                                     0, Long.MAX_VALUE);
       int count = locations.locatedBlockCount();
       System.out.println("testFileCreationError2: "
@@ -439,7 +439,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       }
 
       // verify that the last block was synchronized.
-      locations = client.namenode.getBlockLocations(file1.toString(), 
+      locations = client.getNamenode().getBlockLocations(file1.toString(), 
                                                     0, Long.MAX_VALUE);
       System.out.println("testFileCreationError2: "
           + "locations = " + locations.locatedBlockCount());
@@ -567,14 +567,14 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // verify that new block is associated with this file
       DFSClient client = ((DistributedFileSystem)fs).dfs;
-      LocatedBlocks locations = client.namenode.getBlockLocations(
+      LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
       assertTrue("Error blocks were not cleaned up for file " + file1,
                  locations.locatedBlockCount() == 3);
 
       // verify filestatus2.dat
-      locations = client.namenode.getBlockLocations(
+      locations = client.getNamenode().getBlockLocations(
                                   file2.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
       assertTrue("Error blocks were not cleaned up for file " + file2,
@@ -790,7 +790,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // wait for the lease to expire
       try {Thread.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
 
-      LocatedBlocks locations = dfs.dfs.namenode.getBlockLocations(
+      LocatedBlocks locations = dfs.dfs.getNamenode().getBlockLocations(
           f, 0, Long.MAX_VALUE);
       assertEquals(1, locations.locatedBlockCount());
       LocatedBlock locatedblock = locations.getLocatedBlocks().get(0);

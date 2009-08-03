@@ -50,10 +50,10 @@ public class TestAbandonBlock extends junit.framework.TestCase {
   
       //try reading the block by someone
       DFSClient dfsclient = new DFSClient(CONF);
-      LocatedBlocks blocks = dfsclient.namenode.getBlockLocations(src, 0, 1);
+      LocatedBlocks blocks = dfsclient.getNamenode().getBlockLocations(src, 0, 1);
       LocatedBlock b = blocks.get(0); 
       try {
-        dfsclient.namenode.abandonBlock(b.getBlock(), src, "someone");
+        dfsclient.getNamenode().abandonBlock(b.getBlock(), src, "someone");
         //previous line should throw an exception.
         assertTrue(false);
       }

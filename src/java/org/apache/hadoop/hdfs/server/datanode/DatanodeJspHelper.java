@@ -65,7 +65,7 @@ class DatanodeJspHelper {
       JspHelper.printGotoForm(out, namenodeInfoPort, target);
     } else {
       if (!targetStatus.isDir()) { // a file
-        List<LocatedBlock> blocks = dfs.namenode.getBlockLocations(dir, 0, 1)
+        List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(dir, 0, 1)
             .getLocatedBlocks();
 
         LocatedBlock firstBlock = null;
@@ -205,7 +205,7 @@ class DatanodeJspHelper {
 
     final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(),
         JspHelper.conf);
-    List<LocatedBlock> blocks = dfs.namenode.getBlockLocations(filename, 0,
+    List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     // Add the various links for looking at the file contents
     // URL for downloading the full file
@@ -320,7 +320,7 @@ class DatanodeJspHelper {
     AccessToken accessToken = AccessToken.DUMMY_TOKEN;
     if (JspHelper.conf.getBoolean(
         AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false)) {
-      List<LocatedBlock> blks = dfs.namenode.getBlockLocations(filename, 0,
+      List<LocatedBlock> blks = dfs.getNamenode().getBlockLocations(filename, 0,
           Long.MAX_VALUE).getLocatedBlocks();
       if (blks == null || blks.size() == 0) {
         out.print("Can't locate file blocks");
@@ -390,7 +390,7 @@ class DatanodeJspHelper {
     // determine data for the next link
     if (startOffset + chunkSizeToView >= blockSize) {
       // we have to go to the next block from this point onwards
-      List<LocatedBlock> blocks = dfs.namenode.getBlockLocations(filename, 0,
+      List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
           Long.MAX_VALUE).getLocatedBlocks();
       for (int i = 0; i < blocks.size(); i++) {
         if (blocks.get(i).getBlock().getBlockId() == blockId) {
@@ -440,7 +440,7 @@ class DatanodeJspHelper {
     int prevPort = req.getServerPort();
     int prevDatanodePort = datanodePort;
     if (startOffset == 0) {
-      List<LocatedBlock> blocks = dfs.namenode.getBlockLocations(filename, 0,
+      List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
           Long.MAX_VALUE).getLocatedBlocks();
       for (int i = 0; i < blocks.size(); i++) {
         if (blocks.get(i).getBlock().getBlockId() == blockId) {
@@ -546,7 +546,7 @@ class DatanodeJspHelper {
     // fetch the block from the datanode that has the last block for this file
     final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(),
         JspHelper.conf);
-    List<LocatedBlock> blocks = dfs.namenode.getBlockLocations(filename, 0,
+    List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     if (blocks == null || blocks.size() == 0) {
       out.print("No datanodes contain blocks of file " + filename);

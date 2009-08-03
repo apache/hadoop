@@ -175,7 +175,7 @@ public class TestFsck extends TestCase {
       String[] fileNames = util.getFileNames(topDir);
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                           cluster.getNameNodePort()), conf);
-      String block = dfsClient.namenode.
+      String block = dfsClient.getNamenode().
                       getBlockLocations(fileNames[0], 0, Long.MAX_VALUE).
                       get(0).getBlock().getBlockName();
       File baseDir = new File(System.getProperty("test.build.data",
@@ -315,7 +315,7 @@ public class TestFsck extends TestCase {
 
     dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                cluster.getNameNodePort()), conf);
-    blocks = dfsClient.namenode.
+    blocks = dfsClient.getNamenode().
                getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
     replicaCount = blocks.get(0).getLocations().length;
     while (replicaCount != 3) {
@@ -323,7 +323,7 @@ public class TestFsck extends TestCase {
         Thread.sleep(100);
       } catch (InterruptedException ignore) {
       }
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                 getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       replicaCount = blocks.get(0).getLocations().length;
     }

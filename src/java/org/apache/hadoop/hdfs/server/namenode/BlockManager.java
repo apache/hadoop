@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.security.AccessTokenHandler;
@@ -234,7 +233,7 @@ public class BlockManager {
   /**
    * Get all valid locations of the block
    */
-  ArrayList<String> addBlock(Block block) {
+  ArrayList<String> getValidLocations(Block block) {
     ArrayList<String> machineSet =
       new ArrayList<String>(blocksMap.numNodes(block));
     for(Iterator<DatanodeDescriptor> it =
@@ -248,7 +247,6 @@ public class BlockManager {
     }
     return machineSet;
   }
-
 
   List<LocatedBlock> getBlockLocations(Block[] blocks, long offset,
       long length, int nrBlocksToReturn) throws IOException {
@@ -397,43 +395,50 @@ public class BlockManager {
     }
   }
 
-  void markBlockAsCorrupt(Block blk, DatanodeInfo dn) throws IOException {
-    DatanodeDescriptor node = namesystem.getDatanode(dn);
-    if (node == null) {
-      throw new IOException("Cannot mark block" + blk.getBlockName() +
-                            " as corrupt because datanode " + dn.getName() +
-                            " does not exist. ");
-    }
-
-    final BlockInfo storedBlockInfo = blocksMap.getStoredBlock(blk);
-    if (storedBlockInfo == null) {
+  void findAndMarkBlockAsCorrupt(Block blk,
+                                 DatanodeInfo dn) throws IOException {
+    BlockInfo storedBlock = getStoredBlock(blk);
+    if (storedBlock == null) {
       // Check if the replica is in the blockMap, if not
       // ignore the request for now. This could happen when BlockScanner
       // thread of Datanode reports bad block before Block reports are sent
       // by the Datanode on startup
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.markBlockAsCorrupt: " +
+                                   "block " + blk + " could not be marked as " +
+                                   "corrupt as it does not exist in blocksMap");
+      return;
+    }
+    markBlockAsCorrupt(storedBlock, dn);
+  }
+
+  private void markBlockAsCorrupt(BlockInfo storedBlock,
+                                  DatanodeInfo dn) throws IOException {
+    assert storedBlock != null : "storedBlock should not be null";
+    DatanodeDescriptor node = namesystem.getDatanode(dn);
+    if (node == null) {
+      throw new IOException("Cannot mark block " + 
+                            storedBlock.getBlockName() +
+                            " as corrupt because datanode " + dn.getName() +
+                            " does not exist. ");
+    }
+
+    INodeFile inode = storedBlock.getINode();
+    if (inode == null) {
       NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: " +
-                                   "block " + blk + " could not be marked " +
-                                   "as corrupt as it does not exists in " +
-                                   "blocksMap");
+                                   "block " + storedBlock +
+                                   " could not be marked as corrupt as it" +
+                                   " does not belong to any file");
+      addToInvalidates(storedBlock, node);
+      return;
+    } 
+    // Add this replica to corruptReplicas Map
+    corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
+    if (countNodes(storedBlock).liveReplicas() > inode.getReplication()) {
+      // the block is over-replicated so invalidate the replicas immediately
+      invalidateBlock(storedBlock, node);
     } else {
-      INodeFile inode = storedBlockInfo.getINode();
-      if (inode == null) {
-        NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: " +
-                                     "block " + blk + " could not be marked " +
-                                     "as corrupt as it does not belong to " +
-                                     "any file");
-        addToInvalidates(storedBlockInfo, node);
-        return;
-      } 
-      // Add this replica to corruptReplicas Map
-      corruptReplicas.addToCorruptReplicasMap(storedBlockInfo, node);
-      if (countNodes(storedBlockInfo).liveReplicas() > inode.getReplication()) {
-        // the block is over-replicated so invalidate the replicas immediately
-        invalidateBlock(storedBlockInfo, node);
-      } else {
-        // add the block to neededReplication
-        updateNeededReplications(storedBlockInfo, -1, 0);
-      }
+      // add the block to neededReplication
+      updateNeededReplications(storedBlock, -1, 0);
     }
   }
 
@@ -844,8 +849,9 @@ public class BlockManager {
    * needed replications if this takes care of the problem.
    * @return the block that is stored in blockMap.
    */
-  private Block addStoredBlock(Block block, DatanodeDescriptor node,
-      DatanodeDescriptor delNodeHint) {
+  private Block addStoredBlock(final Block block,
+                               DatanodeDescriptor node,
+                               DatanodeDescriptor delNodeHint) {
     BlockInfo storedBlock = blocksMap.getStoredBlock(block);
     if (storedBlock == null || storedBlock.getINode() == null) {
       // If this block does not belong to anyfile, then we are done.
@@ -858,30 +864,32 @@ public class BlockManager {
       // it will happen in next block report otherwise.
       return block;
     }
+    assert storedBlock != null : "Block must be stored by now";
+    INodeFile fileINode = storedBlock.getINode();
+    assert fileINode != null : "Block must belong to a file";
 
     // add block to the data-node
     boolean added = node.addBlock(storedBlock);
 
-    assert storedBlock != null : "Block must be stored by now";
-
     if (block != storedBlock) {
-      if (block.getNumBytes() >= 0) {
-        long cursize = storedBlock.getNumBytes();
+      long cursize = storedBlock.getNumBytes();
+      long newsize = block.getNumBytes();
+      if (newsize >= 0) {
         if (cursize == 0) {
-          storedBlock.setNumBytes(block.getNumBytes());
-        } else if (cursize != block.getNumBytes()) {
+          storedBlock.setNumBytes(newsize);
+        } else if (cursize != newsize) {
           FSNamesystem.LOG.warn("Inconsistent size for block " + block +
                    " reported from " + node.getName() +
                    " current size is " + cursize +
-                   " reported size is " + block.getNumBytes());
+                   " reported size is " + newsize);
           try {
-            if (cursize > block.getNumBytes()) {
+            if (cursize > newsize) {
               // new replica is smaller in size than existing block.
               // Mark the new replica as corrupt.
               FSNamesystem.LOG.warn("Mark new replica "
                   + block + " from " + node.getName() + " as corrupt "
                   + "because length is shorter than existing ones");
-              markBlockAsCorrupt(block, node);
+              markBlockAsCorrupt(storedBlock, node);
             } else {
               // new replica is larger in size than existing block.
               // Mark pre-existing replicas as corrupt.
@@ -899,19 +907,12 @@ public class BlockManager {
                 FSNamesystem.LOG.warn("Mark existing replica "
                         + block + " from " + node.getName() + " as corrupt "
                         + "because its length is shorter than the new one");
-                markBlockAsCorrupt(block, nodes[j]);
+                markBlockAsCorrupt(storedBlock, nodes[j]);
               }
               //
               // change the size of block in blocksMap
               //
-              storedBlock = blocksMap.getStoredBlock(block); // extra look up!
-              if (storedBlock == null) {
-                FSNamesystem.LOG.warn("Block " + block + " reported from "
-                    + node.getName()
-                    + " does not exist in blockMap. Surprise! Surprise!");
-              } else {
-                storedBlock.setNumBytes(block.getNumBytes());
-              }
+              storedBlock.setNumBytes(newsize);
             }
           } catch (IOException e) {
             FSNamesystem.LOG.warn("Error in deleting bad block " + block + e);
@@ -919,17 +920,15 @@ public class BlockManager {
         }
 
         // Updated space consumed if required.
-        INodeFile file = (storedBlock != null) ? storedBlock.getINode() : null;
-        long diff = (file == null) ? 0 :
-                    (file.getPreferredBlockSize() - storedBlock.getNumBytes());
+        long diff = fileINode.getPreferredBlockSize() - storedBlock.getNumBytes();
         
-        if (diff > 0 && file.isUnderConstruction() &&
+        if (diff > 0 && fileINode.isUnderConstruction() &&
             cursize < storedBlock.getNumBytes()) {
           try {
             String path = /* For finding parents */
-            namesystem.leaseManager.findPath((INodeFileUnderConstruction) file);
+            namesystem.leaseManager.findPath((INodeFileUnderConstruction)fileINode);
             namesystem.dir.updateSpaceConsumed(path, 0, -diff
-                * file.getReplication());
+                * fileINode.getReplication());
           } catch (IOException e) {
             FSNamesystem.LOG
                 .warn("Unexpected exception while updating disk space : "
@@ -937,12 +936,9 @@ public class BlockManager {
           }
         }
       }
-      block = storedBlock;
     }
-    assert storedBlock == block : "Block must be stored by now";
 
     int curReplicaDelta = 0;
-
     if (added) {
       curReplicaDelta = 1;
       //
@@ -952,20 +948,20 @@ public class BlockManager {
       //
       if (!namesystem.isInSafeMode()) {
         NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
-            + "blockMap updated: " + node.getName() + " is added to " + block
-            + " size " + block.getNumBytes());
+            + "blockMap updated: " + node.getName() + " is added to " + 
+            storedBlock + " size " + storedBlock.getNumBytes());
       }
     } else {
       NameNode.stateChangeLog.warn("BLOCK* NameSystem.addStoredBlock: "
-          + "Redundant addStoredBlock request received for " + block + " on "
-          + node.getName() + " size " + block.getNumBytes());
+          + "Redundant addStoredBlock request received for " + storedBlock
+          + " on " + node.getName() + " size " + storedBlock.getNumBytes());
     }
 
     // filter out containingNodes that are marked for decommission.
     NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
     int numCurrentReplica = numLiveReplicas
-      + pendingReplications.getNumReplicas(block);
+      + pendingReplications.getNumReplicas(storedBlock);
 
     // check whether safe replication is reached for the block
     namesystem.incrementSafeBlockCount(numCurrentReplica);
@@ -974,39 +970,37 @@ public class BlockManager {
     // if file is being actively written to, then do not check
     // replication-factor here. It will be checked when the file is closed.
     //
-    INodeFile fileINode = null;
-    fileINode = storedBlock.getINode();
     if (fileINode.isUnderConstruction()) {
-      return block;
+      return storedBlock;
     }
 
     // do not handle mis-replicated blocks during startup
     if (namesystem.isInSafeMode())
-      return block;
+      return storedBlock;
 
     // handle underReplication/overReplication
     short fileReplication = fileINode.getReplication();
     if (numCurrentReplica >= fileReplication) {
-      neededReplications.remove(block, numCurrentReplica,
+      neededReplications.remove(storedBlock, numCurrentReplica,
           num.decommissionedReplicas, fileReplication);
     } else {
-      updateNeededReplications(block, curReplicaDelta, 0);
+      updateNeededReplications(storedBlock, curReplicaDelta, 0);
     }
     if (numCurrentReplica > fileReplication) {
-      processOverReplicatedBlock(block, fileReplication, node, delNodeHint);
+      processOverReplicatedBlock(storedBlock, fileReplication, node, delNodeHint);
     }
     // If the file replication has reached desired value
     // we can remove any corrupt replicas the block may have
-    int corruptReplicasCount = corruptReplicas.numCorruptReplicas(block);
+    int corruptReplicasCount = corruptReplicas.numCorruptReplicas(storedBlock);
     int numCorruptNodes = num.corruptReplicas();
     if (numCorruptNodes != corruptReplicasCount) {
       FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for " +
-          block + "blockMap has " + numCorruptNodes + 
+          storedBlock + "blockMap has " + numCorruptNodes + 
           " but corrupt replicas map has " + corruptReplicasCount);
     }
     if ((corruptReplicasCount > 0) && (numLiveReplicas >= fileReplication))
-      invalidateCorruptReplicas(block);
-    return block;
+      invalidateCorruptReplicas(storedBlock);
+    return storedBlock;
   }
 
   /**
@@ -1051,7 +1045,7 @@ public class BlockManager {
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
     synchronized (namesystem) {
       neededReplications.clear();
-      for (BlocksMap.BlockInfo block : blocksMap.getBlocks()) {
+      for (BlockInfo block : blocksMap.getBlocks()) {
         INodeFile fileINode = block.getINode();
         if (fileINode == null) {
           // block does not belong to any file
@@ -1415,13 +1409,13 @@ public class BlockManager {
     blocksMap.removeBlock(block);
   }
   
-  public int getCapacity() {
+  int getCapacity() {
     synchronized(namesystem) {
       return blocksMap.getCapacity();
     }
   }
   
-  public float getLoadFactor() {
+  float getLoadFactor() {
     return blocksMap.getLoadFactor();
   }
 }

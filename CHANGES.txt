@@ -45,6 +45,31 @@ Trunk (unreleased changes)
     HDFS-458. Create a new ant target, run-commit-test.  (Jakob Homan
     via szetszwo)
 
+    HDFS-493. Change build.xml so that the fault-injected tests are executed
+    only by the run-test-*-faul-inject targets.  (Konstantin Boudnik via
+    szetszwo)
+
+    HADOOP-6160. Fix releaseaudit target to run on specific directories.
+    (gkesavan)
+
+    HDFS-508. Factor out BlockInfo from BlocksMap. (shv)
+
+    HDFS-510. Rename DatanodeBlockInfo to be ReplicaInfo.
+    (Jakob Homan & Hairong Kuang via shv)
+
+    HDFS-500. Deprecate NameNode methods deprecated in NameNodeProtocol.
+    (Jakob Homan via shv)
+
+    HDFS-514. Change DFSClient.namenode from public to private.  (Bill Zeller
+    via szetszwo)
+
+    HDFS-496. Use PureJavaCrc32 in HDFS.  (Todd Lipcon via szetszwo)
+
+    HDFS-511. Remove redundant block searches in BlockManager. (shv)
+
+    HDFS-504. Update the modification time of a file when the file 
+    is closed. (Chun Zhang via dhruba)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than
@@ -88,6 +113,21 @@ Trunk (unreleased changes)
 
     HDFS-463. CreateEditLog utility broken after HDFS-396 (URI for
     FSImage). (Suresh Srinivas via rangadi)
+
+    HDFS-484. Fix bin-package and package target to package jar files.
+    (gkesavan)
+
+    HDFS-501. Use enum to define the constants in DataTransferProtocol.
+    (szetszwo)
+
+    HDFS-490. Eliminate the deprecated warnings introduced by H-5438.
+    (He Yongqiang via szetszwo)
+
+    HDFS-119. Fix a bug in logSync(), which causes NameNode block forever.
+    (Suresh Srinivas via shv)
+
+    HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
+    (Bill Zeller via szetszwo)
 
 Release 0.20.1 - Unreleased
 

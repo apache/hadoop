@@ -168,7 +168,7 @@ public class TestFileAppend extends TestCase {
       assertTrue("There should be only one datanode but found " + dn.length,
                   dn.length == 1);
 
-      LocatedBlocks locations = client.namenode.getBlockLocations(
+      LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       List<LocatedBlock> blocks = locations.getLocatedBlocks();
       FSDataset dataset = (FSDataset) dn[0].data;

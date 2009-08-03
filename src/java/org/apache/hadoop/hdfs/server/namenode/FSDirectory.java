@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -277,8 +276,7 @@ class FSDirectory implements Closeable {
                   fileNode.getPreferredBlockSize()*fileNode.getReplication());
       
       // associate the new list of blocks with this file
-      getBlockManager().addINode(block, fileNode);
-      BlockInfo blockInfo = getBlockManager().getStoredBlock(block);
+      BlockInfo blockInfo = getBlockManager().addINode(block, fileNode);
       fileNode.addBlock(blockInfo);
 
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
@@ -308,8 +306,10 @@ class FSDirectory implements Closeable {
    */
   void closeFile(String path, INodeFile file) {
     waitForReady();
+    long now = FSNamesystem.now();
     synchronized (rootDir) {
       // file is closed
+      file.setModificationTimeForce(now);
       fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "

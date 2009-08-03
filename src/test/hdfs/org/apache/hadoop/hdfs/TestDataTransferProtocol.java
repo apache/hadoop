@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.READ_BLOCK;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.WRITE_BLOCK;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.ERROR;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.SUCCESS;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -168,13 +173,13 @@ public class TestDataTransferProtocol extends TestCase {
     // bad ops
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK - 1);
+    sendOut.writeByte(WRITE_BLOCK.code - 1);
     sendRecvData("Wrong Op Code", true);
     
     /* Test OP_WRITE_BLOCK */
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
+    WRITE_BLOCK.write(sendOut);
     sendOut.writeLong(newBlockId); // block id
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -188,13 +193,13 @@ public class TestDataTransferProtocol extends TestCase {
     // bad bytes per checksum
     sendOut.writeInt(-1-random.nextInt(oneMil));
     recvBuf.reset();
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);
+    ERROR.write(recvOut);
     sendRecvData("wrong bytesPerChecksum while writing", true);
 
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
+    WRITE_BLOCK.write(sendOut);
     sendOut.writeLong(newBlockId);
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -204,13 +209,13 @@ public class TestDataTransferProtocol extends TestCase {
 
     // bad number of targets
     sendOut.writeInt(-1-random.nextInt(oneMil));
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);
+    ERROR.write(recvOut);
     sendRecvData("bad targets len while writing block " + newBlockId, true);
 
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
+    WRITE_BLOCK.write(sendOut);
     sendOut.writeLong(++newBlockId);
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -228,10 +233,10 @@ public class TestDataTransferProtocol extends TestCase {
     
     // bad data chunk length
     sendOut.writeInt(-1-random.nextInt(oneMil));
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);
+    SUCCESS.write(recvOut);
     Text.writeString(recvOut, ""); // first bad node
     recvOut.writeLong(100);        // sequencenumber
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);
+    ERROR.write(recvOut);
     sendRecvData("negative DATA_CHUNK len while writing block " + newBlockId, 
                  true);
 
@@ -239,7 +244,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_WRITE_BLOCK);
+    WRITE_BLOCK.write(sendOut);
     sendOut.writeLong(++newBlockId);
     sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
@@ -258,10 +263,10 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // chunk length
     sendOut.writeInt(0);           // zero checksum
     //ok finally write a block with 0 len
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);
+    SUCCESS.write(recvOut);
     Text.writeString(recvOut, ""); // first bad node
     recvOut.writeLong(100);        // sequencenumber
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);
+    SUCCESS.write(recvOut);
     sendRecvData("Writing a zero len block blockid " + newBlockId, false);
     
     /* Test OP_READ_BLOCK */
@@ -270,13 +275,13 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     recvBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
+    READ_BLOCK.write(sendOut);
     newBlockId = firstBlock.getBlockId()-1;
     sendOut.writeLong(newBlockId);
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0L);
     sendOut.writeLong(fileLen);
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);
+    ERROR.write(recvOut);
     Text.writeString(sendOut, "cl");
     AccessToken.DUMMY_TOKEN.write(sendOut);
     sendRecvData("Wrong block ID " + newBlockId + " for read", false); 
@@ -284,7 +289,7 @@ public class TestDataTransferProtocol extends TestCase {
     // negative block start offset
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
+    READ_BLOCK.write(sendOut);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(-1L);
@@ -297,7 +302,7 @@ public class TestDataTransferProtocol extends TestCase {
     // bad block start offset
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
+    READ_BLOCK.write(sendOut);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(fileLen);
@@ -309,10 +314,10 @@ public class TestDataTransferProtocol extends TestCase {
     
     // negative length is ok. Datanode assumes we want to read the whole block.
     recvBuf.reset();
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);    
+    SUCCESS.write(recvOut);    
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
+    READ_BLOCK.write(sendOut);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
@@ -324,10 +329,10 @@ public class TestDataTransferProtocol extends TestCase {
     
     // length is more than size of block.
     recvBuf.reset();
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR);    
+    ERROR.write(recvOut);    
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
+    READ_BLOCK.write(sendOut);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
@@ -340,7 +345,7 @@ public class TestDataTransferProtocol extends TestCase {
     //At the end of all this, read the file to make sure that succeeds finally.
     sendBuf.reset();
     sendOut.writeShort((short)DataTransferProtocol.DATA_TRANSFER_VERSION);
-    sendOut.writeByte(DataTransferProtocol.OP_READ_BLOCK);
+    READ_BLOCK.write(sendOut);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);

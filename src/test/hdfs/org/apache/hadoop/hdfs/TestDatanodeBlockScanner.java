@@ -171,7 +171,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     dfsClient = new DFSClient(new InetSocketAddress("localhost", 
                                         cluster.getNameNodePort()), conf);
     do {
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       blockCount = blocks.get(0).getLocations().length;
       try {
@@ -190,7 +190,7 @@ public class TestDatanodeBlockScanner extends TestCase {
 
     // We have 2 good replicas and block is not corrupt
     do {
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       blockCount = blocks.get(0).getLocations().length;
       try {
@@ -218,7 +218,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     // We now have the blocks to be marked as corrupt and we get back all
     // its replicas
     do {
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       blockCount = blocks.get(0).getLocations().length;
       try {
@@ -282,7 +282,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     
     dfsClient = new DFSClient(new InetSocketAddress("localhost", 
                                         cluster.getNameNodePort()), conf);
-    blocks = dfsClient.namenode.
+    blocks = dfsClient.getNamenode().
                getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
     replicaCount = blocks.get(0).getLocations().length;
 
@@ -294,7 +294,7 @@ public class TestDatanodeBlockScanner extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       replicaCount = blocks.get(0).getLocations().length;
     }
@@ -332,7 +332,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     }
     
     // Loop until the block recovers after replication
-    blocks = dfsClient.namenode.
+    blocks = dfsClient.getNamenode().
                getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
     replicaCount = blocks.get(0).getLocations().length;
     while (replicaCount != numReplicas) {
@@ -341,7 +341,7 @@ public class TestDatanodeBlockScanner extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                  getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       replicaCount = blocks.get(0).getLocations().length;
     }
@@ -358,7 +358,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       }
       corruptReplicaSize = cluster.getNamesystem().
                             numCorruptReplicas(blk);
-      blocks = dfsClient.namenode.
+      blocks = dfsClient.getNamenode().
                  getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       replicaCount = blocks.get(0).getLocations().length;
     }

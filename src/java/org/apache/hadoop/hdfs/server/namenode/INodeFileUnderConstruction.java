@@ -21,7 +21,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 
 
 class INodeFileUnderConstruction extends INodeFile {
