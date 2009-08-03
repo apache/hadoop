@@ -1349,19 +1349,24 @@ class RegionManager implements HConstants {
       double avg = master.serverManager.getAverageLoad();
 
       // nothing to balance if server load not more then average load
-      if (servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) return;
+      if(servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) {
+        return;
+      }
       
-      // check if server is overloaded
+      // check if current server is overloaded
       int numRegionsToClose = balanceFromOverloaded(servLoad, avg);
       
       // check if we can unload server by low loaded servers
-      if (numRegionsToClose <= 0)
-        balanceToLowloaded(info.getServerName(), servLoad, avg);
+      if(numRegionsToClose <= 0) {
+        numRegionsToClose = balanceToLowloaded(info.getServerName(), servLoad, 
+            avg);
+      }
       
-      if (maxRegToClose > 0)
+      if(maxRegToClose > 0) {
         numRegionsToClose = Math.min(numRegionsToClose, maxRegToClose);
-              
-      if (numRegionsToClose > 0){
+      }
+      
+      if(numRegionsToClose > 0) {
         unassignSomeRegions(info, numRegionsToClose, mostLoadedRegions, 
             returnMsgs);
       }
@@ -1416,7 +1421,8 @@ class RegionManager implements HConstants {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Server " + srvName + " will be unloaded for " +
             "balance. Server load: " + numSrvRegs + " avg: " +
-            avgLoad + ", regions can be moved: " + numMoveToLowLoaded);
+            avgLoad + ", regions can be moved: " + numMoveToLowLoaded +
+            ". Regions to close: " + numRegionsToClose);
       }
       return numRegionsToClose;
     }
