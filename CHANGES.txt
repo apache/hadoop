@@ -193,6 +193,9 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-383. Fix a bug in Pipes combiner due to bytes count not 
     getting reset after the spill. (Christian Kunz via sharad)
 
+    MAPREDUCE-40. Keep memory management backwards compatible for job 
+    configuration parameters and limits. (Rahul Kumar Singh via yhemanth)
+   
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

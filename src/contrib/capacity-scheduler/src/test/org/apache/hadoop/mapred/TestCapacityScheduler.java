@@ -45,7 +45,7 @@ public class TestCapacityScheduler extends TestCase {
       LogFactory.getLog(org.apache.hadoop.mapred.TestCapacityScheduler.class);
 
   private static int jobCounter;
-  
+
   /**
    * Test class that removes the asynchronous nature of job initialization.
    * 
@@ -2788,5 +2788,23 @@ public class TestCapacityScheduler extends TestCase {
           + " instead of " + expectedQ, expectedQ.equals(observedOrder[i]));
       i++;
     }
+  }
+
+  public void testDeprecatedMemoryValues() throws IOException {
+    // 2 map and 1 reduce slots
+    taskTrackerManager.addQueues(new String[] { "default" });
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, true, 25));  
+    resConf.setFakeQueues(queues);
+    JobConf conf = (JobConf)(scheduler.getConf());
+    conf.set(
+      JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, String.valueOf(
+        1024 * 1024 * 3));
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    scheduler.setResourceManagerConf(resConf);    
+    scheduler.start();
+
+    assertEquals(scheduler.getLimitMaxMemForMapSlot(),3);
+    assertEquals(scheduler.getLimitMaxMemForReduceSlot(),3);
   }
 }

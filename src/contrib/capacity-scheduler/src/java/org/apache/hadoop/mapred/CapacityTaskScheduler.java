@@ -770,6 +770,29 @@ class CapacityTaskScheduler extends TaskScheduler {
   }
 
   private void initializeMemoryRelatedConf() {
+    //handling @deprecated
+    if (conf.get(
+      CapacitySchedulerConf.DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY) !=
+      null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          CapacitySchedulerConf.DEFAULT_PERCENTAGE_OF_PMEM_IN_VMEM_PROPERTY));
+    }
+
+    //handling @deprecated
+    if (conf.get(CapacitySchedulerConf.UPPER_LIMIT_ON_TASK_PMEM_PROPERTY) !=
+      null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          CapacitySchedulerConf.UPPER_LIMIT_ON_TASK_PMEM_PROPERTY));
+    }
+
+    if (conf.get(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY));
+    }
+
     memSizeForMapSlotOnJT =
         JobConf.normalizeMemoryConfigValue(conf.getLong(
             JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
@@ -778,14 +801,39 @@ class CapacityTaskScheduler extends TaskScheduler {
         JobConf.normalizeMemoryConfigValue(conf.getLong(
             JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
-    limitMaxMemForMapTasks =
-        JobConf.normalizeMemoryConfigValue(conf.getLong(
+
+    //handling @deprecated values
+    if (conf.get(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY)+
+          " instead use " +JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY+
+          " and " + JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY
+      );
+      
+      limitMaxMemForMapTasks = limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
+            JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+      if (limitMaxMemForMapTasks != JobConf.DISABLED_MEMORY_LIMIT &&
+        limitMaxMemForMapTasks >= 0) {
+        limitMaxMemForMapTasks = limitMaxMemForReduceTasks =
+          limitMaxMemForMapTasks /
+            (1024 * 1024); //Converting old values in bytes to MB
+      }
+    } else {
+      limitMaxMemForMapTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
             JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
-    limitMaxMemForReduceTasks =
-        JobConf.normalizeMemoryConfigValue(conf.getLong(
+      limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
             JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
+    }
     LOG.info(String.format("Scheduler configured with "
         + "(memSizeForMapSlotOnJT, memSizeForReduceSlotOnJT, "
         + "limitMaxMemForMapTasks, limitMaxMemForReduceTasks)"
@@ -848,7 +896,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       }else {
         totalCapacity += capacity;
       }
-      int ulMin = schedConf.getMinimumUserLimitPercent(queueName); 
+      int ulMin = schedConf.getMinimumUserLimitPercent(queueName);
       // create our QSI and add to our hashmap
       QueueSchedulingInfo qsi = new QueueSchedulingInfo(queueName, capacity, 
                                                     ulMin, jobQueuesManager);
