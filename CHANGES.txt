@@ -313,3 +313,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-587. Fixes a OOM issue in TestStreamingExitStatus.
     (Amar Kamat via ddas) 
+
+    MAPREDUCE-408. Fixes an assertion problem in TestKillSubProcesses
+    (Ravi Gummadi via ddas)
