@@ -1053,6 +1053,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     status.setHBaseVersion(VersionInfo.getVersion());
     status.setServerInfo(serverManager.serversToServerInfo.values());
     status.setDeadServers(serverManager.deadServers);
+    status.setRegionsInTransition(this.regionManager.getRegionsInTransition());
     return status;
   }
 

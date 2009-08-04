@@ -270,6 +270,11 @@ module HBase
       status = @admin.getClusterStatus()
       if format != nil and format == "detailed"
         puts("version %s" % [ status.getHBaseVersion() ])
+        # Put regions in transition first because usually empty
+        puts("%d regionsInTransition" % status.getRegionsInTransition().size())
+        for k, v in status.getRegionsInTransition()
+          puts("    %s" % [v])
+        end
         puts("%d live servers" % [ status.getServers() ])
         for server in status.getServerInfo()
           puts("    %s:%d %d" % \

@@ -26,6 +26,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -41,6 +45,7 @@ import org.apache.hadoop.io.VersionedWritable;
  * <li>The number of requests since last report.</li>
  * <li>Detailed region server loading and resource usage information,
  *  per server and per region.</li>
+ *  <li>Regions in transition at master</li>
  * </ul>
  */
 public class ClusterStatus extends VersionedWritable {
@@ -49,6 +54,7 @@ public class ClusterStatus extends VersionedWritable {
   private String hbaseVersion;
   private Collection<HServerInfo> liveServerInfo;
   private Collection<String> deadServers;
+  private NavigableMap<String, String> intransition;
 
   /**
    * Constructor, for Writable
@@ -191,6 +197,14 @@ public class ClusterStatus extends VersionedWritable {
     this.deadServers = deadServers;
   }
 
+  public Map<String, String> getRegionsInTransition() {
+    return this.intransition;
+  }
+
+  public void setRegionsInTransition(final NavigableMap<String, String> m) {
+    this.intransition = m;
+  }
+
   //
   // Writable
   //
@@ -205,6 +219,11 @@ public class ClusterStatus extends VersionedWritable {
     out.writeInt(deadServers.size());
     for (String server: deadServers) {
       out.writeUTF(server);
+    }
+    out.writeInt(this.intransition.size());
+    for (Map.Entry<String, String> e: this.intransition.entrySet()) {
+      out.writeUTF(e.getKey());
+      out.writeUTF(e.getValue());
     }
   }
 
@@ -222,6 +241,13 @@ public class ClusterStatus extends VersionedWritable {
     deadServers = new ArrayList<String>(count);
     for (int i = 0; i < count; i++) {
       deadServers.add(in.readUTF());
+    }
+    count = in.readInt();
+    this.intransition = new TreeMap<String, String>();
+    for (int i = 0; i < count; i++) {
+      String key = in.readUTF();
+      String value = in.readUTF();
+      this.intransition.put(key, value);
     }
   }
 }

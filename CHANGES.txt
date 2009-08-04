@@ -546,6 +546,8 @@ Release 0.20.0 - Unreleased
    HBASE-1714  Thrift server: prefix scan API
    HBASE-1719  hold a reference to the region in stores instead of only the
                region info
+   HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
+               detailed output
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

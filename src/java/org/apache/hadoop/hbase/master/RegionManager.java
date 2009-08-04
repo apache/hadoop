@@ -20,21 +20,21 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.Collections;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,15 +43,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionHistorian;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1349,24 +1349,19 @@ class RegionManager implements HConstants {
       double avg = master.serverManager.getAverageLoad();
 
       // nothing to balance if server load not more then average load
-      if(servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) {
-        return;
-      }
+      if (servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) return;
       
-      // check if current server is overloaded
+      // check if server is overloaded
       int numRegionsToClose = balanceFromOverloaded(servLoad, avg);
       
       // check if we can unload server by low loaded servers
-      if(numRegionsToClose <= 0) {
-        numRegionsToClose = balanceToLowloaded(info.getServerName(), servLoad, 
-            avg);
-      }
+      if (numRegionsToClose <= 0)
+        balanceToLowloaded(info.getServerName(), servLoad, avg);
       
-      if(maxRegToClose > 0) {
+      if (maxRegToClose > 0)
         numRegionsToClose = Math.min(numRegionsToClose, maxRegToClose);
-      }
-      
-      if(numRegionsToClose > 0) {
+              
+      if (numRegionsToClose > 0){
         unassignSomeRegions(info, numRegionsToClose, mostLoadedRegions, 
             returnMsgs);
       }
@@ -1421,11 +1416,24 @@ class RegionManager implements HConstants {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Server " + srvName + " will be unloaded for " +
             "balance. Server load: " + numSrvRegs + " avg: " +
-            avgLoad + ", regions can be moved: " + numMoveToLowLoaded +
-            ". Regions to close: " + numRegionsToClose);
+            avgLoad + ", regions can be moved: " + numMoveToLowLoaded);
       }
       return numRegionsToClose;
     }
+  }
+
+  /**
+   * @return Snapshot of regionsintransition as a sorted Map.
+   */
+  NavigableMap<String, String> getRegionsInTransition() {
+    NavigableMap<String, String> result = new TreeMap<String, String>();
+    synchronized (this.regionsInTransition) {
+      if (this.regionsInTransition.isEmpty()) return result;
+      for (Map.Entry<String, RegionState> e: this.regionsInTransition.entrySet()) {
+        result.put(e.getKey(), e.getValue().toString());
+      }
+    }
+    return result;
   }
 
   /*
