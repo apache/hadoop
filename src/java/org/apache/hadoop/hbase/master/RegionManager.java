@@ -1436,6 +1436,26 @@ class RegionManager implements HConstants {
     return result;
   }
 
+  /**
+   * @param regionname Name to clear from regions in transistion.
+   * @return True if we removed an element for the passed regionname.
+   */
+  boolean clearFromInTransition(final byte [] regionname) {
+    boolean result = false;
+    synchronized (this.regionsInTransition) {
+      if (this.regionsInTransition.isEmpty()) return result;
+      for (Map.Entry<String, RegionState> e: this.regionsInTransition.entrySet()) {
+        if (Bytes.equals(regionname, e.getValue().getRegionName())) {
+          this.regionsInTransition.remove(e.getKey());
+          LOG.debug("Removed " + e.getKey() + ", " + e.getValue());
+          result = true;
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
   /*
    * State of a Region as it transitions from closed to open, etc.  See
    * note on regionsInTransition data member above for listing of state
