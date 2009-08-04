@@ -13,8 +13,6 @@ Trunk (unreleased changes)
 
     HDFS-461. Tool to analyze file size distribution in HDFS. (shv)
 
-    HDFS-446. Improvements to Offline Image Viewer. (Jakob Homan via shv)
-
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
@@ -69,6 +67,11 @@ Trunk (unreleased changes)
 
     HDFS-504. Update the modification time of a file when the file 
     is closed. (Chun Zhang via dhruba)
+
+    HDFS-446. Improvements to Offline Image Viewer. (Jakob Homan via shv)
+
+    HDFS-498. Add development guide and documentation for the fault injection
+    framework.  (Konstantin Boudnik via szetszwo)
 
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
