@@ -902,6 +902,9 @@ Trunk (unreleased changes)
     HADOOP-6172. Fix jar file names in hadoop-config.sh and include ${build.src}
     as a part of the source list in build.xml.  (Hong Tang via szetszwo)
 
+    HADOOP-6124. Fix javac warning detection in test-patch.sh.  (Giridharan
+    Kesavan via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
