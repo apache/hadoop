@@ -52,7 +52,8 @@ public class TestStreamingExitStatus extends TestCase
       "-reducer", (failMap ? echoTask : failingTask),
       "-jobconf", "keep.failed.task.files=true",
       "-jobconf", "stream.non.zero.exit.is.failure=" + exitStatusIsFailure,
-      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
+      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
+      "-jobconf", "io.sort.mb=10"
     };
   }
 

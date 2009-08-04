@@ -311,4 +311,5 @@ Trunk (unreleased changes)
     MAPREDUCE-40. Keep memory management backwards compatible for job
     configuration parameters and limits. (Rahul Kumar Singh via yhemanth)
 
-    
+    MAPREDUCE-587. Fixes a OOM issue in TestStreamingExitStatus.
+    (Amar Kamat via ddas) 
