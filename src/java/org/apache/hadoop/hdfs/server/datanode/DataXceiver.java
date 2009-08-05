@@ -43,6 +43,8 @@ import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputSt
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessToken;
 import org.apache.hadoop.security.AccessTokenHandler;
@@ -57,22 +59,29 @@ class DataXceiver extends DataTransferProtocol.Receiver
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
-  Socket s;
-  final String remoteAddress; // address of remote side
-  final String localAddress;  // local address of this daemon
-  DataNode datanode;
-  DataXceiverServer dataXceiverServer;
+  private final Socket s;
+  private final boolean isLocal; //is a local connection?
+  private final String remoteAddress; // address of remote side
+  private final String localAddress;  // local address of this daemon
+  private final DataNode datanode;
+  private final DataXceiverServer dataXceiverServer;
+
+  private long opStartTime; //the start time of receiving an Op
   
   public DataXceiver(Socket s, DataNode datanode, 
       DataXceiverServer dataXceiverServer) {
-    
     this.s = s;
+    this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
     this.datanode = datanode;
     this.dataXceiverServer = dataXceiverServer;
     dataXceiverServer.childSockets.put(s, s);
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
-    LOG.debug("Number of active connections is: " + datanode.getXceiverCount());
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Number of active connections is: "
+          + datanode.getXceiverCount());
+    }
   }
 
   /**
@@ -84,8 +93,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
       in = new DataInputStream(
           new BufferedInputStream(NetUtils.getInputStream(s), 
                                   SMALL_BUFFER_SIZE));
-      final DataTransferProtocol.Op op = op(in);
-      boolean local = s.getInetAddress().equals(s.getLocalAddress());
+      final DataTransferProtocol.Op op = readOp(in);
+
       // Make sure the xciver count is not exceeded
       int curXceiverCount = datanode.getXceiverCount();
       if (curXceiverCount > dataXceiverServer.maxXceiverCount) {
@@ -93,45 +102,16 @@ class DataXceiver extends DataTransferProtocol.Receiver
                               + " exceeds the limit of concurrent xcievers "
                               + dataXceiverServer.maxXceiverCount);
       }
-      long startTime = DataNode.now();
-      switch ( op ) {
-      case READ_BLOCK:
-        opReadBlock(in);
-        datanode.myMetrics.readBlockOp.inc(DataNode.now() - startTime);
-        if (local)
-          datanode.myMetrics.readsFromLocalClient.inc();
-        else
-          datanode.myMetrics.readsFromRemoteClient.inc();
-        break;
-      case WRITE_BLOCK:
-        opWriteBlock(in);
-        datanode.myMetrics.writeBlockOp.inc(DataNode.now() - startTime);
-        if (local)
-          datanode.myMetrics.writesFromLocalClient.inc();
-        else
-          datanode.myMetrics.writesFromRemoteClient.inc();
-        break;
-      case REPLACE_BLOCK: // for balancing purpose; send to a destination
-        opReplaceBlock(in);
-        datanode.myMetrics.replaceBlockOp.inc(DataNode.now() - startTime);
-        break;
-      case COPY_BLOCK:
-            // for balancing purpose; send to a proxy source
-        opCopyBlock(in);
-        datanode.myMetrics.copyBlockOp.inc(DataNode.now() - startTime);
-        break;
-      case BLOCK_CHECKSUM: //get the checksum of a block
-        opBlockChecksum(in);
-        datanode.myMetrics.blockChecksumOp.inc(DataNode.now() - startTime);
-        break;
-      default:
-        throw new IOException("Unknown opcode " + op + " in data stream");
-      }
+
+      opStartTime = DataNode.now();
+      processOp(op, in);
     } catch (Throwable t) {
       LOG.error(datanode.dnRegistration + ":DataXceiver",t);
     } finally {
-      LOG.debug(datanode.dnRegistration + ":Number of active connections is: "
-                               + datanode.getXceiverCount());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(datanode.dnRegistration + ":Number of active connections is: "
+            + datanode.getXceiverCount());
+      }
       IOUtils.closeStream(in);
       IOUtils.closeSocket(s);
       dataXceiverServer.childSockets.remove(s);
@@ -142,7 +122,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Read a block from the disk.
    */
   @Override
-  public void opReadBlock(DataInputStream in,
+  protected void opReadBlock(DataInputStream in,
       long blockId, long blockGs, long startOffset, long length,
       String clientName, AccessToken accessToken) throws IOException {
     final Block block = new Block(blockId, 0 , blockGs);
@@ -213,13 +193,18 @@ class DataXceiver extends DataTransferProtocol.Receiver
       IOUtils.closeStream(out);
       IOUtils.closeStream(blockSender);
     }
+
+    //update metrics
+    updateDuration(datanode.myMetrics.readBlockOp);
+    updateCounter(datanode.myMetrics.readsFromLocalClient,
+                  datanode.myMetrics.readsFromRemoteClient);
   }
 
   /**
    * Write a block to disk.
    */
   @Override
-  public void opWriteBlock(DataInputStream in, long blockId, long blockGs,
+  protected void opWriteBlock(DataInputStream in, long blockId, long blockGs,
       int pipelineSize, boolean isRecovery,
       String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
       AccessToken accessToken) throws IOException {
@@ -377,13 +362,18 @@ class DataXceiver extends DataTransferProtocol.Receiver
       IOUtils.closeSocket(mirrorSock);
       IOUtils.closeStream(blockReceiver);
     }
+
+    //update metrics
+    updateDuration(datanode.myMetrics.writeBlockOp);
+    updateCounter(datanode.myMetrics.writesFromLocalClient,
+                  datanode.myMetrics.writesFromRemoteClient);
   }
 
   /**
    * Get block checksum (MD5 of CRC32).
    */
   @Override
-  public void opBlockChecksum(DataInputStream in,
+  protected void opBlockChecksum(DataInputStream in,
       long blockId, long blockGs, AccessToken accessToken) throws IOException {
     final Block block = new Block(blockId, 0 , blockGs);
     DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
@@ -433,13 +423,16 @@ class DataXceiver extends DataTransferProtocol.Receiver
       IOUtils.closeStream(checksumIn);
       IOUtils.closeStream(metadataIn);
     }
+
+    //update metrics
+    updateDuration(datanode.myMetrics.blockChecksumOp);
   }
 
   /**
    * Read a block from the disk and then sends it to a destination.
    */
   @Override
-  public void opCopyBlock(DataInputStream in,
+  protected void opCopyBlock(DataInputStream in,
       long blockId, long blockGs, AccessToken accessToken) throws IOException {
     // Read in the header
     Block block = new Block(blockId, 0, blockGs);
@@ -499,6 +492,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
       IOUtils.closeStream(reply);
       IOUtils.closeStream(blockSender);
     }
+
+    //update metrics    
+    updateDuration(datanode.myMetrics.copyBlockOp);
   }
 
   /**
@@ -506,7 +502,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * remove the copy from the source.
    */
   @Override
-  public void opReplaceBlock(DataInputStream in,
+  protected void opReplaceBlock(DataInputStream in,
       long blockId, long blockGs, String sourceID, DatanodeInfo proxySource,
       AccessToken accessToken) throws IOException {
     /* read header */
@@ -606,8 +602,20 @@ class DataXceiver extends DataTransferProtocol.Receiver
       IOUtils.closeStream(blockReceiver);
       IOUtils.closeStream(proxyReply);
     }
+
+    //update metrics
+    updateDuration(datanode.myMetrics.replaceBlockOp);
   }
-  
+
+  private void updateDuration(MetricsTimeVaryingRate mtvr) {
+    mtvr.inc(DataNode.now() - opStartTime);
+  }
+
+  private void updateCounter(MetricsTimeVaryingInt localCounter,
+      MetricsTimeVaryingInt remoteCounter) {
+    (isLocal? localCounter: remoteCounter).inc();
+  }
+
   /**
    * Utility function for sending a response.
    * @param s socket to write to

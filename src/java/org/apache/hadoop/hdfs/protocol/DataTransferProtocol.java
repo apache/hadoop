@@ -249,8 +249,8 @@ public interface DataTransferProtocol {
 
   /** Receiver */
   public static abstract class Receiver {
-    /** Initialize a operation. */
-    public final Op op(DataInputStream in) throws IOException {
+    /** Read an Op.  It also checks protocol version. */
+    protected final Op readOp(DataInputStream in) throws IOException {
       final short version = in.readShort();
       if (version != DATA_TRANSFER_VERSION) {
         throw new IOException( "Version Mismatch" );
@@ -258,8 +258,32 @@ public interface DataTransferProtocol {
       return Op.read(in);
     }
 
+    /** Process op by the corresponding method. */
+    protected final void processOp(Op op, DataInputStream in
+        ) throws IOException {
+      switch(op) {
+      case READ_BLOCK:
+        opReadBlock(in);
+        break;
+      case WRITE_BLOCK:
+        opWriteBlock(in);
+        break;
+      case REPLACE_BLOCK:
+        opReplaceBlock(in);
+        break;
+      case COPY_BLOCK:
+        opCopyBlock(in);
+        break;
+      case BLOCK_CHECKSUM:
+        opBlockChecksum(in);
+        break;
+      default:
+        throw new IOException("Unknown op " + op + " in data stream");
+      }
+    }
+
     /** Receive OP_READ_BLOCK */
-    public final void opReadBlock(DataInputStream in) throws IOException {
+    private void opReadBlock(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
       final long offset = in.readLong();
@@ -270,13 +294,16 @@ public interface DataTransferProtocol {
       opReadBlock(in, blockId, blockGs, offset, length, client, accesstoken);
     }
 
-    /** Abstract OP_READ_BLOCK method. */
-    public abstract void opReadBlock(DataInputStream in,
+    /**
+     * Abstract OP_READ_BLOCK method.
+     * Read a block.
+     */
+    protected abstract void opReadBlock(DataInputStream in,
         long blockId, long blockGs, long offset, long length,
         String client, AccessToken accesstoken) throws IOException;
     
     /** Receive OP_WRITE_BLOCK */
-    public final void opWriteBlock(DataInputStream in) throws IOException {
+    private void opWriteBlock(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
       final int pipelineSize = in.readInt(); // num of datanodes in entire pipeline
@@ -298,14 +325,17 @@ public interface DataTransferProtocol {
           client, src, targets, accesstoken);
     }
 
-    /** Abstract OP_WRITE_BLOCK method. */
-    public abstract void opWriteBlock(DataInputStream in,
+    /**
+     * Abstract OP_WRITE_BLOCK method. 
+     * Write a block.
+     */
+    protected abstract void opWriteBlock(DataInputStream in,
         long blockId, long blockGs, int pipelineSize, boolean isRecovery,
         String client, DatanodeInfo src, DatanodeInfo[] targets,
         AccessToken accesstoken) throws IOException;
 
     /** Receive OP_REPLACE_BLOCK */
-    public final void opReplaceBlock(DataInputStream in) throws IOException {
+    private void opReplaceBlock(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
       final String sourceId = Text.readString(in); // read del hint
@@ -315,13 +345,16 @@ public interface DataTransferProtocol {
       opReplaceBlock(in, blockId, blockGs, sourceId, src, accesstoken);
     }
 
-    /** Abstract OP_REPLACE_BLOCK method. */
-    public abstract void opReplaceBlock(DataInputStream in,
+    /**
+     * Abstract OP_REPLACE_BLOCK method.
+     * It is used for balancing purpose; send to a destination
+     */
+    protected abstract void opReplaceBlock(DataInputStream in,
         long blockId, long blockGs, String sourceId, DatanodeInfo src,
         AccessToken accesstoken) throws IOException;
 
     /** Receive OP_COPY_BLOCK */
-    public final void opCopyBlock(DataInputStream in) throws IOException {
+    private void opCopyBlock(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
       final AccessToken accesstoken = readAccessToken(in);
@@ -329,12 +362,15 @@ public interface DataTransferProtocol {
       opCopyBlock(in, blockId, blockGs, accesstoken);
     }
 
-    /** Abstract OP_COPY_BLOCK method. */
-    public abstract void opCopyBlock(DataInputStream in,
+    /**
+     * Abstract OP_COPY_BLOCK method.
+     * It is used for balancing purpose; send to a proxy source.
+     */
+    protected abstract void opCopyBlock(DataInputStream in,
         long blockId, long blockGs, AccessToken accesstoken) throws IOException;
 
     /** Receive OP_BLOCK_CHECKSUM */
-    public final void opBlockChecksum(DataInputStream in) throws IOException {
+    private void opBlockChecksum(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
       final AccessToken accesstoken = readAccessToken(in);
@@ -342,8 +378,11 @@ public interface DataTransferProtocol {
       opBlockChecksum(in, blockId, blockGs, accesstoken);
     }
 
-    /** Abstract OP_BLOCK_CHECKSUM method. */
-    public abstract void opBlockChecksum(DataInputStream in,
+    /**
+     * Abstract OP_BLOCK_CHECKSUM method.
+     * Get the checksum of a block 
+     */
+    protected abstract void opBlockChecksum(DataInputStream in,
         long blockId, long blockGs, AccessToken accesstoken) throws IOException;
 
     /** Read an AccessToken */
