@@ -86,6 +86,9 @@ Trunk (unreleased changes)
     HDFS-529. Use BlockInfo instead of Block to avoid redundant block searches
     in BlockManager. (shv)
 
+    HDFS-530. Refactor TestFileAppend* to remove code duplication.
+    (Konstantin Boudnik via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 

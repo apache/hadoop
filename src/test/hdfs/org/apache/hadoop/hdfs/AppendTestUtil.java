@@ -23,13 +23,12 @@ import java.io.OutputStream;
 import java.util.Random;
 
 import junit.framework.TestCase;
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -61,7 +60,11 @@ class AppendTestUtil {
       return r;
     }
   };
-  
+  static final int BLOCK_SIZE = 1024;
+  static final int NUM_BLOCKS = 10;
+  static final int FILE_SIZE = NUM_BLOCKS * BLOCK_SIZE + 1;
+  static long seed = -1;
+
   static int nextInt() {return RANDOM.get().nextInt();}
   static int nextInt(int n) {return RANDOM.get().nextInt(n);}
   static int nextLong() {return RANDOM.get().nextInt();}
@@ -114,6 +117,51 @@ class AppendTestUtil {
       in.close();
     } catch(IOException ioe) {
       throw new IOException("p=" + p + ", length=" + length + ", i=" + i, ioe);
+    }
+  }
+
+  /**
+   *  create a buffer that contains the entire test file data.
+   */
+  static byte[] initBuffer(int size) {
+    if (seed == -1)
+      seed = nextLong();
+    return randomBytes(seed, size);
+  }
+
+  /**
+   *  Creates a file but does not close it
+   *  Make sure to call close() on the returned stream
+   *  @throws IOException an exception might be thrown
+   */
+  static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
+      throws IOException {
+    return fileSys.create(name, true,
+        fileSys.getConf().getInt("io.file.buffer.size", 4096),
+        (short) repl, (long) BLOCK_SIZE);
+  }
+
+  /**
+   *  Compare the content of a file created from FileSystem and Path with
+   *  the specified byte[] buffer's content
+   *  @throws IOException an exception might be thrown
+   */
+  static void checkFullFile(FileSystem fs, Path name, int len,
+                            final byte[] compareContent, String message) throws IOException {
+    FSDataInputStream stm = fs.open(name);
+    byte[] actual = new byte[len];
+    stm.readFully(0, actual);
+    checkData(actual, 0, compareContent, message);
+    stm.close();
+  }
+
+  private static void checkData(final byte[] actual, int from,
+                                final byte[] expected, String message) {
+    for (int idx = 0; idx < actual.length; idx++) {
+      Assert.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
+                   expected[from+idx]+" actual "+actual[idx],
+                   expected[from+idx], actual[idx]);
+      actual[idx] = 0;
     }
   }
 }

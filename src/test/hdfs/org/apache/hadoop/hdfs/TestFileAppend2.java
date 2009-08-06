@@ -24,7 +24,6 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,9 +55,7 @@ public class TestFileAppend2 extends TestCase {
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  static final int blockSize = 1024;
   static final int numBlocks = 5;
-  static final int fileSize = numBlocks * blockSize + 1;
   boolean simulatedStorage = false;
 
   private byte[] fileContents = null;
@@ -73,54 +70,14 @@ public class TestFileAppend2 extends TestCase {
   int numAppendsPerThread = 2000;
 ****/
   Workload[] workload = null;
-  ArrayList<Path> testFiles = new ArrayList<Path>();
+  final ArrayList<Path> testFiles = new ArrayList<Path>();
   volatile static boolean globalStatus = true;
-
-  //
-  // create a buffer that contains the entire test file data.
-  //
-  private void initBuffer(int size) {
-    long seed = AppendTestUtil.nextLong();
-    fileContents = AppendTestUtil.randomBytes(seed, size);
-  }
-
-  /*
-   * creates a file but does not close it
-   */ 
-  private FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
-    throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true,
-                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                                            (short)repl, (long)blockSize);
-    return stm;
-  }
-
-  private void checkFile(FileSystem fs, Path name, int len) throws IOException {
-    FSDataInputStream stm = fs.open(name);
-    byte[] actual = new byte[len];
-    stm.readFully(0, actual);
-    checkData(actual, 0, fileContents, "Read 2");
-    stm.close();
-  }
-
-  private void checkFullFile(FileSystem fs, Path name) throws IOException {
-    checkFile(fs, name, fileSize);
-  }
-
-  private void checkData(byte[] actual, int from, byte[] expected, String message) {
-    for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                   expected[from+idx]+" actual "+actual[idx],
-                   expected[from+idx], actual[idx]);
-      actual[idx] = 0;
-    }
-  }
-
 
   /**
    * Creates one file, writes a few bytes to it and then closed it.
    * Reopens the same file for appending, write all blocks and then close.
    * Verify that all data exists in file.
+   * @throws IOException an exception might be thrown
    */ 
   public void testSimpleAppend() throws IOException {
     Configuration conf = new Configuration();
@@ -129,7 +86,7 @@ public class TestFileAppend2 extends TestCase {
     }
     conf.setInt("dfs.datanode.handler.count", 50);
     conf.setBoolean("dfs.support.append", true);
-    initBuffer(fileSize);
+    fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
     try {
@@ -137,7 +94,7 @@ public class TestFileAppend2 extends TestCase {
 
         // create a new file.
         Path file1 = new Path("/simpleAppend.dat");
-        FSDataOutputStream stm = createFile(fs, file1, 1);
+        FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
         System.out.println("Created file simpleAppend.dat");
   
         // write to file
@@ -161,14 +118,16 @@ public class TestFileAppend2 extends TestCase {
         // ensure getPos is set to reflect existing size of the file
         assertTrue(stm.getPos() > 0);
 
-        System.out.println("Writing " + (fileSize - mid2) + " bytes to file " + file1);
-        stm.write(fileContents, mid2, fileSize - mid2);
+        System.out.println("Writing " + (AppendTestUtil.FILE_SIZE - mid2) +
+            " bytes to file " + file1);
+        stm.write(fileContents, mid2, AppendTestUtil.FILE_SIZE - mid2);
         System.out.println("Written second part of file");
         stm.close();
         System.out.println("Wrote and Closed second part of file.");
   
         // verify that entire file is good
-        checkFullFile(fs, file1);
+        AppendTestUtil.checkFullFile(fs, file1, AppendTestUtil.FILE_SIZE,
+            fileContents, "Read 2");
       }
 
       { // test appending to an non-existing file.
@@ -285,7 +244,7 @@ public class TestFileAppend2 extends TestCase {
       for (int i = 0; i < numAppendsPerThread; i++) {
    
         // pick a file at random and remove it from pool
-        Path testfile = null;
+        Path testfile;
         synchronized (testFiles) {
           if (testFiles.size() == 0) {
             System.out.println("Completed write to almost all files.");
@@ -304,7 +263,7 @@ public class TestFileAppend2 extends TestCase {
           len = fs.getFileStatus(testfile).getLen();
 
           // if file is already full, then pick another file
-          if (len >= fileSize) {
+          if (len >= AppendTestUtil.FILE_SIZE) {
             System.out.println("File " + testfile + " is full.");
             continue;
           }
@@ -312,7 +271,7 @@ public class TestFileAppend2 extends TestCase {
           // do small size appends so that we can trigger multiple
           // appends to the same file.
           //
-          int left = (int)(fileSize - len)/3;
+          int left = (int)(AppendTestUtil.FILE_SIZE - len)/3;
           if (left <= 0) {
             left = 1;
           }
@@ -335,8 +294,7 @@ public class TestFileAppend2 extends TestCase {
                                  " expected size " + (len + sizeToAppend) +
                                  " waiting for namenode metadata update.");
               Thread.sleep(5000);
-            } catch (InterruptedException e) { 
-            }
+            } catch (InterruptedException e) {;}
           }
 
           assertTrue("File " + testfile + " size is " + 
@@ -344,7 +302,8 @@ public class TestFileAppend2 extends TestCase {
                      " but expected " + (len + sizeToAppend),
                     fs.getFileStatus(testfile).getLen() == (len + sizeToAppend));
 
-          checkFile(fs, testfile, (int)(len + sizeToAppend));
+          AppendTestUtil.checkFullFile(fs, testfile, (int)(len + sizeToAppend),
+              fileContents, "Read 2");
         } catch (Throwable e) {
           globalStatus = false;
           if (e != null && e.toString() != null) {
@@ -368,9 +327,10 @@ public class TestFileAppend2 extends TestCase {
 
   /**
    * Test that appends to files at random offsets.
+   * @throws IOException an exception might be thrown
    */
   public void testComplexAppend() throws IOException {
-    initBuffer(fileSize);
+    fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     Configuration conf = new Configuration();
     conf.setInt("heartbeat.recheck.interval", 2000);
     conf.setInt("dfs.heartbeat.interval", 2);
@@ -392,7 +352,8 @@ public class TestFileAppend2 extends TestCase {
       for (int i = 0; i < numberOfFiles; i++) {
         short replication = (short)(AppendTestUtil.nextInt(numDatanodes) + 1);
         Path testFile = new Path("/" + i + ".dat");
-        FSDataOutputStream stm = createFile(fs, testFile, replication);
+        FSDataOutputStream stm =
+            AppendTestUtil.createFile(fs, testFile, replication);
         stm.close();
         testFiles.add(testFile);
       }

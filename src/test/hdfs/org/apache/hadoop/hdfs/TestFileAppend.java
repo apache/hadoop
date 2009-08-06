@@ -26,7 +26,6 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,38 +42,15 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
  * support HDFS appends.
  */
 public class TestFileAppend extends TestCase {
-  static final int blockSize = 1024;
-  static final int numBlocks = 10;
-  static final int fileSize = numBlocks * blockSize + 1;
   boolean simulatedStorage = false;
 
-  private long seed;
-  private byte[] fileContents = null;
-
-  //
-  // create a buffer that contains the entire test file data.
-  //
-  private void initBuffer(int size) {
-    seed = AppendTestUtil.nextLong();
-    fileContents = AppendTestUtil.randomBytes(seed, size);
-  }
-
-  /*
-   * creates a file but does not close it
-   */ 
-  private FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
-    throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true,
-                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                                            (short)repl, (long)blockSize);
-    return stm;
-  }
+  private static byte[] fileContents = null;
 
   //
   // writes to file but does not close it
   //
   private void writeFile(FSDataOutputStream stm) throws IOException {
-    byte[] buffer = AppendTestUtil.randomBytes(seed, fileSize);
+    byte[] buffer = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     stm.write(buffer);
   }
 
@@ -89,16 +65,16 @@ public class TestFileAppend extends TestCase {
     while (!done) {
       try {
         Thread.sleep(1000);
-      } catch (InterruptedException e) {}
+      } catch (InterruptedException e) {;}
       done = true;
       BlockLocation[] locations = fileSys.getFileBlockLocations(
-          fileSys.getFileStatus(name), 0, fileSize);
-      if (locations.length < numBlocks) {
+          fileSys.getFileStatus(name), 0, AppendTestUtil.FILE_SIZE);
+      if (locations.length < AppendTestUtil.NUM_BLOCKS) {
         System.out.println("Number of blocks found " + locations.length);
         done = false;
         continue;
       }
-      for (int idx = 0; idx < numBlocks; idx++) {
+      for (int idx = 0; idx < AppendTestUtil.NUM_BLOCKS; idx++) {
         if (locations[idx].getHosts().length < repl) {
           System.out.println("Block index " + idx + " not yet replciated.");
           done = false;
@@ -106,43 +82,24 @@ public class TestFileAppend extends TestCase {
         }
       }
     }
-    FSDataInputStream stm = fileSys.open(name);
-    byte[] expected = new byte[numBlocks * blockSize];
+    byte[] expected = 
+        new byte[AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE];
     if (simulatedStorage) {
       for (int i= 0; i < expected.length; i++) {  
         expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
       }
     } else {
-      for (int i= 0; i < expected.length; i++) {  
-        expected[i] = fileContents[i];
-      }
+      System.arraycopy(fileContents, 0, expected, 0, expected.length);
     }
     // do a sanity check. Read the file
-    byte[] actual = new byte[numBlocks * blockSize];
-    stm.readFully(0, actual);
-    checkData(actual, 0, expected, "Read 1");
+    AppendTestUtil.checkFullFile(fileSys, name,
+        AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE,
+        expected, "Read 1");
   }
-
-  private void checkFullFile(FileSystem fs, Path name) throws IOException {
-    FSDataInputStream stm = fs.open(name);
-    byte[] actual = new byte[fileSize];
-    stm.readFully(0, actual);
-    checkData(actual, 0, fileContents, "Read 2");
-    stm.close();
-  }
-
-  private void checkData(byte[] actual, int from, byte[] expected, String message) {
-    for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                   expected[from+idx]+" actual "+actual[idx],
-                   expected[from+idx], actual[idx]);
-      actual[idx] = 0;
-    }
-  }
-
 
   /**
    * Test that copy on write for blocks works correctly
+   * @throws IOException an exception might be thrown
    */
   public void testCopyOnWrite() throws IOException {
     Configuration conf = new Configuration();
@@ -159,7 +116,7 @@ public class TestFileAppend extends TestCase {
       // create a new file, write to it and close it.
       //
       Path file1 = new Path("/filestatus.dat");
-      FSDataOutputStream stm = createFile(fs, file1, 1);
+      FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
       writeFile(stm);
       stm.close();
 
@@ -178,11 +135,9 @@ public class TestFileAppend extends TestCase {
       //
       for (int i = 0; i < blocks.size(); i = i + 2) {
         Block b = blocks.get(i).getBlock();
-        FSDataset fsd = dataset;
-        File f = fsd.getFile(b);
+        File f = dataset.getFile(b);
         File link = new File(f.toString() + ".link");
-        System.out.println("Creating hardlink for File " + f + 
-                           " to " + link);
+        System.out.println("Creating hardlink for File " + f + " to " + link);
         HardLink.createHardLink(f, link);
       }
 
@@ -193,7 +148,7 @@ public class TestFileAppend extends TestCase {
         Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned true",
-                   dataset.detachBlock(b, 1) == true);
+            dataset.detachBlock(b, 1));
       }
 
       // Since the blocks were already detached earlier, these calls should
@@ -203,7 +158,7 @@ public class TestFileAppend extends TestCase {
         Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned false",
-                   dataset.detachBlock(b, 1) == false);
+            !dataset.detachBlock(b, 1));
       }
 
     } finally {
@@ -214,30 +169,31 @@ public class TestFileAppend extends TestCase {
 
   /**
    * Test a simple flush on a simple HDFS file.
+   * @throws IOException an exception might be thrown
    */
   public void testSimpleFlush() throws IOException {
     Configuration conf = new Configuration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    initBuffer(fileSize);
+    fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
     try {
 
       // create a new file.
       Path file1 = new Path("/simpleFlush.dat");
-      FSDataOutputStream stm = createFile(fs, file1, 1);
+      FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
       System.out.println("Created file simpleFlush.dat");
 
       // write to file
-      int mid = fileSize/2;
+      int mid = AppendTestUtil.FILE_SIZE /2;
       stm.write(fileContents, 0, mid);
       stm.sync();
       System.out.println("Wrote and Flushed first part of file.");
 
       // write the remainder of the file
-      stm.write(fileContents, mid, fileSize - mid);
+      stm.write(fileContents, mid, AppendTestUtil.FILE_SIZE - mid);
       System.out.println("Written second part of file");
       stm.sync();
       stm.sync();
@@ -250,7 +206,8 @@ public class TestFileAppend extends TestCase {
       System.out.println("Closed file.");
 
       // verify that entire file is good
-      checkFullFile(fs, file1);
+      AppendTestUtil.checkFullFile(fs, file1, AppendTestUtil.FILE_SIZE,
+          fileContents, "Read 2");
 
     } catch (IOException e) {
       System.out.println("Exception :" + e);
@@ -267,36 +224,38 @@ public class TestFileAppend extends TestCase {
 
   /**
    * Test that file data can be flushed.
+   * @throws IOException an exception might be thrown
    */
   public void testComplexFlush() throws IOException {
     Configuration conf = new Configuration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    initBuffer(fileSize);
+    fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
     try {
 
       // create a new file.
       Path file1 = new Path("/complexFlush.dat");
-      FSDataOutputStream stm = createFile(fs, file1, 1);
+      FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
       System.out.println("Created file complexFlush.dat");
 
       int start = 0;
-      for (start = 0; (start + 29) < fileSize; ) {
+      for (start = 0; (start + 29) < AppendTestUtil.FILE_SIZE; ) {
         stm.write(fileContents, start, 29);
         stm.sync();
         start += 29;
       }
-      stm.write(fileContents, start, fileSize-start);
+      stm.write(fileContents, start, AppendTestUtil.FILE_SIZE -start);
 
       // verify that full blocks are sane
       checkFile(fs, file1, 1);
       stm.close();
 
       // verify that entire file is good
-      checkFullFile(fs, file1);
+      AppendTestUtil.checkFullFile(fs, file1, AppendTestUtil.FILE_SIZE,
+          fileContents, "Read 2");
     } catch (IOException e) {
       System.out.println("Exception :" + e);
       throw e; 
