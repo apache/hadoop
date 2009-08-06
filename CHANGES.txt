@@ -81,6 +81,8 @@ Trunk (unreleased changes)
 
     HDFS-524. Further DataTransferProtocol code refactoring.  (szetszwo)
 
+    HDFS-527. Remove/deprecate unnecessary DFSClient constructors.  (szetszwo)
+
   BUG FIXES
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than

@@ -223,7 +223,7 @@ public class TestDFSClientRetries extends TestCase {
     conf.setInt("dfs.client.block.write.locateFollowingBlock.retries", 1);
         
     TestNameNode tnn = new TestNameNode(conf);
-    DFSClient client = new DFSClient(tnn, tnn, conf, null);
+    final DFSClient client = new DFSClient(null, tnn, conf, null);
     OutputStream os = client.create("testfile", true);
     os.write(20); // write one random byte
     
