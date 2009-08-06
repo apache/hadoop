@@ -28,12 +28,30 @@
         	<classpath refid="classpath" />
         </javac>
     </target>
-	
 
-	 <target name="compress" depends="compile" description="Compression target">
-  	      <jar jarfile="${build.dir}/gridmix.jar" basedir="${build.dir}" includes="**/*.class" />
-                   
+    <target name="dev-build" depends="init, dev-compile, compress" description="Developers build target">
+        <echo>
+            Building the .jar files.
+        </echo>
+    </target>
 
+    <target name="dev-compile" depends="init" description="Compilation target">
+        <path id="dev-classpath">
+            <pathelement location="${build.classes}"/>
+            <fileset dir="${hadoop.dir}/build">
+               <include name="**.jar" />
+               <include name="contrib/streaming/**.jar" />
+            </fileset>
+            <fileset dir="${lib.dir}">
+               <include name="*.jar" />
+               <exclude name="**/excluded/" />
+            </fileset>
+         </path>
+        <javac srcdir="src/java/" destdir="${build.dir}" classpathref="dev-classpath"/>
+    </target>
+
+    <target name="compress" depends="compile" description="Compression target">
+        <jar jarfile="${build.dir}/gridmix.jar" basedir="${build.dir}" includes="**/*.class" />
         <copy todir="." includeEmptyDirs="false">
             <fileset dir="${build.dir}">
 	        <exclude name="**" />

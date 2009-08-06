@@ -316,3 +316,5 @@ Trunk (unreleased changes)
 
     MAPREDUCE-408. Fixes an assertion problem in TestKillSubProcesses
     (Ravi Gummadi via ddas)
+     
+    MAPREDUCE-659. Fix gridmix2 compilation. (Giridharan Kesavan)

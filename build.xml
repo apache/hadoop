@@ -674,7 +674,7 @@
     </available>  	
   </target>
 
- <target name="all-jars" depends="tools-jar,examples">
+ <target name="all-jars" depends="tools-jar,examples,jar-test">
    <subant target="jar">
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
@@ -957,9 +957,9 @@
 
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${final.name}*.jar"/>
-    <!--  <fileset file="${build.dir}/${test.final.name}.jar"/>
+      <fileset file="${build.dir}/${test.final.name}.jar"/>
       <fileset file="${build.dir}/${examples.final.name}.jar"/>
-      <fileset file="${build.dir}/${tools.final.name}.jar"/> -->
+      <fileset file="${build.dir}/${tools.final.name}.jar"/> 
     </copy>
     
 
