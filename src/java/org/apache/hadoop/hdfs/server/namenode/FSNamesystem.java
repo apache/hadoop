@@ -1030,13 +1030,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     synchronized (this) {
       INodeFileUnderConstruction file = (INodeFileUnderConstruction)dir.getFileINode(src);
 
-      Block[] blocks = file.getBlocks();
+      BlockInfo[] blocks = file.getBlocks();
       if (blocks != null && blocks.length > 0) {
-        Block last = blocks[blocks.length-1];
+        BlockInfo last = blocks[blocks.length-1];
+        // this is a redundant search in blocksMap
+        // should be resolved by the new implementation of append
         BlockInfo storedBlock = blockManager.getStoredBlock(last);
+        assert last == storedBlock : "last block should be in the blocksMap";
         if (file.getPreferredBlockSize() > storedBlock.getNumBytes()) {
           long fileLength = file.computeContentSummary().getLength();
-          DatanodeDescriptor[] targets = blockManager.getNodes(last);
+          DatanodeDescriptor[] targets = blockManager.getNodes(storedBlock);
           // remove the replica locations of this block from the node
           for (int i = 0; i < targets.length; i++) {
             targets[i].removeBlock(storedBlock);
@@ -1578,8 +1581,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       // setup the Inode.targets for the last block from the blockManager
       //
-      Block[] blocks = pendingFile.getBlocks();
-      Block last = blocks[blocks.length-1];
+      BlockInfo[] blocks = pendingFile.getBlocks();
+      BlockInfo last = blocks[blocks.length-1];
       DatanodeDescriptor[] targets = blockManager.getNodes(last);
       pendingFile.setTargets(targets);
     }

@@ -108,9 +108,20 @@ class BlocksMap {
     return map.get(b);
   }
 
-  /** Returned Iterator does not support. */
+  /**
+   * Searches for the block in the BlocksMap and 
+   * returns Iterator that iterates through the nodes the block belongs to.
+   */
   Iterator<DatanodeDescriptor> nodeIterator(Block b) {
-    return new NodeIterator(map.get(b));
+    return nodeIterator(map.get(b));
+  }
+
+  /**
+   * For a block that has already been retrieved from the BlocksMap
+   * returns Iterator that iterates through the nodes the block belongs to.
+   */
+  Iterator<DatanodeDescriptor> nodeIterator(BlockInfo storedBlock) {
+    return new NodeIterator(storedBlock);
   }
 
   /** counts number of containing nodes. Better than using iterator. */

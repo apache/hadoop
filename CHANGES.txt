@@ -83,7 +83,11 @@ Trunk (unreleased changes)
 
     HDFS-527. Remove/deprecate unnecessary DFSClient constructors.  (szetszwo)
 
+    HDFS-529. Use BlockInfo instead of Block to avoid redundant block searches
+    in BlockManager. (shv)
+
   BUG FIXES
+
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than
     current consumption. (Boris Shkolnik via rangadi)
