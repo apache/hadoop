@@ -146,7 +146,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
         } else if (th instanceof InterruptedException) {
           throw (InterruptedException) th;
         } else {
-          throw (RuntimeException) th;
+          throw new RuntimeException(th);
         }
       }
     }

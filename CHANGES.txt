@@ -318,3 +318,6 @@ Trunk (unreleased changes)
     (Ravi Gummadi via ddas)
      
     MAPREDUCE-659. Fix gridmix2 compilation. (Giridharan Kesavan)
+
+    MAPREDUCE-796. Fixes a ClassCastException in an exception log in
+    MultiThreadedMapRunner. (Amar Kamat via ddas)
