@@ -489,6 +489,9 @@ Trunk (unreleased changes)
     (gkesavan)
     
     HADOOP-6169. Removing deprecated method calls in TFile. (hong tang via mahadev)
+
+    HADOOP-6176. Add a couple package private methods to AccessTokenHandler
+    for testing.  (Kan Zhang via szetszwo)
  
   OPTIMIZATIONS
 
