@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.fs.Path;
 
 /** A section of an input file.  Returned by {@link
@@ -34,12 +33,10 @@ import org.apache.hadoop.fs.Path;
 @Deprecated
 public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit 
                        implements InputSplit {
-  private Path file;
-  private long start;
-  private long length;
-  private String[] hosts;
-  
-  FileSplit() {}
+  org.apache.hadoop.mapreduce.lib.input.FileSplit fs; 
+  FileSplit() {
+    fs = new org.apache.hadoop.mapreduce.lib.input.FileSplit();
+  }
 
   /** Constructs a split.
    * @deprecated
@@ -60,45 +57,38 @@ public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit
    * @param hosts the list of hosts containing the block, possibly null
    */
   public FileSplit(Path file, long start, long length, String[] hosts) {
-    this.file = file;
-    this.start = start;
-    this.length = length;
-    this.hosts = hosts;
+    fs = new org.apache.hadoop.mapreduce.lib.input.FileSplit(file, start,
+           length, hosts);
+  }
+  
+  public FileSplit(org.apache.hadoop.mapreduce.lib.input.FileSplit fs) {
+    this.fs = fs;
   }
 
   /** The file containing this split's data. */
-  public Path getPath() { return file; }
+  public Path getPath() { return fs.getPath(); }
   
   /** The position of the first byte in the file to process. */
-  public long getStart() { return start; }
+  public long getStart() { return fs.getStart(); }
   
   /** The number of bytes in the file to process. */
-  public long getLength() { return length; }
+  public long getLength() { return fs.getLength(); }
 
-  public String toString() { return file + ":" + start + "+" + length; }
+  public String toString() { return fs.toString(); }
 
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
 
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, file.toString());
-    out.writeLong(start);
-    out.writeLong(length);
+    fs.write(out);
   }
   public void readFields(DataInput in) throws IOException {
-    file = new Path(UTF8.readString(in));
-    start = in.readLong();
-    length = in.readLong();
-    hosts = null;
+    fs.readFields(in);
   }
 
   public String[] getLocations() throws IOException {
-    if (this.hosts == null) {
-      return new String[]{};
-    } else {
-      return this.hosts;
-    }
+    return fs.getLocations();
   }
   
 }

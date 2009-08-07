@@ -38,7 +38,7 @@ public class FileSplit extends InputSplit implements Writable {
   private long length;
   private String[] hosts;
 
-  FileSplit() {}
+  public FileSplit() {}
 
   /** Constructs a split with host information
    *

@@ -21,10 +21,7 @@ package org.apache.hadoop.mapred.lib;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -35,7 +32,6 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.LineRecordReader;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.LineReader;
 
 /**
  * NLineInputFormat which splits N lines of input as one split.
@@ -54,8 +50,10 @@ import org.apache.hadoop.util.LineReader;
  * a value to one map task, and key is the offset.
  * i.e. (k,v) is (LongWritable, Text).
  * The location hints will span the whole mapred cluster.
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.input.NLineInputFormat} instead
  */
-
+@Deprecated
 public class NLineInputFormat extends FileInputFormat<LongWritable, Text> 
                               implements JobConfigurable { 
   private int N = 1;
@@ -79,46 +77,10 @@ public class NLineInputFormat extends FileInputFormat<LongWritable, Text>
   throws IOException {
     ArrayList<FileSplit> splits = new ArrayList<FileSplit>();
     for (FileStatus status : listStatus(job)) {
-      Path fileName = status.getPath();
-      if (status.isDir()) {
-        throw new IOException("Not a file: " + fileName);
-      }
-      FileSystem  fs = fileName.getFileSystem(job);
-      LineReader lr = null;
-      try {
-        FSDataInputStream in  = fs.open(fileName);
-        lr = new LineReader(in, job);
-        Text line = new Text();
-        int numLines = 0;
-        long begin = 0;
-        long length = 0;
-        int num = -1;
-        while ((num = lr.readLine(line)) > 0) {
-          numLines++;
-          length += num;
-          if (numLines == N) {
-            // NLineInputFormat uses LineRecordReader, which always reads (and consumes) 
-            //at least one character out of its upper split boundary. So to make sure that
-            //each mapper gets N lines, we move back the upper split limits of each split 
-            //by one character here.
-            if (begin == 0) {
-              splits.add(new FileSplit(fileName, begin, length - 1, new String[] {}));
-            } else {
-              splits.add(new FileSplit(fileName, begin - 1, length, new String[] {}));
-            }
-            begin += length;
-            length = 0;
-            numLines = 0;
-          }
-        }
-        if (numLines != 0) {
-          splits.add(new FileSplit(fileName, begin, length, new String[]{}));
-        }
-   
-      } finally {
-        if (lr != null) {
-          lr.close();
-        }
+      for (org.apache.hadoop.mapreduce.lib.input.FileSplit split : 
+          org.apache.hadoop.mapreduce.lib.input.
+          NLineInputFormat.getSplitsForFile(status, job, N)) {
+        splits.add(new FileSplit(split));
       }
     }
     return splits.toArray(new FileSplit[splits.size()]);

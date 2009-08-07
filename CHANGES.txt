@@ -171,6 +171,10 @@ Trunk (unreleased changes)
     MAPREDUCE-670. Creates ant target for 10 mins patch test build.
     (Jothi Padmanabhan via gkesavan)
 
+    MAPREDUCE-375. Change org.apache.hadoop.mapred.lib.NLineInputFormat 
+    and org.apache.hadoop.mapred.MapFileOutputFormat to use new api.
+    (Amareshwari Sriramadasu via ddas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
