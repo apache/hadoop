@@ -18,18 +18,15 @@
 package org.apache.hadoop.fs;
 
 
-import junit.framework.TestCase;
-import java.io.File;
-import java.io.IOException;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.net.URI;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.Trash;
-import org.apache.hadoop.fs.LocalFileSystem;
 
 /**
  * This class tests commands from Trash.
@@ -60,6 +57,22 @@ public class TestTrash extends TestCase {
       Path path) throws IOException {
     Path p = new Path(trashRoot+"/"+ path.toUri().getPath());
     assertTrue(fs.exists(p));
+  }
+  
+  // counts how many instances of the file are in the Trash
+  // they all are in format fileName*
+  protected static int countSameDeletedFiles(FileSystem fs, final File trashDir,
+      final String fileName) throws IOException {
+    System.out.println("Counting " + fileName + " in " + trashDir.getAbsolutePath());
+    String [] res = trashDir.list(
+          new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                return name.startsWith(fileName);
+              }
+          }
+      );
+
+    return res.length;
   }
 
   // check that the specified file is not in Trash
@@ -313,6 +326,45 @@ public class TestTrash extends TestCase {
       assertFalse(fs.exists(myFile));
       assertTrue(val == 0);
     }
+    
+    // deleting same file multiple times
+    {     
+      int val = -1;
+      mkdir(fs, myPath);
+      
+      try {
+        assertEquals(0, shell.run(new String [] { "-expunge" } ));
+      } catch (Exception e) {
+        System.err.println("Exception raised from fs expunge " +
+            e.getLocalizedMessage());        
+      }
+      
+      // create a file in that directory.
+      myFile = new Path(base, "test/mkdirs/myFile");
+      String [] args = new String[] {"-rm", myFile.toString()};
+      int num_runs = 10;
+      for(int i=0;i<num_runs; i++) {
+        
+        //create file
+        writeFile(fs, myFile);
+         
+        // delete file
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from Trash.run " +
+              e.getLocalizedMessage());
+        }
+        assertTrue(val==0);
+      }
+      // current trash directory
+      File trashCurrent = new File(trashRoot.toUri().getPath() + myFile.getParent().toUri().getPath());
+      
+      int count = countSameDeletedFiles(fs, trashCurrent, myFile.getName());
+      System.out.println("counted " + count + " files " + myFile.getName() + "* in " + trashCurrent);
+      assertTrue(count==num_runs);
+    }
+    
   }
 
   public static void trashNonDefaultFS(Configuration conf) throws IOException {
@@ -353,6 +405,17 @@ public class TestTrash extends TestCase {
     conf.set("fs.default.name", "invalid://host/bar/foo");
     trashNonDefaultFS(conf);
   }
+  
+  /**
+   * @see TestCase#tearDown()
+   */
+  @Override
+  protected void tearDown() throws IOException {
+    File trashDir = new File(TEST_DIR.toUri().getPath());
+    if (trashDir.exists() && !FileUtil.fullyDelete(trashDir)) {
+      throw new IOException("Cannot remove data directory: " + trashDir);
+    }
+  }
 
   static class TestLFS extends LocalFileSystem {
     Path home;
@@ -366,5 +429,78 @@ public class TestTrash extends TestCase {
     public Path getHomeDirectory() {
       return home;
     }
+  }
+  
+  /**
+   *  test same file deletion - multiple time
+   *  this is more of a performance test - shouldn't be run as a unit test
+   * @throws IOException
+   */
+  public static void performanceTestDeleteSameFile() throws IOException{
+    Path base = TEST_DIR;
+    Configuration conf = new Configuration();
+    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
+    FileSystem fs = FileSystem.getLocal(conf);
+    
+    conf.set("fs.default.name", fs.getUri().toString());
+    conf.set("fs.trash.interval", "10"); //minutes..
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    //Path trashRoot = null;
+
+    Path myPath = new Path(base, "test/mkdirs");
+    mkdir(fs, myPath);
+
+    // create a file in that directory.
+    Path myFile;
+    long start;
+    long first = 0;
+    int retVal = 0;
+    int factor = 10; // how much slower any of subsequent deletion can be
+    myFile = new Path(base, "test/mkdirs/myFile");
+    String [] args = new String[] {"-rm", myFile.toString()};
+    int iters = 1000;
+    for(int i=0;i<iters; i++) {
+      
+      writeFile(fs, myFile);
+      
+      start = System.currentTimeMillis();
+      
+      try {
+        retVal = shell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from Trash.run " +
+            e.getLocalizedMessage());
+        throw new IOException(e.getMessage());
+      }
+      
+      assertTrue(retVal == 0);
+      
+      long iterTime = System.currentTimeMillis() - start;
+      // take median of the first 10 runs
+      if(i<10) {
+        if(i==0) {
+          first = iterTime;
+        }
+        else {
+          first = (first + iterTime)/2;
+        }
+      }
+      // we don't want to print every iteration - let's do every 10th
+      int print_freq = iters/10; 
+      
+      if(i>10) {
+        if((i%print_freq) == 0)
+          System.out.println("iteration="+i+";res =" + retVal + "; start=" + start
+              + "; iterTime = " + iterTime + " vs. firstTime=" + first);
+        long factoredTime = first*factor;
+        assertTrue(iterTime<factoredTime); //no more then twice of median first 10
+      }
+    } 
+  }
+  
+  public static void main(String [] arg) throws IOException{
+    // run performance piece as a separate test
+    performanceTestDeleteSameFile();
   }
 }

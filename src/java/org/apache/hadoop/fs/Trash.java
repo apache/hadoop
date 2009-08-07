@@ -17,14 +17,19 @@
  */
 package org.apache.hadoop.fs;
 
-import java.text.*;
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.fs.permission.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.StringUtils;
 
 /** Provides a <i>trash</i> feature.  Files are moved to a user's trash
@@ -128,12 +133,14 @@ public class Trash extends Configured {
       try {
         //
         // if the target path in Trash already exists, then append with 
-        // a number. Start from 1.
+        // a current time in millisecs.
         //
         String orig = trashPath.toString();
-        for (int j = 1; fs.exists(trashPath); j++) {
-          trashPath = new Path(orig + "." + j);
+        
+        while(fs.exists(trashPath)) {
+          trashPath = new Path(orig + System.currentTimeMillis());
         }
+        
         if (fs.rename(path, trashPath))           // move to current trash
           return true;
       } catch (IOException e) {
