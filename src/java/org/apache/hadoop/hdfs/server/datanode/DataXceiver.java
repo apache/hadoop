@@ -84,6 +84,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
     }
   }
 
+  /** Return the datanode object. */
+  DataNode getDataNode() {return datanode;}
+
   /**
    * Read/write data from/to the DataXceiveServer.
    */

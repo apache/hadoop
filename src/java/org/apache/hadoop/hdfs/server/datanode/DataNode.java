@@ -490,6 +490,11 @@ public class DataNode extends Configured
     return myMetrics;
   }
   
+  /** Return DatanodeRegistration */
+  public DatanodeRegistration getDatanodeRegistration() {
+    return dnRegistration;
+  }
+
   /**
    * Return the namenode's identifier
    */

@@ -89,6 +89,9 @@ Trunk (unreleased changes)
     HDFS-530. Refactor TestFileAppend* to remove code duplication.
     (Konstantin Boudnik via szetszwo)
 
+    HDFS-451. Add fault injection tests, Pipeline_Fi_06,07,14,15, for
+    DataTransferProtocol.  (szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
