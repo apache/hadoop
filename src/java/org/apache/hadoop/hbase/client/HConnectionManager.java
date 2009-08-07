@@ -573,12 +573,11 @@ public class HConnectionManager implements HConstants {
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
-
           byte [] value = regionInfoRow.getValue(CATALOG_FAMILY, 
               REGIONINFO_QUALIFIER);
           if (value == null || value.length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
-              Bytes.toString(parentTable));
+              Bytes.toString(parentTable) + ", " + regionInfoRow);
           }
           // convert the row result into the HRegionLocation we need!
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
