@@ -51,7 +51,7 @@ class JobTrackerStatistics {
       stat.remove();
     }
   }
-
+  
   synchronized TaskTrackerStat getTaskTrackerStat(String name) {
     return ttStats.get(name);
   }
@@ -62,12 +62,17 @@ class JobTrackerStatistics {
 
     final String succeededTasksKey;
     final Stat succeededTasksStat;
+    
+    final String healthCheckFailedKey;
+    final Stat healthCheckFailedStat;
 
     TaskTrackerStat(String trackerName) {
       totalTasksKey = trackerName+"-"+"totalTasks";
       totalTasksStat = collector.createStat(totalTasksKey);
       succeededTasksKey = trackerName+"-"+"succeededTasks";
       succeededTasksStat = collector.createStat(succeededTasksKey);
+      healthCheckFailedKey = trackerName + "-"+ "healthcheckfailed";
+      healthCheckFailedStat = collector.createStat(healthCheckFailedKey);
     }
 
     synchronized void incrTotalTasks() {
@@ -77,10 +82,15 @@ class JobTrackerStatistics {
     synchronized void incrSucceededTasks() {
       succeededTasksStat.inc();
     }
+    
+    synchronized void incrHealthCheckFailed() {
+      healthCheckFailedStat.inc();
+    }
 
     synchronized void remove() {
       collector.removeStat(totalTasksKey);
       collector.removeStat(succeededTasksKey);
+      collector.removeStat(healthCheckFailedKey);
     }
 
   }

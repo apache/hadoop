@@ -51,7 +51,7 @@
       c = tracker.taskTrackers();
     }
     int noCols = 9 + 
-      (2 * tracker.getStatistics().collector.DEFAULT_COLLECT_WINDOWS.length);
+      (3 * tracker.getStatistics().collector.DEFAULT_COLLECT_WINDOWS.length);
     if(type.equals("blacklisted")) {
       noCols = noCols + 1;
     }
@@ -75,8 +75,9 @@
            collector.DEFAULT_COLLECT_WINDOWS) {
          out.println("<td><b>Total Tasks "+window.name+"</b></td>");
          out.println("<td><b>Succeeded Tasks "+window.name+"</b></td>");
+         out.println("<td><b>Failed Health Checks " 
+               + window.name+"</b></td>"); 
        }
-      
       out.print("<td><b>Seconds since heartbeat</b></td></tr>\n");
 
       int maxFailures = 0;
@@ -127,6 +128,8 @@
                                 get(window).getValue());
           out.println("</td><td>" + ttStat.succeededTasksStat.getValues().
                                 get(window).getValue());
+          out.println("</td><td>" + ttStat.healthCheckFailedStat.
+              getValues().get(window).getValue());
         }
         
         out.print("</td><td>" + sinceHeartbeat + "</td></tr>\n");

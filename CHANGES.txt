@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     and org.apache.hadoop.mapred.MapFileOutputFormat to use new api.
     (Amareshwari Sriramadasu via ddas)
 
+    MAPREDUCE-779. Added node health failure counts into 
+    JobTrackerStatistics. (Sreekanth Ramakrishnan via yhemanth)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

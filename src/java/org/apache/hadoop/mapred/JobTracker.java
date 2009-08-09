@@ -65,6 +65,7 @@ import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
+import org.apache.hadoop.mapred.JobTrackerStatistics.TaskTrackerStat;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
@@ -843,7 +844,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       if (!isHealthy) {
         fi = getFaultInfo(hostName, true);
         fi.setHealthy(isHealthy);
-        synchronized (potentiallyFaultyTrackers) {
+        updateNodeHealthFailureStatistics(hostName, fi);
+        synchronized (potentiallyFaultyTrackers) { 
           blackListTracker(hostName, reason,
               ReasonForBlackListing.NODE_UNHEALTHY);
         }
@@ -859,6 +861,34 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
     }
+
+    /**
+     * Update the node health failure statistics of the given
+     * host.
+     * 
+     * We increment the count only when the host transitions
+     * from healthy -> unhealthy. 
+     * 
+     * @param hostName
+     * @param fi Fault info object for the host.
+     */
+    private void updateNodeHealthFailureStatistics(String hostName, 
+        FaultInfo fi) {
+      //Check if the node was already blacklisted due to 
+      //unhealthy reason. If so dont increment the count.
+      if (!fi.getReasonforblacklisting().contains(
+          ReasonForBlackListing.NODE_UNHEALTHY)) {
+        Set<TaskTracker> trackers = hostnameToTaskTracker.get(hostName);
+        synchronized (trackers) {
+          for (TaskTracker t : trackers) {
+            TaskTrackerStat stat = statistics.getTaskTrackerStat(
+                t.getTrackerName());
+            stat.incrHealthCheckFailed();
+          }
+        }
+      }
+    }
+    
   }
   
   /**

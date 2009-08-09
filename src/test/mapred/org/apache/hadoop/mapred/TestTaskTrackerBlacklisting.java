@@ -207,6 +207,58 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     assertEquals("Trackers still blacklisted after healthy report", jobTracker
         .getBlacklistedTrackerCount(), 0);
   }
+  
+  
+  /**
+   * Test case to check if the task tracker node health failure statistics
+   * is populated correctly.
+   * 
+   * We check the since start property and assume that other properties would
+   * be populated in a correct manner.
+   */
+  public void testTaskTrackerNodeHealthFailureStatistics() throws Exception {
+    //populate previous failure count, as the job tracker is bought up only
+    //once in setup of test cases to run all node health blacklist stuff.
+    int failureCount = getFailureCountSinceStart(jobTracker, trackers[0]);
+    sendHeartBeat(null, false);
+    for(String tracker: trackers) {
+      assertEquals("Failure count updated wrongly for tracker : " + tracker,
+          failureCount, getFailureCountSinceStart(jobTracker, tracker));
+    }
+    
+    TaskTrackerHealthStatus status = getUnhealthyNodeStatus("ERROR");
+    sendHeartBeat(status, false);
+    //When the node fails due to health check, the statistics is 
+    //incremented.
+    failureCount++;
+    for(String tracker: trackers) {
+      assertEquals("Failure count updated wrongly for tracker : " + tracker,
+          failureCount, getFailureCountSinceStart(jobTracker, tracker));
+    }
+    //even if the node reports unhealthy in next status update we dont
+    //increment it. We increment the statistics if the node goes back to
+    //healthy and then becomes unhealthy.
+    sendHeartBeat(status, false);
+    for(String tracker: trackers) {
+      assertEquals("Failure count updated wrongly for tracker : " + tracker,
+          failureCount, getFailureCountSinceStart(jobTracker, tracker));
+    }
+    //make nodes all healthy, but the failure statistics should be 
+    //carried forward.
+    sendHeartBeat(null, false);
+    for(String tracker: trackers) {
+      assertEquals("Failure count updated wrongly for tracker : " + tracker,
+          failureCount, getFailureCountSinceStart(jobTracker, tracker));
+    }
+  }
+  
+  private int getFailureCountSinceStart(JobTracker jt, String tracker) {
+    JobTrackerStatistics jtStats = jt.getStatistics();
+    StatisticsCollector collector = jtStats.collector;
+    collector.update();
+    return jtStats.getTaskTrackerStat(tracker).healthCheckFailedStat
+        .getValues().get(StatisticsCollector.SINCE_START).getValue();
+  }
 
   public void testBlackListingWithFailuresAndHealthStatus() throws Exception {
     runBlackListingJob(jobTracker, trackers);
