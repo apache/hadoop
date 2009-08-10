@@ -334,3 +334,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-808. Fixes a serialization problem in TypedBytes.
     (Klaas Bosteels via ddas)
+
+    MAPREDUCE-845. Fix a findbugs heap size problem in build.xml and add
+    a new property findbugs.heap.size.  (Lee Tucker via szetszwo)

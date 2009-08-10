@@ -154,6 +154,7 @@
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
 
+  <property name="findbugs.heap.size" value="512M"/>
   <!-- task-controller properties set here -->
   <!-- Source directory from where configure is run and files are copied
   -->
@@ -695,7 +696,7 @@
 
     <findbugs home="${findbugs.home}" output="xml:withMessages"
         outputFile="${findbugs.report.xmlfile}" effort="max"
-        excludeFilter="${findbugs.exclude.file}" jvmargs="-Xmx512M">
+        excludeFilter="${findbugs.exclude.file}" jvmargs="-Xmx${findbugs.heap.size}">
       <auxClasspath>
         <fileset dir="${lib.dir}">
           <include name="**/*.jar"/>
