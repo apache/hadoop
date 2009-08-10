@@ -75,8 +75,10 @@ public class TestIO extends TestCase {
     Map<Object, Object> map = new HashMap<Object, Object>();
     map.put("one", 1);
     map.put("vector", vector);
+    Buffer buffer = new Buffer(new byte[] { 1, 2, 3, 4 });
+    buffer.setCapacity(10);
     Object[] objects = new Object[] {
-      new Buffer(new byte[] { 1, 2, 3, 4 }),
+      buffer,
       (byte) 123, true, 12345, 123456789L, (float) 1.2, 1.234,
       "random string", vector, list, map 
     };

@@ -331,3 +331,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-796. Fixes a ClassCastException in an exception log in
     MultiThreadedMapRunner. (Amar Kamat via ddas)
+
+    MAPREDUCE-808. Fixes a serialization problem in TypedBytes.
+    (Klaas Bosteels via ddas)

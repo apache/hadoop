@@ -74,7 +74,7 @@ public class TypedBytesOutput {
    */
   public void write(Object obj) throws IOException {
     if (obj instanceof Buffer) {
-      writeBytes(((Buffer) obj).get());
+      writeBytes((Buffer) obj);
     } else if (obj instanceof Byte) {
       writeByte((Byte) obj);
     } else if (obj instanceof Boolean) {
@@ -124,6 +124,21 @@ public class TypedBytesOutput {
   }
 
   /**
+   * Writes a bytes array as a typed bytes sequence, using a given typecode 
+   * and length.
+   * 
+   * @param bytes the bytes array to be written
+   * @param code the typecode to use
+   * @param length the number of bytes to write, starting from position 0
+   * @throws IOException
+   */
+  public void writeBytes(byte[] bytes, int code, int length) throws IOException {
+    out.write(code);
+    out.writeInt(length);
+    out.write(bytes, 0, length);
+  }
+  
+  /**
    * Writes a bytes array as a typed bytes sequence, using a given typecode.
    * 
    * @param bytes the bytes array to be written
@@ -131,9 +146,7 @@ public class TypedBytesOutput {
    * @throws IOException
    */
   public void writeBytes(byte[] bytes, int code) throws IOException {
-    out.write(code);
-    out.writeInt(bytes.length);
-    out.write(bytes);
+    writeBytes(bytes, code, bytes.length);
   }
   
   /**
@@ -144,6 +157,16 @@ public class TypedBytesOutput {
    */
   public void writeBytes(byte[] bytes) throws IOException {
     writeBytes(bytes, Type.BYTES.code);
+  }
+  
+  /**
+   * Writes a bytes buffer as a typed bytes sequence.
+   * 
+   * @param buffer the bytes buffer to be written
+   * @throws IOException
+   */
+  public void writeBytes(Buffer buffer) throws IOException {
+    writeBytes(buffer.get(), Type.BYTES.code, buffer.getCount());
   }
 
   /**
