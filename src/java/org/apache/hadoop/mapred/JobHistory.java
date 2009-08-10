@@ -30,14 +30,19 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -102,7 +107,8 @@ public class JobHistory {
     FsPermission.createImmutable((short) 0750); // rwxr-x---
   final static FsPermission HISTORY_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0740); // rwxr-----
-  private static FileSystem JT_FS; // jobtracker's filesystem
+  private static FileSystem LOGDIR_FS; // log dir filesystem
+  private static FileSystem DONEDIR_FS; // Done dir filesystem
   private static Path DONE = null; // folder for completed jobs
   
   /**
@@ -118,10 +124,22 @@ public class JobHistory {
       Path historyFilename; // path of job history file
       Path confFilename; // path of job's conf
     }
-    
+
+    private ThreadPoolExecutor executor = null;
+    private final Configuration conf;
+
     // cache from job-key to files associated with it.
     private Map<JobID, FilesHolder> fileCache = 
       new ConcurrentHashMap<JobID, FilesHolder>();
+
+    JobHistoryFilesManager(Configuration conf) throws IOException {
+      this.conf = conf;
+    }
+
+    void start() {
+      executor = new ThreadPoolExecutor(1, 3, 1, 
+          TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
+    }
 
     private FilesHolder getFileHolder(JobID id) {
       FilesHolder holder = fileCache.get(id);
@@ -164,6 +182,33 @@ public class JobHistory {
 
     void purgeJob(JobID id) {
       fileCache.remove(id);
+    }
+
+    void moveToDone(final JobID id, final List<Path> paths) {
+      executor.execute(new Runnable() {
+
+        public void run() {
+          //move the files to DONE folder
+          try {
+            for (Path path : paths) {
+              //check if path exists, in case of retries it may not exist
+              if (LOGDIR_FS.exists(path)) {
+                LOG.info("Moving " + path.toString() + " to " + 
+                    DONE.toString()); 
+                DONEDIR_FS.moveFromLocalFile(path, DONE);
+                DONEDIR_FS.setPermission(new Path(DONE, path.getName()), 
+                    new FsPermission(HISTORY_FILE_PERMISSION));
+              }
+            }
+
+            //purge the job from the cache
+            fileManager.purgeJob(id);
+          } catch (Throwable e) {
+            LOG.error("Unable to move history file to DONE folder.", e);
+          }
+        }
+
+      });
     }
   }
   /**
@@ -229,18 +274,18 @@ public class JobHistory {
         "file:///" + new File(
         System.getProperty("hadoop.log.dir")).getAbsolutePath()
         + File.separator + "history");
-      DONE = new Path(LOG_DIR, "done");
       JOBTRACKER_UNIQUE_STRING = hostname + "_" + 
                                     String.valueOf(jobTrackerStartTime) + "_";
       jobtrackerHostname = hostname;
       Path logDir = new Path(LOG_DIR);
       if (fs == null) {
-        JT_FS = logDir.getFileSystem(conf);
+        LOGDIR_FS = logDir.getFileSystem(conf);
       } else {
-        JT_FS = fs;
+        LOGDIR_FS = fs;
       }
-      if (!JT_FS.exists(logDir)){
-        if (!JT_FS.mkdirs(logDir, new FsPermission(HISTORY_DIR_PERMISSION))) {
+      if (!LOGDIR_FS.exists(logDir)){
+        if (!LOGDIR_FS.mkdirs(logDir, 
+            new FsPermission(HISTORY_DIR_PERMISSION))) {
           throw new IOException("Mkdirs failed to create " + logDir.toString());
         }
       }
@@ -250,12 +295,40 @@ public class JobHistory {
       jobHistoryBlockSize = 
         conf.getLong("mapred.jobtracker.job.history.block.size", 
                      3 * 1024 * 1024);
-      
-      // create the done folder with appropriate permission
-      JT_FS.mkdirs(DONE, HISTORY_DIR_PERMISSION);
 
       // initialize the file manager
-      fileManager = new JobHistoryFilesManager();
+      fileManager = new JobHistoryFilesManager(conf);
+    } catch(IOException e) {
+        LOG.error("Failed to initialize JobHistory log file", e); 
+        disableHistory = true;
+    }
+    return !(disableHistory);
+  }
+
+  static boolean initDone(JobConf conf, FileSystem fs){
+    try {
+      //if completed job history location is set, use that
+      String doneLocation = conf.
+                       get("mapred.job.tracker.history.completed.location");
+      if (doneLocation != null) {
+        DONE = fs.makeQualified(new Path(doneLocation));
+        DONEDIR_FS = fs;
+      } else {
+        DONE = new Path(LOG_DIR, "done");
+        DONEDIR_FS = LOGDIR_FS;
+      }
+
+      //If not already present create the done folder with appropriate 
+      //permission
+      if (!DONEDIR_FS.exists(DONE)) {
+        LOG.info("Creating DONE folder at "+ DONE);
+        if (! DONEDIR_FS.mkdirs(DONE, 
+            new FsPermission(HISTORY_DIR_PERMISSION))) {
+          throw new IOException("Mkdirs failed to create " + DONE.toString());
+        }
+      }
+
+      fileManager.start();
     } catch(IOException e) {
         LOG.error("Failed to initialize JobHistory log file", e); 
         disableHistory = true;
@@ -739,15 +812,22 @@ public class JobHistory {
       if (LOG_DIR == null) {
         return null;
       }
-      return getJobHistoryFileName(jobConf, id, new Path(LOG_DIR));
+      return getJobHistoryFileName(jobConf, id, new Path(LOG_DIR), LOGDIR_FS);
+    }
+
+    static synchronized String getDoneJobHistoryFileName(JobConf jobConf, 
+        JobID id) throws IOException {
+      if (DONE == null) {
+        return null;
+      }
+      return getJobHistoryFileName(jobConf, id, DONE, DONEDIR_FS);
     }
 
     /**
      * @param dir The directory where to search.
      */
-    static synchronized String getJobHistoryFileName(JobConf jobConf, 
-                                                            JobID id, 
-                                                            Path dir) 
+    private static synchronized String getJobHistoryFileName(JobConf jobConf, 
+                                          JobID id, Path dir, FileSystem fs) 
     throws IOException {
       String user = getUserName(jobConf);
       String jobName = trimJobName(getJobName(jobConf));
@@ -776,7 +856,7 @@ public class JobHistory {
         }
       };
       
-      FileStatus[] statuses = JT_FS.listStatus(dir, filter);
+      FileStatus[] statuses = fs.listStatus(dir, filter);
       String filename = null;
       if (statuses.length == 0) {
         LOG.info("Nothing to recover for job " + id);
@@ -816,7 +896,7 @@ public class JobHistory {
       Path logPath = JobHistory.JobInfo.getJobHistoryLogLocation(fileName);
       if (logPath != null) {
         LOG.info("Deleting job history file " + logPath.getName());
-        JT_FS.delete(logPath, false);
+        LOGDIR_FS.delete(logPath, false);
       }
       // do the same for the user file too
       logPath = JobHistory.JobInfo.getJobHistoryLogLocationForUser(fileName, 
@@ -848,20 +928,20 @@ public class JobHistory {
       String tmpFilename = getSecondaryJobHistoryFile(logFileName);
       Path logDir = logFilePath.getParent();
       Path tmpFilePath = new Path(logDir, tmpFilename);
-      if (JT_FS.exists(logFilePath)) {
+      if (LOGDIR_FS.exists(logFilePath)) {
         LOG.info(logFileName + " exists!");
-        if (JT_FS.exists(tmpFilePath)) {
+        if (LOGDIR_FS.exists(tmpFilePath)) {
           LOG.info("Deleting " + tmpFilename 
                    + "  and using " + logFileName + " for recovery.");
-          JT_FS.delete(tmpFilePath, false);
+          LOGDIR_FS.delete(tmpFilePath, false);
         }
         ret = tmpFilePath;
       } else {
         LOG.info(logFileName + " doesnt exist! Using " 
                  + tmpFilename + " for recovery.");
-        if (JT_FS.exists(tmpFilePath)) {
+        if (LOGDIR_FS.exists(tmpFilePath)) {
           LOG.info("Renaming " + tmpFilename + " to " + logFileName);
-          JT_FS.rename(tmpFilePath, logFilePath);
+          LOGDIR_FS.rename(tmpFilePath, logFilePath);
           ret = tmpFilePath;
         } else {
           ret = logFilePath;
@@ -919,7 +999,7 @@ public class JobHistory {
       // rename the tmp file to the master file. Note that this should be 
       // done only when the file is closed and handles are released.
       LOG.info("Renaming " + tmpLogFileName + " to " + masterLogFileName);
-      JT_FS.rename(tmpLogPath, masterLogPath);
+      LOGDIR_FS.rename(tmpLogPath, masterLogPath);
       // update the cache
       fileManager.setHistoryFile(id, masterLogPath);
       
@@ -960,28 +1040,25 @@ public class JobHistory {
      * This *should* be the last call to jobhistory for a given job.
      */
      static void markCompleted(JobID id) throws IOException {
+       List<Path> paths = new ArrayList<Path>();
        Path path = fileManager.getHistoryFile(id);
        if (path == null) {
          LOG.info("No file for job-history with " + id + " found in cache!");
-         return;
+       } else {
+         paths.add(path);
        }
-       Path newPath = new Path(DONE, path.getName());
-       LOG.info("Moving completed job from " + path + " to " + newPath);
-       JT_FS.rename(path, newPath);
 
        Path confPath = fileManager.getConfFileWriters(id);
        if (confPath == null) {
          LOG.info("No file for jobconf with " + id + " found in cache!");
-         return;
+       } else {
+         paths.add(confPath);
        }
-       // move the conf too
-       newPath = new Path(DONE, confPath.getName());
-       LOG.info("Moving configuration of completed job from " + confPath 
-                + " to " + newPath);
-       JT_FS.rename(confPath, newPath);
 
-       // purge the job from the cache
-       fileManager.purgeJob(id);
+       //move the job files to done folder and purge the job
+       if (paths.size() > 0) {
+         fileManager.moveToDone(id, paths);
+       }
      }
 
      /**
@@ -1056,12 +1133,12 @@ public class JobHistory {
             }
             
             int defaultBufferSize = 
-              JT_FS.getConf().getInt("io.file.buffer.size", 4096);
-            out = JT_FS.create(logFile, 
+              LOGDIR_FS.getConf().getInt("io.file.buffer.size", 4096);
+            out = LOGDIR_FS.create(logFile, 
                             new FsPermission(HISTORY_FILE_PERMISSION),
                             EnumSet.of(CreateFlag.OVERWRITE), 
                             defaultBufferSize, 
-                            JT_FS.getDefaultReplication(), 
+                            LOGDIR_FS.getDefaultReplication(), 
                             jobHistoryBlockSize, null);
             writer = new PrintWriter(out);
             fileManager.addWriter(jobId, writer);
@@ -1140,14 +1217,14 @@ public class JobHistory {
       try {
         if (LOG_DIR != null) {
           int defaultBufferSize = 
-              JT_FS.getConf().getInt("io.file.buffer.size", 4096);
-          if (!JT_FS.exists(jobFilePath)) {
-            jobFileOut = JT_FS.create(jobFilePath, 
+              LOGDIR_FS.getConf().getInt("io.file.buffer.size", 4096);
+          if (!LOGDIR_FS.exists(jobFilePath)) {
+            jobFileOut = LOGDIR_FS.create(jobFilePath, 
                                    new FsPermission(HISTORY_FILE_PERMISSION),
                                    EnumSet.of(CreateFlag.OVERWRITE), 
                                    defaultBufferSize, 
-                                   JT_FS.getDefaultReplication(), 
-                                   JT_FS.getDefaultBlockSize(), null);
+                                   LOGDIR_FS.getDefaultReplication(), 
+                                   LOGDIR_FS.getDefaultBlockSize(), null);
             jobConf.writeXml(jobFileOut);
             jobFileOut.close();
           }
@@ -1963,12 +2040,12 @@ public class JobHistory {
       lastRan = now;  
       isRunning = true; 
       try {
-        FileStatus[] historyFiles = JT_FS.listStatus(DONE);
+        FileStatus[] historyFiles = DONEDIR_FS.listStatus(DONE);
         // delete if older than 30 days
         if (historyFiles != null) {
           for (FileStatus f : historyFiles) {
             if (now - f.getModificationTime() > THIRTY_DAYS_IN_MS) {
-              JT_FS.delete(f.getPath(), true); 
+              DONEDIR_FS.delete(f.getPath(), true); 
               LOG.info("Deleting old history file : " + f.getPath());
             }
           }

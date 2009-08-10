@@ -50,6 +50,9 @@ Trunk (unreleased changes)
     MAPREDUCE-705. User-configurable quote and delimiter characters for Sqoop
     records and record reparsing. (Aaron Kimball via tomwhite)
 
+    MAPREDUCE-814. Provide a way to configure completed job history files 
+    to be on HDFS. (sharad)
+
   IMPROVEMENTS
 
     MAPREDUCE-816. Rename "local" mysql import to "direct" in Sqoop.

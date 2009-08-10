@@ -1873,14 +1873,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // initialize history parameters.
     boolean historyInitialized = JobHistory.init(conf, this.localMachine,
                                                  this.startTime);
-    String historyLogDir = null;
-    FileSystem historyFS = null;
-    if (historyInitialized) {
-      historyLogDir = JobHistory.getCompletedJobHistoryLocation().toString();
-      infoServer.setAttribute("historyLogDir", historyLogDir);
-      historyFS = new Path(historyLogDir).getFileSystem(conf);
-      infoServer.setAttribute("fileSys", historyFS);
-    }
+    
     infoServer.addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
     infoServer.start();
     
@@ -1969,13 +1962,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Same with 'localDir' except it's always on the local disk.
     jobConf.deleteLocalFiles(SUBDIR);
 
-    // Initialize history again if it is not initialized
-    // because history was on dfs and namenode was in safemode.
-    if (!historyInitialized) {
-      JobHistory.init(conf, this.localMachine, this.startTime); 
-      historyLogDir = conf.get("hadoop.job.history.location");
+    // Initialize history DONE folder
+    if (historyInitialized) {
+      JobHistory.initDone(conf, fs);
+      String historyLogDir = 
+        JobHistory.getCompletedJobHistoryLocation().toString();
       infoServer.setAttribute("historyLogDir", historyLogDir);
-      historyFS = new Path(historyLogDir).getFileSystem(conf);
+      FileSystem historyFS = new Path(historyLogDir).getFileSystem(conf);
       infoServer.setAttribute("fileSys", historyFS);
     }
 

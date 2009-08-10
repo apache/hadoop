@@ -27,6 +27,15 @@
 </property>
 
 <property>
+  <name>mapred.job.tracker.history.completed.location</name>
+  <value></value>
+  <description> The completed job history files are stored at this single well 
+  known location. If nothing is specified, the files are stored at 
+  ${hadoop.job.history.location}/done.
+  </description>
+</property>
+
+<property>
   <name>mapred.committer.job.setup.cleanup.needed</name>
   <value>true</value>
   <description> true, if job needs job-setup and job-cleanup.
