@@ -55,7 +55,7 @@ public class RowModel extends AbstractModel {
   public Result get(byte[] tableName, Get get)
   throws HBaseRestException {
     try {
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
       return table.get(get);
     } catch (IOException e) {
       throw new HBaseRestException(e);
@@ -112,7 +112,7 @@ public class RowModel extends AbstractModel {
 
   public void post(byte[] tableName, Put put) throws HBaseRestException {
     try {
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
       table.put(put);
     } catch (IOException e) {
       throw new HBaseRestException(e);
@@ -122,7 +122,7 @@ public class RowModel extends AbstractModel {
   public void post(byte[] tableName, List<Put> puts)
       throws HBaseRestException {
     try {
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
       table.put(puts);
     } catch (IOException e) {
       throw new HBaseRestException(e);
@@ -150,7 +150,7 @@ public class RowModel extends AbstractModel {
   public void delete(byte[] tableName, Delete delete)
   throws HBaseRestException {
     try {
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
       table.delete(delete);
     } catch (IOException e) {
       throw new HBaseRestException(e);

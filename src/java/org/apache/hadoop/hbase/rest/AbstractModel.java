@@ -69,7 +69,7 @@ public abstract class AbstractModel {
 
   protected byte[][] getColumns(byte[] tableName) throws HBaseRestException {
     try {
-      HTable h = new HTable(tableName);
+      HTable h = new HTable(this.conf, tableName);
       Collection<HColumnDescriptor> columns = h.getTableDescriptor()
           .getFamilies();
       byte[][] resultant = new byte[columns.size()][];
@@ -93,7 +93,6 @@ public abstract class AbstractModel {
         return true;
       }
     }
-
     return false;
   }
 }

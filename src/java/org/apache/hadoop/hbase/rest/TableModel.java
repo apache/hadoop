@@ -68,7 +68,7 @@ public class TableModel extends AbstractModel {
       throws HBaseRestException {
     try {
       ArrayList<Result> a = new ArrayList<Result>();
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
 
       Scan scan = new Scan();
       scan.addColumns(columnNames);

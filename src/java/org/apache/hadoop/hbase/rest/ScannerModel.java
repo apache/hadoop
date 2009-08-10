@@ -208,7 +208,7 @@ public class ScannerModel extends AbstractModel {
       long timestamp) throws HBaseRestException {
     try {
       HTable table;
-      table = new HTable(tableName);
+      table = new HTable(this.conf, tableName);
       Scan scan = new Scan();
       scan.addColumns(columns);
       scan.setTimeRange(0, timestamp);
@@ -228,7 +228,7 @@ public class ScannerModel extends AbstractModel {
       byte[] startRow, long timestamp) throws HBaseRestException {
     try {
       HTable table;
-      table = new HTable(tableName);
+      table = new HTable(this.conf, tableName);
       Scan scan = new Scan(startRow);
       scan.addColumns(columns);
       scan.setTimeRange(0, timestamp);
@@ -249,7 +249,7 @@ public class ScannerModel extends AbstractModel {
       long timestamp, RowFilterInterface filter) throws HBaseRestException {
     try {
       HTable table;
-      table = new HTable(tableName);
+      table = new HTable(this.conf, tableName);
       Scan scan = new Scan();
       scan.addColumns(columns);
       scan.setTimeRange(0, timestamp);
@@ -271,7 +271,7 @@ public class ScannerModel extends AbstractModel {
       throws HBaseRestException {
     try {
       HTable table;
-      table = new HTable(tableName);
+      table = new HTable(this.conf, tableName);
       Scan scan = new Scan(startRow);
       scan.addColumns(columns);
       scan.setTimeRange(0, timestamp);

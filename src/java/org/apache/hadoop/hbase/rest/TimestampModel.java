@@ -50,7 +50,7 @@ public class TimestampModel extends AbstractModel {
   public void delete(byte [] tableName, Delete delete)
   throws HBaseRestException {
     try {
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
       table.delete(delete);
     } catch (IOException e) {
       throw new HBaseRestException(e);
@@ -78,7 +78,7 @@ public class TimestampModel extends AbstractModel {
   public Result get(final byte [] tableName, final Get get)
   throws HBaseRestException {
     try {
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
       return table.get(get);
     } catch (IOException e) {
       throw new HBaseRestException(e);
@@ -140,7 +140,7 @@ public class TimestampModel extends AbstractModel {
   public void post(byte[] tableName, byte[] rowName, byte[] columnName,
       long timestamp, byte[] value) throws HBaseRestException {
     try {
-      HTable table = new HTable(tableName);
+      HTable table = new HTable(this.conf, tableName);
       Put put = new Put(rowName);
       put.setTimeStamp(timestamp);
       byte [][] famAndQf = KeyValue.parseColumn(columnName);

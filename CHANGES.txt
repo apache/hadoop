@@ -316,6 +316,7 @@ Release 0.20.0 - Unreleased
    HBASE-1739  hbase-1683 broke splitting; only split three logs no matter
                what N was
    HBASE-1745  [tools] Tool to kick region out of inTransistion
+   HBASE-1757  REST server runs out of fds
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
