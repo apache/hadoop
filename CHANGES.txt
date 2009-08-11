@@ -337,3 +337,7 @@ Trunk (unreleased changes)
 
     MAPREDUCE-845. Fix a findbugs heap size problem in build.xml and add
     a new property findbugs.heap.size.  (Lee Tucker via szetszwo)
+
+    MAPREDUCE-838. Fixes a problem in the way commit of task outputs
+    happens. The bug was that even if commit failed, the task would
+    be declared as successful. (Amareshwari Sriramadasu via ddas)
