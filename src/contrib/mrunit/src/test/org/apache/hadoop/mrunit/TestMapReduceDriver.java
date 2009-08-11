@@ -88,7 +88,7 @@ public class TestMapReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun1() {
+  public void testTestRun1() {
     driver
             .withInput(new Text("foo"), new LongWritable(FOO_IN_A))
             .withInput(new Text("foo"), new LongWritable(FOO_IN_B))
@@ -99,7 +99,7 @@ public class TestMapReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun2() {
+  public void testTestRun2() {
     driver
             .withInput(new Text("foo"), new LongWritable(FOO_IN_A))
             .withInput(new Text("bar"), new LongWritable(BAR_IN))
@@ -110,7 +110,7 @@ public class TestMapReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun3() {
+  public void testTestRun3() {
     try {
       driver
             .withInput(new Text("foo"), new LongWritable(FOO_IN_A))

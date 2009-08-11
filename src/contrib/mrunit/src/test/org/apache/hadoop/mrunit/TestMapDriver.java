@@ -60,14 +60,14 @@ public class TestMapDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun1() {
+  public void testTestRun1() {
     driver.withInput(new Text("foo"), new Text("bar"))
             .withOutput(new Text("foo"), new Text("bar"))
             .runTest();
   }
 
   @Test
-  public void TesttestRun2() {
+  public void testTestRun2() {
     try {
       driver.withInput(new Text("foo"), new Text("bar"))
             .runTest();
@@ -78,7 +78,7 @@ public class TestMapDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun3() {
+  public void testTestRun3() {
     try {
       driver.withInput(new Text("foo"), new Text("bar"))
             .withOutput(new Text("foo"), new Text("bar"))
@@ -91,7 +91,7 @@ public class TestMapDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun4() {
+  public void testTestRun4() {
     try {
       driver.withInput(new Text("foo"), new Text("bar"))
             .withOutput(new Text("foo"), new Text("bar"))
@@ -104,7 +104,7 @@ public class TestMapDriver extends TestCase {
 
   }
   @Test
-  public void TesttestRun5() {
+  public void testTestRun5() {
     try {
       driver.withInput(new Text("foo"), new Text("bar"))
             .withOutput(new Text("foo"), new Text("somethingelse"))
@@ -116,7 +116,7 @@ public class TestMapDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun6() {
+  public void testTestRun6() {
     try {
       driver.withInput(new Text("foo"), new Text("bar"))
               .withOutput(new Text("someotherkey"), new Text("bar"))
@@ -128,7 +128,7 @@ public class TestMapDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun7() {
+  public void testTestRun7() {
     try {
       driver.withInput(new Text("foo"), new Text("bar"))
             .withOutput(new Text("someotherkey"), new Text("bar"))

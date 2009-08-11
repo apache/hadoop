@@ -75,7 +75,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun1() {
+  public void testTestRun1() {
     driver
             .withInputKey(new Text("foo"))
             .withOutput(new Text("foo"), new LongWritable(0))
@@ -83,7 +83,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun2() {
+  public void testTestRun2() {
     driver
             .withInputKey(new Text("foo"))
             .withInputValue(new LongWritable(IN_A))
@@ -93,7 +93,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun3() {
+  public void testTestRun3() {
     try {
       driver
             .withInputKey(new Text("foo"))
@@ -109,7 +109,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun4() {
+  public void testTestRun4() {
     try {
       driver
             .withInputKey(new Text("foo"))
@@ -124,7 +124,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun5() {
+  public void testTestRun5() {
     try {
       driver
             .withInputKey(new Text("foo"))
@@ -139,7 +139,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun6() {
+  public void testTestRun6() {
     try {
       driver
             .withInputKey(new Text("foo"))
@@ -155,7 +155,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun7() {
+  public void testTestRun7() {
     try {
       driver
               .withInputKey(new Text("foo"))
@@ -171,7 +171,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun8() {
+  public void testTestRun8() {
     try {
       driver
             .withInputKey(new Text("foo"))
@@ -187,7 +187,7 @@ public class TestReduceDriver extends TestCase {
   }
 
   @Test
-  public void TesttestRun9() {
+  public void testTestRun9() {
     try {
       driver
             .withInputKey(new Text("foo"))

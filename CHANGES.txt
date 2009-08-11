@@ -351,3 +351,6 @@ Trunk (unreleased changes)
     MAPREDUCE-805. Fixes some deadlocks in the JobTracker due to the fact
     the JobTracker lock hierarchy wasn't maintained in some JobInProgress
     method calls. (Amar Kamat via ddas)
+    
+    MAPREDUCE-799. Fixes so all of the MRUnit self-tests run.
+    (Aaron Kimball via johan)    
