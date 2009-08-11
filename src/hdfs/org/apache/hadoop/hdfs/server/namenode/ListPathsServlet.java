@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.common.ThreadLocalDateFormat;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
@@ -27,14 +28,12 @@ import org.znerd.xmlenc.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -46,9 +45,9 @@ import javax.servlet.http.HttpServletResponse;
 public class ListPathsServlet extends DfsServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
+  public static final ThreadLocalDateFormat df = 
+    new ThreadLocalDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 
-  public static final SimpleDateFormat df =
-    new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
   static {
     df.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
@@ -163,13 +162,10 @@ public class ListPathsServlet extends DfsServlet {
         }
         catch(RemoteException re) {re.writeXml(p, doc);}
       }
-    } catch (PatternSyntaxException e) {
-      out.println(e.toString());
-    } finally {
       if (doc != null) {
         doc.endDocument();
       }
-
+    } finally {
       if (out != null) {
         out.close();
       }

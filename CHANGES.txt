@@ -198,7 +198,10 @@ Release 0.20.1 - Unreleased
 
     MAPREDUCE-796. Fixes a ClassCastException in an exception log in
     MultiThreadedMapRunner. (Amar Kamat via ddas)
-   
+
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe.  (Suresh Srinivas via szetszwo)
+ 
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
