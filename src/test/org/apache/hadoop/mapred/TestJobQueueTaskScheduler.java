@@ -184,6 +184,14 @@ public class TestJobQueueTaskScheduler extends TestCase {
       return null;
     }
 
+    public void initJob(JobInProgress job) {
+      // do nothing
+    }
+    
+    public void failJob(JobInProgress job) {
+      // do nothing
+    }
+    
     // Test methods
     
     public void submitJob(JobInProgress job) throws IOException {

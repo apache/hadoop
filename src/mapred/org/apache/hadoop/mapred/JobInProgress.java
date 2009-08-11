@@ -54,6 +54,16 @@ import org.apache.hadoop.util.StringUtils;
  * ***********************************************************
  */
 class JobInProgress {
+  /**
+   * Used when the a kill is issued to a job which is initializing.
+   */
+  static class KillInterruptedException extends InterruptedException {
+   private static final long serialVersionUID = 1L;
+    public KillInterruptedException(String msg) {
+      super(msg);
+    }
+  }
+
   static final Log LOG = LogFactory.getLog(JobInProgress.class);
     
   JobProfile profile;
@@ -377,12 +387,13 @@ class JobInProgress {
    * Construct the splits, etc.  This is invoked from an async
    * thread so that split-computation doesn't block anyone.
    */
-  public synchronized void initTasks() throws IOException {
-    if (tasksInited.get()) {
+  public synchronized void initTasks() 
+  throws IOException, KillInterruptedException {
+    if (tasksInited.get() || isComplete()) {
       return;
     }
     synchronized(jobInitKillStatus){
-      if(jobInitKillStatus.killed) {
+      if(jobInitKillStatus.killed || jobInitKillStatus.initStarted) {
         return;
       }
       jobInitKillStatus.initStarted = true;
@@ -493,9 +504,7 @@ class JobInProgress {
     synchronized(jobInitKillStatus){
       jobInitKillStatus.initDone = true;
       if(jobInitKillStatus.killed) {
-        //setup not launched so directly terminate
-        terminateJob(JobStatus.KILLED);
-        return;
+        throw new KillInterruptedException("Job " + jobId + " killed in init");
       }
     }
     
@@ -2199,15 +2208,12 @@ class JobInProgress {
   }
 
   /**
-   * Kill the job and all its component tasks. This method is called from 
+   * Kill the job and all its component tasks. This method should be called from 
    * jobtracker and should return fast as it locks the jobtracker.
    */
   public void kill() {
     boolean killNow = false;
     synchronized(jobInitKillStatus) {
-      if(jobInitKillStatus.killed) {//job is already marked for killing
-        return;
-      }
       jobInitKillStatus.killed = true;
       //if not in middle of init, terminate it now
       if(!jobInitKillStatus.initStarted || jobInitKillStatus.initDone) {
@@ -2221,7 +2227,9 @@ class JobInProgress {
   }
   
   /**
-   * Fails the job and all its component tasks.
+   * Fails the job and all its component tasks. This should be called only from
+   * {@link JobInProgress} or {@link JobTracker}. Look at 
+   * {@link JobTracker#failJob(JobInProgress)} for more details.
    */
   synchronized void fail() {
     terminate(JobStatus.FAILED);

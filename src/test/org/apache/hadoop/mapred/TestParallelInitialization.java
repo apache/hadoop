@@ -27,6 +27,8 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 
 public class TestParallelInitialization extends TestCase {
   
@@ -135,7 +137,38 @@ public class TestParallelInitialization extends TestCase {
       return null;
     }
 
+    public void initJob(JobInProgress job) {
+      try {
+        JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+        job.initTasks();
+        JobStatus newStatus = (JobStatus)job.getStatus().clone();
+        if (prevStatus.getRunState() != newStatus.getRunState()) {
+          JobStatusChangeEvent event = 
+            new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+                newStatus);
+          for (JobInProgressListener listener : listeners) {
+            listener.jobUpdated(event);
+          }
+        }
+      } catch (Exception ioe) {
+        failJob(job);
+      }
+    }
     // Test methods
+    
+    public synchronized void failJob(JobInProgress job) {
+      JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+      job.fail();
+      JobStatus newStatus = (JobStatus)job.getStatus().clone();
+      if (prevStatus.getRunState() != newStatus.getRunState()) {
+        JobStatusChangeEvent event = 
+          new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+              newStatus);
+        for (JobInProgressListener listener : listeners) {
+          listener.jobUpdated(event);
+        }
+      }
+    }
     
     public void submitJob(JobInProgress job) throws IOException {
       for (JobInProgressListener listener : listeners) {

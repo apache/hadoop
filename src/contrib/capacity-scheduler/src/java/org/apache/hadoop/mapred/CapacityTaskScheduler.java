@@ -935,7 +935,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     //Start thread for initialization
     if (initializationPoller == null) {
       this.initializationPoller = new JobInitializationPoller(
-          jobQueuesManager,schedConf,queues);
+          jobQueuesManager,schedConf,queues, taskTrackerManager);
     }
     initializationPoller.init(queueManager.getQueues(), schedConf);
     initializationPoller.setDaemon(true);

@@ -479,7 +479,7 @@ public class TestJobTrackerRestart extends TestCase {
     JobID id = job2.getID();*/
     JobInProgress jip = mr.getJobTrackerRunner().getJobTracker().getJob(id);
     
-    jip.initTasks();
+    mr.getJobTrackerRunner().getJobTracker().initJob(jip);
     
     // find out the history filename
     String history = 
@@ -494,7 +494,7 @@ public class TestJobTrackerRestart extends TestCase {
     id = job1.getID();
     jip = mr.getJobTrackerRunner().getJobTracker().getJob(id);
     
-    jip.initTasks();
+    mr.getJobTrackerRunner().getJobTracker().initJob(jip);
     
     //  make sure that cleanup is launched and is waiting
     while (!jip.isCleanupLaunched()) {

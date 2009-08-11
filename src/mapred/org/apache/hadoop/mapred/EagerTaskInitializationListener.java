@@ -67,7 +67,7 @@ class EagerTaskInitializationListener extends JobInProgressListener {
     }
   }
   
-  static class InitJob implements Runnable {
+  class InitJob implements Runnable {
   
     private JobInProgress job;
     
@@ -76,16 +76,7 @@ class EagerTaskInitializationListener extends JobInProgressListener {
     }
     
     public void run() {
-      try {
-        LOG.info("Initializing " + job.getJobID());
-        job.initTasks();
-      } catch (Throwable t) {
-        LOG.error("Job initialization failed:\n" +
-            StringUtils.stringifyException(t));
-        if (job != null) {
-          job.fail();
-        }
-      }
+      ttm.initJob(job);
     }
   }
   
@@ -94,10 +85,15 @@ class EagerTaskInitializationListener extends JobInProgressListener {
   private List<JobInProgress> jobInitQueue = new ArrayList<JobInProgress>();
   private ExecutorService threadPool;
   private int numThreads;
+  private TaskTrackerManager ttm;
   
   public EagerTaskInitializationListener(Configuration conf) {
     numThreads = conf.getInt("mapred.jobinit.threads", DEFAULT_NUM_THREADS);
     threadPool = Executors.newFixedThreadPool(numThreads);
+  }
+  
+  public void setTaskTrackerManager(TaskTrackerManager ttm) {
+    this.ttm = ttm;
   }
   
   public void start() throws IOException {

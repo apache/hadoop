@@ -137,19 +137,12 @@ public class JobInitializationPoller extends Thread {
           LOG.info("Initializing job : " + job.getJobID() + " in Queue "
               + job.getProfile().getQueueName() + " For user : "
               + job.getProfile().getUser());
-          try {
-            if (startIniting) {
-              setInitializingJob(job);
-              job.initTasks();
-              setInitializingJob(null);
-            } else {
-              break;
-            }
-          } catch (Throwable t) {
-            LOG.info("Job initialization failed:\n"
-                + StringUtils.stringifyException(t));
-            jobQueueManager.removeJobFromWaitingQueue(job);
-            job.fail(); 
+          if (startIniting) {
+            setInitializingJob(job);
+            ttm.initJob(job);
+            setInitializingJob(null);
+          } else {
+            break;
           }
         }
       }
@@ -246,6 +239,7 @@ public class JobInitializationPoller extends Thread {
 
   private volatile boolean running;
 
+  private TaskTrackerManager ttm;
   /**
    * The map which provides information which thread should be used to
    * initialize jobs for a given job queue.
@@ -253,13 +247,15 @@ public class JobInitializationPoller extends Thread {
   private HashMap<String, JobInitializationThread> threadsToQueueMap;
 
   public JobInitializationPoller(JobQueuesManager mgr,
-      CapacitySchedulerConf rmConf, Set<String> queue) {
+      CapacitySchedulerConf rmConf, Set<String> queue, 
+      TaskTrackerManager ttm) {
     initializedJobs = new HashMap<JobID,JobInProgress>();
     jobQueues = new HashMap<String, QueueInfo>();
     this.jobQueueManager = mgr;
     threadsToQueueMap = new HashMap<String, JobInitializationThread>();
     super.setName("JobInitializationPollerThread");
     running = true;
+    this.ttm = ttm;
   }
 
   /*

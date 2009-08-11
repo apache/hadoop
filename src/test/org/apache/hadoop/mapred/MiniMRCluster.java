@@ -500,7 +500,7 @@ public class MiniMRCluster {
    */
   public void initializeJob(JobID jobId) throws IOException {
     JobInProgress job = jobTracker.getJobTracker().getJob(jobId);
-    job.initTasks();
+    jobTracker.getJobTracker().initJob(job);
   }
   
   /**

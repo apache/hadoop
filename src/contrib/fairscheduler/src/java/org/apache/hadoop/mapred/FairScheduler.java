@@ -113,6 +113,7 @@ public class FairScheduler extends TaskScheduler {
     try {
       Configuration conf = getConf();
       this.eagerInitListener = new EagerTaskInitializationListener(conf);
+      eagerInitListener.setTaskTrackerManager(taskTrackerManager);
       eagerInitListener.start();
       taskTrackerManager.addJobInProgressListener(eagerInitListener);
       taskTrackerManager.addJobInProgressListener(jobListener);
