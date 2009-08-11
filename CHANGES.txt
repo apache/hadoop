@@ -344,3 +344,6 @@ Trunk (unreleased changes)
     MAPREDUCE-838. Fixes a problem in the way commit of task outputs
     happens. The bug was that even if commit failed, the task would
     be declared as successful. (Amareshwari Sriramadasu via ddas)
+
+    MAPREDUCE-813. Updates Streaming and M/R tutorial documents.
+    (Corinne Chandel via ddas)
