@@ -94,6 +94,22 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     this.taskid = taskid;
   }
 
+  public RawKeyValueIterator getIterator() {
+    return input;
+  }
+  
+  public Counter getInputCounter() {
+    return inputCounter;
+  }
+  
+  public RawComparator<KEYIN> getComparator() {
+    return comparator;
+  }
+  
+  public boolean hasMore() {
+    return hasMore;
+  }
+  
   /** Start processing next unique key. */
   public boolean nextKey() throws IOException,InterruptedException {
     while (hasMore && nextKeyIsSame) {

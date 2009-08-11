@@ -181,6 +181,9 @@ Trunk (unreleased changes)
     MAPREDUCE-779. Added node health failure counts into 
     JobTrackerStatistics. (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-372. Moves ChainMapper/Reducer to the new API.
+    (Amareshwari Sriramadasu via ddas)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
