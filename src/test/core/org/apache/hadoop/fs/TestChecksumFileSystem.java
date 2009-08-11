@@ -53,7 +53,11 @@ public class TestChecksumFileSystem extends TestCase {
     fout = localFs.create(testPath11);
     fout.write("testing you".getBytes());
     fout.close();
-    
+
+    TestLocalFileSystem.readFile(localFs, testPath, 128);
+    TestLocalFileSystem.readFile(localFs, testPath, 512);
+    TestLocalFileSystem.readFile(localFs, testPath, 1024);
+
     localFs.delete(localFs.getChecksumFile(testPath), true);
     assertTrue("checksum deleted", !localFs.exists(localFs.getChecksumFile(testPath)));
     
@@ -64,7 +68,7 @@ public class TestChecksumFileSystem extends TestCase {
     
     boolean errorRead = false;
     try {
-      TestLocalFileSystem.readFile(localFs, testPath);
+      TestLocalFileSystem.readFile(localFs, testPath, 1024);
     }catch(ChecksumException ie) {
       errorRead = true;
     }
@@ -72,7 +76,7 @@ public class TestChecksumFileSystem extends TestCase {
     
     //now setting verify false, the read should succeed
     localFs.setVerifyChecksum(false);
-    String str = TestLocalFileSystem.readFile(localFs, testPath);
+    String str = TestLocalFileSystem.readFile(localFs, testPath, 1024);
     assertTrue("read", "testing".equals(str));
     
   }

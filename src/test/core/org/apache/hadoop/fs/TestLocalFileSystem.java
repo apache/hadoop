@@ -35,13 +35,14 @@ public class TestLocalFileSystem extends TestCase {
     stm.close();
   }
   
-  static String readFile(FileSystem fs, Path name) throws IOException {
-    byte[] b = new byte[1024];
+  static String readFile(FileSystem fs, Path name, int buflen) throws IOException {
+    byte[] b = new byte[buflen];
     int offset = 0;
     FSDataInputStream in = fs.open(name);
     for(int remaining, n;
         (remaining = b.length - offset) > 0 && (n = in.read(b, offset, remaining)) != -1;
         offset += n); 
+    assertEquals(offset, Math.min(b.length, in.getPos()));
     in.close();
 
     String s = new String(b, 0, offset);

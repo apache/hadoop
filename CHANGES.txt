@@ -502,6 +502,9 @@ Trunk (unreleased changes)
 
     HADOOP-5638. More improvement on block placement performance. (hairong)
 
+    HADOOP-6180. NameNode slowed down when many files with same filename
+    were moved to Trash. (Boris Shkolnik via hairong)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
@@ -907,6 +910,9 @@ Trunk (unreleased changes)
 
     HADOOP-6124. Fix javac warning detection in test-patch.sh.  (Giridharan
     Kesavan via szetszwo)
+
+    HADOOP-6177. FSInputChecker.getPos() would return position greater 
+    than the file size. (Hong Tang via hairong)
 
 Release 0.20.1 - Unreleased
 
@@ -4466,9 +4472,6 @@ Release 0.17.0 - 2008-05-18
     exponentially increasing number of records (up to 10,000
     records/log). (Zheng Shao via omalley)
  
-    HADOOP-6180. NameNode slowed down when many files with same filename
-    were moved to Trash. (Boris Shkolnik via hairong)
-
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

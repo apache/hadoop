@@ -174,6 +174,7 @@ abstract public class FSInputChecker extends FSInputStream {
     assert(pos>=count);
     // fill internal buffer
     count = readChecksumChunk(buf, 0, buf.length);
+    if (count < 0) count = 0;
   }
   
   /*
