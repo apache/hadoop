@@ -914,6 +914,9 @@ Trunk (unreleased changes)
     HADOOP-6177. FSInputChecker.getPos() would return position greater 
     than the file size. (Hong Tang via hairong)
 
+    HADOOP-6188. TestTrash uses java.io.File api but not hadoop FileSystem api.
+    (Boris Shkolnik via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

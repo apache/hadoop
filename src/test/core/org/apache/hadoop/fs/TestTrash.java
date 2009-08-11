@@ -61,18 +61,22 @@ public class TestTrash extends TestCase {
   
   // counts how many instances of the file are in the Trash
   // they all are in format fileName*
-  protected static int countSameDeletedFiles(FileSystem fs, final File trashDir,
-      final String fileName) throws IOException {
-    System.out.println("Counting " + fileName + " in " + trashDir.getAbsolutePath());
-    String [] res = trashDir.list(
-          new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                return name.startsWith(fileName);
-              }
-          }
-      );
+  protected static int countSameDeletedFiles(FileSystem fs, 
+      Path trashDir, Path fileName) throws IOException {
 
-    return res.length;
+    final String prefix = fileName.getName();
+    System.out.println("Counting " + fileName + " in " + trashDir.toString());
+
+    // filter that matches all the files that start with fileName*
+    PathFilter pf = new PathFilter() {
+      public boolean accept(Path file) {
+        return file.getName().startsWith(prefix);
+      }
+    };
+    // run the filter
+    FileStatus [] fss = fs.listStatus(trashDir, pf);
+
+    return fss==null? 0 : fss.length;
   }
 
   // check that the specified file is not in Trash
@@ -358,10 +362,14 @@ public class TestTrash extends TestCase {
         assertTrue(val==0);
       }
       // current trash directory
-      File trashCurrent = new File(trashRoot.toUri().getPath() + myFile.getParent().toUri().getPath());
+      Path trashDir = new Path(trashRoot.toUri().getPath() + myFile.getParent().toUri().getPath());
       
-      int count = countSameDeletedFiles(fs, trashCurrent, myFile.getName());
-      System.out.println("counted " + count + " files " + myFile.getName() + "* in " + trashCurrent);
+      System.out.println("Deleting same myFile: myFile.parent=" + myFile.getParent().toUri().getPath() + 
+          "; trashroot="+trashRoot.toUri().getPath() + 
+          "; trashDir=" + trashDir.toUri().getPath());
+      
+      int count = countSameDeletedFiles(fs, trashDir, myFile);
+      System.out.println("counted " + count + " files " + myFile.getName() + "* in " + trashDir);
       assertTrue(count==num_runs);
     }
     
