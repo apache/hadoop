@@ -300,7 +300,9 @@ public class JobInProgress {
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
-    this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
+    this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP, 
+        this.profile.getUser(), this.profile.getJobName(), 
+        this.profile.getJobFile(), "");
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
     (numMapTasks + numReduceTasks + 10);
     
@@ -330,9 +332,9 @@ public class JobInProgress {
     String url = "http://" + jobtracker.getJobTrackerMachine() + ":" 
         + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobid;
     this.jobtracker = jobtracker;
-    this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
+    
     this.startTime = System.currentTimeMillis();
-    status.setStartTime(startTime);
+    
     this.localFs = jobtracker.getLocalFileSystem();
 
     JobConf default_job_conf = new JobConf(default_conf);
@@ -346,10 +348,15 @@ public class JobInProgress {
     fs.copyToLocalFile(jobFile, localJobFile);
     conf = new JobConf(localJobFile);
     this.priority = conf.getJobPriority();
-    this.status.setJobPriority(this.priority);
     this.profile = new JobProfile(conf.getUser(), jobid, 
                                   jobFile.toString(), url, conf.getJobName(),
                                   conf.getQueueName());
+    this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP, 
+        profile.getUser(), profile.getJobName(), profile.getJobFile(), 
+        profile.getURL().toString());
+    status.setStartTime(startTime);
+    this.status.setJobPriority(this.priority);
+
     String jarFile = conf.getJar();
     if (jarFile != null) {
       fs.copyToLocalFile(new Path(jarFile), localJarFile);
@@ -2630,6 +2637,7 @@ public class JobInProgress {
         this.status.setReduceProgress(1.0f);
       }
       this.finishTime = JobTracker.getClock().getTime();
+      this.status.setFinishTime(this.finishTime);
       LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
       
@@ -2653,11 +2661,15 @@ public class JobInProgress {
   private synchronized void terminateJob(int jobTerminationState) {
     if ((status.getRunState() == JobStatus.RUNNING) ||
         (status.getRunState() == JobStatus.PREP)) {
+
+      this.finishTime = JobTracker.getClock().getTime();
+      this.status.setMapProgress(1.0f);
+      this.status.setReduceProgress(1.0f);
+      this.status.setCleanupProgress(1.0f);
+      this.status.setFinishTime(this.finishTime);
+
       if (jobTerminationState == JobStatus.FAILED) {
-        this.status = new JobStatus(status.getJobID(),
-                                    1.0f, 1.0f, 1.0f, JobStatus.FAILED,
-                                    status.getJobPriority());
-        this.finishTime = JobTracker.getClock().getTime();
+        this.status.setRunState(JobStatus.FAILED);
         
         // Log the job summary
         JobSummary.logJobSummary(this, jobtracker.getClusterStatus(false));
@@ -2667,11 +2679,8 @@ public class JobInProgress {
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks);
       } else {
-        this.status = new JobStatus(status.getJobID(),
-                                    1.0f, 1.0f, 1.0f, JobStatus.KILLED,
-                                    status.getJobPriority());
-        this.finishTime = JobTracker.getClock().getTime();
-        
+        this.status.setRunState(JobStatus.KILLED);
+
         // Log the job summary
         JobSummary.logJobSummary(this, jobtracker.getClusterStatus(false));
 

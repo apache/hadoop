@@ -127,13 +127,16 @@ public class JobHistory {
 
     private ThreadPoolExecutor executor = null;
     private final Configuration conf;
+    private final JobTracker jobTracker;
 
     // cache from job-key to files associated with it.
     private Map<JobID, FilesHolder> fileCache = 
       new ConcurrentHashMap<JobID, FilesHolder>();
 
-    JobHistoryFilesManager(Configuration conf) throws IOException {
+    JobHistoryFilesManager(Configuration conf, JobTracker jobTracker) 
+      throws IOException {
       this.conf = conf;
+      this.jobTracker = jobTracker;
     }
 
     void start() {
@@ -184,7 +187,22 @@ public class JobHistory {
       fileCache.remove(id);
     }
 
-    void moveToDone(final JobID id, final List<Path> paths) {
+    void moveToDone(final JobID id) {
+      final List<Path> paths = new ArrayList<Path>();
+      final Path historyFile = fileManager.getHistoryFile(id);
+      if (historyFile == null) {
+        LOG.info("No file for job-history with " + id + " found in cache!");
+      } else {
+        paths.add(historyFile);
+      }
+
+      final Path confPath = fileManager.getConfFileWriters(id);
+      if (confPath == null) {
+        LOG.info("No file for jobconf with " + id + " found in cache!");
+      } else {
+        paths.add(confPath);
+      }
+
       executor.execute(new Runnable() {
 
         public void run() {
@@ -201,6 +219,13 @@ public class JobHistory {
               }
             }
 
+            String historyFileDonePath = null;
+            if (historyFile != null) {
+              historyFileDonePath = new Path(DONE, 
+                  historyFile.getName()).toString();
+            }
+            jobTracker.historyFileCopied(id, historyFileDonePath);
+            
             //purge the job from the cache
             fileManager.purgeJob(id);
           } catch (Throwable e) {
@@ -249,12 +274,13 @@ public class JobHistory {
    * @param jobTrackerStartTime jobtracker's start time
    * @return true if intialized properly
    *         false otherwise
-   * @deprecated Use {@link #init(JobConf, String, long, FileSystem)} instead.
+   * @deprecated Use {@link #init(JobTracker, JobConf, String, long, 
+   * FileSystem)} instead.
    */
 @Deprecated
-  public static boolean init(JobConf conf, String hostname, 
-                              long jobTrackerStartTime){
-    return init(conf, hostname, jobTrackerStartTime, null);
+  public static boolean init(JobTracker jobTracker, JobConf conf, 
+      String hostname, long jobTrackerStartTime){
+    return init(jobTracker, conf, hostname, jobTrackerStartTime, null);
   }
 
   /**
@@ -266,9 +292,8 @@ public class JobHistory {
    * @return true if intialized properly
    *         false otherwise
    */
-  public static boolean init(JobConf conf, String hostname,
-                             long jobTrackerStartTime,
-                             FileSystem fs){
+  public static boolean init(JobTracker jobTracker, JobConf conf, 
+      String hostname, long jobTrackerStartTime, FileSystem fs){
     try {
       LOG_DIR = conf.get("hadoop.job.history.location" ,
         "file:///" + new File(
@@ -297,7 +322,7 @@ public class JobHistory {
                      3 * 1024 * 1024);
 
       // initialize the file manager
-      fileManager = new JobHistoryFilesManager(conf);
+      fileManager = new JobHistoryFilesManager(conf, jobTracker);
     } catch(IOException e) {
         LOG.error("Failed to initialize JobHistory log file", e); 
         disableHistory = true;
@@ -1040,25 +1065,7 @@ public class JobHistory {
      * This *should* be the last call to jobhistory for a given job.
      */
      static void markCompleted(JobID id) throws IOException {
-       List<Path> paths = new ArrayList<Path>();
-       Path path = fileManager.getHistoryFile(id);
-       if (path == null) {
-         LOG.info("No file for job-history with " + id + " found in cache!");
-       } else {
-         paths.add(path);
-       }
-
-       Path confPath = fileManager.getConfFileWriters(id);
-       if (confPath == null) {
-         LOG.info("No file for jobconf with " + id + " found in cache!");
-       } else {
-         paths.add(confPath);
-       }
-
-       //move the job files to done folder and purge the job
-       if (paths.size() > 0) {
-         fileManager.moveToDone(id, paths);
-       }
+       fileManager.moveToDone(id);
      }
 
      /**

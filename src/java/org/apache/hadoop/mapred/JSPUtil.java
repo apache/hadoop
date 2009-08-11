@@ -18,21 +18,37 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.util.Iterator;
+import java.net.URLEncoder;
 import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.mapred.JobHistory.JobInfo;
 import org.apache.hadoop.util.ServletUtil;
+import org.apache.hadoop.util.StringUtils;
 
 class JSPUtil {
   private static final String PRIVATE_ACTIONS_KEY = "webinterface.private.actions";
   
   public static final Configuration conf = new Configuration();
 
+  //LRU based cache
+  private static final Map<String, JobInfo> jobHistoryCache = 
+    new LinkedHashMap<String, JobInfo>(); 
+
+  private static final int CACHE_SIZE = 
+    conf.getInt("mapred.job.tracker.jobhistory.lru.cache.size", 5);
+
+  private static final Log LOG = LogFactory.getLog(JSPUtil.class);
   /**
    * Method used to process the request from the job page based on the 
    * request which it has received. For example like changing priority.
@@ -178,7 +194,94 @@ class JSPUtil {
     return sb.toString();
   }
 
+  @SuppressWarnings("unchecked")
+  public static String generateRetiredJobTable(JobTracker tracker, int rowId) 
+    throws IOException {
+
+    StringBuffer sb = new StringBuffer();
+    sb.append("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n");
+
+    Iterator<JobStatus> iterator = 
+      tracker.retireJobs.getAll().descendingIterator();
+    if (!iterator.hasNext()) {
+      sb.append("<tr><td align=\"center\" colspan=\"8\"><i>none</i>" +
+      "</td></tr>\n");
+    } else {
+      sb.append("<tr>");
+      
+      sb.append("<td><b>Jobid</b></td>");
+      sb.append("<td><b>Priority</b></td>");
+      sb.append("<td><b>User</b></td>");
+      sb.append("<td><b>Name</b></td>");
+      sb.append("<td><b>State</b></td>");
+      sb.append("<td><b>Start Time</b></td>");
+      sb.append("<td><b>Finish Time</b></td>");
+      sb.append("<td><b>Map % Complete</b></td>");
+      sb.append("<td><b>Reduce % Complete</b></td>");
+      sb.append("<td><b>Job Scheduling Information</b></td>");
+      sb.append("</tr>\n");
+      for (int i = 0; i < 100 && iterator.hasNext(); i++) {
+        JobStatus status = iterator.next();
+        sb.append("<tr>");
+        sb.append(
+            "<td id=\"job_" + rowId + "\">" + 
+              "<a href=\"jobdetailshistory.jsp?jobid=" + 
+              status.getJobId() + "&logFile=" + 
+              URLEncoder.encode(status.getHistoryFile().toString(), 
+                "UTF-8") + "\">" + 
+              status.getJobId() + "</a></td>" +
+            
+            "<td id=\"priority_" + rowId + "\">" + 
+              status.getJobPriority().toString() + "</td>" +
+            "<td id=\"user_" + rowId + "\">" + status.getUsername() + "</td>" +
+            "<td id=\"name_" + rowId + "\">" + status.getJobName() + "</td>" +
+            "<td>" + JobStatus.getJobRunState(status.getRunState()) + "</td>" +
+            "<td>" + new Date(status.getStartTime()) + "</td>" +
+            "<td>" + new Date(status.getFinishTime()) + "</td>" +
+            
+            "<td>" + StringUtils.formatPercent(status.mapProgress(), 2)
+            + ServletUtil.percentageGraph(status.mapProgress() * 100, 80) + 
+            "</td>" +
+            
+            "<td>" + StringUtils.formatPercent(status.reduceProgress(), 2)
+            + ServletUtil.percentageGraph(status.reduceProgress() * 100, 80) + 
+            "</td>" +
+            
+            "<td>" + status.getSchedulingInfo() + "</td>" +
+            
+            "</tr>\n");
+        rowId++;
+      }
+    }
+    sb.append("</table>\n");
+    return sb.toString();
+  }
+
   static final boolean privateActionsAllowed() {
     return conf.getBoolean(PRIVATE_ACTIONS_KEY, false);
+  }
+
+  static JobInfo getJobInfo(HttpServletRequest request, FileSystem fs) 
+      throws IOException {
+    String jobid = request.getParameter("jobid");
+    String logFile = request.getParameter("logFile");
+    synchronized(jobHistoryCache) {
+      JobInfo jobInfo = jobHistoryCache.remove(jobid);
+      if (jobInfo == null) {
+        jobInfo = new JobHistory.JobInfo(jobid);
+        LOG.info("Loading Job History file "+jobid + ".   Cache size is " +
+            jobHistoryCache.size());
+        DefaultJobHistoryParser.parseJobTasks( logFile, jobInfo, fs) ; 
+      }
+      jobHistoryCache.put(jobid, jobInfo);
+      if (jobHistoryCache.size() > CACHE_SIZE) {
+        Iterator<Map.Entry<String, JobInfo>> it = 
+          jobHistoryCache.entrySet().iterator();
+        String removeJobId = it.next().getKey();
+        it.remove();
+        LOG.info("Job History file removed form cache "+removeJobId);
+      }
+      return jobInfo;
+    }
   }
 }

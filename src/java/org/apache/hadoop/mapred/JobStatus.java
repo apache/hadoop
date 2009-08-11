@@ -74,6 +74,14 @@ public class JobStatus implements Writable, Cloneable {
   private String user;
   private JobPriority priority;
   private String schedulingInfo="NA";
+
+  private String jobName;
+  private String jobFile;
+  private long finishTime;
+  private boolean isRetired;
+  private String historyFile = "";
+  private String trackingUrl ="";
+
     
   /**
    */
@@ -87,11 +95,17 @@ public class JobStatus implements Writable, Cloneable {
    * @param reduceProgress The progress made on the reduces
    * @param cleanupProgress The progress made on cleanup
    * @param runState The current state of the job
+   * @param user userid of the person who submitted the job.
+   * @param jobName user-specified job name.
+   * @param jobFile job configuration file. 
+   * @param trackingUrl link to the web-ui for details of the job.
    */
   public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
-                   float cleanupProgress, int runState) {
+                   float cleanupProgress, int runState, 
+                   String user, String jobName, 
+                   String jobFile, String trackingUrl) {
     this(jobid, mapProgress, reduceProgress, cleanupProgress, runState,
-                  JobPriority.NORMAL);
+                  JobPriority.NORMAL, user, jobName, jobFile, trackingUrl);
   }
 
   /**
@@ -100,10 +114,16 @@ public class JobStatus implements Writable, Cloneable {
    * @param mapProgress The progress made on the maps
    * @param reduceProgress The progress made on the reduces
    * @param runState The current state of the job
+   * @param user userid of the person who submitted the job.
+   * @param jobName user-specified job name.
+   * @param jobFile job configuration file. 
+   * @param trackingUrl link to the web-ui for details of the job.
    */
   public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
-                   int runState) {
-    this(jobid, mapProgress, reduceProgress, 0.0f, runState);
+                   int runState, String user, String jobName, 
+                   String jobFile, String trackingUrl) {
+    this(jobid, mapProgress, reduceProgress, 0.0f, runState, user, jobName, 
+        jobFile, trackingUrl);
   }
 
   /**
@@ -113,11 +133,17 @@ public class JobStatus implements Writable, Cloneable {
    * @param reduceProgress The progress made on the reduces
    * @param runState The current state of the job
    * @param jp Priority of the job.
+   * @param user userid of the person who submitted the job.
+   * @param jobName user-specified job name.
+   * @param jobFile job configuration file. 
+   * @param trackingUrl link to the web-ui for details of the job.
    */
    public JobStatus(JobID jobid, float mapProgress, float reduceProgress,
-                      float cleanupProgress, int runState, JobPriority jp) {
+                      float cleanupProgress, int runState, JobPriority jp, 
+                      String user, String jobName, String jobFile, 
+                      String trackingUrl) {
      this(jobid, 0.0f, mapProgress, reduceProgress, 
-          cleanupProgress, runState, jp);
+          cleanupProgress, runState, jp, user, jobName, jobFile, trackingUrl);
    }
    
   /**
@@ -129,21 +155,29 @@ public class JobStatus implements Writable, Cloneable {
    * @param cleanupProgress The progress made on the cleanup
    * @param runState The current state of the job
    * @param jp Priority of the job.
+   * @param user userid of the person who submitted the job.
+   * @param jobName user-specified job name.
+   * @param jobFile job configuration file. 
+   * @param trackingUrl link to the web-ui for details of the job.
    */
    public JobStatus(JobID jobid, float setupProgress, float mapProgress,
                     float reduceProgress, float cleanupProgress, 
-                    int runState, JobPriority jp) {
+                    int runState, JobPriority jp, String user, String jobName, 
+                    String jobFile, String trackingUrl) {
      this.jobid = jobid;
      this.setupProgress = setupProgress;
      this.mapProgress = mapProgress;
      this.reduceProgress = reduceProgress;
      this.cleanupProgress = cleanupProgress;
      this.runState = runState;
-     this.user = "nobody";
+     this.user = user;
      if (jp == null) {
        throw new IllegalArgumentException("Job Priority cannot be null.");
      }
      priority = jp;
+     this.jobName = jobName;
+     this.jobFile = jobFile;
+     this.trackingUrl = trackingUrl;
    }
    
   /**
@@ -308,6 +342,12 @@ public class JobStatus implements Writable, Cloneable {
     Text.writeString(out, user);
     WritableUtils.writeEnum(out, priority);
     Text.writeString(out, schedulingInfo);
+    out.writeLong(finishTime);
+    out.writeBoolean(isRetired);
+    Text.writeString(out, historyFile);
+    Text.writeString(out, jobName);
+    Text.writeString(out, trackingUrl);
+    Text.writeString(out, jobFile);
   }
 
   public synchronized void readFields(DataInput in) throws IOException {
@@ -321,5 +361,98 @@ public class JobStatus implements Writable, Cloneable {
     this.user = Text.readString(in);
     this.priority = WritableUtils.readEnum(in, JobPriority.class);
     this.schedulingInfo = Text.readString(in);
+    this.finishTime = in.readLong();
+    this.isRetired = in.readBoolean();
+    this.historyFile = Text.readString(in);
+    this.jobName = Text.readString(in);
+    this.trackingUrl = Text.readString(in);
+    this.jobFile = Text.readString(in);
+  }
+
+  /**
+   * Get the user-specified job name.
+   */
+  public String getJobName() {
+    return jobName;
+  }
+
+  /**
+   * Get the configuration file for the job.
+   */
+  public String getJobFile() {
+    return jobFile;
+  }
+
+  /**
+   * Get the link to the web-ui for details of the job.
+   */
+  public synchronized String getTrackingUrl() {
+    return trackingUrl;
+  }
+
+  /**
+   * Get the finish time of the job.
+   */
+  public synchronized long getFinishTime() { 
+    return finishTime;
+  }
+
+  /**
+   * Check whether the job has retired.
+   */
+  public synchronized boolean isRetired() {
+    return isRetired;
+  }
+
+  /**
+   * @return the job history file name for a completed job. If job is not 
+   * completed or history file not available then return null.
+   */
+  public synchronized String getHistoryFile() {
+    return historyFile;
+  }
+
+ /** 
+   * Set the finish time of the job
+   * @param finishTime The finishTime of the job
+   */
+  synchronized void setFinishTime(long finishTime) {
+    this.finishTime = finishTime;
+  }
+
+  /**
+   * Set the job history file url for a completed job
+   */
+  synchronized void setHistoryFile(String historyFile) {
+    this.historyFile = historyFile;
+  }
+
+  /**
+   * Set the link to the web-ui for details of the job.
+   */
+  synchronized void setTrackingUrl(String trackingUrl) {
+    this.trackingUrl = trackingUrl;
+  }
+
+  /**
+   * Set the job retire flag to true.
+   */
+  synchronized void setRetired() {
+    this.isRetired = true;
+  }
+
+  public String toString() {
+    StringBuffer buffer = new StringBuffer();
+    buffer.append("job-id : " + jobid);
+    buffer.append("map-progress : " + mapProgress);
+    buffer.append("reduce-progress : " + reduceProgress);
+    buffer.append("cleanup-progress : " + cleanupProgress);
+    buffer.append("setup-progress : " + setupProgress);
+    buffer.append("runstate : " + runState);
+    buffer.append("start-time : " + startTime);
+    buffer.append("user-name : " + user);
+    buffer.append("priority : " + priority);
+    buffer.append("scheduling-info : " + schedulingInfo);
+    return buffer.toString();
   }
 }

@@ -189,4 +189,22 @@ public interface RunningJob {
    * @throws IOException
    */
   public String[] getTaskDiagnostics(TaskAttemptID taskid) throws IOException;
+
+  /**
+   * Get the url where history file is archived. Returns empty string if 
+   * history file is not available yet. 
+   * 
+   * @return the url where history file is archived
+   * @throws IOException
+   */
+  public String getHistoryUrl() throws IOException;
+
+  /**
+   * Check whether the job has been removed from JobTracker memory and retired.
+   * On retire, the job history file is copied to a location known by 
+   * {@link #getHistoryUrl()}
+   * @return <code>true</code> if the job retired, else <code>false</code>.
+   * @throws IOException
+   */
+  public boolean isRetired() throws IOException;
 }

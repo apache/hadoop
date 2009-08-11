@@ -65,8 +65,9 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             Part of HADOOP-5913.  
    * Version 24: Modified ClusterStatus to include BlackListInfo class which 
    *             encapsulates reasons and report for blacklisted node.          
+   * Version 25: Added fields to JobStatus for HADOOP-817.
    */
-  public static final long versionID = 24L;
+  public static final long versionID = 25L;
 
   /**
    * Allocate a name for the job.

@@ -17,6 +17,9 @@ Trunk (unreleased changes)
     MAPREDUCE-766. Enhanced list-blacklisted-trackers to display reasons
     for blacklisting a node. (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-817. Add a cache for retired jobs with minimal job info and 
+    provide a way to access history file url. (sharad)
+
   NEW FEATURES
 
     MAPREDUCE-546. Provide sample fair scheduler config file in conf/ and use

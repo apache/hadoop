@@ -173,7 +173,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * remote service to provide certain functionality.
    */
   class NetworkedJob implements RunningJob {
-    JobProfile profile;
     JobStatus status;
     long statustime;
 
@@ -186,7 +185,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      */
     public NetworkedJob(JobStatus job) throws IOException {
       this.status = job;
-      this.profile = jobSubmitClient.getJobProfile(job.getJobID());
       this.statustime = System.currentTimeMillis();
     }
 
@@ -205,7 +203,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * @throws IOException
      */
     synchronized void updateStatus() throws IOException {
-      this.status = jobSubmitClient.getJobStatus(profile.getJobID());
+      this.status = jobSubmitClient.getJobStatus(status.getJobID());
+      if (this.status == null) {
+        throw new IOException("Job status not available ");
+      }
       this.statustime = System.currentTimeMillis();
     }
 
@@ -213,35 +214,35 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * An identifier for the job
      */
     public JobID getID() {
-      return profile.getJobID();
+      return status.getJobID();
     }
     
     /** @deprecated This method is deprecated and will be removed. Applications should 
      * rather use {@link #getID()}.*/
     @Deprecated
     public String getJobID() {
-      return profile.getJobID().toString();
+      return status.getJobID().toString();
     }
     
     /**
      * The user-specified job name
      */
     public String getJobName() {
-      return profile.getJobName();
+      return status.getJobName();
     }
 
     /**
      * The name of the job file
      */
     public String getJobFile() {
-      return profile.getJobFile();
+      return status.getJobFile();
     }
 
     /**
      * A URL where the job's status can be seen
      */
     public String getTrackingURL() {
-      return profile.getURL().toString();
+      return status.getTrackingUrl();
     }
 
     /**
@@ -368,11 +369,14 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         updateStatus();
       } catch (IOException e) {
       }
-      return "Job: " + profile.getJobID() + "\n" + 
-        "file: " + profile.getJobFile() + "\n" + 
-        "tracking URL: " + profile.getURL() + "\n" + 
+      return "Job: " + status.getJobID() + "\n" +
+        "status: " + JobStatus.getJobRunState(status.getRunState()) + "\n" + 
+        "file: " + status.getJobFile() + "\n" + 
+        "tracking URL: " + status.getTrackingUrl() + "\n" + 
         "map() completion: " + status.mapProgress() + "\n" + 
-        "reduce() completion: " + status.reduceProgress();
+        "reduce() completion: " + status.reduceProgress() + "\n" +
+        "history URL: " + status.getHistoryFile() + "\n" +
+        "retired: " + status.isRetired();
     }
         
     /**
@@ -385,6 +389,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     @Override
     public String[] getTaskDiagnostics(TaskAttemptID id) throws IOException {
       return jobSubmitClient.getTaskDiagnostics(id);
+    }
+
+    public String getHistoryUrl() throws IOException {
+      updateStatus();
+      return status.getHistoryFile();
+    }
+
+    public boolean isRetired() throws IOException {
+      updateStatus();
+      return status.isRetired();
     }
   }
 
@@ -1354,7 +1368,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
     }
     LOG.info("Job complete: " + jobId);
-    job.getCounters().log(LOG);
+    Counters counters = job.getCounters();
+    if (counters != null) {
+      counters.log(LOG);
+    }
     return job.isSuccessful();
   }
 
@@ -1695,7 +1712,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         } else {
           System.out.println();
           System.out.println(job);
-          System.out.println(job.getCounters());
+          Counters counters = job.getCounters();
+          if (counters != null) {
+            System.out.println(counters);
+          } else {
+            System.out.println("Counters not available. Job is retired.");
+          }
           exitCode = 0;
         }
       } else if (getCounter) {
@@ -1704,10 +1726,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           System.out.println("Could not find job " + jobid);
         } else {
           Counters counters = job.getCounters();
-          Group group = counters.getGroup(counterGroupName);
-          Counter counter = group.getCounterForName(counterName);
-          System.out.println(counter.getCounter());
-          exitCode = 0;
+          if (counters == null) {
+            System.out.println("Counters not available for retired job " + 
+                jobid);
+            exitCode = -1;
+          } else {
+            Group group = counters.getGroup(counterGroupName);
+            Counter counter = group.getCounterForName(counterName);
+            System.out.println(counter.getCounter());
+            exitCode = 0;
+          }
         }
       } else if (killJob) {
         RunningJob job = getJob(JobID.forName(jobid));
