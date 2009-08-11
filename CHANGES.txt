@@ -146,12 +146,13 @@ Trunk (unreleased changes)
     HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
     (Bill Zeller via szetszwo)
 
-    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
-    safe.  (Suresh Srinivas via szetszwo)
-
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
 
     HDFS-438. Improve help message for space quota command. (Raghu Angadi)
 
+  BUG FIXES
+
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe.  (Suresh Srinivas via szetszwo)
