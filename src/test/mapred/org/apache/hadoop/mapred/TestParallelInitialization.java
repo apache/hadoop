@@ -27,6 +27,7 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 
 public class TestParallelInitialization extends TestCase {
@@ -141,12 +142,33 @@ public class TestParallelInitialization extends TestCase {
     }
 
     public void initJob(JobInProgress job) {
-      JobStatus prevStatus = (JobStatus)job.getStatus().clone();
       try {
+        JobStatus prevStatus = (JobStatus)job.getStatus().clone();
         job.initTasks();
+        completeEmptyJob(job);
+        JobStatus newStatus = (JobStatus)job.getStatus().clone();
+        if (prevStatus.getRunState() != newStatus.getRunState()) {
+          JobStatusChangeEvent event = 
+            new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+                newStatus);
+          for (JobInProgressListener listener : listeners) {
+            listener.jobUpdated(event);
+          }
+        }
+      } catch (KillInterruptedException kie) {
+        killJob(job.getJobID());
       } catch (IOException ioe) {
-        job.fail();
+        failJob(job);
       }
+    }
+
+    private synchronized void completeEmptyJob(JobInProgress job) {
+      job.completeEmptyJob();
+    }
+
+    public synchronized void failJob(JobInProgress job) {
+      JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+      job.fail();
       JobStatus newStatus = (JobStatus)job.getStatus().clone();
       if (prevStatus.getRunState() != newStatus.getRunState()) {
         JobStatusChangeEvent event = 

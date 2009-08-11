@@ -351,6 +351,10 @@ public class TestFairScheduler extends TestCase {
       // do nothing
     }
     
+    public void failJob (JobInProgress job) {
+      // do nothing
+    }
+    
     // Test methods
     
     public void submitJob(JobInProgress job) throws IOException {

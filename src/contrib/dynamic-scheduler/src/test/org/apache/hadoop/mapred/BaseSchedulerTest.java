@@ -100,6 +100,8 @@ public class BaseSchedulerTest extends TestCase {
     }
     public void initJob(JobInProgress job) {
     }
+    public void failJob(JobInProgress job) {
+    }
     public void startTask(String taskTrackerName, final Task t) {
     }
     public boolean killTask(TaskAttemptID attemptId, boolean shouldFail) {

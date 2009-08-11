@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -65,6 +64,16 @@ import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
  * This is NOT a public interface!
  */
 public class JobInProgress {
+  /**
+   * Used when the a kill is issued to a job which is initializing.
+   */
+  static class KillInterruptedException extends InterruptedException {
+   private static final long serialVersionUID = 1L;
+    public KillInterruptedException(String msg) {
+      super(msg);
+    }
+  }
+  
   static final Log LOG = LogFactory.getLog(JobInProgress.class);
     
   JobProfile profile;
@@ -106,7 +115,7 @@ public class JobInProgress {
   private volatile boolean launchedSetup = false;
   private volatile boolean jobKilled = false;
   private volatile boolean jobFailed = false;
-  private boolean jobSetupCleanupNeeded = true;
+  private final boolean jobSetupCleanupNeeded;
 
   JobPriority priority = JobPriority.NORMAL;
   protected JobTracker jobtracker;
@@ -517,14 +526,17 @@ public class JobInProgress {
 
   /**
    * Construct the splits, etc.  This is invoked from an async
-   * thread so that split-computation doesn't block anyone.
+   * thread so that split-computation doesn't block anyone. Only the 
+   * {@link JobTracker} should invoke this api. Look 
+   * at {@link JobTracker#initJob(JobInProgress)} for more details.
    */
-  public synchronized void initTasks() throws IOException {
-    if (tasksInited.get()) {
+  public synchronized void initTasks() 
+  throws IOException, KillInterruptedException {
+    if (tasksInited.get() || isComplete()) {
       return;
     }
     synchronized(jobInitKillStatus){
-      if(jobInitKillStatus.killed) {
+      if(jobInitKillStatus.killed || jobInitKillStatus.initStarted) {
         return;
       }
       jobInitKillStatus.initStarted = true;
@@ -575,19 +587,33 @@ public class JobInProgress {
       jobInitKillStatus.initDone = true;
       if(jobInitKillStatus.killed) {
         //setup not launched so directly terminate
-        terminateJob(JobStatus.KILLED);
-        return;
+        throw new KillInterruptedException("Job " + jobId + " killed in init");
       }
     }
     
     tasksInited.set(true);
     JobHistory.JobInfo.logInited(profile.getJobID(), this.launchTime, 
                                  numMapTasks, numReduceTasks);
-    
-    // if setup is not needed, mark it complete
-    if (!jobSetupCleanupNeeded) {
-      setupComplete();
-    }
+  }
+
+  // Returns true if the job is empty (0 maps, 0 reduces and no setup-cleanup)
+  // else return false.
+  synchronized boolean isJobEmpty() {
+    return maps.length == 0 && reduces.length == 0 && !jobSetupCleanupNeeded;
+  }
+  
+  synchronized boolean isSetupCleanupRequired() {
+   return jobSetupCleanupNeeded;
+  }
+
+  // Should be called once the init is done. This will complete the job 
+  // because the job is empty (0 maps, 0 reduces and no setup-cleanup).
+  synchronized void completeEmptyJob() {
+    jobComplete();
+  }
+
+  synchronized void completeSetup() {
+    setupComplete();
   }
 
   void logToJobHistory() throws IOException {
@@ -684,10 +710,6 @@ public class JobInProgress {
   
   private void setupComplete() {
     status.setSetupProgress(1.0f);
-    if (maps.length == 0 && reduces.length == 0 && !jobSetupCleanupNeeded) {
-      jobComplete();
-      return;
-    }
     if (this.status.getRunState() == JobStatus.PREP) {
       this.status.setRunState(JobStatus.RUNNING);
       JobHistory.JobInfo.logStarted(profile.getJobID());
@@ -752,15 +774,14 @@ public class JobInProgress {
   }
   public void setPriority(JobPriority priority) {
     if(priority == null) {
-      this.priority = JobPriority.NORMAL;
-    } else {
-      this.priority = priority;
+      priority = JobPriority.NORMAL;
     }
     synchronized (this) {
+      this.priority = priority;
       status.setJobPriority(priority);
+      // log and change to the job's priority
+      JobHistory.JobInfo.logJobPriority(jobId, priority);
     }
-    // log and change to the job's priority
-    JobHistory.JobInfo.logJobPriority(jobId, priority);
   }
 
   // Update the job start/launch time (upon restart) and log to history
@@ -1252,7 +1273,7 @@ public class JobInProgress {
                                              int numUniqueHosts,
                                              boolean isMapSlot
                                             ) throws IOException {
-    if(!tasksInited.get()) {
+    if(!tasksInited.get() || !jobSetupCleanupNeeded) {
       return null;
     }
     
@@ -1333,7 +1354,7 @@ public class JobInProgress {
                                              int numUniqueHosts,
                                              boolean isMapSlot
                                             ) throws IOException {
-    if(!tasksInited.get()) {
+    if(!tasksInited.get() || !jobSetupCleanupNeeded) {
       return null;
     }
     
@@ -2751,15 +2772,12 @@ public class JobInProgress {
   }
 
   /**
-   * Kill the job and all its component tasks. This method is called from 
+   * Kill the job and all its component tasks. This method should be called from 
    * jobtracker and should return fast as it locks the jobtracker.
    */
   public void kill() {
     boolean killNow = false;
     synchronized(jobInitKillStatus) {
-      if(jobInitKillStatus.killed) {//job is already marked for killing
-        return;
-      }
       jobInitKillStatus.killed = true;
       //if not in middle of init, terminate it now
       if(!jobInitKillStatus.initStarted || jobInitKillStatus.initDone) {
@@ -2773,7 +2791,12 @@ public class JobInProgress {
   }
   
   /**
-   * Fails the job and all its component tasks.
+   * Fails the job and all its component tasks. This should be called only from
+   * {@link JobInProgress} or {@link JobTracker}. Look at 
+   * {@link JobTracker#failJob(JobInProgress)} for more details.
+   * Note that the job doesnt expect itself to be failed before its inited. 
+   * Only when the init is done (successfully or otherwise), the job can be 
+   * failed. 
    */
   synchronized void fail() {
     terminate(JobStatus.FAILED);

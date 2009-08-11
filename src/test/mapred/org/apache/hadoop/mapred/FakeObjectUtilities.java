@@ -99,7 +99,7 @@ public class FakeObjectUtilities {
     }
     
     @Override
-    void createMapTasks(String ignored, JobClient.RawSplit[] splits) {
+    protected void createMapTasks(String ignored, JobClient.RawSplit[] splits) {
       maps = new TaskInProgress[numMapTasks];
       for (int i = 0; i < numMapTasks; i++) {
         maps[i] = new TaskInProgress(getJobID(), "test", 
@@ -108,7 +108,7 @@ public class FakeObjectUtilities {
     }
 
     @Override
-    void createReduceTasks(String ignored) {
+    protected void createReduceTasks(String ignored) {
       reduces = new TaskInProgress[numReduceTasks];
       for (int i = 0; i < numReduceTasks; i++) {
         reduces[i] = new TaskInProgress(getJobID(), "test", 

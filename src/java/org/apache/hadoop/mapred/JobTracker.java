@@ -64,6 +64,7 @@ import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapred.JobTrackerStatistics.TaskTrackerStat;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
@@ -3505,8 +3506,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return;
     }
         
-    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
     checkAccess(job, Queue.QueueOperation.ADMINISTER_JOBS);
+    killJob(job);
+  }
+
+  private synchronized void killJob(JobInProgress job) {
+    LOG.info("Killing job " + job.getJobID());
+    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
     job.kill();
     
     // Inform the listeners if the job is killed
@@ -3525,38 +3531,87 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
+  /**
+   * Initialize a job and inform the listeners about a state change, if any.
+   * Other components in the framework should use this api to initialize a job.
+   */
   public void initJob(JobInProgress job) {
     if (null == job) {
       LOG.info("Init on null job is not valid");
       return;
     }
 	        
-    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
     try {
+      JobStatus prevStatus = (JobStatus)job.getStatus().clone();
       LOG.info("Initializing " + job.getJobID());
       job.initTasks();
+      // Here the job *should* be in the PREP state.
+      // From here there are 3 ways :
+      //  - job requires setup : the job remains in PREP state and 
+      //    setup is launched to move the job in RUNNING state
+      //  - job is complete (no setup required and no tasks) : complete 
+      //    the job and move it to SUCCEEDED
+      //  - job has tasks but doesnt require setup : make the job RUNNING.
+      if (job.isJobEmpty()) { // is the job empty?
+        completeEmptyJob(job); // complete it
+      } else if (!job.isSetupCleanupRequired()) { // setup/cleanup not required
+        job.completeSetup(); // complete setup and make job running
+      }
+      // Inform the listeners if the job state has changed
+      // Note : 
+      //   If job does not require setup, job state will be RUNNING
+      //   If job is configured with 0 maps, 0 reduces and no setup-cleanup then 
+      //   the job state will be SUCCEEDED
+      //   otherwise, job state is PREP.
+      JobStatus newStatus = (JobStatus)job.getStatus().clone();
+      if (prevStatus.getRunState() != newStatus.getRunState()) {
+        JobStatusChangeEvent event = 
+          new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+              newStatus);
+        synchronized (JobTracker.this) {
+          updateJobInProgressListeners(event);
+        }
+      }
+    } catch (KillInterruptedException kie) {
+      //   If job was killed during initialization, job state will be KILLED
+      LOG.error("Job initialization interrupted :\n" +
+          StringUtils.stringifyException(kie));
+      killJob(job);
     } catch (Throwable t) {
+      //    If the job initialization is failed, job state will be FAILED
       LOG.error("Job initialization failed:\n" +
           StringUtils.stringifyException(t));
-      if (job != null) {
-        job.fail();
-      }
+      failJob(job);
     }
-	    
+  }
+
+  // This simply marks the job as completed. Note that the caller is responsible
+  // for raising events.
+  private synchronized void completeEmptyJob(JobInProgress job) {
+    job.completeEmptyJob();
+  }
+  
+  /**
+   * Fail a job and inform the listeners. Other components in the framework 
+   * should use this to fail a job.
+   */
+  public synchronized void failJob(JobInProgress job) {
+    if (null == job) {
+      LOG.info("Fail on null job is not valid");
+      return;
+    }
+         
+    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+    LOG.info("Failing job " + job.getJobID());
+    job.fail();
+     
     // Inform the listeners if the job state has changed
-    // Note : 
-    //   If the job initialization is failed, job state will be FAILED
-    //   If job was killed during initialization, job state will be KILLED
-    //   If job does not require setup, job state will be RUNNING
-    //   otherwise, job state is PREP.
     JobStatus newStatus = (JobStatus)job.getStatus().clone();
     if (prevStatus.getRunState() != newStatus.getRunState()) {
       JobStatusChangeEvent event = 
         new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
             newStatus);
-      synchronized (JobTracker.this) {
-        updateJobInProgressListeners(event);
-      }
+      updateJobInProgressListeners(event);
     }
   }
 

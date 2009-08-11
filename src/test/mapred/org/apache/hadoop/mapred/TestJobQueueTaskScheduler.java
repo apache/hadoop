@@ -27,6 +27,7 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
@@ -204,6 +205,10 @@ public class TestJobQueueTaskScheduler extends TestCase {
     }
 
     public void initJob(JobInProgress job) {
+      // do nothing
+    }
+    
+    public void failJob(JobInProgress job) {
       // do nothing
     }
     

@@ -105,4 +105,11 @@ interface TaskTrackerManager {
    * @param job JobInProgress object
    */
   public void initJob(JobInProgress job);
+  
+  /**
+   * Fail a job.
+   * 
+   * @param job JobInProgress object
+   */
+  public void failJob(JobInProgress job);
 }

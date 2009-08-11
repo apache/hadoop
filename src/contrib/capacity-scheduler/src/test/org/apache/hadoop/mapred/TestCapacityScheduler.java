@@ -35,6 +35,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapred.JobInProgress;
+import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.conf.Configuration;
@@ -505,20 +507,35 @@ public class TestCapacityScheduler extends TestCase {
     }
 
     public void initJob(JobInProgress jip) {
-      JobStatus oldStatus = (JobStatus)jip.getStatus().clone();
       try {
+        JobStatus oldStatus = (JobStatus)jip.getStatus().clone();
         jip.initTasks();
-      } catch (IOException ioe) {
-        jip.fail();
+        completeEmptyJob(jip);
+        JobStatus newStatus = (JobStatus)jip.getStatus().clone();
+        JobStatusChangeEvent event = new JobStatusChangeEvent(jip, 
+          EventType.RUN_STATE_CHANGED, oldStatus, newStatus);
+         for (JobInProgressListener listener : listeners) {
+           listener.jobUpdated(event);
+         }
+      } catch (Exception ioe) {
+        failJob(jip);
       }
+    }
+
+    private synchronized void completeEmptyJob(JobInProgress jip) {
+      jip.completeEmptyJob();
+    }
+
+    public synchronized void failJob(JobInProgress jip) {
+      JobStatus oldStatus = (JobStatus)jip.getStatus().clone();
+      jip.fail();
       JobStatus newStatus = (JobStatus)jip.getStatus().clone();
       JobStatusChangeEvent event = new JobStatusChangeEvent(jip, 
-        EventType.RUN_STATE_CHANGED, oldStatus, newStatus);
-       for (JobInProgressListener listener : listeners) {
-         listener.jobUpdated(event);
-       }
+          EventType.RUN_STATE_CHANGED, oldStatus, newStatus);
+      for (JobInProgressListener listener : listeners) {
+        listener.jobUpdated(event);
+      }
     }
-    
 
     public void removeJob(JobID jobid) {
       jobs.remove(jobid);
