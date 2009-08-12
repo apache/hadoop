@@ -1785,7 +1785,7 @@ public class HTable {
     private HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
     private final LinkedList<Result> cache = new LinkedList<Result>();
-    private final int caching = HTable.this.scannerCaching;
+    private final int caching;
     private long lastNext;
     // Keep lastResult returned successfully in case we have to reset scanner.
     private Result lastResult = null;
@@ -1798,7 +1798,14 @@ public class HTable {
       }
       this.scan = scan;
       this.lastNext = System.currentTimeMillis();
-      
+
+      // Use the caching from the Scan.  If not set, use the default cache setting for this table.
+      if (this.scan.getCaching() > 0) {
+        this.caching = this.scan.getCaching();
+      } else {
+        this.caching = HTable.this.scannerCaching;
+      }
+
       // Removed filter validation.  We have a new format now, only one of all
       // the current filters has a validate() method.  We can add it back,
       // need to decide on what we're going to do re: filter redesign.

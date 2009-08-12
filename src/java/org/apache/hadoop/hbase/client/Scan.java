@@ -20,6 +20,14 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -30,14 +38,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 /**
  * Used to perform Scan operations.
  * <p>
@@ -47,6 +47,9 @@ import java.util.TreeSet;
  * iterate over all rows.
  * <p>
  * To scan everything for each row, instantiate a Scan object.
+ * <p>
+ * To modify scanner caching for just this scan, use {@link #setCaching(int) setCaching}.
+ * <p>
  * To further define the scope of what to get when scanning, perform additional 
  * methods as outlined below.
  * <p>
@@ -71,6 +74,7 @@ public class Scan implements Writable {
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
+  private int caching = -1;
   private Filter filter = null;
   private RowFilterInterface oldFilter = null;
   private TimeRange tr = new TimeRange();
@@ -118,6 +122,7 @@ public class Scan implements Writable {
     startRow = scan.getStartRow();
     stopRow  = scan.getStopRow();
     maxVersions = scan.getMaxVersions();
+    caching = scan.getCaching();
     filter = scan.getFilter(); // clone?
     oldFilter = scan.getOldFilter(); // clone?
     TimeRange ctr = scan.getTimeRange();
@@ -308,7 +313,17 @@ public class Scan implements Writable {
     this.maxVersions = maxVersions;
     return this;
   }
-  
+
+  /**
+   * Set the number of rows for caching that will be passed to scanners.
+   * If not set, the default setting from {@link HTable#getScannerCaching()} will apply.
+   * Higher caching values will enable faster scanners but will use more memory.
+   * @param caching the number of rows for caching
+   */
+  public void setCaching(int caching) {
+    this.caching = caching;
+  }
+
   /**
    * Apply the specified server-side filter when performing the Scan.
    * @param filter filter to run on the server
@@ -397,6 +412,13 @@ public class Scan implements Writable {
   } 
 
   /**
+   * @return caching the number of rows fetched when calling next on a scanner
+   */
+  public int getCaching() {
+    return this.caching;
+  } 
+
+  /**
    * @return TimeRange
    */
   public TimeRange getTimeRange() {
@@ -438,6 +460,8 @@ public class Scan implements Writable {
     sb.append(Bytes.toString(this.stopRow));
     sb.append(", maxVersions=");
     sb.append("" + this.maxVersions);
+    sb.append(", caching=");
+    sb.append("" + this.caching);
     sb.append(", timeRange=");
     sb.append("[" + this.tr.getMin() + "," + this.tr.getMax() + ")");
     sb.append(", families=");
@@ -493,6 +517,7 @@ public class Scan implements Writable {
     this.startRow = Bytes.readByteArray(in);
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
+    this.caching = in.readInt();
     if(in.readBoolean()) {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
@@ -524,6 +549,7 @@ public class Scan implements Writable {
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
+    out.writeInt(this.caching);
     if(this.filter == null) {
       out.writeBoolean(false);
     } else {
