@@ -9,6 +9,7 @@ Release 0.21.0 - Unreleased
    HBASE-1759  Ability to specify scanner caching on a per-scan basis
                (Ken Weiner via jgray)
    HBASE-1763  Put writeToWAL methods do not have proper getter/setter names
+               (second commit to fix compile error in hregion)
 
   OPTIMIZATIONS
 

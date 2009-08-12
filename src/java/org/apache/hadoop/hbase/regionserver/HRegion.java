@@ -1199,7 +1199,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    */
   public void put(Put put) throws IOException {
-    this.put(put, null, put.writeToWAL());
+    this.put(put, null, put.getWriteToWAL());
   }
   
   /**
@@ -1217,7 +1217,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    */
   public void put(Put put, Integer lockid) throws IOException {
-    this.put(put, lockid, put.writeToWAL());
+    this.put(put, lockid, put.getWriteToWAL());
   }
 
   /**
