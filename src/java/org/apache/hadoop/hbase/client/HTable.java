@@ -55,8 +55,6 @@ import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Used to communicate with a single HBase table
- * TODO: checkAndSave in oldAPI
- * TODO: Regex deletes.
  */
 public class HTable {
   private final HConnection connection;

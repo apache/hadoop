@@ -1,4 +1,15 @@
 HBase Change Log
+Release 0.21.0 - Unreleased
+  INCOMPATIBLE CHANGES
+
+  BUG FIXES
+
+  IMPROVEMENTS
+   HBASE-1760 Cleanup TODOs in HTable
+
+  OPTIMIZATIONS
+
+
 Release 0.20.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-1147  Modify the scripts to use Zookeeper
