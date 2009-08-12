@@ -66,7 +66,10 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     };  
   }
 
-  /** TC1: Append on block boundary. */
+  /**
+   * TC1: Append on block boundary.
+   * @throws IOException an exception might be thrown
+   */
   public void testTC1() throws Exception {
     final Path p = new Path("/TC1/foo");
     System.out.println("p=" + p);
@@ -91,7 +94,10 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     AppendTestUtil.check(fs, p, len1 + len2);
   }
 
-  /** TC2: Append on non-block boundary. */
+  /**
+   * TC2: Append on non-block boundary.
+   * @throws IOException an exception might be thrown
+   */
   public void testTC2() throws Exception {
     final Path p = new Path("/TC2/foo");
     System.out.println("p=" + p);
@@ -116,7 +122,10 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     AppendTestUtil.check(fs, p, len1 + len2);
   }
 
-  /** TC5: Only one simultaneous append. */
+  /**
+   * TC5: Only one simultaneous append.
+   * @throws IOException an exception might be thrown
+   */
   public void testTC5() throws Exception {
     final Path p = new Path("/TC5/foo");
     System.out.println("p=" + p);
@@ -143,7 +152,10 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     out.close();        
   }
 
-  /** TC7: Corrupted replicas are present. */
+  /**
+   * TC7: Corrupted replicas are present.
+   * @throws IOException an exception might be thrown
+   */
   public void testTC7() throws Exception {
     final short repl = 2;
     final Path p = new Path("/TC7/foo");
@@ -188,7 +200,10 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     AppendTestUtil.check(fs, p, len1 + len2);
   }
 
-  /** TC11: Racing rename */
+  /**
+   * TC11: Racing rename
+   * @throws IOException an exception might be thrown
+   */
   public void testTC11() throws Exception {
     final Path p = new Path("/TC11/foo");
     System.out.println("p=" + p);
@@ -241,7 +256,10 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     }
   }
 
-  /** TC12: Append to partial CRC chunk */
+  /** 
+   * TC12: Append to partial CRC chunk
+   * @throws IOException an exception might be thrown
+   */
   public void testTC12() throws Exception {
     final Path p = new Path("/TC12/foo");
     System.out.println("p=" + p);

@@ -893,11 +893,11 @@ public class BlockManager {
             } else {
               // new replica is larger in size than existing block.
               // Mark pre-existing replicas as corrupt.
-              int numNodes = blocksMap.numNodes(block);
+              int numNodes = storedBlock.numNodes();
               int count = 0;
               DatanodeDescriptor nodes[] = new DatanodeDescriptor[numNodes];
-              Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
-              for (; it != null && it.hasNext(); ) {
+              Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(storedBlock);
+              while (it.hasNext()) {
                 DatanodeDescriptor dd = it.next();
                 if (!dd.equals(node)) {
                   nodes[count++] = dd;
@@ -1262,9 +1262,9 @@ public class BlockManager {
     return blocksMap.size() - (int)pendingDeletionBlocksCount;
   }
 
-  DatanodeDescriptor[] getNodes(Block block) {
+  DatanodeDescriptor[] getNodes(BlockInfo block) {
     DatanodeDescriptor[] nodes =
-      new DatanodeDescriptor[blocksMap.numNodes(block)];
+      new DatanodeDescriptor[block.numNodes()];
     Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
     for (int i = 0; it != null && it.hasNext(); i++) {
       nodes[i] = it.next();

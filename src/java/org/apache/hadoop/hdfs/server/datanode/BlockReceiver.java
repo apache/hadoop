@@ -77,7 +77,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private String clientName;
   DatanodeInfo srcDataNode = null;
   private Checksum partialCrc = null;
-  private DataNode datanode = null;
+  private final DataNode datanode;
 
   BlockReceiver(Block block, DataInputStream in, String inAddr,
                 String myAddr, boolean isRecovery, String clientName, 
@@ -127,6 +127,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       throw ioe;
     }
   }
+
+  /** Return the datanode object. */
+  DataNode getDataNode() {return datanode;}
 
   /**
    * close files.

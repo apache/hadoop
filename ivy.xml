@@ -252,6 +252,10 @@
       name="slf4j-api"
       rev="${slf4j-api.version}"
       conf="common->master"/>
+    <dependency org="org.apache.hadoop"
+      name="avro"
+      rev="1.0.0"
+      conf="common->default"/>
     <dependency org="org.eclipse.jdt"
       name="core"
       rev="${core.version}"

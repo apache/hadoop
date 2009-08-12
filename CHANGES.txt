@@ -13,12 +13,13 @@ Trunk (unreleased changes)
 
     HDFS-461. Tool to analyze file size distribution in HDFS. (shv)
 
-    HDFS-446. Improvements to Offline Image Viewer. (Jakob Homan via shv)
-
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
     is deleted. (Suresh Srinivas via rangadi)
+
+    HDFS-377. Separate codes which implement DataTransferProtocol.
+    (szetszwo)
 
     HDFS-396. NameNode image and edits directories are specified as URIs.
     (Luca Telloli via rangadi)
@@ -49,8 +50,13 @@ Trunk (unreleased changes)
     only by the run-test-*-faul-inject targets.  (Konstantin Boudnik via
     szetszwo)
 
+    HDFS-446. Improvements to Offline Image Viewer. (Jakob Homan via shv)
+
     HADOOP-6160. Fix releaseaudit target to run on specific directories.
     (gkesavan)
+
+    HDFS-501. Use enum to define the constants in DataTransferProtocol.
+    (szetszwo)
 
     HDFS-508. Factor out BlockInfo from BlocksMap. (shv)
 
@@ -70,16 +76,30 @@ Trunk (unreleased changes)
     HDFS-504. Update the modification time of a file when the file 
     is closed. (Chun Zhang via dhruba)
 
+    HDFS-498. Add development guide and documentation for the fault injection
+    framework.  (Konstantin Boudnik via szetszwo)
+
+    HDFS-524. Further DataTransferProtocol code refactoring.  (szetszwo)
+
+    HDFS-527. Remove/deprecate unnecessary DFSClient constructors.  (szetszwo)
+
+    HDFS-529. Use BlockInfo instead of Block to avoid redundant block searches
+    in BlockManager. (shv)
+
+    HDFS-530. Refactor TestFileAppend* to remove code duplication.
+    (Konstantin Boudnik via szetszwo)
+
+    HDFS-451. Add fault injection tests, Pipeline_Fi_06,07,14,15, for
+    DataTransferProtocol.  (szetszwo)
+
   BUG FIXES
+
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than
     current consumption. (Boris Shkolnik via rangadi)
 
     HADOOP-4687. HDFS is split from Hadoop Core. It is a subproject under 
     Hadoop (Owen O'Malley)
-
-    HDFS-377. Separate codes which implement DataTransferProtocol.
-    (szetszwo)
 
     HADOOP-6096. Fix Eclipse project and classpath files following project
     split. (tomwhite)
@@ -117,9 +137,6 @@ Trunk (unreleased changes)
     HDFS-484. Fix bin-package and package target to package jar files.
     (gkesavan)
 
-    HDFS-501. Use enum to define the constants in DataTransferProtocol.
-    (szetszwo)
-
     HDFS-490. Eliminate the deprecated warnings introduced by H-5438.
     (He Yongqiang via szetszwo)
 
@@ -129,9 +146,15 @@ Trunk (unreleased changes)
     HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
     (Bill Zeller via szetszwo)
 
+    HDFS-534. Include avro in ivy.  (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
 
     HDFS-438. Improve help message for space quota command. (Raghu Angadi)
 
+  BUG FIXES
+
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe.  (Suresh Srinivas via szetszwo)

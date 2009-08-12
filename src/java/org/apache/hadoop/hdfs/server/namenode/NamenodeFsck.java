@@ -324,7 +324,7 @@ public class NamenodeFsck {
   
   private void lostFoundMove(FileStatus file, LocatedBlocks blocks)
     throws IOException {
-    DFSClient dfs = new DFSClient(conf);
+    final DFSClient dfs = new DFSClient(NameNode.getAddress(conf), conf);
     try {
     if (!lfInited) {
       lostFoundInit(dfs);

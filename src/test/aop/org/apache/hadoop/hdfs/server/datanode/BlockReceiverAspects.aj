@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fi.ProbabilityModel;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.util.DiskChecker.*;
-
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.DataOutputStream;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.ProbabilityModel;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
 /**
  * This aspect takes care about faults injected into datanode.BlockReceiver 
@@ -34,14 +33,20 @@ import java.io.DataOutputStream;
 public aspect BlockReceiverAspects {
   public static final Log LOG = LogFactory.getLog(BlockReceiverAspects.class);
 
-  pointcut callReceivePacket() :
+  pointcut callReceivePacket(BlockReceiver blockreceiver) :
     call (* OutputStream.write(..))
       && withincode (* BlockReceiver.receivePacket(..))
 // to further limit the application of this aspect a very narrow 'target' can be used as follows
 //  && target(DataOutputStream)
-      && !within(BlockReceiverAspects +);
+      && !within(BlockReceiverAspects +)
+      && this(blockreceiver);
 	
-  before () throws IOException : callReceivePacket () {
+  before(BlockReceiver blockreceiver
+      ) throws IOException : callReceivePacket(blockreceiver) {
+    LOG.info("FI: callReceivePacket");
+    DataTransferTestUtil.getPipelineTest().fiCallReceivePacket.run(
+        blockreceiver.getDataNode());
+
     if (ProbabilityModel.injectCriteria(BlockReceiver.class.getSimpleName())) {
       LOG.info("Before the injection point");
       Thread.dumpStack();
