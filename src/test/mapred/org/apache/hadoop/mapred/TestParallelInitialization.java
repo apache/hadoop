@@ -147,7 +147,11 @@ public class TestParallelInitialization extends TestCase {
       try {
         JobStatus prevStatus = (JobStatus)job.getStatus().clone();
         job.initTasks();
-        completeEmptyJob(job);
+        if (job.isJobEmpty()) {
+          completeEmptyJob(job);
+        } else if (!job.isSetupCleanupRequired()) {
+          job.completeSetup();
+        }
         JobStatus newStatus = (JobStatus)job.getStatus().clone();
         if (prevStatus.getRunState() != newStatus.getRunState()) {
           JobStatusChangeEvent event = 

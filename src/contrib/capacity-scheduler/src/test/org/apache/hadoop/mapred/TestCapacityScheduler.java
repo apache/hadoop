@@ -512,7 +512,11 @@ public class TestCapacityScheduler extends TestCase {
       try {
         JobStatus oldStatus = (JobStatus)jip.getStatus().clone();
         jip.initTasks();
-        completeEmptyJob(jip);
+        if (jip.isJobEmpty()) {
+          completeEmptyJob(jip);
+        } else if (!jip.isSetupCleanupRequired()) {
+          jip.completeSetup();
+        }
         JobStatus newStatus = (JobStatus)jip.getStatus().clone();
         JobStatusChangeEvent event = new JobStatusChangeEvent(jip, 
           EventType.RUN_STATE_CHANGED, oldStatus, newStatus);

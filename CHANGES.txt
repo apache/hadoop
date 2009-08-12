@@ -357,3 +357,6 @@ Trunk (unreleased changes)
     
     MAPREDUCE-799. Fixes so all of the MRUnit self-tests run.
     (Aaron Kimball via johan)    
+
+    MAPREDUCE-848. Fixes a problem to do with TestCapacityScheduler
+    failing (Amar Kamat via ddas)
