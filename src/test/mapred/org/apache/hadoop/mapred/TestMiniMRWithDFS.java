@@ -135,7 +135,7 @@ public class TestMiniMRWithDFS extends TestCase {
       int numNotDel = 0;
       File localDir = new File(mr.getTaskTrackerLocalDir(i));
       LOG.debug("Tracker directory: " + localDir);
-      File trackerDir = new File(localDir, "taskTracker");
+      File trackerDir = new File(localDir, TaskTracker.SUBDIR);
       assertTrue("local dir " + localDir + " does not exist.", 
                  localDir.isDirectory());
       assertTrue("task tracker dir " + trackerDir + " does not exist.", 
@@ -150,7 +150,7 @@ public class TestMiniMRWithDFS extends TestCase {
       }
       for(int fileIdx = 0; fileIdx < contents.length; ++fileIdx) {
         String name = contents[fileIdx];
-        if (!("taskTracker".equals(contents[fileIdx]))) {
+        if (!(TaskTracker.SUBDIR.equals(contents[fileIdx]))) {
           LOG.debug("Looking at " + name);
           assertTrue("Spurious directory " + name + " found in " +
                      localDir, false);
@@ -158,7 +158,7 @@ public class TestMiniMRWithDFS extends TestCase {
       }
       for (int idx = 0; idx < neededDirs.size(); ++idx) {
         String name = neededDirs.get(idx);
-        if (new File(new File(new File(trackerDir, "jobcache"),
+        if (new File(new File(new File(trackerDir, TaskTracker.JOBCACHE),
                               jobIds[idx]), name).isDirectory()) {
           found[idx] = true;
           numNotDel++;

@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
@@ -66,7 +67,6 @@ class MapTask extends Task {
    * The size of each record in the index file for the map-outputs.
    */
   public static final int MAP_OUTPUT_INDEX_RECORD_LENGTH = 24;
-  
 
   private BytesWritable split = new BytesWritable();
   private String splitClass;
@@ -101,11 +101,21 @@ class MapTask extends Task {
   }
 
   @Override
-  public void localizeConfiguration(JobConf conf) throws IOException {
+  public void localizeConfiguration(JobConf conf)
+      throws IOException {
     super.localizeConfiguration(conf);
-    if (isMapOrReduce()) {
-      Path localSplit = new Path(new Path(getJobFile()).getParent(), 
-                                 "split.dta");
+    // split.dta file is used only by IsolationRunner.
+    // Write the split file to the local disk if it is a normal map task (not a
+    // job-setup or a job-cleanup task) and if the user wishes to run
+    // IsolationRunner either by setting keep.failed.tasks.files to true or by
+    // using keep.tasks.files.pattern
+    if (isMapOrReduce()
+        && (conf.getKeepTaskFilesPattern() != null || conf
+            .getKeepFailedTaskFiles())) {
+      Path localSplit =
+          new LocalDirAllocator("mapred.local.dir").getLocalPathForWrite(
+              TaskTracker.getLocalSplitFile(getJobID().toString(), getTaskID()
+                  .toString()), conf);
       LOG.debug("Writing local split to " + localSplit);
       DataOutputStream out = FileSystem.getLocal(conf).create(localSplit);
       Text.writeString(out, splitClass);
@@ -1220,8 +1230,8 @@ class MapTask extends Task {
       try {
         // create spill file
         final SpillRecord spillRec = new SpillRecord(partitions);
-        final Path filename = mapOutputFile.getSpillFileForWrite(getTaskID(),
-            numSpills, size);
+        final Path filename =
+            mapOutputFile.getSpillFileForWrite(numSpills, size);
         out = rfs.create(filename);
 
         final int endPosition = (kvend > kvstart)
@@ -1285,9 +1295,9 @@ class MapTask extends Task {
 
         if (totalIndexCacheMemory >= INDEX_CACHE_MEMORY_LIMIT) {
           // create spill index file
-          Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
-              getTaskID(), numSpills,
-              partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+          Path indexFilename =
+              mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
+                  * MAP_OUTPUT_INDEX_RECORD_LENGTH);
           spillRec.writeToFile(indexFilename, job);
         } else {
           indexCacheList.add(spillRec);
@@ -1313,8 +1323,8 @@ class MapTask extends Task {
       try {
         // create spill file
         final SpillRecord spillRec = new SpillRecord(partitions);
-        final Path filename = mapOutputFile.getSpillFileForWrite(getTaskID(),
-            numSpills, size);
+        final Path filename =
+            mapOutputFile.getSpillFileForWrite(numSpills, size);
         out = rfs.create(filename);
         
         // we don't run the combiner for a single record
@@ -1350,9 +1360,9 @@ class MapTask extends Task {
         }
         if (totalIndexCacheMemory >= INDEX_CACHE_MEMORY_LIMIT) {
           // create spill index file
-          Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
-              getTaskID(), numSpills,
-              partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+          Path indexFilename =
+              mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
+                  * MAP_OUTPUT_INDEX_RECORD_LENGTH);
           spillRec.writeToFile(indexFilename, job);
         } else {
           indexCacheList.add(spillRec);
@@ -1442,14 +1452,14 @@ class MapTask extends Task {
       final TaskAttemptID mapId = getTaskID();
 
       for(int i = 0; i < numSpills; i++) {
-        filename[i] = mapOutputFile.getSpillFile(mapId, i);
+        filename[i] = mapOutputFile.getSpillFile(i);
         finalOutFileSize += rfs.getFileStatus(filename[i]).getLen();
       }
       if (numSpills == 1) { //the spill is the final output
         rfs.rename(filename[0],
             new Path(filename[0].getParent(), "file.out"));
         if (indexCacheList.size() == 0) {
-          rfs.rename(mapOutputFile.getSpillIndexFile(mapId, 0),
+          rfs.rename(mapOutputFile.getSpillIndexFile(0),
               new Path(filename[0].getParent(),"file.out.index"));
         } else {
           indexCacheList.get(0).writeToFile(
@@ -1460,7 +1470,7 @@ class MapTask extends Task {
 
       // read in paged indices
       for (int i = indexCacheList.size(); i < numSpills; ++i) {
-        Path indexFileName = mapOutputFile.getSpillIndexFile(mapId, i);
+        Path indexFileName = mapOutputFile.getSpillIndexFile(i);
         indexCacheList.add(new SpillRecord(indexFileName, job));
       }
 
@@ -1468,10 +1478,10 @@ class MapTask extends Task {
       //lengths for each partition
       finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
       finalIndexFileSize = partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH;
-      Path finalOutputFile = mapOutputFile.getOutputFileForWrite(mapId,
-                             finalOutFileSize);
-      Path finalIndexFile = mapOutputFile.getOutputIndexFileForWrite(
-                            mapId, finalIndexFileSize);
+      Path finalOutputFile =
+          mapOutputFile.getOutputFileForWrite(finalOutFileSize);
+      Path finalIndexFile =
+          mapOutputFile.getOutputIndexFileForWrite(finalIndexFileSize);
 
       //The output stream for the final single output file
       FSDataOutputStream finalOut = rfs.create(finalOutputFile, true, 4096);

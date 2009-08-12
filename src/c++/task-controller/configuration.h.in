@@ -53,10 +53,10 @@ extern struct configuration config;
   extern char *hadoop_conf_dir;
 #endif
 //method exposed to get the configurations
-const char * get_value(char* key);
+const char * get_value(const char* key);
 //method to free allocated configuration
 void free_configurations();
 
 //function to return array of values pointing to the key. Values are
 //comma seperated strings.
-const char ** get_values(char* key);
+const char ** get_values(const char* key);

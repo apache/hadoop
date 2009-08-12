@@ -36,6 +36,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.log4j.LogManager;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 
 /** 
  * The main() for child processes. 
@@ -138,6 +139,10 @@ class Child {
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
 
+        // setup the child's mapred-local-dir. The child is now sandboxed and
+        // can only see files down and under attemtdir only.
+        TaskRunner.setupChildMapredLocalDirs(task, job);
+
         //setupWorkDir actually sets up the symlinks for the distributed
         //cache. After a task exits we wipe the workdir clean, and hence
         //the symlinks have to be rebuilt.
@@ -148,8 +153,6 @@ class Child {
         TaskLog.cleanup(job.getInt("mapred.userlog.retain.hours", 24));
 
         task.setConf(job);
-
-        defaultConf.addResource(new Path(task.getJobFile()));
 
         // Initiate Java VM metrics
         JvmMetrics.init(task.getPhase().toString(), job.getSessionId());
@@ -168,14 +171,15 @@ class Child {
       LOG.fatal("FSError from child", e);
       umbilical.fsError(taskid, e.getMessage());
     } catch (Throwable throwable) {
-      LOG.warn("Error running child", throwable);
+      LOG.warn("Error running child : "
+          + StringUtils.stringifyException(throwable));
       try {
         if (task != null) {
           // do cleanup for the task
           task.taskCleanup(umbilical);
         }
       } catch (Throwable th) {
-        LOG.info("Error cleaning up" + th);
+        LOG.info("Error cleaning up : " + StringUtils.stringifyException(th));
       }
       // Report back any failures, for diagnostic purposes
       ByteArrayOutputStream baos = new ByteArrayOutputStream();

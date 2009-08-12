@@ -189,6 +189,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-789. Oracle support for Sqoop. (Aaron Kimball via tomwhite)
 
+    MAPREDUCE-842. Setup secure permissions for localized job files,
+    intermediate outputs and log files on tasktrackers.
+    (Vinod Kumar Vavilapalli via yhemanth)
+    
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)

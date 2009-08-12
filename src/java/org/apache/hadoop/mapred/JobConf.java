@@ -1418,7 +1418,7 @@ public class JobConf extends Configuration {
    * @return The localized job specific shared directory
    */
   public String getJobLocalDir() {
-    return get("job.local.dir");
+    return get(TaskTracker.JOB_LOCAL_DIR);
   }
 
   public long getMemoryForMapTask() {

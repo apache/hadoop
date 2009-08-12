@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TestMiniMRWithDFS;
+import org.apache.hadoop.util.StringUtils;
 
 import junit.framework.TestCase;
 
@@ -89,10 +90,14 @@ public class TestUlimit extends TestCase {
       assertFalse("output not cleaned up", fs.exists(outputPath));
       mr.waitUntilIdle();
     } catch(IOException e) {
-      fail(e.toString());
+      fail(StringUtils.stringifyException(e));
     } finally {
-      mr.shutdown();
-      dfs.shutdown();
+      if (mr != null) {
+        mr.shutdown();
+      }
+      if (dfs != null) {
+        dfs.shutdown();
+      }
     }
   }
 

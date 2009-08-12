@@ -21,6 +21,9 @@ CFLAGS = @CFLAGS@
 BINARY=task-controller
 installdir = @prefix@
 
+testdir = tests
+TESTOBJS=${testdir}/test-task-controller.o task-controller.o configuration.o
+TESTBINARY=${testdir}/test-task-controller
 
 all: $(OBJS)
 	$(CC) $(CFLAG) -o $(BINARY) $(OBJS)
@@ -34,9 +37,14 @@ task-controller.o: task-controller.c task-controller.h
 configuration.o: configuration.h configuration.c
 	$(CC) $(CFLAG) -o configuration.o -c configuration.c
 
+${testdir}/test-task-controller.o: task-controller.c task-controller.h
+	$(CC) $(CFLAG) -o ${testdir}/test-task-controller.o -c ${testdir}/test-task-controller.c
+
+test: $(TESTOBJS)
+	$(CC) $(CFLAG) -o $(TESTBINARY) $(TESTOBJS)
 
 clean:
-	rm -rf $(BINARY) $(OBJS)
+	rm -rf $(BINARY) $(OBJS) $(TESTOBJS)
 
 install: all
 	cp $(BINARY) $(installdir)

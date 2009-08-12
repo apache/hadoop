@@ -20,8 +20,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Test a java-based mapred job with LinuxTaskController running the jobs as a
@@ -39,10 +41,32 @@ public class TestJobExecutionAsDifferentUser extends
     startCluster();
     Path inDir = new Path("input");
     Path outDir = new Path("output");
-    RunningJob job =
-        UtilsForTests.runJobSucceed(getClusterConf(), inDir, outDir);
+
+    RunningJob job;
+
+    // Run a job with zero maps/reduces
+    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 0, 0);
+    job.waitForCompletion();
     assertTrue("Job failed", job.isSuccessful());
     assertOwnerShip(outDir);
+
+    // Run a job with 1 map and zero reduces
+    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 0);
+    job.waitForCompletion();
+    assertTrue("Job failed", job.isSuccessful());
+    assertOwnerShip(outDir);
+
+    // Run a normal job with maps/reduces
+    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 1);
+    job.waitForCompletion();
+    assertTrue("Job failed", job.isSuccessful());
+    assertOwnerShip(outDir);
+
+    // Run a job with jvm reuse
+    JobConf myConf = getClusterConf();
+    myConf.set("mapred.job.reuse.jvm.num.tasks", "-1");
+    String[] args = { "-m", "6", "-r", "3", "-mt", "1000", "-rt", "1000" };
+    assertEquals(0, ToolRunner.run(myConf, new SleepJob(), args));
   }
   
   public void testEnvironment() throws IOException {

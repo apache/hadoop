@@ -31,13 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JvmTask;
-import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
  * IsolationRunner is intended to facilitate debugging by re-running a specific
@@ -169,17 +164,24 @@ public class IsolationRunner {
     // setup the local and user working directories
     FileSystem local = FileSystem.getLocal(conf);
     LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+
     File workDirName = TaskRunner.formWorkDir(lDirAlloc, taskId, false, conf);
     local.setWorkingDirectory(new Path(workDirName.toString()));
     FileSystem.get(conf).setWorkingDirectory(conf.getWorkingDirectory());
     
     // set up a classloader with the right classpath
-    ClassLoader classLoader = makeClassLoader(conf, workDirName);
+    ClassLoader classLoader =
+        makeClassLoader(conf, new File(workDirName.toString()));
     Thread.currentThread().setContextClassLoader(classLoader);
     conf.setClassLoader(classLoader);
-    
-    Path localSplit = new Path(new Path(jobFilename.toString()).getParent(), 
-                               "split.dta");
+
+    // split.dta file is used only by IsolationRunner. The file can now be in
+    // any of the configured local disks, so use LocalDirAllocator to find out
+    // where it is.
+    Path localSplit =
+        new LocalDirAllocator("mapred.local.dir").getLocalPathToRead(
+            TaskTracker.getLocalSplitFile(taskId.getJobID().toString(), taskId
+                .toString()), conf);
     DataInputStream splitFile = FileSystem.getLocal(conf).open(localSplit);
     String splitClass = Text.readString(splitFile);
     BytesWritable split = new BytesWritable();

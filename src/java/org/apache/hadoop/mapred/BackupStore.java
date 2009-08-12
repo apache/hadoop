@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -548,10 +547,9 @@ public class BackupStore<K,V> {
     boolean isActive() { return isActive; }
 
     private Writer<K,V> createSpillFile() throws IOException {
-      Path tmp = new Path(
-          TaskTracker.getIntermediateOutputDir(
-              tid.getJobID().toString(), tid.toString()) + 
-              "/backup_" + tid.getId() + "_" + (spillNumber++) + ".out");
+      Path tmp =
+          new Path(TaskTracker.OUTPUT + "/backup_" + tid.getId() + "_"
+              + (spillNumber++) + ".out");
 
       LOG.info("Created file: " + tmp);
 

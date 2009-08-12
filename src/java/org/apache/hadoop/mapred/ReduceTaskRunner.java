@@ -37,7 +37,7 @@ class ReduceTaskRunner extends TaskRunner {
     }
     
     // cleanup from failures
-    mapOutputFile.removeAll(getTask().getTaskID());
+    mapOutputFile.removeAll();
     return true;
   }
   
@@ -46,6 +46,6 @@ class ReduceTaskRunner extends TaskRunner {
   public void close() throws IOException {
     LOG.info(getTask()+" done; removing files.");
     getTask().getProgress().setStatus("closed");
-    mapOutputFile.removeAll(getTask().getTaskID());
+    mapOutputFile.removeAll();
   }
 }
