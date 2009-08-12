@@ -245,7 +245,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   /**
    * @return true if edits should be applied to WAL, false if not
    */
-  public boolean writeToWAL() {
+  public boolean getWriteToWAL() {
     return this.writeToWAL;
   }
   
@@ -254,7 +254,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
    * Not writing the WAL means you may lose edits on server crash.
    * @param write true if edits should be written to WAL, false if not
    */
-  public void writeToWAL(boolean write) {
+  public void setWriteToWAL(boolean write) {
     this.writeToWAL = write;
   }
   

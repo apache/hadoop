@@ -5,7 +5,10 @@ Release 0.21.0 - Unreleased
   BUG FIXES
 
   IMPROVEMENTS
-   HBASE-1760 Cleanup TODOs in HTable
+   HBASE-1760  Cleanup TODOs in HTable
+   HBASE-1759  Ability to specify scanner caching on a per-scan basis
+               (Ken Weiner via jgray)
+   HBASE-1763  Put writeToWAL methods do not have proper getter/setter names
 
   OPTIMIZATIONS
 
@@ -561,8 +564,6 @@ Release 0.20.0 - Unreleased
                region info
    HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
                detailed output
-   HBASE-1759  Ability to specify scanner caching on a per-scan basis
-               (Ken Weiner via jgray)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
