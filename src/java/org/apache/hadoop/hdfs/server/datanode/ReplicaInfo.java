@@ -22,61 +22,137 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FileUtil.HardLink;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.io.IOUtils;
 
 /**
- * This class is used by the datanode to maintain the map from a block 
- * to its metadata.
+ * This class is used by datanodes to maintain meta data of its replicas.
+ * It provides a general interface for meta information of a replica.
  */
-class ReplicaInfo {
+abstract class ReplicaInfo extends Block {
+  private FSVolume volume;      // volume where the replica belongs
+  private File     dir;         // directory where block & meta files belong
 
-  private FSVolume volume;       // volume where the block belongs
-  private File     file;         // block file
-  private boolean detached;      // copy-on-write done for block
-
-  ReplicaInfo(FSVolume vol, File file) {
+  /**
+   * Constructor for a zero length replica
+   * @param blockId block id
+   * @param genStamp replica generation stamp
+   * @param vol volume where replica is located
+   * @param dir directory path where block and meta files are located
+   */
+  ReplicaInfo(long blockId, long genStamp, FSVolume vol, File dir) {
+    this( blockId, 0L, genStamp, vol, dir);
+  }
+  
+  /**
+   * Constructor
+   * @param block a block
+   * @param vol volume where replica is located
+   * @param dir directory path where block and meta files are located
+   */
+  ReplicaInfo(Block block, FSVolume vol, File dir) {
+    this(block.getBlockId(), block.getNumBytes(), 
+        block.getGenerationStamp(), vol, dir);
+  }
+  
+  /**
+   * Constructor
+   * @param blockId block id
+   * @param len replica length
+   * @param genStamp replica generation stamp
+   * @param vol volume where replica is located
+   * @param dir directory path where block and meta files are located
+   */
+  ReplicaInfo(long blockId, long len, long genStamp,
+      FSVolume vol, File dir) {
+    super(blockId, len, genStamp);
     this.volume = vol;
-    this.file = file;
-    detached = false;
+    this.dir = dir;
   }
 
-  ReplicaInfo(FSVolume vol) {
-    this.volume = vol;
-    this.file = null;
-    detached = false;
+  /**
+   * Get this replica's meta file name
+   * @return this replica's meta file name
+   */
+  private String getMetaFileName() {
+    return getBlockName() + "_" + getGenerationStamp() + METADATA_EXTENSION; 
   }
-
+  
+  /**
+   * Get the full path of this replica's data file
+   * @return the full path of this replica's data file
+   */
+  File getBlockFile() {
+    return new File(getDir(), getBlockName());
+  }
+  
+  /**
+   * Get the full path of this replica's meta file
+   * @return the full path of this replica's meta file
+   */
+  File getMetaFile() {
+    return new File(getDir(), getMetaFileName());
+  }
+  
+  /**
+   * Get the volume where this replica is located on disk
+   * @return the volume where this replica is located on disk
+   */
   FSVolume getVolume() {
     return volume;
   }
-
-  File getFile() {
-    return file;
+  
+  /**
+   * Set the volume where this replica is located on disk
+   */
+  void setVolume(FSVolume vol) {
+    this.volume = vol;
   }
-
-  void setFile(File f) {
-    file = f;
+  
+  /**
+   * Return the parent directory path where this replica is located
+   * @return the parent directory path where this replica is located
+   */
+  File getDir() {
+    return dir;
   }
 
   /**
-   * Is this block already detached?
+   * Set the parent directory where this replica is located
+   * @param dir the parent directory where the replica is located
+   */
+  void setDir(File dir) {
+    this.dir = dir;
+  }
+
+
+  /**
+   * Get the replica state
+   * @return the replica state
+   */
+  abstract ReplicaState getState();
+  
+  /**
+   * check if this replica has already detached.
+   * @return true if the replica has already detached or no need to detach; 
+   *         false otherwise
    */
   boolean isDetached() {
-    return detached;
+    return true;                // no need to be detached
   }
 
   /**
-   *  Block has been successfully detached
+   * set that this replica is detached
    */
   void setDetached() {
-    detached = true;
+    // no need to be detached
   }
-
-  /**
+  
+   /**
    * Copy specified file into a temporary file. Then rename the
    * temporary file to the original name. This will cause any
    * hardlinks to the original file to be removed. The temporary
@@ -84,7 +160,7 @@ class ReplicaInfo {
    * be recovered (especially on Windows) on datanode restart.
    */
   private void detachFile(File file, Block b) throws IOException {
-    File tmpFile = volume.createDetachFile(b, file.getName());
+    File tmpFile = getVolume().createDetachFile(b, file.getName());
     try {
       FileInputStream in = new FileInputStream(file);
       try {
@@ -114,33 +190,60 @@ class ReplicaInfo {
   }
 
   /**
-   * Returns true if this block was copied, otherwise returns false.
+   * Remove a hard link by copying the block to a temporary place and 
+   * then moving it back
+   * @param numLinks number of hard links
+   * @return true if copy is successful; 
+   *         false if it is already detached or no need to be detached
+   * @throws IOException if there is any copy error
    */
-  boolean detachBlock(Block block, int numLinks) throws IOException {
+  boolean detachBlock(int numLinks) throws IOException {
     if (isDetached()) {
       return false;
     }
-    if (file == null || volume == null) {
-      throw new IOException("detachBlock:Block not found. " + block);
+    File file = getBlockFile();
+    if (file == null || getVolume() == null) {
+      throw new IOException("detachBlock:Block not found. " + this);
     }
-    File meta = FSDataset.getMetaFile(file, block);
+    File meta = getMetaFile();
     if (meta == null) {
-      throw new IOException("Meta file not found for block " + block);
+      throw new IOException("Meta file not found for block " + this);
     }
 
     if (HardLink.getLinkCount(file) > numLinks) {
-      DataNode.LOG.info("CopyOnWrite for block " + block);
-      detachFile(file, block);
+      DataNode.LOG.info("CopyOnWrite for block " + this);
+      detachFile(file, this);
     }
     if (HardLink.getLinkCount(meta) > numLinks) {
-      detachFile(meta, block);
+      detachFile(meta, this);
     }
     setDetached();
     return true;
   }
+
+  /**
+   * Get the number of bytes that are visible to readers
+   * @return the number of bytes that are visible to readers
+   */
+  abstract long getVisibleLen() throws IOException;
   
+  /**
+   * Set this replica's generation stamp to be a newer one
+   * @param newGS new generation stamp
+   * @throws IOException is the new generation stamp is not greater than the current one
+   */
+  void setNewerGenerationStamp(long newGS) throws IOException {
+    long curGS = getGenerationStamp();
+    if (newGS <= curGS) {
+      throw new IOException("New generation stamp (" + newGS 
+          + ") must be greater than current one (" + curGS + ")");
+    }
+    setGenerationStamp(newGS);
+  }
+  
+  @Override  //Object
   public String toString() {
-    return getClass().getSimpleName() + "(volume=" + volume
-        + ", file=" + file + ", detached=" + detached + ")";
+    return getClass().getSimpleName() + " " + super.toString() + 
+    "(volume=" + volume + ", file=" + getBlockFile() + ")";
   }
 }

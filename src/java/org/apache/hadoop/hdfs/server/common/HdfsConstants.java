@@ -79,5 +79,16 @@ public interface HdfsConstants {
       return description;
     }
   }
+  
+  /**
+   * Define Replica Type
+   */
+  static public enum ReplicaState {
+    FINALIZED,  // finalized replica
+    RBW,        // replica being written
+    RWR,        // replica waiting to be recovered
+    RUR,        // replica under recovery
+    TEMPORARY   // temporary replica
+  }
 }
 

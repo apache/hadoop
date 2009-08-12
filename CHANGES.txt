@@ -92,6 +92,9 @@ Trunk (unreleased changes)
     HDFS-451. Add fault injection tests, Pipeline_Fi_06,07,14,15, for
     DataTransferProtocol.  (szetszwo)
 
+    HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.
+    (hairong)
+    
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 

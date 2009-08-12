@@ -23,6 +23,7 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -103,17 +104,20 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       }
       DataNode.LOG.info("newblocksizes = " + Arrays.asList(newblocksizes)); 
 
+      DataNode.LOG.info("dfs.dfs.clientName=" + dfs.dfs.clientName);
+      cluster.getNameNode().append(filestr, dfs.dfs.clientName);
+
       //update blocks with random block sizes
+      long newGS = cluster.getNameNode().nextGenerationStamp(lastblock);
       Block[] newblocks = new Block[REPLICATION_NUM];
       for(int i = 0; i < REPLICATION_NUM; i++) {
         newblocks[i] = new Block(lastblock.getBlockId(), newblocksizes[i],
-            lastblock.getGenerationStamp());
+            newGS);
         idps[i].updateBlock(lastblock, newblocks[i], false);
         checkMetaInfo(newblocks[i], idps[i]);
       }
-
-      DataNode.LOG.info("dfs.dfs.clientName=" + dfs.dfs.clientName);
-      cluster.getNameNode().append(filestr, dfs.dfs.clientName);
+      cluster.getNameNode().commitBlockSynchronization(lastblock, newGS, 
+          lastblocksize, false, false, new DatanodeID[]{});
 
       //block synchronization
       final int primarydatanodeindex = AppendTestUtil.nextInt(datanodes.length);
