@@ -25,6 +25,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +36,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessToken;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -248,6 +251,15 @@ public class DFSTestUtil {
     in.readByte();
     return in.getCurrentBlock();
   }  
+
+  public static List<LocatedBlock> getAllBlocks(FSDataInputStream in)
+      throws IOException {
+    return ((DFSClient.DFSDataInputStream) in).getAllBlocks();
+  }
+
+  public static AccessToken getAccessToken(FSDataOutputStream out) {
+    return ((DFSClient.DFSOutputStream) out.getWrappedStream()).getAccessToken();
+  }
 
   static void setLogLevel2All(org.apache.commons.logging.Log log) {
     ((org.apache.commons.logging.impl.Log4JLogger)log

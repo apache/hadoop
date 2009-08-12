@@ -140,8 +140,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
       try {
         ERROR_ACCESS_TOKEN.write(out);
         out.flush();
-        throw new IOException("Access token verification failed, on client "
-            + "request for reading block " + block);
+        throw new IOException("Access token verification failed, for client "
+            + remoteAddress + " for OP_READ_BLOCK for block " + block);
       } finally {
         IOUtils.closeStream(out);
       }
@@ -235,8 +235,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
           Text.writeString(replyOut, datanode.dnRegistration.getName());
           replyOut.flush();
         }
-        throw new IOException("Access token verification failed, on client "
-            + "request for writing block " + block);
+        throw new IOException("Access token verification failed, for client "
+            + remoteAddress + " for OP_WRITE_BLOCK for block " + block);
       } finally {
         IOUtils.closeStream(replyOut);
       }
@@ -388,8 +388,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
         ERROR_ACCESS_TOKEN.write(out);
         out.flush();
         throw new IOException(
-            "Access token verification failed, on getBlockChecksum() "
-                + "for block " + block);
+            "Access token verification failed, for client " + remoteAddress
+                + " for OP_BLOCK_CHECKSUM for block " + block);
       } finally {
         IOUtils.closeStream(out);
       }
@@ -443,7 +443,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
         && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
             AccessTokenHandler.AccessMode.COPY)) {
       LOG.warn("Invalid access token in request from "
-          + s.getRemoteSocketAddress() + " for copying block " + block);
+          + remoteAddress + " for OP_COPY_BLOCK for block " + block);
       sendResponse(s, ERROR_ACCESS_TOKEN, datanode.socketWriteTimeout);
       return;
     }
@@ -515,7 +515,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
         && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
             AccessTokenHandler.AccessMode.REPLACE)) {
       LOG.warn("Invalid access token in request from "
-          + s.getRemoteSocketAddress() + " for replacing block " + block);
+          + remoteAddress + " for OP_REPLACE_BLOCK for block " + block);
       sendResponse(s, ERROR_ACCESS_TOKEN, datanode.socketWriteTimeout);
       return;
     }
