@@ -362,3 +362,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-848. Fixes a problem to do with TestCapacityScheduler
     failing (Amar Kamat via ddas)
+
+    MAPREDUCE-840. DBInputFormat leaves open transaction.
+    (Aaron Kimball via tomwhite)
