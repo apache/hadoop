@@ -23,6 +23,7 @@ import org.apache.hadoop.sqoop.manager.GenericJdbcManager;
 import org.apache.hadoop.sqoop.manager.HsqldbManager;
 import org.apache.hadoop.sqoop.manager.LocalMySQLManager;
 import org.apache.hadoop.sqoop.manager.MySQLManager;
+import org.apache.hadoop.sqoop.manager.OracleManager;
 
 import java.io.IOException;
 
@@ -78,6 +79,8 @@ public final class ConnFactory {
       }
     } else if (scheme.equals("jdbc:hsqldb:hsql:")) {
       return new HsqldbManager(opts);
+    } else if (scheme.startsWith("jdbc:oracle:")) {
+      return new OracleManager(opts);
     } else {
       throw new IOException("Unknown connection scheme: " + scheme);
     }

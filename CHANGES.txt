@@ -187,6 +187,8 @@ Trunk (unreleased changes)
     MAPREDUCE-372. Moves ChainMapper/Reducer to the new API.
     (Amareshwari Sriramadasu via ddas)
 
+    MAPREDUCE-789. Oracle support for Sqoop. (Aaron Kimball via tomwhite)
+
   BUG FIXES
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
