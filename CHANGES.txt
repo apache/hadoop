@@ -146,6 +146,8 @@ Trunk (unreleased changes)
     HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
     (Bill Zeller via szetszwo)
 
+    HDFS-534. Include avro in ivy.  (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
