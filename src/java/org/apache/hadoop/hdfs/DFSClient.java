@@ -1906,7 +1906,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         } catch (IOException ie) {
           String blockInfo = block.getBlock() + " file=" + src;
           if (failures >= maxBlockAcquireFailures) {
-            throw new IOException("Could not obtain block: " + blockInfo);
+            throw new BlockMissingException(src, "Could not obtain block: " + blockInfo,
+                                            block.getStartOffset());
           }
           
           if (nodes == null || nodes.length == 0) {

@@ -150,6 +150,9 @@ Trunk (unreleased changes)
 
     HDFS-534. Include avro in ivy.  (szetszwo)
 
+    HDFS-532. Allow applications to know that a read request failed 
+    because block is missing. (dhruba)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
