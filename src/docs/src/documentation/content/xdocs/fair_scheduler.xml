@@ -48,13 +48,11 @@
       <p>
         The fair scheduler organizes jobs into <em>pools</em>, and 
         divides resources fairly between these pools. By default, there is a 
-        separate pool for each user, so that each user gets the same share 
-        of the cluster no matter how many jobs they submit. It is also
-        possible to set a job's pool based on the user's Unix group or
-        any jobconf property. 
-        Within each pool, fair sharing is used to divide capacity between 
-        the running jobs. Pools can also be given weights to share the 
-        cluster non-proportionally.
+        separate pool for each user, so that each user gets an equal share 
+        of the cluster. It is also possible to set a job's pool based on the
+        user's Unix group or any jobconf property. 
+        Within each pool, jobs can be scheduled using either fair sharing or 
+        first-in-first-out (FIFO) scheduling.
       </p>
       <p>
         In addition to providing fair sharing, the Fair Scheduler allows
@@ -65,19 +63,15 @@
         guaranteed share, the excess is split between other pools.
       </p>
       <p>
-        In normal operation, when a new job is submitted, the scheduler 
-        waits for tasks from existing jobs to finish in order to free up
-        slots for the new job. However, the scheduler also optionally supports
-        <em>preemption</em> of running jobs after configurable timeouts.
-        If the new job's minimum share is not reached after
-        a certain amount of time, the job is allowed to kill tasks from
-        existing jobs to make room to run.
-        Preemption can thus be used to guarantee
-        that "production" jobs run at specified times while allowing
+        If a pool's minimum share is not met for some period of time, the
+        scheduler optionally supports <em>preemption</em> of jobs in other
+        pools. The pool will be allowed to kill tasks from other pools to make
+        room to run. Preemption can be used to guarantee
+        that "production" jobs are not starved while also allowing
         the Hadoop cluster to also be used for experimental and research jobs.
-        In addition, a job can also be allowed to preempt tasks if it is
+        In addition, a pool can also be allowed to preempt tasks if it is
         below half of its fair share for a configurable timeout (generally
-        set larger than the minimum share timeout).
+        set larger than the minimum share preemption timeout).
         When choosing tasks to kill, the fair scheduler picks the
         most-recently-launched tasks from over-allocated jobs, 
         to minimize wasted computation.
@@ -87,11 +81,11 @@
       <p>
         Finally, the Fair Scheduler can limit the number of concurrent
         running jobs per user and per pool. This can be useful when a 
-        user must submit hundreds of jobs at once, and for ensuring that
-        intermediate data does not fill up disk space on a cluster if too many
+        user must submit hundreds of jobs at once, or for ensuring that
+        intermediate data does not fill up disk space on a cluster when too many
         concurrent jobs are running.
-        Setting job limits causes jobs submitted beyond the limit to wait in the
-        scheduler's queue until some of the user/pool's earlier jobs finish.
+        Setting job limits causes jobs submitted beyond the limit to wait
+        until some of the user/pool's earlier jobs finish.
         Jobs to run from each user/pool are chosen in order of priority and then
         submit time.
       </p>
@@ -356,6 +350,9 @@
           <ul>
           <li><em>minMaps</em> and <em>minReduces</em>,
             to set the pool's minimum share of task slots.</li>
+          <li><em>schedulingMode</em>, the pool's internal scheduling mode,
+          which can be <em>fair</em> for fair sharing or <em>fifo</em> for
+          first-in-first-out.</li>
           <li><em>maxRunningJobs</em>, 
           to limit the number of jobs from the 
           pool to run at once (defaults to infinite).</li>
@@ -381,6 +378,9 @@
         <li><em>fairSharePreemptionTimeout</em>, 
         which sets the preemption timeout used when jobs are below half
         their fair share.</li>
+        <li><em>defaultPoolSchedulingMode</em>, which sets the default scheduling 
+        mode (<em>fair</em> or <em>fifo</em>) for pools whose mode is
+        not specified.</li>
         </ul>
         <p>
         Pool and user elements only required if you are setting
@@ -436,9 +436,9 @@
     </p> 
     <ol>
     <li>
-      It is possible to modify minimum shares, limits, weights and preemption
-      timeouts at runtime by editing the allocation file.
-      The scheduler will reload this file 10-15 seconds after it 
+      It is possible to modify minimum shares, limits, weights, preemption
+      timeouts and pool scheduling modes at runtime by editing the allocation
+      file. The scheduler will reload this file 10-15 seconds after it 
       sees that it was modified.
      </li>
      <li>
@@ -471,22 +471,16 @@
      <p>
      In addition, it is possible to view an "advanced" version of the web 
      UI by going to <em>http://&lt;JobTracker URL&gt;/scheduler?advanced</em>. 
-     This view shows four more columns:
+     This view shows two more columns:
      </p>
      <ul>
      <li><em>Maps/Reduce Weight</em>: Weight of the job in the fair sharing 
      calculations. This depends on priority and potentially also on 
      job size and job age if the <em>sizebasedweight</em> and 
      <em>NewJobWeightBooster</em> are enabled.</li>
-     <li><em>Map/Reduce Deficit</em>: The job's scheduling deficit in machine-
-     seconds - the amount of resources it should have gotten according to 
-     its fair share, minus how many it actually got. Positive deficit means
-      the job will be scheduled again in the near future because it needs to 
-      catch up to its fair share. The scheduler schedules jobs with higher 
-      deficit ahead of others. Please see the Implementation section of 
-      this document for details.</li>
      </ul>
     </section>
+    <!--
     <section>
     <title>Implementation</title>
     <p>There are two aspects to implementing fair scheduling: Calculating 
@@ -541,5 +535,6 @@
      <a href="#Advanced+Parameters">advanced mapred-site.xml properties</a>.
      </p>
     </section>
+    -->
   </body>  
 </document>

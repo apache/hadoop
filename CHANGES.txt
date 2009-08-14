@@ -22,6 +22,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    MAPREDUCE-706. Support for FIFO pools in the fair scheduler.
+    (Matei Zaharia)
+
     MAPREDUCE-546. Provide sample fair scheduler config file in conf/ and use
     it by default if no other config file is specified. (Matei Zaharia)
 
