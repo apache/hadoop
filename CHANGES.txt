@@ -369,3 +369,7 @@ Trunk (unreleased changes)
 
     MAPREDUCE-840. DBInputFormat leaves open transaction.
     (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-859. Adds Avro and its dependencies required by Hadoop 
+    common. (Ravi Gummadi via sharad)
+
