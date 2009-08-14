@@ -372,4 +372,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-859. Adds Avro and its dependencies required by Hadoop 
     common. (Ravi Gummadi via sharad)
+    
+    MAPREDUCE-867. Fix ivy conf to look for avro jar from maven repo.	
+    (Giridharan Kesavan)
+
 

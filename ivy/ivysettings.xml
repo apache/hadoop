@@ -74,7 +74,7 @@
     rather than look for them online.
 
     -->
-    <module organisation="org.apache.hadoop" name=".*" resolver="internal"/>
+    <module organisation="org.apache.hadoop" name="hadoop*" resolver="internal"/>
     <!--until commons cli is external, we need to pull it in from the snapshot repository -if present -->
     <module organisation="org.apache.commons" name=".*" resolver="external-and-snapshots"/>
   </modules>
