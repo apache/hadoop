@@ -81,6 +81,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
   protected RowController rowController;
   protected ScannerController scannercontroller;
   protected TimestampController tsController;
+  private HBaseConfiguration conf = null;
 
   public enum ContentType {
     XML("text/xml"), JSON("application/json"), PLAIN("text/plain"), MIME(
@@ -135,7 +136,7 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
   public void init() throws ServletException {
     super.init();
 
-    HBaseConfiguration conf = new HBaseConfiguration();
+    this.conf = new HBaseConfiguration();
     HBaseAdmin admin = null;
 
     try {
@@ -360,7 +361,9 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
       String resultant = "";
       BufferedReader r = request.getReader();
 
-      int maxLength = 5000; // tie to conf
+      int defaultmaxlength = 10 * 1024 * 1024;
+      int maxLength = this.conf == null?
+        defaultmaxlength: this.conf.getInt("hbase.rest.input.limit", defaultmaxlength);
       int bufferLength = 640;
 
       // TODO make s maxLength and c size values in configuration

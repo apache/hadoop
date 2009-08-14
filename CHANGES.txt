@@ -332,6 +332,7 @@ Release 0.20.0 - Unreleased
                what N was
    HBASE-1745  [tools] Tool to kick region out of inTransistion
    HBASE-1757  REST server runs out of fds
+   HBASE-1768  REST server has upper limit of 5k PUT
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
