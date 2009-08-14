@@ -492,9 +492,6 @@ Trunk (unreleased changes)
 
     HADOOP-6176. Add a couple package private methods to AccessTokenHandler
     for testing.  (Kan Zhang via szetszwo)
-
-    HADOOP-6182. Fix releaseaudit warnings by adding AL Headers. (gkesavan)
-
  
   OPTIMIZATIONS
 
@@ -922,8 +919,6 @@ Trunk (unreleased changes)
 
     HADOOP-6192. Fix Shell.getUlimitMemoryCommand to not rely on Map-Reduce
     specific configs. (acmurthy) 
-
-    HADOOP-6195. Fix checkstyle xml version tag.( Lee Tucker via gkesavan)
 
 Release 0.20.1 - Unreleased
 

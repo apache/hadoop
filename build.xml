@@ -1021,14 +1021,9 @@
   <target name="releaseaudit" depends="package, rats-taskdef" description="Release Audit activities">
    <rat:report xmlns:rat="antlib:org.apache.rat.anttasks">
       <fileset dir="${dist.dir}">
-        <exclude name="**/CHANGES.txt"/>
-        <exclude name="**/conf/*"/>
-        <exclude name="**/docs/"/>
+        <exclude name="CHANGES.txt"/>
+        <exclude name="docs/"/>
         <exclude name="lib/jdiff/"/>
-        <exclude name="**/native/*"/>
-        <exclude name="**/native/config/*"/>
-        <exclude name="**/VERSION"/>
-        <exclude name="**/hod/*.txt"/>
       </fileset>
     </rat:report>
   </target>
