@@ -923,6 +923,8 @@ Trunk (unreleased changes)
     HADOOP-6192. Fix Shell.getUlimitMemoryCommand to not rely on Map-Reduce
     specific configs. (acmurthy) 
 
+    HADOOP-6195. Fix checkstyle xml version tag.( Lee Tucker via gkesavan)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
