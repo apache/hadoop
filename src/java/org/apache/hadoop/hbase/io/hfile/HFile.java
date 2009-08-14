@@ -31,18 +31,27 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.Compressor;
@@ -1594,65 +1603,156 @@ public class HFile {
     return (int)(l & 0x00000000ffffffffL);
   }
 
-
-  public static void main(String []args) throws IOException {
-    if (args.length < 1) {
-      System.out.println("usage: <filename> -- dumps hfile stats");
-      return;
-    }
-
-    HBaseConfiguration conf = new HBaseConfiguration();
-
-    FileSystem fs = FileSystem.get(conf);
-
-    Path path = new Path(args[0]);
-
-    if (!fs.exists(path)) {
-      System.out.println("File doesnt exist: " + path);
-      return;
-    }
-
-    HFile.Reader reader = new HFile.Reader(fs, path, null, false);
-    Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
-
-    // scan thru and count the # of unique rows.
-//    HashSet<Integer> rows = new HashSet<Integer>(reader.getEntries()/4);
-//    long start = System.currentTimeMillis();
-//    HFileScanner scanner = reader.getScanner();
-//    HStoreKey hsk;
-//    scanner.seekTo();
-//    do {
-//      hsk = new HStoreKey(scanner.getKey());
-//      rows.add(Bytes.hashCode(hsk.getRow()));
-//    } while (scanner.next());
-//    long end = System.currentTimeMillis();
-
-
-    HFileScanner scanner = reader.getScanner();
-    scanner.seekTo();
-    KeyValue kv;
-    do {
-      kv = scanner.getKeyValue();
-        System.out.println("K: " + Bytes.toStringBinary(kv.getKey()) +
-            " V: " + Bytes.toStringBinary(kv.getValue()));
-    } while (scanner.next());
-
-    System.out.println("Block index size as per heapsize: " + reader.indexSize());
-    System.out.println(reader.toString());
-    System.out.println(reader.getTrailerInfo());
-    System.out.println("Fileinfo:");
-    for ( Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
-      System.out.print(Bytes.toString(e.getKey()) + " = " );
-
-      if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY"))==0) {
-        long seqid = Bytes.toLong(e.getValue());
-        System.out.println(seqid);
-      } else {
-        System.out.println(Bytes.toStringBinary(e.getValue()));
+  /**
+   * Returns all files belonging to the given region directory. Could return an
+   * empty list.
+   * 
+   * @param fs  The file system reference.
+   * @param regionDir  The region directory to scan.
+   * @return The list of files found.
+   * @throws IOException When scanning the files fails.
+   */
+  static List<Path> getStoreFiles(FileSystem fs, Path regionDir) 
+  throws IOException {
+    List<Path> res = new ArrayList<Path>();
+    PathFilter dirFilter = new FSUtils.DirFilter(fs);
+    FileStatus[] familyDirs = fs.listStatus(regionDir, dirFilter);
+    for(FileStatus dir : familyDirs) {
+      FileStatus[] files = fs.listStatus(dir.getPath());
+      for (FileStatus file : files) {
+        if (!file.isDir()) {
+          res.add(file.getPath());
+        }
       }
-
     }
-
-    reader.close();
+    return res;
   }
+  
+  public static void main(String []args) throws IOException {
+    try {
+      // create options
+      Options options = new Options();
+      options.addOption("v", "verbose", false, "verbose output");
+      options.addOption("p", "printkv", false, "print key/value pairs");
+      options.addOption("m", "printmeta", false, "print meta data of file");
+      options.addOption("k", "checkrow", false, "enable row order check");
+      options.addOption("a", "checkfamily", false, "enable family check");
+      options.addOption("f", "file", true, "file to scan");
+      options.addOption("r", "region", true, "region to scan");
+      if (args.length == 0) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("HFile ", options, true);
+        System.exit(-1);
+      }
+      CommandLineParser parser = new PosixParser();
+      CommandLine cmd = parser.parse(options, args);
+      boolean verbose = cmd.hasOption("v");
+      boolean printKeyValue = cmd.hasOption("p");
+      boolean printMeta = cmd.hasOption("m");
+      boolean checkRow = cmd.hasOption("k");
+      boolean checkFamily = cmd.hasOption("a");
+      // get configuration, file system and get list of files
+      HBaseConfiguration conf = new HBaseConfiguration();
+      FileSystem fs = FileSystem.get(conf);
+      ArrayList<Path> files = new ArrayList<Path>();
+      if (cmd.hasOption("f")) {
+        files.add(new Path(cmd.getOptionValue("f")));
+      }
+      if (cmd.hasOption("r")) {
+        String regionName = cmd.getOptionValue("r");
+        byte[] rn = Bytes.toBytes(regionName);
+        byte[][] hri = HRegionInfo.parseRegionName(rn);
+        Path rootDir = FSUtils.getRootDir(conf);
+        Path tableDir = new Path(rootDir, Bytes.toString(hri[0]));
+        int enc = HRegionInfo.encodeRegionName(rn);
+        Path regionDir = new Path(tableDir, Integer.toString(enc));
+        if (verbose) System.out.println("region dir -> " + regionDir);
+        List<Path> regionFiles = getStoreFiles(fs, regionDir);
+        System.out.println("Number of region files found -> " + 
+          regionFiles.size());
+        if (verbose) {
+          int i = 1;
+          for (Path p : regionFiles) {
+            System.out.println("Found file[" + i++ + "] -> " + p);
+          }
+        }
+        files.addAll(regionFiles);
+      }
+      // iterate over all files found
+      System.out.println("\nStart scan of files...\n");
+      for (Path file : files) {
+        if (verbose) System.out.println("Scanning -> " + file);
+        if (!fs.exists(file)) {
+          System.err.println("ERROR, file doesnt exist: " + file);
+          continue;
+        }
+        // create reader and load file info   
+        HFile.Reader reader = new HFile.Reader(fs, file, null, false);
+        Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
+        // scan over file and read key/value's and check if requested
+        HFileScanner scanner = reader.getScanner();
+        scanner.seekTo();
+        KeyValue pkv = null;
+        int count = 0;
+        do {
+          KeyValue kv = scanner.getKeyValue();
+          // dump key value
+          if (printKeyValue) {
+            System.out.println("K: " + Bytes.toStringBinary(kv.getKey()) +
+              " V: " + Bytes.toStringBinary(kv.getValue()));
+          }
+          // check if rows are in order
+          if (checkRow && pkv != null) {
+            if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
+              System.err.println("WARNING, previous row is greater then" + 
+                " current row\n\tfilename -> " + file + 
+                "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey()) + 
+                "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+            }
+          }
+          // check if families are consistent
+          if (checkFamily) {
+            String fam = Bytes.toString(kv.getFamily());
+            if (!file.toString().contains(fam)) {
+              System.err.println("WARNING, filename does not match kv family," + 
+                "\n\tfilename -> " + file + 
+                "\n\tkeyvalue -> " + Bytes.toStringBinary(kv.getKey()));
+            }
+            if (pkv != null && Bytes.compareTo(pkv.getFamily(), kv.getFamily()) != 0) {
+              System.err.println("WARNING, previous kv has different family" +
+                " compared to current key\n\tfilename -> " + file + 
+                "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) + 
+                "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+            }
+          }
+          pkv = kv;
+          count++;
+        } while (scanner.next());
+        if (verbose || printKeyValue) {
+          System.out.println("Scanned kv count -> " + count);
+        }
+        // print meta data  
+        if (printMeta) {
+          System.out.println("Block index size as per heapsize: " + reader.indexSize());
+          System.out.println(reader.toString());
+          System.out.println(reader.getTrailerInfo());
+          System.out.println("Fileinfo:");
+          for (Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
+            System.out.print(Bytes.toString(e.getKey()) + " = " );
+            if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY"))==0) {
+              long seqid = Bytes.toLong(e.getValue());
+              System.out.println(seqid);
+            } else {
+              System.out.println(Bytes.toStringBinary(e.getValue()));
+            }
+          }
+        }
+        reader.close();
+      }
+      System.out.println("\nDone.");
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
 }
