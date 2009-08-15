@@ -197,6 +197,10 @@ Trunk (unreleased changes)
     (Vinod Kumar Vavilapalli via yhemanth)
     
   BUG FIXES
+
+    MAPREDUCE-878. Rename fair scheduler design doc to 
+    fair-scheduler-design-doc.tex and add Apache license header (matei)
+
     MAPREDUCE-703. Sqoop requires dependency on hsqldb in ivy.
     (Aaron Kimball via matei)
 
