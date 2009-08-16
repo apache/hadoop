@@ -1230,8 +1230,9 @@ public class BlockManager {
    */
   boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
     boolean status = false;
-    for(final Iterator<Block> i = srcNode.getBlockIterator(); i.hasNext(); ) {
-      final Block block = i.next();
+    final Iterator<? extends Block> it = srcNode.getBlockIterator();
+    while(it.hasNext()) {
+      final Block block = it.next();
       INode fileINode = blocksMap.getINode(block);
 
       if (fileINode != null) {

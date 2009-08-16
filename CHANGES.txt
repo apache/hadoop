@@ -94,6 +94,8 @@ Trunk (unreleased changes)
 
     HDFS-409. Add more access token tests.  (Kan Zhang via szetszwo)
 
+    HDFS-546. DatanodeDescriptor iterator blocks as BlockInfo. (shv)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
