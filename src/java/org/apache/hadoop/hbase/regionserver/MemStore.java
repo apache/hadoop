@@ -28,7 +28,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -78,6 +80,10 @@ public class MemStore implements HeapSize {
   // Used to track own heapSize
   final AtomicLong size;
 
+  // All access must be synchronized.
+  final CopyOnWriteArraySet<ChangedMemStoreObserver> changedMemStoreObservers =
+    new CopyOnWriteArraySet<ChangedMemStoreObserver>();
+
   /**
    * Default constructor. Used for tests.
    */
@@ -123,18 +129,25 @@ public class MemStore implements HeapSize {
         LOG.warn("Snapshot called again without clearing previous. " +
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
       } else {
-        // We used to synchronize on the memstore here but we're inside a
-        // write lock so removed it. Comment is left in case removal was a
-        // mistake. St.Ack
         if (!this.kvset.isEmpty()) {
           this.snapshot = this.kvset;
           this.kvset = new KeyValueSkipListSet(this.comparator);
+          tellChangedMemStoreObservers();
           // Reset heap to not include any keys
           this.size.set(DEEP_OVERHEAD);
         }
       }
     } finally {
       this.lock.writeLock().unlock();
+    }
+  }
+
+  /*
+   * Tell outstanding scanners that memstore has changed.
+   */
+  private void tellChangedMemStoreObservers() {
+    for (ChangedMemStoreObserver o: this.changedMemStoreObservers) {
+      o.changedMemStore();
     }
   }
 
@@ -168,6 +181,7 @@ public class MemStore implements HeapSize {
       // create a new snapshot and let the old one go.
       if (!ss.isEmpty()) {
         this.snapshot = new KeyValueSkipListSet(this.comparator);
+        tellChangedMemStoreObservers();
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -445,9 +459,8 @@ public class MemStore implements HeapSize {
   KeyValueScanner [] getScanners() {
     this.lock.readLock().lock();
     try {
-      KeyValueScanner [] scanners = new KeyValueScanner[2];
-      scanners[0] = new MemStoreScanner(this.kvset);
-      scanners[1] = new MemStoreScanner(this.snapshot);
+      KeyValueScanner [] scanners = new KeyValueScanner[1];
+      scanners[0] = new MemStoreScanner(this.changedMemStoreObservers);
       return scanners;
     } finally {
       this.lock.readLock().unlock();
@@ -521,18 +534,22 @@ public class MemStore implements HeapSize {
 
   /*
    * MemStoreScanner implements the KeyValueScanner.
-   * It lets the caller scan the contents of a memstore.
-   * This behaves as if it were a real scanner but does not maintain position
-   * in the passed memstore tree.
+   * It lets the caller scan the contents of a memstore -- both current
+   * map and snapshot.
+   * This behaves as if it were a real scanner but does not maintain position.
    */
-  protected class MemStoreScanner implements KeyValueScanner {
-    private final NavigableSet<KeyValue> kvs;
-    private KeyValue current = null;
+  protected class MemStoreScanner implements KeyValueScanner, ChangedMemStoreObserver {
     private List<KeyValue> result = new ArrayList<KeyValue>();
     private int idx = 0;
+    // Make access atomic.
+    private FirstOnRow firstOnNextRow = new FirstOnRow();
+    // Keep reference to Set so can remove myself when closed.
+    private final Set<ChangedMemStoreObserver> observers;
 
-    MemStoreScanner(final NavigableSet<KeyValue> s) {
-      this.kvs = s;
+    MemStoreScanner(final Set<ChangedMemStoreObserver> observers) {
+      super();
+      this.observers = observers;
+      this.observers.add(this);
     }
 
     public boolean seek(KeyValue key) {
@@ -541,7 +558,7 @@ public class MemStore implements HeapSize {
           close();
           return false;
         }
-        this.current = key;
+        this.firstOnNextRow.set(key);
         return cacheNextRow();
       } catch(Exception e) {
         close();
@@ -570,47 +587,117 @@ public class MemStore implements HeapSize {
     }
 
     /**
-     * @return True if we successfully cached a NavigableSet aligned on
-     * next row.
+     * @return True if successfully cached a next row.
      */
     boolean cacheNextRow() {
-      SortedSet<KeyValue> keys;
+      // Prevent snapshot being cleared while caching a row.
+      lock.readLock().lock();
+      this.result.clear();
+      this.idx = 0;
       try {
-        keys = this.kvs.tailSet(this.current);
-      } catch (Exception e) {
-        close();
-        return false;
+        // Look at each set, kvset and snapshot.
+        // Both look for matching entries for this.current row returning what
+        // they
+        // have as next row after this.current (or null if nothing in set or if
+        // nothing follows.
+        KeyValue kvsetNextRow = cacheNextRow(kvset);
+        KeyValue snapshotNextRow = cacheNextRow(snapshot);
+        if (kvsetNextRow == null && snapshotNextRow == null) {
+          // Nothing more in memstore but we might have gotten current row
+          // results
+          // Indicate at end of store by setting next row to null.
+          this.firstOnNextRow.set(null);
+          return !this.result.isEmpty();
+        } else if (kvsetNextRow != null && snapshotNextRow != null) {
+          // Set current at the lowest of the two values.
+          int compare = comparator.compare(kvsetNextRow, snapshotNextRow);
+          this.firstOnNextRow.set(compare <= 0? kvsetNextRow: snapshotNextRow);
+        } else {
+          this.firstOnNextRow.set(kvsetNextRow != null? kvsetNextRow: snapshotNextRow);
+        }
+        return true;
+      } finally {
+        lock.readLock().unlock();
       }
-      if (keys == null || keys.isEmpty()) {
-        close();
-        return false;
-      }
-      this.current = null;
-      byte [] row = keys.first().getRow();
-      for (KeyValue kv: keys) {
-        if (comparator.compareRows(kv, row) != 0) {
-          this.current = kv;
+    }
+
+    /*
+     * See if set has entries for the <code>this.current</code> row.  If so,
+     * add them to <code>this.result</code>.
+     * @param set Set to examine
+     * @return Next row in passed <code>set</code> or null if nothing in this
+     * passed <code>set</code>
+     */
+    private KeyValue cacheNextRow(final NavigableSet<KeyValue> set) {
+      if (this.firstOnNextRow.get() == null || set.isEmpty()) return null;
+      SortedSet<KeyValue> tail = set.tailSet(this.firstOnNextRow.get());
+      if (tail == null || tail.isEmpty()) return null;
+      KeyValue first = tail.first();
+      KeyValue nextRow = null;
+      for (KeyValue kv: tail) {
+        if (comparator.compareRows(first, kv) != 0) {
+          nextRow = kv;
           break;
         }
-        result.add(kv);
+        this.result.add(kv);
       }
-      return true;
+      return nextRow;
     }
 
     public void close() {
-      current = null;
+      this.firstOnNextRow.set(null);
       idx = 0;
       if (!result.isEmpty()) {
         result.clear();
       }
+      this.observers.remove(this);
+    }
+
+    public void changedMemStore() {
+      this.firstOnNextRow.reset();
     }
   }
-  
+
+  /*
+   * Private class that holds firstOnRow and utility.
+   * Usually firstOnRow is the first KeyValue we find on next row rather than
+   * the absolute minimal first key (empty column, Type.Maximum, maximum ts).
+   * Usually its ok being sloppy with firstOnRow letting it be the first thing
+   * found on next row -- this works -- but if the memstore changes on us, reset
+   * firstOnRow to be the ultimate firstOnRow.  We play sloppy with firstOnRow
+   * usually so we don't have to  allocate a new KeyValue each time firstOnRow
+   * is updated.
+   */
+  private static class FirstOnRow {
+    private KeyValue firstOnRow = null;
+
+    FirstOnRow() {
+      super();
+    }
+
+    synchronized void set(final KeyValue kv) {
+      this.firstOnRow = kv;
+    }
+
+    /* Reset firstOnRow to a 'clean', absolute firstOnRow.
+     */
+    synchronized void reset() {
+      if (this.firstOnRow == null) return;
+      this.firstOnRow =
+         new KeyValue(this.firstOnRow.getRow(), HConstants.LATEST_TIMESTAMP);
+    }
+
+    synchronized KeyValue get() {
+      return this.firstOnRow;
+    }
+  }
+
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (7 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (8 * ClassSize.REFERENCE));
   
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
+      ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +
       (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
 
   /*
@@ -681,5 +768,17 @@ public class MemStore implements HeapSize {
       // Thread.sleep(1000);
     }
     LOG.info("Exiting.");
+  }
+
+  /**
+   * Observers want to know about MemStore changes.
+   * Called when snapshot is cleared and when we make one.
+   */
+  interface ChangedMemStoreObserver {
+    /**
+     * Notify observers.
+     * @throws IOException
+     */
+    void changedMemStore();
   }
 }

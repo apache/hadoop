@@ -92,6 +92,12 @@ public class ClassSize {
   /** Overhead for AtomicBoolean */
   public static int ATOMIC_BOOLEAN = 0;
   
+  /** Overhead for CopyOnWriteArraySet */
+  public static int COPYONWRITE_ARRAYSET = 0;
+  
+  /** Overhead for CopyOnWriteArrayList */
+  public static int COPYONWRITE_ARRAYLIST = 0;
+  
   private static final String THIRTY_TWO = "32";
 
   /**
@@ -151,6 +157,9 @@ public class ClassSize {
     
     ATOMIC_BOOLEAN = align(OBJECT + Bytes.SIZEOF_BOOLEAN);
     
+    COPYONWRITE_ARRAYSET = align(OBJECT + REFERENCE);
+    
+    COPYONWRITE_ARRAYLIST = align(OBJECT + (2 * REFERENCE) + ARRAY);
   }
   
   /**

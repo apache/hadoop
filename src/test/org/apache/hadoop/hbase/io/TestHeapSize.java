@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -164,6 +166,25 @@ public class TestHeapSize extends TestCase {
       assertEquals(expected, actual);
     }
     
+    // CopyOnWriteArraySet
+    cl = CopyOnWriteArraySet.class;
+    expected = ClassSize.estimateBase(cl, false);
+    actual = ClassSize.COPYONWRITE_ARRAYSET;
+    if(expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+    
+    // CopyOnWriteArrayList
+    cl = CopyOnWriteArrayList.class;
+    expected = ClassSize.estimateBase(cl, false);
+    actual = ClassSize.COPYONWRITE_ARRAYLIST;
+    if(expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+    
+    
   }
   
   /**
@@ -240,11 +261,15 @@ public class TestHeapSize extends TestCase {
     expected += ClassSize.estimateBase(AtomicLong.class, false);
     expected += ClassSize.estimateBase(ConcurrentSkipListMap.class, false);
     expected += ClassSize.estimateBase(ConcurrentSkipListMap.class, false);
+    expected += ClassSize.estimateBase(CopyOnWriteArraySet.class, false);
+    expected += ClassSize.estimateBase(CopyOnWriteArrayList.class, false);
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
+      ClassSize.estimateBase(CopyOnWriteArraySet.class, true);
+      ClassSize.estimateBase(CopyOnWriteArrayList.class, true);
       assertEquals(expected, actual);
     }
     

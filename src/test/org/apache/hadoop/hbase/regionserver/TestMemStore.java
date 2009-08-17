@@ -90,6 +90,10 @@ public class TestMemStore extends TestCase {
       s.close();
     }
     assertEquals(rowCount, count);
+    for (int i = 0; i < memstorescanners.length; i++) {
+      memstorescanners[0].close();
+    }
+    memstorescanners = this.memstore.getScanners();
     // Now assert can count same number even if a snapshot mid-scan.
     s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
       this.memstore.comparator, null, memstorescanners);
@@ -112,6 +116,10 @@ public class TestMemStore extends TestCase {
       s.close();
     }
     assertEquals(rowCount, count);
+    for (int i = 0; i < memstorescanners.length; i++) {
+      memstorescanners[0].close();
+    }
+    memstorescanners = this.memstore.getScanners();
     // Assert that new values are seen in kvset as we scan.
     long ts = System.currentTimeMillis();
     s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
@@ -124,8 +132,7 @@ public class TestMemStore extends TestCase {
         // Assert the stuff is coming out in right order.
         assertTrue(Bytes.compareTo(Bytes.toBytes(count), result.get(0).getRow()) == 0);
         // Row count is same as column count.
-        // TODO PUTBACK assertEquals("count=" + count + ", result=" + result,
-        //  rowCount, result.size());
+        assertEquals("count=" + count + ", result=" + result, rowCount, result.size());
         count++;
         if (count == snapshotIndex) {
           this.memstore.snapshot();
@@ -407,8 +414,7 @@ public class TestMemStore extends TestCase {
       assertEquals(expected.get(i), result.get(i));
     }
   }
-  
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Delete tests
   //////////////////////////////////////////////////////////////////////////////
