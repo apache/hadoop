@@ -328,6 +328,26 @@
     </description>
   </property>
   <property>
+    <name>hbase.hstore.blockingStoreFiles</name>
+    <value>7</value>
+    <description>
+    If more than this number of StoreFiles in any one Store
+    (one StoreFile is written per flush of MemStore) then updates are
+    blocked for this HRegion until a compaction is completed, or
+    until hbase.hstore.blockingWaitTime has been exceeded.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.blockingWaitTime</name>
+    <value>90000</value>
+    <description>
+    The time an HRegion will block updates for after hitting the StoreFile
+    limit defined by hbase.hstore.blockingStoreFiles.
+    After this time has elapsed, the HRegion will stop blocking updates even
+    if a compaction has not been completed.  Default: 90 seconds.
+    </description>
+  </property>
+  <property>
     <name>hbase.hstore.compaction.max</name>
     <value>10</value>
     <description>Max number of HStoreFiles to compact per 'minor' compaction.
