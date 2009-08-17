@@ -392,10 +392,18 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.child.java.opts</td>
+                    <td>mapred.map.child.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
-                      Larger heap-size for child jvms of maps/reduces. 
+                      Larger heap-size for child jvms of maps. 
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapred.reduce.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+                      Larger heap-size for child jvms of reduces. 
                     </td>
                   </tr>
                   <tr>
@@ -465,9 +473,17 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.child.java.opts</td>
+                    <td>mapred.map.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+                      Larger heap-size for child jvms of maps. 
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapred.reduce.child.java.opts</td>
                     <td>-Xmx1024M</td>
-                    <td>Larger heap-size for child jvms of maps/reduces.</td>
+                    <td>Larger heap-size for child jvms of reduces.</td>
                   </tr>
                 </table>
               </li>
@@ -477,14 +493,14 @@
         <title> Memory management</title>
         <p>Users/admins can also specify the maximum virtual memory 
         of the launched child-task, and any sub-process it launches 
-        recursively, using <code>mapred.child.ulimit</code>. Note that
-        the value set here is a per process limit.
-        The value for <code>mapred.child.ulimit</code> should be specified 
-        in kilo bytes (KB). And also the value must be greater than
+        recursively, using <code>mapred.{map|reduce}.child.ulimit</code>. Note 
+        that the value set here is a per process limit.
+        The value for <code>mapred.{map|reduce}.child.ulimit</code> should be 
+        specified in kilo bytes (KB). And also the value must be greater than
         or equal to the -Xmx passed to JavaVM, else the VM might not start. 
         </p>
         
-        <p>Note: <code>mapred.child.java.opts</code> are used only for 
+        <p>Note: <code>mapred.{map|reduce}.child.java.opts</code> are used only for 
         configuring the launched child tasks from task tracker. Configuring 
         the memory options for daemons is documented in 
         <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">

@@ -196,6 +196,20 @@ Trunk (unreleased changes)
     intermediate outputs and log files on tasktrackers.
     (Vinod Kumar Vavilapalli via yhemanth)
     
+    MAPREDUCE-478. Allow map and reduce jvm parameters, environment variables
+    and ulimit to be set separately.
+    Configuration changes:
+      add mapred.map.child.java.opts
+      add mapred.reduce.child.java.opts
+      add mapred.map.child.env
+      add mapred.reduce.child.ulimit
+      add mapred.map.child.env
+      add mapred.reduce.child.ulimit
+      deprecated mapred.child.java.opts
+      deprecated mapred.child.env
+      deprecated mapred.child.ulimit
+    (acmurthy)
+
   BUG FIXES
 
     MAPREDUCE-878. Rename fair scheduler design doc to 

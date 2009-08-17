@@ -23,7 +23,7 @@ import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 
 /** Runs a map task. */
 class MapTaskRunner extends TaskRunner {
-
+  
   public MapTaskRunner(TaskInProgress task, TaskTracker tracker, JobConf conf) {
     super(task, tracker, conf);
   }
@@ -43,4 +43,23 @@ class MapTaskRunner extends TaskRunner {
     LOG.info(getTask()+" done; removing files.");
     mapOutputFile.removeAll();
   }
+
+  @Override
+  public String getChildJavaOpts(JobConf jobConf, String defaultValue) {
+    return jobConf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
+                       super.getChildJavaOpts(jobConf, 
+                           JobConf.DEFAULT_MAPRED_TASK_JAVA_OPTS));
+  }
+  
+  @Override
+  public int getChildUlimit(JobConf jobConf) {
+    return jobConf.getInt(JobConf.MAPRED_MAP_TASK_ULIMIT, 
+                          super.getChildUlimit(jobConf));
+  }
+
+  @Override
+  public String getChildEnv(JobConf jobConf) {
+    return jobConf.get(JobConf.MAPRED_MAP_TASK_ENV, super.getChildEnv(jobConf));
+  }
+
 }

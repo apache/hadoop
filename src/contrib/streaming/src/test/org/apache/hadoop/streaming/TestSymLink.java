@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.OutputLogFilter;
 /**
@@ -80,9 +81,18 @@ public class TestSymLink extends TestCase
           "-jobconf", strNamenode,
           "-jobconf", strJobtracker,
           "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
-          "-jobconf", "mapred.child.java.opts=-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
-                      "-Dbuild.test=" + System.getProperty("build.test") + " " +
-                      conf.get("mapred.child.java.opts",""),
+          "-jobconf", 
+            JobConf.MAPRED_MAP_TASK_JAVA_OPTS+ "=" +
+              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
+              "-Dbuild.test=" + System.getProperty("build.test") + " " +
+              conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
+                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
+          "-jobconf", 
+            JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS+ "=" +
+              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
+              "-Dbuild.test=" + System.getProperty("build.test") + " " +
+              conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
+                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
           "-cacheFile", fileSys.getUri() + CACHE_FILE + "#testlink"
         };
 
