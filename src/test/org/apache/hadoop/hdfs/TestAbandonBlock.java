@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.StringUtils;
 
 public class TestAbandonBlock extends junit.framework.TestCase {
@@ -49,7 +50,7 @@ public class TestAbandonBlock extends junit.framework.TestCase {
       fout.sync();
   
       //try reading the block by someone
-      DFSClient dfsclient = new DFSClient(CONF);
+      final DFSClient dfsclient = new DFSClient(NameNode.getAddress(CONF), CONF);
       LocatedBlocks blocks = dfsclient.namenode.getBlockLocations(src, 0, 1);
       LocatedBlock b = blocks.get(0); 
       try {

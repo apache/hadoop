@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -75,7 +76,7 @@ public class TestGetBlocks extends TestCase {
       DatanodeInfo[] dataNodes=null;
       boolean notWritten;
       do {
-        DFSClient dfsclient = new DFSClient(CONF);
+        final DFSClient dfsclient = new DFSClient(NameNode.getAddress(CONF), CONF);
         locatedBlocks = dfsclient.namenode.
           getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
         assertEquals(2, locatedBlocks.size());

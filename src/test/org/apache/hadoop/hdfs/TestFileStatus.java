@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 /**
  * This class tests the FileStatus API.
@@ -66,7 +67,7 @@ public class TestFileStatus extends TestCase {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
-    DFSClient dfsClient = new DFSClient(conf);
+    final DFSClient dfsClient = new DFSClient(NameNode.getAddress(conf), conf);
     try {
 
       //

@@ -212,6 +212,8 @@ Release 0.20.1 - Unreleased
 
     HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
     (Bill Zeller via szetszwo)
+
+    HDFS-527. Remove unnecessary DFSClient constructors.  (szetszwo)
  
 Release 0.20.0 - 2009-04-15
 

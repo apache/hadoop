@@ -67,8 +67,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   public static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
-  public ClientProtocol namenode;
-  private ClientProtocol rpcNamenode;
+  public final ClientProtocol namenode;
+  private final ClientProtocol rpcNamenode;
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
@@ -142,44 +142,40 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         ClientDatanodeProtocol.versionID, addr, conf);
   }
         
-  /** 
-   * Create a new DFSClient connected to the default namenode.
+  /**
+   * Same as this(NameNode.getAddress(conf), conf);
+   * @see #DFSClient(InetSocketAddress, Configuration)
    */
   public DFSClient(Configuration conf) throws IOException {
-    this(NameNode.getAddress(conf), conf, null);
+    this(NameNode.getAddress(conf), conf);
   }
 
-  /** 
-   * Create a new DFSClient connected to the given namenode server.
+  /**
+   * Same as this(nameNodeAddr, conf, null);
+   * @see #DFSClient(InetSocketAddress, Configuration, org.apache.hadoop.fs.FileSystem.Statistics)
+   */
+  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf
+      ) throws IOException {
+    this(nameNodeAddr, conf, null);
+  }
+
+  /**
+   * Same as this(nameNodeAddr, null, conf, stats);
+   * @see #DFSClient(InetSocketAddress, ClientProtocol, Configuration, org.apache.hadoop.fs.FileSystem.Statistics) 
    */
   public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf,
                    FileSystem.Statistics stats)
     throws IOException {
-    this(conf, stats);
-    this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
-    this.namenode = createNamenode(this.rpcNamenode);
+    this(nameNodeAddr, null, conf, stats);
   }
 
   /** 
-   * Create a new DFSClient connected to the given namenode
-   * and rpcNamenode objects.
-   * 
-   * This constructor was written to allow easy testing of the DFSClient class.
-   * End users will most likely want to use one of the other constructors.
+   * Create a new DFSClient connected to the given nameNodeAddr or rpcNamenode.
+   * Exactly one of nameNodeAddr or rpcNamenode must be null.
    */
-  public DFSClient(ClientProtocol namenode, ClientProtocol rpcNamenode,
-                   Configuration conf, FileSystem.Statistics stats)
+  DFSClient(InetSocketAddress nameNodeAddr, ClientProtocol rpcNamenode,
+      Configuration conf, FileSystem.Statistics stats)
     throws IOException {
-      this(conf, stats);
-      this.namenode = namenode;
-      this.rpcNamenode = rpcNamenode;
-  }
-
-  
-  private DFSClient(Configuration conf, FileSystem.Statistics stats)
-    throws IOException {      
-      
-      
     this.conf = conf;
     this.stats = stats;
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
@@ -207,11 +203,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
     defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
-  }
 
-  public DFSClient(InetSocketAddress nameNodeAddr, 
-                   Configuration conf) throws IOException {
-    this(nameNodeAddr, conf, null);
+    if (nameNodeAddr != null && rpcNamenode == null) {
+      this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
+      this.namenode = createNamenode(this.rpcNamenode);
+    } else if (nameNodeAddr == null && rpcNamenode != null) {
+      //This case is used for testing.
+      this.namenode = this.rpcNamenode = rpcNamenode;
+    } else {
+      throw new IllegalArgumentException(
+          "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
+          + "nameNodeAddr=" + nameNodeAddr + ", rpcNamenode=" + rpcNamenode);
+    }
   }
 
   private void checkOpen() throws IOException {
