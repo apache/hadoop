@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-5913. Provide ability to an administrator to stop and start
     job queues. (Rahul Kumar Singh and Hemanth Yamijala via yhemanth)
 
+    MAPREDUCE-711. Removed Distributed Cache from Common, to move it
+    under Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
