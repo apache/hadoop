@@ -397,4 +397,6 @@ Trunk (unreleased changes)
     MAPREDUCE-867. Fix ivy conf to look for avro jar from maven repo.	
     (Giridharan Kesavan)
 
+    MAPREDUCE-877. Added avro as a dependency to contrib ivy settings.
+    (Tsz Wo (Nicholas) Sze via yhemanth)
 

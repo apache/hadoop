@@ -68,5 +68,9 @@
       name="log4j"
       rev="${log4j.version}"
       conf="common->master"/>
+    <dependency org="org.apache.hadoop"
+      name="avro"
+      rev="1.0.0"
+      conf="common->default"/>
     </dependencies>
 </ivy-module>
