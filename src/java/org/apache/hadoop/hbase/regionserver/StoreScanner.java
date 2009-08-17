@@ -145,7 +145,6 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @return true if there are more rows, false if scanner is done
    */
   public synchronized boolean next(List<KeyValue> outResult) throws IOException {
-    List<KeyValue> results = new ArrayList<KeyValue>();
     KeyValue peeked = this.heap.peek();
     if (peeked == null) {
       close();
@@ -153,6 +152,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     }
     matcher.setRow(peeked.getRow());
     KeyValue kv;
+    List<KeyValue> results = new ArrayList<KeyValue>();
     while((kv = this.heap.peek()) != null) {
       QueryMatcher.MatchCode qcode = matcher.match(kv);
       switch(qcode) {
@@ -162,7 +162,6 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
           continue;
           
         case DONE:
-
           // copy jazz
           outResult.addAll(results);
           return true;
@@ -198,7 +197,6 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     if (!results.isEmpty()) {
       // copy jazz
       outResult.addAll(results);
-
       return true;
     }
 

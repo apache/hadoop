@@ -406,5 +406,4 @@ public class TestStore extends TestCase {
     long storeTs = results.get(0).getTimestamp();
     assertTrue(icvTs != storeTs);
   }
-  
 }

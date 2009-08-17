@@ -258,8 +258,8 @@ public class TestCompaction extends HBaseTestCase {
 
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region); 
-    addContent(loader, Bytes.toString(COLUMN_FAMILY),
-        ("bbb").getBytes(), null);
+    addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
+    		"bbb").getBytes(), null);
     loader.flushcache();
   }
 }

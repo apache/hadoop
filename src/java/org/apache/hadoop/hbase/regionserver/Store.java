@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -181,7 +181,7 @@ public class Store implements HConstants, HeapSize {
       // second -> ms adjust for user data
       this.ttl *= 1000;
     }
-    this.memstore = new MemStore(this.ttl, this.comparator);
+    this.memstore = new MemStore(this.comparator);
     this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir), 
         Integer.toString(info.getEncodedName()));
     this.storeName = this.family.getName();
@@ -1028,293 +1028,144 @@ public class Store implements HConstants, HeapSize {
     }
   }
 
+  static boolean isExpired(final KeyValue key, final long oldestTimestamp) {
+    return key.getTimestamp() < oldestTimestamp;
+  }
+
   /**
    * Find the key that matches <i>row</i> exactly, or the one that immediately
    * preceeds it. WARNING: Only use this method on a table where writes occur 
-   * with stricly increasing timestamps. This method assumes this pattern of 
-   * writes in order to make it reasonably performant.
-   * @param targetkey
-   * @return Found keyvalue
+   * with strictly increasing timestamps. This method assumes this pattern of 
+   * writes in order to make it reasonably performant.  Also our search is
+   * dependent on the axiom that deletes are for cells that are in the container
+   * that follows whether a memstore snapshot or a storefile, not for the
+   * current container: i.e. we'll see deletes before we come across cells we
+   * are to delete. Presumption is that the memstore#kvset is processed before
+   * memstore#snapshot and so on.
+   * @param kv First possible item on targeted row; i.e. empty columns, latest
+   * timestamp and maximum type.
+   * @return Found keyvalue or null if none found.
    * @throws IOException
    */
-  KeyValue getRowKeyAtOrBefore(final KeyValue targetkey)
-  throws IOException{
-    // Map of keys that are candidates for holding the row key that
-    // most closely matches what we're looking for. We'll have to update it as
-    // deletes are found all over the place as we go along before finally
-    // reading the best key out of it at the end.   Use a comparator that
-    // ignores key types.  Otherwise, we can't remove deleted items doing
-    // set.remove because of the differing type between insert and delete.
-    NavigableSet<KeyValue> candidates =
-      new TreeSet<KeyValue>(this.comparator.getComparatorIgnoringType());
-
-    // Keep a list of deleted cell keys.  We need this because as we go through
-    // the store files, the cell with the delete marker may be in one file and
-    // the old non-delete cell value in a later store file. If we don't keep
-    // around the fact that the cell was deleted in a newer record, we end up
-    // returning the old value if user is asking for more than one version.
-    // This List of deletes should not be large since we are only keeping rows
-    // and columns that match those set on the scanner and which have delete
-    // values.  If memory usage becomes an issue, could redo as bloom filter.
-    NavigableSet<KeyValue> deletes =
-      new TreeSet<KeyValue>(this.comparatorIgnoringType);
-    long now = System.currentTimeMillis();
+  KeyValue getRowKeyAtOrBefore(final KeyValue kv)
+  throws IOException {
+    GetClosestRowBeforeTracker state = new GetClosestRowBeforeTracker(
+      this.comparator, kv, this.ttl, this.region.getRegionInfo().isMetaRegion());
     this.lock.readLock().lock();
     try {
       // First go to the memstore.  Pick up deletes and candidates.
-      this.memstore.getRowKeyAtOrBefore(targetkey, candidates, deletes, now);
-      // Process each store file.  Run through from newest to oldest.
+      this.memstore.getRowKeyAtOrBefore(state);
+      // Check if match, if we got a candidate on the asked for 'kv' row.
+      // Process each store file. Run through from newest to oldest.
       Map<Long, StoreFile> m = this.storefiles.descendingMap();
-      for (Map.Entry<Long, StoreFile> e: m.entrySet()) {
+      for (Map.Entry<Long, StoreFile> e : m.entrySet()) {
         // Update the candidate keys from the current map file
-        rowAtOrBeforeFromStoreFile(e.getValue(), targetkey, candidates,
-          deletes, now);
+        rowAtOrBeforeFromStoreFile(e.getValue(), state);
       }
-      // Return the best key from candidateKeys
-      return candidates.isEmpty()? null: candidates.last();
+      return state.getCandidate();
     } finally {
       this.lock.readLock().unlock();
     }
   }
 
   /*
-   * Check an individual MapFile for the row at or before a given key 
-   * and timestamp
+   * Check an individual MapFile for the row at or before a given row.
    * @param f
-   * @param targetkey
-   * @param candidates Pass a Set with a Comparator that
-   * ignores key Type so we can do Set.remove using a delete, i.e. a KeyValue
-   * with a different Type to the candidate key.
+   * @param state
    * @throws IOException
    */
   private void rowAtOrBeforeFromStoreFile(final StoreFile f,
-    final KeyValue targetkey, final NavigableSet<KeyValue> candidates,
-    final NavigableSet<KeyValue> deletes, final long now)
+    final GetClosestRowBeforeTracker state)
   throws IOException {
-    // if there aren't any candidate keys yet, we'll do some things different 
-    if (candidates.isEmpty()) {
-      rowAtOrBeforeCandidate(f, targetkey, candidates, deletes, now);
-    } else {
-      rowAtOrBeforeWithCandidates(f, targetkey, candidates, deletes, now);
+    Reader r = f.getReader();
+    if (r == null) {
+      LOG.warn("StoreFile " + f + " has a null Reader");
+      return;
+    }
+    // TODO: Cache these keys rather than make each time?
+    byte [] fk = r.getFirstKey();
+    KeyValue firstKV = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
+    byte [] lk = r.getLastKey();
+    KeyValue lastKV = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
+    KeyValue firstOnRow = state.getTargetKey();
+    if (this.comparator.compareRows(lastKV, firstOnRow) < 0) {
+      // If last key in file is not of the target table, no candidates in this
+      // file.  Return.
+      if (!state.isTargetTable(lastKV)) return;
+      // If the row we're looking for is past the end of file, set search key to
+      // last key. TODO: Cache last and first key rather than make each time.
+      firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
+    }
+    HFileScanner scanner = r.getScanner();
+    // Seek scanner.  If can't seek it, return.
+    if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
+    // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!
+    // Unlikely that there'll be an instance of actual first row in table.
+    if (walkForwardInSingleRow(scanner, firstOnRow, state)) return;
+    // If here, need to start backing up.
+    while (scanner.seekBefore(firstOnRow.getBuffer(), firstOnRow.getKeyOffset(),
+       firstOnRow.getKeyLength())) {
+      KeyValue kv = scanner.getKeyValue();
+      if (!state.isTargetTable(kv)) break;
+      if (!state.isBetterCandidate(kv)) break;
+      // Make new first on row.
+      firstOnRow = new KeyValue(kv.getRow(), HConstants.LATEST_TIMESTAMP);
+      // Seek scanner.  If can't seek it, break.
+      if (!seekToScanner(scanner, firstOnRow, firstKV)) break;
+      // If we find something, break;
+      if (walkForwardInSingleRow(scanner, firstOnRow, state)) break;
     }
   }
 
-  /* 
-   * @param ttlSetting
-   * @param hsk
-   * @param now
-   * @param deletes A Set whose Comparator ignores Type.
-   * @return True if key has not expired and is not in passed set of deletes.
-   */
-  static boolean notExpiredAndNotInDeletes(final long ttl,
-      final KeyValue key, final long now, final Set<KeyValue> deletes) {
-    return !isExpired(key, now-ttl) && (deletes == null || deletes.isEmpty() ||
-        !deletes.contains(key));
-  }
-
-  static boolean isExpired(final KeyValue key, final long oldestTimestamp) {
-    return key.getTimestamp() < oldestTimestamp;
-  }
-
-  /* Find a candidate for row that is at or before passed key, searchkey, in hfile.
-   * @param f
-   * @param targetkey Key to go search the hfile with.
-   * @param candidates
-   * @param now
+  /*
+   * Seek the file scanner to firstOnRow or first entry in file.
+   * @param scanner
+   * @param firstOnRow
+   * @param firstKV
+   * @return True if we successfully seeked scanner.
    * @throws IOException
-   * @see {@link #rowAtOrBeforeCandidate(HStoreKey, org.apache.hadoop.io.MapFile.Reader, byte[], SortedMap, long)}
    */
-  private void rowAtOrBeforeCandidate(final StoreFile f,
-    final KeyValue targetkey, final NavigableSet<KeyValue> candidates,
-    final NavigableSet<KeyValue> deletes, final long now)
+  private boolean seekToScanner(final HFileScanner scanner,
+    final KeyValue firstOnRow, final KeyValue firstKV)
   throws IOException {
-    KeyValue search = targetkey;
-    // If the row we're looking for is past the end of this mapfile, set the
-    // search key to be the last key.  If its a deleted key, then we'll back
-    // up to the row before and return that.
-    // TODO: Cache last key as KV over in the file.
-    Reader r = f.getReader();
-    if (r == null) {
-      LOG.warn("StoreFile " + f + " has a null Reader");
-      return;
-    }
-    byte [] lastkey = r.getLastKey();
-    KeyValue lastKeyValue =
-      KeyValue.createKeyValueFromKey(lastkey, 0, lastkey.length);
-    if (this.comparator.compareRows(lastKeyValue, targetkey) < 0) {
-      search = lastKeyValue;
-    }
-    KeyValue knownNoGoodKey = null;
-    HFileScanner scanner = r.getScanner();
-    for (boolean foundCandidate = false; !foundCandidate;) {
-      // Seek to the exact row, or the one that would be immediately before it
-      int result = scanner.seekTo(search.getBuffer(), search.getKeyOffset(),
-        search.getKeyLength());
-      if (result < 0) {
-        // Not in file.
-        break;
-      }
-      KeyValue deletedOrExpiredRow = null;
-      KeyValue kv = null;
-      do {
-        kv = scanner.getKeyValue();
-        if (this.comparator.compareRows(kv, search) <= 0) {
-          if (!kv.isDeleteType()) {
-            if (handleNonDelete(kv, now, deletes, candidates)) {
-              foundCandidate = true;
-              // NOTE! Continue.
-              continue;
-            }
-          }
-          deletes.add(kv);
-          if (deletedOrExpiredRow == null) {
-            deletedOrExpiredRow = kv;
-          }
-        } else if (this.comparator.compareRows(kv, search) > 0) {
-          // if the row key we just read is beyond the key we're searching for,
-          // then we're done.
-          break;
-        } else {
-          // So, the row key doesn't match, but we haven't gone past the row
-          // we're seeking yet, so this row is a candidate for closest
-          // (assuming that it isn't a delete).
-          if (!kv.isDeleteType()) {
-            if (handleNonDelete(kv, now, deletes, candidates)) {
-              foundCandidate = true;
-              // NOTE: Continue
-              continue;
-            }
-          }
-          deletes.add(kv);
-          if (deletedOrExpiredRow == null) {
-            deletedOrExpiredRow = kv;
-          }
-        }
-      } while(scanner.next() && (knownNoGoodKey == null ||
-          this.comparator.compare(kv, knownNoGoodKey) < 0));
-
-      // If we get here and have no candidates but we did find a deleted or
-      // expired candidate, we need to look at the key before that
-      if (!foundCandidate && deletedOrExpiredRow != null) {
-        knownNoGoodKey = deletedOrExpiredRow;
-        if (!scanner.seekBefore(deletedOrExpiredRow.getBuffer(),
-            deletedOrExpiredRow.getKeyOffset(),
-            deletedOrExpiredRow.getKeyLength())) {
-          // Not in file -- what can I do now but break?
-          break;
-        }
-        search = scanner.getKeyValue();
-      } else {
-        // No candidates and no deleted or expired candidates. Give up.
-        break;
-      }
-    }
-    
-    // Arriving here just means that we consumed the whole rest of the map
-    // without going "past" the key we're searching for. we can just fall
-    // through here.
+    KeyValue kv = firstOnRow;
+    // If firstOnRow < firstKV, set to firstKV
+    if (this.comparator.compareRows(firstKV, firstOnRow) == 0) kv = firstKV;
+    int result = scanner.seekTo(kv.getBuffer(), kv.getKeyOffset(),
+      kv.getKeyLength());
+    return result >= 0;
   }
 
-  private void rowAtOrBeforeWithCandidates(final StoreFile f,
-    final KeyValue targetkey,
-    final NavigableSet<KeyValue> candidates,
-    final NavigableSet<KeyValue> deletes, final long now) 
+  /*
+   * When we come in here, we are probably at the kv just before we break into
+   * the row that firstOnRow is on.  Usually need to increment one time to get
+   * on to the row we are interested in.
+   * @param scanner
+   * @param firstOnRow
+   * @param state
+   * @return True we found a candidate.
+   * @throws IOException
+   */
+  private boolean walkForwardInSingleRow(final HFileScanner scanner,
+    final KeyValue firstOnRow, final GetClosestRowBeforeTracker state)
   throws IOException {
-    // if there are already candidate keys, we need to start our search 
-    // at the earliest possible key so that we can discover any possible
-    // deletes for keys between the start and the search key.  Back up to start
-    // of the row in case there are deletes for this candidate in this mapfile
-    // BUT do not backup before the first key in the store file.
-    KeyValue firstCandidateKey = candidates.first();
-    KeyValue search = null;
-    if (this.comparator.compareRows(firstCandidateKey, targetkey) < 0) {
-      search = targetkey;
-    } else {
-      search = firstCandidateKey;
-    }
-
-    // Seek to the exact row, or the one that would be immediately before it
-    Reader r = f.getReader();
-    if (r == null) {
-      LOG.warn("StoreFile " + f + " has a null Reader");
-      return;
-    }
-    HFileScanner scanner = r.getScanner();
-    int result = scanner.seekTo(search.getBuffer(), search.getKeyOffset(),
-      search.getKeyLength());
-    if (result < 0) {
-      // Key is before start of this file.  Return.
-      return;
-    }
+    boolean foundCandidate = false;
     do {
       KeyValue kv = scanner.getKeyValue();
-      // if we have an exact match on row, and it's not a delete, save this
-      // as a candidate key
-      if (this.comparator.matchingRows(kv, targetkey)) {
-        handleKey(kv, now, deletes, candidates);
-      } else if (this.comparator.compareRows(kv, targetkey) > 0 ) {
-        // if the row key we just read is beyond the key we're searching for,
-        // then we're done.
+      // If we are not in the row, skip.
+      if (this.comparator.compareRows(kv, firstOnRow) < 0) continue;
+      // Did we go beyond the target row? If so break.
+      if (state.isTooFar(kv, firstOnRow)) break;
+      if (state.isExpired(kv)) {
+        continue;
+      }
+      // If we added something, this row is a contender. break.
+      if (state.handle(kv)) {
+        foundCandidate = true;
         break;
-      } else {
-        // So, the row key doesn't match, but we haven't gone past the row
-        // we're seeking yet, so this row is a candidate for closest 
-        // (assuming that it isn't a delete).
-        handleKey(kv, now, deletes, candidates);
       }
     } while(scanner.next());
-  }
-
-  /*
-   * Used calculating keys at or just before a passed key.
-   * @param readkey
-   * @param now
-   * @param deletes Set with Comparator that ignores key type.
-   * @param candidate Set with Comprator that ignores key type.
-   */
-  private void handleKey(final KeyValue readkey, final long now,
-      final NavigableSet<KeyValue> deletes,
-      final NavigableSet<KeyValue> candidates) {
-    if (!readkey.isDeleteType()) {
-      handleNonDelete(readkey, now, deletes, candidates);
-    } else {
-      handleDeletes(readkey, candidates, deletes);
-    }
-  }
-
-  /*
-   * Used calculating keys at or just before a passed key.
-   * @param readkey
-   * @param now
-   * @param deletes Set with Comparator that ignores key type.
-   * @param candidates Set with Comparator that ignores key type.
-   * @return True if we added a candidate.
-   */
-  private boolean handleNonDelete(final KeyValue readkey, final long now,
-      final NavigableSet<KeyValue> deletes,
-      final NavigableSet<KeyValue> candidates) {
-    if (notExpiredAndNotInDeletes(this.ttl, readkey, now, deletes)) {
-      candidates.add(readkey);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Handle keys whose values hold deletes.
-   * Add to the set of deletes and then if the candidate keys contain any that
-   * might match, then check for a match and remove it.  Implies candidates
-   * is made with a Comparator that ignores key type.
-   * @param k
-   * @param candidates
-   * @param deletes
-   * @return True if we removed <code>k</code> from <code>candidates</code>.
-   */
-  static boolean handleDeletes(final KeyValue k,
-      final NavigableSet<KeyValue> candidates,
-      final NavigableSet<KeyValue> deletes) {
-    deletes.add(k);
-    return candidates.remove(k);
+    return foundCandidate;
   }
 
   /**

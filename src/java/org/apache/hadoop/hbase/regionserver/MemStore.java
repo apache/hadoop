@@ -29,7 +29,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -56,8 +55,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 public class MemStore implements HeapSize {
   private static final Log LOG = LogFactory.getLog(MemStore.class);
 
-  private final long ttl;
-
   // MemStore.  Use a KeyValueSkipListSet rather than SkipListSet because of the
   // better semantics.  The Map will overwrite if passed a key it already had
   // whereas the Set will not add new KV if key is same though value might be
@@ -68,7 +65,7 @@ public class MemStore implements HeapSize {
   // Snapshot of memstore.  Made for flusher.
   volatile KeyValueSkipListSet snapshot;
 
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   final KeyValue.KVComparator comparator;
 
@@ -85,7 +82,7 @@ public class MemStore implements HeapSize {
    * Default constructor. Used for tests.
    */
   public MemStore() {
-    this(HConstants.FOREVER, KeyValue.COMPARATOR);
+    this(KeyValue.COMPARATOR);
   }
 
   /**
@@ -93,8 +90,7 @@ public class MemStore implements HeapSize {
    * @param ttl The TTL for cache entries, in milliseconds.
    * @param c
    */
-  public MemStore(final long ttl, final KeyValue.KVComparator c) {
-    this.ttl = ttl;
+  public MemStore(final KeyValue.KVComparator c) {
     this.comparator = c;
     this.comparatorIgnoreTimestamp =
       this.comparator.getComparatorIgnoringTimestamps();
@@ -184,15 +180,15 @@ public class MemStore implements HeapSize {
    * @return approximate size of the passed key and value.
    */
   long add(final KeyValue kv) {
-    long size = -1;
+    long s = -1;
     this.lock.readLock().lock();
     try {
-      size = heapSizeChange(kv, this.kvset.add(kv));
-      this.size.addAndGet(size);
+      s = heapSizeChange(kv, this.kvset.add(kv));
+      this.size.addAndGet(s);
     } finally {
       this.lock.readLock().unlock();
     }
-    return size;
+    return s;
   }
 
   /** 
@@ -201,7 +197,7 @@ public class MemStore implements HeapSize {
    * @return approximate size of the passed key and value.
    */
   long delete(final KeyValue delete) {
-    long size = 0;
+    long s = 0;
     this.lock.readLock().lock();
     //Have to find out what we want to do here, to find the fastest way of
     //removing things that are under a delete.
@@ -261,17 +257,17 @@ public class MemStore implements HeapSize {
       //Delete all the entries effected by the last added delete
       for (KeyValue kv : deletes) {
         notpresent = this.kvset.remove(kv);
-        size -= heapSizeChange(kv, notpresent);
+        s -= heapSizeChange(kv, notpresent);
       }
       
       // Adding the delete to memstore. Add any value, as long as
       // same instance each time.
-      size += heapSizeChange(delete, this.kvset.add(delete));
+      s += heapSizeChange(delete, this.kvset.add(delete));
     } finally {
       this.lock.readLock().unlock();
     }
-    this.size.addAndGet(size);
-    return size;
+    this.size.addAndGet(s);
+    return s;
   }
   
   /**
@@ -325,200 +321,122 @@ public class MemStore implements HeapSize {
     return result;
   }
 
-
   /**
-   * @param row Row to look for.
-   * @param candidateKeys Map of candidate keys (Accumulation over lots of
-   * lookup over stores and memstores)
+   * @param state
    */
-  void getRowKeyAtOrBefore(final KeyValue row,
-      final NavigableSet<KeyValue> candidateKeys) {
-    getRowKeyAtOrBefore(row, candidateKeys,
-      new TreeSet<KeyValue>(this.comparator), System.currentTimeMillis());
-  }
-
-  /**
-   * @param kv Row to look for.
-   * @param candidates Map of candidate keys (Accumulation over lots of
-   * lookup over stores and memstores).  Pass a Set with a Comparator that
-   * ignores key Type so we can do Set.remove using a delete, i.e. a KeyValue
-   * with a different Type to the candidate key.
-   * @param deletes Pass a Set that has a Comparator that ignores key type.
-   * @param now
-   */
-  void getRowKeyAtOrBefore(final KeyValue kv,
-      final NavigableSet<KeyValue> candidates, 
-      final NavigableSet<KeyValue> deletes, final long now) {
+  void getRowKeyAtOrBefore(final GetClosestRowBeforeTracker state) {
     this.lock.readLock().lock();
     try {
-      getRowKeyAtOrBefore(kvset, kv, candidates, deletes, now);
-      getRowKeyAtOrBefore(snapshot, kv, candidates, deletes, now);
+      getRowKeyAtOrBefore(kvset, state);
+      getRowKeyAtOrBefore(snapshot, state);
     } finally {
       this.lock.readLock().unlock();
     }
   }
 
+  /*
+   * @param set
+   * @param state Accumulates deletes and candidates.
+   */
   private void getRowKeyAtOrBefore(final NavigableSet<KeyValue> set,
-      final KeyValue kv, final NavigableSet<KeyValue> candidates,
-      final NavigableSet<KeyValue> deletes, final long now) {
+      final GetClosestRowBeforeTracker state) {
     if (set.isEmpty()) {
       return;
     }
-    // We want the earliest possible to start searching from.  Start before
-    // the candidate key in case it turns out a delete came in later.
-    KeyValue search = candidates.isEmpty()? kv: candidates.first();
-
-    // Get all the entries that come equal or after our search key
-    SortedSet<KeyValue> tail = set.tailSet(search);
-
-    // if there are items in the tail map, there's either a direct match to
-    // the search key, or a range of values between the first candidate key
-    // and the ultimate search key (or the end of the cache)
-    if (!tail.isEmpty() &&
-        this.comparator.compareRows(tail.first(), search) <= 0) {
-      // Keep looking at cells as long as they are no greater than the 
-      // ultimate search key and there's still records left in the map.
-      KeyValue deleted = null;
-      KeyValue found = null;
-      for (Iterator<KeyValue> iterator = tail.iterator();
-        iterator.hasNext() && (found == null ||
-          this.comparator.compareRows(found, kv) <= 0);) {
-        found = iterator.next();
-        if (this.comparator.compareRows(found, kv) <= 0) {
-          if (found.isDeleteType()) {
-            Store.handleDeletes(found, candidates, deletes);
-            if (deleted == null) {
-              deleted = found;
-            }
-          } else {
-            if (Store.notExpiredAndNotInDeletes(this.ttl, found, now, deletes)) {
-              candidates.add(found);
-            } else {
-              if (deleted == null) {
-                deleted = found;
-              }
-              // TODO: Check this removes the right key.
-              // Its expired.  Remove it.
-              iterator.remove();
-            }
-          }
-        }
-      }
-      if (candidates.isEmpty() && deleted != null) {
-        getRowKeyBefore(set, deleted, candidates, deletes, now);
-      }
-    } else {
-      // The tail didn't contain any keys that matched our criteria, or was 
-      // empty. Examine all the keys that proceed our splitting point.
-      getRowKeyBefore(set, search, candidates, deletes, now);
+    if (!walkForwardInSingleRow(set, state.getTargetKey(), state)) {
+      // Found nothing in row.  Try backing up.
+      getRowKeyBefore(set, state);
     }
   }
 
   /*
-   * Get row key that comes before passed <code>search_key</code>
-   * Use when we know search_key is not in the map and we need to search
-   * earlier in the cache.
+   * Walk forward in a row from <code>firstOnRow</code>.  Presumption is that
+   * we have been passed the first possible key on a row.  As we walk forward
+   * we accumulate deletes until we hit a candidate on the row at which point
+   * we return.
    * @param set
-   * @param search
-   * @param candidates
-   * @param deletes Pass a Set that has a Comparator that ignores key type.
-   * @param now
+   * @param firstOnRow First possible key on this row.
+   * @param state
+   * @return True if we found a candidate walking this row.
    */
-  private void getRowKeyBefore(NavigableSet<KeyValue> set,
-      KeyValue search, NavigableSet<KeyValue> candidates,
-      final NavigableSet<KeyValue> deletes, final long now) {
-    NavigableSet<KeyValue> head = set.headSet(search, false);
-    // If we tried to create a headMap and got an empty map, then there are
-    // no keys at or before the search key, so we're done.
-    if (head.isEmpty()) {
-      return;
-    }
-
-    // If there aren't any candidate keys at this point, we need to search
-    // backwards until we find at least one candidate or run out of headMap.
-    if (candidates.isEmpty()) {
-      KeyValue lastFound = null;
-      // TODO: Confirm we're iterating in the right order
-      for (Iterator<KeyValue> i = head.descendingIterator();
-          i.hasNext();) {
-        KeyValue found = i.next();
-        // if the last row we found a candidate key for is different than
-        // the row of the current candidate, we can stop looking -- if its
-        // not a delete record.
-        boolean deleted = found.isDeleteType();
-        if (lastFound != null &&
-            this.comparator.matchingRows(lastFound, found) && !deleted) {
-          break;
-        }
-        // If this isn't a delete, record it as a candidate key. Also 
-        // take note of this candidate so that we'll know when
-        // we cross the row boundary into the previous row.
-        if (!deleted) {
-          if (Store.notExpiredAndNotInDeletes(this.ttl, found, now, deletes)) {
-            lastFound = found;
-            candidates.add(found);
-          } else {
-            // Its expired.
-            Store.expiredOrDeleted(set, found);
-          }
-        } else {
-          // We are encountering items in reverse.  We may have just added
-          // an item to candidates that this later item deletes.  Check.  If we
-          // found something in candidates, remove it from the set.
-          if (Store.handleDeletes(found, candidates, deletes)) {
-            remove(set, found);
-          }
-        }
-      }
-    } else {
-      // If there are already some candidate keys, we only need to consider
-      // the very last row's worth of keys in the headMap, because any 
-      // smaller acceptable candidate keys would have caused us to start
-      // our search earlier in the list, and we wouldn't be searching here.
-      SortedSet<KeyValue> rowTail = 
-        head.tailSet(head.last().cloneRow(HConstants.LATEST_TIMESTAMP));
-      Iterator<KeyValue> i = rowTail.iterator();
-      do {
-        KeyValue found = i.next();
-        if (found.isDeleteType()) {
-          Store.handleDeletes(found, candidates, deletes);
-        } else {
-          if (ttl == HConstants.FOREVER ||
-              now < found.getTimestamp() + ttl ||
-              !deletes.contains(found)) {
-            candidates.add(found);
-          } else {
-            Store.expiredOrDeleted(set, found);
-          }
-        }
-      } while (i.hasNext());
-    }
-  }
-
-
-  /*
-   * @param set
-   * @param delete This is a delete record.  Remove anything behind this of same
-   * r/c/ts.
-   * @return True if we removed anything.
-   */
-  private boolean remove(final NavigableSet<KeyValue> set,
-      final KeyValue delete) {
-    SortedSet<KeyValue> s = set.tailSet(delete);
-    if (s.isEmpty()) {
-      return false;
-    }
-    boolean removed = false;
-    for (KeyValue kv: s) {
-      if (this.comparatorIgnoreType.compare(kv, delete) == 0) {
-        // Same r/c/ts.  Remove it.
-        s.remove(kv);
-        removed = true;
+  private boolean walkForwardInSingleRow(final SortedSet<KeyValue> set,
+      final KeyValue firstOnRow, final GetClosestRowBeforeTracker state) {
+    boolean foundCandidate = false;
+    SortedSet<KeyValue> tail = set.tailSet(firstOnRow);
+    if (tail.isEmpty()) return foundCandidate;
+    for (Iterator<KeyValue> i = tail.iterator(); i.hasNext();) {
+      KeyValue kv = i.next();
+      // Did we go beyond the target row? If so break.
+      if (state.isTooFar(kv, firstOnRow)) break;
+      if (state.isExpired(kv)) {
+        i.remove();
         continue;
       }
-      break;
+      // If we added something, this row is a contender. break.
+      if (state.handle(kv)) {
+        foundCandidate = true;
+        break;
+      }
     }
-    return removed;
+    return foundCandidate;
+  }
+
+  /*
+   * Walk backwards through the passed set a row at a time until we run out of
+   * set or until we get a candidate.
+   * @param set
+   * @param state
+   */
+  private void getRowKeyBefore(NavigableSet<KeyValue> set,
+      final GetClosestRowBeforeTracker state) {
+    KeyValue firstOnRow = state.getTargetKey();
+    for (Member p = memberOfPreviousRow(set, state, firstOnRow);
+        p != null; p = memberOfPreviousRow(p.set, state, firstOnRow)) {
+      // Make sure we don't fall out of our table.
+      if (!state.isTargetTable(p.kv)) break;
+      // Stop looking if we've exited the better candidate range.
+      if (!state.isBetterCandidate(p.kv)) break;
+      // Make into firstOnRow
+      firstOnRow = new KeyValue(p.kv.getRow(), HConstants.LATEST_TIMESTAMP);
+      // If we find something, break;
+      if (walkForwardInSingleRow(p.set, firstOnRow, state)) break;
+    }
+  }
+
+  /*
+   * Immutable data structure to hold member found in set and the set it was
+   * found in.  Include set because it is carrying context.
+   */
+  private class Member {
+    final KeyValue kv;
+    final NavigableSet<KeyValue> set;
+    Member(final NavigableSet<KeyValue> s, final KeyValue kv) {
+      this.kv = kv;
+      this.set = s;
+    }
+  }
+
+  /*
+   * @param set Set to walk back in.  Pass a first in row or we'll return
+   * same row (loop).
+   * @param state Utility and context.
+   * @param firstOnRow First item on the row after the one we want to find a
+   * member in.
+   * @return Null or member of row previous to <code>firstOnRow</code>
+   */
+  private Member memberOfPreviousRow(NavigableSet<KeyValue> set,
+      final GetClosestRowBeforeTracker state, final KeyValue firstOnRow) {
+    NavigableSet<KeyValue> head = set.headSet(firstOnRow, false);
+    if (head.isEmpty()) return null;
+    for (Iterator<KeyValue> i = head.descendingIterator(); i.hasNext();) {
+      KeyValue found = i.next();
+      if (state.isExpired(found)) {
+        i.remove();
+        continue;
+      }
+      return new Member(head, found);
+    }
+    return null;
   }
 
   /**
@@ -689,7 +607,7 @@ public class MemStore implements HeapSize {
   }
   
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + Bytes.SIZEOF_LONG + (7 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (7 * ClassSize.REFERENCE));
   
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +

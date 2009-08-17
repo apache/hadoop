@@ -42,7 +42,7 @@ public class TestMemStore extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private MemStore memstore;
   private static final int ROW_COUNT = 10;
-  private static final int QUALIFIER_COUNT = 10;
+  private static final int QUALIFIER_COUNT = ROW_COUNT;
   private static final byte [] FAMILY = Bytes.toBytes("column");
   private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
   private static final String CONTENTSTR = "contentstr";
@@ -82,6 +82,8 @@ public class TestMemStore extends TestCase {
       while (s.next(result)) {
         LOG.info(result);
         count++;
+        // Row count is same as column count.
+        assertEquals(rowCount, result.size());
         result.clear();
       }
     } finally {
@@ -98,9 +100,39 @@ public class TestMemStore extends TestCase {
         // Assert the stuff is coming out in right order.
         assertTrue(Bytes.compareTo(Bytes.toBytes(count), result.get(0).getRow()) == 0);
         count++;
+        // Row count is same as column count.
+        assertEquals(rowCount, result.size());
         if (count == 2) {
           this.memstore.snapshot();
           LOG.info("Snapshotted");
+        }
+        result.clear();
+      }
+    } finally {
+      s.close();
+    }
+    assertEquals(rowCount, count);
+    // Assert that new values are seen in kvset as we scan.
+    long ts = System.currentTimeMillis();
+    s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
+      this.memstore.comparator, null, memstorescanners);
+    count = 0;
+    int snapshotIndex = 5;
+    try {
+      while (s.next(result)) {
+        LOG.info(result);
+        // Assert the stuff is coming out in right order.
+        assertTrue(Bytes.compareTo(Bytes.toBytes(count), result.get(0).getRow()) == 0);
+        // Row count is same as column count.
+        // TODO PUTBACK assertEquals("count=" + count + ", result=" + result,
+        //  rowCount, result.size());
+        count++;
+        if (count == snapshotIndex) {
+          this.memstore.snapshot();
+          this.memstore.clearSnapshot(this.memstore.getSnapshot());
+          // Added more rows into kvset.
+          addRows(this.memstore, ts);
+          LOG.info("Snapshotted, cleared it and then added values");
         }
         result.clear();
       }
@@ -126,7 +158,7 @@ public class TestMemStore extends TestCase {
   }
 
   public void testMultipleVersionsSimple() throws Exception {
-    MemStore m = new MemStore(HConstants.FOREVER, KeyValue.COMPARATOR);
+    MemStore m = new MemStore(KeyValue.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
     byte [] family = Bytes.toBytes("testFamily");
     byte [] qf = Bytes.toBytes("testQualifier");
@@ -146,7 +178,7 @@ public class TestMemStore extends TestCase {
   }
 
   public void testBinary() throws IOException {
-    MemStore mc = new MemStore(HConstants.FOREVER, KeyValue.ROOT_COMPARATOR);
+    MemStore mc = new MemStore(KeyValue.ROOT_COMPARATOR);
     final int start = 43;
     final int end = 46;
     for (int k = start; k <= end; k++) {
@@ -180,66 +212,7 @@ public class TestMemStore extends TestCase {
   //////////////////////////////////////////////////////////////////////////////
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
-  /** For HBASE-528 */
-  public void testGetRowKeyAtOrBefore() {
-    // set up some test data
-    byte [] t10 = Bytes.toBytes("010");
-    byte [] t20 = Bytes.toBytes("020");
-    byte [] t30 = Bytes.toBytes("030");
-    byte [] t35 = Bytes.toBytes("035");
-    byte [] t40 = Bytes.toBytes("040");
-    
-    memstore.add(getKV(t10, "t10 bytes".getBytes()));
-    memstore.add(getKV(t20, "t20 bytes".getBytes()));
-    memstore.add(getKV(t30, "t30 bytes".getBytes()));
-    memstore.add(getKV(t35, "t35 bytes".getBytes()));
-    // write a delete in there to see if things still work ok
-    memstore.add(getDeleteKV(t35));
-    memstore.add(getKV(t40, "t40 bytes".getBytes()));
-    
-    NavigableSet<KeyValue> results = null;
-    
-    // try finding "015"
-    results =
-      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
-    KeyValue t15 = new KeyValue(Bytes.toBytes("015"),
-      System.currentTimeMillis());
-    memstore.getRowKeyAtOrBefore(t15, results);
-    KeyValue kv = results.last();
-    assertTrue(KeyValue.COMPARATOR.compareRows(kv, t10) == 0);
 
-    // try "020", we should get that row exactly
-    results =
-      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
-    memstore.getRowKeyAtOrBefore(new KeyValue(t20, System.currentTimeMillis()),
-      results);
-    assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t20) == 0);
-
-    // try "030", we should get that row exactly
-    results =
-      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
-    memstore.getRowKeyAtOrBefore(new KeyValue(t30, System.currentTimeMillis()),
-      results);
-    assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t30) == 0);
-  
-    // try "038", should skip the deleted "035" and give "030"
-    results =
-      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
-    byte [] t38 = Bytes.toBytes("038");
-    memstore.getRowKeyAtOrBefore(new KeyValue(t38, System.currentTimeMillis()),
-      results);
-    assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t30) == 0);
-  
-    // try "050", should get stuff from "040"
-    results =
-      new TreeSet<KeyValue>(this.memstore.comparator.getComparatorIgnoringType());
-    byte [] t50 = Bytes.toBytes("050");
-    memstore.getRowKeyAtOrBefore(new KeyValue(t50, System.currentTimeMillis()),
-      results);
-    assertTrue(KeyValue.COMPARATOR.compareRows(results.last(), t40) == 0);
-  }
-  
-  
   /** Test getNextRow from memstore
    * @throws InterruptedException 
    */
@@ -606,8 +579,19 @@ public class TestMemStore extends TestCase {
    * @throws IOException 
    */
   private int addRows(final MemStore hmc) {
+    return addRows(hmc, HConstants.LATEST_TIMESTAMP);
+  }
+  
+  /**
+   * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
+   * @param hmc Instance to add rows to.
+   * @return How many rows we added.
+   * @throws IOException 
+   */
+  private int addRows(final MemStore hmc, final long ts) {
     for (int i = 0; i < ROW_COUNT; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = ts == HConstants.LATEST_TIMESTAMP?
+        System.currentTimeMillis(): ts;
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
         byte [] row = Bytes.toBytes(i);
         byte [] qf = makeQualifier(i, ii);

@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * This class is NOT thread-safe as queries are never multi-threaded 
  */
 public class GetDeleteTracker implements DeleteTracker {
-
-  private long familyStamp = -1L;
+  private static long UNSET = -1L;
+  private long familyStamp = UNSET;
   protected List<Delete> deletes = null;
   private List<Delete> newDeletes = new ArrayList<Delete>();
   private Iterator<Delete> iterator;
@@ -64,7 +64,7 @@ public class GetDeleteTracker implements DeleteTracker {
   @Override
   public void add(byte [] buffer, int qualifierOffset, int qualifierLength,
       long timestamp, byte type) {
-    if(type == KeyValue.Type.DeleteFamily.getCode()) {
+    if (type == KeyValue.Type.DeleteFamily.getCode()) {
       if(timestamp > familyStamp) {
         familyStamp = timestamp;
       }
@@ -88,14 +88,13 @@ public class GetDeleteTracker implements DeleteTracker {
   @Override
   public boolean isDeleted(byte [] buffer, int qualifierOffset,
       int qualifierLength, long timestamp) {
-
     // Check against DeleteFamily
     if (timestamp <= familyStamp) {
       return true;
     }
 
     // Check if there are other deletes
-    if(this.delete == null) {
+    if (this.delete == null) {
       return false;
     }
 
@@ -103,7 +102,7 @@ public class GetDeleteTracker implements DeleteTracker {
     int ret = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
         this.delete.buffer, this.delete.qualifierOffset, 
         this.delete.qualifierLength);
-    if(ret <= -1) {
+    if (ret <= -1) {
       // Have not reached the next delete yet
       return false;
     } else if(ret >= 1) {
@@ -149,10 +148,8 @@ public class GetDeleteTracker implements DeleteTracker {
 
   @Override
   public boolean isEmpty() {
-    if(this.familyStamp == 0L && this.delete == null) {
-      return true;
-    }
-    return false;
+    return this.familyStamp == UNSET && this.delete == null &&
+      this.newDeletes.isEmpty();
   }
 
   @Override
@@ -160,7 +157,7 @@ public class GetDeleteTracker implements DeleteTracker {
     this.deletes = null;
     this.delete = null;
     this.newDeletes = new ArrayList<Delete>();
-    this.familyStamp = 0L;
+    this.familyStamp = UNSET;
     this.iterator = null;
   }
 
@@ -173,7 +170,7 @@ public class GetDeleteTracker implements DeleteTracker {
   @Override
   public void update() {
     // If no previous deletes, use new deletes and return
-    if(this.deletes == null || this.deletes.size() == 0) {
+    if (this.deletes == null || this.deletes.size() == 0) {
       finalize(this.newDeletes);
       return;
     }

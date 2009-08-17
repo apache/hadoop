@@ -577,7 +577,7 @@ public class HConnectionManager implements HConstants {
               REGIONINFO_QUALIFIER);
           if (value == null || value.length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
-              Bytes.toString(parentTable) + ", " + regionInfoRow);
+              Bytes.toString(parentTable) + ", row=" + regionInfoRow);
           }
           // convert the row result into the HRegionLocation we need!
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(

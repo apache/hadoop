@@ -68,7 +68,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
   public Put(byte [] row) {
     this(row, null);
   }
-  
+
   /**
    * Create a Put operation for the specified row, using an existing row lock.
    * @param row row key
@@ -83,7 +83,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
       this.lockId = rowLock.getLockId();
     }
   }
-  
+
   /**
    * Copy constructor.  Creates a Put operation cloned from the specified Put.
    * @param putToCopy put to copy
@@ -333,8 +333,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     this.lockId = in.readLong();
     this.writeToWAL = in.readBoolean();
     int numFamilies = in.readInt();
-    this.familyMap = 
-      new TreeMap<byte [],List<KeyValue>>(Bytes.BYTES_COMPARATOR);
+    if (!this.familyMap.isEmpty()) this.familyMap.clear();
     for(int i=0;i<numFamilies;i++) {
       byte [] family = Bytes.readByteArray(in);
       int numKeys = in.readInt();
@@ -359,7 +358,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     out.writeLong(this.lockId);
     out.writeBoolean(this.writeToWAL);
     out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
       List<KeyValue> keys = entry.getValue();
       out.writeInt(keys.size());

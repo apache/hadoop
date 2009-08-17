@@ -242,7 +242,7 @@ public class Bytes {
    * @return String made from <code>b</code>
    */
   public static String toString(final byte [] b) {
-    if(b == null) {
+    if (b == null) {
       return null;
     }
     return toString(b, 0, b.length);

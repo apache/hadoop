@@ -1022,9 +1022,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @return map of values
    * @throws IOException
    */
-  public Result getClosestRowBefore(final byte [] row,
-    final byte [] family)
-  throws IOException{
+  public Result getClosestRowBefore(final byte [] row, final byte [] family)
+  throws IOException {
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
     KeyValue key = null;
@@ -1038,22 +1037,16 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (key == null) {
         return null;
       }
-      List<KeyValue> results = new ArrayList<KeyValue>();
-      // This will get all results for this store.  TODO: Do I have to make a
-      // new key?
-      if (!this.comparator.matchingRows(kv, key)) {
-        kv = new KeyValue(key.getRow(), HConstants.LATEST_TIMESTAMP);
-      }
+      // This will get all results for this store.  TODO: Do we need to do this?
       Get get = new Get(key.getRow());
+      List<KeyValue> results = new ArrayList<KeyValue>();
       store.get(get, null, results);
-      
       return new Result(results);
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
   }
 
-  //TODO
   /**
    * Return an iterator that scans over the HRegion, returning the indicated 
    * columns and rows specified by the {@link Scan}.
@@ -1166,7 +1159,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           Get g = new Get(kv.getRow());
           NavigableSet<byte []> qualifiers =
             new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
-          qualifiers.add(kv.getQualifier());
+          byte [] q = kv.getQualifier();
+          if (q != null && q.length > 0) qualifiers.add(kv.getQualifier());
           get(store, g, qualifiers, result);
           if (result.isEmpty()) {
             // Nothing to delete
@@ -2432,6 +2426,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       } else {
         // Default behavior
         Scan scan = new Scan();
+        // scan.addFamily(HConstants.CATALOG_FAMILY);
         InternalScanner scanner = region.getScanner(scan);
         try {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -2444,6 +2439,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         } finally {
           scanner.close();
         }
+        // System.out.println(region.getClosestRowBefore(Bytes.toBytes("GeneratedCSVContent2,E3652782193BC8D66A0BA1629D0FAAAB,9993372036854775807")));
       }
     } finally {
       region.close();
@@ -2481,7 +2477,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         printUsageAndExit("ERROR: Unrecognized option <" + args[1] + ">");
       }
       majorCompact = true;
-    
     }
     Path tableDir  = new Path(args[0]);
     HBaseConfiguration c = new HBaseConfiguration();

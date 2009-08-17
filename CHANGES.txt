@@ -335,6 +335,8 @@ Release 0.20.0 - Unreleased
    HBASE-1768  REST server has upper limit of 5k PUT
    HBASE-1766  Add advanced features to HFile.main() to be able to analyze
                storefile problems
+   HBASE-1761  getclosest doesn't understand delete family; manifests as
+               "HRegionInfo was null or empty in .META" A.K.A the BS problem
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
