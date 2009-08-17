@@ -114,11 +114,9 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
   }
 
-  /**
-   *
-   */
   public void testRegionServerSessionExpired() {
     try {
+      this.conf.setBoolean("hbase.regionserver.restart.on.zk.expire", true);
       new HTable(conf, HConstants.META_TABLE_NAME);
   
       ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);

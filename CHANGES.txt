@@ -339,6 +339,8 @@ Release 0.20.0 - Unreleased
                "HRegionInfo was null or empty in .META" A.K.A the BS problem
    HBASE-1738  Scanner doesnt reset when a snapshot is created, could miss
                new updates into the 'kvset' (active part)
+   HBASE-1767  test zookeeper broken in trunk and 0.20 branch; broken on
+               hudson too
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
