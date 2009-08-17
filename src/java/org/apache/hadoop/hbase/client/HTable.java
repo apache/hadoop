@@ -670,11 +670,17 @@ public class HTable {
   }
 
   /**
-   * Set the size of the buffer in bytes
+   * Set the size of the buffer in bytes.
+   * If the new size is lower than the current size of data in the
+   * write buffer, the buffer is flushed.
    * @param writeBufferSize
+   * @throws IOException
    */
-  public void setWriteBufferSize(long writeBufferSize) {
+  public void setWriteBufferSize(long writeBufferSize) throws IOException {
     this.writeBufferSize = writeBufferSize;
+    if(currentWriteBufferSize > writeBufferSize) {
+      flushCommits();
+    }
   }
 
   /**

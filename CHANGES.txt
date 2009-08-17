@@ -10,6 +10,9 @@ Release 0.21.0 - Unreleased
                (Ken Weiner via jgray)
    HBASE-1763  Put writeToWAL methods do not have proper getter/setter names
                (second commit to fix compile error in hregion)
+   HBASE-1770  HTable.setWriteBufferSize does not flush the writeBuffer when
+               its size is set to a value lower than its current size.
+               (Mathias via jgray)
 
   OPTIMIZATIONS
 
