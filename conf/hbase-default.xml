@@ -402,7 +402,7 @@
   </property>
   <property>
     <name>zookeeper.session.timeout</name>
-    <value>30000</value>
+    <value>60000</value>
     <description>ZooKeeper session timeout. This option is not used by HBase
       directly, it is for the internals of ZooKeeper. HBase merely passes it in
       whenever a connection is established to ZooKeeper. It is used by ZooKeeper

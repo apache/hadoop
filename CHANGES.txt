@@ -579,6 +579,7 @@ Release 0.20.0 - Unreleased
                region info
    HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
                detailed output
+   HBASE-1772  Up the default ZK session timeout from 30seconds to 60seconds
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue
