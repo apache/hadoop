@@ -492,6 +492,8 @@ Trunk (unreleased changes)
 
     HADOOP-6176. Add a couple package private methods to AccessTokenHandler
     for testing.  (Kan Zhang via szetszwo)
+
+    HADOOP-6182. Fix ReleaseAudit warnings (Giridharan Kesavan and Lee Tucker via gkesavan)
  
   OPTIMIZATIONS
 
