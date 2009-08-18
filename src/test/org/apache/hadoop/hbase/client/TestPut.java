@@ -42,7 +42,6 @@ public class TestPut extends HBaseClusterTestCase {
   private static final int SMALL_LENGTH = 1;
   private static final int NB_BATCH_ROWS = 10;
   private byte [] value;
-  private byte [] smallValue;
 
   private HTableDescriptor desc = null;
   private HTable table = null;
@@ -53,7 +52,6 @@ public class TestPut extends HBaseClusterTestCase {
   public TestPut() throws UnsupportedEncodingException {
     super();
     value = Bytes.toBytes("abcd");
-    smallValue = Bytes.toBytes("a");
   }
   
   @Override
@@ -164,7 +162,7 @@ public class TestPut extends HBaseClusterTestCase {
     }
   }
   
-  public void testRowsPutBufferedManyManyFlushes() {
+  public void testRowsPutBufferedManyManyFlushes() throws IOException {
     table.setAutoFlush(false);
     table.setWriteBufferSize(10);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();

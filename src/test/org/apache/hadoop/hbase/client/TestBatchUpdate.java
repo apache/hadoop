@@ -104,7 +104,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     }
   }
   
-  public void testRowsBatchUpdateBufferedManyManyFlushes() {
+  public void testRowsBatchUpdateBufferedManyManyFlushes() throws IOException {
     table.setAutoFlush(false);
     table.setWriteBufferSize(10);
     ArrayList<BatchUpdate> rowsUpdate = new ArrayList<BatchUpdate>();
