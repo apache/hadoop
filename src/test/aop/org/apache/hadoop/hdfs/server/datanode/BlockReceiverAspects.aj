@@ -22,6 +22,7 @@ import java.io.OutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.ProbabilityModel;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
@@ -44,8 +45,10 @@ public aspect BlockReceiverAspects {
   before(BlockReceiver blockreceiver
       ) throws IOException : callReceivePacket(blockreceiver) {
     LOG.info("FI: callReceivePacket");
-    DataTransferTestUtil.getPipelineTest().fiCallReceivePacket.run(
-        blockreceiver.getDataNode());
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null)
+      dtTest.fiCallReceivePacket.run(
+          blockreceiver.getDataNode().getDatanodeRegistration());
 
     if (ProbabilityModel.injectCriteria(BlockReceiver.class.getSimpleName())) {
       LOG.info("Before the injection point");

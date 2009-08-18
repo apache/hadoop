@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 
 /** Test DataTransferProtocol with fault injection. */
 public class TestFiDataTransferProtocol extends junit.framework.TestCase {
@@ -79,7 +80,7 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
   private static void runSlowDatanodeTest(String methodName, SleepAction a
                   ) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
-    final DataTransferTest t = DataTransferTestUtil.initTest();
+    final DataTransferTest t = (DataTransferTest)DataTransferTestUtil.initTest();
     t.fiCallReceivePacket.set(a);
     t.fiReceiverOpWriteBlock.set(a);
     t.fiStatusRead.set(a);
@@ -105,9 +106,9 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
   }
 
   private static void runCallReceivePacketTest(String methodName,
-      Action<DataNode> a) throws IOException {
+      Action<DatanodeID> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
-    DataTransferTestUtil.initTest().fiCallReceivePacket.set(a);
+    ((DataTransferTest)DataTransferTestUtil.initTest()).fiCallReceivePacket.set(a);
     write1byte(methodName);
   }
 

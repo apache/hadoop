@@ -47,7 +47,7 @@ Trunk (unreleased changes)
     via szetszwo)
 
     HDFS-493. Change build.xml so that the fault-injected tests are executed
-    only by the run-test-*-faul-inject targets.  (Konstantin Boudnik via
+    only by the run-test-*-fault-inject targets.  (Konstantin Boudnik via
     szetszwo)
 
     HDFS-446. Improvements to Offline Image Viewer. (Jakob Homan via shv)
@@ -94,10 +94,13 @@ Trunk (unreleased changes)
 
     HDFS-546. DatanodeDescriptor iterator blocks as BlockInfo. (shv)
 
-    HDFS-457. Do not shutdown datanode if some, but not all, volumns fail.
+    HDFS-457. Do not shutdown datanode if some, but not all, volumes fail.
     (Boris Shkolnik via szetszwo)
 
     HDFS-548. TestFsck takes nearly 10 minutes to run. (hairong)
+
+    HDFS-539. Refactor fault injeciton pipeline test util for future reuse.
+    (Konstantin Boudnik via szetszwo)
 
   BUG FIXES
 
@@ -111,7 +114,7 @@ Trunk (unreleased changes)
     HADOOP-6096. Fix Eclipse project and classpath files following project
     split. (tomwhite)
 
-    HDFS-195. Handle expired tokens when write pipeline is restablished.
+    HDFS-195. Handle expired tokens when write pipeline is reestablished.
     (Kan Zhang via rangadi)
 
     HDFS-181. Validate src path in FSNamesystem.getFileInfo(..).  (Todd
