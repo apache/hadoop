@@ -97,6 +97,8 @@ Trunk (unreleased changes)
     HDFS-457. Do not shutdown datanode if some, but not all, volumns fail.
     (Boris Shkolnik via szetszwo)
 
+    HDFS-548. TestFsck takes nearly 10 minutes to run. (hairong)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
