@@ -93,8 +93,7 @@ public class MemStore implements HeapSize {
 
   /**
    * Constructor.
-   * @param ttl The TTL for cache entries, in milliseconds.
-   * @param c
+   * @param c Comparator
    */
   public MemStore(final KeyValue.KVComparator c) {
     this.comparator = c;

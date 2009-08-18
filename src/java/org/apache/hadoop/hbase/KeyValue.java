@@ -911,7 +911,7 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or
-   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type.DeleteColumn}
+   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
    * KeyValue type.
    */
   public boolean isDelete() {
