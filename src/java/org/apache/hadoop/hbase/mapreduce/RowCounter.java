@@ -48,7 +48,7 @@ public class RowCounter {
   extends TableMapper<ImmutableBytesWritable, Result> {
     
     /** Counter enumeration to count the actual rows. */
-    private static enum Counters { ROWS }
+    public static enum Counters { ROWS }
 
     /**
      * Maps the data.

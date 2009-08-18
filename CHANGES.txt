@@ -17,6 +17,7 @@ Release 0.21.0 - Unreleased
                MemStoreFlusher#checkStoreFileCount
    HBASE-1758  Extract interface out of HTable (Vaibhav Puranik via Andrew
                Purtell)
+   HBASE-1776  Make rowcounter enum public
 
   OPTIMIZATIONS
 
