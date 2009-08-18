@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
@@ -36,8 +37,8 @@ import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
  * Singleton class encapsulating global REST servlet state and functions.
  */
 public class RESTServlet extends ServletAdaptor {
-  
-  private static final long serialVersionUID = 1L;  
+
+  private static final long serialVersionUID = 1L;
   public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;       // 4 hours
   public static final String VERSION_STRING = "0.0.1";
 
@@ -45,7 +46,7 @@ public class RESTServlet extends ServletAdaptor {
 
   private final HBaseConfiguration conf;
   private final HTablePool pool;
-  protected Map<String,Integer> maxAgeMap = 
+  protected Map<String,Integer> maxAgeMap =
     Collections.synchronizedMap(new HashMap<String,Integer>());
 
   /**
@@ -70,7 +71,7 @@ public class RESTServlet extends ServletAdaptor {
 
 
   /**
-   * Get a table pool for the given table. 
+   * Get a table pool for the given table.
    * @return the table pool
    */
   protected HTablePool getTablePool() {
@@ -87,7 +88,7 @@ public class RESTServlet extends ServletAdaptor {
   /**
    * @param tableName the table name
    * @return the maximum cache age suitable for use with this table, in
-   *  seconds 
+   *  seconds
    * @throws IOException
    */
   public int getMaxAge(String tableName) throws IOException {
@@ -95,10 +96,10 @@ public class RESTServlet extends ServletAdaptor {
     if (i != null) {
       return i.intValue();
     }
-    HTable table = pool.getTable(tableName);
+    HTableInterface table = pool.getTable(tableName);
     try {
       int maxAge = DEFAULT_MAX_AGE;
-      for (HColumnDescriptor family : 
+      for (HColumnDescriptor family :
           table.getTableDescriptor().getFamilies()) {
         int ttl = family.getTimeToLive();
         if (ttl < 0) {

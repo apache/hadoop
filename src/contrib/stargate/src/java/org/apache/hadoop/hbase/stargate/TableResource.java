@@ -85,27 +85,21 @@ public class TableResource implements Constants {
       response.cacheControl(cacheControl);
       return response.build();
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     }
-  }
-
-  @Path("{table}/regions")
-  public RegionsResource getRegionsResource(
-      @PathParam("table") String table) {
-    return new RegionsResource(table);    
   }
 
   @Path("{table}/scanner")
   public ScannerResource getScannerResource(
       @PathParam("table") String table) {
-    return new ScannerResource(table);    
+    return new ScannerResource(table);
   }
 
   @Path("{table}/schema")
   public SchemaResource getSchemaResource(
       @PathParam("table") String table) {
-    return new SchemaResource(table);    
+    return new SchemaResource(table);
   }
 
   @Path("{table}/{rowspec: .+}")
@@ -116,7 +110,7 @@ public class TableResource implements Constants {
     try {
       return new RowResource(table, rowspec, versions);
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
   }

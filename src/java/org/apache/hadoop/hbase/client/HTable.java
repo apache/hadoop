@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.Writables;
 /**
  * Used to communicate with a single HBase table
  */
-public class HTable {
+public class HTable implements HTableInterface {
   private final HConnection connection;
   private final byte [] tableName;
   protected final int scannerTimeout;
@@ -91,7 +91,7 @@ public class HTable {
 
   /**
    * Creates an object to access a HBase table
-   * 
+   *
    * @param conf configuration object
    * @param tableName name of the table
    * @throws IOException
@@ -103,7 +103,7 @@ public class HTable {
 
   /**
    * Creates an object to access a HBase table.
-   * 
+   *
    * @param conf configuration object
    * @param tableName name of the table
    * @throws IOException
@@ -144,7 +144,7 @@ public class HTable {
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
     return isTableEnabled(new HBaseConfiguration(), tableName);
   }
-  
+
   /**
    * @param conf HBaseConfiguration object
    * @param tableName name of table to check
@@ -202,7 +202,7 @@ public class HTable {
   public HConnection getConnection() {
     return this.connection;
   }
-  
+
   /**
    * Get the number of rows for caching that will be passed to scanners
    * @return the number of rows for caching
@@ -220,7 +220,7 @@ public class HTable {
   }
 
   /**
-   * @return table metadata 
+   * @return table metadata
    * @throws IOException
    */
   public HTableDescriptor getTableDescriptor() throws IOException {
@@ -230,7 +230,7 @@ public class HTable {
 
   /**
    * Gets the starting row key for every region in the currently open table
-   * 
+   *
    * @return Array of region starting row keys
    * @throws IOException
    */
@@ -240,7 +240,7 @@ public class HTable {
 
   /**
    * Gets the ending row key for every region in the currently open table
-   * 
+   *
    * @return Array of region ending row keys
    * @throws IOException
    */
@@ -251,7 +251,7 @@ public class HTable {
   /**
    * Gets the starting and ending row keys for every region in the currently
    * open table
-   * 
+   *
    * @return Pair of arrays of region starting and ending row keys
    * @throws IOException
    */
@@ -262,7 +262,7 @@ public class HTable {
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(Result rowResult) throws IOException {
         HRegionInfo info = Writables.getHRegionInfo(
-            rowResult.getValue(HConstants.CATALOG_FAMILY, 
+            rowResult.getValue(HConstants.CATALOG_FAMILY,
                 HConstants.REGIONINFO_QUALIFIER));
         if (Bytes.equals(info.getTableDesc().getName(), getTableName())) {
           if (!(info.isOffline() || info.isSplit())) {
@@ -280,7 +280,7 @@ public class HTable {
 
   /**
    * Get all the regions and their address for this table
-   * 
+   *
    * @return A map of HRegionInfo with it's server address
    * @throws IOException
    */
@@ -291,21 +291,21 @@ public class HTable {
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(Result rowResult) throws IOException {
         HRegionInfo info = Writables.getHRegionInfo(
-            rowResult.getValue(HConstants.CATALOG_FAMILY, 
+            rowResult.getValue(HConstants.CATALOG_FAMILY,
                 HConstants.REGIONINFO_QUALIFIER));
-        
+
         if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
           return false;
         }
 
         HServerAddress server = new HServerAddress();
-        byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY, 
+        byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
             HConstants.SERVER_QUALIFIER);
         if (value != null && value.length > 0) {
           String address = Bytes.toString(value);
           server = new HServerAddress(address);
         }
-        
+
         if (!(info.isOffline() || info.isSplit())) {
           regionMap.put(new UnmodifyableHRegionInfo(info), server);
         }
@@ -318,9 +318,9 @@ public class HTable {
   }
 
   /**
-   * Return the row that matches <i>row</i> exactly, 
+   * Return the row that matches <i>row</i> exactly,
    * or the one that immediately preceeds it.
-   * 
+   *
    * @param row row key
    * @param family Column family to look for row in.
    * @return map of values
@@ -339,9 +339,9 @@ public class HTable {
    }
 
   /**
-  * Return the row that matches <i>row</i> exactly, 
+  * Return the row that matches <i>row</i> exactly,
   * or the one that immediately preceeds it.
-  * 
+  *
   * @param row row key
   * @param family Column family to look for row in.
   * @return map of values
@@ -354,7 +354,7 @@ public class HTable {
     return r == null || r.isEmpty()? null: r.getRowResult();
   }
 
-  /** 
+  /**
    * Get a scanner on the current table as specified by the {@link Scan} object
    *
    * @param scan a configured {@link Scan} object
@@ -369,7 +369,7 @@ public class HTable {
   }
   /**
    * Get a scanner on the current table as specified by the {@link Scan} object
-   * 
+   *
    * @param family  The column family to scan.
    * @return The scanner.
    * @throws IOException
@@ -380,10 +380,10 @@ public class HTable {
     scan.addFamily(family);
     return getScanner(scan);
   }
-  
+
   /**
    * Get a scanner on the current table as specified by the {@link Scan} object
-   * 
+   *
    * @param family  The column family to scan.
    * @param qualifier  The column qualifier to scan.
    * @return The scanner.
@@ -413,10 +413,10 @@ public class HTable {
         }
     );
   }
-  
+
   /**
-   * 
-   * @param delete 
+   *
+   * @param delete
    * @throws IOException
    * @since 0.20.0
    */
@@ -431,7 +431,7 @@ public class HTable {
         }
     );
   }
-  
+
   /**
    * Commit a Put to the table.
    * <p>
@@ -448,7 +448,7 @@ public class HTable {
       flushCommits();
     }
   }
-  
+
   /**
    * Commit a List of Puts to the table.
    * <p>
@@ -467,11 +467,11 @@ public class HTable {
       flushCommits();
     }
   }
-  
+
   /**
    * Atomically increments a column value. If the column value already exists
    * and is not a big-endian long, this could throw an exception.<p>
-   * 
+   *
    * @param row
    * @param family
    * @param qualifier
@@ -479,7 +479,7 @@ public class HTable {
    * @return The new value.
    * @throws IOException
    */
-  public long incrementColumnValue(final byte [] row, final byte [] family, 
+  public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
   throws IOException {
     return incrementColumnValue(row, family, qualifier, amount, true);
@@ -488,8 +488,8 @@ public class HTable {
   /**
    * Atomically increments a column value. If the column value already exists
    * and is not a big-endian long, this could throw an exception.<p>
-   * 
-   * Setting writeToWAL to false means that in a fail scenario, you will lose 
+   *
+   * Setting writeToWAL to false means that in a fail scenario, you will lose
    * any increments that have not been flushed.
    * @param row
    * @param family
@@ -499,7 +499,7 @@ public class HTable {
    * @return The new value.
    * @throws IOException
    */
-  public long incrementColumnValue(final byte [] row, final byte [] family, 
+  public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount, final boolean writeToWAL)
   throws IOException {
     NullPointerException npe = null;
@@ -517,7 +517,7 @@ public class HTable {
         new ServerCallable<Long>(connection, tableName, row) {
           public Long call() throws IOException {
             return server.incrementColumnValue(
-                location.getRegionInfo().getRegionName(), row, family, 
+                location.getRegionInfo().getRegionName(), row, family,
                 qualifier, amount, writeToWAL);
           }
         }
@@ -527,7 +527,7 @@ public class HTable {
   /**
    * Atomically checks if a row/family/qualifier value match the expectedValue.
    * If it does, it adds the put.
-   * 
+   *
    * @param row
    * @param family
    * @param qualifier
@@ -536,8 +536,8 @@ public class HTable {
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
-  public synchronized boolean checkAndPut(final byte [] row, 
-      final byte [] family, final byte [] qualifier, final byte [] value, 
+  public synchronized boolean checkAndPut(final byte [] row,
+      final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
   throws IOException {
     return connection.getRegionServerWithRetries(
@@ -549,12 +549,12 @@ public class HTable {
         }
       ).booleanValue();
   }
-  
+
   /**
    * Test for the existence of columns in the table, as specified in the Get.<p>
-   * 
+   *
    * This will return true if the Get matches one or more keys, false if not.<p>
-   * 
+   *
    * This is a server-side call so it prevents any data from being transfered
    * to the client.
    * @param get
@@ -571,7 +571,7 @@ public class HTable {
       }
     ).booleanValue();
   }
-  
+
   /**
    * Commit to the table the buffer of BatchUpdate.
    * Called automatically in the commit methods when autoFlush is true.
@@ -585,19 +585,19 @@ public class HTable {
       writeBuffer.clear();
     }
   }
-   
+
   /**
    * Release held resources
-   * 
+   *
    * @throws IOException
   */
   public void close() throws IOException{
     flushCommits();
   }
-  
+
   /**
    * Utility method that verifies Put is well formed.
-   * 
+   *
    * @param put
    * @throws IllegalArgumentException
    */
@@ -606,7 +606,7 @@ public class HTable {
       throw new IllegalArgumentException("No columns to insert");
     }
   }
-  
+
   /**
    * Obtain a row lock
    * @param row The row to lock
@@ -644,7 +644,7 @@ public class HTable {
       }
     );
   }
-  
+
   /**
    * Get the value of autoFlush. If true, updates will not be buffered
    * @return value of autoFlush
@@ -684,7 +684,7 @@ public class HTable {
   }
 
   /**
-   * Get the write buffer 
+   * Get the write buffer
    * @return the current write buffer
    */
   public ArrayList<Put> getWriteBuffer() {
@@ -692,10 +692,10 @@ public class HTable {
   }
 
   // Old API. Pre-hbase-880, hbase-1304.
-  
+
   /**
    * Get a single value for the specified row and column
-   * 
+   *
    * @param row row key
    * @param column column name
    * @return value for specified row/column
@@ -707,7 +707,7 @@ public class HTable {
     return get(Bytes.toBytes(row), Bytes.toBytes(column));
   }
 
-  /** 
+  /**
    * Get a single value for the specified row and column
    *
    * @param row row key
@@ -722,7 +722,7 @@ public class HTable {
     return get(Bytes.toBytes(row), Bytes.toBytes(column), numVersions);
   }
 
-  /** 
+  /**
    * Get a single value for the specified row and column
    *
    * @param row row key
@@ -740,7 +740,7 @@ public class HTable {
     return r == null || r.size() <= 0? null: r.getCellValue();
   }
 
-  /** 
+  /**
    * Get the specified number of versions of the specified row and column
    * @param row row key
    * @param column column name
@@ -755,7 +755,7 @@ public class HTable {
     return get(row, column, HConstants.LATEST_TIMESTAMP, numVersions);
   }
 
-  /** 
+  /**
    * Get the specified number of versions of the specified row and column with
    * the specified timestamp.
    *
@@ -773,7 +773,7 @@ public class HTable {
     return get(Bytes.toBytes(row), Bytes.toBytes(column), timestamp, numVersions);
   }
 
-  /** 
+  /**
    * Get the specified number of versions of the specified row and column with
    * the specified timestamp.
    *
@@ -803,9 +803,9 @@ public class HTable {
     return r == null || r.size() <= 0? null: r.getCellValues();
   }
 
-  /** 
+  /**
    * Get all the data for the specified row at the latest timestamp
-   * 
+   *
    * @param row row key
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
@@ -815,9 +815,9 @@ public class HTable {
     return getRow(Bytes.toBytes(row));
   }
 
-  /** 
+  /**
    * Get all the data for the specified row at the latest timestamp
-   * 
+   *
    * @param row row key
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
@@ -826,10 +826,10 @@ public class HTable {
   public RowResult getRow(final byte [] row) throws IOException {
     return getRow(row, HConstants.LATEST_TIMESTAMP);
   }
- 
-  /** 
+
+  /**
    * Get more than one version of all columns for the specified row
-   * 
+   *
    * @param row row key
    * @param numVersions number of versions to return
    * @return RowResult is <code>null</code> if row does not exist.
@@ -838,13 +838,13 @@ public class HTable {
    */
   public RowResult getRow(final String row, final int numVersions)
   throws IOException {
-    return getRow(Bytes.toBytes(row), null, 
+    return getRow(Bytes.toBytes(row), null,
                   HConstants.LATEST_TIMESTAMP, numVersions, null);
   }
 
-  /** 
+  /**
    * Get more than one version of all columns for the specified row
-   * 
+   *
    * @param row row key
    * @param numVersions number of versions to return
    * @return RowResult is <code>null</code> if row does not exist.
@@ -856,38 +856,38 @@ public class HTable {
     return getRow(row, null, HConstants.LATEST_TIMESTAMP, numVersions, null);
   }
 
-  /** 
+  /**
    * Get all the data for the specified row at a specified timestamp
-   * 
+   *
    * @param row row key
    * @param ts timestamp
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
-  public RowResult getRow(final String row, final long ts) 
+  public RowResult getRow(final String row, final long ts)
   throws IOException {
     return getRow(Bytes.toBytes(row), ts);
   }
 
-  /** 
+  /**
    * Get all the data for the specified row at a specified timestamp
-   * 
+   *
    * @param row row key
    * @param ts timestamp
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
-  public RowResult getRow(final byte [] row, final long ts) 
+  public RowResult getRow(final byte [] row, final long ts)
   throws IOException {
     return getRow(row,null,ts);
   }
-  
-  /** 
+
+  /**
    * Get more than one version of all columns for the specified row
    * at a specified timestamp
-   * 
+   *
    * @param row row key
    * @param ts timestamp
    * @param numVersions number of versions to return
@@ -899,11 +899,11 @@ public class HTable {
       final int numVersions) throws IOException {
     return getRow(Bytes.toBytes(row), null, ts, numVersions, null);
   }
-  
-  /** 
+
+  /**
    * Get more than one version of all columns for the specified row
    * at a specified timestamp
-   * 
+   *
    * @param row row key
    * @param timestamp timestamp
    * @param numVersions number of versions to return
@@ -916,37 +916,37 @@ public class HTable {
     return getRow(row, null, timestamp, numVersions, null);
   }
 
-  /** 
+  /**
    * Get selected columns for the specified row at the latest timestamp
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
-  public RowResult getRow(final String row, final String [] columns) 
+  public RowResult getRow(final String row, final String [] columns)
   throws IOException {
     return getRow(Bytes.toBytes(row), Bytes.toByteArrays(columns));
   }
 
-  /** 
+  /**
    * Get selected columns for the specified row at the latest timestamp
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
-  public RowResult getRow(final byte [] row, final byte [][] columns) 
+  public RowResult getRow(final byte [] row, final byte [][] columns)
   throws IOException {
     return getRow(row, columns, HConstants.LATEST_TIMESTAMP);
   }
-  
-  /** 
+
+  /**
    * Get more than one version of selected columns for the specified row
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param numVersions number of versions to return
@@ -959,10 +959,10 @@ public class HTable {
     return getRow(Bytes.toBytes(row), Bytes.toByteArrays(columns),
                   HConstants.LATEST_TIMESTAMP, numVersions, null);
   }
-  
-  /** 
+
+  /**
    * Get more than one version of selected columns for the specified row
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param numVersions number of versions to return
@@ -975,9 +975,9 @@ public class HTable {
     return getRow(row, columns, HConstants.LATEST_TIMESTAMP, numVersions, null);
   }
 
-  /** 
+  /**
    * Get selected columns for the specified row at a specified timestamp
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
@@ -985,15 +985,15 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
-  public RowResult getRow(final String row, final String [] columns, 
-    final long ts) 
-  throws IOException {  
+  public RowResult getRow(final String row, final String [] columns,
+    final long ts)
+  throws IOException {
     return getRow(Bytes.toBytes(row), Bytes.toByteArrays(columns), ts);
   }
 
-  /** 
+  /**
    * Get selected columns for the specified row at a specified timestamp
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
@@ -1001,16 +1001,16 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
-  public RowResult getRow(final byte [] row, final byte [][] columns, 
-    final long ts) 
-  throws IOException {       
+  public RowResult getRow(final byte [] row, final byte [][] columns,
+    final long ts)
+  throws IOException {
     return getRow(row,columns,ts,1,null);
   }
-  
-  /** 
+
+  /**
    * Get more than one version of selected columns for the specified row,
    * using an existing row lock.
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param numVersions number of versions to return
@@ -1026,21 +1026,21 @@ public class HTable {
                   numVersions, rowLock);
   }
 
-  /** 
+  /**
    * Get selected columns for the specified row at a specified timestamp
    * using existing row lock.
-   * 
+   *
    * @param row row key
    * @param columns Array of column names and families you want to retrieve.
    * @param ts timestamp
-   * @param numVersions 
+   * @param numVersions
    * @param rl row lock
    * @return RowResult is <code>null</code> if row does not exist.
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #get(Get)}
    */
-  public RowResult getRow(final byte [] row, final byte [][] columns, 
-    final long ts, final int numVersions, final RowLock rl) 
+  public RowResult getRow(final byte [] row, final byte [][] columns,
+    final long ts, final int numVersions, final RowLock rl)
   throws IOException {
     Get g = rl != null? new Get(row, rl): new Get(row);
     if (columns != null) {
@@ -1061,7 +1061,7 @@ public class HTable {
     return r == null || r.size() <= 0? null: r.getRowResult();
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at first row.
    * Return the specified columns.
    *
@@ -1079,7 +1079,7 @@ public class HTable {
     return getScanner(Bytes.toByteArrays(columns), HConstants.EMPTY_START_ROW);
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
@@ -1098,7 +1098,7 @@ public class HTable {
     return getScanner(Bytes.toByteArrays(columns), Bytes.toBytes(startRow));
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at first row.
    * Return the specified columns.
    *
@@ -1117,7 +1117,7 @@ public class HTable {
       HConstants.LATEST_TIMESTAMP, null);
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
@@ -1135,8 +1135,8 @@ public class HTable {
   throws IOException {
     return getScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, null);
   }
-  
-  /** 
+
+  /**
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
@@ -1156,8 +1156,8 @@ public class HTable {
   throws IOException {
     return getScanner(columns, startRow, timestamp, null);
   }
-  
-  /** 
+
+  /**
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
@@ -1174,11 +1174,11 @@ public class HTable {
    */
   public Scanner getScanner(final byte[][] columns, final byte [] startRow,
     RowFilterInterface filter)
-  throws IOException { 
+  throws IOException {
     return getScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, filter);
   }
-  
-  /** 
+
+  /**
    * Get a scanner on the current table starting at the specified row and
    * ending just before <code>stopRow<code>.
    * Return the specified columns.
@@ -1202,7 +1202,7 @@ public class HTable {
     return getScanner(columns, startRow, stopRow, HConstants.LATEST_TIMESTAMP);
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row and
    * ending just before <code>stopRow<code>.
    * Return the specified columns.
@@ -1228,7 +1228,7 @@ public class HTable {
       Bytes.toBytes(stopRow), timestamp);
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row and
    * ending just before <code>stopRow<code>.
    * Return the specified columns.
@@ -1254,7 +1254,7 @@ public class HTable {
       new WhileMatchRowFilter(new StopRowFilter(stopRow)));
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
@@ -1277,7 +1277,7 @@ public class HTable {
       timestamp, filter);
   }
 
-  /** 
+  /**
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
@@ -1336,7 +1336,7 @@ public class HTable {
   public void deleteAll(final String row) throws IOException {
     deleteAll(row, null);
   }
-  
+
   /**
    * Completely delete the row's cells.
    *
@@ -1376,11 +1376,11 @@ public class HTable {
     deleteAll(row, null, ts);
   }
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column.
    * @param row Row to update
    * @param column name of column whose value is to be deleted
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
   public void deleteAll(final String row, final String column)
@@ -1388,13 +1388,13 @@ public class HTable {
     deleteAll(row, column, HConstants.LATEST_TIMESTAMP);
   }
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
    * @param row Row to update
    * @param column name of column whose value is to be deleted
    * @param ts Delete all cells of the same timestamp or older.
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
   public void deleteAll(final String row, final String column, final long ts)
@@ -1403,13 +1403,13 @@ public class HTable {
       column != null? Bytes.toBytes(column): null, ts);
   }
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
    * @param row Row to update
    * @param column name of column whose value is to be deleted
    * @param ts Delete all cells of the same timestamp or older.
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
   public void deleteAll(final byte [] row, final byte [] column, final long ts)
@@ -1417,7 +1417,7 @@ public class HTable {
     deleteAll(row,column,ts,null);
   }
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp, using an
    * existing row lock.
@@ -1425,7 +1425,7 @@ public class HTable {
    * @param column name of column whose value is to be deleted
    * @param ts Delete all cells of the same timestamp or older.
    * @param rl Existing row lock
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
   public void deleteAll(final byte [] row, final byte [] column, final long ts,
@@ -1437,12 +1437,12 @@ public class HTable {
     }
     delete(d);
   }
-  
-  /** 
+
+  /**
    * Delete all cells that match the passed row and column.
    * @param row Row to update
    * @param colRegex column regex expression
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
   public void deleteAllByRegex(final String row, final String colRegex)
@@ -1450,35 +1450,35 @@ public class HTable {
     deleteAllByRegex(row, colRegex, HConstants.LATEST_TIMESTAMP);
   }
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
    * @param row Row to update
    * @param colRegex Column Regex expression
    * @param ts Delete all cells of the same timestamp or older.
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteAllByRegex(final String row, final String colRegex, 
+  public void deleteAllByRegex(final String row, final String colRegex,
       final long ts) throws IOException {
     deleteAllByRegex(Bytes.toBytes(row), colRegex, ts);
   }
 
-  /** 
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
    * @param row Row to update
    * @param colRegex Column Regex expression
    * @param ts Delete all cells of the same timestamp or older.
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteAllByRegex(final byte [] row, final String colRegex, 
+  public void deleteAllByRegex(final byte [] row, final String colRegex,
       final long ts) throws IOException {
     deleteAllByRegex(row, colRegex, ts, null);
   }
-  
-  /** 
+
+  /**
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp, using an
    * existing row lock.
@@ -1486,10 +1486,10 @@ public class HTable {
    * @param colRegex Column regex expression
    * @param ts Delete all cells of the same timestamp or older.
    * @param rl Existing row lock
-   * @throws IOException 
+   * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteAllByRegex(final byte [] row, final String colRegex, 
+  public void deleteAllByRegex(final byte [] row, final String colRegex,
       final long ts, final RowLock rl)
   throws IOException {
     throw new UnsupportedOperationException("TODO: Not yet implemented");
@@ -1503,7 +1503,7 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteFamily(final String row, final String family) 
+  public void deleteFamily(final String row, final String family)
   throws IOException {
     deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
   }
@@ -1516,7 +1516,7 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteFamily(final byte[] row, final byte[] family) 
+  public void deleteFamily(final byte[] row, final byte[] family)
   throws IOException {
     deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
   }
@@ -1530,7 +1530,7 @@ public class HTable {
    * @param timestamp Timestamp to match
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
-   */  
+   */
   public void deleteFamily(final String row, final String family,
       final long timestamp)
   throws IOException{
@@ -1547,7 +1547,7 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteFamily(final byte [] row, final byte [] family, 
+  public void deleteFamily(final byte [] row, final byte [] family,
     final long timestamp)
   throws IOException {
     deleteFamily(row,family,timestamp,null);
@@ -1564,16 +1564,16 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteFamily(final byte [] row, final byte [] family, 
+  public void deleteFamily(final byte [] row, final byte [] family,
     final long timestamp, final RowLock rl)
   throws IOException {
     Delete d = new Delete(row, HConstants.LATEST_TIMESTAMP, rl);
     d.deleteFamily(stripColon(family), timestamp);
     delete(d);
   }
-  
+
   /**
-   * Delete all cells for a row with matching column family regex 
+   * Delete all cells for a row with matching column family regex
    * at all timestamps.
    *
    * @param row The row to operate on
@@ -1581,13 +1581,13 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteFamilyByRegex(final String row, final String familyRegex) 
+  public void deleteFamilyByRegex(final String row, final String familyRegex)
   throws IOException {
     deleteFamilyByRegex(row, familyRegex, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
-   * Delete all cells for a row with matching column family regex 
+   * Delete all cells for a row with matching column family regex
    * at all timestamps.
    *
    * @param row The row to operate on
@@ -1595,7 +1595,7 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteFamilyByRegex(final byte[] row, final String familyRegex) 
+  public void deleteFamilyByRegex(final byte[] row, final String familyRegex)
   throws IOException {
     deleteFamilyByRegex(row, familyRegex, HConstants.LATEST_TIMESTAMP);
   }
@@ -1609,7 +1609,7 @@ public class HTable {
    * @param timestamp Timestamp to match
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
-   */  
+   */
   public void deleteFamilyByRegex(final String row, final String familyRegex,
       final long timestamp)
   throws IOException{
@@ -1626,17 +1626,17 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)}
    */
-  public void deleteFamilyByRegex(final byte [] row, final String familyRegex, 
+  public void deleteFamilyByRegex(final byte [] row, final String familyRegex,
     final long timestamp)
   throws IOException {
     deleteFamilyByRegex(row,familyRegex,timestamp,null);
   }
-  
+
   /**
    * Delete all cells for a row with matching column family regex with
    * timestamps less than or equal to <i>timestamp</i>, using existing
    * row lock.
-   * 
+   *
    * @param row The row to operate on
    * @param familyRegex Column Family Regex
    * @param timestamp Timestamp to match
@@ -1652,7 +1652,7 @@ public class HTable {
 
   /**
    * Test for the existence of a row in the table.
-   * 
+   *
    * @param row The row
    * @return true if the row exists, false otherwise
    * @throws IOException
@@ -1664,7 +1664,7 @@ public class HTable {
 
   /**
    * Test for the existence of a row and column in the table.
-   * 
+   *
    * @param row The row
    * @param column The column
    * @return true if the row exists, false otherwise
@@ -1678,7 +1678,7 @@ public class HTable {
 
   /**
    * Test for the existence of a coordinate in the table.
-   * 
+   *
    * @param row The row
    * @param column The column
    * @param timestamp The timestamp
@@ -1693,7 +1693,7 @@ public class HTable {
 
   /**
    * Test for the existence of a coordinate in the table.
-   * 
+   *
    * @param row The row
    * @param column The column
    * @param timestamp The timestamp
@@ -1717,12 +1717,12 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)} or
    * {@link #put(Put)}
-   */ 
-  public synchronized void commit(final BatchUpdate batchUpdate) 
+   */
+  public synchronized void commit(final BatchUpdate batchUpdate)
   throws IOException {
     commit(batchUpdate, null);
   }
-  
+
   /**
    * Commit a BatchUpdate to the table using existing row lock.
    * If autoFlush is false, the update is buffered
@@ -1731,9 +1731,9 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)} or
    * {@link #put(Put)}
-   */ 
+   */
   public synchronized void commit(final BatchUpdate batchUpdate,
-      final RowLock rl) 
+      final RowLock rl)
   throws IOException {
     for (BatchOperation bo: batchUpdate) {
       if (!bo.isPut()) throw new IOException("Only Puts in BU as of 0.20.0");
@@ -1750,7 +1750,7 @@ public class HTable {
    * @throws IOException
    * @deprecated As of hbase 0.20.0, replaced by {@link #delete(Delete)} or
    * {@link #put(List)}
-   */ 
+   */
   public synchronized void commit(final List<BatchUpdate> batchUpdates)
       throws IOException {
     // Am I breaking something here in old API by doing this?
@@ -1758,11 +1758,11 @@ public class HTable {
       commit(bu);
     }
   }
-  
+
   /**
-   * Atomically checks if a row's values match the expectedValues. 
+   * Atomically checks if a row's values match the expectedValues.
    * If it does, it uses the batchUpdate to update the row.<p>
-   * 
+   *
    * This operation is not currently supported, use {@link #checkAndPut}
    * @param batchUpdate batchupdate to apply if check is successful
    * @param expectedValues values to check
@@ -1795,11 +1795,11 @@ public class HTable {
     private long lastNext;
     // Keep lastResult returned successfully in case we have to reset scanner.
     private Result lastResult = null;
-    
+
     protected ClientScanner(final Scan scan) {
       if (CLIENT_LOG.isDebugEnabled()) {
-        CLIENT_LOG.debug("Creating scanner over " 
-            + Bytes.toString(getTableName()) 
+        CLIENT_LOG.debug("Creating scanner over "
+            + Bytes.toString(getTableName())
             + " starting at key '" + Bytes.toStringBinary(scan.getStartRow()) + "'");
       }
       this.scan = scan;
@@ -1827,7 +1827,7 @@ public class HTable {
     protected Scan getScan() {
       return scan;
     }
-    
+
     protected long getTimestamp() {
       return lastNext;
     }
@@ -1845,10 +1845,10 @@ public class HTable {
         getConnection().getRegionServerWithRetries(callable);
         this.callable = null;
       }
-      
+
       // Where to start the next scanner
       byte [] localStartKey = null;
-      
+
       // if we're at the end of the table, then close and return false
       // to stop iterating
       if (this.currentRegion != null) {
@@ -1870,10 +1870,10 @@ public class HTable {
       if (CLIENT_LOG.isDebugEnabled()) {
         CLIENT_LOG.debug("Advancing internal scanner to startKey at '" +
           Bytes.toStringBinary(localStartKey) + "'");
-      }            
+      }
       try {
         callable = getScannerCallable(localStartKey, nbRows);
-        // Open a scanner on the region server starting at the 
+        // Open a scanner on the region server starting at the
         // beginning of the region
         getConnection().getRegionServerWithRetries(callable);
         this.currentRegion = callable.getHRegionInfo();
@@ -1883,11 +1883,11 @@ public class HTable {
       }
       return true;
     }
-    
+
     protected ScannerCallable getScannerCallable(byte [] localStartKey,
         int nbRows) {
       scan.setStartRow(localStartKey);
-      ScannerCallable s = new ScannerCallable(getConnection(), 
+      ScannerCallable s = new ScannerCallable(getConnection(),
         getTableName(), scan);
       s.setCaching(nbRows);
       return s;
@@ -1936,7 +1936,7 @@ public class HTable {
       if (cache.size() == 0) {
         Result [] values = null;
         int countdown = this.caching;
-        // We need to reset it if it's a new callable that was created 
+        // We need to reset it if it's a new callable that was created
         // with a countdown in nextScanner
         callable.setCaching(this.caching);
         // This flag is set when we want to skip the result returned.  We do
@@ -2029,7 +2029,7 @@ public class HTable {
       return new Iterator<Result>() {
         // The next RowResult, possibly pre-read
         Result next = null;
-        
+
         // return true if there is another item pending, false if there isn't.
         // this method is where the actual advancing takes place, but you need
         // to call next() to consume it. hasNext() will only advance if there
@@ -2054,7 +2054,7 @@ public class HTable {
           if (!hasNext()) {
             return null;
           }
-          
+
           // if we get to here, then hasNext() has given us an item to return.
           // we want to return the item and then null out the next pointer, so
           // we use a temporary variable.
@@ -2075,7 +2075,7 @@ public class HTable {
    */
   protected class OldClientScanner implements Scanner {
     private final ClientScanner cs;
- 
+
     OldClientScanner(final ClientScanner cs) {
       this.cs = cs;
     }
@@ -2111,7 +2111,7 @@ public class HTable {
       return new Iterator<RowResult>() {
         // The next RowResult, possibly pre-read
         RowResult next = null;
-        
+
         // return true if there is another item pending, false if there isn't.
         // this method is where the actual advancing takes place, but you need
         // to call next() to consume it. hasNext() will only advance if there
@@ -2123,7 +2123,7 @@ public class HTable {
               return next != null;
             } catch (IOException e) {
               throw new RuntimeException(e);
-            }            
+            }
           }
           return true;
         }
@@ -2136,7 +2136,7 @@ public class HTable {
           if (!hasNext()) {
             return null;
           }
-          
+
           // if we get to here, then hasNext() has given us an item to return.
           // we want to return the item and then null out the next pointer, so
           // we use a temporary variable.
@@ -2151,7 +2151,7 @@ public class HTable {
       };
     }
   }
-  
+
   private static byte [] stripColon(final byte [] n) {
     byte col = n[n.length-1];
     if (col == ':') {

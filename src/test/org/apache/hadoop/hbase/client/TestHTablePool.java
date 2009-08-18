@@ -33,14 +33,14 @@ public class TestHTablePool extends HBaseTestCase {
     String tableName = "testTable";
 
     // Request a table from an empty pool
-    HTable table = pool.getTable(tableName);
+    HTableInterface table = pool.getTable(tableName);
     assertNotNull(table);
-  
+
     // Return the table to the pool
     pool.putTable(table);
 
     // Request a table of the same name
-    HTable sameTable = pool.getTable(tableName);
+    HTableInterface sameTable = pool.getTable(tableName);
     assertSame(table, sameTable);
   }
 
@@ -49,36 +49,36 @@ public class TestHTablePool extends HBaseTestCase {
     byte[] tableName = Bytes.toBytes("testTable");
 
     // Request a table from an empty pool
-    HTable table = pool.getTable(tableName);
+    HTableInterface table = pool.getTable(tableName);
     assertNotNull(table);
-  
+
     // Return the table to the pool
     pool.putTable(table);
 
     // Request a table of the same name
-    HTable sameTable = pool.getTable(tableName);
+    HTableInterface sameTable = pool.getTable(tableName);
     assertSame(table, sameTable);
   }
 
   public void testTableWithMaxSize() {
     HTablePool pool = new HTablePool((HBaseConfiguration)null, 2);
     String tableName = "testTable";
-    
+
     // Request tables from an empty pool
-    HTable table1 = pool.getTable(tableName);
-    HTable table2 = pool.getTable(tableName);
-    HTable table3 = pool.getTable(tableName);
-    
+    HTableInterface table1 = pool.getTable(tableName);
+    HTableInterface table2 = pool.getTable(tableName);
+    HTableInterface table3 = pool.getTable(tableName);
+
     // Return the tables to the pool
     pool.putTable(table1);
     pool.putTable(table2);
     // The pool should reject this one since it is already full
     pool.putTable(table3);
-    
+
     // Request tables of the same name
-    HTable sameTable1 = pool.getTable(tableName);
-    HTable sameTable2 = pool.getTable(tableName);
-    HTable sameTable3 = pool.getTable(tableName);
+    HTableInterface sameTable1 = pool.getTable(tableName);
+    HTableInterface sameTable2 = pool.getTable(tableName);
+    HTableInterface sameTable3 = pool.getTable(tableName);
     assertSame(table1, sameTable1);
     assertSame(table2, sameTable2);
     assertNotSame(table3, sameTable3);
@@ -90,17 +90,17 @@ public class TestHTablePool extends HBaseTestCase {
     String tableName2 = "testTable2";
 
     // Request a table from an empty pool
-    HTable table1 = pool.getTable(tableName1);
-    HTable table2 = pool.getTable(tableName2);
+    HTableInterface table1 = pool.getTable(tableName1);
+    HTableInterface table2 = pool.getTable(tableName2);
     assertNotNull(table2);
-  
+
     // Return the tables to the pool
     pool.putTable(table1);
     pool.putTable(table2);
 
     // Request tables of the same names
-    HTable sameTable1 = pool.getTable(tableName1);
-    HTable sameTable2 = pool.getTable(tableName2);
+    HTableInterface sameTable1 = pool.getTable(tableName1);
+    HTableInterface sameTable2 = pool.getTable(tableName2);
     assertSame(table1, sameTable1);
     assertSame(table2, sameTable2);
   }

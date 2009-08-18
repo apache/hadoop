@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.stargate.model.ColumnSchemaModel;
@@ -67,7 +67,7 @@ public class SchemaResource implements Constants {
   private HTableDescriptor getTableSchema() throws IOException,
       TableNotFoundException {
     HTablePool pool = RESTServlet.getInstance().getTablePool();
-    HTable table = pool.getTable(this.table);
+    HTableInterface table = pool.getTable(this.table);
     try {
       return table.getTableDescriptor();
     } finally {
@@ -88,7 +88,7 @@ public class SchemaResource implements Constants {
       model.setName(htd.getNameAsString());
       for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
           htd.getValues().entrySet()) {
-        model.addAttribute(Bytes.toString(e.getKey().get()), 
+        model.addAttribute(Bytes.toString(e.getKey().get()),
             Bytes.toString(e.getValue().get()));
       }
       for (HColumnDescriptor hcd: htd.getFamilies()) {
@@ -96,7 +96,7 @@ public class SchemaResource implements Constants {
         columnModel.setName(hcd.getNameAsString());
         for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
           hcd.getValues().entrySet()) {
-        columnModel.addAttribute(Bytes.toString(e.getKey().get()), 
+        columnModel.addAttribute(Bytes.toString(e.getKey().get()),
           Bytes.toString(e.getValue().get()));
       }
         model.addColumnFamily(columnModel);
@@ -138,10 +138,10 @@ public class SchemaResource implements Constants {
       }
       return Response.created(uriInfo.getAbsolutePath()).build();
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
             Response.Status.SERVICE_UNAVAILABLE);
-    }      
-  } 
+    }
+  }
 
   private Response update(byte[] tableName, TableSchemaModel model,
       UriInfo uriInfo, HBaseAdmin admin) {
@@ -157,11 +157,11 @@ public class SchemaResource implements Constants {
           if (htd.hasFamily(hcd.getName())) {
             admin.modifyColumn(tableName, hcd.getName(), hcd);
           } else {
-            admin.addColumn(model.getName(), hcd);            
+            admin.addColumn(model.getName(), hcd);
           }
         }
       } catch (IOException e) {
-        throw new WebApplicationException(e, 
+        throw new WebApplicationException(e,
             Response.Status.INTERNAL_SERVER_ERROR);
       } finally {
         admin.enableTable(tableName);
@@ -186,7 +186,7 @@ public class SchemaResource implements Constants {
         return update(tableName, model, uriInfo, admin);
       }
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
             Response.Status.SERVICE_UNAVAILABLE);
     }
   }
@@ -212,7 +212,7 @@ public class SchemaResource implements Constants {
   }
 
   @DELETE
-  public Response delete(@Context UriInfo uriInfo) {     
+  public Response delete(@Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
@@ -225,7 +225,7 @@ public class SchemaResource implements Constants {
     } catch (TableNotFoundException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
             Response.Status.SERVICE_UNAVAILABLE);
     }
   }

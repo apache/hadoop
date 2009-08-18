@@ -28,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
 public class ScannerResultGenerator extends ResultGenerator {
   private static final Log LOG =
     LogFactory.getLog(ScannerResultGenerator.class);
-  
+
   private String id;
   private Iterator<KeyValue> rowI;
   private ResultScanner scanner;
@@ -46,8 +46,8 @@ public class ScannerResultGenerator extends ResultGenerator {
 
   public ScannerResultGenerator(String tableName, RowSpec rowspec)
       throws IllegalArgumentException, IOException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool(); 
-    HTable table = pool.getTable(tableName);
+    HTablePool pool = RESTServlet.getInstance().getTablePool();
+    HTableInterface table = pool.getTable(tableName);
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {
@@ -58,12 +58,12 @@ public class ScannerResultGenerator extends ResultGenerator {
       if (rowspec.hasColumns()) {
         scan.addColumns(rowspec.getColumns());
       } else {
-        for (HColumnDescriptor family: 
+        for (HColumnDescriptor family:
             table.getTableDescriptor().getFamilies()) {
           scan.addFamily(family.getName());
         }
       }
-      scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());          
+      scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
       scan.setMaxVersions(rowspec.getMaxVersions());
       scanner = table.getScanner(scan);
       cached = null;

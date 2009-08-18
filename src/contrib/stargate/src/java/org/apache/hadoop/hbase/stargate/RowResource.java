@@ -41,7 +41,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.stargate.model.CellModel;
@@ -56,7 +56,7 @@ public class RowResource implements Constants {
   private RowSpec rowspec;
   private CacheControl cacheControl;
 
-  public RowResource(String table, String rowspec, String versions) 
+  public RowResource(String table, String rowspec, String versions)
       throws IOException {
     this.table = table;
     this.rowspec = new RowSpec(rowspec);
@@ -137,10 +137,10 @@ public class RowResource implements Constants {
     try {
       pool = RESTServlet.getInstance().getTablePool();
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
-    HTable table = null;
+    HTableInterface table = null;
     try {
       table = pool.getTable(this.table);
       for (RowModel row: model.getRows()) {
@@ -171,16 +171,16 @@ public class RowResource implements Constants {
     }
   }
 
-  private Response updateBinary(byte[] message, HttpHeaders headers, 
+  private Response updateBinary(byte[] message, HttpHeaders headers,
       boolean replace) {
     HTablePool pool;
     try {
       pool = RESTServlet.getInstance().getTablePool();
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
-    HTable table = null;    
+    HTableInterface table = null;
     try {
       byte[] row = rowspec.getRow();
       byte[][] columns = rowspec.getColumns();
@@ -240,7 +240,7 @@ public class RowResource implements Constants {
 
   @PUT
   @Consumes(MIMETYPE_BINARY)
-  public Response putBinary(byte[] message, @Context UriInfo uriInfo, 
+  public Response putBinary(byte[] message, @Context UriInfo uriInfo,
       @Context HttpHeaders headers)
   {
     if (LOG.isDebugEnabled()) {
@@ -261,7 +261,7 @@ public class RowResource implements Constants {
 
   @POST
   @Consumes(MIMETYPE_BINARY)
-  public Response postBinary(byte[] message, @Context UriInfo uriInfo, 
+  public Response postBinary(byte[] message, @Context UriInfo uriInfo,
       @Context HttpHeaders headers)
   {
     if (LOG.isDebugEnabled()) {
@@ -281,17 +281,17 @@ public class RowResource implements Constants {
       if (rowspec.hasTimestamp()) {
         delete.deleteColumns(split[0], split[1], rowspec.getTimestamp());
       } else {
-        delete.deleteColumns(split[0], split[1]);        
+        delete.deleteColumns(split[0], split[1]);
       }
     }
     HTablePool pool;
     try {
       pool = RESTServlet.getInstance().getTablePool();
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
-    HTable table = null;
+    HTableInterface table = null;
     try {
       table = pool.getTable(this.table);
       table.delete(delete);
@@ -300,7 +300,7 @@ public class RowResource implements Constants {
       }
       table.flushCommits();
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {
