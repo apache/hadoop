@@ -77,6 +77,7 @@ public class HBaseClient {
                            //maxIdleTime msecs
   final protected int maxRetries; //the max. no. of retries for socket connections
   protected boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  protected boolean tcpKeepAlive; // if T then use keepalives
   protected int pingInterval; // how often sends ping to the server in msecs
 
   protected SocketFactory socketFactory;           // how to create sockets
@@ -301,6 +302,7 @@ public class HBaseClient {
           try {
             this.socket = socketFactory.createSocket();
             this.socket.setTcpNoDelay(tcpNoDelay);
+            this.socket.setKeepAlive(tcpKeepAlive);
             // connection time out is 20s
             NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
             this.socket.setSoTimeout(pingInterval);
@@ -637,6 +639,7 @@ public class HBaseClient {
       conf.getInt("ipc.client.connection.maxidletime", 10000); //10s
     this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
     this.tcpNoDelay = conf.getBoolean("ipc.client.tcpnodelay", false);
+    this.tcpKeepAlive = conf.getBoolean("ipc.client.tcpkeepalive", true);
     this.pingInterval = getPingInterval(conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("The ping interval is" + this.pingInterval + "ms.");

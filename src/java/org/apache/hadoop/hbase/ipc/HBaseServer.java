@@ -145,7 +145,8 @@ public abstract class HBaseServer {
 
   private int maxQueueSize;
   protected int socketSendBufferSize;
-  protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
+  protected final boolean tcpKeepAlive; // if T then use keepalives
 
   volatile protected boolean running = true;         // true while server runs
   protected BlockingQueue<Call> callQueue; // queued calls
@@ -391,6 +392,7 @@ public abstract class HBaseServer {
 
         channel.configureBlocking(false);
         channel.socket().setTcpNoDelay(tcpNoDelay);
+        channel.socket().setKeepAlive(tcpKeepAlive);
         SelectionKey readKey = channel.register(selector, SelectionKey.OP_READ);
         c = new Connection(channel, System.currentTimeMillis());
         readKey.attach(c);
@@ -998,6 +1000,7 @@ public abstract class HBaseServer {
     this.rpcMetrics = new HBaseRpcMetrics(serverName,
                           Integer.toString(this.port));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
+    this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
 
     // Create the responder here
     responder = new Responder();
