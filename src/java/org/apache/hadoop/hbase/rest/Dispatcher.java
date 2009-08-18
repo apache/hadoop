@@ -374,14 +374,13 @@ public class Dispatcher extends javax.servlet.http.HttpServlet {
           return new byte[0];
         }
       }
-      char[] c;// 40 characters * sizeof(UTF16)
-      while (r.ready()) {
+      char [] c;// 40 characters * sizeof(UTF16)
+      while (true) {
     	c = new char[bufferLength]; 
         int n = r.read(c, 0, bufferLength);
-        resultant += new String(c);
-        if (n != bufferLength) {
-          break;
-        } else if (resultant.length() > maxLength) {
+        if (n == -1) break;
+        resultant += new String(c, 0, n);
+        if (resultant.length() > maxLength) {
           resultant = resultant.substring(0, maxLength);
           break;
         }
