@@ -1,0 +1,206 @@
+/**
+ * Copyright 2009 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.client;
+
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.hbase.HTableDescriptor;
+
+/**
+ * Used to communicate with a single HBase table.
+ *
+ * @since 0.21.0
+ */
+public interface HTableInterface {
+  /**
+   * Gets the name of this table.
+   *
+   * @return the table name.
+   */
+  byte[] getTableName();
+
+  /**
+   * Gets the table descriptor for this table.
+   *
+   * @return table metadata
+   * @throws IOException
+   */
+  HTableDescriptor getTableDescriptor() throws IOException;
+
+  /**
+   * Test for the existence of columns in the table, as specified in the Get.
+   * <p>
+   *
+   * This will return true if the Get matches one or more keys, false if not.
+   * <p>
+   *
+   * This is a server-side call so it prevents any data from being transfered to
+   * the client.
+   *
+   * @param get the Get
+   * @return true if the specified Get matches one or more keys, false if not
+   * @throws IOException
+   */
+  boolean exists(Get get) throws IOException;
+
+  /**
+   * Method for getting data from a row.
+   *
+   * @param get the Get to fetch
+   * @return the result
+   * @throws IOException
+   */
+  Result get(Get get) throws IOException;
+
+  /**
+   * Return the row that matches <i>row</i> and <i>family</i> exactly, or the
+   * one that immediately precedes it.
+   *
+   * @param row row key
+   * @param family Column family to look for row in
+   * @return map of values
+   * @throws IOException
+   */
+  Result getRowOrBefore(byte[] row, byte[] family) throws IOException;
+
+  /**
+   * Get a scanner on the current table as specified by the {@link Scan} object.
+   *
+   * @param scan a configured {@link Scan} object
+   * @return scanner
+   * @throws IOException
+   */
+  ResultScanner getScanner(Scan scan) throws IOException;
+
+  /**
+   * Get a scanner on the current table as specified by the {@link Scan} object.
+   *
+   * @param family the column family to scan
+   * @return the scanner
+   * @throws IOException
+   */
+  ResultScanner getScanner(byte[] family) throws IOException;
+
+  /**
+   * Get a scanner on the current table as specified by the {@link Scan} object.
+   *
+   * @param family the column family to scan
+   * @param qualifier the column qualifier to scan
+   * @return The scanner
+   * @throws IOException
+   */
+  ResultScanner getScanner(byte[] family, byte[] qualifier) throws IOException;
+
+  /**
+   * Commit a Put to the table.
+   * <p>
+   * If autoFlush is false, the update is buffered.
+   *
+   * @param put
+   * @throws IOException
+   */
+  void put(Put put) throws IOException;
+
+  /**
+   * Commit a List of Puts to the table.
+   * <p>
+   * If autoFlush is false, the update is buffered.
+   *
+   * @param puts
+   * @throws IOException
+   */
+  void put(List<Put> puts) throws IOException;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected
+   * value. If it does, it adds the put.
+   *
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param value the expected value
+   * @param put
+   * @throws IOException
+   * @return true if the new put was executed, false otherwise
+   */
+  boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, Put put) throws IOException;
+
+  /**
+   * Deletes as specified by the delete.
+   *
+   * @param delete
+   * @throws IOException
+   */
+  void delete(Delete delete) throws IOException;
+
+  /**
+   * Atomically increments a column value. If the column value already exists
+   * and is not a big-endian long, this could throw an exception.
+   *
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param amount
+   * @return the new value
+   * @throws IOException
+   */
+  long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
+      long amount) throws IOException;
+
+  /**
+   * Get the value of autoFlush. If true, updates will not be buffered.
+   *
+   * @return true if autoFlush is enabled for this table
+   */
+  boolean isAutoFlush();
+
+  /**
+   * Flushes buffer data. Called automatically when autoFlush is true.
+   *
+   * @throws IOException
+   */
+  void flushCommits() throws IOException;
+
+  /**
+   * Releases held resources.
+   *
+   * @throws IOException
+   */
+  void close() throws IOException;
+
+  /**
+   * Obtains a row lock.
+   *
+   * @param row the row to lock
+   * @return rowLock RowLock containing row and lock id
+   * @throws IOException
+   */
+  RowLock lockRow(byte[] row) throws IOException;
+
+  /**
+   * Releases the row lock.
+   *
+   * @param rl the row lock to release
+   * @throws IOException
+   */
+  void unlockRow(RowLock rl) throws IOException;
+}
