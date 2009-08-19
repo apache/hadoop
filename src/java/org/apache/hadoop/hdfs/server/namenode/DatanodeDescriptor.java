@@ -229,7 +229,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Iterates over the list of blocks belonging to the datanode.
    */
-  static private class BlockIterator implements Iterator<Block> {
+  static private class BlockIterator implements Iterator<BlockInfo> {
     private BlockInfo current;
     private DatanodeDescriptor node;
       
@@ -253,7 +253,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  Iterator<Block> getBlockIterator() {
+  Iterator<BlockInfo> getBlockIterator() {
     return new BlockIterator(this.blockList, this);
   }
   
@@ -402,7 +402,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
     // collect blocks that have not been reported
     // all of them are next to the delimiter
-    Iterator<Block> it = new BlockIterator(delimiter.getNext(0), this);
+    Iterator<? extends Block> it = new BlockIterator(delimiter.getNext(0),this);
     while(it.hasNext())
       toRemove.add(it.next());
     this.removeBlock(delimiter);

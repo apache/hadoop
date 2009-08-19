@@ -544,7 +544,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if(numBlocks == 0) {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
-    Iterator<Block> iter = node.getBlockIterator();
+    Iterator<BlockInfo> iter = node.getBlockIterator();
     int startBlock = r.nextInt(numBlocks); // starting from a random block
     // skip blocks
     for(int i=0; i<startBlock; i++) {
@@ -2157,7 +2157,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
 
-    for (Iterator<Block> it = nodeInfo.getBlockIterator(); it.hasNext();) {
+    Iterator<? extends Block> it = nodeInfo.getBlockIterator();
+    while(it.hasNext()) {
       blockManager.removeStoredBlock(it.next(), nodeInfo);
     }
     unprotectedRemoveDatanode(nodeInfo);
@@ -2657,7 +2658,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       //
       // all the blocks that reside on this node have to be 
       // replicated.
-      Iterator<Block> decommissionBlocks = node.getBlockIterator();
+      Iterator<? extends Block> decommissionBlocks = node.getBlockIterator();
       while(decommissionBlocks.hasNext()) {
         Block block = decommissionBlocks.next();
         blockManager.updateNeededReplications(block, -1, 0);
