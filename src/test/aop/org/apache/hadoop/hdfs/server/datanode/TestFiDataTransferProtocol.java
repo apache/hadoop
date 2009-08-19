@@ -24,6 +24,7 @@ import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.FiTestUtil;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.fi.DataTransferTestUtil.DoosAction;
+import org.apache.hadoop.fi.DataTransferTestUtil.OomAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.SleepAction;
 import org.apache.hadoop.fi.FiTestUtil.Action;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -31,9 +32,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.junit.Assert;
+import org.junit.Test;
 
 /** Test DataTransferProtocol with fault injection. */
-public class TestFiDataTransferProtocol extends junit.framework.TestCase {
+public class TestFiDataTransferProtocol {
   static final short REPLICATION = 3;
   static final long BLOCKSIZE = 1L * (1L << 20);
 
@@ -69,7 +73,7 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
       final FSDataInputStream in = dfs.open(p);
       final int b = in.read();
       in.close();
-      assertEquals(1, b);
+      Assert.assertEquals(1, b);
     }
     finally {
       cluster.shutdown();
@@ -79,7 +83,7 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
   private static void runSlowDatanodeTest(String methodName, SleepAction a
                   ) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
-    final DataTransferTest t = DataTransferTestUtil.initTest();
+    final DataTransferTest t = (DataTransferTest)DataTransferTestUtil.initTest();
     t.fiCallReceivePacket.set(a);
     t.fiReceiverOpWriteBlock.set(a);
     t.fiStatusRead.set(a);
@@ -90,7 +94,8 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
    * Pipeline setup with DN0 very slow but it won't lead to timeout.
    * Client finishes setup successfully.
    */
-  public void testPipelineFi06() throws IOException {
+  @Test
+  public void pipeline_Fi_06() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
     runSlowDatanodeTest(methodName, new SleepAction(methodName, 0, 3000));
   }
@@ -99,16 +104,45 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
    * Pipeline setup with DN1 very slow but it won't lead to timeout.
    * Client finishes setup successfully.
    */
-  public void testPipelineFi07() throws IOException {
+  @Test
+  public void pipeline_Fi_07() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
     runSlowDatanodeTest(methodName, new SleepAction(methodName, 1, 3000));
   }
 
+  /**
+   * Pipeline setup with DN2 very slow but it won't lead to timeout.
+   * Client finishes setup successfully.
+   */
+  @Test
+  public void pipeline_Fi_08() throws IOException {
+    final String methodName = FiTestUtil.getMethodName();
+    runSlowDatanodeTest(methodName, new SleepAction(methodName, 2, 3000));
+  }
+
   private static void runCallReceivePacketTest(String methodName,
-      Action<DataNode> a) throws IOException {
+      Action<DatanodeID> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
-    DataTransferTestUtil.initTest().fiCallReceivePacket.set(a);
+    ((DataTransferTest)DataTransferTestUtil.initTest()).fiCallReceivePacket.set(a);
     write1byte(methodName);
+  }
+
+  private static void runStatusReadTest(String methodName, Action<DatanodeID> a
+      ) throws IOException {
+    FiTestUtil.LOG.info("Running " + methodName + " ...");
+    ((DataTransferTest)DataTransferTestUtil.initTest()).fiStatusRead.set(a);
+    write1byte(methodName);
+  }
+
+  /**
+   * Pipeline setup, DN1 throws an OutOfMemoryException right after it
+   * received a setup ack from DN2.
+   * Client gets an IOException and determine DN1 bad.
+   */
+  @Test
+  public void pipeline_Fi_12() throws IOException {
+    final String methodName = FiTestUtil.getMethodName();
+    runStatusReadTest(methodName, new OomAction(methodName, 1));
   }
 
   /**
@@ -116,7 +150,8 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
    * when it writes the data to disk.
    * Client gets an IOException and determine DN0 bad.
    */
-  public void testPipelineFi14() throws IOException {
+  @Test
+  public void pipeline_Fi_14() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
     runCallReceivePacketTest(methodName, new DoosAction(methodName, 0));
   }
@@ -126,8 +161,20 @@ public class TestFiDataTransferProtocol extends junit.framework.TestCase {
    * when it writes the data to disk.
    * Client gets an IOException and determine DN1 bad.
    */
-  public void testPipelineFi15() throws IOException {
+  @Test
+  public void pipeline_Fi_15() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
     runCallReceivePacketTest(methodName, new DoosAction(methodName, 1));
+  }
+
+  /**
+   * Streaming: Write a packet, DN2 throws a DiskOutOfSpaceError
+   * when it writes the data to disk.
+   * Client gets an IOException and determine DN2 bad.
+   */
+  @Test
+  public void pipeline_Fi_16() throws IOException {
+    final String methodName = FiTestUtil.getMethodName();
+    runCallReceivePacketTest(methodName, new DoosAction(methodName, 2));
   }
 }

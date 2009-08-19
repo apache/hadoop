@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Receiver;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
@@ -59,7 +60,8 @@ public aspect DataTransferProtocolAspects {
     final DataNode d = dataxceiver.getDataNode();
     LOG.info("FI: statusRead " + status + ", datanode="
         + d.getDatanodeRegistration().getName());    
-    DataTransferTestUtil.getPipelineTest().fiStatusRead.run(d);
+    DataTransferTestUtil.getDataTransferTest().fiStatusRead.run(
+        d.getDatanodeRegistration());
   }
 
   pointcut receiverOpWriteBlock(DataXceiver dataxceiver):
@@ -68,7 +70,9 @@ public aspect DataTransferProtocolAspects {
   before(DataXceiver dataxceiver
       ) throws IOException: receiverOpWriteBlock(dataxceiver) {
     LOG.info("FI: receiverOpWriteBlock");
-    DataTransferTestUtil.getPipelineTest().fiReceiverOpWriteBlock.run(
-        dataxceiver.getDataNode());
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null)
+      dtTest.fiReceiverOpWriteBlock.run(
+          dataxceiver.getDataNode().getDatanodeRegistration());
   }
 }

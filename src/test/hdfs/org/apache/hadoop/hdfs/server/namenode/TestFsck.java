@@ -162,6 +162,7 @@ public class TestFsck extends TestCase {
     try {
       Configuration conf = new Configuration();
       conf.setLong("dfs.blockreport.intervalMsec", 10000L);
+      conf.setInt("dfs.datanode.directoryscan.interval", 1);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       String topDir = "/srcdat";
       fs = cluster.getFileSystem();

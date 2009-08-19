@@ -49,7 +49,7 @@ Trunk (unreleased changes)
     via szetszwo)
 
     HDFS-493. Change build.xml so that the fault-injected tests are executed
-    only by the run-test-*-faul-inject targets.  (Konstantin Boudnik via
+    only by the run-test-*-fault-inject targets.  (Konstantin Boudnik via
     szetszwo)
 
     HDFS-446. Improvements to Offline Image Viewer. (Jakob Homan via shv)
@@ -83,20 +83,28 @@ Trunk (unreleased changes)
 
     HDFS-524. Further DataTransferProtocol code refactoring.  (szetszwo)
 
-    HDFS-527. Remove/deprecate unnecessary DFSClient constructors.  (szetszwo)
-
     HDFS-529. Use BlockInfo instead of Block to avoid redundant block searches
     in BlockManager. (shv)
 
     HDFS-530. Refactor TestFileAppend* to remove code duplication.
     (Konstantin Boudnik via szetszwo)
 
-    HDFS-451. Add fault injection tests, Pipeline_Fi_06,07,14,15, for
-    DataTransferProtocol.  (szetszwo)
+    HDFS-451. Add fault injection tests for DataTransferProtocol.  (szetszwo)
 
     HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.
     (hairong)
     
+    HDFS-457. Do not shutdown datanode if some, but not all, volumes fail.
+    (Boris Shkolnik via szetszwo)
+
+    HDFS-548. TestFsck takes nearly 10 minutes to run. (hairong)
+
+    HDFS-539. Refactor fault injeciton pipeline test util for future reuse.
+    (Konstantin Boudnik via szetszwo)
+
+    HDFS-552. Change TestFiDataTransferProtocol to junit 4 and add a few new
+    tests.  (szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
@@ -109,7 +117,7 @@ Trunk (unreleased changes)
     HADOOP-6096. Fix Eclipse project and classpath files following project
     split. (tomwhite)
 
-    HDFS-195. Handle expired tokens when write pipeline is restablished.
+    HDFS-195. Handle expired tokens when write pipeline is reestablished.
     (Kan Zhang via rangadi)
 
     HDFS-181. Validate src path in FSNamesystem.getFileInfo(..).  (Todd
@@ -148,9 +156,6 @@ Trunk (unreleased changes)
     HDFS-119. Fix a bug in logSync(), which causes NameNode block forever.
     (Suresh Srinivas via shv)
 
-    HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
-    (Bill Zeller via szetszwo)
-
     HDFS-534. Include avro in ivy.  (szetszwo)
 
 Release 0.20.1 - Unreleased
@@ -163,3 +168,8 @@ Release 0.20.1 - Unreleased
 
     HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
     safe.  (Suresh Srinivas via szetszwo)
+
+    HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
+    (Bill Zeller via szetszwo)
+
+    HDFS-527. Remove/deprecate unnecessary DFSClient constructors.  (szetszwo)
