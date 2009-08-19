@@ -87,8 +87,7 @@ Trunk (unreleased changes)
     HDFS-530. Refactor TestFileAppend* to remove code duplication.
     (Konstantin Boudnik via szetszwo)
 
-    HDFS-451. Add fault injection tests, Pipeline_Fi_06,07,14,15, for
-    DataTransferProtocol.  (szetszwo)
+    HDFS-451. Add fault injection tests for DataTransferProtocol.  (szetszwo)
 
     HDFS-409. Add more access token tests.  (Kan Zhang via szetszwo)
 
@@ -101,6 +100,9 @@ Trunk (unreleased changes)
 
     HDFS-539. Refactor fault injeciton pipeline test util for future reuse.
     (Konstantin Boudnik via szetszwo)
+
+    HDFS-552. Change TestFiDataTransferProtocol to junit 4 and add a few new
+    tests.  (szetszwo)
 
   BUG FIXES
 
