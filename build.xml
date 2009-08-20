@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="Hadoop-Core" default="compile" 
+<project name="hadoop-core" default="compile" 
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->

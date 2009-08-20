@@ -26,7 +26,7 @@
 
   <!--Override point: allow for overridden in properties to be loaded-->
   <property file="build.properties" />
-
+  <property file="../build.properties" />
 
   <target name="ivy-init-properties" >
     <property name="ivy.dir" location="ivy" />
@@ -40,8 +40,11 @@
     <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
     <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
     <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
-    <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.pom" />
-    <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.jar" />
+    <property name="module" value="common" />
+    <property name="build.ivy.maven.pom"
+      location="${build.ivy.maven.dir}/hadoop-${module}-${hadoop.version}.pom" />
+    <property name="build.ivy.maven.jar"
+      location="${build.ivy.maven.dir}/hadoop-${module}-${hadoop.version}.jar" />
 
     <!--this is the naming policy for artifacts we want pulled down-->
     <property name="ivy.artifact.retrieve.pattern"
@@ -50,7 +53,7 @@
     <property name="ivy.publish.pattern"
       value="hadoop-[revision]-core.[ext]"/>
     <property name="hadoop.jar"
-      location="${build.dir}/hadoop-${hadoop.version}-core.jar" />
+      location="${build.dir}/hadoop-${hadoop.version}-${module}.jar" />    
 
     <!--preset to build down; puts us in control of version naming-->
     <presetdef name="delegate">
@@ -258,8 +261,9 @@ ${build.ivy.report.dir}
       </exec>
     </presetdef>
     <property name="issue" value="HADOOP-6194"/>
+    <property name="hadoop.svn.host" value="svn.apache.org" />
     <property name="hadoop-svn"
-        value="https://svn.apache.org/repos/asf/hadoop/common"/>
+      value="https://${hadoop.svn.host}/repos/asf/hadoop/common"/>
     <property name="trunk"
         value="${hadoop-svn}/trunk"/>
     <property name="branch"
@@ -267,7 +271,8 @@ ${build.ivy.report.dir}
     <property name="patches.dir" location="../outgoing"/>
     <mkdir dir="${patches.dir}" />
     <property name="patch.version" value="1" />
-    <property name="patch.file" location="${patches.dir}/${issue}-${patch.version}.patch" />
+    <property name="patch.file" 
+      location="${patches.dir}/${issue}-${patch.version}.patch" />
   </target>
 
   <target name="svn-merge" depends="svn-init"
