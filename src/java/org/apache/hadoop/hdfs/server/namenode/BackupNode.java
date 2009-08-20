@@ -130,8 +130,17 @@ public class BackupNode extends NameNode {
     runCheckpointDaemon(conf);
   }
 
+  /**
+   * {@inheritDoc} 
+   * <p/> 
+   * When shutting down, this service shuts down the checkpoint manager.
+   * If registered to a namenode, it reports that it is shutting down
+   * via {@link NameNode#errorReport(NamenodeRegistration, int, String)} 
+   *
+   * @throws IOException for any IO problem
+   */
   @Override // NameNode
-  public void stop() {
+  protected void innerClose() throws IOException {
     if(checkpointManager != null) checkpointManager.shouldRun = false;
     if(cpDaemon != null) cpDaemon.interrupt();
     if(namenode != null && getRegistration() != null) {
@@ -143,7 +152,17 @@ public class BackupNode extends NameNode {
       }
     }
     RPC.stopProxy(namenode); // stop the RPC threads
-    super.stop();
+    super.innerClose();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @return "BackupNode"
+   */
+  @Override
+  public String getServiceName() {
+    return "BackupNode";
   }
 
   /////////////////////////////////////////////////////

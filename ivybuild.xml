@@ -1,0 +1,353 @@
+<?xml version="1.0"?>
+<project name="hadoop-hdfs" default="published"
+  xmlns:ivy="antlib:org.apache.ivy.ant">
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+  <description>
+    This is a build file to publish Hadoop hdfs as ivy and maven artifacts.
+    It currently works alongside the original build.xml file, and exists
+    purely to hook up hadoop into the SmartFrog test/release process.
+  </description>
+
+  <!--Override point: allow for overridden in properties to be loaded-->
+  <property file="build.properties" />
+  <property file="../build.properties" />
+
+
+  <target name="ivy-init-properties" >
+    <property name="ivy.dir" location="ivy" />
+    <loadproperties srcfile="${ivy.dir}/libraries.properties" />
+    <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
+    <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
+    <property name="ivy.org" value="org.apache.hadoop"/>
+
+    <property name="build.dir" location="build" />
+    <property name="build.ivy.dir" location="${build.dir}/ivy" />
+    <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
+    <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
+    <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
+    <property name="module" value="hdfs" />
+    <property name="build.ivy.maven.pom" 
+      location="${build.ivy.maven.dir}/hadoop-${module}-${hadoop.version}.pom" />
+    <property name="build.ivy.maven.jar" 
+      location="${build.ivy.maven.dir}/hadoop-${module}-${hadoop.version}.jar" />
+
+    <!--this is the naming policy for artifacts we want pulled down-->
+    <property name="ivy.artifact.retrieve.pattern"
+      value="[conf]/[artifact]-[revision].[ext]"/>
+    <!--this is how artifacts that get built are named-->
+    <property name="ivy.publish.pattern"
+      value="hadoop-[revision]-core.[ext]"/>
+    <property name="hadoop.jar"
+      location="${build.dir}/hadoop-${hadoop.version}-${module}.jar" />
+
+    <!--preset to build down; puts us in control of version naming-->
+    <presetdef name="delegate">
+      <ant antfile="build.xml" inheritall="false" inheritrefs="false" >
+        <property name="version" value="${hadoop.version}"/>
+      </ant>
+    </presetdef>
+    <!--preset to build down; puts us in control of version naming-->
+    <presetdef name="delegate2">
+      <subant antfile="build.xml" buildpath="." inheritall="false" inheritrefs="false" >
+        <property name="version" value="${hadoop.version}"/>
+      </subant>
+    </presetdef>
+
+    <!--preset to copy with ant property expansion (and always overwrite)-->
+    <presetdef name="expandingcopy" >
+    <copy overwrite="true">
+      <filterchain>
+        <expandproperties/>
+      </filterchain>
+    </copy>
+  </presetdef>
+  </target>
+
+
+  <target name="ivy-init-dirs" depends="ivy-init-properties" >
+    <mkdir dir="${build.ivy.dir}" />
+    <mkdir dir="${build.ivy.lib.dir}" />
+    <mkdir dir="${build.ivy.report.dir}" />
+    <mkdir dir="${build.ivy.maven.dir}" />
+  </target>
+
+
+  <target name="clean"  depends="ivy-init-properties"
+    description="Clean the output directories" >
+    <delegate target="clean" />
+  </target>
+
+
+  <target name="jar"  depends="ivy-init-dirs"
+    description="build the JAR">
+    <delegate target="jar" />
+  </target>
+
+  <!--
+    This looks for Ivy on the classpath, and is used to skip reloading it if found.
+    It looks for an ivy-2.0 file.
+  -->
+  <target name="ivy-probe-antlib" >
+    <condition property="ivy.found">
+      <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+    </condition>
+  </target>
+
+
+  <!--
+  To avoid Ivy leaking things across big projects, always load Ivy in the same classloader.
+  Also note how we skip loading Ivy if it is already there, just to make sure all is well.
+  -->
+  <target name="ivy-init-antlib" depends="ivy-init-properties,ivy-init-dirs,ivy-probe-antlib" unless="ivy.found">
+
+    <typedef uri="antlib:org.apache.ivy.ant" onerror="fail"
+      loaderRef="ivyLoader">
+      <classpath>
+        <pathelement location="${ivy.jar}"/>
+      </classpath>
+    </typedef>
+    <fail >
+      <condition >
+        <not>
+          <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+        </not>
+      </condition>
+      You need Apache Ivy 2.0 or later from http://ant.apache.org/
+      It could not be loaded from ${ivy.jar}
+    </fail>
+  </target>
+
+
+  <target name="ivy-init" depends="ivy-init-antlib" >
+
+    <!--Configure Ivy by reading in the settings file
+        If anyone has already read in a settings file into this settings ID, it gets priority
+    -->
+    <ivy:configure settingsId="hadoop.ivy.settings" file="${ivysettings.xml}" override="false"/>
+
+  </target>
+
+  <target name="ivy-resolve" depends="ivy-init">
+    <ivy:resolve settingsRef="hadoop.ivy.settings"/>
+  </target>
+
+  <target name="ivy-retrieve" depends="ivy-resolve"
+    description="Retrieve all Ivy-managed artifacts for the different configurations">
+    <ivy:retrieve settingsRef="hadoop.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+  </target>
+
+  <target name="ivy-report" depends="ivy-resolve"
+    description="Generate">
+    <ivy:report todir="${build.ivy.report.dir}" settingsRef="hadoop.ivy.settings"/>
+    <echo>
+      Reports generated:
+${build.ivy.report.dir}
+    </echo>
+  </target>
+
+  <target name="assert-hadoop-jar-exists" depends="ivy-init">
+    <fail>
+      <condition >
+        <not>
+          <available file="${hadoop.jar}" />
+        </not>
+      </condition>
+      Not found: ${hadoop.jar}
+      Please run the target "jar" in the main build file
+    </fail>
+
+  </target>
+
+  <target name="ready-to-publish" depends="jar,assert-hadoop-jar-exists,ivy-resolve"/>
+
+  <target name="ivy-publish-local" depends="ready-to-publish">
+    <ivy:publish
+      settingsRef="hadoop.ivy.settings"
+      resolver="local"
+      pubrevision="${hadoop.version}"
+      overwrite="true"
+      artifactspattern="${build.dir}/${ivy.publish.pattern}" />
+  </target>
+
+
+  <!-- this is here for curiosity, to see how well the makepom task works
+  Answer: it depends whether you want transitive dependencies excluded or not
+  -->
+  <target name="makepom" depends="ivy-resolve">
+    <ivy:makepom settingsRef="hadoop.ivy.settings"
+      ivyfile="ivy.xml"
+      pomfile="${build.ivy.maven.dir}/generated.pom">
+      <ivy:mapping conf="default" scope="default"/>
+      <ivy:mapping conf="master"  scope="master"/>
+      <ivy:mapping conf="runtime" scope="runtime"/>
+    </ivy:makepom>
+  </target>
+
+
+  <target name="copy-jar-to-maven" depends="ready-to-publish">
+    <copy file="${hadoop.jar}"
+      tofile="${build.ivy.maven.jar}"/>
+    <checksum file="${build.ivy.maven.jar}" algorithm="md5"/>
+  </target>
+
+  <target name="copypom" depends="ivy-init-dirs">
+    <expandingcopy file="ivy/hadoop-core.pom"
+      tofile="${build.ivy.maven.pom}"/>
+    <checksum file="${build.ivy.maven.pom}" algorithm="md5"/>
+  </target>
+
+  <target name="maven-artifacts" depends="copy-jar-to-maven,copypom" />
+
+  <target name="published" depends="ivy-publish-local,maven-artifacts">
+
+  </target>
+
+  <target name="ready-to-test" depends="ivy-init-dirs">
+    <property name="test.data.dir" location="${build.dir}/test/data" />
+    <property name="test.reports.dir" location="${build.dir}/test/reports" />
+    <mkdir dir="${test.data.dir}" />
+    <mkdir dir="${test.reports.dir}" />
+  </target>
+
+  <target name="testjob.jar"  depends="ready-to-test">
+    <delegate2 target="jar-test"
+        failonerror="true">
+    </delegate2>
+  </target>
+
+
+  <target name="junit"  depends="ready-to-test,testjob.jar"
+      description="run the junit tests and generate an XML report">
+    <delegate2 target="test-core"
+        failonerror="false">
+      <property name="test.junit.output.format" value="xml" />
+      <property name="test.build.dir" value="${test.data.dir}"/>
+    </delegate2>
+  </target>
+
+  <!-- generate a junit report. 
+  tip: you can run this while junit is still going on-->
+  <target name="junitreport"  depends="ready-to-test">
+    <junitreport todir="${test.reports.dir}">
+      <fileset dir="${test.data.dir}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test.reports.dir}"/>
+    </junitreport>
+    <echo>reports in ${test.reports.dir}/index.html</echo>
+  </target>
+
+  <target name="tested" depends="junit,junitreport" />
+
+  <target name="svn-init">
+    <presetdef name="svn">
+      <exec executable="svn" failonerror="true">
+      </exec>
+    </presetdef>
+    <property name="issue" value="HDFS-326"/>
+    <property name="hadoop-svn"
+      value="https://svn.apache.org/repos/asf/hadoop/common"/>
+    <property name="trunk"
+      value="${hadoop-svn}/trunk"/>
+    <property name="branch"
+      value="${hadoop-svn}/branches/${issue}"/>
+    <property name="patches.dir" location="../outgoing"/>
+    <mkdir dir="${patches.dir}" />
+    <property name="patch.version" value="1" />
+    <property name="patch.file"
+      location="${patches.dir}/${issue}-${patch.version}.patch" />
+  </target>  
+
+  <target name="svn-merge" depends="svn-init"
+    description="merge in the trunk"  >
+    <svn>
+      <arg value="merge"/>
+      <arg value="${trunk}"/>
+      <arg value="--accept"/>
+      <arg value="postpone"/>
+    </svn>
+  </target>
+  
+  <target name="svn-diff" depends="svn-init"
+    description="diff the local code against the branch"  >
+    <svn>
+      <arg value="diff"/>
+    </svn>
+  </target>
+
+  <target name="svn-resolved" depends="svn-init"
+    description="mark the tree as resolved"  >
+    <svn>
+      <arg value="resolve"/>
+    </svn>
+  </target>
+
+  <!--
+  svn diff \
+  https://svn.apache.org/repos/asf/hadoop/core/trunk \
+  https://svn.apache.org/repos/asf/hadoop/core/branches/HADOOP-3628-2
+  -->
+  <target name="svn-diff-trunk" depends="svn-init"
+      description="diff against trunk"  >
+    <svn>
+      <arg value="diff" />
+      <arg value="${trunk}"/>
+      <arg value="${branch}"/>
+    </svn>
+  </target>
+
+
+  <target name="svn-create-changelist" depends="svn-init"
+      description="Create a changelist of everything we want in the big patch"  >
+    <property name="hdfs/server"
+        value="src/java/org/apache/hadoop/hdfs/server" />
+    <property name="test/hdfs"
+        value="src/test/hdfs/org/apache/hadoop/hdfs" />
+    <svn>
+      <arg value="changelist"/>
+      <arg value="${issue}"/>
+
+      <arg value="${hdfs/server}/datanode/DataNode.java" />
+      <arg value="${hdfs/server}/datanode/FSDataset.java" />
+      <arg value="${hdfs/server}/namenode/BackupNode.java" />
+      <arg value="${hdfs/server}/namenode/FSNamesystem.java" />
+      <arg value="${hdfs/server}/namenode/NameNode.java" />
+      <arg value="${hdfs/server}/namenode/PendingReplicationBlocks.java" />
+      <arg value="${test/hdfs}/server/namenode/TestReplicationPolicy.java" />
+    </svn>
+  </target>
+
+
+  <!--
+  
+  -->
+  <target name="svn-diff-src" depends="svn-init"
+      description="diff against trunk"  >
+    <echo> Writing to ${patch.file}</echo>
+    <svn output="${patch.file}" >
+      <arg value="diff" />
+      <arg value="${trunk}/src" />
+      <arg value="${branch}/src" />
+      <arg value="--changelist" />
+      <arg value="${issue}"/>
+    </svn>
+  </target>
+
+</project>

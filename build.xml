@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="Hadoop-Hdfs" default="compile" 
+<project name="hadoop-hdfs" default="compile" 
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -28,8 +28,8 @@
   <property name="Name" value="Hadoop-Hdfs"/>
   <property name="name" value="hadoop-hdfs"/>
   <property name="version" value="0.21.0-dev"/>
-  <property name="hadoop-core.version" value="0.21.0-dev"/>
-  <property name="hadoop-mr.version" value="0.21.0-dev"/>
+  <property name="hadoop-core.version" value="${version}"/>
+  <property name="hadoop-mr.version" value="${version}"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
   <property name="test.hdfswithmr.final.name" value="${name}-hdfswithmr-test-${version}"/>

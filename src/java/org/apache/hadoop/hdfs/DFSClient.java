@@ -144,6 +144,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private final FileSystem.Statistics stats;
   private int maxBlockAcquireFailures;
   private final int hdfsTimeout;    // timeout value for a DFS operation.
+  private IOException closedLocation; // where this filesystem was closed
 
   /**
    * The locking hierarchy is to first acquire lock on DFSClient object, followed by 
@@ -288,6 +289,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private void checkOpen() throws IOException {
     if (!clientRunning) {
       IOException result = new IOException("Filesystem closed");
+      if (closedLocation != null) {
+        //report where the client was closed
+        result.initCause(closedLocation);
+      }
       throw result;
     }
   }
@@ -307,6 +312,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   
       // close connections to the namenode
       RPC.stopProxy(rpcNamenode);
+      //note where the location was closed
+      closedLocation = new IOException("Filesystem closed");
+      LOG.debug("Closing filesystem", closedLocation);
     }
   }
 

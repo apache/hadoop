@@ -78,6 +78,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Service;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 
@@ -115,7 +116,7 @@ import org.apache.hadoop.util.StringUtils;
  * secondary namenodes or rebalancing processes to get partial namenode's
  * state, for example partial blocksMap etc.
  **********************************************************/
-public class NameNode implements ClientProtocol, DatanodeProtocol,
+public class NameNode extends Service implements ClientProtocol, DatanodeProtocol,
                                  NamenodeProtocol, FSConstants,
                                  RefreshAuthorizationPolicyProtocol {
   static{
@@ -369,7 +370,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /**
-   * Start NameNode.
+   * Create a NameNode.
    * <p>
    * The name-node can be started with one of the following startup options:
    * <ul> 
@@ -400,12 +401,90 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) throws IOException {
+    super(conf);
     this.role = role;
-    try {
-      initialize(conf);
-    } catch (IOException e) {
-      this.stop();
-      throw e;
+  }
+
+  /**
+   * The toString operator returns the super class name/id, and the state. This
+   * gives all services a slightly useful message in a debugger or test report
+   *
+   * @return a string representation of the object.
+   */
+  @Override
+  public String toString() {
+    return super.toString() 
+            + (httpAddress != null ? (" at " + httpAddress + " , ") : "")
+            + (server != null ? (" IPC " + server.getListenerAddress()) : "");
+  }
+
+  /////////////////////////////////////////////////////
+  // Service Lifecycle and other methods
+  /////////////////////////////////////////////////////
+  
+  /**
+   * {@inheritDoc}
+   *
+   * @return "NameNode"
+   */
+  @Override
+  public String getServiceName() {
+    return "NameNode";
+  }
+  
+  /**
+   * This method does all the startup. It is invoked from {@link #start()} when
+   * needed.
+   *
+   * This implementation delegates all the work to the (overridable)
+   * {@link #initialize(Configuration)} method, then calls
+   * {@link #setServiceState(ServiceState)} to mark the service as live.
+   * Any subclasses that do not consider themsevles to be live once 
+   * any subclassed initialize method has returned should override the method
+   * {@link #goLiveAtTheEndOfStart()} to change that behavior.
+   * @throws IOException for any problem.
+   */
+  @Override
+  protected void innerStart() throws IOException {
+    initialize(getConf());
+    if(goLiveAtTheEndOfStart()) {
+      setServiceState(ServiceState.LIVE);
+    }
+  }
+
+  /**
+   * Override point: should the NameNode enter the live state at the end of
+   * the {@link #innerStart()} operation?
+   * @return true if the service should enter the live state at this point,
+   * false to leave the service in its current state.
+   */
+  protected boolean goLiveAtTheEndOfStart() {
+    return true;
+  }
+
+  /**
+   * {@inheritDoc}.
+   *
+   * This implementation checks for the name system being non-null and live
+   *
+   * @param status status response to build up
+   * @throws IOException       for IO failure; this will be caught and included
+   * in the status message
+   */
+  @Override
+  public void innerPing(ServiceStatus status) throws IOException {
+    if (namesystem == null) {
+      status.addThrowable(new LivenessException("No name system"));
+    } else {
+      try {
+        namesystem.ping();
+      } catch (IOException e) {
+        status.addThrowable(e);
+      }
+    }
+    if (httpServer == null || !httpServer.isAlive()) {
+      status.addThrowable(
+              new LivenessException("NameNode HttpServer is not running"));
     }
   }
 
@@ -415,15 +494,33 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   public void join() {
     try {
-      this.server.join();
+      if (server != null) {
+        server.join();
+      }
     } catch (InterruptedException ie) {
     }
   }
 
   /**
    * Stop all NameNode threads and wait for all to finish.
+   * <p/>
+   * Retained for backwards compatibility.
    */
-  public void stop() {
+  public final void stop() {
+    closeQuietly();
+  }
+
+  /**
+   * {@inheritDoc} 
+   * <p/>
+   * To shut down, this service stops all NameNode threads and
+   * waits for them to finish. It also stops the metrics.
+   * @throws IOException for any IO problem
+   */
+  @Override
+  protected synchronized void innerClose() throws IOException {
+    LOG.info("Closing " + getServiceName());
+
     if (stopRequested)
       return;
     stopRequested = true;
@@ -441,14 +538,23 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
-    if(namesystem != null) namesystem.close();
-    if(emptier != null) emptier.interrupt();
-    if(server != null) server.stop();
+    if(namesystem != null) {
+      namesystem.close();
+    }
+    if(emptier != null) {
+      emptier.interrupt();
+      emptier = null;
+    }
+    if(server != null) {
+      server.stop();
+      server = null;
+    }
     if (myMetrics != null) {
       myMetrics.shutdown();
     }
     if (namesystem != null) {
       namesystem.shutdown();
+      namesystem = null;
     }
   }
   
@@ -1160,9 +1266,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
         return null; // avoid javac warning
       case BACKUP:
       case CHECKPOINT:
-        return new BackupNode(conf, startOpt.toNodeRole());
+        BackupNode backupNode = new BackupNode(conf, startOpt.toNodeRole());
+        startService(backupNode);
+        return backupNode;
       default:
-        return new NameNode(conf);
+        NameNode nameNode = new NameNode(conf);
+        startService(nameNode);
+        return nameNode;
     }
   }
     
