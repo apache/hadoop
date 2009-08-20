@@ -214,6 +214,9 @@ Release 0.20.1 - Unreleased
     (Bill Zeller via szetszwo)
 
     HDFS-527. Remove unnecessary DFSClient constructors.  (szetszwo)
+
+    MAPREDUCE-832. Reduce number of warning messages printed when 
+    deprecated memory variables are used. (Rahul Kumar Singh via yhemanth)
  
 Release 0.20.0 - 2009-04-15
 
