@@ -497,6 +497,9 @@ Trunk (unreleased changes)
     for testing.  (Kan Zhang via szetszwo)
 
     HADOOP-6182. Fix ReleaseAudit warnings (Giridharan Kesavan and Lee Tucker via gkesavan)
+
+    HADOOP-6173. Change src/native/packageNativeHadoop.sh to package all
+    native library files.  (Hong Tang via szetszwo)
  
   OPTIMIZATIONS
 

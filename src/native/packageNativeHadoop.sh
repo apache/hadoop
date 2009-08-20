@@ -42,7 +42,7 @@ then
     fi
     echo "Copying libraries in $BASE_NATIVE_LIB_DIR/$platform to $DIST_LIB_DIR/$platform/"
     cd $BASE_NATIVE_LIB_DIR/$platform/
-    $TAR *hadoop* | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
+    $TAR . | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
   done
 fi
 
@@ -58,7 +58,7 @@ then
     fi
     echo "Copying libraries in $BUILD_NATIVE_DIR/$platform/lib to $DIST_LIB_DIR/$platform/"
     cd $BUILD_NATIVE_DIR/$platform/lib
-    $TAR *hadoop* | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
+    $TAR . | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
   done  
 fi
 
