@@ -405,9 +405,8 @@ public class TestNodeRefresh extends TestCase {
     JobID id = job.getID();
     
     // wait for 50%
-    while (job.mapProgress() < 0.5f) {
-      UtilsForTests.waitFor(100);
-    }
+    UtilsForTests.waitForJobHalfDone(job);
+
     
     // change the exclude-hosts file to include one host
     FileOutputStream out = new FileOutputStream(file);

@@ -51,7 +51,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -86,6 +86,8 @@ import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
+import org.apache.hadoop.util.Service;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -97,7 +99,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  * for Task assignments and reporting results.
  *
  *******************************************************/
-public class TaskTracker 
+public class TaskTracker extends Service
              implements MRConstants, TaskUmbilicalProtocol, Runnable {
   /**
    * @deprecated
@@ -113,7 +115,7 @@ public class TaskTracker
     "mapred.tasktracker.pmem.reserved";
 
   static final long WAIT_FOR_DONE = 3 * 1000;
-  private int httpPort;
+  int httpPort;
 
   static enum State {NORMAL, STALE, INTERRUPTED, DENIED}
 
@@ -135,7 +137,10 @@ public class TaskTracker
   public static final Log ClientTraceLog =
     LogFactory.getLog(TaskTracker.class.getName() + ".clienttrace");
 
-  volatile boolean running = true;
+  /**
+   * Flag used to synchronize running state across threads.
+   */
+  private volatile boolean running = false;
 
   private LocalDirAllocator localDirAllocator;
   String taskTrackerName;
@@ -168,7 +173,7 @@ public class TaskTracker
   // The filesystem where job files are stored
   FileSystem systemFS = null;
   
-  private final HttpServer server;
+  private HttpServer server;
     
   volatile boolean shuttingDown = false;
     
@@ -330,33 +335,7 @@ public class TaskTracker
   /**
    * A daemon-thread that pulls tips off the list of things to cleanup.
    */
-  private Thread taskCleanupThread = 
-    new Thread(new Runnable() {
-        public void run() {
-          while (true) {
-            try {
-              TaskTrackerAction action = tasksToCleanup.take();
-              if (action instanceof KillJobAction) {
-                purgeJob((KillJobAction) action);
-              } else if (action instanceof KillTaskAction) {
-                TaskInProgress tip;
-                KillTaskAction killAction = (KillTaskAction) action;
-                synchronized (TaskTracker.this) {
-                  tip = tasks.get(killAction.getTaskID());
-                }
-                LOG.info("Received KillTaskAction for task: " + 
-                         killAction.getTaskID());
-                purgeTask(tip, false);
-              } else {
-                LOG.error("Non-delete action given to cleanup thread: "
-                          + action);
-              }
-            } catch (Throwable except) {
-              LOG.warn(StringUtils.stringifyException(except));
-            }
-          }
-        }
-      }, "taskCleanup");
+  private TaskCleanupThread taskCleanupThread;
 
   TaskController getTaskController() {
     return taskController;
@@ -487,6 +466,17 @@ public class TaskTracker
    * close().
    */
   synchronized void initialize() throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Initializing Task Tracker: " + this);
+    }
+    //check that the server is not already live.                        
+
+    //allow this operation in only two service states: started and live 
+    verifyServiceState(ServiceState.STARTED, ServiceState.LIVE);
+
+    //flip the running switch for our inner threads                     
+    running = true;
+
     localFs = FileSystem.getLocal(fConf);
     // use configured nameserver & interface to get local hostname
     if (fConf.get("slave.host.name") != null) {
@@ -570,10 +560,17 @@ public class TaskTracker
     DistributedCache.purgeCache(this.fConf);
     cleanupStorage();
 
+    //mark as just started; this is used in heartbeats
+    this.justStarted = true;
+    int connectTimeout = fConf
+            .getInt("mapred.task.tracker.connect.timeout", 60000);
     this.jobClient = (InterTrackerProtocol) 
       RPC.waitForProxy(InterTrackerProtocol.class,
                        InterTrackerProtocol.versionID, 
-                       jobTrackAddr, this.fConf);
+                       jobTrackAddr, this.fConf, connectTimeout);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connected to JobTracker at " + jobTrackAddr);
+    }
     this.justInited = true;
     this.running = true;    
     // start the thread that will fetch map task completion events
@@ -625,7 +622,9 @@ public class TaskTracker
    * startup, to remove any leftovers from previous run.
    */
   public void cleanupStorage() throws IOException {
-    this.fConf.deleteLocalFiles();
+    if (fConf != null) {
+      fConf.deleteLocalFiles();
+    }
   }
 
   // Object on wait which MapEventsFetcherThread is going to wait.
@@ -1141,25 +1140,73 @@ public class TaskTracker
     }
   }
     
-  public synchronized void shutdown() throws IOException {
-    shuttingDown = true;
-    close();
-    if (this.server != null) {
-      try {
-        LOG.info("Shutting down StatusHttpServer");
-        this.server.stop();
-      } catch (Exception e) {
-        LOG.warn("Exception shutting down TaskTracker", e);
-      }
+  /////////////////////////////////////////////////////
+  // Service Lifecycle
+  /////////////////////////////////////////////////////
+
+  /**
+   * {@inheritDoc}
+   *
+   * @param status a status that can be updated with problems
+   * @throws IOException       for any problem
+   */
+  @Override
+  public void innerPing(ServiceStatus status) throws IOException {
+    if (server == null || !server.isAlive()) {
+      status.addThrowable(
+              new IOException("TaskTracker HttpServer is not running on port "
+                      + httpPort));
+    }
+    if (taskReportServer == null) {
+      status.addThrowable(
+              new IOException("TaskTracker Report Server is not running on "
+              + taskReportAddress));
     }
   }
+
+  /**
+   * A shutdown request triggers termination
+   * @throws IOException when errors happen during termination
+   */
+  public synchronized void shutdown() throws IOException {
+    close();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @throws IOException exceptions which will be logged
+   */
+  @Override
+  protected void innerClose() throws IOException {
+    synchronized (this) {
+      shuttingDown = true;
+      closeTaskTracker();
+      if (this.server != null) {
+        try {
+          LOG.info("Shutting down StatusHttpServer");
+          this.server.stop();
+      } catch (Exception e) {
+        LOG.warn("Exception shutting down TaskTracker", e);
+        }
+      }
+      stopCleanupThreads();
+    }
+  }
+
   /**
    * Close down the TaskTracker and all its components.  We must also shutdown
    * any running tasks or threads, and cleanup disk space.  A new TaskTracker
    * within the same process space might be restarted, so everything must be
    * clean.
+   * @throws IOException when errors happen during shutdown
    */
-  public synchronized void close() throws IOException {
+  public synchronized void closeTaskTracker() throws IOException {
+    if (!running) {
+      //this operation is a no-op when not already running
+      return;
+    }
+    running = false;
     //
     // Kill running tasks.  Do this in a 2nd vector, called 'tasksToClose',
     // because calling jobHasFinished() may result in an edit to 'tasks'.
@@ -1177,13 +1224,21 @@ public class TaskTracker
     cleanupStorage();
         
     // Shutdown the fetcher thread
-    this.mapEventsFetcher.interrupt();
-    
+    if (mapEventsFetcher != null) {
+      mapEventsFetcher.interrupt();
+    }    
     //stop the launchers
-    this.mapLauncher.interrupt();
-    this.reduceLauncher.interrupt();
-    
-    jvmManager.stop();
+    if (mapLauncher != null) {
+      mapLauncher.cleanTaskQueue();
+      mapLauncher.interrupt();
+    }
+    if (reduceLauncher != null) {
+      reduceLauncher.cleanTaskQueue();
+      reduceLauncher.interrupt();
+    }
+    if (jvmManager != null) {
+      jvmManager.stop();
+    }
     
     // shutdown RPC connections
     RPC.stopProxy(jobClient);
@@ -1191,7 +1246,9 @@ public class TaskTracker
     // wait for the fetcher thread to exit
     for (boolean done = false; !done; ) {
       try {
-        this.mapEventsFetcher.join();
+        if (mapEventsFetcher != null) {
+          mapEventsFetcher.join();
+        }
         done = true;
       } catch (InterruptedException e) {
       }
@@ -1221,8 +1278,47 @@ public class TaskTracker
 
   /**
    * Start with the local machine name, and the default JobTracker
+   * Create and start a task tracker.                                   
+   * Subclasses must not subclass this constructor, as it may           
+   * call their initialisation/startup methods before the construction
+   * is complete         
+   * It is here for backwards compatibility.                            
+   * @param conf configuration                                          
+   * @throws IOException for problems on startup                        
    */
   public TaskTracker(JobConf conf) throws IOException {
+    this(conf, true);
+  }
+
+  /**
+   * Subclasses should extend this constructor and pass start=false to the    
+   * superclass to avoid race conditions in constructors and threads.         
+   * @param conf configuration                                                
+   * @param start flag to set to true to start the daemon. Subclasses should
+   * avoid this, starting themselves outside the constructor, to avoid odd
+   * thread-related race conditions. 
+   * @throws IOException for problems on startup                              
+   */
+  protected TaskTracker(JobConf conf, boolean start) throws IOException {
+    super(conf);
+    fConf = conf;
+    //for backwards compatibility, the task tracker starts up unless told not 
+    //to. Subclasses should be very cautious about having their superclass    
+    //do that as subclassed methods can be invoked before the class is fully  
+    //configured                                                              
+    if (start) {
+      startService(this);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @throws IOException for any problem.
+   */
+  @Override
+  protected synchronized void innerStart() throws IOException {
+    JobConf conf = fConf;
     fConf = conf;
     maxMapSlots = conf.getInt("mapred.tasktracker.map.tasks.maximum", 2);
     maxReduceSlots = conf.getInt("mapred.tasktracker.reduce.tasks.maximum", 2);
@@ -1264,11 +1360,22 @@ public class TaskTracker
   }
   
   private void startCleanupThreads() throws IOException {
+    taskCleanupThread = new TaskCleanupThread();
     taskCleanupThread.setDaemon(true);
     taskCleanupThread.start();
     directoryCleanupThread = new CleanupQueue();
   }
-  
+
+  /**
+   * Tell the cleanup threads that they should end themselves   
+   */
+  private void stopCleanupThreads() {
+    if (taskCleanupThread != null) {
+      taskCleanupThread.terminate();
+      taskCleanupThread = null;
+    }
+  }
+
   /**
    * The connection to the JobTracker, used by the TaskRunner 
    * for locating remote files.
@@ -1316,6 +1423,7 @@ public class TaskTracker
    */
   State offerService() throws Exception {
     long lastHeartbeat = 0;
+    boolean restartingService = true;
 
     while (running && !shuttingDown) {
       try {
@@ -1331,6 +1439,7 @@ public class TaskTracker
         // 1. Verify the buildVersion
         // 2. Get the system directory & filesystem
         if(justInited) {
+          LOG.debug("Checking build version with JobTracker");
           String jobTrackerBV = jobClient.getBuildVersion();
           if(!VersionInfo.getBuildVersion().equals(jobTrackerBV)) {
             String msg = "Shutting down. Incompatible buildVersion." +
@@ -1340,7 +1449,7 @@ public class TaskTracker
             try {
               jobClient.reportTaskTrackerError(taskTrackerName, null, msg);
             } catch(Exception e ) {
-              LOG.info("Problem reporting to jobtracker: " + e);
+              LOG.info("Problem reporting to jobtracker: " + e, e);
             }
             return State.DENIED;
           }
@@ -1351,6 +1460,9 @@ public class TaskTracker
           }
           systemDirectory = new Path(dir);
           systemFS = systemDirectory.getFileSystem(fConf);
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("System directory is " + systemDirectory);
+          }
         }
         
         // Send the heartbeat and process the jobtracker's directives
@@ -1401,6 +1513,15 @@ public class TaskTracker
         }
         if (reinitTaskTracker(actions)) {
           return State.STALE;
+        }
+            
+        //At this point the job tracker is present and compatible,
+        //so the service is coming up.
+        //It is time to declare it as such
+        if (restartingService) {
+          //declare the service as live.
+          enterLiveState();
+          restartingService = false;
         }
             
         // resetting heartbeat interval from the response.
@@ -2004,7 +2125,7 @@ public class TaskTracker
     } catch (Throwable e) {
       String msg = ("Error initializing " + tip.getTask().getTaskID() + 
                     ":\n" + StringUtils.stringifyException(e));
-      LOG.warn(msg);
+      LOG.warn(msg, e);
       tip.reportDiagnosticInfo(msg);
       try {
         tip.kill(true);
@@ -2064,6 +2185,8 @@ public class TaskTracker
               if (!shuttingDown) {
                 LOG.info("Lost connection to JobTracker [" +
                          jobTrackAddr + "].  Retrying...", ex);
+                //enter the started state; we are no longer live
+                enterState(ServiceState.UNDEFINED, ServiceState.STARTED);
                 try {
                   Thread.sleep(5000);
                 } catch (InterruptedException ie) {
@@ -2072,7 +2195,7 @@ public class TaskTracker
             }
           }
         } finally {
-          close();
+          closeTaskTracker();
         }
         if (shuttingDown) { return; }
         LOG.warn("Reinitializing local state");
@@ -3024,7 +3147,17 @@ public class TaskTracker
   String getName() {
     return taskTrackerName;
   }
-    
+
+  /**
+   * {@inheritDoc}
+   *
+   * @return the name of this service
+   */
+  @Override
+  public String getServiceName() {
+    return taskTrackerName != null ? taskTrackerName : "Task Tracker";
+  }
+
   private synchronized List<TaskStatus> cloneAndResetRunningTaskStatuses(
                                           boolean sendCounters) {
     List<TaskStatus> result = new ArrayList<TaskStatus>(runningTasks.size());
@@ -3141,7 +3274,9 @@ public class TaskTracker
       // enable the server to track time spent waiting on locks
       ReflectionUtils.setContentionTracing
         (conf.getBoolean("tasktracker.contention.tracking", false));
-      new TaskTracker(conf).run();
+      TaskTracker tracker = new TaskTracker(conf, false);
+      Service.startService(tracker);
+      tracker.run();
     } catch (Throwable e) {
       LOG.error("Can not start task tracker because "+
                 StringUtils.stringifyException(e));
@@ -3460,7 +3595,7 @@ public class TaskTracker
       try {
         purgeTask(tip, wasFailure); // Marking it as failed/killed.
       } catch (IOException ioe) {
-        LOG.warn("Couldn't purge the task of " + tid + ". Error : " + ioe);
+        LOG.warn("Couldn't purge the task of " + tid + ". Error : " + ioe, ioe);
       }
     }
   }
@@ -3483,5 +3618,67 @@ public class TaskTracker
   private void startHealthMonitor(Configuration conf) {
     healthChecker = new NodeHealthCheckerService(conf);
     healthChecker.start();
+  }
+
+
+  /**
+   * Thread that handles cleanup
+   */
+  private class TaskCleanupThread extends Daemon {
+
+    /**
+     * flag to halt work
+     */
+    private volatile boolean live = true;
+
+
+    /**
+     * Construct a daemon thread.
+     */
+    private TaskCleanupThread() {
+      setName("Task Tracker Task Cleanup Thread");
+    }
+
+    /**
+     * End the daemon. This is done by setting the live flag to false and
+     * interrupting ourselves.
+     */
+    public void terminate() {
+      live = false;
+      interrupt();
+    }
+
+    /**
+     * process task kill actions until told to stop being live.
+     */
+    public void run() {
+      LOG.debug("Task cleanup thread started");
+      while (live) {
+        try {
+          TaskTrackerAction action = tasksToCleanup.take();
+          if (action instanceof KillJobAction) {
+            purgeJob((KillJobAction) action);
+          } else if (action instanceof KillTaskAction) {
+            TaskInProgress tip;
+            KillTaskAction killAction = (KillTaskAction) action;
+            synchronized (TaskTracker.this) {
+              tip = tasks.get(killAction.getTaskID());
+            }
+            LOG.info("Received KillTaskAction for task: " +
+                    killAction.getTaskID());
+            purgeTask(tip, false);
+          } else {
+            LOG.error("Non-delete action given to cleanup thread: "
+                    + action);
+          }
+        } catch (InterruptedException except) {
+          //interrupted. this may have reset the live flag                
+        } catch (Throwable except) {
+          LOG.warn("Exception in Cleanup thread: " + except,
+                  except);
+        }
+      }
+      LOG.debug("Task cleanup thread ending");
+    }
   }
 }

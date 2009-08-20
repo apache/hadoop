@@ -100,7 +100,7 @@ public class TestMapReduceLocal extends TestCase {
       private float last = 0.0f;
       private boolean progressCalled = false;
       @Override
-      public float getProgress() {
+      public float getProgress() throws IOException {
         progressCalled = true;
         final float ret = super.getProgress();
         assertTrue("getProgress decreased", ret >= last);

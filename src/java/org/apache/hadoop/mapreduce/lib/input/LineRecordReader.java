@@ -26,8 +26,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -48,10 +50,13 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private long pos;
   private long end;
   private LineReader in;
+  private FSDataInputStream fileIn;
   private int maxLineLength;
   private LongWritable key = null;
   private Text value = null;
   private Counter inputByteCounter;
+  private CompressionCodec codec;
+  private Decompressor decompressor;
 
   public void initialize(InputSplit genericSplit,
                          TaskAttemptContext context) throws IOException {
@@ -65,14 +70,14 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     end = start + split.getLength();
     final Path file = split.getPath();
     compressionCodecs = new CompressionCodecFactory(job);
-    final CompressionCodec codec = compressionCodecs.getCodec(file);
+    codec = compressionCodecs.getCodec(file);
 
     // open the file and seek to the start of the split
     FileSystem fs = file.getFileSystem(job);
-    FSDataInputStream fileIn = fs.open(split.getPath());
-    if (codec != null) {
-      in = new LineReader(codec.createInputStream(fileIn), job);
-      end = Long.MAX_VALUE;
+    fileIn = fs.open(split.getPath());
+    if (isCompressedInput()) {
+      decompressor = CodecPool.getDecompressor(codec);
+      in = new LineReader(codec.createInputStream(fileIn, decompressor), job);
     } else {
       fileIn.seek(start);
       in = new LineReader(fileIn, job);
@@ -81,12 +86,27 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     // because we always (except the last split) read one extra line in
     // next() method.
     if (start != 0) {
-      start += in.readLine(new Text(), 0, (int) Math.min(
-          (long) Integer.MAX_VALUE, end - start));
+      start += in.readLine(new Text(), 0, maxBytesToConsume());
     }
     this.pos = start;
   }
   
+  private boolean isCompressedInput() { return (codec != null); }
+  
+  private int maxBytesToConsume() {
+    return (isCompressedInput()) ? Integer.MAX_VALUE
+                           : (int) Math.min(Integer.MAX_VALUE, (end - start));
+  }
+  
+  private long getFilePosition() throws IOException {
+    long retVal;
+    if (isCompressedInput()) {
+      retVal = fileIn.getPos();
+    } else {
+      retVal = pos;
+    }
+    return retVal;
+  }
   public boolean nextKeyValue() throws IOException {
     if (key == null) {
       key = new LongWritable();
@@ -98,10 +118,9 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     int newSize = 0;
     // We always read one extra line, which lies outside the upper
     // split limit i.e. (end - 1)
-    while (pos <= end) {
+    while (getFilePosition() <= end) {
       newSize = in.readLine(value, maxLineLength,
-                            Math.max((int)Math.min(Integer.MAX_VALUE, end-pos),
-                                     maxLineLength));
+                            Math.max(maxBytesToConsume(), maxLineLength));
       if (newSize == 0) {
         break;
       }
@@ -137,17 +156,23 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   /**
    * Get the progress within the split
    */
-  public float getProgress() {
+  public float getProgress() throws IOException {
     if (start == end) {
       return 0.0f;
     } else {
-      return Math.min(1.0f, (pos - start) / (float)(end - start));
+      return Math.min(1.0f, (getFilePosition() - start) / (float)(end - start));
     }
   }
   
   public synchronized void close() throws IOException {
-    if (in != null) {
-      in.close(); 
+    try {
+      if (in != null) {
+        in.close();
+      }
+    } finally {
+      if (decompressor != null) {
+        CodecPool.returnDecompressor(decompressor);
+      }
     }
   }
 }

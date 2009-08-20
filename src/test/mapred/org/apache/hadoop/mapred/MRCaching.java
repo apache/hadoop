@@ -33,7 +33,8 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.filecache.*;
+import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+
 import java.net.URI;
 
 public class MRCaching {

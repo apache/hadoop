@@ -118,7 +118,7 @@ public class KeyValueLineRecordReader extends RecordReader<Text, Text> {
     return value;
   }
 
-  public float getProgress() {
+  public float getProgress() throws IOException {
     return lineRecordReader.getProgress();
   }
   

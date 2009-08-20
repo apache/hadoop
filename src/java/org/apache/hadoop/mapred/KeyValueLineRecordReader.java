@@ -90,7 +90,7 @@ public class KeyValueLineRecordReader implements RecordReader<Text, Text> {
     return true;
   }
   
-  public float getProgress() {
+  public float getProgress() throws IOException {
     return lineRecordReader.getProgress();
   }
   

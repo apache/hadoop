@@ -47,12 +47,16 @@ public class FakeObjectUtilities {
     int totalSlots;
     private String[] trackers;
 
+    /**
+     * This job tracker starts itself in its constructor
+     */
     FakeJobTracker(JobConf conf, Clock clock, String[] tts) throws IOException, 
     InterruptedException {
       super(conf, clock);
       this.trackers = tts;
       //initialize max{Map/Reduce} task capacities to twice the clustersize
       totalSlots = trackers.length * 4;
+      startService(this);
     }
     @Override
     public ClusterStatus getClusterStatus(boolean detailed) {

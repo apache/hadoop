@@ -20,6 +20,9 @@ Trunk (unreleased changes)
     MAPREDUCE-817. Add a cache for retired jobs with minimal job info and 
     provide a way to access history file url. (sharad)
 
+    MAPREDUCE-711. Moved Distributed Cache from Common to Map/Reduce
+    project. (Vinod Kumar Vavilapalli via yhemanth)
+
   NEW FEATURES
 
     MAPREDUCE-706. Support for FIFO pools in the fair scheduler.
@@ -400,3 +403,9 @@ Trunk (unreleased changes)
     MAPREDUCE-877. Added avro as a dependency to contrib ivy settings.
     (Tsz Wo (Nicholas) Sze via yhemanth)
 
+    MAPREDUCE-852. In build.xml, remove the Main-Class, which is incorrectly
+    set in tools, and rename the target "tools-jar" to "tools".  (szetszwo)
+
+    MAPREDUCE-773. Sends progress reports for compressed gzip inputs in maps.
+    Fixes a native direct buffer leak in LineRecordReader classes.
+    (Hong Tang and ddas)

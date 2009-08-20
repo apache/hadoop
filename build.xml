@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="Hadoop" default="compile" 
+<project name="hadoop-mapred" default="compile" 
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -440,14 +440,10 @@
     </jar>
   </target>
 
-  <target name="tools-jar" depends="jar, compile-tools" 
+  <target name="tools" depends="jar, compile-tools" 
           description="Make the Hadoop tools jar.">
     <jar jarfile="${build.dir}/${tools.final.name}.jar"
          basedir="${build.tools}">
-      <manifest>
-        <attribute name="Main-Class" 
-                   value="org/apache/hadoop/examples/ExampleDriver"/>
-      </manifest>
     </jar>
   </target>
 
@@ -675,7 +671,7 @@
     </available>  	
   </target>
 
- <target name="all-jars" depends="tools-jar,examples,jar-test">
+ <target name="all-jars" depends="tools,examples,jar-test">
    <subant target="jar">
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
@@ -924,7 +920,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, api-report, examples, tools-jar, jar-test, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, docs, api-report, examples, tools, jar-test, package-librecordio"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1024,7 +1020,7 @@
     </macro_tar>
   </target>
 
-  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, package-librecordio" 
+  <target name="bin-package" depends="compile, jar, examples, tools, jar-test, package-librecordio" 
 		description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
