@@ -19,7 +19,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -99,7 +101,9 @@ public class MiniMRCluster {
         jc.set("mapred.local.dir",f.getAbsolutePath());
         jc.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
-        tracker = JobTracker.startTracker(jc);
+        String id = 
+          new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date());
+        tracker = JobTracker.startTracker(jc, id);
         tracker.offerService();
       } catch (Throwable e) {
         LOG.error("Job tracker crashed", e);
@@ -312,6 +316,13 @@ public class MiniMRCluster {
     if(conf == null) {
       conf = new JobConf();
     }
+    return configureJobConf(conf, namenode, jobTrackerPort, jobTrackerInfoPort, 
+                            ugi);
+  }
+  
+  static JobConf configureJobConf(JobConf conf, String namenode, 
+                                  int jobTrackerPort, int jobTrackerInfoPort, 
+                                  UnixUserGroupInformation ugi) {
     JobConf result = new JobConf(conf);
     FileSystem.setDefaultUri(result, namenode);
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);

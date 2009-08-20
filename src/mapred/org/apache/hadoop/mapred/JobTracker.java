@@ -169,10 +169,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public static JobTracker startTracker(JobConf conf
                                         ) throws IOException,
                                                  InterruptedException {
+    return startTracker(conf, generateNewIdentifier());
+  }
+  
+  public static JobTracker startTracker(JobConf conf, String identifier) 
+  throws IOException, InterruptedException {
     JobTracker result = null;
     while (true) {
       try {
-        result = new JobTracker(conf);
+        result = new JobTracker(conf, identifier);
         result.taskScheduler.setTaskTrackerManager(result);
         break;
       } catch (VersionMismatch e) {
@@ -1522,6 +1527,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Start the JobTracker process, listen on the indicated port
    */
   JobTracker(JobConf conf) throws IOException, InterruptedException {
+    this(conf, generateNewIdentifier());
+  }
+  
+  JobTracker(JobConf conf, String identifier) 
+  throws IOException, InterruptedException {   
     //
     // Grab some static constants
     //
@@ -1610,7 +1620,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     infoServer.addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
     infoServer.start();
     
-    trackerIdentifier = getDateFormat().format(new Date());
+    this.trackerIdentifier = identifier;
 
     // Initialize instrumentation
     JobTrackerInstrumentation tmp;
@@ -1719,6 +1729,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return new SimpleDateFormat("yyyyMMddHHmm");
   }
 
+  private static String generateNewIdentifier() {
+    return getDateFormat().format(new Date());
+  }
+  
   static boolean validateIdentifier(String id) {
     try {
       // the jobtracker id should be 'date' parseable

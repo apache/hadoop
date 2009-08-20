@@ -218,6 +218,9 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-832. Reduce number of warning messages printed when 
     deprecated memory variables are used. (Rahul Kumar Singh via yhemanth)
  
+    MAPREDUCE-745. Fixes a testcase problem to do with generation of JobTracker
+    IDs. (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
