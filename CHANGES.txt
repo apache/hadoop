@@ -497,6 +497,9 @@ Trunk (unreleased changes)
     for testing.  (Kan Zhang via szetszwo)
 
     HADOOP-6182. Fix ReleaseAudit warnings (Giridharan Kesavan and Lee Tucker via gkesavan)
+
+    HADOOP-6173. Change src/native/packageNativeHadoop.sh to package all
+    native library files.  (Hong Tang via szetszwo)
  
   OPTIMIZATIONS
 
@@ -924,6 +927,9 @@ Trunk (unreleased changes)
 
     HADOOP-6192. Fix Shell.getUlimitMemoryCommand to not rely on Map-Reduce
     specific configs. (acmurthy) 
+
+    HADOOP-6103. Clones the classloader as part of Configuration clone.
+    (Amareshwari Sriramadasu via ddas)
 
 Release 0.20.1 - Unreleased
 

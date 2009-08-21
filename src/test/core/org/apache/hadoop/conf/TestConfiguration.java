@@ -21,10 +21,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.DataInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -401,6 +397,17 @@ public class TestConfiguration extends TestCase {
     assertFalse(conf.iterator().hasNext());
   }
 
+  public static class Fake_ClassLoader extends ClassLoader {
+  }
+
+  public void testClassLoader() {
+    Configuration conf = new Configuration(false);
+    conf.setQuietMode(false);
+    conf.setClassLoader(new Fake_ClassLoader());
+    Configuration other = new Configuration(conf);
+    assertTrue(other.getClassLoader() instanceof Fake_ClassLoader);
+  }
+  
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
