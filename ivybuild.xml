@@ -51,9 +51,9 @@
       value="[conf]/[artifact]-[revision].[ext]"/>
     <!--this is how artifacts that get built are named-->
     <property name="ivy.publish.pattern"
-      value="hadoop-[revision]-core.[ext]"/>
+      value="hadoop--core-[revision].[ext]"/>
     <property name="hadoop.jar"
-      location="${build.dir}/hadoop-${hadoop.version}-${module}.jar" />    
+      location="${build.dir}/hadoop-${module}-${hadoop.version}.jar" />
 
     <!--preset to build down; puts us in control of version naming-->
     <presetdef name="delegate">
@@ -366,6 +366,44 @@ ${build.ivy.report.dir}
       <arg value="${branch}/src" />
       <arg value="--changelist" />
       <arg value="${issue}"/>
+    </svn>
+  </target>
+
+    <target name="svn-create-ivy-changelist" depends="svn-init"
+      description="Create a changelist of the Ivy/build/Maven changes"  >
+      <property name="ivy.issue" value="HADOOP-6206" />
+      <property name="ivy.patch.version" value="1" />
+      <property name="ivy.patch.file"
+                location="${patches.dir}/${ivy.issue}-${ivy.patch.version}.patch" />
+      <svn>
+      <arg value="changelist"/>
+      <arg value="${ivy.issue}"/>
+      <!-- core -->
+      <!-- question this one -->
+      <!--
+      <arg value="${core/hadoop}/security/authorize/ConfiguredPolicy.java" />
+      -->
+      <arg value="build.xml" />
+      <arg value="ivy/hadoop-core.pom" />
+      <arg value="ivy/libraries.properties" />
+      <arg value="ivy.xml" />
+    </svn>
+  </target>
+
+   <target name="svn-diff-ivy-changelist" depends="svn-init"
+      description="diff against trunk"  >
+     <property name="ivy.issue" value="HADOOP-6206" />
+      <property name="ivy.patch.version" value="1" />
+      <property name="ivy.patch.file"
+        location="${patches.dir}/${ivy.issue}-${ivy.patch.version}.patch" />
+    <echo> Writing to ${ivy.patch.file}</echo>
+    <svn output="${ivy.patch.file}" >
+      <arg value="diff" />
+      <arg value="--old=${trunk}" />
+      <arg value="build.xml" />
+      <arg value="ivy/hadoop-core.pom" />
+      <arg value="ivy/libraries.properties" />
+      <arg value="ivy.xml" />
     </svn>
   </target>
 
