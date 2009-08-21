@@ -3081,7 +3081,26 @@ public class TaskTracker
         maxCurrentMapTasks * mapSlotMemorySizeOnTT + maxCurrentReduceTasks
             * reduceSlotSizeMemoryOnTT;
     if (totalMemoryAllottedForTasks < 0) {
-      totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
+      //adding check for the old keys which might be used by the administrator
+      //while configuration of the memory monitoring on TT
+      long memoryAllotedForSlot = fConf.normalizeMemoryConfigValue(
+          fConf.getLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY, 
+              JobConf.DISABLED_MEMORY_LIMIT));
+      long limitVmPerTask = fConf.normalizeMemoryConfigValue(
+          fConf.getLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, 
+              JobConf.DISABLED_MEMORY_LIMIT));
+      if(memoryAllotedForSlot == JobConf.DISABLED_MEMORY_LIMIT) {
+        totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT; 
+      } else {
+        if(memoryAllotedForSlot > limitVmPerTask) {
+          LOG.info("DefaultMaxVmPerTask is mis-configured. " +
+          		"It shouldn't be greater than task limits");
+          totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
+        } else {
+          totalMemoryAllottedForTasks = (maxCurrentMapTasks + 
+              maxCurrentReduceTasks) *  (memoryAllotedForSlot/(1024 * 1024));
+        }
+      }
     }
     if (totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT) {
       LOG.info("totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT."
