@@ -2,6 +2,12 @@ Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
+    HDFS-538. Per the contract elucidated in HADOOP-6201, throw
+    FileNotFoundException from FileSystem::listStatus rather than returning
+    null. (Jakob Homan via cdouglas)
+
   NEW FEATURES
 
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
