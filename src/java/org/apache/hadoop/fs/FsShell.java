@@ -532,17 +532,18 @@ public class FsShell extends Configured implements Tool {
       return;
     }
     FileStatus items[] = srcFs.listStatus(src);
-    if (items == null) {
+    try {
+      items = srcFs.listStatus(src);
+    } catch (FileNotFoundException fnfe) {
       throw new IOException("Could not get listing for " + src);
-    } else {
+    }
 
-      for (int i = 0; i < items.length; i++) {
-        if (!items[i].isDir()) {
-          setFileReplication(items[i].getPath(), srcFs, newRep, waitingList);
-        } else if (recursive) {
-          setReplication(newRep, srcFs, items[i].getPath(), recursive, 
-                         waitingList);
-        }
+    for (int i = 0; i < items.length; i++) {
+      if (!items[i].isDir()) {
+        setFileReplication(items[i].getPath(), srcFs, newRep, waitingList);
+      } else if (recursive) {
+        setReplication(newRep, srcFs, items[i].getPath(), recursive, 
+                       waitingList);
       }
     }
   }
@@ -706,7 +707,11 @@ public class FsShell extends Configured implements Tool {
         statusToPrint = globStatus;
       } else {
         Path statPaths[] = FileUtil.stat2Paths(globStatus, srcPath);
-        statusToPrint = srcFs.listStatus(statPaths);
+        try {
+          statusToPrint = srcFs.listStatus(statPaths);
+        } catch(FileNotFoundException fnfe) {
+          statusToPrint = null;
+        }
       }
       if ((statusToPrint == null) || ((statusToPrint.length == 0) &&
                                       (!srcFs.exists(srcPath)))){
@@ -1234,11 +1239,10 @@ public class FsShell extends Configured implements Tool {
     Path path = src.getPath();
     try {
       FileStatus[] files = srcFs.listStatus(path);
-      if ( files == null ) {
-        System.err.println(cmd + 
-                           ": could not get listing for '" + path + "'");
-      }
+
       return files;
+    } catch(FileNotFoundException fnfe) {
+      System.err.println(cmd + ": could not get listing for '" + path + "'");
     } catch (IOException e) {
       System.err.println(cmd + 
                          ": could not get get listing for '" + path + "' : " +

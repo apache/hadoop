@@ -74,6 +74,10 @@ Trunk (unreleased changes)
     MAPREDUCE-711. Removed Distributed Cache from Common, to move it
     under Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-6201. Change FileSystem::listStatus contract to throw
+    FileNotFoundException if the directory does not exist, rather than letting
+    this be implementation-specific. (Jakob Homan via cdouglas)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

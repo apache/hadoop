@@ -162,8 +162,13 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     }
   }
   
-  public void testListStatusReturnsNullForNonExistentFile() throws Exception {
-    assertNull(fs.listStatus(path("/test/hadoop/file")));
+  public void testListStatusThrowsExceptionForNonExistentFile() throws Exception {
+    try {
+      fs.listStatus(path("/test/hadoop/file"));
+      fail("Should throw FileNotFoundException");
+    } catch (FileNotFoundException fnfe) {
+      // expected
+    }
   }
   
   public void testListStatus() throws Exception {

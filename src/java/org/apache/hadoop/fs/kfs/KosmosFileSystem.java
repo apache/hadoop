@@ -142,6 +142,9 @@ public class KosmosFileSystem extends FileSystem {
         Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
 
+        if(!kfsImpl.exists(srep))
+          throw new FileNotFoundException("File " + path + " does not exist.");
+
         if (kfsImpl.isFile(srep))
                 return new FileStatus[] { getFileStatus(path) } ;
 
@@ -249,15 +252,13 @@ public class KosmosFileSystem extends FileSystem {
         return kfsImpl.remove(srep) == 0;
 
       FileStatus[] dirEntries = listStatus(absolute);
-      if ((!recursive) && (dirEntries != null) && 
-            (dirEntries.length != 0)) {
+      if (!recursive && (dirEntries.length != 0)) {
         throw new IOException("Directory " + path.toString() + 
         " is not empty.");
       }
-      if (dirEntries != null) {
-        for (int i = 0; i < dirEntries.length; i++) {
-          delete(new Path(absolute, dirEntries[i].getPath()), recursive);
-        }
+
+      for (int i = 0; i < dirEntries.length; i++) {
+        delete(new Path(absolute, dirEntries[i].getPath()), recursive);
       }
       return kfsImpl.rmdir(srep) == 0;
     }

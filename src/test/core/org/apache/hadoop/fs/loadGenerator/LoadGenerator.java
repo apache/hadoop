@@ -545,16 +545,15 @@ public class LoadGenerator extends Configured implements Tool {
    */
   private void initFileDirTables(Path path) throws IOException {
     FileStatus[] stats = fs.listStatus(path);
-    if (stats != null) { 
-      for (FileStatus stat : stats) {
-        if (stat.isDir()) {
-          dirs.add(stat.getPath().toString());
-          initFileDirTables(stat.getPath());
-        } else {
-          Path filePath = stat.getPath();
-          if (filePath.getName().startsWith(StructureGenerator.FILE_NAME_PREFIX)) {
-            files.add(filePath.toString());
-          }
+
+    for (FileStatus stat : stats) {
+      if (stat.isDir()) {
+        dirs.add(stat.getPath().toString());
+        initFileDirTables(stat.getPath());
+      } else {
+        Path filePath = stat.getPath();
+        if (filePath.getName().startsWith(StructureGenerator.FILE_NAME_PREFIX)) {
+          files.add(filePath.toString());
         }
       }
     }

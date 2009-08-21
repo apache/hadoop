@@ -731,25 +731,25 @@ public abstract class FileSystem extends Configured implements Closeable {
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
    * 
-   * @param f
-   *          given path
+   * @param f given path
    * @return the statuses of the files/directories in the given patch
-   * @throws IOException
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation
    */
-  public abstract FileStatus[] listStatus(Path f) throws IOException;
+  public abstract FileStatus[] listStatus(Path f) throws FileNotFoundException, 
+                                                         IOException;
     
   /*
    * Filter files/directories in the given path using the user-supplied path
    * filter. Results are added to the given array <code>results</code>.
    */
   private void listStatus(ArrayList<FileStatus> results, Path f,
-      PathFilter filter) throws IOException {
+      PathFilter filter) throws FileNotFoundException, IOException {
     FileStatus listing[] = listStatus(f);
-    if (listing != null) {
-      for (int i = 0; i < listing.length; i++) {
-        if (filter.accept(listing[i].getPath())) {
-          results.add(listing[i]);
-        }
+
+    for (int i = 0; i < listing.length; i++) {
+      if (filter.accept(listing[i].getPath())) {
+        results.add(listing[i]);
       }
     }
   }
@@ -764,10 +764,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    *          the user-supplied path filter
    * @return an array of FileStatus objects for the files under the given path
    *         after applying the filter
-   * @throws IOException
-   *           if encounter any problem while fetching the status
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation   
    */
-  public FileStatus[] listStatus(Path f, PathFilter filter) throws IOException {
+  public FileStatus[] listStatus(Path f, PathFilter filter) 
+                                   throws FileNotFoundException, IOException {
     ArrayList<FileStatus> results = new ArrayList<FileStatus>();
     listStatus(results, f, filter);
     return results.toArray(new FileStatus[results.size()]);
@@ -781,10 +782,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    *          a list of paths
    * @return a list of statuses for the files under the given paths after
    *         applying the filter default Path filter
-   * @exception IOException
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation
    */
   public FileStatus[] listStatus(Path[] files)
-      throws IOException {
+      throws FileNotFoundException, IOException {
     return listStatus(files, DEFAULT_FILTER);
   }
 
@@ -798,10 +800,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    *          the user-supplied path filter
    * @return a list of statuses for the files under the given paths after
    *         applying the filter
-   * @exception IOException
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation
    */
   public FileStatus[] listStatus(Path[] files, PathFilter filter)
-      throws IOException {
+      throws FileNotFoundException, IOException {
     ArrayList<FileStatus> results = new ArrayList<FileStatus>();
     for (int i = 0; i < files.length; i++) {
       listStatus(results, files[i], filter);
