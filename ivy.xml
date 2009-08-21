@@ -20,7 +20,7 @@
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
     <description>
-        Hadoop Core
+        Hadoop Common
     </description>
   </info>
   <configurations defaultconfmapping="default">
@@ -269,18 +269,19 @@
       rev="${slf4j-log4j12.version}"
       conf="common->master">
     </dependency>
+
     <dependency org="org.apache.hadoop"
       name="avro"
-      rev="1.0.0"
-      conf="common->default"/>
+      rev="${avro.version}"
+      conf="mandatory->default"/>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
-      rev="1.0.1"
-      conf="common->default"/>
+      rev="${jackson-mapper-asl.version}"
+      conf="mandatory->default"/>
     <dependency org="com.thoughtworks.paranamer"
       name="paranamer"
-      rev="1.5"
-      conf="common->default"/>
+      rev="${paranamer.version}"
+      conf="mandatory->default"/>
     </dependencies>
   
 </ivy-module>
