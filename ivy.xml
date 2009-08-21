@@ -252,10 +252,6 @@
       name="slf4j-api"
       rev="${slf4j-api.version}"
       conf="common->master"/>
-    <dependency org="org.apache.hadoop"
-      name="avro"
-      rev="1.0.0"
-      conf="common->default"/>
     <dependency org="org.eclipse.jdt"
       name="core"
       rev="${core.version}"
@@ -279,6 +275,19 @@
       rev="${aspectj.version}"
       conf="common->default">
     </dependency>
+
+    <dependency org="org.apache.hadoop"
+      name="avro"
+      rev="${avro.version}"
+      conf="mandatory->default"/>
+    <dependency org="org.codehaus.jackson"
+      name="jackson-mapper-asl"
+      rev="${jackson-mapper-asl.version}"
+      conf="mandatory->default"/>
+    <dependency org="com.thoughtworks.paranamer"
+      name="paranamer"
+      rev="${paranamer.version}"
+      conf="mandatory->default"/>
     </dependencies>
   
 </ivy-module>

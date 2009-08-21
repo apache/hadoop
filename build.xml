@@ -1417,7 +1417,7 @@
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
   </target>
 
-  <target name="ivy-report" depends="ivy-resolve-releaseaudit"
+  <target name="ivy-report" depends="ivy-resolve"
     description="Generate">
     <ivy:report todir="${build.ivy.report.dir}" settingsRef="${ant.project.name}.ivy.settings"/>
     <echo>
