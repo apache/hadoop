@@ -225,6 +225,9 @@ Release 0.20.1 - Unreleased
     memory management parameters are used in configuration.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    MAPREDUCE-818. Fixes Counters#getGroup API. (Amareshwari Sriramadasu 
+    via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

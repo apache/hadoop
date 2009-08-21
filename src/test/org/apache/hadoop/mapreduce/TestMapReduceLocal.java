@@ -155,6 +155,9 @@ public class TestMapReduceLocal extends TestCase {
     assertEquals("map out = combine in", mapOut, combineIn);
     assertEquals("combine out = reduce in", combineOut, reduceIn);
     assertTrue("combine in > combine out", combineIn > combineOut);
+    String group = "Random Group";
+    CounterGroup ctrGrp = ctrs.getGroup(group);
+    assertEquals(0, ctrGrp.size());
   }
 
 }
