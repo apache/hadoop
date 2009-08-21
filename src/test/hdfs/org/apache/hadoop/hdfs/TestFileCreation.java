@@ -73,7 +73,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   // the datanodes.
 
   // creates a file but does not close it
-  static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
+  public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     System.out.println("createFile: Created " + name + " with " + repl + " replica.");
     FSDataOutputStream stm = fileSys.create(name, true,
@@ -92,7 +92,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   //
   // writes specified bytes to file.
   //
-  static void writeFile(FSDataOutputStream stm, int size) throws IOException {
+  public static void writeFile(FSDataOutputStream stm, int size) throws IOException {
     byte[] buffer = AppendTestUtil.randomBytes(seed, size);
     stm.write(buffer, 0, size);
   }

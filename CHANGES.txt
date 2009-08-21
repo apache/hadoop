@@ -15,6 +15,9 @@ Trunk (unreleased changes)
 
     HDFS-536. Support hflush at DFSClient. (hairong)
 
+    HDFS-517. Introduce BlockInfoUnderConstruction to reflect block replica
+    states while writing. (shv)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file

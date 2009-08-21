@@ -552,13 +552,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     List<BlockWithLocations> results = new ArrayList<BlockWithLocations>();
     long totalSize = 0;
+    BlockInfo curBlock;
     while(totalSize<size && iter.hasNext()) {
-      totalSize += addBlock(iter.next(), results);
+      curBlock = iter.next();
+      if(curBlock.isUnderConstruction())  continue;
+      totalSize += addBlock(curBlock, results);
     }
     if(totalSize<size) {
       iter = node.getBlockIterator(); // start from the beginning
       for(int i=0; i<startBlock&&totalSize<size; i++) {
-        totalSize += addBlock(iter.next(), results);
+        curBlock = iter.next();
+        if(curBlock.isUnderConstruction())  continue;
+        totalSize += addBlock(curBlock, results);
       }
     }
 
@@ -968,6 +973,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         // Recreate in-memory lease record.
         //
         INodeFile node = (INodeFile) myFile;
+        blockManager.convertLastBlockToUnderConstruction(node);
         INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                                         node.getLocalNameBytes(),
                                         node.getReplication(),
@@ -1029,40 +1035,36 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     LocatedBlock lb = null;
     synchronized (this) {
       INodeFileUnderConstruction file = (INodeFileUnderConstruction)dir.getFileINode(src);
-
-      BlockInfo[] blocks = file.getBlocks();
-      if (blocks != null && blocks.length > 0) {
-        BlockInfo last = blocks[blocks.length-1];
-        // this is a redundant search in blocksMap
-        // should be resolved by the new implementation of append
-        BlockInfo storedBlock = blockManager.getStoredBlock(last);
-        assert last == storedBlock : "last block should be in the blocksMap";
-        if (file.getPreferredBlockSize() > storedBlock.getNumBytes()) {
+      BlockInfoUnderConstruction lastBlock = file.getLastBlock();
+      if (lastBlock != null) {
+        assert lastBlock == blockManager.getStoredBlock(lastBlock) :
+          "last block of the file is not in blocksMap";
+        if (file.getPreferredBlockSize() > lastBlock.getNumBytes()) {
           long fileLength = file.computeContentSummary().getLength();
-          DatanodeDescriptor[] targets = blockManager.getNodes(storedBlock);
+          DatanodeDescriptor[] targets = blockManager.getNodes(lastBlock);
           // remove the replica locations of this block from the node
           for (int i = 0; i < targets.length; i++) {
-            targets[i].removeBlock(storedBlock);
+            targets[i].removeBlock(lastBlock);
           }
-          // set the locations of the last block in the lease record
-          file.setLastBlock(storedBlock, targets);
+          // convert last block to under-construction and set its locations
+          file.setLastBlock(lastBlock, targets);
 
-          lb = new LocatedBlock(last, targets, 
-                                fileLength-storedBlock.getNumBytes());
+          lb = new LocatedBlock(lastBlock, targets, 
+                                fileLength-lastBlock.getNumBytes());
           if (isAccessTokenEnabled) {
             lb.setAccessToken(accessTokenHandler.generateToken(lb.getBlock()
                 .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.WRITE)));
           }
 
           // Remove block from replication queue.
-          blockManager.updateNeededReplications(last, 0, 0);
+          blockManager.updateNeededReplications(lastBlock, 0, 0);
 
           // remove this block from the list of pending blocks to be deleted. 
           // This reduces the possibility of triggering HADOOP-1349.
           //
           for (DatanodeDescriptor dd : targets) {
             String datanodeId = dd.getStorageID();
-            blockManager.removeFromInvalidates(datanodeId, last);
+            blockManager.removeFromInvalidates(datanodeId, lastBlock);
           }
         }
       }
@@ -1150,8 +1152,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
 
       // allocate new block record block locations in INode.
-      newBlock = allocateBlock(src, pathINodes);
-      pendingFile.setTargets(targets);
+      newBlock = allocateBlock(src, pathINodes, targets);
       
       for (DatanodeDescriptor dn : targets) {
         dn.incBlocksScheduled();
@@ -1293,13 +1294,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * @param inodes INode representing each of the components of src. 
    *        <code>inodes[inodes.length-1]</code> is the INode for the file.
    */
-  private Block allocateBlock(String src, INode[] inodes) throws IOException {
+  private Block allocateBlock(String src,
+                              INode[] inodes,
+                              DatanodeDescriptor targets[]) throws IOException {
     Block b = new Block(FSNamesystem.randBlockId.nextLong(), 0, 0); 
     while(isValidBlock(b)) {
       b.setBlockId(FSNamesystem.randBlockId.nextLong());
     }
     b.setGenerationStamp(getGenerationStamp());
-    b = dir.addBlock(src, inodes, b);
+    b = dir.addBlock(src, inodes, b, targets);
     NameNode.stateChangeLog.info("BLOCK* NameSystem.allocateBlock: "
                                  +src+ ". "+b);
     return b;
@@ -1310,12 +1313,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * replicated.  If not, return false. If checkall is true, then check
    * all blocks, otherwise check only penultimate block.
    */
-  synchronized boolean checkFileProgress(INodeFile v, boolean checkall) {
+  synchronized boolean checkFileProgress(INodeFile v, boolean checkall) throws IOException {
     if (checkall) {
       //
       // check all blocks of the file.
       //
-      for (Block block: v.getBlocks()) {
+      for (BlockInfo block: v.getBlocks()) {
         if (!blockManager.checkMinReplication(block)) {
           return false;
         }
@@ -1324,7 +1327,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       //
       // check the penultimate block of this file
       //
-      Block b = v.getPenultimateBlock();
+      BlockInfo b = v.getPenultimateBlock();
       if (b != null && !blockManager.checkMinReplication(b)) {
         return false;
       }
@@ -1567,27 +1570,28 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
 
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
+    BlockInfoUnderConstruction lastBlock = pendingFile.getLastBlock();
 
     // Initialize lease recovery for pendingFile. If there are no blocks 
     // associated with this file, then reap lease immediately. Otherwise 
     // renew the lease and trigger lease recovery.
-    if (pendingFile.getTargets() == null ||
-        pendingFile.getTargets().length == 0) {
-      if (pendingFile.getBlocks().length == 0) {
-        finalizeINodeFileUnderConstruction(src, pendingFile);
-        NameNode.stateChangeLog.warn("BLOCK*"
-          + " internalReleaseLease: No blocks found, lease removed.");
-        return;
-      }
-      // setup the Inode.targets for the last block from the blockManager
-      //
-      BlockInfo[] blocks = pendingFile.getBlocks();
-      BlockInfo last = blocks[blocks.length-1];
-      DatanodeDescriptor[] targets = blockManager.getNodes(last);
-      pendingFile.setTargets(targets);
+    if (lastBlock == null) {
+      assert pendingFile.getBlocks().length == 0 :
+        "file is not empty but the last block does not exist";
+      finalizeINodeFileUnderConstruction(src, pendingFile);
+      NameNode.stateChangeLog.warn("BLOCK*"
+        + " internalReleaseLease: No blocks found, lease removed.");
+      return;
     }
+
+    // setup the last block locations from the blockManager if not known
+    if(lastBlock.getNumLocations() == 0) {
+      DatanodeDescriptor targets[] = blockManager.getNodes(lastBlock);
+      lastBlock.setLocations(targets);
+    }
+
     // start lease recovery of the last block for this file.
-    pendingFile.assignPrimaryDatanode();
+    lastBlock.assignPrimaryDatanode();
     leaseManager.renewLease(lease);
   }
 
@@ -1595,11 +1599,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       INodeFileUnderConstruction pendingFile) throws IOException {
     leaseManager.removeLease(pendingFile.clientName, src);
 
+    // commit the last block and complete the penultimate block
+    // SHV !!! second parameter should be a block reported by client
+    blockManager.commitLastBlock(pendingFile, pendingFile.getLastBlock());
+
     // The file is no longer pending.
-    // Create permanent INode, update blockmap
+    // Create permanent INode, update blocks
     INodeFile newFile = pendingFile.convertToInodeFile();
     dir.replaceNode(src, pendingFile, newFile);
 
+    // complete last block of the file
+    blockManager.completeBlock(newFile, newFile.numBlocks()-1);
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);
 
@@ -1635,12 +1645,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     blockManager.removeBlockFromMap(oldblockinfo);
 
     if (deleteblock) {
-      pendingFile.removeBlock(lastblock);
+      pendingFile.removeLastBlock(lastblock);
     }
     else {
       // update last block, construct newblockinfo and add it to the blocks map
       lastblock.set(lastblock.getBlockId(), newlength, newgenerationstamp);
-      final BlockInfo newblockinfo = blockManager.addINode(lastblock, pendingFile);
+      BlockInfoUnderConstruction newblockinfo = 
+        new BlockInfoUnderConstruction(
+            lastblock, pendingFile.getReplication());
+      blockManager.addINode(newblockinfo, pendingFile);
 
       // find the DatanodeDescriptor objects
       // There should be no locations in the blockManager till now because the
@@ -1659,11 +1672,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         for (int i = 0; i < descriptors.length; i++) {
           descriptors[i].addBlock(newblockinfo);
         }
-        pendingFile.setLastBlock(newblockinfo, null);
-      } else {
-        // add locations into the INodeUnderConstruction
-        pendingFile.setLastBlock(newblockinfo, descriptors);
       }
+      // add locations into the INodeUnderConstruction
+      pendingFile.setLastBlock(newblockinfo, descriptors);
     }
 
     // If this commit does not want to close the file, persist
@@ -3624,12 +3635,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new IOException(msg);
     }
     INodeFile fileINode = storedBlock.getINode();
-    if (!fileINode.isUnderConstruction()) {
-      String msg = block + " is already commited, !fileINode.isUnderConstruction().";
+    if(!fileINode.isUnderConstruction() || !storedBlock.isUnderConstruction()) {
+      String msg = block + 
+            " is already commited, file or block is not under construction().";
       LOG.info(msg);
       throw new IOException(msg);
     }
-    if (!((INodeFileUnderConstruction)fileINode).setLastRecoveryTime(now())) {
+    if(!((BlockInfoUnderConstruction)storedBlock).setLastRecoveryTime(now())) {
       String msg = block + " is beening recovered, ignoring this request.";
       LOG.info(msg);
       throw new IOException(msg);

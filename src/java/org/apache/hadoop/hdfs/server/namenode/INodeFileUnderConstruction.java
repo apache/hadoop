@@ -27,10 +27,6 @@ class INodeFileUnderConstruction extends INodeFile {
   final String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
-
-  private int primaryNodeIndex = -1; //the node working on lease recovery
-  private DatanodeDescriptor[] targets = null;   //locations for last block
-  private long lastRecoveryTime = 0;
   
   INodeFileUnderConstruction(PermissionStatus permissions,
                              short replication,
@@ -83,15 +79,6 @@ class INodeFileUnderConstruction extends INodeFile {
     return true;
   }
 
-  DatanodeDescriptor[] getTargets() {
-    return targets;
-  }
-
-  void setTargets(DatanodeDescriptor[] targets) {
-    this.targets = targets;
-    this.primaryNodeIndex = -1;
-  }
-
   //
   // converts a INodeFileUnderConstruction into a INodeFile
   // use the modification time as the access time
@@ -108,10 +95,10 @@ class INodeFileUnderConstruction extends INodeFile {
   }
 
   /**
-   * remove a block from the block list. This block should be
+   * Remove a block from the block list. This block should be
    * the last one on the list.
    */
-  void removeBlock(Block oldblock) throws IOException {
+  void removeLastBlock(Block oldblock) throws IOException {
     if (blocks == null) {
       throw new IOException("Trying to delete non-existant block " + oldblock);
     }
@@ -124,57 +111,25 @@ class INodeFileUnderConstruction extends INodeFile {
     BlockInfo[] newlist = new BlockInfo[size_1];
     System.arraycopy(blocks, 0, newlist, 0, size_1);
     blocks = newlist;
-    
-    // Remove the block locations for the last block.
-    targets = null;
-  }
-
-  synchronized void setLastBlock(BlockInfo newblock, DatanodeDescriptor[] newtargets
-      ) throws IOException {
-    if (blocks == null) {
-      throw new IOException("Trying to update non-existant block (newblock="
-          + newblock + ")");
-    }
-    blocks[blocks.length - 1] = newblock;
-    setTargets(newtargets);
-    lastRecoveryTime = 0;
   }
 
   /**
-   * Initialize lease recovery for this object
+   * Convert the last block of the file to an under-construction block.
+   * Set its locations.
    */
-  void assignPrimaryDatanode() {
-    //assign the first alive datanode as the primary datanode
-
-    if (targets.length == 0) {
-      NameNode.stateChangeLog.warn("BLOCK*"
-        + " INodeFileUnderConstruction.initLeaseRecovery:"
-        + " No blocks found, lease removed.");
+  void setLastBlock(BlockInfo lastBlock, DatanodeDescriptor[] targets)
+  throws IOException {
+    if (blocks == null || blocks.length == 0) {
+      throw new IOException("Trying to update non-existant block. " +
+      		"File is empty.");
     }
-
-    int previous = primaryNodeIndex;
-    //find an alive datanode beginning from previous
-    for(int i = 1; i <= targets.length; i++) {
-      int j = (previous + i)%targets.length;
-      if (targets[j].isAlive) {
-        DatanodeDescriptor primary = targets[primaryNodeIndex = j]; 
-        primary.addBlockToBeRecovered(blocks[blocks.length - 1], targets);
-        NameNode.stateChangeLog.info("BLOCK* " + blocks[blocks.length - 1]
-          + " recovery started, primary=" + primary);
-        return;
-      }
-    }
-  }
-  
-  /**
-   * Update lastRecoveryTime if expired.
-   * @return true if lastRecoveryTimeis updated. 
-   */
-  synchronized boolean setLastRecoveryTime(long now) {
-    boolean expired = now - lastRecoveryTime > NameNode.LEASE_RECOVER_PERIOD;
-    if (expired) {
-      lastRecoveryTime = now;
-    }
-    return expired;
+    BlockInfoUnderConstruction ucBlock;
+    if(lastBlock.isUnderConstruction())
+      ucBlock = (BlockInfoUnderConstruction)lastBlock;
+    else
+      ucBlock = new BlockInfoUnderConstruction(lastBlock, getReplication());
+    ucBlock.setLocations(targets);
+    ucBlock.setLastRecoveryTime(0);
+    blocks[blocks.length - 1] = ucBlock;
   }
 }

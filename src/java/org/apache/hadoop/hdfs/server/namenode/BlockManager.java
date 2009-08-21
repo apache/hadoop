@@ -231,6 +231,64 @@ public class BlockManager {
   }
 
   /**
+   * Commit the last block of the file and complete the penultimate block.
+   * 
+   * @param fileINode file inode
+   * @param commitBlock - contains client reported block length and generation
+   * @throws IOException if the block does not have at least a minimal number
+   * of replicas reported from data-nodes.
+   */
+  void commitLastBlock(INodeFileUnderConstruction fileINode, 
+                       Block commitBlock) throws IOException {
+    BlockInfoUnderConstruction lastBlock = fileINode.getLastBlock();
+    if(lastBlock == null)
+      return;
+    lastBlock.commitBlock(commitBlock);
+
+    // complete the penultimate block
+    completeBlock(fileINode, fileINode.numBlocks()-2);
+  }
+
+  /**
+   * Convert a specified block of the file to a complete block.
+   * @param fileINode file
+   * @param blkIndex  block index in the file
+   * @throws IOException if the block does not have at least a minimal number
+   * of replicas reported from data-nodes.
+   */
+  void completeBlock(INodeFile fileINode, int blkIndex) throws IOException {
+    if(blkIndex < 0)
+      return;
+    BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
+    if(!curBlock.isUnderConstruction())
+      return;
+    BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)curBlock;
+    if(ucBlock.numNodes() < minReplication)
+      throw new IOException("Cannot complete block: " +
+          "block does not satisfy minimal replication requirement.");
+    BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
+    // replace penultimate block in file
+    fileINode.setBlock(blkIndex, completeBlock);
+    // replace block in the blocksMap
+    blocksMap.replaceBlock(completeBlock);
+  }
+
+  /**
+   * Convert the last block of the file to an under constroction block.
+   * @param fileINode file
+   */
+  void convertLastBlockToUnderConstruction(INodeFile fileINode)
+  throws IOException {
+    BlockInfo oldBlock = fileINode.getLastBlock();
+    if(oldBlock == null || oldBlock.isUnderConstruction())
+      return;
+    BlockInfoUnderConstruction ucBlock =
+      oldBlock.convertToBlockUnderConstruction();
+    fileINode.setBlock(fileINode.numBlocks()-1, ucBlock);
+    blocksMap.replaceBlock(ucBlock);
+  }
+
+  /**
    * Get all valid locations of the block
    */
   ArrayList<String> getValidLocations(Block block) {
@@ -1390,7 +1448,7 @@ public class BlockManager {
     return Math.max(missingBlocksInPrevIter, missingBlocksInCurIter);
   }
 
-  BlockInfo addINode(Block block, INodeFile iNode) {
+  BlockInfo addINode(BlockInfo block, INodeFile iNode) {
     return blocksMap.addINode(block, iNode);
   }
 

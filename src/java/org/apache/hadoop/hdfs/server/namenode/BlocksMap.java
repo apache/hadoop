@@ -75,11 +75,10 @@ class BlocksMap {
   /**
    * Add block b belonging to the specified file inode to the map.
    */
-  BlockInfo addINode(Block b, INodeFile iNode) {
-    int replication = iNode.getReplication();
+  BlockInfo addINode(BlockInfo b, INodeFile iNode) {
     BlockInfo info = map.get(b);
-    if (info == null) {
-      info = new BlockInfo(b, replication);
+    if (info != b) {
+      info = b;
       map.put(info, info);
     }
     info.setINode(iNode);
@@ -190,5 +189,24 @@ class BlocksMap {
   /** Get the load factor of the map */
   float getLoadFactor() {
     return loadFactor;
+  }
+
+  /**
+   * Replace a block in the block map by a new block.
+   * The new block and the old one have the same key.
+   * @param newBlock - block for replacement
+   * @return new block
+   */
+  BlockInfo replaceBlock(BlockInfo newBlock) {
+    BlockInfo currentBlock = map.get(newBlock);
+    assert currentBlock != null : "the block if not in blocksMap";
+    // replace block in data-node lists
+    for(int idx = currentBlock.numNodes()-1; idx >= 0; idx--) {
+      DatanodeDescriptor dn = currentBlock.getDatanode(idx);
+      dn.replaceBlock(currentBlock, newBlock);
+    }
+    // replace block in the map itself
+    map.put(newBlock, newBlock);
+    return newBlock;
   }
 }

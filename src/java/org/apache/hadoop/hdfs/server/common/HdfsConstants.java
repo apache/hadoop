@@ -79,16 +79,53 @@ public interface HdfsConstants {
       return description;
     }
   }
-  
+
   /**
-   * Define Replica Type
+   * Block replica states, which it can go through while being constructed.
    */
   static public enum ReplicaState {
-    FINALIZED,  // finalized replica
-    RBW,        // replica being written
-    RWR,        // replica waiting to be recovered
-    RUR,        // replica under recovery
-    TEMPORARY   // temporary replica
+    /** Replica is finalized. The state when replica is not modified. */
+    FINALIZED,
+    /** Replica is being written to. */
+    RBW,
+    /** Replica is waiting to be recovered. */
+    RWR,
+    /** Replica is under recovery. */
+    RUR,
+    /** Temporary replica: created for replication and relocation only. */
+    TEMPORARY;
+  }
+
+  /**
+   * States, which a block can go through while it is under construction.
+   */
+  static public enum BlockUCState {
+    /**
+     * Block construction completed.<br>
+     * The block has at least one {@link ReplicaState#FINALIZED} replica,
+     * and is not going to be modified.
+     */
+    COMPLETE,
+    /**
+     * The block is under construction.<br>
+     * It has been recently allocated for write or append.
+     */
+    UNDER_CONSTRUCTION,
+    /**
+     * The block is under recovery.<br>
+     * When a file lease expires its last block may not be {@link #COMPLETE}
+     * and needs to go through a recovery procedure, 
+     * which synchronizes the existing replicas contents.
+     */
+    UNDER_RECOVERY,
+    /**
+     * The block is committed.<br>
+     * The client reported that all bytes are written to data-nodes
+     * with the given generation stamp and block length, but no 
+     * {@link ReplicaState#FINALIZED} 
+     * replicas has yet been reported by data-nodes themselves.
+     */
+    COMMITTED;
   }
 }
 

@@ -461,19 +461,9 @@ public class FSEditLog {
             blockSize = readLong(in);
           }
           // get blocks
-          Block blocks[] = null;
-          if (logVersion <= -14) {
-            blocks = readBlocks(in);
-          } else {
-            BlockTwo oldblk = new BlockTwo();
-            int num = in.readInt();
-            blocks = new Block[num];
-            for (int i = 0; i < num; i++) {
-              oldblk.readFields(in);
-              blocks[i] = new Block(oldblk.blkid, oldblk.len, 
-                                    Block.GRANDFATHER_GENERATION_STAMP);
-            }
-          }
+          boolean isFileUnderConstruction = (opcode == OP_ADD);
+          BlockInfo blocks[] = 
+            readBlocks(in, logVersion, isFileUnderConstruction, replication);
 
           // Older versions of HDFS does not store the block size in inode.
           // If the file has more than one block, use the size of the
@@ -521,7 +511,7 @@ public class FSEditLog {
                                                     path, permissions,
                                                     blocks, replication, 
                                                     mtime, atime, blockSize);
-          if (opcode == OP_ADD) {
+          if (isFileUnderConstruction) {
             numOpAdd++;
             //
             // Replace current node with a INodeUnderConstruction.
@@ -1247,12 +1237,26 @@ public class FSEditLog {
     return Long.parseLong(FSImage.readString(in));
   }
 
-  static private Block[] readBlocks(DataInputStream in) throws IOException {
+  static private BlockInfo[] readBlocks(
+      DataInputStream in,
+      int logVersion,
+      boolean isFileUnderConstruction,
+      short replication) throws IOException {
     int numBlocks = in.readInt();
-    Block[] blocks = new Block[numBlocks];
+    BlockInfo[] blocks = new BlockInfo[numBlocks];
+    Block blk = new Block();
+    BlockTwo oldblk = new BlockTwo();
     for (int i = 0; i < numBlocks; i++) {
-      blocks[i] = new Block();
-      blocks[i].readFields(in);
+      if (logVersion <= -14) {
+        blk.readFields(in);
+      } else {
+        oldblk.readFields(in);
+        blk.set(oldblk.blkid, oldblk.len, Block.GRANDFATHER_GENERATION_STAMP);
+      }
+      if(isFileUnderConstruction && i == numBlocks-1)
+        blocks[i] = new BlockInfoUnderConstruction(blk, replication);
+      else
+        blocks[i] = new BlockInfo(blk, replication);
     }
     return blocks;
   }
