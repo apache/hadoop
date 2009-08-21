@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="hadoop-core" default="compile" 
+<project name="hadoop-common" default="compile"
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -25,8 +25,8 @@
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
-  <property name="Name" value="Hadoop-core"/>
-  <property name="name" value="hadoop-core"/>
+  <property name="Name" value="Hadoop-common"/>
+  <property name="name" value="hadoop-common"/>
   <property name="version" value="0.21.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
@@ -144,7 +144,7 @@
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
-  <property name="ivy.publish.pattern" value="hadoop-core-[revision].[ext]"/>
+  <property name="ivy.publish.pattern" value="hadoop-common-[revision].[ext]"/>
   <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
   <property name="hadoop-core-test.jar" location="${build.dir}/${test.final.name}.jar" />
 
@@ -1292,7 +1292,7 @@
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
   </target>
 
-  <target name="ivy-report" depends="ivy-resolve-releaseaudit"
+  <target name="ivy-report" depends="ivy-resolve"
     description="Generate">
     <ivy:report todir="${build.ivy.report.dir}" settingsRef="${ant.project.name}.ivy.settings"/>
     <echo>
