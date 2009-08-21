@@ -2259,7 +2259,8 @@ public class JobTracker extends Service
     }
     if (interTrackerServer == null) {
       status.addThrowable(
-              new IOException("InterTrackerServer is not running"));
+              new IOException("InterTrackerServer is not running on port "
+                      + port ));
     }
   }
 
@@ -2289,6 +2290,7 @@ public class JobTracker extends Service
       LOG.info("Stopping infoServer");
       try {
         this.infoServer.stop();
+        infoServer = null;
       } catch (Exception ex) {
         LOG.warn("Exception shutting down JobTracker", ex);
       }
@@ -2296,21 +2298,25 @@ public class JobTracker extends Service
     if (this.interTrackerServer != null) {
       LOG.info("Stopping interTrackerServer");
       this.interTrackerServer.stop();
+      interTrackerServer = null;
     }
 
     stopExpireTrackersThread();
     retireThread("retirer", retireJobsThread);
     if (taskScheduler != null) {
       taskScheduler.terminate();
+      taskScheduler = null;
     }
     retireThread("expireLaunchingTasks", expireLaunchingTaskThread);
+    expireLaunchingTaskThread = null;
     retireThread("completedJobsStore thread", completedJobsStoreThread);
+    completedJobsStoreThread = null;
     LOG.info("stopped all jobtracker services");
-    return;
   }
 
   void stopExpireTrackersThread() {
     retireThread("expireTrackers", expireTrackersThread);
+    expireTrackersThread = null;
   }
 
   /**
