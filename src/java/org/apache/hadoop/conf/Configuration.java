@@ -243,6 +243,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
+    this.classLoader = other.classLoader;
+    this.loadDefaults = other.loadDefaults;
+    setQuietMode(other.getQuietMode());
   }
   
   /**
@@ -1373,6 +1376,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     this.quietmode = quietmode;
   }
 
+  synchronized boolean getQuietMode() {
+    return this.quietmode;
+  }
+  
   /** For debugging.  List non-default properties to the terminal and exit. */
   public static void main(String[] args) throws Exception {
     new Configuration().writeXml(System.out);
