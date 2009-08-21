@@ -184,14 +184,14 @@
   <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
   <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
   <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
-  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-mapred-${version}.pom" />
-  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar" />
+  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/${name}-${version}.pom" />
+  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/${name}-${version}.jar" />
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
-  <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>
+  <property name="ivy.publish.pattern" value="${name}-[revision].[ext]"/>
   <property name="hadoop-mapred.jar" location="${build.dir}/${final.name}.jar" />
 
   <!-- jdiff.home property set -->
@@ -1557,7 +1557,7 @@
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
   </target>
 
-  <target name="ivy-report" depends="ivy-resolve-releaseaudit"
+  <target name="ivy-report" depends="ivy-resolve"
     description="Generate">
     <ivy:report todir="${build.ivy.report.dir}" settingsRef="${ant.project.name}.ivy.settings"/>
     <echo>
@@ -1569,10 +1569,10 @@
     <fail>
       <condition >
         <not>
-          <available file="${hadoop.jar}" />
+          <available file="${hadoop-mapred.jar}" />
         </not>
       </condition>
-      Not found: ${hadoop.jar}
+      Not found: ${hadoop-mapred.jar}
       Please run the target "jar" in the main build file
     </fail>
 
@@ -1605,7 +1605,7 @@
 
 
   <target name="copy-jar-to-maven" depends="ready-to-publish">
-    <copy file="${hadoop.jar}"
+    <copy file="${hadoop-mapred.jar}"
       tofile="${build.ivy.maven.jar}"/>
     <checksum file="${build.ivy.maven.jar}" algorithm="md5"/>
   </target>
@@ -1620,7 +1620,7 @@
     </copy>
    </presetdef>
 
-   <expandingcopy file="ivy/hadoop-core.pom"
+   <expandingcopy file="ivy/hadoop-mapred.pom"
       tofile="${build.ivy.maven.pom}"/>
    <checksum file="${build.ivy.maven.pom}" algorithm="md5"/>
   </target>
