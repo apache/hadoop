@@ -170,6 +170,9 @@ Trunk (unreleased changes)
     HDFS-532. Allow applications to know that a read request failed 
     because block is missing. (dhruba)
 
+    HDFS-561. Fix write pipeline READ_TIMEOUT in DataTransferProtocol.
+    (Kan Zhang via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

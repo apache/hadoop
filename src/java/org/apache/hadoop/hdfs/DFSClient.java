@@ -2338,7 +2338,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     // it. When all the packets for a block are sent out and acks for each
     // if them are received, the DataStreamer closes the current block.
     //
-    private class DataStreamer extends Daemon {
+    class DataStreamer extends Daemon {
       private static final int MAX_RECOVERY_ERROR_COUNT = 5; // try block recovery 5 times
       private int recoveryErrorCount = 0; // number of times block recovery failed
       private volatile boolean streamerClosed = false;
@@ -2348,8 +2348,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       private DataInputStream blockReplyStream;
       private ResponseProcessor response = null;
       private volatile DatanodeInfo[] nodes = null; // list of targets for current block
-      private volatile boolean hasError = false;
-      private volatile int errorIndex = 0;
+      volatile boolean hasError = false;
+      volatile int errorIndex = 0;
   
       /*
        * streamer thread is the only thread that opens streams to datanode, 
@@ -2830,7 +2830,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           LOG.debug("Connecting to " + nodes[0].getName());
           InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
           s = socketFactory.createSocket();
-          int timeoutValue = (socketTimeout > 0) ? (3000 * nodes.length + socketTimeout) : 0;
+          int timeoutValue = (socketTimeout > 0) ? (HdfsConstants.READ_TIMEOUT_EXTENSION
+              * nodes.length + socketTimeout) : 0;
           NetUtils.connect(s, target, timeoutValue);
           s.setSoTimeout(timeoutValue);
           s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
