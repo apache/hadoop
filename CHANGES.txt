@@ -504,6 +504,9 @@ Trunk (unreleased changes)
 
     HADOOP-6173. Change src/native/packageNativeHadoop.sh to package all
     native library files.  (Hong Tang via szetszwo)
+
+    HADOOP-6184. Provide an API to dump Configuration in a JSON format.
+    (V.V.Chaitanya Krishna via yhemanth)
  
   OPTIMIZATIONS
 
