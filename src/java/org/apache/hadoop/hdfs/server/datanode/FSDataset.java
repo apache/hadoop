@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -37,6 +39,7 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
@@ -54,8 +57,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
-import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.hadoop.io.IOUtils;
 
 import org.mortbay.log.Log;
 
@@ -199,21 +201,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         }
       }
 
-      File blockFiles[] = dir.listFiles();
-      for (File blockFile : blockFiles) {
-        if (Block.isBlockFilename(blockFile)) {
-          long genStamp = getGenerationStampFromFile(blockFiles, blockFile);
-          long blockId = Block.filename2id(blockFile.getName());
-          ReplicaInfo oldReplica = volumeMap.add(
-              new FinalizedReplica(blockId, blockFile.length(), genStamp, 
-              volume, blockFile.getParentFile()));
-          if (oldReplica != null) {
-            DataNode.LOG.warn("Two block files have the same block id exits " +
-            		"on disk: " + oldReplica.getBlockFile() +
-            		" and " + blockFile );
-          }
-        }
-      }
+      volume.addToReplicasMap(volumeMap, dir, true);
     }
         
     /**
@@ -293,8 +281,9 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   class FSVolume {
-    private FSDir dataDir;
-    private File tmpDir;
+    private FSDir dataDir;      // directory store Finalized replica
+    private File rbwDir;        // directory store RBW replica
+    private File tmpDir;        // directory store Temporary replica
     private File detachDir; // copy on write for blocks in snapshot
     private DF usage;
     private DU dfsUsage;
@@ -305,10 +294,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
       boolean supportAppends = conf.getBoolean("dfs.support.append", false);
       File parent = currentDir.getParentFile();
+      final File finalizedDir = new File(
+          currentDir, DataStorage.STORAGE_DIR_FINALIZED);
 
       this.detachDir = new File(parent, "detach");
       if (detachDir.exists()) {
-        recoverDetachedBlocks(currentDir, detachDir);
+        recoverDetachedBlocks(finalizedDir, detachDir);
       }
 
       // Files that were being written when the datanode was last shutdown
@@ -319,12 +310,21 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       this.tmpDir = new File(parent, "tmp");
       if (tmpDir.exists()) {
         if (supportAppends) {
-          recoverDetachedBlocks(currentDir, tmpDir);
+          recoverDetachedBlocks(finalizedDir, tmpDir);
         } else {
           FileUtil.fullyDelete(tmpDir);
         }
       }
-      this.dataDir = new FSDir(currentDir);
+      this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
+      if (rbwDir.exists() && !supportAppends) {
+        FileUtil.fullyDelete(rbwDir);
+      }
+      this.dataDir = new FSDir(finalizedDir);
+      if (!rbwDir.mkdirs()) {  // create rbw directory if not exist
+        if (!rbwDir.isDirectory()) {
+          throw new IOException("Mkdirs failed to create " + rbwDir.toString());
+        }
+      }
       if (!tmpDir.mkdirs()) {
         if (!tmpDir.isDirectory()) {
           throw new IOException("Mkdirs failed to create " + tmpDir.toString());
@@ -429,10 +429,117 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     void checkDirs() throws DiskErrorException {
       dataDir.checkDirTree();
       DiskChecker.checkDir(tmpDir);
+      DiskChecker.checkDir(rbwDir);
     }
       
     void getVolumeMap(ReplicasMap volumeMap) {
+      // add finalized replicas
       dataDir.getVolumeMap(volumeMap, this);
+      // add rbw replicas
+      addToReplicasMap(volumeMap, rbwDir, false);
+    }
+
+    /**
+     * Add replicas under the given directory to the volume map
+     * @param volumeMap the replicas map
+     * @param dir an input directory
+     * @param isFinalized true if the directory has finalized replicas;
+     *                    false if the directory has rbw replicas
+     */
+    private void addToReplicasMap(ReplicasMap volumeMap, 
+        File dir, boolean isFinalized) {
+      File blockFiles[] = dir.listFiles();
+      for (File blockFile : blockFiles) {
+        if (!Block.isBlockFilename(blockFile))
+          continue;
+        
+        long genStamp = getGenerationStampFromFile(blockFiles, blockFile);
+        long blockId = Block.filename2id(blockFile.getName());
+        ReplicaInfo newReplica = null;
+        if (isFinalized) {
+          newReplica = new FinalizedReplica(blockId, 
+              blockFile.length(), genStamp, this, blockFile.getParentFile());
+        } else {
+          newReplica = new ReplicaWaitingToBeRecovered(blockId,
+              validateIntegrity(blockFile, genStamp), 
+              genStamp, this, blockFile.getParentFile());
+        }
+
+        ReplicaInfo oldReplica = volumeMap.add(newReplica);
+        if (oldReplica != null) {
+          DataNode.LOG.warn("Two block files with the same block id exist " +
+              "on disk: " + oldReplica.getBlockFile() +
+              " and " + blockFile );
+        }
+      }
+    }
+    
+    /**
+     * Find out the number of bytes in the block that match its crc.
+     * 
+     * This algorithm assumes that data corruption caused by unexpected 
+     * datanode shutdown occurs only in the last crc chunk. So it checks
+     * only the last chunk.
+     * 
+     * @param blockFile the block file
+     * @param genStamp generation stamp of the block
+     * @return the number of valid bytes
+     */
+    private long validateIntegrity(File blockFile, long genStamp) {
+      DataInputStream checksumIn = null;
+      InputStream blockIn = null;
+      try {
+        File metaFile = new File(getMetaFileName(blockFile.toString(), genStamp));
+        long blockFileLen = blockFile.length();
+        long metaFileLen = metaFile.length();
+        int crcHeaderLen = DataChecksum.getChecksumHeaderSize();
+        if (!blockFile.exists() || blockFileLen == 0 ||
+            !metaFile.exists() || metaFileLen < (long)crcHeaderLen) {
+          return 0;
+        }
+        checksumIn = new DataInputStream(
+            new BufferedInputStream(new FileInputStream(metaFile),
+                BUFFER_SIZE));
+
+        // read and handle the common header here. For now just a version
+        BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
+        short version = header.getVersion();
+        if (version != FSDataset.METADATA_VERSION) {
+          DataNode.LOG.warn("Wrong version (" + version + ") for metadata file "
+              + metaFile + " ignoring ...");
+        }
+        DataChecksum checksum = header.getChecksum();
+        int bytesPerChecksum = checksum.getBytesPerChecksum();
+        int checksumSize = checksum.getChecksumSize();
+        long numChunks = Math.min(
+            (blockFileLen + bytesPerChecksum - 1)/bytesPerChecksum, 
+            (metaFileLen - crcHeaderLen)/checksumSize);
+        if (numChunks == 0) {
+          return 0;
+        }
+        IOUtils.skipFully(checksumIn, (numChunks-1)*checksumSize);
+        blockIn = new FileInputStream(blockFile);
+        long lastChunkStartPos = (numChunks-1)*bytesPerChecksum;
+        IOUtils.skipFully(blockIn, lastChunkStartPos);
+        int lastChunkSize = (int)Math.min(
+            bytesPerChecksum, blockFileLen-lastChunkStartPos);
+        byte[] buf = new byte[lastChunkSize+checksumSize];
+        checksumIn.readFully(buf, lastChunkSize, checksumSize);
+        IOUtils.readFully(blockIn, buf, 0, lastChunkSize);
+
+        checksum.update(buf, 0, lastChunkSize);
+        if (checksum.compare(buf, lastChunkSize)) { // last chunk matches crc
+          return lastChunkStartPos + lastChunkSize;
+        } else { // last chunck is corrupt
+          return lastChunkStartPos;
+        }
+      } catch (IOException e) {
+        DataNode.LOG.warn(e);
+        return 0;
+      } finally {
+        IOUtils.closeStream(checksumIn);
+        IOUtils.closeStream(blockIn);
+      }
     }
       
     void clearPath(File f) {
@@ -440,7 +547,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
       
     public String toString() {
-      return dataDir.dir.getAbsolutePath();
+      return getDir().getAbsolutePath();
     }
 
     /**
@@ -628,6 +735,26 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
   protected File getMetaFile(Block b) throws IOException {
     return getMetaFile(getBlockFile(b), b);
+  }
+
+  /** Find the metadata file for the specified block file.
+   * Return the generation stamp from the name of the metafile.
+   */
+  private static long getGenerationStampFromFile(File[] listdir, File blockFile) {
+    String blockName = blockFile.getName();
+    for (int j = 0; j < listdir.length; j++) {
+      String path = listdir[j].getName();
+      if (!path.startsWith(blockName)) {
+        continue;
+      }
+      if (blockFile == listdir[j]) {
+        continue;
+      }
+      return Block.getGenerationStamp(listdir[j].getName());
+    }
+    DataNode.LOG.warn("Block " + blockFile + 
+                      " does not have a metafile!");
+    return Block.GRANDFATHER_GENERATION_STAMP;
   }
 
   /** Find the corresponding meta data file from a given block file */
@@ -1414,7 +1541,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           error = true;
           continue;
         }
-        v.clearPath(parent);
+        ReplicaState replicaState = dinfo.getState();
+        if (replicaState == ReplicaState.FINALIZED || 
+            (replicaState == ReplicaState.RUR && 
+                ((ReplicaUnderRecovery)dinfo).getOrignalReplicaState() == 
+                  ReplicaState.FINALIZED)) {
+          v.clearPath(parent);
+        }
         volumeMap.remove(invalidBlks[i]);
       }
       File metaFile = getMetaFile( f, invalidBlks[i] );

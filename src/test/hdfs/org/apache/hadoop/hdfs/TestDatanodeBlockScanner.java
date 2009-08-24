@@ -134,8 +134,8 @@ public class TestDatanodeBlockScanner extends TestCase {
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
     boolean corrupted = false;
     for (int i=replica*2; i<replica*2+2; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
-                               blockName);
+      File blockFile = new File(baseDir, "data" + (i+1) + 
+          MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
       if (blockFile.exists()) {
         // Corrupt replica by writing random bytes into replica
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
@@ -175,7 +175,7 @@ public class TestDatanodeBlockScanner extends TestCase {
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       blockCount = blocks.get(0).getLocations().length;
       try {
-        LOG.info("Looping until expected blockCount of 3 is received");
+        LOG.info("Looping until expected blockCount of 3 is received: " + blockCount);
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
@@ -194,7 +194,7 @@ public class TestDatanodeBlockScanner extends TestCase {
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       blockCount = blocks.get(0).getLocations().length;
       try {
-        LOG.info("Looping until expected blockCount of 2 is received");
+        LOG.info("Looping until expected blockCount of 2 is received: " + blockCount);
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
@@ -412,8 +412,8 @@ public class TestDatanodeBlockScanner extends TestCase {
   static boolean changeReplicaLength(String blockName, int dnIndex, int lenDelta) throws IOException {
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
     for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
-                               blockName);
+      File blockFile = new File(baseDir, "data" + (i+1) + 
+          MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
       if (blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
         raFile.setLength(raFile.length()+lenDelta);
@@ -427,10 +427,10 @@ public class TestDatanodeBlockScanner extends TestCase {
   private static void waitForBlockDeleted(String blockName, int dnIndex) 
   throws IOException, InterruptedException {
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
-    File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1)+ "/current/" + 
-        blockName);
-    File blockFile2 = new File(baseDir, "data" + (2*dnIndex+2)+ "/current/" + 
-        blockName);
+    File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1) + 
+        MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
+    File blockFile2 = new File(baseDir, "data" + (2*dnIndex+2) + 
+        MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
     while (blockFile1.exists() || blockFile2.exists()) {
       Thread.sleep(100);
     }

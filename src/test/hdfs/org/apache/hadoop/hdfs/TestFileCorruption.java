@@ -110,11 +110,11 @@ public class TestFileCorruption extends TestCase {
       
       // get the block
       File dataDir = new File(cluster.getDataDirectory(),
-          "data1/current");
+          "data1" + MiniDFSCluster.FINALIZED_DIR_NAME);
       Block blk = getBlock(dataDir);
       if (blk == null) {
         blk = getBlock(new File(cluster.getDataDirectory(),
-          "dfs/data/data2/current"));
+          "dfs/data/data2" + MiniDFSCluster.FINALIZED_DIR_NAME));
       }
       assertFalse(blk==null);
 

@@ -110,7 +110,7 @@ public class DFSTestUtil {
   /** create nFiles with random names and directory hierarchies
    *  with random (but reproducible) data in them.
    */
-  void createFiles(FileSystem fs, String topdir,
+  public void createFiles(FileSystem fs, String topdir,
                    short replicationFactor) throws IOException {
     files = new MyFile[nFiles];
     

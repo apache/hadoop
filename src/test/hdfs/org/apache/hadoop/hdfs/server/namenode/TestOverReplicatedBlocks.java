@@ -56,7 +56,8 @@ public class TestOverReplicatedBlocks extends TestCase {
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       // remove block scanner log to trigger block scanning
       File scanLog = new File(System.getProperty("test.build.data"),
-          "dfs/data/data1/current/dncp_block_verification.log.curr");
+          "dfs/data/data1" + MiniDFSCluster.FINALIZED_DIR_NAME + 
+          "dncp_block_verification.log.curr");
       //wait for one minute for deletion to succeed;
       for(int i=0; !scanLog.delete(); i++) {
         assertTrue("Could not delete log file in one minute", i < 60);

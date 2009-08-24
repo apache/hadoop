@@ -53,6 +53,8 @@ public class DataStorage extends Storage {
   final static String BLOCK_SUBDIR_PREFIX = "subdir";
   final static String BLOCK_FILE_PREFIX = "blk_";
   final static String COPY_FILE_PREFIX = "dncp_";
+  final static String STORAGE_DIR_RBW = "rbw";
+  final static String STORAGE_DIR_FINALIZED = "finalized";
   
   private String storageID;
 
@@ -277,8 +279,8 @@ public class DataStorage extends Storage {
     assert !tmpDir.exists() : "previous.tmp directory must not exist.";
     // rename current to tmp
     rename(curDir, tmpDir);
-    // hardlink blocks
-    linkBlocks(tmpDir, curDir, this.getLayoutVersion());
+    // hard link finalized & rbw blocks
+    linkAllBlocks(tmpDir, curDir);
     // write version file
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     assert this.namespaceID == nsInfo.getNamespaceID() :
@@ -359,8 +361,34 @@ public class DataStorage extends Storage {
       doFinalize(it.next());
     }
   }
+
+  /**
+   * Hardlink all finalized and RBW blocks in fromDir to toDir
+   * @param fromDir directory where the snapshot is stored
+   * @param toDir the current data directory
+   * @throws IOException if error occurs during hardlink
+   */
+  private void linkAllBlocks(File fromDir, File toDir) throws IOException {
+    // do the link
+    int diskLayoutVersion = this.getLayoutVersion();
+    if (diskLayoutVersion < PRE_RBW_LAYOUT_VERSION) { // RBW version
+      // hardlink finalized blocks in tmpDir/finalized
+      linkBlocks(new File(fromDir, STORAGE_DIR_FINALIZED), 
+          new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion);
+      // hardlink rbw blocks in tmpDir/finalized
+      linkBlocks(new File(fromDir, STORAGE_DIR_RBW), 
+          new File(toDir, STORAGE_DIR_RBW), diskLayoutVersion);
+    } else { // pre-RBW version
+      // hardlink finalized blocks in tmpDir
+      linkBlocks(fromDir, 
+          new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion);      
+    }    
+  }
   
   static void linkBlocks(File from, File to, int oldLV) throws IOException {
+    if (!from.exists()) {
+      return;
+    }
     if (!from.isDirectory()) {
       if (from.getName().startsWith(COPY_FILE_PREFIX)) {
         FileInputStream in = new FileInputStream(from);
@@ -387,7 +415,7 @@ public class DataStorage extends Storage {
       return;
     }
     // from is a directory
-    if (!to.mkdir())
+    if (!to.mkdirs())
       throw new IOException("Cannot create directory " + to);
     String[] blockNames = from.list(new java.io.FilenameFilter() {
         public boolean accept(File dir, String name) {

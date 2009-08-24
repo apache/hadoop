@@ -86,7 +86,9 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -19;
+  public static final int LAYOUT_VERSION = -20;
   // Current version: 
-  // -19: Sticky bit
+  // -20: DataNode adds a "rbw" sub directory to data directory
+  //      current dir contains "finalized" subdir for finalized replicas
+  //      and "rbw" subdir for replicas being written to.
 }

@@ -291,7 +291,7 @@ public class TestReplication extends TestCase {
    * for under replicated blocks. 
    * 
    * It creates a file with one block and replication of 4. It corrupts 
-   * two of the blocks and removes one of the replicas. Expected behaviour is
+   * two of the blocks and removes one of the replicas. Expected behavior is
    * that missing replica will be copied from one valid source.
    */
   public void testPendingReplicationRetry() throws IOException {
@@ -341,7 +341,8 @@ public class TestReplication extends TestCase {
       
       int fileCount = 0;
       for (int i=0; i<6; i++) {
-        File blockFile = new File(baseDir, "data" + (i+1) + "/current/" + block);
+        File blockFile = new File(baseDir, "data" + (i+1) + 
+            MiniDFSCluster.FINALIZED_DIR_NAME + block);
         LOG.info("Checking for file " + blockFile);
         
         if (blockFile.exists()) {

@@ -74,6 +74,8 @@ public class MiniDFSCluster {
   private File base_dir;
   private File data_dir;
   
+  public final static String FINALIZED_DIR_NAME = "/current/finalized/";
+  
   
   /**
    * This null constructor is used only when wishing to start a data node cluster
@@ -631,7 +633,7 @@ public class MiniDFSCluster {
     if (i < 0 || i >= dataNodes.size())
       return false;
     for (int dn = i*2; dn < i*2+2; dn++) {
-      File blockFile = new File(dataDir, "data" + (dn+1) + "/current/" +
+      File blockFile = new File(dataDir, "data" + (dn+1) + FINALIZED_DIR_NAME +
                                 blockName);
       System.out.println("Corrupting for: " + blockFile);
       if (blockFile.exists()) {
