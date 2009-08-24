@@ -231,6 +231,10 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-818. Fixes Counters#getGroup API. (Amareshwari Sriramadasu 
     via sharad)
 
+    MAPREDUCE-807. Handles the AccessControlException during the deletion of
+    mapred.system.dir in the JobTracker. The JobTracker will bail out if it
+    encounters such an exception. (Amar Kamat via ddas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

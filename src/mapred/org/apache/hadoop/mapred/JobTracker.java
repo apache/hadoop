@@ -186,6 +186,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         throw e;
       } catch (UnknownHostException e) {
         throw e;
+      } catch (AccessControlException ace) {
+        // in case of jobtracker not having right access
+        // bail out
+        throw ace;
       } catch (IOException e) {
         LOG.warn("Error starting tracker: " + 
                  StringUtils.stringifyException(e));
@@ -1651,7 +1655,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // start the recovery manager
     recoveryManager = new RecoveryManager();
     
-    while (true) {
+    while (!Thread.currentThread().isInterrupted()) {
       try {
         // if we haven't contacted the namenode go ahead and do it
         if (fs == null) {
@@ -1691,15 +1695,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           break;
         }
         LOG.error("Mkdirs failed to create " + systemDir);
+      } catch (AccessControlException ace) {
+        LOG.warn("Failed to operate on mapred.system.dir (" + systemDir 
+                 + ") because of permissions.");
+        LOG.warn("Manually delete the mapred.system.dir (" + systemDir 
+                 + ") and then start the JobTracker.");
+        LOG.warn("Bailing out ... ");
+        throw ace;
       } catch (IOException ie) {
-        if (ie instanceof RemoteException && 
-            AccessControlException.class.getName().equals(
-                ((RemoteException)ie).getClassName())) {
-          throw ie;
-        }
         LOG.info("problem cleaning system directory: " + systemDir, ie);
       }
       Thread.sleep(FS_ACCESS_RETRY_PERIOD);
+    }
+    
+    if (Thread.currentThread().isInterrupted()) {
+      throw new InterruptedException();
     }
     
     // Same with 'localDir' except it's always on the local disk.
