@@ -94,7 +94,7 @@ fi
 if [ -d "$HADOOP_HDFS_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME
 fi
-for f in $HADOOP_HDFS_HOME/hadoop-*-hdfs.jar; do
+for f in $HADOOP_HDFS_HOME/hadoop-hdfs-*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 

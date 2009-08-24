@@ -938,6 +938,9 @@ Trunk (unreleased changes)
     HADOOP-6103. Clones the classloader as part of Configuration clone.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-6152. Fix classpath variables in bin/hadoop-config.sh and some
+    other scripts.  (Aaron Kimball via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

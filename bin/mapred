@@ -84,7 +84,7 @@ fi
 if [ -d "$HADOOP_MAPRED_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME
 fi
-for f in $HADOOP_MAPRED_HOME/hadoop-*-mapred.jar; do
+for f in $HADOOP_MAPRED_HOME/hadoop-mapred-*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 

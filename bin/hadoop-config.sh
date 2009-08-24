@@ -115,9 +115,6 @@ fi
 if [ -d "$HADOOP_CORE_HOME/build/test/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build/test/classes
 fi
-if [ -d "$HADOOP_CORE_HOME/build/tools" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build/tools
-fi
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
@@ -157,13 +154,6 @@ for f in $HADOOP_CORE_HOME/lib/jsp-2.1/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-for f in $HADOOP_CORE_HOME/hadoop-*-tools.jar; do
-  TOOL_PATH=${TOOL_PATH}:$f;
-done
-for f in $HADOOP_CORE_HOME/build/hadoop-*-tools.jar; do
-  TOOL_PATH=${TOOL_PATH}:$f;
-done
-
 # add user-specified CLASSPATH last
 if [ "$HADOOP_CLASSPATH" != "" ]; then
   CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
@@ -189,7 +179,6 @@ unset IFS
 if $cygwin; then
   HADOOP_CORE_HOME=`cygpath -w "$HADOOP_CORE_HOME"`
   HADOOP_LOG_DIR=`cygpath -w "$HADOOP_LOG_DIR"`
-  TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
 fi
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
@@ -228,12 +217,12 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 if [ "$HADOOP_HDFS_HOME" = "" ]; then
   if [ -d "${HADOOP_HOME}/hdfs" ]; then
     HADOOP_HDFS_HOME=$HADOOP_HOME/hdfs
-    echo Found HDFS installed at $HADOOP_HDFS_HOME
+    #echo Found HDFS installed at $HADOOP_HDFS_HOME
   fi
 fi
 
 if [ -d "${HADOOP_HDFS_HOME}" ]; then
-  for f in $HADOOP_HDFS_HOME/hadoop-*-hdfs.jar; do
+  for f in $HADOOP_HDFS_HOME/hadoop-hdfs-*.jar; do
     CLASSPATH=${CLASSPATH}:$f;
   done
 
@@ -247,14 +236,51 @@ if [ -d "${HADOOP_HDFS_HOME}" ]; then
   fi
 fi
 
+# cygwin path translation
+if $cygwin; then
+  HADOOP_HDFS_HOME=`cygpath -w "$HADOOP_HDFS_HOME"`
+fi
+
 # set mapred home if mapred is present
 if [ "$HADOOP_MAPRED_HOME" = "" ]; then
   if [ -d "${HADOOP_HOME}/mapred" ]; then
     HADOOP_MAPRED_HOME=$HADOOP_HOME/mapred
-    echo Found MAPRED installed at $HADOOP_MAPRED_HOME
+    #echo Found MAPRED installed at $HADOOP_MAPRED_HOME
   fi
 fi
 
+if [ -d "${HADOOP_MAPRED_HOME}" ]; then
+  for f in $HADOOP_MAPRED_HOME/hadoop-mapred-*.jar; do
+    CLASSPATH=${CLASSPATH}:$f
+  done
+
+  for f in $HADOOP_MAPRED_HOME/lib/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f
+  done
+
+  if [ -d "$HADOOP_MAPRED_HOME/build/classes" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/classes
+  fi
+
+  if [ -d "$HADOOP_MAPRED_HOME/build/tools" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/tools
+  fi
+
+  for f in $HADOOP_MAPRED_HOME/hadoop-mapred-tools-*.jar; do
+    TOOL_PATH=${TOOL_PATH}:$f;
+  done
+  for f in $HADOOP_MAPRED_HOME/build/hadoop-mapred-tools-*.jar; do
+    TOOL_PATH=${TOOL_PATH}:$f;
+  done
+fi
+
+# cygwin path translation
+if $cygwin; then
+  HADOOP_MAPRED_HOME=`cygpath -w "$HADOOP_MAPRED_HOME"`
+  TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
+fi
+
+
 # TODO:remove this when dir structure is changed
-export HADOOP_HDFS_HOME=$HADOOP_HOME
-export HADOOP_MAPRED_HOME=$HADOOP_HOME
+#export HADOOP_HDFS_HOME=$HADOOP_HOME
+#export HADOOP_MAPRED_HOME=$HADOOP_HOME
