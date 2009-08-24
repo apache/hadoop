@@ -80,10 +80,10 @@
   <dependencies>
 
  <!--used client side-->
-<!--  <dependency org="commons-cli"
-    name="commons-cli"
-    rev="${commons-cli.version}"
-    conf="client->default"/> -->
+    <dependency org="commons-cli"
+      name="commons-cli"
+      rev="${commons-cli.version}"
+      conf="client->default"/>
 
     <dependency org="checkstyle"
       name="checkstyle"

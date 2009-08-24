@@ -25,14 +25,18 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Iterator;
 import java.util.StringTokenizer;
 
-import org.apache.commons.cli2.CommandLine;
-import org.apache.commons.cli2.OptionException;
-import org.apache.commons.cli2.builder.ArgumentBuilder;
-import org.apache.commons.cli2.builder.DefaultOptionBuilder;
-import org.apache.commons.cli2.builder.GroupBuilder;
-import org.apache.commons.cli2.commandline.Parser;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.OptionGroup;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.Parser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -322,28 +326,22 @@ public class Submitter extends Configured implements Tool {
    * A command line parser for the CLI-based Pipes job submitter.
    */
   static class CommandLineParser {
-    private DefaultOptionBuilder option = 
-      new DefaultOptionBuilder("-","-", false);
-    private ArgumentBuilder arg = new ArgumentBuilder();
-    private GroupBuilder optionList = new GroupBuilder();
+    private Options options = new Options();
     
     void addOption(String longName, boolean required, String description, 
                    String paramName) {
-      arg.withName(paramName).withMinimum(1).withMaximum(1);
-      optionList.withOption(option.withLongName(longName).
-                                   withArgument(arg.create()).
-                                   withDescription(description).
-                                   withRequired(required).create());
+      Option option = OptionBuilder.withArgName(paramName).hasArgs(1).withDescription(description).isRequired(required).create(longName);
+      options.addOption(option);
     }
     
     void addArgument(String name, boolean required, String description) {
-      arg.withName(name).withMinimum(1).withMaximum(1);
-      optionList.withOption(arg.create());
+      Option option = OptionBuilder.withArgName(name).hasArgs(1).withDescription(description).isRequired(required).create();
+      options.addOption(option);
+
     }
 
     Parser createParser() {
-      Parser result = new Parser();
-      result.setGroup(optionList.create());
+      Parser result = new BasicParser();
       return result;
     }
     
@@ -371,7 +369,7 @@ public class Submitter extends Configured implements Tool {
                                           JobConf conf, 
                                           Class<InterfaceType> cls
                                          ) throws ClassNotFoundException {
-    return conf.getClassByName((String) cl.getValue(key)).asSubclass(cls);
+    return conf.getClassByName((String) cl.getOptionValue(key)).asSubclass(cls);
   }
 
   @Override
@@ -402,60 +400,61 @@ public class Submitter extends Configured implements Tool {
     try {
       
       GenericOptionsParser genericParser = new GenericOptionsParser(getConf(), args);
-      CommandLine results = parser.parse(genericParser.getRemainingArgs());
+      CommandLine results = 
+        parser.parse(cli.options, genericParser.getRemainingArgs());
       
       JobConf job = new JobConf(getConf());
       
-      if (results.hasOption("-input")) {
+      if (results.hasOption("input")) {
         FileInputFormat.setInputPaths(job, 
-                          (String) results.getValue("-input"));
+                          (String) results.getOptionValue("input"));
       }
-      if (results.hasOption("-output")) {
+      if (results.hasOption("output")) {
         FileOutputFormat.setOutputPath(job, 
-          new Path((String) results.getValue("-output")));
+          new Path((String) results.getOptionValue("output")));
       }
-      if (results.hasOption("-jar")) {
-        job.setJar((String) results.getValue("-jar"));
+      if (results.hasOption("jar")) {
+        job.setJar((String) results.getOptionValue("jar"));
       }
-      if (results.hasOption("-inputformat")) {
+      if (results.hasOption("inputformat")) {
         setIsJavaRecordReader(job, true);
-        job.setInputFormat(getClass(results, "-inputformat", job,
+        job.setInputFormat(getClass(results, "inputformat", job,
                                      InputFormat.class));
       }
-      if (results.hasOption("-javareader")) {
+      if (results.hasOption("javareader")) {
         setIsJavaRecordReader(job, true);
       }
-      if (results.hasOption("-map")) {
+      if (results.hasOption("map")) {
         setIsJavaMapper(job, true);
-        job.setMapperClass(getClass(results, "-map", job, Mapper.class));
+        job.setMapperClass(getClass(results, "map", job, Mapper.class));
       }
-      if (results.hasOption("-partitioner")) {
-        job.setPartitionerClass(getClass(results, "-partitioner", job,
+      if (results.hasOption("partitioner")) {
+        job.setPartitionerClass(getClass(results, "partitioner", job,
                                           Partitioner.class));
       }
-      if (results.hasOption("-reduce")) {
+      if (results.hasOption("reduce")) {
         setIsJavaReducer(job, true);
-        job.setReducerClass(getClass(results, "-reduce", job, Reducer.class));
+        job.setReducerClass(getClass(results, "reduce", job, Reducer.class));
       }
-      if (results.hasOption("-reduces")) {
+      if (results.hasOption("reduces")) {
         job.setNumReduceTasks(Integer.parseInt((String) 
-                                                results.getValue("-reduces")));
+                                            results.getOptionValue("reduces")));
       }
-      if (results.hasOption("-writer")) {
+      if (results.hasOption("writer")) {
         setIsJavaRecordWriter(job, true);
-        job.setOutputFormat(getClass(results, "-writer", job, 
+        job.setOutputFormat(getClass(results, "writer", job, 
                                       OutputFormat.class));
       }
-      if (results.hasOption("-program")) {
-        setExecutable(job, (String) results.getValue("-program"));
+      if (results.hasOption("program")) {
+        setExecutable(job, (String) results.getOptionValue("program"));
       }
-      if (results.hasOption("-jobconf")) {
+      if (results.hasOption("jobconf")) {
         LOG.warn("-jobconf option is deprecated, please use -D instead.");
-        String options = (String)results.getValue("-jobconf");
+        String options = (String)results.getOptionValue("jobconf");
         StringTokenizer tokenizer = new StringTokenizer(options, ",");
         while (tokenizer.hasMoreTokens()) {
           String keyVal = tokenizer.nextToken().trim();
-          String[] keyValSplit = keyVal.split("=");
+          String[] keyValSplit = keyVal.split("=", 2);
           job.set(keyValSplit[0], keyValSplit[1]);
         }
       }
@@ -479,7 +478,8 @@ public class Submitter extends Configured implements Tool {
       
       runJob(job);
       return 0;
-    } catch (OptionException oe) {
+    } catch (ParseException pe) {
+      LOG.info("Error : " + pe);
       cli.printUsage();
       return 1;
     }

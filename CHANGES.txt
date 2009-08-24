@@ -36,6 +36,9 @@ Release 0.20.1 - Unreleased
 
     HDFS-438. Improve help message for space quota command. (Raghu Angadi)
 
+    MAPREDUCE-767. Remove the dependence on the CLI 2.0 snapshot.
+    (Amar Kamat via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
