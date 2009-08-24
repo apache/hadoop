@@ -161,6 +161,9 @@ Trunk (unreleased changes)
 
     HDFS-534. Include avro in ivy.  (szetszwo)
 
+    HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
+    sometimes fails with CloseByInterruptException. (hairong)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
