@@ -176,7 +176,7 @@
   <!-- the normal classpath -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
-    <pathelement path="${lib.dir}/hadoop-core-${hadoop-core.version}.jar"/>
+    <pathelement path="${lib.dir}/hadoop-common-${hadoop-core.version}.jar"/>
     <pathelement location="${conf.dir}"/>
     <path refid="ivy-common.classpath"/>
   </path>
@@ -190,7 +190,7 @@
     <pathelement path="${clover.jar}"/>
     <path refid="ivy-test.classpath"/>
     <fileset dir="${lib.dir}">
-      <include name="hadoop-core-test-${hadoop-core.version}.jar" />
+      <include name="hadoop-common-test-${hadoop-core.version}.jar" />
       <exclude name="**/excluded/" />
     </fileset>
     <path refid="classpath"/>
