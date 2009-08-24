@@ -110,6 +110,10 @@ Trunk (unreleased changes)
     HDFS-552. Change TestFiDataTransferProtocol to junit 4 and add a few new
     tests.  (szetszwo)
 
+    HDFS-549. Allow a non-fault-inject test, which is specified by -Dtestcase,
+    to be executed by the run-test-hdfs-fault-inject target.  (Konstantin
+    Boudnik via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
