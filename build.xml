@@ -214,7 +214,7 @@
   <path id="classpath">
     <pathelement location="${build.classes}"/>
     <pathelement location="${conf.dir}"/>
-    <pathelement path="${lib.dir}/hadoop-core-${hadoop-core.version}.jar"/>
+    <pathelement path="${lib.dir}/hadoop-common-${hadoop-core.version}.jar"/>
     <pathelement path="${lib.dir}/hadoop-hdfs-${hadoop-hdfs.version}.jar"/>
     <path refid="ivy-common.classpath"/>
   </path>
@@ -227,7 +227,7 @@
     <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
-    <pathelement path="${lib.dir}/hadoop-core-test-${hadoop-core.version}.jar"/>
+    <pathelement path="${lib.dir}/hadoop-common-test-${hadoop-core.version}.jar"/>
     <pathelement path="${lib.dir}/hadoop-hdfs-test-${hadoop-hdfs.version}.jar"/>
     <path refid="classpath"/>
     <pathelement location="${test.mapred.build.classes}" />
