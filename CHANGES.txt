@@ -520,6 +520,9 @@ Trunk (unreleased changes)
     HADOOP-6180. NameNode slowed down when many files with same filename
     were moved to Trash. (Boris Shkolnik via hairong)
 
+    HADOOP-6166. Further improve the performance of the pure-Java CRC32
+    implementation. (Tsz Wo (Nicholas), SZE via cdouglas)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
