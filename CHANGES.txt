@@ -3,6 +3,8 @@ Release 0.21.0 - Unreleased
   INCOMPATIBLE CHANGES
 
   BUG FIXES
+   HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

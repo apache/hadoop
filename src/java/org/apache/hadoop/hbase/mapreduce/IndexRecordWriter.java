@@ -136,9 +136,14 @@ extends RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper> {
      */
     @Override
     public void run() {
-      while (!closed) {
         try {
-          context.setStatus("closing");
+            context.setStatus("Closing");
+        } catch (IOException e) {
+            return;
+        }
+        while (!closed) {
+        try {
+          context.progress();            
           Thread.sleep(1000);
         } catch (InterruptedException e) {
           continue;
