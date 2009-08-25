@@ -173,6 +173,9 @@ Trunk (unreleased changes)
     HDFS-561. Fix write pipeline READ_TIMEOUT in DataTransferProtocol.
     (Kan Zhang via szetszwo)
 
+    HDFS-553. BlockSender reports wrong failed position in ChecksumException.
+    (hairong)
+ 
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
