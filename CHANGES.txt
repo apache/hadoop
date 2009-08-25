@@ -166,9 +166,6 @@ Trunk (unreleased changes)
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
     sometimes fails with CloseByInterruptException. (hairong)
 
-    HDFS-553. BlockSender reports wrong failed position in ChecksumException.
-    (hairong)
-
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

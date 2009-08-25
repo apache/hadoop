@@ -290,9 +290,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
           int dLen = Math.min(dLeft, bytesPerChecksum);
           checksum.update(buf, dOff, dLen);
           if (!checksum.compare(buf, cOff)) {
-            long failedPos = offset + len -dLeft;
             throw new ChecksumException("Checksum failed at " + 
-                                        failedPos, failedPos);
+                                        (offset + len - dLeft), len);
           }
           dLeft -= dLen;
           dOff += dLen;
