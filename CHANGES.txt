@@ -110,6 +110,9 @@ Trunk (unreleased changes)
     HDFS-552. Change TestFiDataTransferProtocol to junit 4 and add a few new
     tests.  (szetszwo)
 
+    HDFS-562. Add a test for NameNode.getBlockLocations(..) to check read from
+    un-closed file.  (szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
