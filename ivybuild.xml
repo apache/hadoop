@@ -262,8 +262,10 @@ ${build.ivy.report.dir}
       </exec>
     </presetdef>
     <property name="issue" value="HDFS-326"/>
+    <property name="issue" value="MAPREDUCE-233"/>
+    <property name="hadoop.svn.host" value="svn.apache.org" />
     <property name="hadoop-svn"
-      value="https://svn.apache.org/repos/asf/hadoop/common"/>
+      value="https://${hadoop.svn.host}/repos/asf/hadoop/hdfs"/>    
     <property name="trunk"
       value="${hadoop-svn}/trunk"/>
     <property name="branch"

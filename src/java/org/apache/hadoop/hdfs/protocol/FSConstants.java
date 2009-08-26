@@ -56,6 +56,7 @@ public interface FSConstants {
   public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
 
   public static final int SIZE_OF_INTEGER = Integer.SIZE / Byte.SIZE;
+  public static final int MIN_NUM_OF_VALID_VOLUMES = 1;// for a DN to run
 
   // SafeMode actions
   public enum SafeModeAction{ SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET; }

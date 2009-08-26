@@ -15,24 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol;
+package org.apache.hadoop.fi;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fi.DataTransferTestUtil;
-import org.apache.hadoop.fi.PipelineTest;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
-/** Aspect for ClientProtocol */
-public aspect ClientProtocolAspects {
-  public static final Log LOG = LogFactory.getLog(ClientProtocolAspects.class);
-
-  pointcut addBlock():
-    call(LocatedBlock ClientProtocol.addBlock(String, String));
-
-  after() returning(LocatedBlock lb): addBlock() {
-    PipelineTest pipelineTest = DataTransferTestUtil.getPipelineTest();
-    if (pipelineTest != null)
-      LOG.info("FI: addBlock "
-          + pipelineTest.initPipeline(lb));
-  }
+/** A pipeline contains a list of datanodes. */
+public interface PipelineTest {
+  public Pipeline initPipeline(LocatedBlock lb);
+  public Pipeline getPipeline(DatanodeID id);
 }

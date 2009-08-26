@@ -431,6 +431,17 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   public String getServiceName() {
     return "NameNode";
   }
+
+  /**
+   * Get the current number of workers
+   * @return the worker count
+   */
+  @Override
+  public int getLiveWorkerCount() {
+    return getNamesystem() != null?
+            getNamesystem().heartbeats.size()
+            : 0;
+  }
   
   /**
    * This method does all the startup. It is invoked from {@link #start()} when
@@ -1048,6 +1059,8 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     }
     verifyRequest(nodeReg);
     if (errorCode == DatanodeProtocol.DISK_ERROR) {
+      LOG.warn("Volume failed on " + dnName); 
+    } else if (errorCode == DatanodeProtocol.FATAL_DISK_ERROR) {
       namesystem.removeDatanode(nodeReg);            
     }
   }

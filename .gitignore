@@ -19,7 +19,6 @@
 .settings
 .svn
 build/
-build-fi/
 conf/masters
 conf/slaves
 conf/hadoop-env.sh
@@ -32,3 +31,4 @@ src/docs/build
 src/docs/cn/build
 src/docs/cn/src/documentation/sitemap.xmap
 src/docs/cn/uming.conf
+
