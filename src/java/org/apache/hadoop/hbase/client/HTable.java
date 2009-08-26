@@ -796,9 +796,8 @@ public class HTable implements HTableInterface {
       g.addColumn(fq[0], fq[1]);
     }
     g.setMaxVersions(numVersions);
-    if (timestamp != HConstants.LATEST_TIMESTAMP) {
-      g.setTimeStamp(timestamp);
-    }
+    g.setTimeRange(0, 
+        timestamp == HConstants.LATEST_TIMESTAMP ? timestamp : timestamp+1);
     Result r = get(g);
     return r == null || r.size() <= 0? null: r.getCellValues();
   }
@@ -1054,9 +1053,8 @@ public class HTable implements HTableInterface {
       }
     }
     g.setMaxVersions(numVersions);
-    if (ts != HConstants.LATEST_TIMESTAMP) {
-      g.setTimeStamp(ts);
-    }
+    g.setTimeRange(0,  
+        ts == HConstants.LATEST_TIMESTAMP ? ts : ts+1);
     Result r = get(g);
     return r == null || r.size() <= 0? null: r.getRowResult();
   }
@@ -1310,6 +1308,8 @@ public class HTable implements HTableInterface {
         scan.addColumn(splits[0], splits[1]);
       }
     }
+    scan.setTimeRange(0,  
+        timestamp == HConstants.LATEST_TIMESTAMP ? timestamp : timestamp+1);
     OldClientScanner s = new OldClientScanner(new ClientScanner(scan));
     s.initialize();
     return s;
@@ -1706,7 +1706,8 @@ public class HTable implements HTableInterface {
       final long timestamp, final RowLock rl) throws IOException {
     final Get g = new Get(row, rl);
     g.addColumn(column);
-    g.setTimeStamp(timestamp);
+    g.setTimeRange(0,  
+        timestamp == HConstants.LATEST_TIMESTAMP ? timestamp : timestamp+1);
     return exists(g);
   }
 

@@ -1331,10 +1331,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       
   
   /**
-   * Checks if any stamps are > now.  If so, sets them to now.
+   * Checks if any stamps is Long.MAX_VALUE.  If so, sets them to now.
    * <p>
-   * This acts to be prevent users from inserting future stamps as well as
-   * to replace LATEST_TIMESTAMP with now.
+   * This acts to replace LATEST_TIMESTAMP with now.
    * @param keys
    * @param now
    * @return <code>true</code> when updating the time stamp completed.
@@ -1344,7 +1343,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       return false;
     }
     for(KeyValue key : keys) {
-      key.updateLatestStamp(now);
+      if(key.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
+        key.updateLatestStamp(now);
+      }
     }
     return true;
   }
