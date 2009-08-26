@@ -2606,6 +2606,17 @@ public class TaskTracker
     purgeTask(tip, true);
   }
 
+  /** 
+   * A child task had a fatal error. Kill the task.
+   */  
+  public synchronized void fatalError(TaskAttemptID taskId, String msg) 
+  throws IOException {
+    LOG.fatal("Task: " + taskId + " - Killed : " + msg);
+    TaskInProgress tip = runningTasks.get(taskId);
+    tip.reportDiagnosticInfo("Error: " + msg);
+    purgeTask(tip, true);
+  }
+
   public synchronized MapTaskCompletionEventsUpdate getMapCompletionEvents(
       JobID jobId, int fromEventId, int maxLocs, TaskAttemptID id) 
   throws IOException {

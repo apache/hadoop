@@ -342,6 +342,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
       LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
     }
     
+    public synchronized void fatalError(TaskAttemptID taskId, String msg) 
+    throws IOException {
+      LOG.fatal("Fatal: "+ msg + "from task: " + taskId);
+    }
+    
     public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
         int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
       return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY,

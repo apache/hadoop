@@ -59,6 +59,10 @@ public class IsolationRunner {
       LOG.info("Task " + taskId + " reporting shuffle error: " + message);
     }
 
+    public void fatalError(TaskAttemptID taskId, String msg) throws IOException{
+      LOG.info("Task " + taskId + " reporting fatal error: " + msg);
+    }
+
     public JvmTask getTask(JVMId jvmId) throws IOException {
       return null;
     }

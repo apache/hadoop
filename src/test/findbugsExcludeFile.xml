@@ -50,4 +50,10 @@
 	  The switch condition fall through is intentional and for performance
 	  purposes.
     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Task" />
+       <Method name="reportFatalError" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+    
 </FindBugsFilter>

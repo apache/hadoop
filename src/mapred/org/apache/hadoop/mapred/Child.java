@@ -183,21 +183,31 @@ class Child {
     } catch (FSError e) {
       LOG.fatal("FSError from child", e);
       umbilical.fsError(taskid, e.getMessage());
-    } catch (Throwable throwable) {
-      LOG.warn("Error running child", throwable);
+    } catch (Exception exception) {
+      LOG.warn("Error running child", exception);
       try {
         if (task != null) {
           // do cleanup for the task
           task.taskCleanup(umbilical);
         }
-      } catch (Throwable th) {
-        LOG.info("Error cleaning up" + th);
+      } catch (Exception e) {
+        LOG.info("Error cleaning up" + e);
       }
       // Report back any failures, for diagnostic purposes
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      throwable.printStackTrace(new PrintStream(baos));
+      exception.printStackTrace(new PrintStream(baos));
       if (taskid != null) {
         umbilical.reportDiagnosticInfo(taskid, baos.toString());
+      }
+    } catch (Throwable throwable) {
+      LOG.fatal("Error running child : "
+                + StringUtils.stringifyException(throwable));
+      if (taskid != null) {
+        Throwable tCause = throwable.getCause();
+        String cause = tCause == null 
+                       ? throwable.getMessage() 
+                       : StringUtils.stringifyException(tCause);
+        umbilical.fatalError(taskid, cause);
       }
     } finally {
       RPC.stopProxy(umbilical);
