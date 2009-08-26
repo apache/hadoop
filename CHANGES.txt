@@ -74,6 +74,10 @@ Trunk (unreleased changes)
     MAPREDUCE-711. Removed Distributed Cache from Common, to move it
     under Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-6201. Change FileSystem::listStatus contract to throw
+    FileNotFoundException if the directory does not exist, rather than letting
+    this be implementation-specific. (Jakob Homan via cdouglas)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
@@ -500,6 +504,9 @@ Trunk (unreleased changes)
 
     HADOOP-6173. Change src/native/packageNativeHadoop.sh to package all
     native library files.  (Hong Tang via szetszwo)
+
+    HADOOP-6184. Provide an API to dump Configuration in a JSON format.
+    (V.V.Chaitanya Krishna via yhemanth)
  
   OPTIMIZATIONS
 
@@ -930,6 +937,9 @@ Trunk (unreleased changes)
 
     HADOOP-6103. Clones the classloader as part of Configuration clone.
     (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-6152. Fix classpath variables in bin/hadoop-config.sh and some
+    other scripts.  (Aaron Kimball via szetszwo)
 
 Release 0.20.1 - Unreleased
 

@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.fs.kfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -50,11 +51,12 @@ public class KFSEmulationImpl implements IFSImpl {
 
     public String[] readdir(String path) throws IOException {
         FileStatus[] p = localFS.listStatus(new Path(path));
-        String[] entries = null;
-
-        if (p == null) {
-            return null;
+        try {
+          p = localFS.listStatus(new Path(path));
+        } catch ( FileNotFoundException fnfe ) {
+          return null;
         }
+        String[] entries = null;
 
         entries = new String[p.length];
         for (int i = 0; i < p.length; i++)

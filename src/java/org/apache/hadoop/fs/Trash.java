@@ -170,10 +170,14 @@ public class Trash extends Configured {
 
   /** Delete old checkpoints. */
   public void expunge() throws IOException {
-    FileStatus[] dirs = fs.listStatus(trash);            // scan trash sub-directories
-    if( dirs == null){
+    FileStatus[] dirs = null;
+    
+    try {
+      dirs = fs.listStatus(trash);            // scan trash sub-directories
+    } catch (FileNotFoundException fnfe) {
       return;
     }
+
     long now = System.currentTimeMillis();
     for (int i = 0; i < dirs.length; i++) {
       Path path = dirs[i].getPath();
@@ -252,9 +256,6 @@ public class Trash extends Configured {
               LOG.warn("Trash can't list homes: "+e+" Sleeping.");
               continue;
             }
-
-            if (homes == null)
-              continue;
 
             for (FileStatus home : homes) {         // dump each trash
               if (!home.isDir())

@@ -285,7 +285,7 @@ public class RawLocalFileSystem extends FileSystem {
     FileStatus[] results;
 
     if (!localf.exists()) {
-      return null;
+      throw new FileNotFoundException("File " + f + " does not exist.");
     }
     if (localf.isFile()) {
       return new FileStatus[] {

@@ -178,7 +178,7 @@ public class S3FileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
-      return null;
+      throw new FileNotFoundException("File " + f + " does not exist.");
     }
     if (inode.isFile()) {
       return new FileStatus[] {
@@ -303,10 +303,13 @@ public class S3FileSystem extends FileSystem {
        store.deleteBlock(block);
      }
    } else {
-     FileStatus[] contents = listStatus(absolutePath);
-     if (contents == null) {
+     FileStatus[] contents = null; 
+     try {
+       contents = listStatus(absolutePath);
+     } catch(FileNotFoundException fnfe) {
        return false;
      }
+
      if ((contents.length !=0) && (!recursive)) {
        throw new IOException("Directory " + path.toString() 
            + " is not empty.");
