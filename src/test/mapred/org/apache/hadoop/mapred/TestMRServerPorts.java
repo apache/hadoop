@@ -18,6 +18,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+
+import javax.security.auth.login.LoginException;
+
 import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.TestHDFSServerPorts;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -57,7 +60,7 @@ public class TestMRServerPorts extends TestCase {
    * Check whether the JobTracker can be started.
    */
   private JobTracker startJobTracker(JobConf conf, JTRunner runner) 
-  throws IOException {
+  throws IOException, LoginException {
     conf.set("mapred.job.tracker", "localhost:0");
     conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
     JobTracker jt = null;
@@ -87,7 +90,7 @@ public class TestMRServerPorts extends TestCase {
    * Check whether the JobTracker can be started.
    */
   private boolean canStartJobTracker(JobConf conf) 
-  throws IOException, InterruptedException {
+  throws IOException, InterruptedException, LoginException {
     JobTracker jt = null;
     try {
       jt = JobTracker.startTracker(conf);

@@ -21,9 +21,6 @@ package org.apache.hadoop.sqoop;
 import org.apache.hadoop.sqoop.hive.TestHiveImport;
 import org.apache.hadoop.sqoop.lib.TestFieldFormatter;
 import org.apache.hadoop.sqoop.lib.TestRecordParser;
-import org.apache.hadoop.sqoop.manager.LocalMySQLTest;
-import org.apache.hadoop.sqoop.manager.MySQLAuthTest;
-import org.apache.hadoop.sqoop.manager.OracleManagerTest;
 import org.apache.hadoop.sqoop.manager.TestHsqldbManager;
 import org.apache.hadoop.sqoop.manager.TestSqlManager;
 import org.apache.hadoop.sqoop.orm.TestClassWriter;
@@ -52,14 +49,12 @@ public final class AllTests  {
     suite.addTestSuite(TestMultiCols.class);
     suite.addTestSuite(TestOrderBy.class);
     suite.addTestSuite(TestWhere.class);
-    suite.addTestSuite(LocalMySQLTest.class);
-    suite.addTestSuite(MySQLAuthTest.class);
     suite.addTestSuite(TestHiveImport.class);
     suite.addTestSuite(TestRecordParser.class);
     suite.addTestSuite(TestFieldFormatter.class);
     suite.addTestSuite(TestImportOptions.class);
     suite.addTestSuite(TestParseMethods.class);
-    suite.addTestSuite(OracleManagerTest.class);
+    suite.addTest(ThirdPartyTests.suite());
 
     return suite;
   }

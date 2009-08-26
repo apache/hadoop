@@ -137,6 +137,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     
     //validate skipped records
     Path skipDir = SkipBadRecords.getSkipOutputPath(conf);
+    assertNotNull(skipDir);
     Path[] skips = FileUtil.stat2Paths(getFileSystem().listStatus(skipDir));
     List<String> mapSkipped = new ArrayList<String>();
     List<String> redSkipped = new ArrayList<String>();

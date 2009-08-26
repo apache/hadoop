@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
@@ -39,7 +41,7 @@ public class TestTrackerReservation extends TestCase {
       org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker {
 
     FakeJobTracker(JobConf conf, Clock clock, String[] tts) throws IOException,
-        InterruptedException {
+        InterruptedException, LoginException {
       super(conf, clock, tts);
     }
 

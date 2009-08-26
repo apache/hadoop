@@ -82,10 +82,6 @@
   <dependencies>
 
  <!--used client side-->
-    <dependency org="org.apache.mahout.commons"
-      name="commons-cli"
-      rev="${commons-cli2.version}"
-      conf="client->default"/>
     <dependency org="commons-cli"
       name="commons-cli"
       rev="${commons-cli.version}"

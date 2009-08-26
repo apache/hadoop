@@ -21,6 +21,7 @@ package org.apache.hadoop.examples;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Formatter;
 import java.util.List;
 import java.util.Random;
 
@@ -96,8 +97,16 @@ public class RandomTextWriter extends Configured implements Tool {
     private int wordsInKeyRange;
     private int minWordsInValue;
     private int wordsInValueRange;
-    private Random random = new Random();
-    
+
+    private final Random random = new Random();
+    private final Text keyWords = new Text();
+    private final Text valueWords = new Text();
+    private final String STATUS_MSG = "wrote record %d. %d bytes left.";
+    private final Formatter statusFormat = new Formatter(new StringBuilder());
+
+    private Counter byteCounter;
+    private Counter recordCounter;
+
     /**
      * Save the configuration value that we need to write the data.
      */
@@ -115,6 +124,8 @@ public class RandomTextWriter extends Configured implements Tool {
       wordsInValueRange = 
         (conf.getInt("test.randomtextwrite.max_words_value", 100) - 
          minWordsInValue);
+      byteCounter = context.getCounter(Counters.BYTES_WRITTEN);
+      recordCounter = context.getCounter(Counters.RECORDS_WRITTEN);
     }
     
     /**
@@ -125,38 +136,39 @@ public class RandomTextWriter extends Configured implements Tool {
       int itemCount = 0;
       while (numBytesToWrite > 0) {
         // Generate the key/value 
-        int noWordsKey = minWordsInKey + 
+        final int noWordsKey = minWordsInKey +
           (wordsInKeyRange != 0 ? random.nextInt(wordsInKeyRange) : 0);
-        int noWordsValue = minWordsInValue + 
+        final int noWordsValue = minWordsInValue +
           (wordsInValueRange != 0 ? random.nextInt(wordsInValueRange) : 0);
-        Text keyWords = generateSentence(noWordsKey);
-        Text valueWords = generateSentence(noWordsValue);
-        
+
+        int recordBytes = generateSentence(keyWords, noWordsKey);
+        recordBytes += generateSentence(valueWords, noWordsValue);
+        numBytesToWrite -= recordBytes;
+
         // Write the sentence 
         context.write(keyWords, valueWords);
-        
-        numBytesToWrite -= (keyWords.getLength() + valueWords.getLength());
-        
+
         // Update counters, progress etc.
-        context.getCounter(Counters.BYTES_WRITTEN).increment(
-                  keyWords.getLength() + valueWords.getLength());
-        context.getCounter(Counters.RECORDS_WRITTEN).increment(1);
-        if (++itemCount % 200 == 0) {
-          context.setStatus("wrote record " + itemCount + ". " + 
-                             numBytesToWrite + " bytes left.");
+        recordCounter.increment(1);
+        byteCounter.increment(recordBytes);
+
+        if (++itemCount % 1000 == 0) {
+          ((StringBuilder)statusFormat.out()).setLength(0);
+          context.setStatus(statusFormat.format(STATUS_MSG,
+                itemCount, numBytesToWrite).toString());
         }
       }
       context.setStatus("done with " + itemCount + " records.");
     }
     
-    private Text generateSentence(int noWords) {
-      StringBuffer sentence = new StringBuffer();
-      String space = " ";
+    private int generateSentence(Text txt, int noWords) {
+      txt.clear();
       for (int i=0; i < noWords; ++i) {
-        sentence.append(words[random.nextInt(words.length)]);
-        sentence.append(space);
+        final Text word = words[random.nextInt(words.length)];
+        txt.append(word.getBytes(), 0, word.getLength());
+        txt.append(SPACE, 0, SPACE.length);
       }
-      return new Text(sentence.toString());
+      return txt.getLength();
     }
   }
   
@@ -245,10 +257,12 @@ public class RandomTextWriter extends Configured implements Tool {
     System.exit(res);
   }
 
+  private static final byte[] SPACE = " ".getBytes();
+
   /**
    * A random list of 100 words from /usr/share/dict/words
    */
-  private static String[] words = {
+  private final static Text[] words = buildText(new String[] {
                                    "diurnalness", "Homoiousian",
                                    "spiranthic", "tetragynian",
                                    "silverhead", "ungreat",
@@ -749,5 +763,14 @@ public class RandomTextWriter extends Configured implements Tool {
                                    "sterilely", "unrealize",
                                    "unpatched", "hypochondriacism",
                                    "critically", "cheesecutter",
-                                  };
+                                  });
+
+  private static Text[] buildText(String[] str) {
+    Text[] ret = new Text[str.length];
+    for (int i = 0; i < str.length; ++i) {
+      ret[i] = new Text(str[i]);
+    }
+    return ret;
+  }
+
 }

@@ -30,7 +30,11 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Refinement of InputFormat requiring implementors to provide
  * ComposableRecordReader instead of RecordReader.
+ * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.join.ComposableInputFormat} instead
  */
+@Deprecated
 public interface ComposableInputFormat<K extends WritableComparable,
                                        V extends Writable>
     extends InputFormat<K,V> {

@@ -18,8 +18,11 @@
 package org.apache.hadoop.mapred;
 
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URLEncoder;
@@ -113,9 +116,6 @@ public class JobTracker extends Service
   }
 
   private long tasktrackerExpiryInterval;
-  private long retireJobInterval;
-  private long retireJobCheckInterval;
-
   // The interval after which one fault of a tracker will be discarded,
   // if there are no faults during this. 
   private static long UPDATE_FAULTY_TRACKER_INTERVAL = 24 * 60 * 60 * 1000;
@@ -152,7 +152,9 @@ public class JobTracker extends Service
   final static FsPermission SYSTEM_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0700); // rwx------
   
-  private static Clock clock;
+  private static Clock clock = null;
+  
+  static final Clock DEFAULT_CLOCK = new Clock();
 
   /**
    * A client tried to submit a job before the Job Tracker was ready.
@@ -166,25 +168,17 @@ public class JobTracker extends Service
     }
   }
 
-  /**
-   * The maximum no. of 'completed' (successful/failed/killed)
-   * jobs kept in memory per-user. 
-   */
-  int MAX_COMPLETE_USER_JOBS_IN_MEMORY;
-
-   /**
-    * The minimum time (in ms) that a job's information has to remain
-    * in the JobTracker's memory before it is retired.
-    */
-  int MIN_TIME_BEFORE_RETIRE;
-
-
   private int nextJobId = 1;
 
   public static final Log LOG = LogFactory.getLog(JobTracker.class);
     
+  /**
+   * Returns JobTracker's clock. Note that the correct clock implementation will
+   * be obtained only when the JobTracker is initialized. If the JobTracker is
+   * not initialized then the default clock i.e {@link Clock} is returned. 
+   */
   static Clock getClock() {
-    return clock;
+    return clock == null ? DEFAULT_CLOCK : clock;
   }
   
   /**
@@ -197,18 +191,22 @@ public class JobTracker extends Service
    * @param conf configuration for the JobTracker.
    * @throws IOException
    */
-  public static JobTracker startTracker(JobConf conf
-                                        ) throws IOException,
-                                                 InterruptedException {
-    return startTracker(conf, new Clock());
+  public static JobTracker startTracker(JobConf conf) 
+  throws IOException, InterruptedException, LoginException {
+    return startTracker(conf, DEFAULT_CLOCK);
   }
 
   static JobTracker startTracker(JobConf conf, Clock clock) 
-  throws IOException, InterruptedException {
+  throws IOException, InterruptedException, LoginException {
+    return startTracker(conf, clock, generateNewIdentifier());
+  }
+
+  static JobTracker startTracker(JobConf conf, Clock clock, String identifier) 
+  throws IOException, InterruptedException, LoginException {
     JobTracker result = null;
     while (true) {
       try {
-        result = new JobTracker(conf, clock);
+        result = new JobTracker(conf, clock, identifier);
         startService(result);
         result.taskScheduler.setTaskTrackerManager(result);
         break;
@@ -218,6 +216,10 @@ public class JobTracker extends Service
         throw e;
       } catch (UnknownHostException e) {
         throw e;
+      } catch (AccessControlException ace) {
+        // in case of jobtracker not having right access
+        // bail out
+        throw ace;
       } catch (IOException e) {
         LOG.warn("Error starting tracker: " +
                 e, e);
@@ -429,29 +431,58 @@ public class JobTracker extends Service
     }
   }
 
-  synchronized void historyFileCopied(JobID jobid, String historyFile) {
-    JobStatus status = getJobStatus(jobid);
-    if (status != null) {
-      String trackingUrl = "";
-      if (historyFile != null) {
-        status.setHistoryFile(historyFile);
-        try {
-          trackingUrl = "http://" + getJobTrackerMachine() + ":" + 
-            getInfoPort() + "/jobdetailshistory.jsp?jobid=" + 
-            jobid + "&logFile=" + URLEncoder.encode(historyFile, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-          LOG.warn("Could not create trackingUrl", e);
+  synchronized void retireJob(JobID jobid, String historyFile) {
+    synchronized (jobs) {
+      JobInProgress job = jobs.get(jobid);
+      if (job != null) {
+        JobStatus status = job.getStatus();
+        
+        //set the historyfile and update the tracking url
+        String trackingUrl = "";
+        if (historyFile != null) {
+          status.setHistoryFile(historyFile);
+          try {
+            trackingUrl = "http://" + getJobTrackerMachine() + ":" + 
+              getInfoPort() + "/jobdetailshistory.jsp?jobid=" + 
+              jobid + "&logFile=" + URLEncoder.encode(historyFile, "UTF-8");
+          } catch (UnsupportedEncodingException e) {
+            LOG.warn("Could not create trackingUrl", e);
+          }
+        }
+        status.setTrackingUrl(trackingUrl);
+        // clean up job files from the local disk
+        JobHistory.JobInfo.cleanupJob(job.getProfile().getJobID());
+
+        //this configuration is primarily for testing
+        //test cases can set this to false to validate job data structures on 
+        //job completion
+        boolean retireJob = 
+          conf.getBoolean("mapred.job.tracker.retire.jobs", true);
+
+        if (retireJob) {
+          //purge the job from memory
+          removeJobTasks(job);
+          jobs.remove(job.getProfile().getJobID());
+          for (JobInProgressListener l : jobInProgressListeners) {
+            l.jobRemoved(job);
+          }
+
+          String jobUser = job.getProfile().getUser();
+          LOG.info("Retired job with id: '" + 
+                   job.getProfile().getJobID() + "' of user '" +
+                   jobUser + "'");
+
+          //add the job status to retired cache
+          retireJobs.addToCache(job.getStatus());
         }
       }
-      status.setTrackingUrl(trackingUrl);
     }
   }
 
   ///////////////////////////////////////////////////////
   // Used to remove old finished Jobs that have been around for too long
   ///////////////////////////////////////////////////////
-  class RetireJobs implements Runnable {
-    int runCount = 0;
+  class RetireJobs {
     private final Map<JobID, JobStatus> jobIDStatusMap = 
       new HashMap<JobID, JobStatus>();
     private final LinkedList<JobStatus> jobStatusQ = 
@@ -478,74 +509,8 @@ public class JobTracker extends Service
     synchronized LinkedList<JobStatus> getAll() {
       return (LinkedList<JobStatus>) jobStatusQ.clone();
     }
-
-    /**
-     * The run method lives for the life of the JobTracker,
-     * and removes Jobs that are not still running, but which
-     * finished a long time ago.
-     */
-    public void run() {
-      while (true) {
-        ++runCount;
-        try {
-          Thread.sleep(retireJobCheckInterval);
-          List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
-          long now = clock.getTime();
-          long retireBefore = now - retireJobInterval;
-
-          synchronized (jobs) {
-            for(JobInProgress job: jobs.values()) {
-              if (job.getStatus().getRunState() != JobStatus.RUNNING &&
-                  job.getStatus().getRunState() != JobStatus.PREP &&
-                  (job.getFinishTime() + MIN_TIME_BEFORE_RETIRE < now) &&
-                  (job.getFinishTime()  < retireBefore)) {
-                retiredJobs.add(job);
-              }
-            }
-          }
-          if (!retiredJobs.isEmpty()) {
-            synchronized (JobTracker.this) {
-              synchronized (jobs) {
-                synchronized (taskScheduler) {
-                  for (JobInProgress job: retiredJobs) {
-                    removeJobTasks(job);
-                    jobs.remove(job.getProfile().getJobID());
-                    for (JobInProgressListener l : jobInProgressListeners) {
-                      l.jobRemoved(job);
-                    }
-                    String jobUser = job.getProfile().getUser();
-                    synchronized (userToJobsMap) {
-                      ArrayList<JobInProgress> userJobs =
-                        userToJobsMap.get(jobUser);
-                      synchronized (userJobs) {
-                        userJobs.remove(job);
-                      }
-                      if (userJobs.isEmpty()) {
-                        userToJobsMap.remove(jobUser);
-                      }
-                    }
-                    LOG.info("Retired job with id: '" + 
-                             job.getProfile().getJobID() + "' of user '" +
-                             jobUser + "'");
-
-                    // clean up job files from the local disk
-                    JobHistory.JobInfo.cleanupJob(job.getProfile().getJobID());
-                    addToCache(job.getStatus());
-                  }
-                }
-              }
-            }
-          }
-        } catch (InterruptedException t) {
-          break;
-        } catch (Throwable t) {
-          LOG.error("Error in retiring job:\n" +
-                    StringUtils.stringifyException(t));
-        }
-      }
-    }
   }
-  
+
   enum ReasonForBlackListing {
     EXCEEDING_FAILURES,
     NODE_UNHEALTHY
@@ -1112,6 +1077,9 @@ public class JobTracker extends Service
           hasUpdates = true;
           LOG.info("Calling init from RM for job " + jip.getJobID().toString());
           initJob(jip);
+          if (!jip.inited()) {
+            throw new IOException("Failed to initialize job " + jip.getJobID());
+          }
         }
       }
       
@@ -1717,10 +1685,6 @@ public class JobTracker extends Service
   // All the known jobs.  (jobid->JobInProgress)
   Map<JobID, JobInProgress> jobs = new TreeMap<JobID, JobInProgress>();
 
-  // (user -> list of JobInProgress)
-  TreeMap<String, ArrayList<JobInProgress>> userToJobsMap =
-    new TreeMap<String, ArrayList<JobInProgress>>();
-    
   // (trackerID --> list of jobs to cleanup)
   Map<String, Set<JobID>> trackerToJobsToCleanup = 
     new HashMap<String, Set<JobID>>();
@@ -1777,7 +1741,6 @@ public class JobTracker extends Service
   ExpireTrackers expireTrackers = new ExpireTrackers();
   Thread expireTrackersThread = null;
   RetireJobs retireJobs = new RetireJobs();
-  Thread retireJobsThread = null;
   int retiredJobsCacheSize;
   ExpireLaunchingTasks expireLaunchingTasks = new ExpireLaunchingTasks();
   Thread expireLaunchingTaskThread = new Thread(expireLaunchingTasks,
@@ -1833,7 +1796,8 @@ public class JobTracker extends Service
 
   private QueueManager queueManager;
 
-  JobTracker(JobConf conf) throws IOException,InterruptedException{
+  JobTracker(JobConf conf) 
+  throws IOException,InterruptedException, LoginException {
     this(conf, new Clock());
   }
   /**
@@ -1843,32 +1807,28 @@ public class JobTracker extends Service
    * @param clock clock to use
    * @throws IOException on problems initializing the tracker
    */
-  JobTracker(JobConf conf, Clock clock)
-          throws IOException, InterruptedException {
-    super(conf);
-    this.clock = clock;
-    // find the owner of the process
-    try {
-      mrOwner = UnixUserGroupInformation.login(conf);
-    } catch (LoginException e) {
-      throw new IOException(StringUtils.stringifyException(e));
-    }
+  JobTracker(JobConf conf, Clock clock) 
+  throws IOException, InterruptedException, LoginException {
+    this(conf, clock, generateNewIdentifier());
+  }
+
+  JobTracker(JobConf conf, Clock newClock, String jobtrackerIdentifier) 
+  throws IOException, InterruptedException, LoginException {
+    clock = newClock;
+    mrOwner = UnixUserGroupInformation.login(conf);
     supergroup = conf.get("mapred.permissions.supergroup", "supergroup");
     LOG.info("Starting jobtracker with owner as " + mrOwner.getUserName() 
              + " and supergroup as " + supergroup);
+    this.conf = conf;
+    setConf(conf);
 
     //
     // Grab some static constants
     //
     tasktrackerExpiryInterval = 
       conf.getLong("mapred.tasktracker.expiry.interval", 10 * 60 * 1000);
-    retireJobInterval = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
-    retireJobCheckInterval = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);
     retiredJobsCacheSize = 
       conf.getInt("mapred.job.tracker.retiredjobs.cache.size", 1000);
-    // min time before retire
-    MIN_TIME_BEFORE_RETIRE = conf.getInt("mapred.jobtracker.retirejob.interval.min", 60000);
-    MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
     MAX_BLACKLISTS_PER_TRACKER = 
         conf.getInt("mapred.max.tracker.blacklists", 4);
     NUM_HEARTBEATS_IN_SECOND = 
@@ -1882,8 +1842,6 @@ public class JobTracker extends Service
 
     // This is a directory of temporary submission files.  We delete it
     // on startup, and can delete any files that we're done with
-    this.conf = conf;
-    JobConf jobConf = new JobConf(conf);
 
     initializeTaskMemoryRelatedConfig();
 
@@ -1893,6 +1851,7 @@ public class JobTracker extends Service
 
     Configuration queuesConf = new Configuration(this.conf);
     queueManager = new QueueManager(queuesConf);
+    this.trackerIdentifier = jobtrackerIdentifier;
     
     // Create the scheduler
     Class<? extends TaskScheduler> schedulerClass
@@ -1959,7 +1918,7 @@ public class JobTracker extends Service
     infoServer.addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
     infoServer.start();
     
-    trackerIdentifier = getDateFormat().format(new Date());
+    
 
     // Initialize instrumentation
     //this operation is synchronized to stop findbugs warning of inconsistent
@@ -1994,7 +1953,7 @@ public class JobTracker extends Service
     // start the recovery manager
     recoveryManager = new RecoveryManager();
     
-    while (true) {
+    while (!Thread.currentThread().isInterrupted()) {
       try {
         // if we haven't contacted the namenode go ahead and do it
         if (fs == null) {
@@ -2009,8 +1968,14 @@ public class JobTracker extends Service
           systemDir = new Path(getSystemDir());    
         }
         // Make sure that the backup data is preserved
-        FileStatus[] systemDirData = fs.listStatus(this.systemDir);
-        // Check if the history is enabled .. as we cant have persistence with 
+        FileStatus[] systemDirData;
+        try {
+          systemDirData = fs.listStatus(this.systemDir);
+        } catch (FileNotFoundException fnfe) {
+          systemDirData = null;
+        }
+        
+        // Check if the history is enabled .. as we can't have persistence with 
         // history disabled
         if (conf.getBoolean("mapred.jobtracker.restart.recover", false) 
             && !JobHistory.isDisableHistory()
@@ -2037,12 +2002,14 @@ public class JobTracker extends Service
           break;
         }
         LOG.error("Mkdirs failed to create " + systemDir);
+      } catch (AccessControlException ace) {
+        LOG.warn("Failed to operate on mapred.system.dir (" + systemDir 
+                 + ") because of permissions.");
+        LOG.warn("Manually delete the mapred.system.dir (" + systemDir 
+                 + ") and then start the JobTracker.");
+        LOG.warn("Bailing out ... ");
+        throw ace;
       } catch (IOException ie) {
-        if (ie instanceof RemoteException && 
-            AccessControlException.class.getName().equals(
-                ((RemoteException)ie).getClassName())) {
-          throw ie;
-        }
         LOG.info("problem cleaning system directory: " + systemDir + ": " + ie,
                 ie);
       }
@@ -2052,6 +2019,10 @@ public class JobTracker extends Service
         throw new IOException("Interrupted during system directory cleanup ",
                 e);
       }
+    }
+    
+    if (Thread.currentThread().isInterrupted()) {
+      throw new IOException("Interrupted during startup");
     }
     
     // Same with 'localDir' except it's always on the local disk.
@@ -2085,6 +2056,10 @@ public class JobTracker extends Service
     return new SimpleDateFormat("yyyyMMddHHmm");
   }
 
+  private static String generateNewIdentifier() {
+    return getDateFormat().format(new Date());
+  }
+  
   static boolean validateIdentifier(String id) {
     try {
       // the jobtracker id should be 'date' parseable
@@ -2217,8 +2192,6 @@ public class JobTracker extends Service
     
     startExpireTrackersThread();
 
-    this.retireJobsThread = new Thread(this.retireJobs, "retireJobs");
-    this.retireJobsThread.start();
     expireLaunchingTaskThread.start();
 
     synchronized (this) {
@@ -2273,8 +2246,11 @@ public class JobTracker extends Service
    */
   @Override
   protected void innerClose() throws IOException {
-    JobEndNotifier.stopNotifier();
-    closeJobTracker();
+      try {
+          JobEndNotifier.stopNotifier();
+      } finally {
+          closeJobTracker();
+      }
   }
 
   /**
@@ -2302,7 +2278,6 @@ public class JobTracker extends Service
     }
 
     stopExpireTrackersThread();
-    retireThread("retirer", retireJobsThread);
     if (taskScheduler != null) {
       taskScheduler.terminate();
       taskScheduler = null;
@@ -2367,6 +2342,16 @@ public class JobTracker extends Service
   @Override
   public String getServiceName() {
     return "JobTracker";
+  }
+
+  /**
+   * Get the current number of workers
+   *
+   * @return the number of task trackers
+   */
+  @Override
+  public int getLiveWorkerCount() {
+    return getNumResolvedTaskTrackers();
   }
 
   ///////////////////////////////////////////////////////
@@ -2500,11 +2485,7 @@ public class JobTracker extends Service
   /**
    * Call {@link #removeTaskEntry(String)} for each of the
    * job's tasks.
-   * When the JobTracker is retiring the long-completed
-   * job, either because it has outlived {@link #retireJobInterval}
-   * or the limit of {@link #MAX_COMPLETE_USER_JOBS_IN_MEMORY} jobs 
-   * has been reached, we can afford to nuke all it's tasks; a little
-   * unsafe, but practically feasible. 
+   * When the job is retiring we can afford to nuke all it's tasks
    * 
    * @param job the job about to be 'retired'
    */
@@ -2556,8 +2537,6 @@ public class JobTracker extends Service
     final JobTrackerInstrumentation metrics = getInstrumentation();
     metrics.finalizeJob(conf, id);
     
-    long now = clock.getTime();
-    
     // mark the job for cleanup at all the trackers
     addJobForCleanup(id);
 
@@ -2566,74 +2545,6 @@ public class JobTracker extends Service
       if (job.getNoOfBlackListedTrackers() > 0) {
         for (String hostName : job.getBlackListedTrackers()) {
           faultyTrackers.incrementFaults(hostName);
-        }
-      }
-    }
-    
-    // Purge oldest jobs and keep at-most MAX_COMPLETE_USER_JOBS_IN_MEMORY jobs of a given user
-    // in memory; information about the purged jobs is available via
-    // JobHistory.
-    synchronized (jobs) {
-      synchronized (taskScheduler) {
-        synchronized (userToJobsMap) {
-          String jobUser = job.getProfile().getUser();
-          if (!userToJobsMap.containsKey(jobUser)) {
-            userToJobsMap.put(jobUser, 
-                              new ArrayList<JobInProgress>());
-          }
-          ArrayList<JobInProgress> userJobs = 
-            userToJobsMap.get(jobUser);
-          synchronized (userJobs) {
-            // Add the currently completed 'job'
-            userJobs.add(job);
-
-            // Check if we need to retire some jobs of this user
-            while (userJobs.size() > 
-                   MAX_COMPLETE_USER_JOBS_IN_MEMORY) {
-              JobInProgress rjob = userJobs.get(0);
-
-              // do not retire jobs that finished in the very recent past.
-              if (rjob.getFinishTime() + MIN_TIME_BEFORE_RETIRE > now) {
-                break;
-              }
-                
-              // Cleanup all datastructures
-              int rjobRunState = 
-                rjob.getStatus().getRunState();
-              if (rjobRunState == JobStatus.SUCCEEDED || 
-                  rjobRunState == JobStatus.FAILED ||
-                  rjobRunState == JobStatus.KILLED) {
-                // Ok, this call to removeTaskEntries
-                // is dangerous is some very very obscure
-                // cases; e.g. when rjob completed, hit
-                // MAX_COMPLETE_USER_JOBS_IN_MEMORY job
-                // limit and yet some task (taskid)
-                // wasn't complete!
-                removeJobTasks(rjob);
-                  
-                userJobs.remove(0);
-                jobs.remove(rjob.getProfile().getJobID());
-                for (JobInProgressListener listener : jobInProgressListeners) {
-                  listener.jobRemoved(rjob);
-                }
-                  
-                LOG.info("Retired job with id: '" + 
-                         rjob.getProfile().getJobID() + "' of user: '" +
-                         jobUser + "'");
-                // clean up job files from the local disk
-                JobHistory.JobInfo.cleanupJob(rjob.getProfile().getJobID());
-                retireJobs.addToCache(rjob.getStatus());
-              } else {
-                // Do not remove jobs that aren't complete.
-                // Stop here, and let the next pass take
-                // care of purging jobs.
-                break;
-              }
-            }
-          }
-          if (userJobs.isEmpty()) {
-            userToJobsMap.remove(jobUser);
-          }
         }
       }
     }
@@ -4368,18 +4279,38 @@ public class JobTracker extends Service
   public static void main(String argv[]
                           ) throws IOException, InterruptedException {
     StringUtils.startupShutdownMessage(JobTracker.class, argv, LOG);
-    if (argv.length != 0) {
-      System.out.println("usage: JobTracker");
-      System.exit(-1);
-    }
-      
+    
     try {
-      JobTracker tracker = startTracker(new JobConf());
-      tracker.offerService();
+      if(argv.length == 0) {
+        JobTracker tracker = startTracker(new JobConf());
+        tracker.offerService();
+      }
+      else {
+        if ("-dumpConfiguration".equals(argv[0]) && argv.length == 1) {
+          dumpConfiguration(new PrintWriter(System.out));
+        }
+        else {
+          System.out.println("usage: JobTracker [-dumpConfiguration]");
+          System.exit(-1);
+        }
+      }
     } catch (Throwable e) {
       LOG.fatal(StringUtils.stringifyException(e));
       System.exit(-1);
     }
+  }
+
+  /**
+   * Dumps the configuration properties in Json format
+   * @param writer {@link}Writer object to which the output is written
+   * @throws IOException
+   */
+  private static void dumpConfiguration(Writer writer) throws IOException {
+    Configuration.dumpConfiguration(new JobConf(), writer);
+    writer.write("\n");
+    // get the QueueManager configuration properties
+    QueueManager.dumpConfiguration(writer);
+    writer.write("\n");
   }
 
   @Override

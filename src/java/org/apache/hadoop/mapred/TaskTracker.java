@@ -51,7 +51,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -70,6 +69,7 @@ import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapred.pipes.Submitter;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -133,6 +133,7 @@ public class TaskTracker extends Service
         ", bytes: %s" + // byte count
         ", op: %s" +    // operation
         ", cliID: %s" + // task id
+        ", reduceID: %s" + // reduce id
         ", duration: %s"; // duration
   public static final Log ClientTraceLog =
     LogFactory.getLog(TaskTracker.class.getName() + ".clienttrace");
@@ -151,6 +152,8 @@ public class TaskTracker extends Service
 
   Server taskReportServer = null;
   InterTrackerProtocol jobClient;
+  
+  private TrackerDistributedCacheManager distributedCacheManager;
     
   // last heartbeat response recieved
   short heartbeatResponseId = -1;
@@ -556,8 +559,11 @@ public class TaskTracker extends Service
     this.taskTrackerName = "tracker_" + localHostname + ":" + taskReportAddress;
     LOG.info("Starting tracker " + taskTrackerName);
 
-    // Clear out temporary files that might be lying around
-    DistributedCache.purgeCache(this.fConf);
+    // Initialize DistributedCache and
+    // clear out temporary files that might be lying around
+    this.distributedCacheManager = 
+        new TrackerDistributedCacheManager(this.fConf);
+    this.distributedCacheManager.purgeCache();
     cleanupStorage();
 
     //mark as just started; this is used in heartbeats
@@ -3295,6 +3301,7 @@ public class TaskTracker extends Service
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {
+      TaskAttemptID reduceAttId = null;
       String mapId = request.getParameter("map");
       String reduceId = request.getParameter("reduce");
       String jobId = request.getParameter("job");
@@ -3306,8 +3313,13 @@ public class TaskTracker extends Service
       if (mapId == null || reduceId == null) {
         throw new IOException("map and reduce parameters are required");
       }
+      try {
+        reduceAttId = TaskAttemptID.forName(reduceId);
+      } catch (IllegalArgumentException e) {
+        throw new IOException("reduce attempt ID is malformed");
+      }
       ServletContext context = getServletContext();
-      int reduce = Integer.parseInt(reduceId);
+      int reduce = reduceAttId.getTaskID().getId();
       byte[] buffer = new byte[MAX_BYTES_TO_READ];
       // true iff IOException was caused by attempt to access input
       boolean isInputException = true;
@@ -3422,7 +3434,8 @@ public class TaskTracker extends Service
           ClientTraceLog.info(String.format(MR_CLIENTTRACE_FORMAT,
                 request.getLocalAddr() + ":" + request.getLocalPort(),
                 request.getRemoteAddr() + ":" + request.getRemotePort(),
-                totalRead, "MAPRED_SHUFFLE", mapId, endTime-startTime));
+                totalRead, "MAPRED_SHUFFLE", mapId, reduceId,
+                endTime-startTime));
         }
       }
       outStream.close();
@@ -3543,7 +3556,26 @@ public class TaskTracker extends Service
         maxMapSlots * mapSlotMemorySizeOnTT + maxReduceSlots
             * reduceSlotSizeMemoryOnTT;
     if (totalMemoryAllottedForTasks < 0) {
-      totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
+      //adding check for the old keys which might be used by the administrator
+      //while configuration of the memory monitoring on TT
+      long memoryAllotedForSlot = fConf.normalizeMemoryConfigValue(
+          fConf.getLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY, 
+              JobConf.DISABLED_MEMORY_LIMIT));
+      long limitVmPerTask = fConf.normalizeMemoryConfigValue(
+          fConf.getLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, 
+              JobConf.DISABLED_MEMORY_LIMIT));
+      if(memoryAllotedForSlot == JobConf.DISABLED_MEMORY_LIMIT) {
+        totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT; 
+      } else {
+        if(memoryAllotedForSlot > limitVmPerTask) {
+          LOG.info("DefaultMaxVmPerTask is mis-configured. " +
+          		"It shouldn't be greater than task limits");
+          totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
+        } else {
+          totalMemoryAllottedForTasks = (maxMapSlots + 
+              maxReduceSlots) *  (memoryAllotedForSlot/(1024 * 1024));
+        }
+      }
     }
     if (totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT) {
       LOG.info("totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT."
@@ -3620,6 +3652,9 @@ public class TaskTracker extends Service
     healthChecker.start();
   }
 
+  TrackerDistributedCacheManager getTrackerDistributedCacheManager() {
+    return distributedCacheManager;
+  }
 
   /**
    * Thread that handles cleanup
@@ -3680,5 +3715,7 @@ public class TaskTracker extends Service
       }
       LOG.debug("Task cleanup thread ending");
     }
+
   }
+
 }

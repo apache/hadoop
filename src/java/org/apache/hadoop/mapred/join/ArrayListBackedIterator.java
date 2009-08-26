@@ -17,73 +17,28 @@
  */
 package org.apache.hadoop.mapred.join;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * This class provides an implementation of ResetableIterator. The
  * implementation uses an {@link java.util.ArrayList} to store elements
  * added to it, replaying them as requested.
  * Prefer {@link StreamBackedIterator}.
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.join.ArrayListBackedIterator} instead
  */
-public class ArrayListBackedIterator<X extends Writable>
+@Deprecated
+public class ArrayListBackedIterator<X extends Writable> extends 
+    org.apache.hadoop.mapreduce.lib.join.ArrayListBackedIterator<X>
     implements ResetableIterator<X> {
 
-  private Iterator<X> iter;
-  private ArrayList<X> data;
-  private X hold = null;
-
   public ArrayListBackedIterator() {
-    this(new ArrayList<X>());
+    super();
   }
 
   public ArrayListBackedIterator(ArrayList<X> data) {
-    this.data = data;
-    this.iter = this.data.iterator();
+    super(data);
   }
-
-  public boolean hasNext() {
-    return iter.hasNext();
-  }
-
-  public boolean next(X val) throws IOException {
-    if (iter.hasNext()) {
-      WritableUtils.cloneInto(val, iter.next());
-      if (null == hold) {
-        hold = WritableUtils.clone(val, null);
-      } else {
-        WritableUtils.cloneInto(hold, val);
-      }
-      return true;
-    }
-    return false;
-  }
-
-  public boolean replay(X val) throws IOException {
-    WritableUtils.cloneInto(val, hold);
-    return true;
-  }
-
-  public void reset() {
-    iter = data.iterator();
-  }
-
-  public void add(X item) throws IOException {
-    data.add(WritableUtils.clone(item, null));
-  }
-
-  public void close() throws IOException {
-    iter = null;
-    data = null;
-  }
-
-  public void clear() {
-    data.clear();
-    reset();
-  }
-
 }

@@ -32,7 +32,10 @@ import org.apache.hadoop.mapred.JobConf;
  * For example, <tt>override(S1,S2,S3)</tt> will prefer values
  * from S3 over S2, and values from S2 over S1 for all keys
  * emitted from all sources.
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.join.OverrideRecordReader} instead
  */
+@Deprecated
 public class OverrideRecordReader<K extends WritableComparable,
                                   V extends Writable>
     extends MultiFilterRecordReader<K,V> {

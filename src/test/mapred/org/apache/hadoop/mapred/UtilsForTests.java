@@ -242,6 +242,7 @@ public class UtilsForTests {
       if(System.currentTimeMillis() > timeout) {
         throw new IOException("Timeout waiting for job to get to 50% done");
       }
+      LOG.info("Waiting for job " + job.getID() + " to be 50% done");
       UtilsForTests.waitFor(100);
     }
   }

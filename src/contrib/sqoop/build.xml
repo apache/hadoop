@@ -25,6 +25,7 @@ to call at top-level: ant deploy-contrib compile-core-test
 
   <import file="../build-contrib.xml"/>
   <property environment="env"/>
+  <property name="sqoop.thirdparty.lib.dir" value="" />
 
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     -->
@@ -76,6 +77,11 @@ to call at top-level: ant deploy-contrib compile-core-test
       -->
       <sysproperty key="sqoop.src.dir" value="${build.test}/data"/>
 
+      <!-- Override standalone Hadoop's working dirs to allow parallel
+           execution of multiple Hudson builders
+      -->
+      <sysproperty key="hadoop.tmp.dir" value="${build.test}/hadoop"/>
+
       <sysproperty key="fs.default.name" value="${fs.default.name}"/>
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
       <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/>
@@ -91,6 +97,8 @@ to call at top-level: ant deploy-contrib compile-core-test
         <path refid="test.classpath"/>
         <path refid="contrib-classpath"/>
         <pathelement path="${env.JAVA_HOME}/lib/tools.jar" />
+        <fileset dir="${sqoop.thirdparty.lib.dir}"
+            includes="*.jar" />
       </classpath>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${build.test}" unless="testcase">

@@ -44,7 +44,10 @@ import org.apache.hadoop.mapred.Reporter;
  * in the join.
  * @see JoinRecordReader
  * @see MultiFilterRecordReader
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.join.CompositeInputFormat} instead
  */
+@Deprecated
 public class CompositeInputFormat<K extends WritableComparable>
       implements ComposableInputFormat<K,TupleWritable> {
 

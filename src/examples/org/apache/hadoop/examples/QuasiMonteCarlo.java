@@ -72,12 +72,12 @@ import org.apache.hadoop.util.ToolRunner;
  * and the area of unit square is 1.
  * Finally, the estimated value of Pi is 4(numInside/numTotal).  
  */
-public class PiEstimator extends Configured implements Tool {
+public class QuasiMonteCarlo extends Configured implements Tool {
   static final String DESCRIPTION
       = "A map/reduce program that estimates Pi using a quasi-Monte Carlo method.";
   /** tmp directory for input/output */
   static private final Path TMP_DIR = new Path(
-      PiEstimator.class.getSimpleName() + "_TMP_3_141592654");
+      QuasiMonteCarlo.class.getSimpleName() + "_TMP_3_141592654");
   
   /** 2-dimensional Halton sequence {H(i)},
    * where H(i) is a 2-dimensional point and i >= 1 is the index.
@@ -148,7 +148,7 @@ public class PiEstimator extends Configured implements Tool {
    * Generate points in a unit square
    * and then count points inside/outside of the inscribed circle of the square.
    */
-  public static class PiMapper extends 
+  public static class QmcMapper extends 
       Mapper<LongWritable, LongWritable, BooleanWritable, LongWritable> {
 
     /** Map method.
@@ -195,7 +195,7 @@ public class PiEstimator extends Configured implements Tool {
    * Reducer class for Pi estimation.
    * Accumulate points inside/outside results from the mappers.
    */
-  public static class PiReducer extends 
+  public static class QmcReducer extends 
       Reducer<BooleanWritable, LongWritable, WritableComparable<?>, Writable> {
     
     private long numInside = 0;
@@ -244,12 +244,13 @@ public class PiEstimator extends Configured implements Tool {
    *
    * @return the estimated value of Pi
    */
-  public static BigDecimal estimate(int numMaps, long numPoints, Configuration conf
+  public static BigDecimal estimatePi(int numMaps, long numPoints,
+      Configuration conf
       ) throws IOException, ClassNotFoundException, InterruptedException {
     Job job = new Job(conf);
     //setup job conf
-    job.setJobName(PiEstimator.class.getSimpleName());
-    job.setJarByClass(PiEstimator.class);
+    job.setJobName(QuasiMonteCarlo.class.getSimpleName());
+    job.setJarByClass(QuasiMonteCarlo.class);
 
     job.setInputFormatClass(SequenceFileInputFormat.class);
 
@@ -257,9 +258,9 @@ public class PiEstimator extends Configured implements Tool {
     job.setOutputValueClass(LongWritable.class);
     job.setOutputFormatClass(SequenceFileOutputFormat.class);
 
-    job.setMapperClass(PiMapper.class);
+    job.setMapperClass(QmcMapper.class);
 
-    job.setReducerClass(PiReducer.class);
+    job.setReducerClass(QmcReducer.class);
     job.setNumReduceTasks(1);
 
     // turn off speculative execution, because DFS doesn't handle
@@ -346,7 +347,7 @@ public class PiEstimator extends Configured implements Tool {
     System.out.println("Samples per Map = " + nSamples);
         
     System.out.println("Estimated value of Pi is "
-        + estimate(nMaps, nSamples, getConf()));
+        + estimatePi(nMaps, nSamples, getConf()));
     return 0;
   }
 
@@ -354,6 +355,6 @@ public class PiEstimator extends Configured implements Tool {
    * main method for running it as a stand alone command. 
    */
   public static void main(String[] argv) throws Exception {
-    System.exit(ToolRunner.run(null, new PiEstimator(), argv));
+    System.exit(ToolRunner.run(null, new QuasiMonteCarlo(), argv));
   }
 }

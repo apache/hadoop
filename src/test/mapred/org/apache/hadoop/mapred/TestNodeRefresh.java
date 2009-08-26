@@ -100,6 +100,7 @@ public class TestNodeRefresh extends TestCase {
                    hostsSeen.size());
     } catch (IOException ioe) {
       stopCluster();
+      throw ioe;
     }
   }
 

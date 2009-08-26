@@ -28,6 +28,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
@@ -65,7 +66,13 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     utilTest.checkUserDir();
     utilTest.redirectIfAntJunit();
   }
-  
+
+  protected void setUp() throws Exception {
+    Properties props = new Properties();
+    props.setProperty("mapred.job.tracker.retire.jobs", "false");
+    startCluster(true, props);
+  }
+
   private void createInput() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), 
         "text.txt"));

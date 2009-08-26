@@ -18,22 +18,28 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -43,6 +49,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Utility methods used in various Job Control unit tests.
@@ -235,6 +242,99 @@ public class MapReduceTestUtil {
         // Do nothing
       }
     }
+  }
+
+  public static class IncomparableKey implements WritableComparable<Object> {
+    public void write(DataOutput out) { }
+    public void readFields(DataInput in) { }
+    public int compareTo(Object o) {
+      throw new RuntimeException("Should never see this.");
+    }
+  }
+
+  public static class FakeSplit extends InputSplit implements Writable {
+    public void write(DataOutput out) throws IOException { }
+    public void readFields(DataInput in) throws IOException { }
+    public long getLength() { return 0L; }
+    public String[] getLocations() { return new String[0]; }
+  }
+
+  public static class Fake_IF<K,V>
+    extends InputFormat<K, V> 
+    implements Configurable {
+
+    public Fake_IF() { }
+
+    public List<InputSplit> getSplits(JobContext context) {
+      List<InputSplit> ret = new ArrayList<InputSplit>(); 
+      ret.add(new FakeSplit());
+      return ret;
+    }
+    public static void setKeyClass(Configuration conf, Class<?> k) {
+      conf.setClass("test.fakeif.keyclass", k, WritableComparable.class);
+    }
+
+    public static void setValClass(Configuration job, Class<?> v) {
+      job.setClass("test.fakeif.valclass", v, Writable.class);
+    }
+
+    protected Class<? extends K> keyclass;
+    protected Class<? extends V> valclass;
+    Configuration conf = null;
+
+    @SuppressWarnings("unchecked")
+    public void setConf(Configuration conf) {
+      this.conf = conf;
+      keyclass = (Class<? extends K>) conf.getClass("test.fakeif.keyclass",
+          NullWritable.class, WritableComparable.class);
+      valclass = (Class<? extends V>) conf.getClass("test.fakeif.valclass",
+          NullWritable.class, WritableComparable.class);
+    }
+
+    public Configuration getConf() {
+      return conf;
+    }
+    
+    public RecordReader<K,V> createRecordReader(
+        InputSplit ignored, TaskAttemptContext context) {
+      return new RecordReader<K,V>() {
+        public boolean nextKeyValue() throws IOException { return false; }
+        public void initialize(InputSplit split, TaskAttemptContext context) 
+            throws IOException, InterruptedException {}
+        public K getCurrentKey() {
+        return null;
+        }
+        public V getCurrentValue() {
+          return null;
+        }
+        public void close() throws IOException { }
+        public float getProgress() throws IOException { return 0.0f; }
+      };
+    }
+  }
+  
+  public static class Fake_RR<K, V> extends RecordReader<K,V> {
+    private Class<? extends K> keyclass;
+    private Class<? extends V> valclass;
+    public boolean nextKeyValue() throws IOException { return false; }
+    @SuppressWarnings("unchecked")
+    public void initialize(InputSplit split, TaskAttemptContext context) 
+        throws IOException, InterruptedException {
+      Configuration conf = context.getConfiguration();
+      keyclass = (Class<? extends K>) conf.getClass("test.fakeif.keyclass",
+        NullWritable.class, WritableComparable.class);
+      valclass = (Class<? extends V>) conf.getClass("test.fakeif.valclass",
+        NullWritable.class, WritableComparable.class);
+      
+    }
+    public K getCurrentKey() {
+      return ReflectionUtils.newInstance(keyclass, null);
+    }
+    public V getCurrentValue() {
+      return ReflectionUtils.newInstance(valclass, null);
+    }
+    public void close() throws IOException { }
+    public float getProgress() throws IOException { return 0.0f; }
   }
 
   public static Job createJob(Configuration conf, Path inDir, Path outDir, 

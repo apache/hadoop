@@ -37,11 +37,7 @@ public class Counters implements Writable,Iterable<CounterGroup> {
   }
 
   public Counter findCounter(String groupName, String counterName) {
-    CounterGroup grp = groups.get(groupName);
-    if (grp == null) {
-      grp = new CounterGroup(groupName);
-      groups.put(groupName, grp);
-    }
+    CounterGroup grp = getGroup(groupName);
     return grp.findCounter(counterName);
   }
 
@@ -78,7 +74,12 @@ public class Counters implements Writable,Iterable<CounterGroup> {
    * with the specified name.
    */
   public synchronized CounterGroup getGroup(String groupName) {
-    return groups.get(groupName);
+    CounterGroup grp = groups.get(groupName);
+    if (grp == null) {
+      grp = new CounterGroup(groupName);
+      groups.put(groupName, grp);
+    }
+    return grp;
   }
 
   /**

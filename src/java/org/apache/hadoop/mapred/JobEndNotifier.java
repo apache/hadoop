@@ -89,7 +89,9 @@ public class JobEndNotifier {
 
   public static void stopNotifier() {
     running = false;
-    thread.interrupt();
+    if (thread != null) {
+      thread.interrupt();
+    }
   }
 
   private static JobEndStatusInfo createNotification(JobConf conf,

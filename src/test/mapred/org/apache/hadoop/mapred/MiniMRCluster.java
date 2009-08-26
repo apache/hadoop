@@ -19,7 +19,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -67,7 +69,7 @@ public class MiniMRCluster {
     private volatile boolean isActive = true;
     
     JobConf jc = null;
-    Clock clock = null;
+    Clock clock = JobTracker.DEFAULT_CLOCK;
         
     public JobTrackerRunner(JobConf conf) {
       jc = conf;
@@ -108,11 +110,9 @@ public class MiniMRCluster {
         jc.set("mapred.local.dir",f.getAbsolutePath());
         jc.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
-        if (clock == null) {
-          tracker = JobTracker.startTracker(jc);
-        } else {
-          tracker = JobTracker.startTracker(jc, clock);
-        }
+        String id = 
+          new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date());
+        tracker = JobTracker.startTracker(jc, clock, id);
         tracker.offerService();
       } catch (Throwable e) {
         LOG.error("Job tracker crashed", e);
@@ -328,6 +328,13 @@ public class MiniMRCluster {
     if(conf == null) {
       conf = new JobConf();
     }
+    return configureJobConf(conf, namenode, jobTrackerPort, jobTrackerInfoPort, 
+                            ugi);
+  }
+  
+  static JobConf configureJobConf(JobConf conf, String namenode, 
+                                  int jobTrackerPort, int jobTrackerInfoPort, 
+                                  UnixUserGroupInformation ugi) {
     JobConf result = new JobConf(conf);
     FileSystem.setDefaultUri(result, namenode);
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
@@ -573,11 +580,20 @@ public class MiniMRCluster {
    * Start the jobtracker.
    */
   public void startJobTracker() {
+    startJobTracker(true);
+  }
+
+  public void startJobTracker(boolean wait) {
     //  Create the JobTracker
     jobTracker = new JobTrackerRunner(conf, clock);
     jobTrackerThread = new Thread(jobTracker);
         
     jobTrackerThread.start();
+
+    if (!wait) {
+      return;
+    }
+
     while (jobTracker.isActive() && !jobTracker.isUp()) {
       try {                                     // let daemons get started
         Thread.sleep(1000);

@@ -48,6 +48,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -567,15 +568,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                "Applications should implement Tool for the same.");
     }
 
-    // get all the command line arguments into the 
-    // jobconf passed in by the user conf
-    String files = null;
-    String libjars = null;
-    String archives = null;
+    // Retrieve command line arguments placed into the JobConf
+    // by GenericOptionsParser.
+    String files = job.get("tmpfiles");
+    String libjars = job.get("tmpjars");
+    String archives = job.get("tmparchives");
 
-    files = job.get("tmpfiles");
-    libjars = job.get("tmpjars");
-    archives = job.get("tmparchives");
     /*
      * set this user's id in job configuration, so later job files can be
      * accessed using this user's id
@@ -651,27 +649,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
     
     //  set the timestamps of the archives and files
-    URI[] tarchives = DistributedCache.getCacheArchives(job);
-    if (tarchives != null) {
-      StringBuffer archiveTimestamps = 
-        new StringBuffer(String.valueOf(DistributedCache.getTimestamp(job, tarchives[0])));
-      for (int i = 1; i < tarchives.length; i++) {
-        archiveTimestamps.append(",");
-        archiveTimestamps.append(String.valueOf(DistributedCache.getTimestamp(job, tarchives[i])));
-      }
-      DistributedCache.setArchiveTimestamps(job, archiveTimestamps.toString());
-    }
-
-    URI[] tfiles = DistributedCache.getCacheFiles(job);
-    if (tfiles != null) {
-      StringBuffer fileTimestamps = 
-        new StringBuffer(String.valueOf(DistributedCache.getTimestamp(job, tfiles[0])));
-      for (int i = 1; i < tfiles.length; i++) {
-        fileTimestamps.append(",");
-        fileTimestamps.append(String.valueOf(DistributedCache.getTimestamp(job, tfiles[i])));
-      }
-      DistributedCache.setFileTimestamps(job, fileTimestamps.toString());
-    }
+    TrackerDistributedCacheManager.determineTimestamps(job);
        
     String originalJarPath = job.getJar();
 
@@ -699,6 +677,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
 
   }
+
 
   private UnixUserGroupInformation getUGI(Configuration job) throws IOException {
     UnixUserGroupInformation ugi = null;
@@ -949,9 +928,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   public static boolean isJobDirValid(Path jobDirPath, FileSystem fs) 
   throws IOException {
-    FileStatus[] contents = fs.listStatus(jobDirPath);
+    FileStatus[] contents = null;
+    
+    try {
+      contents = fs.listStatus(jobDirPath);
+    } catch(FileNotFoundException fnfe) {
+      return false;
+    }
+    
     int matchCount = 0;
-    if (contents != null && contents.length >=2) {
+    if (contents.length >=2) {
       for (FileStatus status : contents) {
         if ("job.xml".equals(status.getPath().getName())) {
           ++matchCount;

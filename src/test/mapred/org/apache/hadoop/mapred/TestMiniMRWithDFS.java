@@ -173,7 +173,7 @@ public class TestMiniMRWithDFS extends TestCase {
   public static void runPI(MiniMRCluster mr, JobConf jobconf) 
       throws IOException, InterruptedException, ClassNotFoundException {
     LOG.info("runPI");
-    double estimate = org.apache.hadoop.examples.PiEstimator.estimate(
+    double estimate = org.apache.hadoop.examples.QuasiMonteCarlo.estimatePi(
         NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
     double error = Math.abs(Math.PI - estimate);
     assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));

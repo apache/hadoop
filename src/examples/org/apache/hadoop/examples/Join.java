@@ -27,19 +27,23 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapred.join.*;
-import org.apache.hadoop.mapred.lib.IdentityMapper;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapred.ClusterStatus;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.lib.join.*;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * This is the trivial map/reduce program that does absolutely nothing
- * other than use the framework to fragment and sort the input values.
+ * Given a set of sorted datasets keyed with the same class and yielding
+ * equal partitions, it is possible to effect a join of those datasets 
+ * prior to the map. The example facilitates the same.
  *
  * To run: bin/hadoop jar build/hadoop-examples.jar join
- *            [-m <i>maps</i>] [-r <i>reduces</i>]
+ *            [-r <i>reduces</i>]
  *            [-inFormat <i>input format class</i>] 
  *            [-outFormat <i>output format class</i>] 
  *            [-outKey <i>output key class</i>] 
@@ -50,7 +54,7 @@ import org.apache.hadoop.util.ToolRunner;
 public class Join extends Configured implements Tool {
 
   static int printUsage() {
-    System.out.println("join [-m <maps>] [-r <reduces>] " +
+    System.out.println("join [-r <reduces>] " +
                        "[-inFormat <input format class>] " +
                        "[-outFormat <output format class>] " + 
                        "[-outKey <output key class>] " +
@@ -58,7 +62,7 @@ public class Join extends Configured implements Tool {
                        "[-joinOp <inner|outer|override>] " +
                        "[input]* <input> <output>");
     ToolRunner.printGenericCommandUsage(System.out);
-    return -1;
+    return 2;
   }
 
   /**
@@ -67,23 +71,24 @@ public class Join extends Configured implements Tool {
    * @throws IOException When there is communication problems with the 
    *                     job tracker.
    */
+  @SuppressWarnings("unchecked")
   public int run(String[] args) throws Exception {
-    JobConf jobConf = new JobConf(getConf(), Sort.class);
-    jobConf.setJobName("join");
-
-    jobConf.setMapperClass(IdentityMapper.class);        
-    jobConf.setReducerClass(IdentityReducer.class);
-
-    JobClient client = new JobClient(jobConf);
+    Configuration conf = getConf();
+    JobClient client = new JobClient(conf);
     ClusterStatus cluster = client.getClusterStatus();
-    int num_maps = cluster.getTaskTrackers() * 
-                   jobConf.getInt("test.sort.maps_per_host", 10);
     int num_reduces = (int) (cluster.getMaxReduceTasks() * 0.9);
-    String sort_reduces = jobConf.get("test.sort.reduces_per_host");
-    if (sort_reduces != null) {
+    String join_reduces = conf.get("mapreduce.join.reduces_per_host");
+    if (join_reduces != null) {
        num_reduces = cluster.getTaskTrackers() * 
-                       Integer.parseInt(sort_reduces);
+                       Integer.parseInt(join_reduces);
     }
+    Job job = new Job(conf);
+    job.setJobName("join");
+    job.setJarByClass(Sort.class);
+
+    job.setMapperClass(Mapper.class);        
+    job.setReducerClass(Reducer.class);
+
     Class<? extends InputFormat> inputFormatClass = 
       SequenceFileInputFormat.class;
     Class<? extends OutputFormat> outputFormatClass = 
@@ -94,9 +99,7 @@ public class Join extends Configured implements Tool {
     List<String> otherArgs = new ArrayList<String>();
     for(int i=0; i < args.length; ++i) {
       try {
-        if ("-m".equals(args[i])) {
-          num_maps = Integer.parseInt(args[++i]);
-        } else if ("-r".equals(args[i])) {
+        if ("-r".equals(args[i])) {
           num_reduces = Integer.parseInt(args[++i]);
         } else if ("-inFormat".equals(args[i])) {
           inputFormatClass = 
@@ -126,37 +129,37 @@ public class Join extends Configured implements Tool {
     }
 
     // Set user-supplied (possibly default) job configs
-    jobConf.setNumMapTasks(num_maps);
-    jobConf.setNumReduceTasks(num_reduces);
+    job.setNumReduceTasks(num_reduces);
 
     if (otherArgs.size() < 2) {
       System.out.println("ERROR: Wrong number of parameters: ");
       return printUsage();
     }
 
-    FileOutputFormat.setOutputPath(jobConf, 
+    FileOutputFormat.setOutputPath(job, 
       new Path(otherArgs.remove(otherArgs.size() - 1)));
     List<Path> plist = new ArrayList<Path>(otherArgs.size());
     for (String s : otherArgs) {
       plist.add(new Path(s));
     }
 
-    jobConf.setInputFormat(CompositeInputFormat.class);
-    jobConf.set("mapred.join.expr", CompositeInputFormat.compose(
-          op, inputFormatClass, plist.toArray(new Path[0])));
-    jobConf.setOutputFormat(outputFormatClass);
+    job.setInputFormatClass(CompositeInputFormat.class);
+    job.getConfiguration().set(CompositeInputFormat.JOIN_EXPR, 
+      CompositeInputFormat.compose(op, inputFormatClass,
+      plist.toArray(new Path[0])));
+    job.setOutputFormatClass(outputFormatClass);
 
-    jobConf.setOutputKeyClass(outputKeyClass);
-    jobConf.setOutputValueClass(outputValueClass);
+    job.setOutputKeyClass(outputKeyClass);
+    job.setOutputValueClass(outputValueClass);
 
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
-    JobClient.runJob(jobConf);
+    int ret = job.waitForCompletion(true) ? 0 : 1 ;
     Date end_time = new Date();
     System.out.println("Job ended: " + end_time);
     System.out.println("The job took " + 
         (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
-    return 0;
+    return ret;
   }
 
   public static void main(String[] args) throws Exception {

@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +53,7 @@ public class FakeObjectUtilities {
      * This job tracker starts itself in its constructor
      */
     FakeJobTracker(JobConf conf, Clock clock, String[] tts) throws IOException, 
-    InterruptedException {
+    InterruptedException, LoginException {
       super(conf, clock);
       this.trackers = tts;
       //initialize max{Map/Reduce} task capacities to twice the clustersize

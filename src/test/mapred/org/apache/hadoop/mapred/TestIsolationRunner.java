@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -89,13 +90,17 @@ public class TestIsolationRunner extends TestCase {
   private static int countSideEffectFiles(JobConf conf, final String prefix)
       throws IOException {
     FileSystem localFs = FileSystem.getLocal(conf);
-    FileStatus[] files = localFs.listStatus(
-        new Path(conf.get(SIDE_EFFECT_DIR_PROPERTY)), new PathFilter() {
-      @Override public boolean accept(Path path) {
-        return path.getName().startsWith(prefix + "-");
-      }
-    });
-    return files.length;
+    try {
+      FileStatus[] files = localFs.listStatus(
+          new Path(conf.get(SIDE_EFFECT_DIR_PROPERTY)), new PathFilter() {
+        @Override public boolean accept(Path path) {
+          return path.getName().startsWith(prefix + "-");
+        }
+      });
+      return files.length;
+    } catch (FileNotFoundException fnfe) {
+      return 0;
+    }
   }
 
   private Path getAttemptJobXml(JobConf conf, JobID jobId, TaskType taskType)

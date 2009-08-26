@@ -36,6 +36,7 @@ public final class AllTests  {
 
     suite.addTestSuite(TestMapDriver.class);
     suite.addTestSuite(TestMapReduceDriver.class);
+    suite.addTestSuite(TestPipelineMapReduceDriver.class);
     suite.addTestSuite(TestMockReporter.class);
     suite.addTestSuite(TestMockOutputCollector.class);
     suite.addTestSuite(TestReduceDriver.class);
@@ -43,6 +44,7 @@ public final class AllTests  {
     suite.addTestSuite(TestExample.class);
 
     suite.addTest(org.apache.hadoop.mrunit.types.AllTests.suite());
+    suite.addTest(org.apache.hadoop.mrunit.mapreduce.AllTests.suite());
     return suite;
   }
 

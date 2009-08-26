@@ -24,6 +24,5 @@ Require-Bundle: org.eclipse.ui,
  org.apache.commons.logging
 Eclipse-LazyStart: true
 Bundle-ClassPath: classes/,
- lib/commons-cli-2.0-SNAPSHOT.jar,
  lib/hadoop-core.jar
 Bundle-Vendor: Apache Hadoop

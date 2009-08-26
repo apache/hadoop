@@ -196,16 +196,8 @@ public class TestTaskTrackerMemoryManager extends TestCase {
       return;
     }
 
-    long PER_TASK_LIMIT = 1L; // Low enough to kill off sleepJob tasks.
-
-    Pattern taskOverLimitPattern =
-        Pattern.compile(String.format(taskOverLimitPatternString, String
-            .valueOf(PER_TASK_LIMIT*1024*1024L)));
-    Matcher mat = null;
-
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-
     // very small value, so that no task escapes to successful completion.
     fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
         String.valueOf(300));
@@ -215,6 +207,51 @@ public class TestTaskTrackerMemoryManager extends TestCase {
         JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
         2 * 1024);
     startCluster(fConf);
+    runJobExceedingMemoryLimit();
+  }
+  
+  /**
+   * Runs tests with tasks beyond limit and using old configuration values for
+   * the TaskTracker.
+   * 
+   * @throws Exception
+   */
+
+  public void testTaskMemoryMonitoringWithDeprecatedConfiguration () 
+    throws Exception {
+    
+    // Run the test only if memory management is enabled
+    if (!isProcfsBasedTreeAvailable()) {
+      return;
+    }
+    // Start cluster with proper configuration.
+    JobConf fConf = new JobConf();
+    // very small value, so that no task escapes to successful completion.
+    fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
+        String.valueOf(300));
+    //set old values, max vm property per task and upper limit on the tasks
+    //vm
+    //setting the default maximum vmem property to 2 GB
+    fConf.setLong(JobConf.MAPRED_TASK_DEFAULT_MAXVMEM_PROPERTY,
+        (2L * 1024L * 1024L * 1024L));
+    fConf.setLong(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, 
+        (3L * 1024L * 1024L * 1024L));
+    startCluster(fConf);
+    runJobExceedingMemoryLimit();
+  }
+
+  /**
+   * Runs a job which should fail the when run by the memory monitor.
+   * 
+   * @throws IOException
+   */
+  private void runJobExceedingMemoryLimit() throws IOException {
+    long PER_TASK_LIMIT = 1L; // Low enough to kill off sleepJob tasks.
+
+    Pattern taskOverLimitPattern =
+        Pattern.compile(String.format(taskOverLimitPatternString, String
+            .valueOf(PER_TASK_LIMIT*1024*1024L)));
+    Matcher mat = null;
 
     // Set up job.
     JobConf conf = new JobConf(miniMRCluster.createJobConf());

@@ -24,10 +24,6 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
-    <dependency org="org.apache.mahout.commons"
-      name="commons-cli"
-      rev="${commons-cli2.version}"
-      conf="common->default"/>
     <dependency org="commons-cli"
       name="commons-cli"
       rev="${commons-cli.version}"

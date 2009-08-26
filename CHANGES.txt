@@ -23,6 +23,13 @@ Trunk (unreleased changes)
     MAPREDUCE-711. Moved Distributed Cache from Common to Map/Reduce
     project. (Vinod Kumar Vavilapalli via yhemanth)
 
+    MAPREDUCE-895. Per the contract elucidated in HADOOP-6201, throw
+    FileNotFoundException from FileSystem::listStatus rather than returning
+    null. (Jakob Homan via cdouglas)
+
+    MAPREDUCE-479. Provide full task id to map output servlet rather than the
+    reduce id, only. (Jiaqi Tan via cdouglas)
+
   NEW FEATURES
 
     MAPREDUCE-706. Support for FIFO pools in the fair scheduler.
@@ -61,6 +68,15 @@ Trunk (unreleased changes)
 
     MAPREDUCE-814. Provide a way to configure completed job history files 
     to be on HDFS. (sharad)
+
+    MAPREDUCE-800. MRUnit should support the new API. (Aaron Kimball via
+    tomwhite)
+
+    MAPREDUCE-798. MRUnit should be able to test a succession of MapReduce
+    passes. (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-768. Provide an option to dump jobtracker configuration in JSON
+    format to standard output. (V.V.Chaitanya Krishna via yhemanth)
 
   IMPROVEMENTS
 
@@ -212,6 +228,36 @@ Trunk (unreleased changes)
       deprecated mapred.child.env
       deprecated mapred.child.ulimit
     (acmurthy)
+
+    MAPREDUCE-767. Remove the dependence on the CLI 2.0 snapshot.
+    (Amar Kamat via omalley)
+
+    MAPREDUCE-712. Minor efficiency tweaks to RandomTextWriter. (cdouglas)
+
+    MAPREDUCE-870. Remove the job retire thread and the associated 
+    config parameters. (sharad)
+
+    MAPREDUCE-749. Make Sqoop unit tests more Hudson-friendly.
+    (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-874. Rename the PiEstimator example to QuasiMonteCarlo.
+    (szetszwo)
+
+    MAPREDUCE-336. Allow logging level of map/reduce tasks to be configurable. 
+    Configuration changes:
+      add mapred.map.child.log.level 
+      add mapred.reduce.child.log.level 
+    (acmurthy)
+
+    MAPREDUCE-355. Update mapred.join package to use the new API. (Amareshwari
+    Sriramadasu via cdouglas)
+
+    HADOOP-6184. Updated hadoop common and test jars to get the new API
+    in Configuration for dumping in JSON format from Hudson trunk build #68.
+    (yhemanth)
+
+    MAPREDUCE-476. Extend DistributedCache to work locally (LocalJobRunner).
+    (Philip Zeyliger via tomwhite)
 
   BUG FIXES
 
@@ -409,3 +455,21 @@ Trunk (unreleased changes)
     MAPREDUCE-773. Sends progress reports for compressed gzip inputs in maps.
     Fixes a native direct buffer leak in LineRecordReader classes.
     (Hong Tang and ddas)
+
+    MAPREDUCE-832. Reduce number of warning messages printed when
+    deprecated memory variables are used. (Rahul Kumar Singh via yhemanth)
+
+    MAPREDUCE-745. Fixes a testcase problem to do with generation of JobTracker
+    IDs. (Amar Kamat via ddas)
+
+    MAPREDUCE-834. Enables memory management on tasktrackers when old
+    memory management parameters are used in configuration.
+    (Sreekanth Ramakrishnan via yhemanth)
+
+    MAPREDUCE-818. Fixes Counters#getGroup API. (Amareshwari Sriramadasu 
+    via sharad)
+
+    MAPREDUCE-807. Handles the AccessControlException during the deletion of
+    mapred.system.dir in the JobTracker. The JobTracker will bail out if it
+    encounters such an exception. (Amar Kamat via ddas)
+

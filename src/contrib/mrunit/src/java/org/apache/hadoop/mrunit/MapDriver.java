@@ -38,14 +38,11 @@ import org.apache.hadoop.mrunit.types.Pair;
  * single (k, v) -> (k, v)* case from the Mapper, representing a single unit
  * test. Multiple input (k, v) pairs should go in separate unit tests.
  */
-public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
+public class MapDriver<K1, V1, K2, V2> extends MapDriverBase<K1, V1, K2, V2> {
 
   public static final Log LOG = LogFactory.getLog(MapDriver.class);
 
   private Mapper<K1, V1, K2, V2> myMapper;
-
-  private K1 inputKey;
-  private V1 inputVal;
 
   public MapDriver(final Mapper<K1, V1, K2, V2> m) {
     myMapper = m;
@@ -53,7 +50,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
 
   public MapDriver() {
   }
-
 
   /**
    * Set the Mapper instance to use with this test driver
@@ -78,18 +74,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   }
 
   /**
-   * Sets the input key to send to the mapper
-   *
-   */
-  public void setInputKey(K1 key) {
-    inputKey = key;
-  }
-
-  public K1 getInputKey() {
-    return inputKey;
-  }
-
-  /**
    * Identical to setInputKey() but with fluent programming style
    *
    * @return this
@@ -97,19 +81,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   public MapDriver<K1, V1, K2, V2> withInputKey(K1 key) {
     setInputKey(key);
     return this;
-  }
-
-  /**
-   * Sets the input value to send to the mapper
-   *
-   * @param val
-   */
-  public void setInputValue(V1 val) {
-    inputVal = val;
-  }
-
-  public V1 getInputValue() {
-    return inputVal;
   }
 
   /**
@@ -124,15 +95,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   }
 
   /**
-   * Sets the input to send to the mapper
-   *
-   */
-  public void setInput(K1 key, V1 val) {
-    setInputKey(key);
-    setInputValue(val);
-  }
-
-  /**
    * Identical to setInput() but returns self for fluent programming style
    *
    * @return this
@@ -140,21 +102,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   public MapDriver<K1, V1, K2, V2> withInput(K1 key, V1 val) {
     setInput(key, val);
     return this;
-  }
-
-  /**
-   * Sets the input to send to the mapper
-   *
-   * @param inputRecord
-   *          a (key, val) pair
-   */
-  public void setInput(Pair<K1, V1> inputRecord) {
-    if (null != inputRecord) {
-      setInputKey(inputRecord.getFirst());
-      setInputValue(inputRecord.getSecond());
-    } else {
-      throw new IllegalArgumentException("null inputRecord in setInput()");
-    }
   }
 
   /**
@@ -169,20 +116,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   }
 
   /**
-   * Adds an output (k, v) pair we expect from the Mapper
-   *
-   * @param outputRecord
-   *          The (k, v) pair to add
-   */
-  public void addOutput(Pair<K2, V2> outputRecord) {
-    if (null != outputRecord) {
-      expectedOutputs.add(outputRecord);
-    } else {
-      throw new IllegalArgumentException("Tried to add null outputRecord");
-    }
-  }
-
-  /**
    * Works like addOutput(), but returns self for fluent style
    *
    * @param outputRecord
@@ -191,14 +124,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   public MapDriver<K1, V1, K2, V2> withOutput(Pair<K2, V2> outputRecord) {
     addOutput(outputRecord);
     return this;
-  }
-
-  /**
-   * Adds a (k, v) pair we expect as output from the mapper
-   *
-   */
-  public void addOutput(K2 key, V2 val) {
-    addOutput(new Pair<K2, V2>(key, val));
   }
 
   /**
@@ -213,30 +138,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   }
 
   /**
-   * Expects an input of the form "key \t val" Forces the Mapper input types
-   * to Text.
-   *
-   * @param input
-   *          A string of the form "key \t val".
-   */
-  public void setInputFromString(String input) {
-    if (null == input) {
-      throw new IllegalArgumentException("null input given to setInputFromString");
-    } else {
-      Pair<Text, Text> inputPair = parseTabbedPair(input);
-      if (null != inputPair) {
-        // I know this is not type-safe, but I don't know a better way to do
-        // this.
-        setInputKey((K1) inputPair.getFirst());
-        setInputValue((V1) inputPair.getSecond());
-      } else {
-        throw new IllegalArgumentException(
-            "Could not parse input pair in setInputFromString");
-      }
-    }
-  }
-
-  /**
    * Identical to setInputFromString, but with a fluent programming style
    *
    * @param input
@@ -246,28 +147,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
   public MapDriver<K1, V1, K2, V2> withInputFromString(String input) {
     setInputFromString(input);
     return this;
-  }
-
-  /**
-   * Expects an input of the form "key \t val" Forces the Mapper output types
-   * to Text.
-   *
-   * @param output
-   *          A string of the form "key \t val". Trims any whitespace.
-   */
-  public void addOutputFromString(String output) {
-    if (null == output) {
-      throw new IllegalArgumentException("null input given to setOutput");
-    } else {
-      Pair<Text, Text> outputPair = parseTabbedPair(output);
-      if (null != outputPair) {
-        // I know this is not type-safe, but I don't know a better way to do
-        // this.
-        addOutput((Pair<K2, V2>) outputPair);
-      } else {
-        throw new IllegalArgumentException("Could not parse output pair in setOutput");
-      }
-    }
   }
 
   /**
@@ -291,33 +170,6 @@ public class MapDriver<K1, V1, K2, V2> extends TestDriver<K1, V1, K2, V2> {
     myMapper.map(inputKey, inputVal, outputCollector, reporter);
 
     return outputCollector.getOutputs();
-  }
-
-  @Override
-  public void runTest() throws RuntimeException {
-    String inputKeyStr = "(null)";
-    String inputValStr = "(null)";
-
-    if (null != inputKey) {
-      inputKeyStr = inputKey.toString();
-    }
-
-    if (null != inputVal) {
-      inputValStr = inputVal.toString();
-    }
-
-    LOG.debug("Mapping input (" + inputKeyStr + ", " + inputValStr + ")");
-
-    List<Pair<K2, V2>> outputs = null;
-
-    try {
-      outputs = run();
-      validate(outputs);
-    } catch (IOException ioe) {
-      LOG.error("IOException in mapper: " + ioe.toString());
-      LOG.debug("Setting success to false based on IOException");
-      throw new RuntimeException();
-    }
   }
 
   @Override

@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskReport;
 
@@ -78,8 +79,10 @@ public class TestStreamingStatus extends TestCase {
   public void testStreamingStatus() throws Exception {
     MiniMRCluster mr = null;
     FileSystem fs = null;
+    JobConf conf = new JobConf();
+    conf.setBoolean("mapred.job.tracker.retire.jobs", false);
     try {
-      mr = new MiniMRCluster(1, "file:///", 3);
+      mr = new MiniMRCluster(1, "file:///", 3, null , null, conf);
 
       Path inFile = new Path(INPUT_FILE);
       fs = inFile.getFileSystem(mr.createJobConf());

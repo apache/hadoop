@@ -55,7 +55,7 @@ public class BigMapOutput extends Configured implements Tool {
     // Check if the input path exists and is non-empty
     if (fs.exists(dir)) {
       FileStatus[] list = fs.listStatus(dir);
-      if (list != null && list.length > 0) {
+      if (list.length > 0) {
         throw new IOException("Input path: " + dir + " already exists... ");
       }
     }

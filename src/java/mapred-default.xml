@@ -341,13 +341,6 @@
 </property>
 
 <property>
-  <name>mapred.jobtracker.completeuserjobs.maximum</name>
-  <value>100</value>
-  <description>The maximum number of complete jobs per user to keep around 
-  before delegating them to the job history.</description>
-</property>
-
-<property>
   <name>mapred.job.tracker.retiredjobs.cache.size</name>
   <value>1000</value>
   <description>The number of retired job status to keep in the cache.
@@ -417,6 +410,22 @@
   option -Djava.io.tmpdir='the absolute path of the tmp dir'. Pipes and
   streaming are set with environment variable,
    TMPDIR='the absolute path of the tmp dir'
+  </description>
+</property>
+
+<property>
+  <name>mapred.map.child.log.level</name>
+  <value>INFO</value>
+  <description>The logging level for the map task. The allowed levels are:
+  OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.child.log.level</name>
+  <value>INFO</value>
+  <description>The logging level for the reduce task. The allowed levels are:
+  OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
   </description>
 </property>
 
@@ -883,33 +892,6 @@
   <description> This is the max level of the task cache. For example, if
     the level is 2, the tasks cached are at the host level and at the rack
     level.
-  </description>
-</property>
-
-<property>
-  <name>mapred.queue.names</name>
-  <value>default</value>
-  <description> Comma separated list of queues configured for this jobtracker.
-    Jobs are added to queues and schedulers can configure different 
-    scheduling properties for the various queues. To configure a property 
-    for a queue, the name of the queue must match the name specified in this 
-    value. Queue properties that are common to all schedulers are configured 
-    here with the naming convention, mapred.queue.$QUEUE-NAME.$PROPERTY-NAME,
-    for e.g. mapred.queue.default.submit-job-acl.
-    The number of queues configured in this parameter could depend on the
-    type of scheduler being used, as specified in 
-    mapred.jobtracker.taskScheduler. For example, the JobQueueTaskScheduler
-    supports only a single queue, which is the default configured here.
-    Before adding more queues, ensure that the scheduler you've configured
-    supports multiple queues.
-  </description>
-</property>
-
-<property>
-  <name>mapred.acls.enabled</name>
-  <value>false</value>
-  <description> Specifies whether ACLs are enabled, and should be checked
-    for various operations.
   </description>
 </property>
 

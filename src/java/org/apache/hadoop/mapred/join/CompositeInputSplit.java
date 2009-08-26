@@ -31,7 +31,11 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * This InputSplit contains a set of child InputSplits. Any InputSplit inserted
  * into this collection must have a public default constructor.
+ * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.join.CompositeInputSplit} instead
  */
+@Deprecated
 public class CompositeInputSplit implements InputSplit {
 
   private int fill = 0;

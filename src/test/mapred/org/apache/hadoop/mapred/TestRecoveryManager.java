@@ -79,10 +79,8 @@ public class TestRecoveryManager extends TestCase {
     RunningJob rJob1 = (new JobClient(job1)).submitJob(job1);
     LOG.info("Submitted job " + rJob1.getID());
     
-    while (rJob1.mapProgress() < 0.5f) {
-      LOG.info("Waiting for job " + rJob1.getID() + " to be 50% done");
-      UtilsForTests.waitFor(100);
-    }
+    // wait for 50%
+    UtilsForTests.waitForJobHalfDone(rJob1);
     
     JobConf job2 = mr.createJobConf();
     
@@ -94,10 +92,8 @@ public class TestRecoveryManager extends TestCase {
     RunningJob rJob2 = (new JobClient(job2)).submitJob(job2);
     LOG.info("Submitted job " + rJob2.getID());
     
-    while (rJob2.mapProgress() < 0.5f) {
-      LOG.info("Waiting for job " + rJob2.getID() + " to be 50% done");
-      UtilsForTests.waitFor(100);
-    }
+    // wait for 50%
+    UtilsForTests.waitForJobHalfDone(rJob2);
     
     // kill the jobtracker
     LOG.info("Stopping jobtracker");

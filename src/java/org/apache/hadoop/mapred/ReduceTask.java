@@ -2760,10 +2760,12 @@ class ReduceTask extends Task {
                 maxFetchRetriesPerMap = Math.max(MIN_FETCH_RETRIES_PER_MAP, 
                   getClosestPowerOf2((maxMapRuntime / BACKOFF_INIT) + 1));
               }
+              // send the full attempt ID of the reduce task to enable full 
+              // causal tracing of shuffle from map attempt to reduce attempt
               URL mapOutputLocation = new URL(event.getTaskTrackerHttp() + 
                                       "/mapOutput?job=" + taskId.getJobID() +
                                       "&map=" + taskId + 
-                                      "&reduce=" + getPartition());
+                                      "&reduce=" + reduceTask.getTaskID());
               List<MapOutputLocation> loc = mapLocations.get(host);
               if (loc == null) {
                 loc = Collections.synchronizedList

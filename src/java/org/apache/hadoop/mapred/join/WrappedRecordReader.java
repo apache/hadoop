@@ -31,7 +31,10 @@ import org.apache.hadoop.mapred.RecordReader;
  * This class keeps track of the &quot;head&quot; key-value pair for the
  * provided RecordReader and keeps a store of values matching a key when
  * this source is participating in a join.
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.join.WrappedRecordReader} instead
  */
+@Deprecated
 public class WrappedRecordReader<K extends WritableComparable,
                           U extends Writable>
     implements ComposableRecordReader<K,U> {

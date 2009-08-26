@@ -36,4 +36,6 @@
 **/TestTextOutputFormat.java
 **/TestTrackerBlacklistAcrossJobs.java
 **/TestTaskTrackerBlacklisting.java
+**/TestTaskTrackerLocalization
+**/TestTrackerDistributedCacheManager
 

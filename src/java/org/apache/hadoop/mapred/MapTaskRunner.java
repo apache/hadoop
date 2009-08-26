@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.log4j.Level;
 
 /** Runs a map task. */
 class MapTaskRunner extends TaskRunner {
@@ -60,6 +61,12 @@ class MapTaskRunner extends TaskRunner {
   @Override
   public String getChildEnv(JobConf jobConf) {
     return jobConf.get(JobConf.MAPRED_MAP_TASK_ENV, super.getChildEnv(jobConf));
+  }
+
+  @Override
+  public Level getLogLevel(JobConf jobConf) {
+    return Level.toLevel(jobConf.get(JobConf.MAPRED_MAP_TASK_LOG_LEVEL, 
+                                     JobConf.DEFAULT_LOG_LEVEL.toString()));
   }
 
 }

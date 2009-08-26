@@ -70,7 +70,7 @@ public abstract class TestDriver<K1, V1, K2, V2> {
    * Split "key \t val" into Pair(Text(key), Text(val))
    * @param tabSeparatedPair
    */
-  static Pair<Text, Text> parseTabbedPair(String tabSeparatedPair) {
+  public static Pair<Text, Text> parseTabbedPair(String tabSeparatedPair) {
 
     String key, val;
 

@@ -59,7 +59,9 @@ import org.apache.hadoop.util.ReflectionUtils;
  * straightforward. One need only override the relevant method(s) (usually only
  * {@link CompositeRecordReader#combine}) and include a property to map its
  * value to an identifier in the parser.
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.join.Parser} instead
  */
+@Deprecated
 public class Parser {
   public enum TType { CIF, IDENT, COMMA, LPAREN, RPAREN, QUOT, NUM, }
 

@@ -41,14 +41,14 @@ import org.apache.hadoop.mrunit.types.Pair;
  * inputs. By calling runTest(), the harness will deliver the input to the
  * Mapper, feed the intermediate results to the Reducer (without checking
  * them), and will check the Reducer's outputs against the expected results.
- * This is designed to handle a single (k, v)* -> (k, v)* case from the
+ * This is designed to handle the (k, v)* -> (k, v)* case from the
  * Mapper/Reducer pair, representing a single unit test.
  *
  * If a combiner is specified, then it will be run exactly once after
  * the Mapper and before the Reducer.
  */
 public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
-    extends TestDriver<K1, V1, K3, V3> {
+    extends MapReduceDriverBase<K1, V1, K2, V2, K3, V3> {
 
   public static final Log LOG = LogFactory.getLog(MapReduceDriver.class);
 
@@ -56,13 +56,10 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   private Reducer<K2, V2, K3, V3> myReducer;
   private Reducer<K2, V2, K2, V2> myCombiner;
 
-  private List<Pair<K1, V1>> inputList;
-
   public MapReduceDriver(final Mapper<K1, V1, K2, V2> m,
                          final Reducer<K2, V2, K3, V3> r) {
     myMapper = m;
     myReducer = r;
-    inputList = new ArrayList<Pair<K1, V1>>();
   }
 
   public MapReduceDriver(final Mapper<K1, V1, K2, V2> m,
@@ -71,11 +68,9 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
     myMapper = m;
     myReducer = r;
     myCombiner = c;
-    inputList = new ArrayList<Pair<K1, V1>>();
   }
 
   public MapReduceDriver() {
-    inputList = new ArrayList<Pair<K1, V1>>();
   }
 
   /** Set the Mapper instance to use with this test driver
@@ -151,15 +146,6 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   }
 
   /**
-   * Adds an input to send to the mapper
-   * @param key
-   * @param val
-   */
-  public void addInput(K1 key, V1 val) {
-    inputList.add(new Pair<K1, V1>(key, val));
-  }
-
-  /**
    * Identical to addInput() but returns self for fluent programming style
    * @param key
    * @param val
@@ -168,18 +154,6 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   public MapReduceDriver<K1, V1, K2, V2, K3, V3> withInput(K1 key, V1 val) {
     addInput(key, val);
     return this;
-  }
-
-  /**
-   * Adds an input to send to the Mapper
-   * @param input The (k, v) pair to add to the input list.
-   */
-  public void addInput(Pair<K1, V1> input) {
-    if (null == input) {
-      throw new IllegalArgumentException("Null input in addInput()");
-    }
-
-    inputList.add(input);
   }
 
   /**
@@ -194,18 +168,6 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   }
 
   /**
-   * Adds an output (k, v) pair we expect from the Reducer
-   * @param outputRecord The (k, v) pair to add
-   */
-  public void addOutput(Pair<K3, V3> outputRecord) {
-    if (null != outputRecord) {
-      expectedOutputs.add(outputRecord);
-    } else {
-      throw new IllegalArgumentException("Tried to add null outputRecord");
-    }
-  }
-
-  /**
    * Works like addOutput(), but returns self for fluent style
    * @param outputRecord
    * @return this
@@ -214,15 +176,6 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
           Pair<K3, V3> outputRecord) {
     addOutput(outputRecord);
     return this;
-  }
-
-  /**
-   * Adds a (k, v) pair we expect as output from the Reducer
-   * @param key
-   * @param val
-   */
-  public void addOutput(K3 key, V3 val) {
-    addOutput(new Pair<K3, V3>(key, val));
   }
 
   /**
@@ -237,26 +190,6 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   }
 
   /**
-   * Expects an input of the form "key \t val"
-   * Forces the Mapper input types to Text.
-   * @param input A string of the form "key \t val". Trims any whitespace.
-   */
-  public void addInputFromString(String input) {
-    if (null == input) {
-      throw new IllegalArgumentException("null input given to setInput");
-    } else {
-      Pair<Text, Text> inputPair = parseTabbedPair(input);
-      if (null != inputPair) {
-        // I know this is not type-safe, but I don't
-        // know a better way to do this.
-        addInput((Pair<K1, V1>) inputPair);
-      } else {
-        throw new IllegalArgumentException("Could not parse input pair in addInput");
-      }
-    }
-  }
-
-  /**
    * Identical to addInputFromString, but with a fluent programming style
    * @param input A string of the form "key \t val". Trims any whitespace.
    * @return this
@@ -264,27 +197,6 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   public MapReduceDriver<K1, V1, K2, V2, K3, V3> withInputFromString(String input) {
     addInputFromString(input);
     return this;
-  }
-
-  /**
-   * Expects an input of the form "key \t val"
-   * Forces the Reducer output types to Text.
-   * @param output A string of the form "key \t val". Trims any whitespace.
-   */
-  public void addOutputFromString(String output) {
-    if (null == output) {
-      throw new IllegalArgumentException("null input given to setOutput");
-    } else {
-      Pair<Text, Text> outputPair = parseTabbedPair(output);
-      if (null != outputPair) {
-        // I know this is not type-safe,
-        // but I don't know a better way to do this.
-        addOutput((Pair<K3, V3>) outputPair);
-      } else {
-        throw new IllegalArgumentException(
-            "Could not parse output pair in setOutput");
-      }
-    }
   }
 
   /**
@@ -347,58 +259,7 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   }
 
   @Override
-  public void runTest() throws RuntimeException {
-    List<Pair<K3, V3>> reduceOutputs = null;
-    boolean succeeded;
-
-    try {
-      reduceOutputs = run();
-      validate(reduceOutputs);
-    } catch (IOException ioe) {
-      LOG.error("IOException: " + ioe.toString());
-      LOG.debug("Setting success to false based on IOException");
-      throw new RuntimeException();
-    }
-  }
-
-  /** Take the outputs from the Mapper, combine all values for the
-   *  same key, and sort them by key.
-   * @param mapOutputs An unordered list of (key, val) pairs from the mapper
-   * @return the sorted list of (key, list(val))'s to present to the reducer
-   */
-  List<Pair<K2, List<V2>>> shuffle(List<Pair<K2, V2>> mapOutputs) {
-    HashMap<K2, List<V2>> reducerInputs = new HashMap<K2, List<V2>>();
-
-    // step 1: condense all values with the same key into a list.
-    for (Pair<K2, V2> mapOutput : mapOutputs) {
-      List<V2> valuesForKey = reducerInputs.get(mapOutput.getFirst());
-
-      if (null == valuesForKey) {
-        // this is the first (k, v) pair for this key. Add it to the list.
-        valuesForKey = new ArrayList<V2>();
-        valuesForKey.add(mapOutput.getSecond());
-        reducerInputs.put(mapOutput.getFirst(), valuesForKey);
-      } else {
-        // add this value to the existing list for this key
-        valuesForKey.add(mapOutput.getSecond());
-      }
-    }
-
-    // build a list out of these (k, list(v)) pairs
-    List<Pair<K2, List<V2>>> finalInputs = new ArrayList<Pair<K2, List<V2>>>();
-    Set<Map.Entry<K2, List<V2>>> entries = reducerInputs.entrySet();
-    for (Map.Entry<K2, List<V2>> entry : entries) {
-      K2 key = entry.getKey();
-      List<V2> vals = entry.getValue();
-      finalInputs.add(new Pair<K2, List<V2>>(key, vals));
-    }
-
-    // and then sort the output list by key
-    if (finalInputs.size() > 0) {
-      Collections.sort(finalInputs,
-              finalInputs.get(0).new FirstElemComparator());
-    }
-
-    return finalInputs;
+  public String toString() {
+    return "MapReduceDriver (" + myMapper + ", " + myReducer + ")";
   }
 }

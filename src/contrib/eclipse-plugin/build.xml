@@ -71,7 +71,6 @@
       <fileset dir="${hadoop.root}/lib" includes="hadoop-core-*.jar" excludes="hadoop-core-test-*.jar"/>
     </copy> 
     <copy file="${hadoop.root}/build/ivy/lib/Hadoop/common/commons-cli-${commons-cli.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
-    <copy file="${hadoop.root}/build/ivy/lib/Hadoop/common/commons-cli-${commons-cli2.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
     <jar
       jarfile="${build.dir}/hadoop-${version}-${name}.jar"
       manifest="${root}/META-INF/MANIFEST.MF">

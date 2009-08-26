@@ -43,6 +43,7 @@ import org.apache.hadoop.mapred.lib.KeyFieldBasedComparator;
 import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.log4j.Level;
 
 /** 
  * A map/reduce job configuration.
@@ -305,9 +306,34 @@ public class JobConf extends Configuration {
     "mapred.reduce.child.env";
 
   /**
+   * Configuration key to set the logging {@link Level} for the map task.
+   *
+   * The allowed logging levels are:
+   * OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
+   */
+  public static final String MAPRED_MAP_TASK_LOG_LEVEL = 
+    "mapred.map.child.log.level";
+  
+  /**
+   * Configuration key to set the logging {@link Level} for the reduce task.
+   *
+   * The allowed logging levels are:
+   * OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
+   */
+  public static final String MAPRED_REDUCE_TASK_LOG_LEVEL = 
+    "mapred.reduce.child.log.level";
+  
+  /**
+   * Default logging level for map/reduce tasks.
+   */
+  public static final Level DEFAULT_LOG_LEVEL = Level.INFO;
+  
+  /**
    * Construct a map/reduce job configuration.
    */
-  public JobConf() {}
+  public JobConf() {
+    checkAndWarnDeprecation();
+  }
 
   /** 
    * Construct a map/reduce job configuration.
@@ -316,6 +342,7 @@ public class JobConf extends Configuration {
    */
   public JobConf(Class exampleClass) {
     setJarByClass(exampleClass);
+    checkAndWarnDeprecation();
   }
   
   /**
@@ -325,6 +352,7 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf) {
     super(conf);
+    checkAndWarnDeprecation();
   }
 
 
@@ -354,6 +382,7 @@ public class JobConf extends Configuration {
   public JobConf(Path config) {
     super();
     addResource(config);
+    checkAndWarnDeprecation();
   }
 
   /** A new map/reduce configuration where the behavior of reading from the
@@ -366,6 +395,7 @@ public class JobConf extends Configuration {
    */
   public JobConf(boolean loadDefaults) {
     super(loadDefaults);
+    checkAndWarnDeprecation();
   }
 
   /**
@@ -1570,12 +1600,6 @@ public class JobConf extends Configuration {
 
   public long getMemoryForMapTask() {
     if (get(MAPRED_TASK_MAXVMEM_PROPERTY) != null) {
-      LOG.warn(
-        JobConf.deprecatedString(
-          JobConf.MAPRED_TASK_MAXVMEM_PROPERTY)+
-          " instead use  "+JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY + " and "
-          + JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY);
-
       long val = getLong(
         MAPRED_TASK_MAXVMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
       return (val == DISABLED_MEMORY_LIMIT) ? val :
@@ -1592,11 +1616,6 @@ public class JobConf extends Configuration {
 
   public long getMemoryForReduceTask() {
     if (get(MAPRED_TASK_MAXVMEM_PROPERTY) != null) {
-      LOG.warn(
-        JobConf.deprecatedString(
-          JobConf.MAPRED_TASK_MAXVMEM_PROPERTY)+
-        " instead use  "+JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY + " and "
-        + JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY);
       long val = getLong(
         MAPRED_TASK_MAXVMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
       return (val == DISABLED_MEMORY_LIMIT) ? val :
@@ -1808,8 +1827,17 @@ public class JobConf extends Configuration {
   }
 
   static String deprecatedString(String key) {
-    return "The variable " + key + " is no longer used";
+    return "The variable " + key + " is no longer used.";
   }
+
+  private void checkAndWarnDeprecation() {
+    if(get(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY) != null) {
+      LOG.warn(JobConf.deprecatedString(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY)
+                + " Instead use " + JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY
+                + " and " + JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY);
+    }
+  }
+  
 
 }
 

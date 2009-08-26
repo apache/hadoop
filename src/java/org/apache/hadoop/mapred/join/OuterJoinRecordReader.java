@@ -26,7 +26,11 @@ import org.apache.hadoop.mapred.JobConf;
 
 /**
  * Full outer join.
+ * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.join.OuterJoinRecordReader} instead
  */
+@Deprecated
 public class OuterJoinRecordReader<K extends WritableComparable>
     extends JoinRecordReader<K> {
 

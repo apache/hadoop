@@ -30,7 +30,6 @@
 	<classpathentry kind="lib" path="lib/hadoop-hdfs-0.21.0-dev.jar"/>
 	<classpathentry kind="lib" path="lib/hadoop-hdfs-test-0.21.0-dev.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-cli-1.2.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-cli-2.0-mahout.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-codec-1.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-el-1.0.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-httpclient-3.0.1.jar"/>
