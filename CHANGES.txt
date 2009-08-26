@@ -235,6 +235,9 @@ Release 0.20.1 - Unreleased
     mapred.system.dir in the JobTracker. The JobTracker will bail out if it
     encounters such an exception. (Amar Kamat via ddas)
 
+    HADOOP-6213. Remove commons dependency on commons-cli2. (Amar Kamat via
+    sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
