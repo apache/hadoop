@@ -473,33 +473,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     return true;
   }
 
-  /**
-   * {@inheritDoc}.
-   *
-   * This implementation checks for the name system being non-null and live
-   *
-   * @param status status response to build up
-   * @throws IOException       for IO failure; this will be caught and included
-   * in the status message
-   */
-  @Override
-  public void innerPing(ServiceStatus status) throws IOException {
-    if (namesystem == null) {
-      status.addThrowable(new LivenessException("No name system"));
-    } else {
-      try {
-        namesystem.ping();
-      } catch (IOException e) {
-        status.addThrowable(e);
-      }
-    }
-    if (httpServer == null || !httpServer.isAlive()) {
-      status.addThrowable(
-              new LivenessException("NameNode HttpServer is not running"));
-    }
-  }
-
-  /**
+    /**
    * Wait for service to finish.
    * (Normally, it runs forever.)
    */

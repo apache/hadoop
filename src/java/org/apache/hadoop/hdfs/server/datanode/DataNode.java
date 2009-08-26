@@ -251,27 +251,7 @@ public class DataNode extends Service
   public void innerStart() throws IOException {
     startDataNode(getConf(), dataDirs);
   }
-    
-  /**
-   * {@inheritDoc}.
-   *
-   * This implementation checks for the IPC server running and the
-   * DataNode being registered to a namenode.
-   *
-   * @param status the initial status
-   * @throws IOException       for any ping failure
-   * @throws LivenessException if the IPC server is not defined 
-   */
-  @Override
-  public void innerPing(ServiceStatus status) throws IOException {
-    if (ipcServer == null) {
-      status.addThrowable(new LivenessException("No IPC Server running"));
-    }
-    if (dnRegistration == null) {
-      status.addThrowable(
-              new LivenessException("Not registered to a namenode"));
-    }
-  }
+
   
   /**
    * This method starts the data node with the specified conf.
