@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessToken;
 
@@ -95,8 +96,8 @@ public class TestDiskError extends TestCase {
       DFSTestUtil.waitReplication(fs, fileName, (short)1);
 
       // get the block belonged to the created file
-      LocatedBlocks blocks = cluster.getNamesystem().getBlockLocations(
-          fileName.toString(), 0, (long)fileLen);
+      LocatedBlocks blocks = NameNodeAdapter.getBlockLocations(
+          cluster.getNameNode(), fileName.toString(), 0, (long)fileLen);
       assertEquals(blocks.locatedBlockCount(), 1);
       LocatedBlock block = blocks.get(0);
       

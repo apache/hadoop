@@ -114,6 +114,9 @@ Trunk (unreleased changes)
     to be executed by the run-test-hdfs-fault-inject target.  (Konstantin
     Boudnik via szetszwo)
 
+    HDFS-563. Simplify the codes in FSNamesystem.getBlockLocations(..).
+    (szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
