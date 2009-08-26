@@ -1151,26 +1151,6 @@ public class TaskTracker extends Service
   /////////////////////////////////////////////////////
 
   /**
-   * {@inheritDoc}
-   *
-   * @param status a status that can be updated with problems
-   * @throws IOException       for any problem
-   */
-  @Override
-  public void innerPing(ServiceStatus status) throws IOException {
-    if (server == null || !server.isAlive()) {
-      status.addThrowable(
-              new IOException("TaskTracker HttpServer is not running on port "
-                      + httpPort));
-    }
-    if (taskReportServer == null) {
-      status.addThrowable(
-              new IOException("TaskTracker Report Server is not running on "
-              + taskReportAddress));
-    }
-  }
-
-  /**
    * A shutdown request triggers termination
    * @throws IOException when errors happen during termination
    */

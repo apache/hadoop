@@ -2218,26 +2218,6 @@ public class JobTracker extends Service
   /////////////////////////////////////////////////////
 
   /**
-   * {@inheritDoc}
-   *
-   * @param status a status that can be updated with problems
-   * @throws IOException for any problem
-   */
-  @Override
-  public void innerPing(ServiceStatus status) throws IOException {
-    if (infoServer == null || !infoServer.isAlive()) {
-      status.addThrowable(
-              new IOException("TaskTracker HttpServer is not running on port "
-                      + infoPort));
-    }
-    if (interTrackerServer == null) {
-      status.addThrowable(
-              new IOException("InterTrackerServer is not running on port "
-                      + port ));
-    }
-  }
-
-  /**
    * This service shuts down by stopping the
    * {@link JobEndNotifier} and then closing down the job
    * tracker
