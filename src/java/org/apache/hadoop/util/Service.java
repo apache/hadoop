@@ -23,11 +23,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.io.Closeable;
 import java.util.Date;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This is the base class for services that can be deployed. A service is any
@@ -67,8 +64,7 @@ import java.util.List;
  * <li>Avoid doing any initialization/startup in the constructors, as this
  * breaks the lifecycle and prevents subclassing. </li>
  *
- * <li>If the service wishes to declare itself as having failed, so that
- * {@link #ping()} operations automatically fail, call
+ * <li>If the service wishes to declare itself as having failed, call
  * {@link #enterFailedState(Throwable)} to enter the failed state.</li>
  *
  * <li>Override the {@link #innerStart()} method to start the service, including
@@ -82,20 +78,14 @@ import java.util.List;
  * call the  {@link #enterLiveState()} in the separate thread <i>when the
  * service is ready</i></li>
  *
- * <li>Override {@link #innerPing(ServiceStatus)} with any health checks that a service
- * can perform to check that it is still "alive". These should be short lasting
- * and non-side effecting. Simple checks for valid data structures and live
- * worker threads are good examples. When the service thinks that something
- * has failed, throw an IOException with a meaningful error message!
- * </li>
- *
  * <li>Override {@link #innerClose()} to perform all shutdown logic.
  * Be robust here and shut down cleanly even if the service did not start up
  * completely. Do not assume all fields are non-null</li>
  *
+ *
  * You should not need to worry about making these overridden methods
  * synchronized, as they are only called when a service has entered a specific
- * state -which is synchronized. Except for {@link #innerPing(ServiceStatus)} ,
+ * state -which is synchronized. 
  * each method will only be called at most once in the life of a service instance.
  * However, because findbugs can flag synchronization warnings, it is often
  * simplest and safest to mark the innerX operations as synchronized.
@@ -134,7 +124,7 @@ public abstract class Service extends Configured implements Closeable {
    * value: {@value}
    */
   public static final String ERROR_NO_CONFIGURATION
-          = "Cannot initialize when unconfigured";
+          = "Cannot initialize no Configuration has been provided";
 
   /**
    * Construct a service with no configuration; one must be called with {@link
@@ -190,71 +180,6 @@ public abstract class Service extends Configured implements Closeable {
     }
   }
 
-  /**
-   * Ping: checks that a component considers itself live.
-   *
-   * This may trigger a health check in which the service probes its
-   * constituent parts to verify that they are themselves live.
-   * The base implementation considers any state other than
-   * {@link ServiceState#FAILED} and {@link ServiceState#CLOSED}
-   * to be valid, so it is OK to ping a
-   * component that is still starting up. However, in such situations, the inner
-   * ping health tests are skipped, because they are generally irrelevant.
-   *
-   * Subclasses should not normally override this method, but instead override
-   * {@link #innerPing(ServiceStatus)} with extra health checks that will only
-   * be called when a system is actually live.
-   * @return the current service state.
-   * @throws IOException           for any ping failure
-   * @throws ServiceStateException if the component is in a wrong state.
-   */
-  protected ServiceStatus ping() throws IOException {
-    ServiceStatus status = new ServiceStatus(this);
-    ServiceState state = status.getState();
-    if (state == ServiceState.LIVE) {
-      try {
-        innerPing(status);
-      } catch (Throwable thrown) {
-        //TODO: what happens whenthe ping() returns >0 causes of failure but 
-        //doesn't throw an exception -this method will not get called. Is 
-        //that what we want?
-        status = onInnerPingFailure(status, thrown);
-      }
-    } else {
-      //ignore the ping
-      LOG.debug("ignoring ping request while in state " + state);
-      //but tack on any non-null failure cause, which may be a valid value
-      //in FAILED or TERMINATED states.
-      status.addThrowable(getFailureCause());
-    }
-    return status;
-  }
-
-  /**
-   * This is an override point for services -handle failure of the inner
-   * ping operation.
-   * The base implementation calls {@link #enterFailedState(Throwable)} and then
-   * updates the service status with the (new) state and the throwable
-   * that was caught.
-   * @param currentStatus the current status structure
-   * @param thrown the exception from the failing ping.
-   * @return an updated service status structure.
-   * @throws IOException for IO problems
-   */
-  protected ServiceStatus onInnerPingFailure(ServiceStatus currentStatus,
-                                             Throwable thrown) 
-          throws IOException {
-    //something went wrong
-    //mark as failed
-    //TODO: don't enter failed state on a failing ping? Just report the event
-    //to the caller?
-    enterFailedState(thrown);
-    //update the state
-    currentStatus.updateState(this);
-    currentStatus.addThrowable(thrown);
-    //and return the exception.
-    return currentStatus;
-  }
 
   /**
    * Convert any exception to an {@link IOException}
@@ -265,7 +190,7 @@ public abstract class Service extends Configured implements Closeable {
    * @return an IOException representing or containing the forwarded exception
    */
   @SuppressWarnings({"ThrowableInstanceNeverThrown"})
-  protected IOException forwardAsIOException(Throwable thrown) {
+  protected static IOException forwardAsIOException(Throwable thrown) {
     IOException newException;
     if(thrown instanceof IOException) {
       newException = (IOException) thrown;
@@ -345,19 +270,6 @@ public abstract class Service extends Configured implements Closeable {
    * @throws IOException for any problem.
    */
   protected void innerStart() throws IOException {
-  }
-
-
-  /**
-   * This method is designed for overriding, with subclasses implementing health
-   * tests inside it.
-   *
-   * It is invoked whenever the component is called with {@link Service#ping()}
-   * and the call is not rejected.
-   * @param status the service status, which can be updated
-   * @throws IOException for any problem.
-   */
-  protected void innerPing(ServiceStatus status) throws IOException {
   }
 
   /**
@@ -469,6 +381,14 @@ public abstract class Service extends Configured implements Closeable {
   }
 
   /**
+   * When did the service last change state
+   * @return the last state change of this service
+   */
+  public Date getLastStateChange() {
+    return lastStateChange;
+  }
+
+  /**
    * Enter a new state if that is permitted from the current state.
    * Does nothing if we are in that state; throws an exception if the
    * state transition is not permitted
@@ -523,7 +443,6 @@ public abstract class Service extends Configured implements Closeable {
               entryState);
     }
   }
-
 
   /**
    * Verify that a service is in a specific state
@@ -672,14 +591,7 @@ public abstract class Service extends Configured implements Closeable {
       service.enterFailedState(t);
       //we assume that the service really does know how to terminate
       service.closeQuietly();
-      
-      if (t instanceof IOException) {
-        //rethrow any IOException
-        throw (IOException) t;
-      } else {
-        //and wrap any other exception in an IOException that is rethrown
-        throw (IOException) new IOException(t.toString()).initCause(t);
-      }
+      throw forwardAsIOException(t);
     }
   }
 
@@ -707,6 +619,16 @@ public abstract class Service extends Configured implements Closeable {
         LOG.info("when closing :" + closeable+ ":" + e, e);
       }
     }
+  }
+
+
+  /**
+   * Get the current number of workers
+   * @return the worker count, or -1 for "this service has no workers"
+   */
+
+  public int getLiveWorkerCount() {
+    return -1;
   }
 
 
@@ -787,55 +709,6 @@ public abstract class Service extends Configured implements Closeable {
   }
 
   /**
-   * This is an exception that can be raised on a liveness failure.
-   */
-  public static class LivenessException extends IOException {
-
-    /**
-     * Constructs an exception with {@code null} as its error detail message.
-     */
-    public LivenessException() {
-    }
-
-    /**
-     * Constructs an Exception with the specified detail message.
-     *
-     * @param message The detail message (which is saved for later retrieval by
-     *                the {@link #getMessage()} method)
-     */
-    public LivenessException(String message) {
-      super(message);
-    }
-
-    /**
-     * Constructs an exception with the specified detail message and cause.
-     *
-     * <p> The detail message associated with {@code cause} is only incorporated
-     * into this exception's detail message when the message parameter is null.
-     *
-     * @param message The detail message (which is saved for later retrieval by
-     *                the {@link #getMessage()} method)
-     * @param cause   The cause (which is saved for later retrieval by the
-     *                {@link #getCause()} method).  (A null value is permitted,
-     *                and indicates that the cause is nonexistent or unknown.)
-     */
-    public LivenessException(String message, Throwable cause) {
-      super(message, cause);
-    }
-
-    /**
-     * Constructs an exception with the specified cause and a detail message of
-     * {@code cause.toString())}. A null cause is allowed.
-     *
-     * @param cause The cause (which is saved for later retrieval by the {@link
-     *              #getCause()} method). Can be null.
-     */
-    public LivenessException(Throwable cause) {
-      super(cause);
-    }
-  }
-
-  /**
    * The state of the service as perceived by the service itself. Failure is the
    * odd one as it often takes a side effecting test (or an outsider) to
    * observe.
@@ -872,145 +745,4 @@ public abstract class Service extends Configured implements Closeable {
     CLOSED
   }
 
-  /**
-   * This is the full service status
-   */
-  public static final class ServiceStatus implements Serializable {
-    /** enumerated state */
-    private ServiceState state;
-
-    /** name of the service */
-    private String name;
-
-    /** when did the state change?  */
-    private Date lastStateChange;
-
-    /**
-     * a possibly null array of exceptions that caused a system failure
-     */
-    public ArrayList<Throwable> throwables = new ArrayList<Throwable>(0);
-
-    /**
-     * Create an empty service status instance
-     */
-    public ServiceStatus() {
-    }
-
-    /**
-     * Create a service status instance with the base values set
-     * @param name service name
-     * @param state current state
-     * @param lastStateChange when did the state last change?
-     */
-    public ServiceStatus(String name, ServiceState state,
-                         Date lastStateChange) {
-      this.state = state;
-      this.name = name;
-      this.lastStateChange = lastStateChange;
-    }
-
-    /**
-     * Create a service status instance from the given service
-     *
-     * @param service service to read from
-     */
-    public ServiceStatus(Service service) {
-      name = service.getServiceName();
-      updateState(service);
-    }
-
-    /**
-     * Add a new throwable to the list. This is a no-op if it is null.
-     * To be safely sent over a network connection, the Throwable (and any
-     * chained causes) must be fully serializable.
-     * @param thrown the throwable. Can be null; will not be cloned.
-     */
-    public void addThrowable(Throwable thrown) {
-      if (thrown != null) {
-        throwables.add(thrown);
-      }
-    }
-
-    /**
-     * Get the list of throwables. This may be null.
-     * @return A list of throwables or null
-     */
-    public List<Throwable> getThrowables() {
-      return throwables;
-    }
-
-    /**
-     * Get the current state
-     * @return the state
-     */
-    public ServiceState getState() {
-      return state;
-    }
-
-    /**
-     * set the state
-     * @param state new state
-     */
-    public void setState(ServiceState state) {
-      this.state = state;
-    }
-
-    /**
-     * Get the name of the service
-     * @return the service name
-     */
-    public String getName() {
-      return name;
-    }
-
-    /**
-     * Set the name of the service
-     * @param name the service name
-     */
-    public void setName(String name) {
-      this.name = name;
-    }
-
-    /**
-     * Get the date of the last state change
-     * @return when the service state last changed
-     */
-    public Date getLastStateChange() {
-      return lastStateChange;
-    }
-
-    /**
-     * Set the last state change
-     * @param lastStateChange the timestamp of the last state change
-     */
-    public void setLastStateChange(Date lastStateChange) {
-      this.lastStateChange = lastStateChange;
-    }
-
-    /**
-     * Update the service state
-     * @param service the service to update from
-     */
-    public void updateState(Service service) {
-      synchronized (service) {
-        setState(service.getServiceState());
-        setLastStateChange(service.lastStateChange);
-      }
-    }
-
-    /**
-     * The string operator includes the messages of every throwable
-     * in the list of failures
-     * @return the list of throwables
-     */
-    @Override
-    public String toString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append(getName()).append(" in state ").append(getState());
-      for (Throwable t : throwables) {
-        builder.append("\n ").append(t.toString());
-      }
-      return builder.toString();
-    }
-  }
 }

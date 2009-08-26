@@ -46,10 +46,6 @@ public class TestServiceLifecycle extends TestCase {
     super.tearDown();
   }
 
-  private void ping() throws IOException {
-    service.ping();
-  }
-
   private void start() throws IOException {
     service.start();
   }
@@ -109,12 +105,6 @@ public class TestServiceLifecycle extends TestCase {
             service.getStateChangeCount());
   }
 
-  private void assertPingCount(int expected) {
-    assertEquals("Wrong pingchange count for " + service,
-            expected,
-            service.getPingCount());
-  }
-
   private void assertNoStartFromState(Service.ServiceState serviceState)
           throws IOException {
     enterState(serviceState);
@@ -130,22 +120,6 @@ public class TestServiceLifecycle extends TestCase {
     fail("expected failure, but service is in " + service.getServiceState());
   }
 
-  /**
-   * Test that the ping operation returns a mock exception
-   * @return the service status
-   * @throws IOException IO problems
-   */
-  private Service.ServiceStatus assertPingContainsMockException()
-          throws IOException {
-    Service.ServiceStatus serviceStatus = service.ping();
-    List<Throwable> thrown = serviceStatus.getThrowables();
-    assertFalse("No nested exceptions in service status", thrown.isEmpty());
-    Throwable throwable = thrown.get(0);
-    assertTrue(
-            "Nested exception is not a MockServiceException : "+throwable,
-            throwable instanceof MockService.MockServiceException);
-    return serviceStatus;
-  }
 
   /**
    * Walk through the lifecycle and check it changes visible state
@@ -157,9 +131,6 @@ public class TestServiceLifecycle extends TestCase {
     start();
     assertInLiveState();
     assertRunning();
-    ping();
-    ping();
-    assertPingCount(2);
     close();
     assertStateChangeCount(3);
     assertNotRunning();
@@ -213,18 +184,6 @@ public class TestServiceLifecycle extends TestCase {
     }
   }
 
-  public void testPingInFailedReturnsException() throws Throwable {
-    service.setFailOnStart(true);
-    try {
-      start();
-      failShouldNotGetHere();
-    } catch (MockService.MockServiceException e) {
-      assertInFailedState();
-      //and test that the ping works out
-      Service.ServiceStatus serviceStatus = assertPingContainsMockException();
-      assertEquals(Service.ServiceState.FAILED, serviceStatus.getState());
-    }
-  }
 
   public void testTerminateFromFailure() throws Throwable {
     enterFailedState();
@@ -232,50 +191,6 @@ public class TestServiceLifecycle extends TestCase {
     close();
   }
 
-  public void testFailInPing() throws Throwable {
-    service.setFailOnPing(true);
-    start();
-    Service.ServiceStatus serviceStatus = service.ping();
-    assertEquals(Service.ServiceState.FAILED, serviceStatus.getState());
-    assertPingCount(1);
-    List<Throwable> thrown = serviceStatus.getThrowables();
-    assertEquals(1, thrown.size());
-    Throwable throwable = thrown.get(0);
-    assertTrue(throwable instanceof MockService.MockServiceException);
-  }
-
-  public void testPingInCreated() throws Throwable {
-    service.setFailOnPing(true);
-    ping();
-    assertPingCount(0);
-  }
-
-
-  /**
-   * Test that when in a failed state, you can't ping the service
-   *
-   * @throws Throwable if needed
-   */
-  public void testPingInFailedStateIsNoop() throws Throwable {
-    enterFailedState();
-    assertInFailedState();
-    Service.ServiceStatus serviceStatus = service.ping();
-    assertEquals(Service.ServiceState.FAILED, serviceStatus.getState());
-    assertPingCount(0);
-  }
-
-  /**
-   * Test that when in a terminated state, you can't ping the service
-   *
-   * @throws Throwable if needed
-   */
-  public void testPingInTerminatedStateIsNoop() throws Throwable {
-    enterTerminatedState();
-    assertInTerminatedState();
-    Service.ServiceStatus serviceStatus = service.ping();
-    assertEquals(Service.ServiceState.CLOSED, serviceStatus.getState());
-    assertPingCount(0);
-  }
 
   public void testDeploy() throws Throwable {
     Service.startService(service);

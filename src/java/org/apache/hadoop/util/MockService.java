@@ -43,18 +43,13 @@ public class MockService extends Service {
     super(conf);
   }
 
-  private boolean failOnStart, failOnPing, failOnClose;
+  private boolean failOnStart, failOnClose;
   private boolean goLiveInStart = true;
   private boolean closed = true;
   private volatile int stateChangeCount = 0;
-  private volatile int pingCount = 0;
 
   public void setFailOnStart(boolean failOnStart) {
     this.failOnStart = failOnStart;
-  }
-
-  public void setFailOnPing(boolean failOnPing) {
-    this.failOnPing = failOnPing;
   }
 
   public void setGoLiveInStart(boolean goLiveInStart) {
@@ -94,18 +89,6 @@ public class MockService extends Service {
 
   /**
    * {@inheritDoc}
-   * @throws IOException if {@link #failOnPing is set} @param status
-   */
-  @Override
-  protected void innerPing(ServiceStatus status) throws IOException {
-    pingCount++;
-    if (failOnPing) {
-      throw new MockServiceException("failOnPing");
-    }
-  }
-
-  /**
-   * {@inheritDoc}
    *
    * @throws IOException if {@link #failOnClose} is true
    */
@@ -140,16 +123,14 @@ public class MockService extends Service {
     return stateChangeCount;
   }
 
-  public int getPingCount() {
-    return pingCount;
-  }
+
 
   /**
    * An exception to indicate we have triggered a mock event
    */
-  static class MockServiceException extends IOException {
+  public static class MockServiceException extends IOException {
 
-    private MockServiceException(String message) {
+    public MockServiceException(String message) {
       super(message);
     }
   }
