@@ -997,10 +997,10 @@ public class HConnectionManager implements HConstants {
       return location;
     }
 
-    public void processBatchOfRows(ArrayList<Put> list, byte[] tableName)
+    public int processBatchOfRows(ArrayList<Put> list, byte[] tableName)
         throws IOException {
       if (list.isEmpty()) {
-        return;
+        return 0;
       }
       boolean retryOnlyOne = false;
       if (list.size() > 1) {
@@ -1014,7 +1014,8 @@ public class HConnectionManager implements HConstants {
       byte [] region = currentRegion;
       boolean isLastRow = false;
       Put [] putarray = new Put[0];
-      for (int i = 0, tries = 0; i < list.size() && tries < this.numRetries; i++) {
+      int i, tries;
+      for (i = 0, tries = 0; i < list.size() && tries < this.numRetries; i++) {
         Put put = list.get(i);
         currentPuts.add(put);
         // If the next Put goes to a new region, then we are to clear
@@ -1072,6 +1073,7 @@ public class HConnectionManager implements HConstants {
           currentPuts.clear();
         }
       }
+      return i;
     }
 
     void close(boolean stopProxy) {

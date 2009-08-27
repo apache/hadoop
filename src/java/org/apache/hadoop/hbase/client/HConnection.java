@@ -189,6 +189,6 @@ public interface HConnection {
    * @param tableName The name of the table
    * @throws IOException
    */
-  public void processBatchOfRows(ArrayList<Put> list, byte[] tableName)
+  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName)
       throws IOException;
 }

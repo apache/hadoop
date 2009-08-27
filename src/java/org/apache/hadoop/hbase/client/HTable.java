@@ -54,14 +54,16 @@ import org.apache.hadoop.hbase.util.Writables;
 
 
 /**
- * Used to communicate with a single HBase table
+ * Used to communicate with a single HBase table.
+ * <p>
+ * This class is not MT safe for writes.
  */
 public class HTable implements HTableInterface {
   private final HConnection connection;
   private final byte [] tableName;
   protected final int scannerTimeout;
   private volatile HBaseConfiguration configuration;
-  private ArrayList<Put> writeBuffer;
+  private final ArrayList<Put> writeBuffer = new ArrayList<Put>();
   private long writeBufferSize;
   private boolean autoFlush;
   private long currentWriteBufferSize;
@@ -121,7 +123,6 @@ public class HTable implements HTableInterface {
       conf.getInt("hbase.regionserver.lease.period", 60 * 1000);
     this.configuration = conf;
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
-    this.writeBuffer = new ArrayList<Put>();
     this.writeBufferSize = conf.getLong("hbase.client.write.buffer", 2097152);
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
@@ -578,11 +579,15 @@ public class HTable implements HTableInterface {
    * @throws IOException
    */
   public void flushCommits() throws IOException {
+    int last = 0;
     try {
-      connection.processBatchOfRows(writeBuffer, tableName);
+      last = connection.processBatchOfRows(writeBuffer, tableName);
     } finally {
+      writeBuffer.subList(0, last).clear();
       currentWriteBufferSize = 0;
-      writeBuffer.clear();
+      for (int i = 0; i < writeBuffer.size(); i++) {
+        currentWriteBufferSize += writeBuffer.get(i).heapSize();
+      }
     }
   }
 

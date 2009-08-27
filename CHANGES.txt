@@ -357,6 +357,7 @@ Release 0.20.0 - Unreleased
                new updates into the 'kvset' (active part)
    HBASE-1767  test zookeeper broken in trunk and 0.20 branch; broken on
                hudson too
+   HBASE-1780  HTable.flushCommits clears write buffer in finally clause
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
