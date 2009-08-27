@@ -27,6 +27,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Random;
@@ -44,7 +45,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.server.common.ThreadLocalDateFormat;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -74,7 +74,7 @@ public class HftpFileSystem extends FileSystem {
   protected UserGroupInformation ugi; 
   protected final Random ran = new Random();
 
-  protected static final ThreadLocalDateFormat df = ListPathsServlet.df;
+  protected static final SimpleDateFormat df = ListPathsServlet.df;
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
