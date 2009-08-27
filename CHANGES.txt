@@ -194,3 +194,6 @@ Release 0.20.1 - Unreleased
     (Bill Zeller via szetszwo)
 
     HDFS-527. Remove/deprecate unnecessary DFSClient constructors.  (szetszwo)
+
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe. (Suresh Srinivas and cdouglas)
