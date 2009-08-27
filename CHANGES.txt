@@ -944,6 +944,9 @@ Trunk (unreleased changes)
     HADOOP-6152. Fix classpath variables in bin/hadoop-config.sh and some
     other scripts.  (Aaron Kimball via szetszwo)
 
+    HADOOP-6215. fix GenericOptionParser to deal with -D with '=' in the 
+    value. (Amar Kamat via sharad)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
