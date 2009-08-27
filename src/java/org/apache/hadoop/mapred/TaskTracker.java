@@ -571,7 +571,7 @@ public class TaskTracker extends Service
     int connectTimeout = fConf
             .getInt("mapred.task.tracker.connect.timeout", 60000);
     this.jobClient = (InterTrackerProtocol) 
-      RPC.waitForProxy(InterTrackerProtocol.class,
+    RPC.waitForProxy(InterTrackerProtocol.class,
                        InterTrackerProtocol.versionID, 
                        jobTrackAddr, this.fConf, connectTimeout);
     if (LOG.isDebugEnabled()) {
@@ -1187,7 +1187,7 @@ public class TaskTracker extends Service
    * clean.
    * @throws IOException when errors happen during shutdown
    */
-  public synchronized void closeTaskTracker() throws IOException {
+  protected synchronized void closeTaskTracker() throws IOException {
     if (!running) {
       //this operation is a no-op when not already running
       return;
@@ -1301,9 +1301,11 @@ public class TaskTracker extends Service
    * {@inheritDoc}
    *
    * @throws IOException for any problem.
+   * @throws InterruptedException if the thread was interrupted on startup
    */
   @Override
-  protected synchronized void innerStart() throws IOException {
+  protected synchronized void innerStart() 
+          throws IOException, InterruptedException {
     JobConf conf = fConf;
     fConf = conf;
     maxMapSlots = conf.getInt("mapred.tasktracker.map.tasks.maximum", 2);

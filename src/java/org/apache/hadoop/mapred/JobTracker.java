@@ -1871,8 +1871,10 @@ public class JobTracker extends Service
    * JobTracker does not go live until {@link #offerService()} is called.
    * accordingly, JobTracker does not enter the Live state here.
    * @throws IOException for any startup problems
+   * @throws InterruptedException if the thread was interrupted on startup
    */
-  protected void innerStart() throws IOException {
+  @Override
+  protected void innerStart() throws IOException, InterruptedException {
     // This is a directory of temporary submission files.  We delete it
     // on startup, and can delete any files that we're done with
     JobConf jobConf = new JobConf(conf);
