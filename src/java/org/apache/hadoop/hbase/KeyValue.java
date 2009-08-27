@@ -819,9 +819,8 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   public boolean updateLatestStamp(final byte [] now) {
-    int tsOffset = getTimestampOffset();
-    if(Bytes.compareTo(now, 0, Bytes.SIZEOF_LONG, 
-        this.bytes, tsOffset, Bytes.SIZEOF_LONG) < 0) {
+    if(this.isLatestTimestamp()) {
+      int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
       return true;
     }

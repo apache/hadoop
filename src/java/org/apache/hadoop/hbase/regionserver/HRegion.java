@@ -1108,7 +1108,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       //Check to see if this is a deleteRow insert
       if(delete.getFamilyMap().isEmpty()){
         for(byte [] family : regionInfo.getTableDesc().getFamiliesKeys()){
-          delete.deleteFamily(family);
+          // Don't eat the timestamp
+          delete.deleteFamily(family, delete.getTimeStamp());
         }
       } else {
         for(byte [] family : delete.getFamilyMap().keySet()) {

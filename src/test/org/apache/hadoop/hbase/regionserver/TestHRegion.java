@@ -292,6 +292,41 @@ public class TestHRegion extends HBaseTestCase {
     result = region.get(get, null);
     assertEquals(1, result.size());
   }
+  
+  public void testDeleteRowWithFutureTs() throws IOException {
+    byte [] tableName = Bytes.toBytes("testtable");
+    byte [] fam = Bytes.toBytes("info");
+    byte [][] families = {fam};
+    String method = this.getName();
+    initHRegion(tableName, method, families);
+
+    byte [] row = Bytes.toBytes("table_name");
+    // column names
+    byte [] serverinfo = Bytes.toBytes("serverinfo");
+
+    // add data in the far future
+    Put put = new Put(row);
+    put.add(fam, serverinfo, HConstants.LATEST_TIMESTAMP-5,Bytes.toBytes("value"));
+    region.put(put);
+
+    // now delete something in the present
+    Delete delete = new Delete(row);
+    region.delete(delete, null, true);
+
+    // make sure we still see our data
+    Get get = new Get(row).addColumn(fam, serverinfo);
+    Result result = region.get(get, null);
+    assertEquals(1, result.size());
+    
+    // delete the future row
+    delete = new Delete(row,HConstants.LATEST_TIMESTAMP-3,null);
+    region.delete(delete, null, true);
+
+    // make sure it is gone
+    get = new Get(row).addColumn(fam, serverinfo);
+    result = region.get(get, null);
+    assertEquals(0, result.size());
+  }
 
   public void testScanner_DeleteOneFamilyNotAnother() throws IOException {
     byte [] tableName = Bytes.toBytes("test_table");
