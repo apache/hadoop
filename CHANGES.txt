@@ -128,9 +128,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5882. Fixes a reducer progress update problem for new mapreduce
     api. (Amareshwari Sriramadasu via sharad)
 
-    HADOOP-5746. Fixes a corner case problem in Streaming, where if an exception
-    happens in MROutputThread after the last call to the map/reduce method, the 
-    exception goes undetected. (Amar Kamat via ddas)
+    HADOOP-5746. Fixes a corner case problem in Streaming, where if an 
+    exception happens in MROutputThread after the last call to the map/reduce 
+    method, the exception goes undetected. (Amar Kamat via ddas)
 
     HADOOP-5884. Fixes accounting in capacity scheduler so that high RAM jobs
     take more slots. (Vinod Kumar Vavilapalli via yhemanth)
@@ -142,11 +142,11 @@ Release 0.20.1 - Unreleased
     causing TestQueueCapacities to fail.
     (Sreekanth Ramakrishnan via yhemanth)
 
-    HADOOP-5921. Fixes a problem in the JobTracker where it sometimes never used
-    to come up due to a system file creation on JobTracker's system-dir failing. 
-    This problem would sometimes show up only when the FS for the system-dir 
-    (usually HDFS) is started at nearly the same time as the JobTracker. 
-    (Amar Kamat via ddas)
+    HADOOP-5921. Fixes a problem in the JobTracker where it sometimes never
+    used to come up due to a system file creation on JobTracker's system-dir 
+    failing. This problem would sometimes show up only when the FS for the 
+    system-dir (usually HDFS) is started at nearly the same time as the 
+    JobTracker. (Amar Kamat via ddas)
 
     HADOOP-5920. Fixes a testcase failure for TestJobHistory. 
     (Amar Kamat via ddas)
@@ -240,6 +240,9 @@ Release 0.20.1 - Unreleased
 
     HADOOP-6215. fix GenericOptionParser to deal with -D with '=' in the 
     value. (Amar Kamat via sharad)
+
+    MAPREDUCE-421. Fix Pipes to use returned system exit code.
+    (Christian Kunz via omalley)
 
 Release 0.20.0 - 2009-04-15
 

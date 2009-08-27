@@ -491,7 +491,8 @@ public class Submitter extends Configured implements Tool {
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    new Submitter().run(args);
+    int exitCode =  new Submitter().run(args);
+    System.exit(exitCode);
   }
 
 }
