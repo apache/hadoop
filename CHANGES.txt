@@ -244,6 +244,9 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-421. Fix Pipes to use returned system exit code.
     (Christian Kunz via omalley)
 
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe. (Suresh Srinivas and cdouglas)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
