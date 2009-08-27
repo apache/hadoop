@@ -46,7 +46,7 @@ public class TestServiceLifecycle extends TestCase {
     super.tearDown();
   }
 
-  private void start() throws IOException {
+  private void start() throws IOException, InterruptedException {
     service.start();
   }
 
@@ -106,7 +106,7 @@ public class TestServiceLifecycle extends TestCase {
   }
 
   private void assertNoStartFromState(Service.ServiceState serviceState)
-          throws IOException {
+          throws Throwable {
     enterState(serviceState);
     try {
       service.start();

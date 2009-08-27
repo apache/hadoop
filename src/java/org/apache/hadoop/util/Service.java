@@ -25,6 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import java.io.IOException;
 import java.io.Closeable;
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * This is the base class for services that can be deployed. A service is any
@@ -109,6 +111,8 @@ public abstract class Service extends Configured implements Closeable {
    * A root cause for failure. May be null.
    */
   private Throwable failureCause;
+  
+  private List<StateChangeListener> stateListeners;
 
   /**
    * Error string included in {@link ServiceStateException} exceptions
@@ -145,18 +149,22 @@ public abstract class Service extends Configured implements Closeable {
   /**
    * Start any work (usually in separate threads).
    *
-   * When completed, the service will be in the {@link ServiceState#STARTED}
+   * When successful, the service will be in the {@link ServiceState#STARTED}
    * state, or may have already transited to the {@link ServiceState#LIVE}
    * state
    *
+   * When unsuccessful, the service will have entered the FAILED state and
+   * then attempted to close down.
    * Subclasses must implement their work in {@link #innerStart()}, leaving the
    * start() method to manage state checks and changes.
+   * 
    *
    * @throws IOException           for any failure
    * @throws ServiceStateException when the service is not in a state from which
    *                               it can enter this state.
+   * @throws InterruptedException if the thread was interrupted on startup
    */
-  public void start() throws IOException {
+  public final void start() throws IOException, InterruptedException {
     synchronized (this) {
       //this request is idempotent on either live or starting states; either
       //state is ignored
@@ -165,6 +173,7 @@ public abstract class Service extends Configured implements Closeable {
               currentState == ServiceState.STARTED) {
         return;
       }
+      //sanity check: make sure that we are configured
       if (getConf() == null) {
         throw new ServiceStateException(ERROR_NO_CONFIGURATION,
                 getServiceState());
@@ -175,6 +184,10 @@ public abstract class Service extends Configured implements Closeable {
     try {
       innerStart();
     } catch (IOException e) {
+      enterFailedState(e);
+      throw e;
+    } catch (InterruptedException e) {
+      //interruptions mean "stop trying to start the service"
       enterFailedState(e);
       throw e;
     }
@@ -189,7 +202,6 @@ public abstract class Service extends Configured implements Closeable {
    * @param thrown the exception to forward
    * @return an IOException representing or containing the forwarded exception
    */
-  @SuppressWarnings({"ThrowableInstanceNeverThrown"})
   protected static IOException forwardAsIOException(Throwable thrown) {
     IOException newException;
     if(thrown instanceof IOException) {
@@ -201,7 +213,6 @@ public abstract class Service extends Configured implements Closeable {
     }
     return newException;
   }
-
 
   /**
    * Test for a service being in the {@link ServiceState#LIVE} or {@link
@@ -268,8 +279,9 @@ public abstract class Service extends Configured implements Closeable {
    * state to {@link ServiceState#LIVE} to indicate the service is now live.
    *
    * @throws IOException for any problem.
+   * @throws InterruptedException if the thread was interrupted on startup
    */
-  protected void innerStart() throws IOException {
+  protected void innerStart() throws IOException, InterruptedException {
   }
 
   /**
@@ -364,21 +376,7 @@ public abstract class Service extends Configured implements Closeable {
     }
   }
 
-  /**
-   * Override point - a method called whenever there is a state change.
-   *
-   * The base class logs the event.
-   *
-   * @param oldState existing state
-   * @param newState new state.
-   */
-  protected void onStateChange(ServiceState oldState,
-                               ServiceState newState) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("State Change: " + toString()
-              + " transitioned from state " + oldState + " to " + newState);
-    }
-  }
+
 
   /**
    * When did the service last change state
@@ -631,7 +629,65 @@ public abstract class Service extends Configured implements Closeable {
     return -1;
   }
 
+  /**
+   * Override point - a method called whenever there is a state change.
+   *
+   * The base class logs the event and notifies all state change listeners.
+   *
+   * @param oldState existing state
+   * @param newState new state.
+   */
+  protected void onStateChange(ServiceState oldState,
+                               ServiceState newState) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("State Change: " + toString()
+              + " transitioned from state " + oldState + " to " + newState);
+    }
+    
+    //copy all the listeners out of the list
+    //this is to give us access to an unsynchronized copy of the listeners, which
+    //can then have the state notifications called outside of any synchronized 
+    //sectoin
+    StateChangeListener[] listeners = null;
+    synchronized (this) {
+      if (stateListeners != null) {
+        listeners = new StateChangeListener[stateListeners
+                .size()];
+        stateListeners.toArray(listeners);
+      } else {
+        //no listeners, exit here
+        return;
+      }
+    }
+    // issue the notifications
+    for (StateChangeListener listener : listeners) {
+      listener.onStateChange(this, oldState, newState);
+    }
+  }
 
+  /**
+   * Add a new state change listener
+   * @param listener a new state change listener
+   */
+  public synchronized void addStateChangeListener(StateChangeListener listener) {
+    if(stateListeners==null) {
+      stateListeners = new ArrayList<StateChangeListener>(1);
+    }
+    stateListeners.add(listener);
+  }
+
+  /**
+   * Remove a state change listener. This is an idempotent operation; it is 
+   * not an error to attempt to remove a listener which is not present
+   * @param listener a state change listener
+   */
+  public synchronized void removeStateChangeListener(StateChangeListener listener) {
+    if (stateListeners != null) {
+      stateListeners.remove(listener);
+    }
+  }
+
+  
   /**
    * An exception that indicates there is something wrong with the state of the
    * service
@@ -745,4 +801,19 @@ public abstract class Service extends Configured implements Closeable {
     CLOSED
   }
 
+  public interface StateChangeListener {
+    
+    /**
+     * This method is called for any listener. 
+     *
+     * The base class logs the event.
+     * @param service the service whose state is changing
+     * @param oldState existing state
+     * @param newState new state.
+     */
+    void onStateChange(Service service, 
+                       ServiceState oldState,
+                       ServiceState newState);
+
+  }
 }

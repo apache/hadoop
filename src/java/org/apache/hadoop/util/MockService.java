@@ -45,6 +45,7 @@ public class MockService extends Service {
 
   private boolean failOnStart, failOnClose;
   private boolean goLiveInStart = true;
+  private int startupDelay; 
   private boolean closed = true;
   private volatile int stateChangeCount = 0;
 
@@ -58,6 +59,10 @@ public class MockService extends Service {
 
   public void setFailOnClose(boolean failOnClose) {
     this.failOnClose = failOnClose;
+  }
+
+  public void setStartupDelay(int startupDelay) {
+    this.startupDelay = startupDelay;
   }
 
   public boolean isClosed() {
@@ -76,11 +81,16 @@ public class MockService extends Service {
   /**
    * {@inheritDoc}
    * @throws IOException  if {@link #failOnStart is set}
+   * @throws InterruptedException if the service was to delay its startup, and it
+   * was interrupted
    */
   @Override
-  protected void innerStart() throws IOException {
+  protected void innerStart() throws IOException, InterruptedException {
     if (failOnStart) {
       throw new MockServiceException("failOnStart");
+    }
+    if (startupDelay>0) {
+      Thread.sleep(startupDelay);
     }
     if (goLiveInStart) {
       goLive();
