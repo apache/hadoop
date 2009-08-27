@@ -246,9 +246,10 @@ public class DataNode extends Service
    * Start any work (in separate threads)
    *
    * @throws IOException for any startup failure
+   * @throws InterruptedException if the thread was interrupted on startup
    */
   @Override
-  public void innerStart() throws IOException {
+  public void innerStart() throws IOException, InterruptedException {
     startDataNode(getConf(), dataDirs);
   }
 
@@ -265,7 +266,7 @@ public class DataNode extends Service
    */
   void startDataNode(Configuration conf, 
                      AbstractList<File> dataDirs
-                     ) throws IOException {
+                     ) throws IOException, InterruptedException {
     // use configured nameserver & interface to get local hostname
     if (conf.get("slave.host.name") != null) {
       machineName = conf.get("slave.host.name");   

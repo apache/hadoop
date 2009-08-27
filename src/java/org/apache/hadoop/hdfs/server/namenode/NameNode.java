@@ -453,10 +453,11 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
    * Any subclasses that do not consider themsevles to be live once 
    * any subclassed initialize method has returned should override the method
    * {@link #goLiveAtTheEndOfStart()} to change that behavior.
-   * @throws IOException for any problem.
+   * @throws IOException for any problem that prevented startup.
+   * @throws InterruptedException if the thread was interrupted on startup
    */
   @Override
-  protected void innerStart() throws IOException {
+  protected void innerStart() throws IOException, InterruptedException {
     initialize(getConf());
     if(goLiveAtTheEndOfStart()) {
       setServiceState(ServiceState.LIVE);
