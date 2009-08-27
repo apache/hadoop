@@ -68,6 +68,7 @@ import java.util.Map;
  * 
  * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseRest">Hbase
  *      REST Specification</a>
+ * @deprecated Use the {@link org.apache.hadoop.hbase.stargate}  hbase contrib instead.
  */
 public class Dispatcher extends javax.servlet.http.HttpServlet {
 
