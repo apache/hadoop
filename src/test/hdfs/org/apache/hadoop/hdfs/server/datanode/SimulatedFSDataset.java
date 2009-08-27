@@ -380,7 +380,24 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return getStorageInfo();
   }
 
-  public synchronized BlockWriteStreams writeToBlock(Block b, 
+  @Override
+  public BlockWriteStreams append(Block b) throws IOException {
+    return writeToBlock(b, true);
+  }
+
+  @Override
+  public synchronized BlockWriteStreams writeToRbw(Block b, boolean isRecovery)
+      throws IOException {
+    return writeToBlock(b, isRecovery);
+  }
+
+  @Override
+  public synchronized BlockWriteStreams writeToTemporary(Block b)
+      throws IOException {
+    return writeToBlock(b, false);
+  }
+
+  private synchronized BlockWriteStreams writeToBlock(Block b, 
                                             boolean isRecovery)
                                             throws IOException {
     if (isValidBlock(b)) {

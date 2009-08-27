@@ -57,8 +57,8 @@ public class TestDiskError extends TestCase {
     FileSystem fs = cluster.getFileSystem();
     final int dnIndex = 0;
     String dataDir = cluster.getDataDirectory();
-    File dir1 = new File(new File(dataDir, "data"+(2*dnIndex+1)), "tmp");
-    File dir2 = new File(new File(dataDir, "data"+(2*dnIndex+2)), "tmp");
+    File dir1 = new File(new File(dataDir, "data"+(2*dnIndex+1)), "current/rbw");
+    File dir2 = new File(new File(dataDir, "data"+(2*dnIndex+2)), "current/rbw");
     try {
       // make the data directory of the first datanode to be readonly
       assertTrue(dir1.setReadOnly());
@@ -135,8 +135,8 @@ public class TestDiskError extends TestCase {
       
       // the temporary block & meta files should be deleted
       String dataDir = cluster.getDataDirectory();
-      File dir1 = new File(new File(dataDir, "data"+(2*sndNode+1)), "tmp");
-      File dir2 = new File(new File(dataDir, "data"+(2*sndNode+2)), "tmp");
+      File dir1 = new File(new File(dataDir, "data"+(2*sndNode+1)), "current/rbw");
+      File dir2 = new File(new File(dataDir, "data"+(2*sndNode+2)), "current/rbw");
       while (dir1.listFiles().length != 0 || dir2.listFiles().length != 0) {
         Thread.sleep(100);
       }

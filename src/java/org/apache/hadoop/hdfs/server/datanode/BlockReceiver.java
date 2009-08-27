@@ -95,11 +95,18 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       this.checksum = DataChecksum.newDataChecksum(in);
       this.bytesPerChecksum = checksum.getBytesPerChecksum();
       this.checksumSize = checksum.getChecksumSize();
+      this.finalized = datanode.data.isValidBlock(block);
       //
       // Open local disk out
       //
-      streams = datanode.data.writeToBlock(block, isRecovery);
-      this.finalized = datanode.data.isValidBlock(block);
+      if (clientName.length() == 0) { //replication or move
+        streams = datanode.data.writeToTemporary(block);
+      } else if (finalized && isRecovery) { // client append
+        streams = datanode.data.append(block);
+        this.finalized = false;
+      } else { // client write
+        streams = datanode.data.writeToRbw(block, isRecovery);
+      }
       if (streams != null) {
         this.out = streams.dataOut;
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
@@ -113,6 +120,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
     } catch (BlockAlreadyExistsException bae) {
       throw bae;
+    } catch (BlockNotFoundException bne) {
+      throw bne;
     } catch(IOException ioe) {
       IOUtils.closeStream(this);
       cleanupBlock();

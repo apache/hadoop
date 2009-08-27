@@ -144,6 +144,10 @@ public interface FSDatasetInterface extends FSDatasetMBean {
         checksumOut = cOut;
       }
       
+      void close() throws IOException {
+        IOUtils.closeStream(dataOut);
+        IOUtils.closeStream(checksumOut);
+      }
     }
 
   /**
@@ -167,14 +171,35 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   }
     
   /**
-   * Creates the block and returns output streams to write data and CRC
-   * @param b
-   * @param isRecovery True if this is part of erro recovery, otherwise false
+   * Creates a temporary replica and returns output streams to write data and CRC
+   * 
+   * @param b block
+   * @return a BlockWriteStreams object to allow writing the block data
+   *  and CRC
+   * @throws IOException if an error occurs
+   */
+  public BlockWriteStreams writeToTemporary(Block b) throws IOException;
+
+  /**
+   * Creates/recovers a RBW replica and returns output streams to 
+   * write data and CRC
+   * 
+   * @param b block
+   * @param isRecovery True if this is part of error recovery, otherwise false
+   * @return a BlockWriteStreams object to allow writing the block data
+   *  and CRC
+   * @throws IOException if an error occurs
+   */
+  public BlockWriteStreams writeToRbw(Block b, boolean isRecovery) throws IOException;
+
+  /**
+   * Append to a finalized replica and returns output streams to write data and CRC
+   * @param b block
    * @return a BlockWriteStreams object to allow writing the block data
    *  and CRC
    * @throws IOException
    */
-  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException;
+  public BlockWriteStreams append(Block b) throws IOException;
 
   /**
    * Update the block to the new generation stamp and length.  

@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     HDFS-562. Add a test for NameNode.getBlockLocations(..) to check read from
     un-closed file.  (szetszwo)
 
+    HDFS-543. Break FSDatasetInterface#writToBlock() into writeToRemporary,
+    writeToRBW, ad append. (hairong)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 

@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
@@ -47,11 +45,11 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param block a block
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
-   * @param threads a list of threads that are writing to this replica
+   * @param writer a thread that is writing to this replica
    */
   ReplicaBeingWritten(Block block, 
-      FSVolume vol, File dir, List<Thread> threads) {
-    super( block, vol, dir, threads);
+      FSVolume vol, File dir, Thread writer) {
+    super( block, vol, dir, writer);
   }
 
   /**
@@ -61,11 +59,11 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param genStamp replica generation stamp
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
-   * @param threads a list of threads that are writing to this replica
+   * @param writer a thread that is writing to this replica
    */
   ReplicaBeingWritten(long blockId, long len, long genStamp,
-      FSVolume vol, File dir, List<Thread> threads ) {
-    super( blockId, len, genStamp, vol, dir, threads);
+      FSVolume vol, File dir, Thread writer ) {
+    super( blockId, len, genStamp, vol, dir, writer);
   }
   
   @Override   //ReplicaInfo

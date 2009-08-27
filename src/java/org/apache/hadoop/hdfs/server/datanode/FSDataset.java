@@ -28,10 +28,8 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import javax.management.NotCompliantMBeanException;
@@ -39,7 +37,6 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
@@ -55,7 +52,6 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.io.IOUtils;
 
@@ -292,7 +288,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
-      boolean supportAppends = conf.getBoolean("dfs.support.append", false);
       File parent = currentDir.getParentFile();
       final File finalizedDir = new File(
           currentDir, DataStorage.STORAGE_DIR_FINALIZED);
@@ -309,11 +304,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       //
       this.tmpDir = new File(parent, "tmp");
       if (tmpDir.exists()) {
-        if (supportAppends) {
-          recoverDetachedBlocks(finalizedDir, tmpDir);
-        } else {
-          FileUtil.fullyDelete(tmpDir);
-        }
+        FileUtil.fullyDelete(tmpDir);
       }
       this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
       if (rbwDir.exists() && !supportAppends) {
@@ -374,11 +365,20 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     
     /**
-     * Temporary files. They get moved to the real block directory either when
-     * the block is finalized or the datanode restarts.
+     * Temporary files. They get moved to the finalized block directory when
+     * the block is finalized.
      */
     File createTmpFile(Block b) throws IOException {
       File f = new File(tmpDir, b.getBlockName());
+      return createTmpFile(b, f);
+    }
+
+    /**
+     * RBW files. They get moved to the finalized block directory when
+     * the block is finalized.
+     */
+    File createRbwFile(Block b) throws IOException {
+      File f = new File(rbwDir, b.getBlockName());
       return createTmpFile(b, f);
     }
 
@@ -832,11 +832,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   // Used for synchronizing access to usage stats
   private Object statsLock = new Object();
 
+  boolean supportAppends = false;
+
   /**
    * An FSDataset has a directory where it loads its data files.
    */
   public FSDataset(DataStorage storage, Configuration conf) throws IOException {
     this.maxBlocksPerDir = conf.getInt("dfs.datanode.numblocks", 64);
+    this.supportAppends = conf.getBoolean("dfs.support.append", false);
     FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
@@ -937,13 +940,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                           long blkOffset, long ckoff) throws IOException {
 
     ReplicaInfo info = getReplicaInfo(b);
-    FSVolume v = info.getVolume();
-    File blockFile = v.getTmpFile(b);
+    File blockFile = info.getBlockFile();
     RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
     if (blkOffset > 0) {
       blockInFile.seek(blkOffset);
     }
-    File metaFile = getMetaFile(blockFile, b);
+    File metaFile = info.getMetaFile();
     RandomAccessFile metaInFile = new RandomAccessFile(metaFile, "r");
     if (ckoff > 0) {
       metaInFile.seek(ckoff);
@@ -984,56 +986,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           + ") to newblock (=" + newblock + ").");
     }
     
-    for(;;) {
-      final List<Thread> threads = tryUpdateBlock(oldblock, newblock);
-      if (threads == null) {
-        return;
-      }
-
-      // interrupt and wait for all ongoing create threads
-      for(Thread t : threads) {
-        t.interrupt();
-      }
-      for(Thread t : threads) {
-        try {
-          t.join();
-        } catch (InterruptedException e) {
-          DataNode.LOG.warn("interruptOngoingCreates: t=" + t, e);
-        }
-      }
-    }
-  }
-
-  /**
-   * Try to update an old block to a new block.
-   * If there are write threads running for the old block,
-   * the threads will be returned without updating the block. 
-   * 
-   * @return write threads if there is any. Otherwise, return null.
-   */
-  private synchronized List<Thread> tryUpdateBlock(
-      Block oldblock, Block newblock) throws IOException {
-    //check write threads
     final ReplicaInfo replicaInfo = volumeMap.get(oldblock.getBlockId());
     File blockFile = replicaInfo==null?null:replicaInfo.getBlockFile();
     if (blockFile == null) {
       throw new IOException("Block " + oldblock + " does not exist.");
     }
 
+    //check write threads
     if (replicaInfo instanceof ReplicaInPipeline) {
-      List<Thread> threads = ((ReplicaInPipeline)replicaInfo).getThreads();
-      //remove dead threads
-      for(Iterator<Thread> i = threads.iterator(); i.hasNext(); ) {
-        final Thread t = i.next();
-        if (!t.isAlive()) {
-          i.remove();
-        }
-      }
-
-      //return living threads
-      if (!threads.isEmpty()) {
-        return new ArrayList<Thread>(threads);
-      }
+      ((ReplicaInPipeline)replicaInfo).stopWriter();
     }
 
     //No ongoing create threads is alive.  Update block.
@@ -1076,7 +1037,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     // paranoia! verify that the contents of the stored block 
     // matches the block file on disk.
     validateBlockMetadata(newblock);
-    return null;
   }
 
   static private void truncateBlock(File blockFile, File metaFile,
@@ -1139,115 +1099,109 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
   }
 
-  /**
-   * Start writing to a block file
-   * If isRecovery is true and the block pre-exists, then we kill all
-      volumeMap.put(b, v);
-      volumeMap.put(b, v);
-   * other threads that might be writing to this block, and then reopen the file.
-   */
-  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException {
-    //
-    // Make sure the block isn't a valid one - we're still creating it!
-    //
+  @Override  // FSDatasetInterface
+  public BlockWriteStreams append(Block b)
+      throws IOException {
+    // If the block was successfully finalized because all packets
+    // were successfully processed at the Datanode but the ack for
+    // some of the packets were not received by the client. The client 
+    // re-opens the connection and retries sending those packets.
+    // The other reason is that an "append" is occurring to this block.
+    
     ReplicaInfo replicaInfo = volumeMap.get(b);
-    if (isValidBlock(b)) {
-      if (!isRecovery) {
-        throw new BlockAlreadyExistsException("Block " + b + " is valid, and cannot be written to.");
-      }
-      // If the block was successfully finalized because all packets
-      // were successfully processed at the Datanode but the ack for
-      // some of the packets were not received by the client. The client 
-      // re-opens the connection and retries sending those packets.
-      // The other reason is that an "append" is occurring to this block.
-      if (replicaInfo != null) {
-        replicaInfo.detachBlock(1);
-      }
+    // check the validity of the parameter
+    if (replicaInfo == null) {
+      throw new BlockNotFoundException(
+          BlockNotFoundException.NON_EXISTENT_REPLICA + b);
+    }  
+    if (replicaInfo.getState() != ReplicaState.FINALIZED) {
+      throw new BlockNotFoundException(
+          BlockNotFoundException.UNFINALIZED_REPLICA + b);
     }
-    long blockSize = b.getNumBytes();
+    
+    DataNode.LOG.info("Reopen Block for append " + b);
 
-    //
-    // Serialize access to /tmp, and check if file already there.
-    //
+    // unlink the finalized replica
+    replicaInfo.detachBlock(1);
+    
+    // construct a RBW replica
+    File blkfile = replicaInfo.getBlockFile();
+    FSVolume v = volumes.getNextVolume(b.getNumBytes());
+    File newBlkFile = v.createRbwFile(b);
+    File oldmeta = replicaInfo.getMetaFile();
+    replicaInfo = new ReplicaBeingWritten(replicaInfo,
+        v, newBlkFile.getParentFile(), Thread.currentThread());
+    File newmeta = replicaInfo.getMetaFile();
+
+    // rename meta file to rbw directory
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("Renaming " + oldmeta + " to " + newmeta);
+    }
+    if (!oldmeta.renameTo(newmeta)) {
+      throw new IOException("Block " + b + " reopen failed. " +
+                            " Unable to move meta file  " + oldmeta +
+                            " to rbw dir " + newmeta);
+    }
+
+    // rename block file to rbw directory
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("Renaming " + blkfile + " to " + newBlkFile);
+    }
+    if (!blkfile.renameTo(newBlkFile)) {
+      if (!newmeta.renameTo(oldmeta)) {  // restore the meta file
+        DataNode.LOG.warn("Cannot move meta file " + newmeta + 
+            "back to the finalized directory " + oldmeta);
+      }
+      throw new IOException("Block " + b + " reopen failed. " +
+                              " Unable to move block file " + blkfile +
+                              " to rbw dir " + newBlkFile);
+    }
+    
+    // Replace finalized replica by a RBW replica in replicas map
+    volumeMap.add(replicaInfo);
+    
+    File metafile = getMetaFile(newBlkFile, b);
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("append blockfile is " + newBlkFile 
+                       + " of size " + newBlkFile.length());
+      DataNode.LOG.debug("append metafile is " + metafile 
+                       + " of size " + metafile.length());
+    }    
+    // return the write stream
+    return createBlockWriteStreams(newBlkFile , metafile);
+  }
+
+  @Override
+  public BlockWriteStreams writeToRbw(Block b, boolean isRecovery)
+      throws IOException {
+    ReplicaInfo replicaInfo = volumeMap.get(b);
     File f = null;
-    List<Thread> threads = null;
-    synchronized (this) {
-      //
-      // Is it already in the create process?
-      //
-      if (replicaInfo != null && replicaInfo instanceof ReplicaInPipeline) {
-        f = replicaInfo.getBlockFile();
-        threads = ((ReplicaInPipeline)replicaInfo).getThreads();
-        
-        if (!isRecovery) {
-          throw new BlockAlreadyExistsException("Block " + b +
-                                  " has already been started (though not completed), and thus cannot be created.");
-        } else {
-          for (Thread thread:threads) {
-            thread.interrupt();
-          }
-        }
+    if (replicaInfo == null) { // create a new block
+      FSVolume v = volumes.getNextVolume(b.getNumBytes());
+      // create a rbw file to hold block in the designated volume
+      f = v.createRbwFile(b);
+      replicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
+          b.getGenerationStamp(), v, f.getParentFile());
+      volumeMap.add(replicaInfo);
+    } else {
+      if (!isRecovery) {
+        throw new BlockAlreadyExistsException("Block " + b +
+        " already exists in state " + replicaInfo.getState() +
+        " and thus cannot be created.");
       }
-      FSVolume v = null;
-      if (!isRecovery) { // create a new block
-        v = volumes.getNextVolume(blockSize);
-        // create temporary file to hold block in the designated volume
-        f = createTmpFile(v, b);
-        replicaInfo = new ReplicaInPipeline(b.getBlockId(), 
-            b.getGenerationStamp(), v, f.getParentFile());
-        volumeMap.add(replicaInfo);
-      } else if (f != null) {
-        DataNode.LOG.info("Reopen already-open Block for append " + b);
-      } else {
-        // reopening block for appending to it.
-        DataNode.LOG.info("Reopen Block for append " + b);
-        v = replicaInfo.getVolume();
-        f = createTmpFile(v, b);
-        File blkfile = replicaInfo.getBlockFile();
-        File oldmeta = replicaInfo.getMetaFile();
-        replicaInfo = new ReplicaInPipeline(replicaInfo,
-            v, f.getParentFile(), threads);
-        File newmeta = replicaInfo.getMetaFile();
-
-        // rename meta file to tmp directory
-        DataNode.LOG.debug("Renaming " + oldmeta + " to " + newmeta);
-        if (!oldmeta.renameTo(newmeta)) {
-          throw new IOException("Block " + b + " reopen failed. " +
-                                " Unable to move meta file  " + oldmeta +
-                                " to tmp dir " + newmeta);
-        }
-
-        // rename block file to tmp directory
-        DataNode.LOG.debug("Renaming " + blkfile + " to " + f);
-        if (!blkfile.renameTo(f)) {
-          if (!f.delete()) {
-            throw new IOException("Block " + b + " reopen failed. " +
-                                  " Unable to remove file " + f);
-          }
-          if (!blkfile.renameTo(f)) {
-            throw new IOException("Block " + b + " reopen failed. " +
-                                  " Unable to move block file " + blkfile +
-                                  " to tmp dir " + f);
-          }
-        }
-        volumeMap.add(replicaInfo);
+      if (replicaInfo.getState() != ReplicaState.RBW) {
+        throw new BlockNotFoundException(
+            BlockNotFoundException.NON_RBW_REPLICA + b);
       }
-      if (f == null) {
-        DataNode.LOG.warn("Block " + b + " reopen failed " +
-                          " Unable to locate tmp file.");
-        throw new IOException("Block " + b + " reopen failed " +
-                              " Unable to locate tmp file.");
+      ReplicaInPipeline replicaInPipeline = (ReplicaInPipeline)replicaInfo;
+      synchronized (this) {
+        //
+        // Is it already in the write process?
+        //
+        replicaInPipeline.stopWriter();
+        replicaInPipeline.setWriter(Thread.currentThread());
       }
-    }
-
-    try {
-      if (threads != null) {
-        for (Thread thread:threads) {
-          thread.join();
-        }
-      }
-    } catch (InterruptedException e) {
-      throw new IOException("Recovery waiting for thread interrupted.");
+      f = replicaInfo.getBlockFile();
     }
 
     //
@@ -1256,8 +1210,42 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     // block size, so clients can't go crazy
     //
     File metafile = getMetaFile(f, b);
-    DataNode.LOG.debug("writeTo blockfile is " + f + " of size " + f.length());
-    DataNode.LOG.debug("writeTo metafile is " + metafile + " of size " + metafile.length());
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("writeToRbw blockfile is " + f +
+                         " of size " + f.length());
+      DataNode.LOG.debug("writeToRbw metafile is " + metafile +
+                         " of size " + metafile.length());
+    }
+    return createBlockWriteStreams( f , metafile);
+
+  }
+  
+  @Override
+  public BlockWriteStreams writeToTemporary(Block b)
+      throws IOException {
+    ReplicaInfo replicaInfo = volumeMap.get(b);
+    if (replicaInfo != null) {
+      throw new BlockAlreadyExistsException("Block " + b +
+          " already exists in state " + replicaInfo.getState() +
+          " and thus cannot be created.");
+    }
+    
+    File f = null;
+    FSVolume v = volumes.getNextVolume(b.getNumBytes());
+    // create a temporary file to hold block in the designated volume
+    f = v.createTmpFile(b);
+    replicaInfo = new ReplicaInPipeline(b.getBlockId(), 
+        b.getGenerationStamp(), v, f.getParentFile());
+    volumeMap.add(replicaInfo);
+    
+    // return the output streams
+    File metafile = getMetaFile(f, b);
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("writeToTemp blockfile is " + f + 
+          " of size " + f.length());
+      DataNode.LOG.debug("writeToTemp metafile is " + metafile + 
+          " of size " + metafile.length());
+    }
     return createBlockWriteStreams( f , metafile);
   }
 
@@ -1280,8 +1268,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                  throws IOException {
     long size = 0;
     synchronized (this) {
-      FSVolume vol = getReplicaInfo(b).getVolume();
-      size = vol.getTmpFile(b).length();
+      size = getReplicaInfo(b).getBlockFile().length();
     }
     if (size < dataOffset) {
       String msg = "Trying to change block file offset of block " + b +
@@ -1297,6 +1284,16 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   synchronized File createTmpFile( FSVolume vol, Block blk ) throws IOException {
+    if ( vol == null ) {
+      vol = getReplicaInfo( blk ).getVolume();
+      if ( vol == null ) {
+        throw new IOException("Could not find volume for block " + blk);
+      }
+    }
+    return vol.createTmpFile(blk);
+  }
+
+  synchronized File createRbwFile( FSVolume vol, Block blk ) throws IOException {
     if ( vol == null ) {
       vol = getReplicaInfo( blk ).getVolume();
       if ( vol == null ) {
@@ -1391,7 +1388,9 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     ArrayList<Block> list =  new ArrayList<Block>(volumeMap.size());
     synchronized(this) {
       for (ReplicaInfo b : volumeMap.replicas()) {
-        if (b.getState() == ReplicaState.FINALIZED) {
+        if (b.getState() == ReplicaState.FINALIZED ) {
+          list.add(new Block(b));
+        } else if (supportAppends && b.getState() == ReplicaState.RWR) {
           list.add(new Block(b));
         }
       }

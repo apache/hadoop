@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
@@ -37,7 +35,7 @@ import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 class ReplicaInPipeline extends ReplicaInfo {
   private long bytesAcked;
   private long bytesOnDisk;
-  private List<Thread> threads = new ArrayList<Thread>();
+  private Thread writer;
   
   /**
    * Constructor for a zero length replica
@@ -49,7 +47,7 @@ class ReplicaInPipeline extends ReplicaInfo {
    */
     ReplicaInPipeline(long blockId, long genStamp, 
         FSVolume vol, File dir) {
-    this( blockId, 0L, genStamp, vol, dir, null);
+    this( blockId, 0L, genStamp, vol, dir, Thread.currentThread());
   }
 
   /**
@@ -57,12 +55,12 @@ class ReplicaInPipeline extends ReplicaInfo {
    * @param block a block
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
-   * @param threads a list of threads that are writing to this replica
+   * @param writer a thread that is writing to this replica
    */
   ReplicaInPipeline(Block block, 
-      FSVolume vol, File dir, List<Thread> threads) {
+      FSVolume vol, File dir, Thread writer) {
     this( block.getBlockId(), block.getNumBytes(), block.getGenerationStamp(),
-        vol, dir, threads);
+        vol, dir, writer);
   }
 
   /**
@@ -72,15 +70,14 @@ class ReplicaInPipeline extends ReplicaInfo {
    * @param genStamp replica generation stamp
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
-   * @param threads a list of threads that are writing to this replica
+   * @param writer a thread that is writing to this replica
    */
   ReplicaInPipeline(long blockId, long len, long genStamp,
-      FSVolume vol, File dir, List<Thread> threads ) {
+      FSVolume vol, File dir, Thread writer ) {
     super( blockId, len, genStamp, vol, dir);
     this.bytesAcked = len;
     this.bytesOnDisk = len;
-    setThreads(threads);
-    this.threads.add(Thread.currentThread());
+    this.writer = writer;
   }
 
   @Override  //ReplicaInfo
@@ -127,26 +124,31 @@ class ReplicaInPipeline extends ReplicaInfo {
   }
   
   /**
-   * Set the threads that are writing to this replica
-   * @param threads a list of threads writing to this replica
+   * Set the thread that is writing to this replica
+   * @param writer a thread writing to this replica
    */
-  public void setThreads(List<Thread> threads) {
-    if (threads != null) {
-      threads.addAll(threads);
-    }
-  }
-  
-  /**
-   * Get a list of threads writing to this replica 
-   * @return a list of threads writing to this replica
-   */
-  public List<Thread> getThreads() {
-    return threads;
+  public void setWriter(Thread writer) {
+    this.writer = writer;
   }
   
   @Override  // Object
   public boolean equals(Object o) {
     return super.equals(o);
+  }
+  
+  /**
+   * Interrupt the writing thread and wait until it dies
+   * @throws IOException the waiting is interrupted
+   */
+  void stopWriter() throws IOException {
+    if (writer != null && writer != Thread.currentThread() && writer.isAlive()) {
+      writer.interrupt();
+      try {
+        writer.join();
+      } catch (InterruptedException e) {
+        throw new IOException("Waiting for writer thread is interrupted.");
+      }
+    }
   }
   
   @Override  // Object

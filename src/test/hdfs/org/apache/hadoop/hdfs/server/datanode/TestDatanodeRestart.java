@@ -33,12 +33,13 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.io.IOUtils;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.Assert;
 
 /** Test if a datanode can correctly upgrade itself */
-public class TestDatanodeRestart extends TestCase {
+public class TestDatanodeRestart {
   // test finalized replicas persist across DataNode restarts
-  public void testFinalizedReplicas() throws Exception {
+  @Test public void testFinalizedReplicas() throws Exception {
     // bring up a cluster of 3
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", 1024L);
@@ -62,7 +63,7 @@ public class TestDatanodeRestart extends TestCase {
   }
   
   // test rbw replicas persist across DataNode restarts
-  public void testRbwReplicas() throws IOException {
+  @Test public void testRbwReplicas() throws IOException {
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", 1024L);
     conf.setInt("dfs.write.packet.size", 512);
@@ -91,16 +92,13 @@ public class TestDatanodeRestart extends TestCase {
       out.write(writeBuf);
       out.sync();
       DataNode dn = cluster.getDataNodes().get(0);
-      // move tmp replicas to be rbw replicas: this is a temporary trick
       for (FSVolume volume : ((FSDataset)dn.data).volumes.volumes) {
         File currentDir = volume.getDir().getParentFile();
-        File tmpDir = new File(currentDir.getParentFile(), "tmp");
         File rbwDir = new File(currentDir, "rbw");
-        for (File file : tmpDir.listFiles()) {
+        for (File file : rbwDir.listFiles()) {
           if (isCorrupt && Block.isBlockFilename(file)) {
             new RandomAccessFile(file, "rw").setLength(fileLen-1); // corrupt
           }
-          file.renameTo(new File(rbwDir, file.getName()));
         }
       }
       cluster.restartDataNodes();
@@ -109,13 +107,13 @@ public class TestDatanodeRestart extends TestCase {
 
       // check volumeMap: one rwr replica
       ReplicasMap replicas = ((FSDataset)(dn.data)).volumeMap;
-      assertEquals(1, replicas.size());
+      Assert.assertEquals(1, replicas.size());
       ReplicaInfo replica = replicas.replicas().iterator().next();
-      assertEquals(ReplicaState.RWR, replica.getState());
+      Assert.assertEquals(ReplicaState.RWR, replica.getState());
       if (isCorrupt) {
-        assertEquals((fileLen-1)/512*512, replica.getNumBytes());
+        Assert.assertEquals((fileLen-1)/512*512, replica.getNumBytes());
       } else {
-        assertEquals(fileLen, replica.getNumBytes());
+        Assert.assertEquals(fileLen, replica.getNumBytes());
       }
       dn.data.invalidate(new Block[]{replica});
       fs.delete(src, false);

@@ -39,8 +39,8 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   ReplicaUnderRecovery(ReplicaInfo replica, long recoveryId) {
     super(replica.getBlockId(), replica.getNumBytes(), replica.getGenerationStamp(),
         replica.getVolume(), replica.getDir());
-    if ( replica.getState() != ReplicaState.FINALIZED ||
-         replica.getState() != ReplicaState.RBW ||
+    if ( replica.getState() != ReplicaState.FINALIZED &&
+         replica.getState() != ReplicaState.RBW &&
          replica.getState() != ReplicaState.RWR ) {
       throw new IllegalArgumentException("Cannot recover replica: " + replica);
     }
