@@ -241,6 +241,9 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-430. Fix a bug related to task getting stuck in case of 
     OOM error. (Amar Kamat via ddas)
 
+    HADOOP-6215. fix GenericOptionParser to deal with -D with '=' in the 
+    value. (Amar Kamat via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

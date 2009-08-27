@@ -103,6 +103,12 @@ public class TestGenericsUtil extends TestCase {
      GenericOptionsParser parser = new GenericOptionsParser(
         new Configuration(), new String[] {"-jt"});
     assertEquals(parser.getRemainingArgs().length, 0);
+    
+    // test if -D accepts -Dx=y=z
+    parser = 
+      new GenericOptionsParser(new Configuration(), 
+                               new String[] {"-Dx=y=z"});
+    assertEquals(parser.getConfiguration().get("x"), "y=z");
   }
   
   public void testGetClass() {

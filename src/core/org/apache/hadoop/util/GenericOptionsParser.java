@@ -281,7 +281,7 @@ public class GenericOptionsParser {
     if (line.hasOption('D')) {
       String[] property = line.getOptionValues('D');
       for(String prop : property) {
-        String[] keyval = prop.split("=");
+        String[] keyval = prop.split("=", 2);
         if (keyval.length == 2) {
           conf.set(keyval[0], keyval[1]);
         }
