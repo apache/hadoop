@@ -20,7 +20,6 @@ package org.apache.hadoop.util;
 import junit.framework.TestCase;
 
 import java.io.IOException;
-import java.util.List;
 
 
 /**
@@ -29,6 +28,7 @@ import java.util.List;
 
 public class TestServiceLifecycle extends TestCase {
   private MockService service;
+  private MockService.LifecycleEventCount counter;
 
   public TestServiceLifecycle(String name) {
     super(name);
@@ -38,6 +38,8 @@ public class TestServiceLifecycle extends TestCase {
   protected void setUp() throws Exception {
     super.setUp();
     service = new MockService();
+    counter = new MockService.LifecycleEventCount();
+    service.addStateChangeListener(counter);
   }
 
   @Override
@@ -52,7 +54,7 @@ public class TestServiceLifecycle extends TestCase {
 
   private void close() throws IOException {
     service.close();
-    assertInTerminatedState();
+    assertInClosedState();
   }
 
   protected void assertInState(Service.ServiceState state)
@@ -72,7 +74,7 @@ public class TestServiceLifecycle extends TestCase {
     assertInState(Service.ServiceState.FAILED);
   }
 
-  private void assertInTerminatedState() throws Service.ServiceStateException {
+  private void assertInClosedState() throws Service.ServiceStateException {
     assertInState(Service.ServiceState.CLOSED);
   }
 
@@ -95,7 +97,7 @@ public class TestServiceLifecycle extends TestCase {
     enterState(Service.ServiceState.FAILED);
   }
 
-  private void enterTerminatedState() throws Service.ServiceStateException {
+  private void enterClosedState() throws Service.ServiceStateException {
     enterState(Service.ServiceState.CLOSED);
   }
 
@@ -104,6 +106,14 @@ public class TestServiceLifecycle extends TestCase {
             expected,
             service.getStateChangeCount());
   }
+
+  private void assertStateListenerCount(int expected) {
+      assertEquals("Wrong listener state change count for " + service,
+              expected,
+              counter.getCount());
+    }
+
+
 
   private void assertNoStartFromState(Service.ServiceState serviceState)
           throws Throwable {
@@ -123,6 +133,7 @@ public class TestServiceLifecycle extends TestCase {
 
   /**
    * Walk through the lifecycle and check it changes visible state
+   * @throws Throwable if something went wrong
    */
   public void testBasicLifecycle() throws Throwable {
     assertInCreatedState();
@@ -141,6 +152,9 @@ public class TestServiceLifecycle extends TestCase {
    * @throws Throwable if something went wrong
    */
   public void testStartIdempotent() throws Throwable {
+    //remove the counter, see it works. twice
+    service.removeStateChangeListener(counter);
+    service.removeStateChangeListener(counter);
     start();
     int count = service.getStateChangeCount();
     //declare that we want to fail in our start operation
@@ -170,17 +184,21 @@ public class TestServiceLifecycle extends TestCase {
 
   public void testStaticCloseOperation() throws Throwable {
     Service.close(service);
-    assertInTerminatedState();
+    assertInClosedState();
     Service.close(service);
   }
 
   public void testFailInStart() throws Throwable {
     service.setFailOnStart(true);
+    int count = service.getStateChangeCount();
     try {
       start();
       failShouldNotGetHere();
     } catch (MockService.MockServiceException e) {
       assertInFailedState();
+      //we should have entered two more states, STARED and FAILED
+      assertStateChangeCount(count+2);
+      assertStateListenerCount(count+2);
     }
   }
 
@@ -202,7 +220,7 @@ public class TestServiceLifecycle extends TestCase {
     try {
       Service.startService(service);
     } catch (MockService.MockServiceException e) {
-      assertInTerminatedState();
+      assertInClosedState();
     }
   }
 
@@ -227,7 +245,7 @@ public class TestServiceLifecycle extends TestCase {
       service.close();
       fail("Should have thrown an exception");
     } catch (IOException e) {
-      assertInTerminatedState();
+      assertInClosedState();
       assertTrue(service.isClosed());
     }
     //the second call should be a no-op; no exceptions get thrown
@@ -246,10 +264,10 @@ public class TestServiceLifecycle extends TestCase {
   public void testFailFromTerminatedDoesNotChangeState() throws Throwable {
     Service.startService(service);
     service.close();
-    assertInTerminatedState();
+    assertInClosedState();
     Exception cause = new Exception("test");
     service.enterFailedState(cause);
-    assertInTerminatedState();
+    assertInClosedState();
     assertEquals(cause,service.getFailureCause());
   }
 

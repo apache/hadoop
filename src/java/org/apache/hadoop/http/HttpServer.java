@@ -512,6 +512,17 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Return the host and port of the HttpServer, if live
+   * @return the classname and any HTTP URL
+   */
+  @Override
+  public String toString() {
+    return listener != null ?
+        ("HttpServer at http://" + listener.getHost() + ":" + listener.getLocalPort() + "/")
+        : "Inactive HttpServer";
+  }
+
+  /**
    * A very simple servlet to serve up a text representation of the current
    * stack traces. It both returns the stacks to the caller and logs them.
    * Currently the stack traces are done sequentially rather than exactly the

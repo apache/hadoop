@@ -251,7 +251,7 @@ public abstract class Service extends Configured implements Closeable {
    *
    * @throws IOException if an I/O error occurs
    */
-  public void close() throws IOException {
+  public final void close() throws IOException {
     if (enterState(ServiceState.CLOSED)) {
       innerClose();
     }
@@ -313,7 +313,7 @@ public abstract class Service extends Configured implements Closeable {
    * @param oldState the old state of the service
    * @param newState the new state
    */
-  protected boolean isValidStateTransition(ServiceState oldState,
+  protected final boolean isValidStateTransition(ServiceState oldState,
                                            ServiceState newState) {
     switch(oldState) {
       case CREATED:
@@ -382,7 +382,7 @@ public abstract class Service extends Configured implements Closeable {
    * When did the service last change state
    * @return the last state change of this service
    */
-  public Date getLastStateChange() {
+  public final Date getLastStateChange() {
     return lastStateChange;
   }
 

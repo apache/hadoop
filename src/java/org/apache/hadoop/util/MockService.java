@@ -37,7 +37,7 @@ public class MockService extends Service {
 
   /**
    * Build from a configuration file
-   * @param conf
+   * @param conf configuration
    */
   public MockService(Configuration conf) {
     super(conf);
@@ -142,6 +142,22 @@ public class MockService extends Service {
 
     public MockServiceException(String message) {
       super(message);
+    }
+  }
+
+  /**
+   * To test lifecycle events, counts up every time something happens
+   */
+  public static class LifecycleEventCount implements StateChangeListener {
+    private int count = 0;
+
+    @Override
+    public synchronized void onStateChange(Service service, ServiceState oldState, ServiceState newState) {
+      count++;
+    }
+
+    public synchronized int getCount() {
+      return count;
     }
   }
 }
