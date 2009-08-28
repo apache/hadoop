@@ -19,6 +19,9 @@ Trunk (unreleased changes)
 
     HDFS-461. Tool to analyze file size distribution in HDFS. (shv)
 
+    HDFS-492. Add two JSON JSP pages to the Namenode for providing corrupt
+    blocks/replicas information.  (Bill Zeller via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
