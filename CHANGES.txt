@@ -182,8 +182,9 @@ Trunk (unreleased changes)
     HDFS-553. BlockSender reports wrong failed position in ChecksumException.
     (hairong)
 
-    HDFS-568. Update hadoop-mapred-examples-0.21.0-dev.jar for MAPREDUCE-874.
-    (szetszwo)
+    HDFS-568. Set mapred.job.tracker.retire.jobs to false in
+    src/test/mapred-site.xml for mapreduce tests to run.  (Amareshwari
+    Sriramadasu via szetszwo)
  
 Release 0.20.1 - Unreleased
 
