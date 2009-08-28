@@ -558,7 +558,8 @@
     </jar>
   </target>
 
-  <target name="jar-hdfswithmr-test" depends="compile-hdfs-with-mr-test" description="Make hadoop-hdfswithmr-test.jar"> 
+  <target name="jar-hdfswithmr-test" depends="compile-hdfs-with-mr-test" description="Make hadoop-hdfswithmr-test.jar"
+      if="hadoop-mapred.jar.exists"> 
     <copy todir="${test.build.classes}">
       <fileset dir="${test.hdfs.with.mr.build.classes}"/>
     </copy>
