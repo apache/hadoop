@@ -267,7 +267,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
-          int timeoutValue = targets.length * datanode.socketTimeout;
+          int timeoutValue = datanode.socketTimeout
+              + (HdfsConstants.READ_TIMEOUT_EXTENSION * targets.length);
           int writeTimeout = datanode.socketWriteTimeout + 
                       (HdfsConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);

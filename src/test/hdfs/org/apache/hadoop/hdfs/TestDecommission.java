@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
  * This class tests the decommissioning of nodes.
@@ -158,7 +158,7 @@ public class TestDecommission extends TestCase {
   /*
    * decommission one random node.
    */
-  private String decommissionNode(NameNode namenode,
+  private String decommissionNode(FSNamesystem namesystem,
                                   Configuration conf,
                                   DFSClient client, 
                                   FileSystem localFileSys)
@@ -183,7 +183,7 @@ public class TestDecommission extends TestCase {
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
     nodes.add(nodename);
     writeConfigFile(localFileSys, excludeFile, nodes);
-    namenode.getNamesystem().refreshNodes(conf);
+    namesystem.refreshNodes(conf);
     return nodename;
   }
 
@@ -277,7 +277,7 @@ public class TestDecommission extends TestCase {
                            replicas + " replicas.");
         checkFile(fileSys, file1, replicas);
         printFileLocations(fileSys, file1);
-        String downnode = decommissionNode(cluster.getNameNode(), conf,
+        String downnode = decommissionNode(cluster.getNamesystem(), conf,
                                            client, localFileSys);
         decommissionedNodes.add(downnode);
         waitNodeState(fileSys, downnode, NodeState.DECOMMISSIONED);

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -132,9 +133,13 @@ public class DistributedFSCheck extends TestCase {
       return;
     }
     
-    FileStatus children[] = fs.listStatus(rootFile);
-    if (children == null)
+    FileStatus [] children = null;
+    try {
+      children = fs.listStatus(rootFile);
+    } catch (FileNotFoundException fnfe ){
       throw new IOException("Could not get listing for " + rootFile);
+    }
+
     for (int i = 0; i < children.length; i++)
       listSubtree(children[i], writer);
   }

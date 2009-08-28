@@ -258,7 +258,9 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public FileStatus[] listStatus(Path p) throws IOException {
     FileStatus[] infos = dfs.listPaths(getPathName(p));
-    if (infos == null) return null;
+    if (infos == null) 
+      throw new FileNotFoundException("File " + p + " does not exist.");
+    
     FileStatus[] stats = new FileStatus[infos.length];
     for (int i = 0; i < infos.length; i++) {
       stats[i] = makeQualified(infos[i]);

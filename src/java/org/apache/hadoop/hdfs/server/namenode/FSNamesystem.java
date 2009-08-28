@@ -646,8 +646,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   /**
    * Get block locations within the specified range.
-   * 
-   * @see #getBlockLocations(String, long, long)
+   * @see ClientProtocol#getBlockLocations(String, long, long)
    */
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws IOException {
@@ -670,18 +669,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Get block locations within the specified range.
    * @see ClientProtocol#getBlockLocations(String, long, long)
-   */
-  public LocatedBlocks getBlockLocations(String src, long offset, long length
-      ) throws IOException {
-    return getBlockLocations(src, offset, length, false);
-  }
-
-  /**
-   * Get block locations within the specified range.
-   * @see ClientProtocol#getBlockLocations(String, long, long)
    * @throws FileNotFoundException
    */
-  public LocatedBlocks getBlockLocations(String src, long offset, long length,
+  LocatedBlocks getBlockLocations(String src, long offset, long length,
       boolean doAccessTime) throws IOException {
     if (offset < 0) {
       throw new IOException("Negative offset is not supported. File: " + src );
@@ -693,7 +683,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (inode == null)
       throw new FileNotFoundException();
     final LocatedBlocks ret = getBlockLocationsInternal(src, inode,
-        offset, length, Integer.MAX_VALUE, doAccessTime);  
+        offset, length, doAccessTime);  
     if (auditLog.isInfoEnabled()) {
       logAuditEvent(UserGroupInformation.getCurrentUGI(),
                     Server.getRemoteIp(),
@@ -706,25 +696,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                                        INodeFile inode,
                                                        long offset, 
                                                        long length,
-                                                       int nrBlocksToReturn,
                                                        boolean doAccessTime
                                                        ) throws IOException {
-    if(inode == null) {
-      return null;
-    }
     if (doAccessTime && isAccessTimeSupported()) {
       dir.setTimes(src, inode, -1, now(), false);
     }
-    Block[] blocks = inode.getBlocks();
+    final Block[] blocks = inode.getBlocks();
     if (blocks == null) {
       return null;
     }
-    if (blocks.length == 0) {
-      return inode.createLocatedBlocks(new ArrayList<LocatedBlock>(blocks.length));
-    }
-    
-    List<LocatedBlock> results = blockManager.getBlockLocations(blocks,
-        offset, length, nrBlocksToReturn);
+    final List<LocatedBlock> results = blocks.length == 0?
+        new ArrayList<LocatedBlock>(0):
+        blockManager.getBlockLocations(blocks, offset, length, Integer.MAX_VALUE);
     return inode.createLocatedBlocks(results);
   }
 

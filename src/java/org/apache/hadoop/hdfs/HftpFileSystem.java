@@ -27,9 +27,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Random;
+import java.util.TimeZone;
 
 import javax.security.auth.login.LoginException;
 
@@ -44,7 +46,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.server.common.ThreadLocalDateFormat;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -74,7 +75,21 @@ public class HftpFileSystem extends FileSystem {
   protected UserGroupInformation ugi; 
   protected final Random ran = new Random();
 
-  protected static final ThreadLocalDateFormat df = ListPathsServlet.df;
+  public static final String HFTP_TIMEZONE = "UTC";
+  public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+
+  public static final SimpleDateFormat getDateFormat() {
+    final SimpleDateFormat df = new SimpleDateFormat(HFTP_DATE_FORMAT);
+    df.setTimeZone(TimeZone.getTimeZone(HFTP_TIMEZONE));
+    return df;
+  }
+
+  protected static final ThreadLocal<SimpleDateFormat> df =
+    new ThreadLocal<SimpleDateFormat>() {
+      protected SimpleDateFormat initialValue() {
+        return getDateFormat();
+      }
+    };
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
@@ -168,10 +183,11 @@ public class HftpFileSystem extends FileSystem {
       long modif;
       long atime = 0;
       try {
-        modif = df.parse(attrs.getValue("modified")).getTime();
+        final SimpleDateFormat ldf = df.get();
+        modif = ldf.parse(attrs.getValue("modified")).getTime();
         String astr = attrs.getValue("accesstime");
         if (astr != null) {
-          atime = df.parse(astr).getTime();
+          atime = ldf.parse(astr).getTime();
         }
       } catch (ParseException e) { throw new SAXException(e); }
       FileStatus fs = "file".equals(qname)

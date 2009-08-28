@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 /**
  * Test for metrics published by the Namenode
@@ -53,7 +54,7 @@ public class TestNameNodeMetrics extends TestCase {
   protected void setUp() throws Exception {
     cluster = new MiniDFSCluster(CONF, 3, true, null);
     cluster.waitActive();
-    namesystem = cluster.getNameNode().getNamesystem();
+    namesystem = cluster.getNamesystem();
     fs = (DistributedFileSystem) cluster.getFileSystem();
     metrics = namesystem.getFSNamesystemMetrics();
   }
@@ -106,7 +107,8 @@ public class TestNameNodeMetrics extends TestCase {
     createFile(file, 100, (short)2);
     
     // Corrupt first replica of the block
-    LocatedBlock block = namesystem.getBlockLocations(file, 0, 1).get(0);
+    LocatedBlock block = NameNodeAdapter.getBlockLocations(
+        cluster.getNameNode(), file, 0, 1).get(0);
     namesystem.markBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
     updateMetrics();
     assertEquals(1, metrics.corruptBlocks.get());
@@ -140,7 +142,8 @@ public class TestNameNodeMetrics extends TestCase {
     createFile(file, 100, (short)1);
     
     // Corrupt the only replica of the block to result in a missing block
-    LocatedBlock block = namesystem.getBlockLocations(file, 0, 1).get(0);
+    LocatedBlock block = NameNodeAdapter.getBlockLocations(
+        cluster.getNameNode(), file, 0, 1).get(0);
     namesystem.markBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
     updateMetrics();
     assertEquals(1, metrics.underReplicatedBlocks.get());

@@ -2,6 +2,12 @@ Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
+    HDFS-538. Per the contract elucidated in HADOOP-6201, throw
+    FileNotFoundException from FileSystem::listStatus rather than returning
+    null. (Jakob Homan via cdouglas)
+
   NEW FEATURES
 
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
@@ -116,6 +122,13 @@ Trunk (unreleased changes)
     HDFS-543. Break FSDatasetInterface#writToBlock() into writeToRemporary,
     writeToRBW, ad append. (hairong)
 
+    HDFS-549. Allow a non-fault-inject test, which is specified by -Dtestcase,
+    to be executed by the run-test-hdfs-fault-inject target.  (Konstantin
+    Boudnik via szetszwo)
+
+    HDFS-563. Simplify the codes in FSNamesystem.getBlockLocations(..).
+    (szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
@@ -172,6 +185,15 @@ Trunk (unreleased changes)
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
     sometimes fails with CloseByInterruptException. (hairong)
 
+    HDFS-561. Fix write pipeline READ_TIMEOUT in DataTransferProtocol.
+    (Kan Zhang via szetszwo)
+
+    HDFS-553. BlockSender reports wrong failed position in ChecksumException.
+    (hairong)
+
+    HDFS-568. Update hadoop-mapred-examples-0.21.0-dev.jar for MAPREDUCE-874.
+    (szetszwo)
+ 
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
@@ -180,10 +202,10 @@ Release 0.20.1 - Unreleased
 
   BUG FIXES
 
-    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
-    safe.  (Suresh Srinivas via szetszwo)
-
     HDFS-167. Fix a bug in DFSClient that caused infinite retries on write.
     (Bill Zeller via szetszwo)
 
     HDFS-527. Remove/deprecate unnecessary DFSClient constructors.  (szetszwo)
+
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe. (Suresh Srinivas and cdouglas)

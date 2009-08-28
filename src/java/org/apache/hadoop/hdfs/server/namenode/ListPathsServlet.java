@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.server.common.ThreadLocalDateFormat;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
@@ -28,12 +28,13 @@ import org.znerd.xmlenc.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
-import java.util.TimeZone;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -45,12 +46,13 @@ import javax.servlet.http.HttpServletResponse;
 public class ListPathsServlet extends DfsServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
-  public static final ThreadLocalDateFormat df = 
-    new ThreadLocalDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 
-  static {
-    df.setTimeZone(TimeZone.getTimeZone("UTC"));
-  }
+  public static final ThreadLocal<SimpleDateFormat> df =
+    new ThreadLocal<SimpleDateFormat>() {
+      protected SimpleDateFormat initialValue() {
+        return HftpFileSystem.getDateFormat();
+      }
+    };
 
   /**
    * Write a node to output.
@@ -58,10 +60,11 @@ public class ListPathsServlet extends DfsServlet {
    * For files, it also includes size, replication and block-size. 
    */
   static void writeInfo(FileStatus i, XMLOutputter doc) throws IOException {
+    final SimpleDateFormat ldf = df.get();
     doc.startTag(i.isDir() ? "directory" : "file");
     doc.attribute("path", i.getPath().toUri().getPath());
-    doc.attribute("modified", df.format(new Date(i.getModificationTime())));
-    doc.attribute("accesstime", df.format(new Date(i.getAccessTime())));
+    doc.attribute("modified", ldf.format(new Date(i.getModificationTime())));
+    doc.attribute("accesstime", ldf.format(new Date(i.getAccessTime())));
     if (!i.isDir()) {
       doc.attribute("size", String.valueOf(i.getLen()));
       doc.attribute("replication", String.valueOf(i.getReplication()));
@@ -92,7 +95,7 @@ public class ListPathsServlet extends DfsServlet {
     root.put("recursive", recur ? "yes" : "no");
     root.put("filter", filter);
     root.put("exclude", exclude);
-    root.put("time", df.format(new Date()));
+    root.put("time", df.get().format(new Date()));
     root.put("version", VersionInfo.getVersion());
     return root;
   }
@@ -162,10 +165,11 @@ public class ListPathsServlet extends DfsServlet {
         }
         catch(RemoteException re) {re.writeXml(p, doc);}
       }
+    } finally {
       if (doc != null) {
         doc.endDocument();
       }
-    } finally {
+
       if (out != null) {
         out.close();
       }

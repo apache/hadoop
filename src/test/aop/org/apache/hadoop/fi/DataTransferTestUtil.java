@@ -52,6 +52,7 @@ public class DataTransferTestUtil {
    */
   public static class DataTransferTest implements PipelineTest {
     private List<Pipeline> pipelines = new ArrayList<Pipeline>();
+    private volatile boolean isSuccess = false;
 
     /** Simulate action for the receiverOpWriteBlock pointcut */
     public final ActionContainer<DatanodeID> fiReceiverOpWriteBlock
@@ -62,6 +63,22 @@ public class DataTransferTestUtil {
     /** Simulate action for the statusRead pointcut */
     public final ActionContainer<DatanodeID> fiStatusRead
         = new ActionContainer<DatanodeID>();
+    /** Verification action for the pipelineInitNonAppend pointcut */
+    public final ActionContainer<Integer> fiPipelineInitErrorNonAppend
+        = new ActionContainer<Integer>();
+    /** Verification action for the pipelineErrorAfterInit pointcut */
+    public final ActionContainer<Integer> fiPipelineErrorAfterInit
+        = new ActionContainer<Integer>();
+
+    /** Get test status */
+    public boolean isSuccess() {
+      return this.isSuccess;
+    }
+
+    /** Set test status */
+    public void markSuccess() {
+      this.isSuccess = true;
+    }
 
     /** Initialize the pipeline. */
     public Pipeline initPipeline(LocatedBlock lb) {
@@ -127,8 +144,9 @@ public class DataTransferTestUtil {
 
     @Override
     public void run(DatanodeID id) {
-      final Pipeline p = getPipelineTest().getPipeline(id);
-      if (p.contains(index, id)) {
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(id);
+      if (!test.isSuccess() && p.contains(index, id)) {
         final String s = toString(id);
         FiTestUtil.LOG.info(s);
         throw new OutOfMemoryError(s);
@@ -145,7 +163,8 @@ public class DataTransferTestUtil {
 
     @Override
     public void run(DatanodeID id) throws DiskOutOfSpaceException {
-      final Pipeline p = getPipelineTest().getPipeline(id);
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(id);
       if (p.contains(index, id)) {
         final String s = toString(id);
         FiTestUtil.LOG.info(s);
@@ -173,8 +192,9 @@ public class DataTransferTestUtil {
 
     @Override
     public void run(DatanodeID id) {
-      final Pipeline p = getPipelineTest().getPipeline(id);
-      if (p.contains(index, id)) {
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(id);
+      if (!test.isSuccess() && p.contains(index, id)) {
         final String s = toString(id) + ", duration=" + duration;
         FiTestUtil.LOG.info(s);
         if (duration <= 0) {
@@ -182,6 +202,38 @@ public class DataTransferTestUtil {
         } else {
           FiTestUtil.sleep(duration);
         }
+      }
+    }
+  }
+
+  /** Action for pipeline error verification */
+  public static class VerificationAction implements Action<Integer> {
+    /** The name of the test */
+    final String currentTest;
+    /** The error index of the datanode */
+    final int errorIndex;
+
+    /**
+     * Create a verification action for errors at datanode i in the pipeline.
+     * 
+     * @param currentTest The name of the test
+     * @param i The error index of the datanode
+     */
+    public VerificationAction(String currentTest, int i) {
+      this.currentTest = currentTest;
+      this.errorIndex = i;
+    }
+
+    /** {@inheritDoc} */
+    public String toString() {
+      return currentTest + ", errorIndex=" + errorIndex;
+    }
+
+    @Override
+    public void run(Integer i) {
+      if (i == errorIndex) {
+        FiTestUtil.LOG.info(this + ", successfully verified.");
+        getDataTransferTest().markSuccess();
       }
     }
   }

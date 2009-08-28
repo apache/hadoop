@@ -174,7 +174,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /** Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
    */
-  public FSNamesystem getNamesystem() {
+  FSNamesystem getNamesystem() {
     return namesystem;
   }
 

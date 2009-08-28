@@ -78,7 +78,7 @@ public class TestDatanodeReport extends TestCase {
 
       Thread.sleep(5000);
       FSNamesystemMetrics fsMetrics = 
-                     cluster.getNameNode().getNamesystem().getFSNamesystemMetrics();
+                     cluster.getNamesystem().getFSNamesystemMetrics();
       assertEquals(1,fsMetrics.numExpiredHeartbeats.getCurrentIntervalValue());
     }finally {
       cluster.shutdown();
