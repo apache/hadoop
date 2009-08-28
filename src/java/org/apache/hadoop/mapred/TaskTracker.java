@@ -470,7 +470,7 @@ public class TaskTracker extends Service
    */
   synchronized void initialize() throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Initializing Task Tracker: " + this);
+      LOG.debug("Initializing Task Tracker: " + toString());
     }
     //check that the server is not already live.                        
 
@@ -1449,6 +1449,7 @@ public class TaskTracker extends Service
           systemDirectory = new Path(dir);
           systemFS = systemDirectory.getFileSystem(fConf);
           if(LOG.isDebugEnabled()) {
+            LOG.debug("Starting " + this);
             LOG.debug("System directory is " + systemDirectory);
           }
         }
@@ -3443,6 +3444,23 @@ public class TaskTracker extends Service
   
   int getMaxCurrentReduceTasks() {
     return maxReduceSlots;
+  }
+
+  /**
+   * Return a string that is useful in logs and debugging
+   *
+   * @return state of the job tracker
+   */
+  @Override
+  public String toString() {
+    return super.toString()
+        + " "
+        + (server != null ?
+          (server.toString() + " ") : "")
+        + (taskReportAddress!=null ?
+          ("rpc://" + taskReportAddress + "/ ") : "")
+        + (jobTrackAddr != null ?
+          (" bound to JobTracker " + jobTrackAddr + " ") : "");
   }
 
   /**

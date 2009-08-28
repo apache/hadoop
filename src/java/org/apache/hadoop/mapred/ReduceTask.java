@@ -1230,7 +1230,8 @@ class ReduceTask extends Task {
               error = CopyOutputErrorType.NO_ERROR;
             } catch (IOException e) {
               LOG.warn(reduceTask.getTaskID() + " copy failed: " +
-                       loc.getTaskAttemptId() + " from " + loc.getHost());
+                       loc.getTaskAttemptId() + " from " + loc.getHost()
+                       + " " + loc.getOutputLocation());
               LOG.warn(StringUtils.stringifyException(e));
               shuffleClientMetrics.failedFetch();
               if (readError) {
@@ -1297,7 +1298,8 @@ class ReduceTask extends Task {
         if (mapOutput == null) {
           throw new IOException("Failed to fetch map-output for " + 
                                 loc.getTaskAttemptId() + " from " + 
-                                loc.getHost());
+                                loc.getHost()
+                                + " at " + loc.getOutputLocation());
         }
         
         // The size of the map-output

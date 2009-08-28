@@ -133,7 +133,6 @@ public class JobTracker extends Service
   // in a second
   private int NUM_HEARTBEATS_IN_SECOND = 100;
   public static enum State { INITIALIZING, RUNNING }
-  State state = State.INITIALIZING;
   private static final int FS_ACCESS_RETRY_PERIOD = 10000;
 
   private DNSToSwitchMapping dnsToSwitchMapping;
@@ -2162,10 +2161,10 @@ public class JobTracker extends Service
    * @throws IOException IO Problems
    */
   public void offerService() throws InterruptedException, IOException {
-    if(!enterLiveState()) {
+    if(getServiceState() == ServiceState.LIVE) {
       //catch re-entrancy by returning early
       return;
-    };
+    }
     // Prepare for recovery. This is done irrespective of the status of restart
     // flag.
     while (true) {
@@ -2180,6 +2179,8 @@ public class JobTracker extends Service
       }
     }
 
+    //now we are live
+    enterLiveState();
     taskScheduler.start();
     
     //  Start the recovery after starting the scheduler
@@ -2327,13 +2328,27 @@ public class JobTracker extends Service
   }
 
   /**
-   * Get the current number of workers
-   *
+   * Get the current number of trackers.
+   * This includes blacklisted trackers
    * @return the number of task trackers
    */
   @Override
   public int getLiveWorkerCount() {
-    return getNumResolvedTaskTrackers();
+    return taskTrackers.size();
+  }
+
+  /**
+   * Return a string that is useful in logs and debugging
+   * @return state of the job tracker
+   */
+  @Override
+  public String toString() {
+    return super.toString()
+        + " http://" + conf.get("mapred.job.tracker.http.address") + "/ "
+        + (interTrackerServer != null
+          ? ("ipc://" + interTrackerServer.getListenerAddress() + "/ ")
+          : "")
+        + "workers=" + getLiveWorkerCount();
   }
 
   ///////////////////////////////////////////////////////
