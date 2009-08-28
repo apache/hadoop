@@ -519,7 +519,8 @@ public class NNThroughputBenchmark {
               .of(CreateFlag.OVERWRITE)), replication, BLOCK_SIZE);
       long end = System.currentTimeMillis();
       for(boolean written = !closeUponCreate; !written; 
-        written = nameNode.complete(fileNames[daemonId][inputIdx], clientName));
+        written = nameNode.complete(fileNames[daemonId][inputIdx],
+                                    clientName, null));
       return end-start;
     }
 
@@ -889,8 +890,8 @@ public class NNThroughputBenchmark {
         nameNode.create(fileName, FsPermission.getDefault(), clientName,
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.OVERWRITE)), replication,
             BLOCK_SIZE);
-        addBlocks(fileName, clientName);
-        nameNode.complete(fileName, clientName);
+        Block lastBlock = addBlocks(fileName, clientName);
+        nameNode.complete(fileName, clientName, lastBlock);
       }
       // prepare block reports
       for(int idx=0; idx < nrDatanodes; idx++) {
@@ -898,9 +899,12 @@ public class NNThroughputBenchmark {
       }
     }
 
-    private void addBlocks(String fileName, String clientName) throws IOException {
+    private Block addBlocks(String fileName, String clientName)
+    throws IOException {
+      Block prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
-        LocatedBlock loc = nameNode.addBlock(fileName, clientName);
+        LocatedBlock loc = nameNode.addBlock(fileName, clientName, prevBlock);
+        prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           datanodes[dnIdx].addBlock(loc.getBlock());
@@ -910,6 +914,7 @@ public class NNThroughputBenchmark {
               new String[] {""});
         }
       }
+      return prevBlock;
     }
 
     /**

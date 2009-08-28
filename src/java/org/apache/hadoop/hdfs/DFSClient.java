@@ -2432,6 +2432,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                   } catch (InterruptedException  e) {
                   }
                 }
+                // update block length
+                block.setNumBytes(offsetInBlock + one.dataPos - one.dataStart);
               }
               
               if (ackQueue.isEmpty()) { // done receiving all acks
@@ -2442,6 +2444,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 blockStream.writeInt(0);
                 blockStream.flush();
               }
+            } else {
+              // update block length
+              block.setNumBytes(offsetInBlock + one.dataPos - one.dataStart);
             }
             if (LOG.isDebugEnabled()) {
               LOG.debug("DataStreamer block " + block +
@@ -2801,6 +2806,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           if (!success) {
             LOG.info("Abandoning block " + block);
             namenode.abandonBlock(block, src, clientName);
+            block = null;
 
             // Connection failed.  Let's wait a little bit and retry
             retry = true;
@@ -2908,7 +2914,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           long localstart = System.currentTimeMillis();
           while (true) {
             try {
-              return namenode.addBlock(src, clientName);
+              return namenode.addBlock(src, clientName, block);
             } catch (RemoteException e) {
               IOException ue = 
                 e.unwrapRemoteException(FileNotFoundException.class,
@@ -2995,6 +3001,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
         }
         processDatanodeError(true, true);
+      }
+
+      Block getBlock() {
+        return block;
       }
 
       DatanodeInfo[] getNodes() {
@@ -3364,8 +3374,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
 
         flushInternal();             // flush all data to Datanodes
+        // get last block before destroying the streamer
+        Block lastBlock = streamer.getBlock();
         closeThreads(false);
-        completeFile();
+        completeFile(lastBlock);
         leasechecker.remove(src);
       } finally {
         closed = true;
@@ -3374,11 +3386,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     // should be called holding (this) lock since setTestFilename() may 
     // be called during unit tests
-    private void completeFile() throws IOException {
+    private void completeFile(Block last) throws IOException {
       long localstart = System.currentTimeMillis();
       boolean fileComplete = false;
       while (!fileComplete) {
-        fileComplete = namenode.complete(src, clientName);
+        fileComplete = namenode.complete(src, clientName, last);
         if (!fileComplete) {
           if (!clientRunning ||
                 (hdfsTimeout > 0 &&

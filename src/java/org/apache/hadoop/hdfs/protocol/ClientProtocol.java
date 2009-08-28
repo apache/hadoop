@@ -43,9 +43,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 45: add create flag for create command, see Hadoop-5438
+   * 46: add Block parameter to addBlock() and complete()
    */
-  public static final long versionID = 45L;
+  public static final long versionID = 46L;
   
   ///////////////////////////////////////
   // File contents
@@ -85,8 +85,8 @@ public interface ClientProtocol extends VersionedProtocol {
    * {@link #rename(String, String)} it until the file is completed
    * or explicitly as a result of lease expiration.
    * <p>
-   * Blocks have a maximum size.  Clients that intend to
-   * create multi-block files must also use {@link #addBlock(String, String)}.
+   * Blocks have a maximum size.  Clients that intend to create
+   * multi-block files must also use {@link #addBlock(String, String, Block)}.
    *
    * @param src path of the file being created.
    * @param masked masked permission.
@@ -177,9 +177,14 @@ public interface ClientProtocol extends VersionedProtocol {
    * addBlock() allocates a new block and datanodes the block data
    * should be replicated to.
    * 
+   * addBlock() also commits the previous block by reporting
+   * to the name-node the actual generation stamp and the length
+   * of the block that the client has transmitted to data-nodes.
+   * 
    * @return LocatedBlock allocated block information.
    */
-  public LocatedBlock addBlock(String src, String clientName) throws IOException;
+  public LocatedBlock addBlock(String src, String clientName,
+                               Block previous) throws IOException;
 
   /**
    * The client is done writing data to the given filename, and would 
@@ -187,13 +192,18 @@ public interface ClientProtocol extends VersionedProtocol {
    *
    * The function returns whether the file has been closed successfully.
    * If the function returns false, the caller should try again.
+   * 
+   * close() also commits the last block of the file by reporting
+   * to the name-node the actual generation stamp and the length
+   * of the block that the client has transmitted to data-nodes.
    *
    * A call to complete() will not return true until all the file's
    * blocks have been replicated the minimum number of times.  Thus,
    * DataNode failures may cause a client to call complete() several
    * times before succeeding.
    */
-  public boolean complete(String src, String clientName) throws IOException;
+  public boolean complete(String src, String clientName,
+                          Block last) throws IOException;
 
   /**
    * The client wants to report corrupted blocks (blocks with specified

@@ -279,10 +279,6 @@ class FSDirectory implements Closeable {
       INodeFileUnderConstruction fileINode = 
         (INodeFileUnderConstruction)inodes[inodes.length-1];
 
-      // commit the last block and complete the penultimate block
-      // SHV !!! second parameter should be a block reported by client
-      getBlockManager().commitLastBlock(fileINode, fileINode.getLastBlock());
-
       // check quota limits and updated space consumed
       updateCount(inodes, inodes.length-1, 0, 
                   fileINode.getPreferredBlockSize()*fileINode.getReplication());

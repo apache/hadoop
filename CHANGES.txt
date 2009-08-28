@@ -26,6 +26,9 @@ Trunk (unreleased changes)
 
     HDFS-544. Add a "rbw" subdir to DataNode data directory. (hairong)
 
+    HDFS-565. Introduce block committing logic during new block allocation
+    and file close. (shv)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file

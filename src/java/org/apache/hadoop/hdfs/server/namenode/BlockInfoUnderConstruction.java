@@ -104,11 +104,15 @@ class BlockInfoUnderConstruction extends BlockInfo {
 
   /**
    * Return the state of the block under construction.
-   * @see {@link BlockUCState}
+   * @see BlockUCState
    */
   @Override // BlockInfo
   BlockUCState getBlockUCState() {
     return blockUCState;
+  }
+
+  void setBlockUCState(BlockUCState s) {
+    blockUCState = s;
   }
 
   /**

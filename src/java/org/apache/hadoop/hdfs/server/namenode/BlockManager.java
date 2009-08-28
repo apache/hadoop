@@ -240,9 +240,14 @@ public class BlockManager {
    */
   void commitLastBlock(INodeFileUnderConstruction fileINode, 
                        Block commitBlock) throws IOException {
+    if(commitBlock == null)
+      return; // not committing, this is a block allocation retry
     BlockInfoUnderConstruction lastBlock = fileINode.getLastBlock();
     if(lastBlock == null)
-      return;
+      return; // no blocks in file yet
+    assert lastBlock.getNumBytes() <= commitBlock.getNumBytes() :
+      "commitBlock length is less than the stored one "
+      + commitBlock.getNumBytes() + " vs. " + lastBlock.getNumBytes();
     lastBlock.commitBlock(commitBlock);
 
     // complete the penultimate block
@@ -274,17 +279,18 @@ public class BlockManager {
   }
 
   /**
-   * Convert the last block of the file to an under constroction block.
+   * Convert the last block of the file to an under construction block.
    * @param fileINode file
+   * @param targets data-nodes that will form the pipeline for this block
    */
-  void convertLastBlockToUnderConstruction(INodeFile fileINode)
-  throws IOException {
+  void convertLastBlockToUnderConstruction(
+      INodeFileUnderConstruction fileINode,
+      DatanodeDescriptor[] targets) throws IOException {
     BlockInfo oldBlock = fileINode.getLastBlock();
-    if(oldBlock == null || oldBlock.isUnderConstruction())
+    if(oldBlock == null)
       return;
     BlockInfoUnderConstruction ucBlock =
-      oldBlock.convertToBlockUnderConstruction();
-    fileINode.setBlock(fileINode.numBlocks()-1, ucBlock);
+      fileINode.setLastBlock(oldBlock, targets);
     blocksMap.replaceBlock(ucBlock);
   }
 

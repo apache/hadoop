@@ -956,7 +956,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         // Recreate in-memory lease record.
         //
         INodeFile node = (INodeFile) myFile;
-        blockManager.convertLastBlockToUnderConstruction(node);
         INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                                         node.getLocalNameBytes(),
                                         node.getReplication(),
@@ -1018,7 +1017,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     LocatedBlock lb = null;
     synchronized (this) {
       INodeFileUnderConstruction file = (INodeFileUnderConstruction)dir.getFileINode(src);
-      BlockInfoUnderConstruction lastBlock = file.getLastBlock();
+      BlockInfo lastBlock = file.getLastBlock();
       if (lastBlock != null) {
         assert lastBlock == blockManager.getStoredBlock(lastBlock) :
           "last block of the file is not in blocksMap";
@@ -1030,7 +1029,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
             targets[i].removeBlock(lastBlock);
           }
           // convert last block to under-construction and set its locations
-          file.setLastBlock(lastBlock, targets);
+          blockManager.convertLastBlockToUnderConstruction(file, targets);
 
           lb = new LocatedBlock(lastBlock, targets, 
                                 fileLength-lastBlock.getNumBytes());
@@ -1081,7 +1080,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * client to "try again later".
    */
   public LocatedBlock getAdditionalBlock(String src, 
-                                         String clientName
+                                         String clientName,
+                                         Block previous
                                          ) throws IOException {
     long fileLength, blockSize;
     int replication;
@@ -1100,6 +1100,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkFsObjectLimit();
 
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
+
+      // commit the last block and complete the penultimate block
+      blockManager.commitLastBlock(pendingFile, previous);
 
       //
       // If we fail this, bad things happen!
@@ -1215,15 +1218,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     COMPLETE_SUCCESS
   }
   
-  public CompleteFileStatus completeFile(String src, String holder) throws IOException {
-    CompleteFileStatus status = completeFileInternal(src, holder);
+  public CompleteFileStatus completeFile(String src,
+                                         String holder,
+                                         Block last) throws IOException {
+    CompleteFileStatus status = completeFileInternal(src, holder, last);
     getEditLog().logSync();
     return status;
   }
 
-
-  private synchronized CompleteFileStatus completeFileInternal(String src, 
-                                                String holder) throws IOException {
+  private synchronized CompleteFileStatus completeFileInternal(
+                                            String src, 
+                                            String holder,
+                                            Block last) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
@@ -1244,7 +1250,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                      ("from " + pendingFile.getClientMachine()))
                                   );                      
       return CompleteFileStatus.OPERATION_FAILED;
-    } else if (!checkFileProgress(pendingFile, true)) {
+    } 
+
+    // commit the last block and complete the penultimate block
+    blockManager.commitLastBlock(pendingFile, last);
+
+    if (!checkFileProgress(pendingFile, true)) {
       return CompleteFileStatus.STILL_WAITING;
     }
 
@@ -1578,13 +1589,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     leaseManager.renewLease(lease);
   }
 
-  private void finalizeINodeFileUnderConstruction(String src,
+  private void finalizeINodeFileUnderConstruction(
+      String src,
       INodeFileUnderConstruction pendingFile) throws IOException {
     leaseManager.removeLease(pendingFile.clientName, src);
-
-    // commit the last block and complete the penultimate block
-    // SHV !!! second parameter should be a block reported by client
-    blockManager.commitLastBlock(pendingFile, pendingFile.getLastBlock());
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
@@ -1671,6 +1679,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
       return;
     }
+
+    // commit the last block and complete the penultimate block
+    blockManager.commitLastBlock(pendingFile, lastblock);
     
     //remove lease, close file
     finalizeINodeFileUnderConstruction(src, pendingFile);

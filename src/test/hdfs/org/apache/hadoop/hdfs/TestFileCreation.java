@@ -416,9 +416,9 @@ public class TestFileCreation extends junit.framework.TestCase {
       System.out.println("testFileCreationError2: "
           + "The file has " + locations.locatedBlockCount() + " blocks.");
 
-      // add another block to the file
+      // add one block to the file
       LocatedBlock location = client.getNamenode().addBlock(file1.toString(), 
-          client.clientName);
+          client.clientName, null);
       System.out.println("testFileCreationError2: "
           + "Added block " + location.getBlock());
 

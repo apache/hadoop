@@ -136,7 +136,7 @@ public class TestDFSClientRetries extends TestCase {
       return versionID;
     }
 
-    public LocatedBlock addBlock(String src, String clientName)
+    public LocatedBlock addBlock(String src, String clientName, Block previous)
     throws IOException
     {
       num_calls++;
@@ -167,7 +167,7 @@ public class TestDFSClientRetries extends TestCase {
 
     public void abandonBlock(Block b, String src, String holder) throws IOException {}
 
-    public boolean complete(String src, String clientName) throws IOException { return false; }
+    public boolean complete(String src, String clientName, Block last) throws IOException { return false; }
 
     public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {}
 

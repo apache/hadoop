@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 
 
 class INodeFileUnderConstruction extends INodeFile {
@@ -117,19 +118,18 @@ class INodeFileUnderConstruction extends INodeFile {
    * Convert the last block of the file to an under-construction block.
    * Set its locations.
    */
-  void setLastBlock(BlockInfo lastBlock, DatanodeDescriptor[] targets)
+  BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
+                                          DatanodeDescriptor[] targets)
   throws IOException {
     if (blocks == null || blocks.length == 0) {
       throw new IOException("Trying to update non-existant block. " +
       		"File is empty.");
     }
-    BlockInfoUnderConstruction ucBlock;
-    if(lastBlock.isUnderConstruction())
-      ucBlock = (BlockInfoUnderConstruction)lastBlock;
-    else
-      ucBlock = new BlockInfoUnderConstruction(lastBlock, getReplication());
-    ucBlock.setLocations(targets);
-    ucBlock.setLastRecoveryTime(0);
-    blocks[blocks.length - 1] = ucBlock;
+    BlockInfoUnderConstruction ucBlock =
+      lastBlock.convertToBlockUnderConstruction(
+          BlockUCState.UNDER_CONSTRUCTION, targets);
+    ucBlock.setINode(this);
+    setBlock(numBlocks()-1, ucBlock);
+    return ucBlock;
   }
 }
