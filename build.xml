@@ -636,7 +636,6 @@
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
           <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
-          <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
       <antcall target="checkfailure"/>
@@ -696,7 +695,6 @@
       </batchtest>
       <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
         <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
-        <fileset dir="${test.src.dir}/hdfs-with-mr" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
     <antcall target="checkfailure"/>
