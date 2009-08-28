@@ -25,6 +25,8 @@ Release 0.21.0 - Unreleased
    HBASE-1758  Extract interface out of HTable (Vaibhav Puranik via Andrew
                Purtell)
    HBASE-1776  Make rowcounter enum public
+   HBASE-1276  [testing] Upgrade to JUnit 4.x and use @BeforeClass
+               annotations to optimize tests
 
   OPTIMIZATIONS
 
