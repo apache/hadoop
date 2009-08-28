@@ -196,13 +196,23 @@
     <path refid="classpath"/>
   </path>
 
+  <property name="hadoop-mapred.jar"
+    location="${lib.dir}/hadoop-mapred-${hadoop-mr.version}.jar" />
+  <available property="hadoop-mapred.jar.exists"
+    file="${hadoop-mapred.jar}" />
+  <property name="hadoop-mapred-test.jar"
+    location="${lib.dir}/hadoop-mapred-test-${hadoop-mr.version}.jar" />
+  <property name="hadoop-mapred-tools.jar"
+    location="${lib.dir}/hadoop-mapred-tools-${hadoop-mr.version}.jar" />
+  <property name="hadoop-mapred-examples.jar"
+    location="${lib.dir}/hadoop-mapred-examples-${hadoop-mr.version}.jar" />
   <path id="test.hdfs.with.mr.classpath">
     <path refid="test.classpath"/>
     <pathelement location="${test.hdfs.with.mr.build.classes}" />
-    <pathelement location="${lib.dir}/hadoop-mapred-test-${hadoop-mr.version}.jar" />
-    <pathelement location="${lib.dir}/hadoop-mapred-${hadoop-mr.version}.jar" />
-    <pathelement location="${lib.dir}/hadoop-mapred-tools-${hadoop-mr.version}.jar" />
-    <pathelement location="${lib.dir}/hadoop-mapred-examples-${hadoop-mr.version}.jar" />
+    <pathelement location="${hadoop-mapred.jar}" />
+    <pathelement location="${hadoop-mapred-test.jar}" />
+    <pathelement location="${hadoop-mapred-tools.jar}" />
+    <pathelement location="${hadoop-mapred-examples.jar}" />
   </path>
 
   <!-- the cluster test classpath: uses conf.dir for configuration -->
