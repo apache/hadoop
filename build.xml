@@ -255,12 +255,10 @@
         <exclude name="**/*.jsp" />
       </fileset>
     </copy>
-    <unzip src="${lib.dir}/hadoop-mapred-${hadoop-mr.version}.jar"
-        dest="${build.dir}">
-      <patternset>
-        <include name="webapps/**"/>
-      </patternset>
-    </unzip>
+    <property name="hadoop-mapred.jar"
+          location="${lib.dir}/hadoop-mapred-${hadoop-mr.version}.jar" />
+    <available property="hadoop-mapred.jar.exists"
+       file="${hadoop-mapred.jar}" />
 
     <copy todir="${conf.dir}" verbose="true">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
@@ -274,7 +272,19 @@
 
   </target>
 
-  <target name="compile-hdfs-classes" depends="init">
+  <!-- unzip the web applications of mapred, if found-->
+  <target name="unzip-mapred-webapps" depends="init" if="hadoop-mapred.jar.exists">
+    <unzip src="${hadoop-mapred.jar}"
+        dest="${build.dir}">
+      <patternset>
+        <include name="webapps/**"/>
+      </patternset>
+    </unzip>
+  </target>
+
+  <target name="ready-to-compile" depends="unzip-mapred-webapps, clover" />
+
+  <target name="compile-hdfs-classes" depends="ready-to-compile">
     <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
        <classpath refid="classpath"/>
     </taskdef>
@@ -494,7 +504,8 @@
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV19" todir="${test.cache.data}"/>
   </target>
 
-  <target name="compile-hdfs-with-mr-test" depends="compile-hdfs-test">
+  <target name="compile-hdfs-with-mr-test" depends="compile-hdfs-test"
+      if="hadoop-mapred.jar.exists">
     <mkdir dir="${test.hdfs.with.mr.build.classes}"/>
     <javac 
       encoding="${build.encoding}" 
@@ -651,7 +662,9 @@
      <macro-test-runner test.file="${test.hdfs.commit.tests.file}" />
   </target>
 
-  <target name="run-test-hdfs-with-mr" depends="compile-hdfs-with-mr-test" description="Run hdfs unit tests that require mapred">
+  <target name="run-test-hdfs-with-mr" depends="compile-hdfs-with-mr-test"
+      description="Run hdfs unit tests that require mapred"
+      if="hadoop-mapred.jar.exists">
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
