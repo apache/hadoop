@@ -165,11 +165,10 @@ public class ListPathsServlet extends DfsServlet {
         }
         catch(RemoteException re) {re.writeXml(p, doc);}
       }
-    } finally {
       if (doc != null) {
         doc.endDocument();
       }
-
+    } finally {
       if (out != null) {
         out.close();
       }
