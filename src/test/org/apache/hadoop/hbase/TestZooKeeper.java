@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -145,6 +146,30 @@ public class TestZooKeeper extends HBaseClusterTestCase {
       Put put = new Put(Bytes.toBytes("testrow"));
       put.add(Bytes.toBytes("fam"), Bytes.toBytes("col"), Bytes.toBytes("testdata"));
       table.put(put);
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail();
+    }
+  }
+  
+  public void testMultipleZK() {
+    try {
+      HTable localMeta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HBaseConfiguration otherConf = new HBaseConfiguration(conf);
+      otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
+      HTable ipMeta = new HTable(conf, HConstants.META_TABLE_NAME);
+      
+      // dummy, just to open the connection
+      localMeta.exists(new Get(HConstants.LAST_ROW));
+      ipMeta.exists(new Get(HConstants.LAST_ROW));
+
+      // make sure they aren't the same
+      assertFalse(HConnectionManager.getClientZooKeeperWatcher(conf)
+          .getZooKeeperWrapper() == HConnectionManager.getClientZooKeeperWatcher(
+          otherConf).getZooKeeperWrapper());
+      assertFalse(HConnectionManager.getConnection(conf)
+          .getZooKeeperWrapper().getQuorumServers().equals(HConnectionManager
+          .getConnection(otherConf).getZooKeeperWrapper().getQuorumServers()));
     } catch (Exception e) {
       e.printStackTrace();
       fail();

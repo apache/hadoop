@@ -27,6 +27,7 @@ Release 0.21.0 - Unreleased
    HBASE-1776  Make rowcounter enum public
    HBASE-1276  [testing] Upgrade to JUnit 4.x and use @BeforeClass
                annotations to optimize tests
+   HBASE-1800  Too many ZK connections
 
   OPTIMIZATIONS
 
