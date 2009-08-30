@@ -182,6 +182,8 @@ Trunk (unreleased changes)
     src/test/mapred-site.xml for mapreduce tests to run.  (Amareshwari
     Sriramadasu via szetszwo)
  
+    HDFS-15. All replicas end up on 1 rack. (Jitendra Nath Pandey via hairong)
+ 
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

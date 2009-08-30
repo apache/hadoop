@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
  * Blocks have only one replicas has the highest
  */
 class UnderReplicatedBlocks implements Iterable<Block> {
-  static final int LEVEL = 3;
+  static final int LEVEL = 4;
   private List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
       
   /* constructor */
@@ -53,7 +53,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     }
     return size;
   }
-        
+
   /* Check if a block is in the neededReplication queue */
   synchronized boolean contains(Block block) {
     for(TreeSet<Block> set:priorityQueues) {
@@ -71,8 +71,10 @@ class UnderReplicatedBlocks implements Iterable<Block> {
                           int curReplicas, 
                           int decommissionedReplicas,
                           int expectedReplicas) {
-    if (curReplicas<0 || curReplicas>=expectedReplicas) {
-      return LEVEL; // no need to replicate
+    if (curReplicas<0) {
+      return LEVEL;
+    } else if (curReplicas>=expectedReplicas) {
+      return 3; // Block doesn't have enough racks
     } else if(curReplicas==0) {
       // If there are zero non-decommissioned replica but there are
       // some decommissioned replicas, then assign them highest priority
@@ -99,7 +101,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
                            int curReplicas, 
                            int decomissionedReplicas,
                            int expectedReplicas) {
-    if(curReplicas<0 || expectedReplicas <= curReplicas) {
+    if(curReplicas<0) {
       return false;
     }
     int priLevel = getPriority(block, curReplicas, decomissionedReplicas,
