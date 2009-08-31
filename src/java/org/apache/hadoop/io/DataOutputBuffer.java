@@ -20,6 +20,8 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.apache.hadoop.io.DataOutputBuffer.Buffer;
+
 /** A reusable {@link DataOutput} implementation that writes to an in-memory
  * buffer.
  *
@@ -41,7 +43,7 @@ import java.io.*;
  */
 public class DataOutputBuffer extends DataOutputStream {
 
-  private static class Buffer extends ByteArrayOutputStream {
+  public static class Buffer extends ByteArrayOutputStream {
     public byte[] getData() { return buf; }
     public int getLength() { return count; }
 
@@ -53,6 +55,10 @@ public class DataOutputBuffer extends DataOutputStream {
       super(size);
     }
     
+    public Buffer(byte[] buf) {
+      super.buf = buf;
+    }
+
     public void write(DataInput in, int len) throws IOException {
       int newcount = count + len;
       if (newcount > buf.length) {
@@ -76,6 +82,10 @@ public class DataOutputBuffer extends DataOutputStream {
     this(new Buffer(size));
   }
   
+  public DataOutputBuffer(byte[] buf) {
+    this(new Buffer(buf));
+  }
+
   private DataOutputBuffer(Buffer buffer) {
     super(buffer);
     this.buffer = buffer;
