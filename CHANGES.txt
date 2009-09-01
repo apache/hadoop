@@ -247,6 +247,9 @@ Release 0.20.1 - 2009-08-27
     HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
     safe. (Suresh Srinivas and cdouglas)
 
+    MAPREDUCE-911. Fix a bug in TestTaskFail related to speculative 
+    execution. (Amareshwari Sriramadasu via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES

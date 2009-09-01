@@ -101,6 +101,7 @@ public class TestTaskFail extends TestCase {
     conf.setNumReduceTasks(0);
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
+    conf.setSpeculativeExecution(false);
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
                                     "/tmp")).toString().replace(' ', '+');
     conf.set("test.build.data", TEST_ROOT_DIR);
