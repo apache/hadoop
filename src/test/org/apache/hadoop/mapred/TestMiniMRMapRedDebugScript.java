@@ -207,7 +207,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
                                outDir,debugDir, debugScript, input);
       
       // Assert the output of debug script.
-      assertEquals("Test Script\nBailing out", result);
+      assertTrue(result.contains("Test Script\nBailing out"));
 
     } finally {  
       // close file system and shut down dfs and mapred cluster

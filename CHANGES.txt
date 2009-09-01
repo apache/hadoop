@@ -250,6 +250,9 @@ Release 0.20.1 - 2009-08-27
     MAPREDUCE-911. Fix a bug in TestTaskFail related to speculative 
     execution. (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-687. Fix an assertion in TestMiniMRMapRedDebugScript.
+    (Amareshwari Sriramadasu via sharad)
+
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
