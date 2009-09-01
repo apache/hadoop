@@ -951,6 +951,10 @@ Trunk (unreleased changes)
     HADOOP-6215. fix GenericOptionParser to deal with -D with '=' in the 
     value. (Amar Kamat via sharad)
 
+    HADOOP-6227. Fix Configuration to allow final parameters to be set to null
+    and prevent them from being overridden.
+    (Amareshwari Sriramadasu via yhemanth)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
