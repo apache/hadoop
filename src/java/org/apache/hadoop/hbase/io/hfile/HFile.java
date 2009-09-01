@@ -967,9 +967,8 @@ public class HFile {
     private ByteBuffer decompress(final long offset, final int compressedSize,
       final int decompressedSize) 
     throws IOException {
-      
       Decompressor decompressor = null;
-      
+      ByteBuffer buf = null;
       try {
         decompressor = this.compressAlgo.getDecompressor();
         // My guess is that the bounded range fis is needed to stop the 
@@ -979,7 +978,7 @@ public class HFile {
         InputStream is = this.compressAlgo.createDecompressionStream(
           new BoundedRangeFileInputStream(this.istream, offset, compressedSize),
           decompressor, 0);
-        ByteBuffer buf = ByteBuffer.allocate(decompressedSize);
+        buf = ByteBuffer.allocate(decompressedSize);
         IOUtils.readFully(is, buf.array(), 0, buf.capacity());
         is.close();        
       } finally {
