@@ -361,6 +361,7 @@ Release 0.20.0 - Unreleased
    HBASE-1767  test zookeeper broken in trunk and 0.20 branch; broken on
                hudson too
    HBASE-1780  HTable.flushCommits clears write buffer in finally clause
+   HBASE-1784  Missing rows after medium intensity insert
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

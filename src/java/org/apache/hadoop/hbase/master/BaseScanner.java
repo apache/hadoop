@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -153,8 +154,10 @@ abstract class BaseScanner extends Chore implements HConstants {
     int rows = 0;
     try {
       regionServer = master.connection.getHRegionConnection(region.getServer());
-      scannerId = regionServer.openScanner(region.getRegionName(),
-        new Scan().addFamily(HConstants.CATALOG_FAMILY));
+      Scan s = new Scan().addFamily(HConstants.CATALOG_FAMILY);
+      // Make this scan do a row at a time otherwise, data can be stale.
+      s.setCaching(1);
+      scannerId = regionServer.openScanner(region.getRegionName(), s);
       while (true) {
         Result values = regionServer.next(scannerId);
         if (values == null || values.size() == 0) {
@@ -165,19 +168,11 @@ abstract class BaseScanner extends Chore implements HConstants {
           emptyRows.add(values.getRow());
           continue;
         }
-        String serverName = "";
-        byte [] val = values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-        if( val != null) {
-          serverName = Bytes.toString(val);
-        }
-        long startCode = 0L;
-        val = values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER);
-        if(val != null) {
-          startCode = Bytes.toLong(val);
-        }
+        String serverAddress = getServerAddress(values);
+        long startCode = getStartCode(values);
 
         // Note Region has been assigned.
-        checkAssigned(info, serverName, startCode);
+        checkAssigned(regionServer, region, info, serverAddress, startCode);
         if (isSplitParent(info)) {
           splitParents.put(info, values);
         }
@@ -228,6 +223,24 @@ abstract class BaseScanner extends Chore implements HConstants {
     }
     LOG.info(Thread.currentThread().getName() + " scan of " + rows +
       " row(s) of meta region " + region.toString() + " complete");
+  }
+
+  /*
+   * @param r
+   * @return Empty String or server address found in <code>r</code>
+   */
+  private String getServerAddress(final Result r) {
+    byte [] val = r.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+    return val == null || val.length <= 0? "": Bytes.toString(val);
+  }
+
+  /*
+   * @param r
+   * @return Return 0L or server startcode found in <code>r</code>
+   */
+  private long getStartCode(final Result r) {
+    byte [] val = r.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER);
+    return val == null || val.length <= 0? 0L: Bytes.toLong(val);
   }
 
   /*
@@ -326,8 +339,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     
     if (LOG.isDebugEnabled()) {
       LOG.debug(split.getRegionNameAsString() + "/" + split.getEncodedName()
-          + " no longer has references to " + Bytes.toStringBinary(parent)
-         );
+          + " no longer has references to " + Bytes.toStringBinary(parent));
     }
     
     Delete delete = new Delete(parent);
@@ -337,12 +349,43 @@ abstract class BaseScanner extends Chore implements HConstants {
     return result;
   }
 
-  protected void checkAssigned(final HRegionInfo info,
+  /*
+   * Check the passed region is assigned.  If not, add to unassigned.
+   * @param regionServer
+   * @param meta
+   * @param info
+   * @param serverAddress
+   * @param startCode
+   * @throws IOException
+   */
+  protected void checkAssigned(final HRegionInterface regionServer,
+    final MetaRegion meta, final HRegionInfo info,
     final String serverAddress, final long startCode) 
   throws IOException {
     String serverName = null;
-    if (serverAddress != null && serverAddress.length() > 0) {
-      serverName = HServerInfo.getServerName(serverAddress, startCode);
+    String sa = serverAddress;
+    long sc = startCode;
+    if (sa == null || sa.length() <= 0) {
+      // Scans are sloppy.  They don't respect row locks and they get and 
+      // cache a row internally so may have data that is a little stale.  Make
+      // sure that for sure this serverAddress is null.  We are trying to
+      // avoid double-assignments.  See hbase-1784.  Will have to wait till
+      // 0.21 hbase where we use zk to mediate state transitions to do better.
+      Get g = new Get(info.getRegionName());
+      g.addFamily(HConstants.CATALOG_FAMILY);
+      Result r = regionServer.get(meta.getRegionName(), g);
+      if (r != null && !r.isEmpty()) {
+        sa = getServerAddress(r);
+        if (sa != null && sa.length() > 0) {
+          // Reget startcode in case its changed in the meantime too.
+          sc = getStartCode(r);
+          LOG.debug("GET got values when meta found none: serverAddress=" + sa
+              + ", startCode=" + sc);
+        }
+      }
+    }
+    if (sa != null && sa.length() > 0) {
+      serverName = HServerInfo.getServerName(sa, sc);
     }
     HServerInfo storedInfo = null;
     synchronized (this.master.regionManager) {
@@ -365,8 +408,8 @@ abstract class BaseScanner extends Chore implements HConstants {
         // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionNameAsString() +
-            " is not valid; " + " serverAddress=" + serverAddress +
-            ", startCode=" + startCode + " unknown.");
+            " is not valid; " + " serverAddress=" + sa +
+            ", startCode=" + sc + " unknown.");
         }
         // Now get the region assigned
         this.master.regionManager.setUnassigned(info, true);

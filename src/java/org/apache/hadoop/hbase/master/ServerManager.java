@@ -44,6 +44,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.HMsg.Type;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
@@ -499,16 +502,40 @@ class ServerManager implements HConstants {
       // This prevents the master from sending a SPLIT message if the table
       // has already split by the region server. 
       master.regionManager.endActions(region.getRegionName());
-      HRegionInfo newRegionA = splitA.getRegionInfo();
-      master.regionManager.setUnassigned(newRegionA, false);
-      HRegionInfo newRegionB = splitB.getRegionInfo();
-      master.regionManager.setUnassigned(newRegionB, false);
+      assignSplitDaughter(splitA.getRegionInfo());
+      assignSplitDaughter(splitB.getRegionInfo());
       if (region.isMetaTable()) {
         // A meta region has split.
         master.regionManager.offlineMetaRegion(region.getStartKey());
         master.regionManager.incrementNumMetaRegions();
       }
     }
+  }
+
+  /*
+   * Assign new daughter-of-a-split UNLESS its already been assigned.
+   * It could have been assigned already in rare case where there was a large
+   * gap between insertion of the daughter region into .META. by the
+   * splitting regionserver and receipt of the split message in master (See
+   * HBASE-1784).
+   * @param hri Region to assign.
+   */
+  private void assignSplitDaughter(final HRegionInfo hri) {
+    MetaRegion mr = this.master.regionManager.getFirstMetaRegionForRegion(hri);
+    Get g = new Get(hri.getRegionName());
+    g.addFamily(HConstants.CATALOG_FAMILY);
+    try {
+      HRegionInterface server =
+        master.connection.getHRegionConnection(mr.getServer());
+      Result r = server.get(mr.getRegionName(), g);
+      // If size > 3 -- presume regioninfo, startcode and server -- then presume
+      // that this daughter already assigned and return.
+      if (r.size() >= 3) return;
+    } catch (IOException e) {
+      LOG.warn("Failed get on " + HConstants.CATALOG_FAMILY_STR +
+        "; possible double-assignment?", e);
+    }
+    this.master.regionManager.setUnassigned(hri, false);
   }
 
   /*
