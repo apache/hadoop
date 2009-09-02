@@ -366,6 +366,7 @@ Release 0.20.0 - Unreleased
    HBASE-1810  ConcurrentModificationException in region assignment
                (Mathias Herberts via Stack)
    HBASE-1804  Puts are permitted (and stored) when including an appended colon
+   HBASE-1715  Compaction failure in ScanWildcardColumnTracker.checkColumn
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

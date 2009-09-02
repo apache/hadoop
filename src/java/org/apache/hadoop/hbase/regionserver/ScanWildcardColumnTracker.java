@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -27,6 +29,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Keeps track of the columns for a scan if they are not explicitly specified
  */
 public class ScanWildcardColumnTracker implements ColumnTracker {
+  private static final Log LOG = 
+    LogFactory.getLog(ScanWildcardColumnTracker.class);
   private byte [] columnBuffer = null;
   private int columnOffset = 0;
   private int columnLength = 0;
@@ -79,15 +83,27 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       columnOffset = offset;
       columnLength = length;
       currentCount = 0;
-      
       if (++currentCount > maxVersions)
         return MatchCode.SKIP;
       return MatchCode.INCLUDE;
     }
+
     // new col < oldcol
     // if (cmp < 0) {
-    throw new RuntimeException("ScanWildcardColumnTracker.checkColumn ran " +
-    		"into a column actually smaller than the previous column!");
+    // WARNING: This means that very likely an edit for some other family
+    // was incorrectly stored into the store for this one. Continue, but
+    // complain.
+    LOG.error("ScanWildcardColumnTracker.checkColumn ran " +
+  		"into a column actually smaller than the previous column: " +
+      Bytes.toStringBinary(bytes, offset, length));
+    // switched columns
+    columnBuffer = bytes;
+    columnOffset = offset;
+    columnLength = length;
+    currentCount = 0;
+    if (++currentCount > maxVersions)
+      return MatchCode.SKIP;
+    return MatchCode.INCLUDE;    
   }
 
   @Override
