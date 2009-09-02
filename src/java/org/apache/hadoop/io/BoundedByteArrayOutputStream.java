@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.io.file.tfile;
+package org.apache.hadoop.io;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -26,15 +26,26 @@ import java.io.OutputStream;
  * than the buffer capacity. The object can be reused through <code>reset</code>
  * API and choose different limits in each round.
  */
-class BoundedByteArrayOutputStream extends OutputStream {
+public class BoundedByteArrayOutputStream extends OutputStream {
   private final byte[] buffer;
   private int limit;
   private int count;
 
+  /**
+   * Create a BoundedByteArrayOutputStream with the specified
+   * capacity
+   * @param capacity The capacity of the underlying byte array
+   */
   public BoundedByteArrayOutputStream(int capacity) {
     this(capacity, capacity);
   }
 
+  /**
+   * Create a BoundedByteArrayOutputStream with the specified
+   * capacity and limit.
+   * @param capacity The capacity of the underlying byte array
+   * @param limit The maximum limit upto which data can be written
+   */
   public BoundedByteArrayOutputStream(int capacity, int limit) {
     if ((capacity < limit) || (capacity | limit) < 0) {
       throw new IllegalArgumentException("Invalid capacity/limit");
@@ -69,6 +80,10 @@ class BoundedByteArrayOutputStream extends OutputStream {
     count += len;
   }
 
+  /**
+   * Reset the limit 
+   * @param newlim New Limit
+   */
   public void reset(int newlim) {
     if (newlim > buffer.length) {
       throw new IndexOutOfBoundsException("Limit exceeds buffer size");
@@ -77,19 +92,27 @@ class BoundedByteArrayOutputStream extends OutputStream {
     this.count = 0;
   }
 
+  /** Reset the buffer */
   public void reset() {
     this.limit = buffer.length;
     this.count = 0;
   }
 
+  /** Return the current limit */
   public int getLimit() {
     return limit;
   }
 
+  /** Returns the underlying buffer.
+   *  Data is only valid to {@link #size()}.
+   */
   public byte[] getBuffer() {
     return buffer;
   }
 
+  /** Returns the length of the valid data 
+   * currently in the buffer.
+   */
   public int size() {
     return count;
   }

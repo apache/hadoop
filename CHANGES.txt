@@ -162,6 +162,10 @@ Trunk (unreleased changes)
     HADOOP-6120. Add support for Avro specific and reflect data.
     (sharad via cutting)
 
+    HADOOP-6226. Moves BoundedByteArrayOutputStream from the tfile package to
+    the io package and makes it available to other users (MAPREDUCE-318). 
+    (Jothi Padmanabhan via ddas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
