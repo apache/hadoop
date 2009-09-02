@@ -515,6 +515,9 @@ Trunk (unreleased changes)
     HADOOP-6224. Add a method to WritableUtils performing a bounded read of an
     encoded String. (Jothi Padmanabhan via cdouglas)
 
+    HADOOP-4675 Current Ganglia metrics implementation is incompatible with Ganglia 3.1
+    (Brian Brockelman, Scott Beardsley via stack)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
