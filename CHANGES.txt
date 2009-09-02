@@ -507,10 +507,6 @@ Trunk (unreleased changes)
 
     HADOOP-6184. Provide an API to dump Configuration in a JSON format.
     (V.V.Chaitanya Krishna via yhemanth)
-
-    HADOOP-6224. Adds methods to read strings safely, makes the Buffer class
-    in DataOutputBuffer public, and introduces public constructors there. These changes
-    are required for MAPREDUCE-318. (Jothi Padmanabhan and Arun Murthy via ddas)
  
   OPTIMIZATIONS
 

@@ -35,7 +35,6 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.WritableUtils;
 
 /** This class stores text using standard UTF8 encoding.  It provides methods
  * to serialize, deserialize, and compare texts at byte level.  The type of
@@ -400,30 +399,6 @@ public class Text extends BinaryComparable
    */
   public static String readString(DataInput in) throws IOException {
     int length = WritableUtils.readVInt(in);
-    byte [] bytes = new byte[length];
-    in.readFully(bytes, 0, length);
-    return decode(bytes);
-  }
-  /**
-   * Read a string, but check it for sanity. The format consists of a vint
-   * followed by the given number of bytes.
-   * @param in the stream to read from
-   * @param maxLength the largest acceptable length of string
-   * @return the bytes as a string
-   * @throws IOException if reading from the DataInput fails
-   * @throws IllegalArgumentException if the string length is negative or 
-   *         larger than maxSize. Only the vint is read.
-   */
-  public static String readStringSafely(DataInput in,
-                                        int maxLength
-                                        ) throws IOException, 
-                                                 IllegalArgumentException {
-    int length = WritableUtils.readVInt(in);
-    if (length < 0 || length > maxLength) {
-      throw new IllegalArgumentException("String size was " + length + 
-                                         ", which is outside of 0.." +
-                                         maxLength);
-    }
     byte [] bytes = new byte[length];
     in.readFully(bytes, 0, length);
     return decode(bytes);
