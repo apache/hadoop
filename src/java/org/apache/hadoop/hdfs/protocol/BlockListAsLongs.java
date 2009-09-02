@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.util.Iterator;
+
 /**
  * This class provides an interface for accessing list of blocks that
  * has been implemented as long[].
- * This class is usefull for block report. Rather than send block reports
+ * This class is useful for block report. Rather than send block reports
  * as a Block[] we can send it as a long[].
  *
  */
-public class BlockListAsLongs {
+public class BlockListAsLongs implements Iterable<Block>{
   /**
    * A block as 3 longs
    *   block-id and block length and generation stamp
@@ -48,7 +50,6 @@ public class BlockListAsLongs {
    * @param blockArray - the input array block[]
    * @return the output array of long[]
    */
-  
   public static long[] convertToArrayLongs(final Block[] blockArray) {
     long[] blocksAsLongs = new long[blockArray.length * LONGS_PER_BLOCK];
 
@@ -59,6 +60,10 @@ public class BlockListAsLongs {
       bl.setBlock(i, blockArray[i]);
     }
     return blocksAsLongs;
+  }
+
+  public BlockListAsLongs() {
+    this(null);
   }
 
   /**
@@ -77,7 +82,43 @@ public class BlockListAsLongs {
     }
   }
 
-  
+  /**
+   * Iterates over blocks in the block report.
+   * Avoids object allocation on each iteration.
+   */
+  private class BlockReportIterator implements Iterator<Block> {
+    private int currentBlockIndex;
+    private Block block;
+
+    BlockReportIterator() {
+      this.currentBlockIndex = 0;
+      this.block = new Block();
+    }
+
+    public boolean hasNext() {
+      return currentBlockIndex < getNumberOfBlocks();
+    }
+
+    public Block next() {
+      block.set(blockList[index2BlockId(currentBlockIndex)],
+                blockList[index2BlockLen(currentBlockIndex)],
+                blockList[index2BlockGenStamp(currentBlockIndex)]);
+      currentBlockIndex++;
+      return block;
+    }
+
+    public void remove()  {
+      throw new UnsupportedOperationException("Sorry. can't remove.");
+    }
+  }
+
+  /**
+   * Returns an iterator over blocks in the block report. 
+   */
+  public Iterator<Block> iterator() {
+    return new BlockReportIterator();
+  }
+
   /**
    * The number of blocks
    * @return - the number of blocks
@@ -85,13 +126,13 @@ public class BlockListAsLongs {
   public int getNumberOfBlocks() {
     return blockList.length/LONGS_PER_BLOCK;
   }
-  
-  
+
   /**
    * The block-id of the indexTh block
    * @param index - the block whose block-id is desired
    * @return the block-id
    */
+  @Deprecated
   public long getBlockId(final int index)  {
     return blockList[index2BlockId(index)];
   }
@@ -101,6 +142,7 @@ public class BlockListAsLongs {
    * @param index - the block whose block-len is desired
    * @return - the block-len
    */
+  @Deprecated
   public long getBlockLen(final int index)  {
     return blockList[index2BlockLen(index)];
   }
@@ -110,6 +152,7 @@ public class BlockListAsLongs {
    * @param index - the block whose block-len is desired
    * @return - the generation stamp
    */
+  @Deprecated
   public long getBlockGenStamp(final int index)  {
     return blockList[index2BlockGenStamp(index)];
   }
@@ -119,7 +162,7 @@ public class BlockListAsLongs {
    * @param index - the index of the block to set
    * @param b - the block is set to the value of the this block
    */
-  void setBlock(final int index, final Block b) {
+  private void setBlock(final int index, final Block b) {
     blockList[index2BlockId(index)] = b.getBlockId();
     blockList[index2BlockLen(index)] = b.getNumBytes();
     blockList[index2BlockGenStamp(index)] = b.getGenerationStamp();

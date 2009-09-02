@@ -116,6 +116,8 @@ Trunk (unreleased changes)
     HDFS-563. Simplify the codes in FSNamesystem.getBlockLocations(..).
     (szetszwo)
 
+    HDFS-581. Introduce an iterator over blocks in the block report array. (shv)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
