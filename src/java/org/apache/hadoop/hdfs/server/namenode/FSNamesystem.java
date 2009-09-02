@@ -3743,4 +3743,25 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   DatanodeDescriptor getDatanode(String nodeID) {
     return datanodeMap.get(nodeID);
   }
+
+  /**
+   * Return a range of corrupt replica block ids. Up to numExpectedBlocks 
+   * blocks starting at the next block after startingBlockId are returned
+   * (fewer if numExpectedBlocks blocks are unavailable). If startingBlockId 
+   * is null, up to numExpectedBlocks blocks are returned from the beginning.
+   * If startingBlockId cannot be found, null is returned.
+   *
+   * @param numExpectedBlocks Number of block ids to return.
+   *  0 <= numExpectedBlocks <= 100
+   * @param startingBlockId Block id from which to start. If null, start at
+   *  beginning.
+   * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
+   *
+   */
+  long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
+                                   Long startingBlockId) {  
+    return blockManager.getCorruptReplicaBlockIds(numExpectedBlocks,
+                                                  startingBlockId);
+  }
+
 }

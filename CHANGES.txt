@@ -29,6 +29,9 @@ Trunk (unreleased changes)
     HDFS-565. Introduce block committing logic during new block allocation
     and file close. (shv)
 
+    HDFS-492. Add two JSON JSP pages to the Namenode for providing corrupt
+    blocks/replicas information.  (Bill Zeller via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
@@ -119,6 +122,7 @@ Trunk (unreleased changes)
     HDFS-552. Change TestFiDataTransferProtocol to junit 4 and add a few new
     tests.  (szetszwo)
 
+<<<<<<< .working
     HDFS-562. Add a test for NameNode.getBlockLocations(..) to check read from
     un-closed file.  (szetszwo)
 
@@ -129,6 +133,8 @@ Trunk (unreleased changes)
     to be executed by the run-test-hdfs-fault-inject target.  (Konstantin
     Boudnik via szetszwo)
 
+=======
+>>>>>>> .merge-right.r809439
     HDFS-563. Simplify the codes in FSNamesystem.getBlockLocations(..).
     (szetszwo)
 
@@ -194,8 +200,11 @@ Trunk (unreleased changes)
     HDFS-553. BlockSender reports wrong failed position in ChecksumException.
     (hairong)
 
-    HDFS-568. Update hadoop-mapred-examples-0.21.0-dev.jar for MAPREDUCE-874.
-    (szetszwo)
+    HDFS-568. Set mapred.job.tracker.retire.jobs to false in
+    src/test/mapred-site.xml for mapreduce tests to run.  (Amareshwari
+    Sriramadasu via szetszwo)
+ 
+    HDFS-15. All replicas end up on 1 rack. (Jitendra Nath Pandey via hairong)
  
 Release 0.20.1 - Unreleased
 

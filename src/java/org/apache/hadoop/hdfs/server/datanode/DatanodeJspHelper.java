@@ -258,6 +258,10 @@ class DatanodeJspHelper {
     out.print("<B>Total number of blocks: " + blocks.size() + "</B><br>");
     // generate a table and dump the info
     out.println("\n<table>");
+    
+    String namenodeHost = datanode.getNameNodeAddr().getHostName();
+    String namenodeHostName = InetAddress.getByName(namenodeHost).getCanonicalHostName();
+    
     for (LocatedBlock cur : blocks) {
       out.print("<tr>");
       final String blockidstring = Long.toString(cur.getBlock().getBlockId());
@@ -277,14 +281,18 @@ class DatanodeJspHelper {
             + "&genstamp=" + cur.getBlock().getGenerationStamp()
             + "&namenodeInfoPort=" + namenodeInfoPort
             + "&chunkSizeToView=" + chunkSizeToView;
+
+        String blockInfoUrl = "http://" + namenodeHostName + ":"
+            + namenodeInfoPort
+            + "/block_info_xml.jsp?blockId=" + blockidstring;
         out.print("<td>&nbsp</td><td><a href=\"" + blockUrl + "\">"
-            + datanodeAddr + "</a></td>");
+            + datanodeAddr + "</a></td><td>"
+            + "<a href=\"" + blockInfoUrl + "\">View Block Info</a></td>");
       }
       out.println("</tr>");
     }
     out.println("</table>");
     out.print("<hr>");
-    String namenodeHost = datanode.getNameNodeAddr().getHostName();
     out.print("<br><a href=\"http://"
         + InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
