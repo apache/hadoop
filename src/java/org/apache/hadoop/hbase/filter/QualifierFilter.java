@@ -24,41 +24,44 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 
 /**
- * This filter is used to filter based on column value. It takes an 
+ * This filter is used to filter based on the column qualifier. It takes an 
  * operator (equal, greater, not equal, etc) and a byte [] comparator for the 
- * cell value.
+ * column qualifier portion of a key.
  * <p>
  * This filter can be wrapped with {@link WhileMatchFilter} and {@link SkipFilter}
  * to add more control.
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  * <p>
- * To test the value of a single qualifier when scanning multiple qualifiers,
- * use {@link SingleColumnValueFilter}.
+ * If an already known column qualifier is looked for, use {@link Get#addColumn}
+ * directly rather than a filter.
  */
-public class ValueFilter extends CompareFilter {
+public class QualifierFilter extends CompareFilter {
 
   /**
    * Writable constructor, do not use.
    */
-  public ValueFilter() {
+  public QualifierFilter() {
   }
 
   /**
    * Constructor.
-   * @param valueCompareOp the compare op for column qualifier matching
-   * @param valueComparator the comparator for column qualifier matching
+   * @param qualifierCompareOp the compare op for column qualifier matching
+   * @param qualifierComparator the comparator for column qualifier matching
    */
-  public ValueFilter(final CompareOp valueCompareOp,
-      final WritableByteArrayComparable valueComparator) {
-    super(valueCompareOp, valueComparator);
+  public QualifierFilter(final CompareOp qualifierCompareOp,
+      final WritableByteArrayComparable qualifierComparator) {
+    super(qualifierCompareOp, qualifierComparator);
   }
 
   @Override
   public ReturnCode filterKeyValue(KeyValue v) {
-    if (doCompare(this.compareOp, this.comparator, v.getBuffer(), 
-        v.getValueOffset(), v.getValueLength())) {
-      return ReturnCode.SKIP;
+    int qualifierLength = v.getQualifierLength();
+    if (qualifierLength > 0) {
+      if (doCompare(this.compareOp, this.comparator, v.getBuffer(), 
+          v.getQualifierOffset(), qualifierLength)) {
+        return ReturnCode.SKIP;
+      }
     }
     return ReturnCode.INCLUDE;
   }

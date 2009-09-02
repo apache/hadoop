@@ -143,7 +143,14 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(PageFilter.class, code++);
     addToMap(InclusiveStopFilter.class, code++);
     addToMap(ColumnCountGetFilter.class, code++);
+    addToMap(SingleColumnValueFilter.class, code++);
+    addToMap(BinaryComparator.class, code++);
+    addToMap(CompareFilter.class, code++);
+    addToMap(RowFilter.class, code++);
     addToMap(ValueFilter.class, code++);
+    addToMap(QualifierFilter.class, code++);
+    addToMap(SkipFilter.class, code++);
+    addToMap(WritableByteArrayComparable.class, code++);
   }
   
   private Class<?> declaredClass;
@@ -400,7 +407,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
       if (b.byteValue() == NOT_ENCODED) {
         String className = Text.readString(in);
         try {
-          instanceClass = conf.getClassByName(className);
+          instanceClass = getClassByName(conf, className);
         } catch (ClassNotFoundException e) {
           throw new RuntimeException("Can't find class " + className);
         }
@@ -422,6 +429,19 @@ public class HbaseObjectWritable implements Writable, Configurable {
     return instance;
   }
 
+  @SuppressWarnings("unchecked")
+  private static Class getClassByName(Configuration conf, String className) 
+  throws ClassNotFoundException {
+    if(conf != null) {
+      return conf.getClassByName(className);
+    }
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if(cl == null) {
+      cl = HbaseObjectWritable.class.getClassLoader();
+    }
+    return Class.forName(className, true, cl);
+  }
+  
   private static void addToMap(final Class<?> clazz, final byte code) {
     CLASS_TO_CODE.put(clazz, code);
     CODE_TO_CLASS.put(code, clazz);

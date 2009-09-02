@@ -29,14 +29,12 @@ import org.apache.hadoop.hbase.KeyValue;
  * Implementation of Filter interface that limits results to a specific page
  * size. It terminates scanning once the number of filter-passed rows is >
  * the given page size.
- * 
  * <p>
  * Note that this filter cannot guarantee that the number of results returned
  * to a client are <= page size. This is because the filter is applied
  * separately on different region servers. It does however optimize the scan of
  * individual HRegions by making sure that the page size is never exceeded
  * locally.
- * </p>
  */
 public class PageFilter implements Filter {
   private long pageSize = Long.MAX_VALUE;
@@ -60,16 +58,15 @@ public class PageFilter implements Filter {
   }
 
   public void reset() {
-    rowsAccepted = 0;
+    // noop
   }
 
   public boolean filterAllRemaining() {
-    return this.rowsAccepted > this.pageSize;
+    return this.rowsAccepted >= this.pageSize;
   }
 
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
-    this.rowsAccepted++;
-    return filterAllRemaining();
+    return false;
   }
 
   public void readFields(final DataInput in) throws IOException {
@@ -81,10 +78,11 @@ public class PageFilter implements Filter {
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {
-    return filterAllRemaining() ? ReturnCode.NEXT_ROW : ReturnCode.INCLUDE;
+    return ReturnCode.INCLUDE;
   }
 
   public boolean filterRow() {
-    return filterAllRemaining();
+    this.rowsAccepted++;
+    return this.rowsAccepted > this.pageSize;
   }
 }

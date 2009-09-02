@@ -83,7 +83,7 @@ public class TestInclusiveStopFilter extends TestCase {
     assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW),
       filter.filterRowKey(PAST_STOP_ROW, 0, PAST_STOP_ROW.length));
 
-    assertFalse("FilterAllRemaining", filter.filterAllRemaining());
+    assertTrue("FilterAllRemaining", filter.filterAllRemaining());
     assertFalse("FilterNotNull", filter.filterRow());
 
     assertFalse("Filter a null", filter.filterRowKey(null, 0, 0));

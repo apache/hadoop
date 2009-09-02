@@ -32,6 +32,7 @@ import java.io.DataInput;
  */
 public class PrefixFilter implements Filter {
   protected byte [] prefix = null;
+  protected boolean passedPrefix = false;
 
   public PrefixFilter(final byte [] prefix) {
     this.prefix = prefix;
@@ -52,12 +53,17 @@ public class PrefixFilter implements Filter {
       return true;
     // if they are equal, return false => pass row
     // else return true, filter row
-    return Bytes.compareTo(buffer, offset, this.prefix.length, this.prefix, 0,
-      this.prefix.length) != 0;
+    // if we are passed the prefix, set flag
+    int cmp = Bytes.compareTo(buffer, offset, this.prefix.length, this.prefix, 0,
+        this.prefix.length);
+    if(cmp > 0) {
+      passedPrefix = true;
+    }
+    return cmp != 0;
   }
 
   public boolean filterAllRemaining() {
-    return false;
+    return passedPrefix;
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {

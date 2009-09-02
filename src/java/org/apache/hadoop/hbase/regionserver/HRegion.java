@@ -1736,6 +1736,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       outResults.addAll(results);
       resetFilters();
+      if(filter != null && filter.filterAllRemaining()) {
+        return false;
+      }
       return returnResult;
     }
 
@@ -1759,6 +1762,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         // see if current row should be filtered based on row key
         if ((filter != null && filter.filterRowKey(row, 0, row.length)) ||
             (oldFilter != null && oldFilter.filterRowKey(row, 0, row.length))) {
+          if(!results.isEmpty() && !Bytes.equals(currentRow, row)) {
+            return true;
+          }
           this.storeHeap.next(results);
           results.clear();
           resetFilters();

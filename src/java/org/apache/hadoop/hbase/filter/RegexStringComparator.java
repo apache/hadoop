@@ -27,18 +27,18 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * This comparator is for use with ColumnValueFilter, for filtering based on
- * the value of a given column. Use it to test if a given regular expression
- * matches a cell value in the column.
+ * This comparator is for use with {@link CompareFilter} implementations, such 
+ * as {@link RowFilter}, {@link QualifierFilter}, and {@link ValueFilter}, for 
+ * filtering based on the value of a given column. Use it to test if a given 
+ * regular expression matches a cell value in the column.
  * <p>
- * Only EQUAL or NOT_EQUAL tests are valid with this comparator. 
+ * Only EQUAL or NOT_EQUAL {@link CompareOp} comparisons are valid with this 
+ * comparator. 
  * <p>
  * For example:
  * <p>
  * <pre>
- * ColumnValueFilter cvf =
- *   new ColumnValueFilter("col",
- *     ColumnValueFilter.CompareOp.EQUAL,
+ * ValueFilter vf = new ValueFilter(CompareOp.EQUAL,
  *     new RegexStringComparator(
  *       // v4 IP address
  *       "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3,3}" +

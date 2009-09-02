@@ -72,6 +72,7 @@ public class TestFilterList extends TestCase {
     byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
     for (int i = 0; i < MAX_PAGES - 1; i++) {
       assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      assertFalse(filterMPONE.filterRow());
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
         Bytes.toBytes(i));
       assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -80,6 +81,7 @@ public class TestFilterList extends TestCase {
     /* Only pass PageFilter */
     rowkey = Bytes.toBytes("z");
     assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    assertFalse(filterMPONE.filterRow());
     KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
         Bytes.toBytes(0));
     assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -87,19 +89,16 @@ public class TestFilterList extends TestCase {
     /* PageFilter will fail now, but should pass because we match yyy */
     rowkey = Bytes.toBytes("yyy");
     assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    assertFalse(filterMPONE.filterRow());
     kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
         Bytes.toBytes(0));
     assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
     
-    /* We should filter the row key now if we match neither */
-    rowkey = Bytes.toBytes("x");
+    /* We should filter any row */
+    rowkey = Bytes.toBytes("z");
     assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
-    kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
-        Bytes.toBytes(0));
-    assertTrue(Filter.ReturnCode.SKIP == filterMPONE.filterKeyValue(kv));
-    
-    // Both filters in Set should be satisfied by now
     assertTrue(filterMPONE.filterRow());
+    assertTrue(filterMPONE.filterAllRemaining());
 
   }
 
@@ -153,6 +152,7 @@ public class TestFilterList extends TestCase {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PrefixFilter(Bytes.toBytes("yyy")));
     filters.add(new PageFilter(MAX_PAGES));
+    RegexStringComparator rsc;
     Filter filterMPONE =
         new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
     /* Filter must do all below steps:
@@ -171,21 +171,23 @@ public class TestFilterList extends TestCase {
     assertFalse(filterMPONE.filterAllRemaining());
     
     /* We should be able to fill MAX_PAGES without incrementing page counter */
-    byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
+    byte [] rowkey = Bytes.toBytes("yyyyyyyy");
     for (int i = 0; i < MAX_PAGES; i++) {
       assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
-        Bytes.toBytes(i));
-      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+          Bytes.toBytes(i));
+        assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+      assertFalse(filterMPONE.filterRow());
     }
     
     /* Now let's fill the page filter */
-    rowkey = Bytes.toBytes("zzzzzzzz");
+    rowkey = Bytes.toBytes("xxxxxxx");
     for (int i = 0; i < MAX_PAGES; i++) {
       assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
-        Bytes.toBytes(i));
-      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+          Bytes.toBytes(i));
+        assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+      assertFalse(filterMPONE.filterRow());
     }
     
     /* We should still be able to include even though page filter is at max */
@@ -193,14 +195,10 @@ public class TestFilterList extends TestCase {
     for (int i = 0; i < MAX_PAGES; i++) {
       assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
-        Bytes.toBytes(i));
-      assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+          Bytes.toBytes(i));
+        assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
+      assertFalse(filterMPONE.filterRow());
     }
-    
-    /* We should filter the row key now if we don't match neither */
-    rowkey = Bytes.toBytes("x");
-    assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
-    
   }
 
   /**

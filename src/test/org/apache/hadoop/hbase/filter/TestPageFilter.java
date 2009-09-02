@@ -68,30 +68,26 @@ public class TestPageFilter extends TestCase {
   
   private void pageSizeTests(Filter f) throws Exception {
     testFiltersBeyondPageSize(f, ROW_LIMIT);
-    // Test reset works by going in again.
-    f.reset();
-    testFiltersBeyondPageSize(f, ROW_LIMIT);
   }
   
   private void testFiltersBeyondPageSize(final Filter f, final int pageSize) {
     int count = 0;
     for (int i = 0; i < (pageSize * 2); i++) {
-      byte [] bytes = Bytes.toBytes(Integer.toString(i) + ":tail");
-      KeyValue kv = new KeyValue(bytes, bytes);
-      boolean filterOut =
-        f.filterRowKey(kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
-      if (!filterOut) {
-        assertFalse("Disagrees with 'filter'", f.filterAllRemaining());
-      } else {
-        // Once we have all for a page, calls to filterAllRemaining should
-        // stay true.
-        assertTrue("Disagrees with 'filter'", f.filterAllRemaining());
-        assertTrue(i >= pageSize);
-      }
-      if (Filter.ReturnCode.NEXT_ROW == f.filterKeyValue(kv)) {
+      boolean filterOut = f.filterRow();
+      
+      if(filterOut) {
         break;
+      } else {
+        count++;
       }
-      count++;
+      
+      // If at last row, should tell us to skip all remaining
+      if(count == pageSize) {
+        assertTrue(f.filterAllRemaining());
+      } else {
+        assertFalse(f.filterAllRemaining());
+      }
+      
     }
     assertEquals(pageSize, count);
   }

@@ -35,6 +35,7 @@ import java.io.DataInput;
  */
 public class InclusiveStopFilter implements Filter {
   private byte [] stopRowKey;
+  private boolean done = false;
 
   public InclusiveStopFilter() {
     super();
@@ -56,12 +57,17 @@ public class InclusiveStopFilter implements Filter {
       return false;
     }
     // if stopRowKey is <= buffer, then true, filter row.
-    return Bytes.compareTo(stopRowKey, 0, stopRowKey.length,
-      buffer, offset, length) < 0;
+    int cmp = Bytes.compareTo(stopRowKey, 0, stopRowKey.length,
+      buffer, offset, length);
+    
+    if(cmp < 0) {
+      done = true;
+    }
+    return done;
   }
 
   public boolean filterAllRemaining() {
-    return false;
+    return done;
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {

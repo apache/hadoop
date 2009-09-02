@@ -10,6 +10,7 @@ Release 0.21.0 - Unreleased
    HBASE-1793  [Regression] HTable.get/getRow with a ts is broken
    HBASE-1698  Review documentation for o.a.h.h.mapreduce
    HBASE-1798  [Regression] Unable to delete a row in the future
+   HBASE-1790  filters are not working correctly (HBASE-1710 HBASE-1807 too)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
