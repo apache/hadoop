@@ -425,20 +425,22 @@ class RegionManager implements HConstants {
       return regionsToAssign; // dont assign anything to this server.
     }
 
-    for (RegionState s: regionsInTransition.values()) {
-      HRegionInfo i = s.getRegionInfo();
-      if (i == null) {
-        continue;
-      }
-      if (reassigningMetas &&
-          !i.isMetaRegion()) {
-        // Can't assign user regions until all meta regions have been assigned
-        // and are on-line
-        continue;
-      }
-      if (s.isUnassigned()) {
-        regionsToAssign.add(s);
-      }
+    synchronized(regionsInTransition) {
+      for (RegionState s: regionsInTransition.values()) {
+        HRegionInfo i = s.getRegionInfo();
+        if (i == null) {
+          continue;
+        }
+        if (reassigningMetas &&
+            !i.isMetaRegion()) {
+          // Can't assign user regions until all meta regions have been assigned
+          // and are on-line
+          continue;
+        }
+        if (s.isUnassigned()) {
+          regionsToAssign.add(s);
+        }
+      }      
     }
     return regionsToAssign;
   }
@@ -834,14 +836,16 @@ class RegionManager implements HConstants {
 
     // This might be expensive, but we need to make sure we dont
     // get double assignment to the same regionserver.
-    for (RegionState s : regionsInTransition.values()) {
-      if (s.getRegionInfo().isMetaRegion()
-          && !s.isUnassigned()
-          && s.getServerName() != null
-          && s.getServerName().equals(server.toString())) {
-        // Has an outstanding meta region to be assigned.
-        return true;
-      }
+    synchronized(regionsInTransition) {
+      for (RegionState s : regionsInTransition.values()) {
+        if (s.getRegionInfo().isMetaRegion()
+            && !s.isUnassigned()
+            && s.getServerName() != null
+            && s.getServerName().equals(server.toString())) {
+          // Has an outstanding meta region to be assigned.
+          return true;
+        }
+      }      
     }
     return false;
   }
