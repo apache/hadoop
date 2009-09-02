@@ -100,7 +100,7 @@ Trunk (unreleased changes)
 
     HDFS-409. Add more access token tests.  (Kan Zhang via szetszwo)
 
-    HDFS-546. DatanodeDescriptor iterator blocks as BlockInfo. (shv)
+    HDFS-546. DatanodeDescriptor iterates blocks as BlockInfo. (shv)
 
     HDFS-457. Do not shutdown datanode if some, but not all, volumes fail.
     (Boris Shkolnik via szetszwo)
