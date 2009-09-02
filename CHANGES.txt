@@ -118,6 +118,10 @@ Trunk (unreleased changes)
 
     HDFS-581. Introduce an iterator over blocks in the block report array. (shv)
 
+    HDFS-549. Add a new target, run-with-fault-inject-testcaseonly, which
+    allows an execution of non-FI tests in FI-enable environment.  (Konstantin
+    Boudnik via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
