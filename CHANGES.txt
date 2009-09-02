@@ -951,6 +951,9 @@ Trunk (unreleased changes)
     and prevent them from being overridden.
     (Amareshwari Sriramadasu via yhemanth)
 
+    HADOOP-6199. Move io.map.skip.index property to core-default from mapred.
+    (Amareshwari Sriramadasu via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -116,6 +116,14 @@
   </description>
 </property>
 
+<property>
+  <name>io.map.index.skip</name>
+  <value>0</value>
+  <description>Number of index entries to skip between each entry.
+  Zero by default. Setting this to values larger than zero can
+  facilitate opening large MapFiles using less memory.</description>
+</property>
+
 <!-- file system properties -->
 
 <property>
