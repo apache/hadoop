@@ -507,7 +507,10 @@ Trunk (unreleased changes)
 
     HADOOP-6184. Provide an API to dump Configuration in a JSON format.
     (V.V.Chaitanya Krishna via yhemanth)
- 
+
+    HADOOP-6224. Add a method to WritableUtils performing a bounded read of an
+    encoded String. (Jothi Padmanabhan via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
