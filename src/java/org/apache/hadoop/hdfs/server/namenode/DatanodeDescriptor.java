@@ -381,20 +381,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
                   Collection<Block> toAdd,    // add to DatanodeDescriptor
                   Collection<Block> toRemove, // remove from DatanodeDescriptor
                   Collection<Block> toInvalidate) { // should be removed from DN
-    // place a deilimiter in the list which separates blocks 
+    // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
     BlockInfo delimiter = new BlockInfo(new Block(), 1);
     boolean added = this.addBlock(delimiter);
     assert added : "Delimiting block cannot be present in the node";
     if(newReport == null)
-      newReport = new BlockListAsLongs( new long[0]);
+      newReport = new BlockListAsLongs();
     // scan the report and collect newly reported blocks
     // Note we are taking special precaution to limit tmp blocks allocated
     // as part this block report - which why block list is stored as longs
-    Block iblk = new Block(); // a fixed new'ed block to be reused with index i
-    for (int i = 0; i < newReport.getNumberOfBlocks(); ++i) {
-      iblk.set(newReport.getBlockId(i), newReport.getBlockLen(i), 
-               newReport.getBlockGenStamp(i));
+    for (Block iblk : newReport) {
       BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
       if(storedBlock == null) {
         // If block is not in blocksMap it does not belong to any file

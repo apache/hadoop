@@ -1,5 +1,37 @@
 Hadoop HDFS Change Log
 
+Append branch (unreleased changes)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HDFS-536. Support hflush at DFSClient. (hairong)
+
+    HDFS-517. Introduce BlockInfoUnderConstruction to reflect block replica
+    states while writing. (shv)
+
+    HDFS-544. Add a "rbw" subdir to DataNode data directory. (hairong)
+
+    HDFS-565. Introduce block committing logic during new block allocation
+    and file close. (shv)
+
+  IMPROVEMENTS
+
+    HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.
+    (hairong)
+
+    HDFS-562. Add a test for NameNode.getBlockLocations(..) to check read from
+    un-closed file.  (szetszwo)
+
+    HDFS-543. Break FSDatasetInterface#writToBlock() into writeToRemporary,
+    writeToRBW, ad append. (hairong)
+
+  BUG FIXES
+
+    HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
+    sometimes fails with CloseByInterruptException. (hairong)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
@@ -18,16 +50,6 @@ Trunk (unreleased changes)
     HDFS-459. Introduce Job History Log Analyzer. (shv)
 
     HDFS-461. Tool to analyze file size distribution in HDFS. (shv)
-
-    HDFS-536. Support hflush at DFSClient. (hairong)
-
-    HDFS-517. Introduce BlockInfoUnderConstruction to reflect block replica
-    states while writing. (shv)
-
-    HDFS-544. Add a "rbw" subdir to DataNode data directory. (hairong)
-
-    HDFS-565. Introduce block committing logic during new block allocation
-    and file close. (shv)
 
     HDFS-492. Add two JSON JSP pages to the Namenode for providing corrupt
     blocks/replicas information.  (Bill Zeller via szetszwo)
@@ -108,9 +130,10 @@ Trunk (unreleased changes)
 
     HDFS-451. Add fault injection tests for DataTransferProtocol.  (szetszwo)
 
-    HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.
-    (hairong)
-    
+    HDFS-409. Add more access token tests.  (Kan Zhang via szetszwo)
+
+    HDFS-546. DatanodeDescriptor iterates blocks as BlockInfo. (shv)
+
     HDFS-457. Do not shutdown datanode if some, but not all, volumes fail.
     (Boris Shkolnik via szetszwo)
 
@@ -122,21 +145,10 @@ Trunk (unreleased changes)
     HDFS-552. Change TestFiDataTransferProtocol to junit 4 and add a few new
     tests.  (szetszwo)
 
-<<<<<<< .working
-    HDFS-562. Add a test for NameNode.getBlockLocations(..) to check read from
-    un-closed file.  (szetszwo)
-
-    HDFS-543. Break FSDatasetInterface#writToBlock() into writeToRemporary,
-    writeToRBW, ad append. (hairong)
-
-    HDFS-549. Allow a non-fault-inject test, which is specified by -Dtestcase,
-    to be executed by the run-test-hdfs-fault-inject target.  (Konstantin
-    Boudnik via szetszwo)
-
-=======
->>>>>>> .merge-right.r809439
     HDFS-563. Simplify the codes in FSNamesystem.getBlockLocations(..).
     (szetszwo)
+
+    HDFS-581. Introduce an iterator over blocks in the block report array. (shv)
 
   BUG FIXES
 
@@ -191,8 +203,8 @@ Trunk (unreleased changes)
 
     HDFS-534. Include avro in ivy.  (szetszwo)
 
-    HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
-    sometimes fails with CloseByInterruptException. (hairong)
+    HDFS-532. Allow applications to know that a read request failed 
+    because block is missing. (dhruba)
 
     HDFS-561. Fix write pipeline READ_TIMEOUT in DataTransferProtocol.
     (Kan Zhang via szetszwo)
