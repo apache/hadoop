@@ -69,7 +69,8 @@ public class KeyValue implements Writable, HeapSize {
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
 
-  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY = new byte[]{COLUMN_FAMILY_DELIMITER};
+  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY =
+    new byte[]{COLUMN_FAMILY_DELIMITER};
   
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values.
@@ -105,30 +106,6 @@ public class KeyValue implements Writable, HeapSize {
    * {@link KeyValue} keys.
    */
   public static KeyComparator ROOT_KEY_COMPARATOR = new RootKeyComparator();
-
-  /**
-   * Comparator that compares the family portion of columns only.
-   * Use this making NavigableMaps of Stores or when you need to compare
-   * column family portion only of two column names.
-   */
-  public static final RawComparator<byte []> FAMILY_COMPARATOR =
-    new RawComparator<byte []> () {
-      public int compare(byte [] a, int ao, int al, byte [] b, int bo, int bl) {
-        int indexa = KeyValue.getDelimiter(a, ao, al, COLUMN_FAMILY_DELIMITER);
-        if (indexa < 0) {
-          indexa = al;
-        }
-        int indexb = KeyValue.getDelimiter(b, bo, bl, COLUMN_FAMILY_DELIMITER);
-        if (indexb < 0) {
-          indexb = bl;
-        }
-        return Bytes.compareTo(a, ao, indexa, b, bo, indexb);
-      }
-
-      public int compare(byte[] a, byte[] b) {
-        return compare(a, 0, a.length, b, 0, b.length);
-      }
-    };
 
   /**
    * Get the appropriate row comparator for the specified table.

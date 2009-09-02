@@ -101,7 +101,7 @@ ISerializable {
 
   // Key is hash of the family name.
   public final Map<byte [], HColumnDescriptor> families =
-    new TreeMap<byte [], HColumnDescriptor>(KeyValue.FAMILY_COMPARATOR);
+    new TreeMap<byte [], HColumnDescriptor>(Bytes.BYTES_RAWCOMPARATOR);
    
   /**
    * Private constructor used internally creating table descriptors for 

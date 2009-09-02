@@ -72,12 +72,31 @@ public class TestHRegion extends HBaseTestCase {
     super.setUp();
   }
 
-  
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the 
   // individual code pieces in the HRegion. Putting files locally in
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
+
+  public void testFamilyWithAndWithoutColon() throws Exception {
+    byte [] b = Bytes.toBytes(getName());
+    byte [] cf = Bytes.toBytes("cf");
+    initHRegion(b, getName(), cf);
+    Put p = new Put(b);
+    byte [] cfwithcolon = Bytes.toBytes("cf:");
+    p.add(cfwithcolon, cfwithcolon, cfwithcolon);
+    boolean exception = false;
+    try {
+      this.region.put(p);
+    } catch (NoSuchColumnFamilyException e) {
+      exception = true;
+    }
+    assertTrue(exception);
+    // Can I add it using old style call?
+    p = new Put(b);
+    p.add(cfwithcolon, System.currentTimeMillis(), cfwithcolon);
+    this.region.put(p);
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // checkAndPut tests

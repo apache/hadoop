@@ -122,7 +122,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   private final Map<Integer, byte []> locksToRows =
     new ConcurrentHashMap<Integer, byte []>();
   protected final Map<byte [], Store> stores =
-    new ConcurrentSkipListMap<byte [], Store>(KeyValue.FAMILY_COMPARATOR);
+    new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR);
   
   //These variable are just used for getting data out of the region, to test on
   //client side

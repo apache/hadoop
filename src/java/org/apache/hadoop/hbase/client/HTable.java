@@ -351,7 +351,9 @@ public class HTable implements HTableInterface {
   */
   public RowResult getClosestRowBefore(final byte[] row, final byte[] family)
   throws IOException {
-    Result r = getRowOrBefore(row, family);
+    // Do parse in case we are passed a family with a ':' on it.
+    final byte [] f = KeyValue.parseColumn(family)[0];
+    Result r = getRowOrBefore(row, f);
     return r == null || r.isEmpty()? null: r.getRowResult();
   }
 
