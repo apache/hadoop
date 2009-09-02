@@ -174,11 +174,10 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * Creates a temporary replica and returns output streams to write data and CRC
    * 
    * @param b block
-   * @return a BlockWriteStreams object to allow writing the block data
-   *  and CRC
+   * @return the meata info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public BlockWriteStreams writeToTemporary(Block b) throws IOException;
+  public ReplicaInPipelineInterface writeToTemporary(Block b) throws IOException;
 
   /**
    * Creates/recovers a RBW replica and returns output streams to 
@@ -186,20 +185,19 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * 
    * @param b block
    * @param isRecovery True if this is part of error recovery, otherwise false
-   * @return a BlockWriteStreams object to allow writing the block data
-   *  and CRC
+   * @return the meata info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public BlockWriteStreams writeToRbw(Block b, boolean isRecovery) throws IOException;
+  public ReplicaInPipelineInterface writeToRbw(Block b, boolean isRecovery)
+  throws IOException;
 
   /**
    * Append to a finalized replica and returns output streams to write data and CRC
    * @param b block
-   * @return a BlockWriteStreams object to allow writing the block data
-   *  and CRC
+   * @return the meata info of the replica which is being written to
    * @throws IOException
    */
-  public BlockWriteStreams append(Block b) throws IOException;
+  public ReplicaInPipelineInterface append(Block b) throws IOException;
 
   /**
    * Update the block to the new generation stamp and length.  

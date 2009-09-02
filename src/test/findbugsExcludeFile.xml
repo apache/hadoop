@@ -214,10 +214,7 @@
      -->
      <Match>
        <Class name="org.apache.hadoop.hdfs.server.datanode.FSDataset" />
-       <Or>
-         <Method name="createBlockWriteStreams" />
-         <Method name="getTmpInputStreams" />
-       </Or>
+       <Method name="getTmpInputStreams" />
        <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
      </Match>
 

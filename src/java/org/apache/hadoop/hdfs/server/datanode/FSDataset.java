@@ -954,12 +954,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                 new FileInputStream(metaInFile.getFD()));
   }
     
-  private BlockWriteStreams createBlockWriteStreams( File f , File metafile) throws IOException {
-      return new BlockWriteStreams(new FileOutputStream(new RandomAccessFile( f , "rw" ).getFD()),
-          new FileOutputStream( new RandomAccessFile( metafile , "rw" ).getFD() ));
-
-  }
-
   /**
    * Make a copy of the block if this block is linked to an existing
    * snapshot. This ensures that modifying this block does not modify
@@ -1100,7 +1094,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   @Override  // FSDatasetInterface
-  public BlockWriteStreams append(Block b)
+  public ReplicaInPipelineInterface append(Block b)
       throws IOException {
     // If the block was successfully finalized because all packets
     // were successfully processed at the Datanode but the ack for
@@ -1129,9 +1123,9 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     FSVolume v = volumes.getNextVolume(b.getNumBytes());
     File newBlkFile = v.createRbwFile(b);
     File oldmeta = replicaInfo.getMetaFile();
-    replicaInfo = new ReplicaBeingWritten(replicaInfo,
+    ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(replicaInfo,
         v, newBlkFile.getParentFile(), Thread.currentThread());
-    File newmeta = replicaInfo.getMetaFile();
+    File newmeta = newReplicaInfo.getMetaFile();
 
     // rename meta file to rbw directory
     if (DataNode.LOG.isDebugEnabled()) {
@@ -1158,31 +1152,23 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     
     // Replace finalized replica by a RBW replica in replicas map
-    volumeMap.add(replicaInfo);
+    volumeMap.add(newReplicaInfo);
     
-    File metafile = getMetaFile(newBlkFile, b);
-    if (DataNode.LOG.isDebugEnabled()) {
-      DataNode.LOG.debug("append blockfile is " + newBlkFile 
-                       + " of size " + newBlkFile.length());
-      DataNode.LOG.debug("append metafile is " + metafile 
-                       + " of size " + metafile.length());
-    }    
-    // return the write stream
-    return createBlockWriteStreams(newBlkFile , metafile);
+    return newReplicaInfo;
   }
 
   @Override
-  public BlockWriteStreams writeToRbw(Block b, boolean isRecovery)
+  public ReplicaInPipelineInterface writeToRbw(Block b, boolean isRecovery)
       throws IOException {
     ReplicaInfo replicaInfo = volumeMap.get(b);
-    File f = null;
+    ReplicaBeingWritten newReplicaInfo;
     if (replicaInfo == null) { // create a new block
       FSVolume v = volumes.getNextVolume(b.getNumBytes());
       // create a rbw file to hold block in the designated volume
-      f = v.createRbwFile(b);
-      replicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
+      File f = v.createRbwFile(b);
+      newReplicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
           b.getGenerationStamp(), v, f.getParentFile());
-      volumeMap.add(replicaInfo);
+      volumeMap.add(newReplicaInfo);
     } else {
       if (!isRecovery) {
         throw new BlockAlreadyExistsException("Block " + b +
@@ -1193,35 +1179,21 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         throw new BlockNotFoundException(
             BlockNotFoundException.NON_RBW_REPLICA + b);
       }
-      ReplicaInPipeline replicaInPipeline = (ReplicaInPipeline)replicaInfo;
+      newReplicaInfo = (ReplicaBeingWritten)replicaInfo;
       synchronized (this) {
         //
         // Is it already in the write process?
         //
-        replicaInPipeline.stopWriter();
-        replicaInPipeline.setWriter(Thread.currentThread());
+        newReplicaInfo.stopWriter();
+        newReplicaInfo.setWriter(Thread.currentThread());
       }
-      f = replicaInfo.getBlockFile();
     }
 
-    //
-    // Finally, allow a writer to the block file
-    // REMIND - mjc - make this a filter stream that enforces a max
-    // block size, so clients can't go crazy
-    //
-    File metafile = getMetaFile(f, b);
-    if (DataNode.LOG.isDebugEnabled()) {
-      DataNode.LOG.debug("writeToRbw blockfile is " + f +
-                         " of size " + f.length());
-      DataNode.LOG.debug("writeToRbw metafile is " + metafile +
-                         " of size " + metafile.length());
-    }
-    return createBlockWriteStreams( f , metafile);
-
+    return newReplicaInfo;
   }
   
   @Override
-  public BlockWriteStreams writeToTemporary(Block b)
+  public ReplicaInPipelineInterface writeToTemporary(Block b)
       throws IOException {
     ReplicaInfo replicaInfo = volumeMap.get(b);
     if (replicaInfo != null) {
@@ -1230,23 +1202,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           " and thus cannot be created.");
     }
     
-    File f = null;
     FSVolume v = volumes.getNextVolume(b.getNumBytes());
     // create a temporary file to hold block in the designated volume
-    f = v.createTmpFile(b);
-    replicaInfo = new ReplicaInPipeline(b.getBlockId(), 
+    File f = v.createTmpFile(b);
+    ReplicaInPipeline newReplicaInfo = new ReplicaInPipeline(b.getBlockId(), 
         b.getGenerationStamp(), v, f.getParentFile());
-    volumeMap.add(replicaInfo);
+    volumeMap.add(newReplicaInfo);
     
-    // return the output streams
-    File metafile = getMetaFile(f, b);
-    if (DataNode.LOG.isDebugEnabled()) {
-      DataNode.LOG.debug("writeToTemp blockfile is " + f + 
-          " of size " + f.length());
-      DataNode.LOG.debug("writeToTemp metafile is " + metafile + 
-          " of size " + metafile.length());
-    }
-    return createBlockWriteStreams( f , metafile);
+    return newReplicaInfo;
   }
 
   /**
@@ -1293,16 +1256,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return vol.createTmpFile(blk);
   }
 
-  synchronized File createRbwFile( FSVolume vol, Block blk ) throws IOException {
-    if ( vol == null ) {
-      vol = getReplicaInfo( blk ).getVolume();
-      if ( vol == null ) {
-        throw new IOException("Could not find volume for block " + blk);
-      }
-    }
-    return vol.createTmpFile(blk);
-  }
-
   //
   // REMIND - mjc - eventually we should have a timeout system
   // in place to clean up block files left by abandoned clients.
@@ -1329,11 +1282,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       File f = replicaInfo.getBlockFile();
       if (v == null) {
         throw new IOException("No volume for temporary file " + f + 
-            " for block " + b);
+            " for block " + replicaInfo);
       }
 
-      File dest = v.addBlock(b, f);
-      newReplicaInfo = new FinalizedReplica(b, v, dest.getParentFile());
+      File dest = v.addBlock(replicaInfo, f);
+      newReplicaInfo = new FinalizedReplica(replicaInfo, v, dest.getParentFile());
     }
     volumeMap.add(newReplicaInfo);
   }

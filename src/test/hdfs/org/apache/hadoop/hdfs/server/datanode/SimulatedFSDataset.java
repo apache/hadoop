@@ -77,11 +77,14 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       nullCrcFileData[i+2] = nullCrcHeader[i];
     }
   }
-  
-  private class BInfo { // information about a single block
+
+  // information about a single block
+  private class BInfo implements ReplicaInPipelineInterface {
     Block theBlock;
     private boolean finalized = false; // if not finalized => ongoing creation
     SimulatedOutputStream oStream = null;
+    private long bytesAcked;
+    private long bytesRcvd;
     BInfo(Block b, boolean forWriting) throws IOException {
       theBlock = new Block(b);
       if (theBlock.getNumBytes() < 0) {
@@ -108,20 +111,21 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
     synchronized void updateBlock(Block b) {
       theBlock.setGenerationStamp(b.getGenerationStamp());
-      setlength(b.getNumBytes());
+      setNumBytes(b.getNumBytes());
+      setBytesOnDisk(b.getNumBytes());
     }
     
-    synchronized long getlength() {
+    synchronized public long getNumBytes() {
       if (!finalized) {
-         return oStream.getLength();
+         return bytesRcvd;
       } else {
         return theBlock.getNumBytes();
       }
     }
 
-    synchronized void setlength(long length) {
+    synchronized public void setNumBytes(long length) {
       if (!finalized) {
-         oStream.setLength(length);
+         bytesRcvd = length;
       } else {
         theBlock.setNumBytes(length);
       }
@@ -170,13 +174,69 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       oStream = null;
       return;
     }
-    
+
+    synchronized void unfinalizeBlock() throws IOException {
+      if (!finalized) {
+        throw new IOException("Unfinalized a block that's not finalized "
+            + theBlock);
+      }
+      finalized = false;
+      oStream = new SimulatedOutputStream();
+      long blockLen = theBlock.getNumBytes();
+      oStream.setLength(blockLen);
+      bytesRcvd = blockLen;
+      bytesAcked = blockLen;
+    }
+
     SimulatedInputStream getMetaIStream() {
       return new SimulatedInputStream(nullCrcFileData);  
     }
 
     synchronized boolean isFinalized() {
       return finalized;
+    }
+
+    @Override
+    synchronized public BlockWriteStreams createStreams() throws IOException {
+      if (finalized) {
+        throw new IOException("Trying to write to a finalized replica "
+            + theBlock);
+      } else {
+        SimulatedOutputStream crcStream = new SimulatedOutputStream();
+        return new BlockWriteStreams(oStream, crcStream);
+      }
+    }
+
+    @Override
+    synchronized public long getBytesAcked() {
+      if (finalized) {
+        return theBlock.getNumBytes();
+      } else {
+        return bytesAcked;
+      }
+    }
+
+    @Override
+    synchronized public void setBytesAcked(long bytesAcked) {
+      if (!finalized) {
+        this.bytesAcked = bytesAcked;
+      }
+    }
+
+    @Override
+    synchronized public long getBytesOnDisk() {
+      if (finalized) {
+        return theBlock.getNumBytes();
+      } else {
+        return oStream.getLength();
+      }
+    }
+
+    @Override
+    synchronized public void setBytesOnDisk(long bytesOnDisk) {
+      if (!finalized) {
+        oStream.setLength(bytesOnDisk);
+      }
     }
   }
   
@@ -311,7 +371,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
     }
-    return binfo.getlength();
+    return binfo.getNumBytes();
   }
 
   /** {@inheritDoc} */
@@ -322,7 +382,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       return null;
     }
     b.setGenerationStamp(binfo.getGenerationStamp());
-    b.setNumBytes(binfo.getlength());
+    b.setNumBytes(binfo.getNumBytes());
     return b;
   }
 
@@ -350,7 +410,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         DataNode.LOG.warn("Invalidate: Missing block");
         continue;
       }
-      storage.free(binfo.getlength());
+      storage.free(binfo.getNumBytes());
       blockMap.remove(b);
     }
       if (error) {
@@ -381,25 +441,35 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   @Override
-  public BlockWriteStreams append(Block b) throws IOException {
-    return writeToBlock(b, true);
+  public ReplicaInPipelineInterface append(Block b) throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null || !binfo.isFinalized()) {
+      throw new BlockNotFoundException("Block " + b
+          + " is not valid, and cannot be appended to.");
+    }
+    binfo.unfinalizeBlock();
+    return binfo;
   }
 
   @Override
-  public synchronized BlockWriteStreams writeToRbw(Block b, boolean isRecovery)
-      throws IOException {
-    return writeToBlock(b, isRecovery);
+  public synchronized ReplicaInPipelineInterface writeToRbw(Block b,
+      boolean isRecovery) throws IOException {
+    if (isValidBlock(b)) {
+      throw new BlockAlreadyExistsException("Block " + b
+          + " is valid, and cannot be written to.");
+    }
+    BInfo binfo = blockMap.get(b);
+    if (isRecovery && binfo != null) {
+      return binfo;
+    }
+    binfo = new BInfo(b, true);
+    blockMap.put(b, binfo);
+    return binfo;
   }
 
   @Override
-  public synchronized BlockWriteStreams writeToTemporary(Block b)
+  public synchronized ReplicaInPipelineInterface writeToTemporary(Block b)
       throws IOException {
-    return writeToBlock(b, false);
-  }
-
-  private synchronized BlockWriteStreams writeToBlock(Block b, 
-                                            boolean isRecovery)
-                                            throws IOException {
     if (isValidBlock(b)) {
           throw new BlockAlreadyExistsException("Block " + b + 
               " is valid, and cannot be written to.");
@@ -408,10 +478,9 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         throw new BlockAlreadyExistsException("Block " + b + 
             " is being written, and cannot be written to.");
     }
-      BInfo binfo = new BInfo(b, true);
-      blockMap.put(b, binfo);
-      SimulatedOutputStream crcStream = new SimulatedOutputStream();
-      return new BlockWriteStreams(binfo.oStream, crcStream);
+    BInfo binfo = new BInfo(b, true);
+    blockMap.put(b, binfo);
+    return binfo;
   }
 
   public synchronized InputStream getBlockInputStream(Block b)
@@ -500,7 +569,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo == null) {
       throw new IOException("No such Block " + b );
     }
-    return binfo.getlength();
+    return binfo.getNumBytes();
   }
 
   public synchronized void setChannelPosition(Block b, BlockWriteStreams stream, 
@@ -510,7 +579,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo == null) {
       throw new IOException("No such Block " + b );
     }
-    binfo.setlength(dataOffset);
+    binfo.setBytesOnDisk(dataOffset);
   }
 
   /** 

@@ -120,10 +120,10 @@ public class TestWriteToReplica {
   }
   
   private void testAppend(FSDataset dataSet) throws IOException {
-    dataSet.append(blocks[FINALIZED]).close();  // successful
+    dataSet.append(blocks[FINALIZED]);  // successful
     
     try {
-      dataSet.append(blocks[TEMPORARY]).close();
+      dataSet.append(blocks[TEMPORARY]);
       Assert.fail("Should not have appended to a temporary replica " 
           + blocks[TEMPORARY]);
     } catch (BlockNotFoundException e) {
@@ -132,7 +132,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.append(blocks[RBW]).close();
+      dataSet.append(blocks[RBW]);
       Assert.fail("Should not have appended to an RBW replica" + blocks[RBW]);
     } catch (BlockNotFoundException e) {
       Assert.assertEquals(BlockNotFoundException.UNFINALIZED_REPLICA +
@@ -140,7 +140,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.append(blocks[RWR]).close();
+      dataSet.append(blocks[RWR]);
       Assert.fail("Should not have appended to an RWR replica" + blocks[RWR]);
     } catch (BlockNotFoundException e) {
       Assert.assertEquals(BlockNotFoundException.UNFINALIZED_REPLICA +
@@ -148,7 +148,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.append(blocks[RUR]).close();
+      dataSet.append(blocks[RUR]);
       Assert.fail("Should not have appended to an RUR replica" + blocks[RUR]);
     } catch (BlockNotFoundException e) {
       Assert.assertEquals(BlockNotFoundException.UNFINALIZED_REPLICA +
@@ -156,7 +156,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.append(blocks[NON_EXISTENT]).close();
+      dataSet.append(blocks[NON_EXISTENT]);
       Assert.fail("Should not have appended to a non-existent replica " + 
           blocks[NON_EXISTENT]);
     } catch (BlockNotFoundException e) {
@@ -167,7 +167,7 @@ public class TestWriteToReplica {
 
   private void testWriteToRbw(FSDataset dataSet) throws IOException {
     try {
-      dataSet.writeToRbw(blocks[FINALIZED], true).close();
+      dataSet.writeToRbw(blocks[FINALIZED], true);
       Assert.fail("Should not have recovered a finalized replica " +
           blocks[FINALIZED]);
     } catch (BlockNotFoundException e) {
@@ -176,14 +176,14 @@ public class TestWriteToReplica {
     }
  
     try {
-      dataSet.writeToRbw(blocks[FINALIZED], false).close();
+      dataSet.writeToRbw(blocks[FINALIZED], false);
       Assert.fail("Should not have created a replica that's already " +
       		"finalized " + blocks[FINALIZED]);
     } catch (BlockAlreadyExistsException e) {
     }
  
     try {
-      dataSet.writeToRbw(blocks[TEMPORARY], true).close();
+      dataSet.writeToRbw(blocks[TEMPORARY], true);
       Assert.fail("Should not have recovered a temporary replica " +
           blocks[TEMPORARY]);
     } catch (BlockNotFoundException e) {
@@ -192,23 +192,23 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.writeToRbw(blocks[TEMPORARY], false).close();
+      dataSet.writeToRbw(blocks[TEMPORARY], false);
       Assert.fail("Should not have created a replica that had created as " +
       		"temporary " + blocks[TEMPORARY]);
     } catch (BlockAlreadyExistsException e) {
     }
         
-    dataSet.writeToRbw(blocks[RBW], true).close();  // expect to be successful
+    dataSet.writeToRbw(blocks[RBW], true);  // expect to be successful
     
     try {
-      dataSet.writeToRbw(blocks[RBW], false).close();
+      dataSet.writeToRbw(blocks[RBW], false);
       Assert.fail("Should not have created a replica that had created as RBW " +
           blocks[RBW]);
     } catch (BlockAlreadyExistsException e) {
     }
     
     try {
-      dataSet.writeToRbw(blocks[RWR], true).close();
+      dataSet.writeToRbw(blocks[RWR], true);
       Assert.fail("Should not have recovered a RWR replica " + blocks[RWR]);
     } catch (BlockNotFoundException e) {
       Assert.assertEquals(BlockNotFoundException.NON_RBW_REPLICA + 
@@ -216,14 +216,14 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.writeToRbw(blocks[RWR], false).close();
+      dataSet.writeToRbw(blocks[RWR], false);
       Assert.fail("Should not have created a replica that was waiting to be " +
       		"recovered " + blocks[RWR]);
     } catch (BlockAlreadyExistsException e) {
     }
     
     try {
-      dataSet.writeToRbw(blocks[RUR], true).close();
+      dataSet.writeToRbw(blocks[RUR], true);
       Assert.fail("Should not have recovered a RUR replica " + blocks[RUR]);
     } catch (BlockNotFoundException e) {
       Assert.assertEquals(BlockNotFoundException.NON_RBW_REPLICA + 
@@ -231,58 +231,58 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.writeToRbw(blocks[RUR], false).close();
+      dataSet.writeToRbw(blocks[RUR], false);
       Assert.fail("Should not have created a replica that was under recovery " +
           blocks[RUR]);
     } catch (BlockAlreadyExistsException e) {
     }
     
-    dataSet.writeToRbw(blocks[NON_EXISTENT], true).close();
+    dataSet.writeToRbw(blocks[NON_EXISTENT], true);
     
     // remove this replica
     ReplicaInfo removedReplica = dataSet.volumeMap.remove(blocks[NON_EXISTENT]);
     removedReplica.getBlockFile().delete();
     removedReplica.getMetaFile().delete();
     
-    dataSet.writeToRbw(blocks[NON_EXISTENT], false).close();
+    dataSet.writeToRbw(blocks[NON_EXISTENT], false);
   }
   
   private void testWriteToTemporary(FSDataset dataSet) throws IOException {
     try {
-      dataSet.writeToTemporary(blocks[FINALIZED]).close();
+      dataSet.writeToTemporary(blocks[FINALIZED]);
       Assert.fail("Should not have created a temporary replica that was " +
       		"finalized " + blocks[FINALIZED]);
     } catch (BlockAlreadyExistsException e) {
     }
  
     try {
-      dataSet.writeToTemporary(blocks[TEMPORARY]).close();
+      dataSet.writeToTemporary(blocks[TEMPORARY]);
       Assert.fail("Should not have created a replica that had created as" +
       		"temporary " + blocks[TEMPORARY]);
     } catch (BlockAlreadyExistsException e) {
     }
     
     try {
-      dataSet.writeToTemporary(blocks[RBW]).close();
+      dataSet.writeToTemporary(blocks[RBW]);
       Assert.fail("Should not have created a replica that had created as RBW " +
           blocks[RBW]);
     } catch (BlockAlreadyExistsException e) {
     }
     
     try {
-      dataSet.writeToTemporary(blocks[RWR]).close();
+      dataSet.writeToTemporary(blocks[RWR]);
       Assert.fail("Should not have created a replica that was waiting to be " +
       		"recovered " + blocks[RWR]);
     } catch (BlockAlreadyExistsException e) {
     }
     
     try {
-      dataSet.writeToTemporary(blocks[RUR]).close();
+      dataSet.writeToTemporary(blocks[RUR]);
       Assert.fail("Should not have created a replica that was under recovery " +
           blocks[RUR]);
     } catch (BlockAlreadyExistsException e) {
     }
     
-    dataSet.writeToTemporary(blocks[NON_EXISTENT]).close();
+    dataSet.writeToTemporary(blocks[NON_EXISTENT]);
   }
 }

@@ -16,6 +16,10 @@ Append branch (unreleased changes)
     HDFS-565. Introduce block committing logic during new block allocation
     and file close. (shv)
 
+    HDFS-537. DataNode exposes a replica's meta info to BlockReceiver for the
+    support of dfs writes/hflush. It also updates a replica's bytes received,
+    bytes on disk, and bytes acked after receiving a packet. (hairong)
+
   IMPROVEMENTS
 
     HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.

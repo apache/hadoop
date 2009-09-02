@@ -18,11 +18,15 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
+import org.apache.hadoop.io.IOUtils;
 
 /** 
  * This class defines a replica in a pipeline, which
@@ -32,7 +36,8 @@ import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
  * 
  * The base class implements a temporary replica
  */
-class ReplicaInPipeline extends ReplicaInfo {
+class ReplicaInPipeline extends ReplicaInfo
+                        implements ReplicaInPipelineInterface {
   private long bytesAcked;
   private long bytesOnDisk;
   private Thread writer;
@@ -91,35 +96,23 @@ class ReplicaInPipeline extends ReplicaInfo {
     return ReplicaState.TEMPORARY;
   }
   
-  /**
-   * Get the number of bytes acked
-   * @return the number of bytes acked
-   */
-  long getBytesAcked() {
+  @Override // ReplicaInPipelineInterface
+  public long getBytesAcked() {
     return bytesAcked;
   }
   
-  /**
-   * Set the number bytes that have acked
-   * @param bytesAcked
-   */
-  void setBytesAcked(long bytesAcked) {
+  @Override // ReplicaInPipelineInterface
+  public void setBytesAcked(long bytesAcked) {
     this.bytesAcked = bytesAcked;
   }
   
-  /**
-   * Get the number of bytes that have written to disk
-   * @return the number of bytes that have written to disk
-   */
-  long getBytesOnDisk() {
+  @Override // ReplicaInPipelineInterface
+  public long getBytesOnDisk() {
     return bytesOnDisk;
   }
   
-  /**
-   * Set the number of bytes on disk
-   * @param bytesOnDisk number of bytes on disk
-   */
-  void setBytesOnDisk(long bytesOnDisk) {
+  @Override //ReplicaInPipelineInterface
+  public void setBytesOnDisk(long bytesOnDisk) {
     this.bytesOnDisk = bytesOnDisk;
   }
   
@@ -155,4 +148,29 @@ class ReplicaInPipeline extends ReplicaInfo {
   public int hashCode() {
     return super.hashCode();
   }
+  
+  @Override // ReplicaInPipelineInterface
+  public BlockWriteStreams createStreams() throws IOException {
+    File blockFile = getBlockFile();
+    File metaFile = getMetaFile();
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("writeTo blockfile is " + blockFile +
+                         " of size " + blockFile.length());
+      DataNode.LOG.debug("writeTo metafile is " + metaFile +
+                         " of size " + metaFile.length());
+    }
+    FileOutputStream blockOut = null;
+    FileOutputStream crcOut = null;
+    try {
+      blockOut = new FileOutputStream(
+          new RandomAccessFile( blockFile, "rw" ).getFD() );
+      crcOut = new FileOutputStream(
+          new RandomAccessFile( metaFile, "rw" ).getFD() );
+      return new BlockWriteStreams(blockOut, crcOut);
+    } catch (IOException e) {
+      IOUtils.closeStream(blockOut);
+      IOUtils.closeStream(crcOut);
+      throw e;
+    }
+  }  
 }

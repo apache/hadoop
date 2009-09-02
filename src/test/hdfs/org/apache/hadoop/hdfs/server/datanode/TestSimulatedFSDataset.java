@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
 import org.apache.hadoop.util.DataChecksum;
 
 /**
@@ -62,14 +63,19 @@ public class TestSimulatedFSDataset extends TestCase {
     int bytesAdded = 0;
     for (int i = startingBlockId; i < startingBlockId+NUMBLOCKS; ++i) {
       Block b = new Block(i, 0, 0); // we pass expected len as zero, - fsdataset should use the sizeof actual data written
-      OutputStream dataOut  = fsdataset.writeToRbw(b, false).dataOut;
-      assertEquals(0, fsdataset.getLength(b));
-      for (int j=1; j <= blockIdToLen(i); ++j) {
-        dataOut.write(j);
-        assertEquals(j, fsdataset.getLength(b)); // correct length even as we write
-        bytesAdded++;
+      ReplicaInPipelineInterface bInfo = fsdataset.writeToRbw(b, false);
+      BlockWriteStreams out = bInfo.createStreams();
+      try {
+        OutputStream dataOut  = out.dataOut;
+        assertEquals(0, fsdataset.getLength(b));
+        for (int j=1; j <= blockIdToLen(i); ++j) {
+          dataOut.write(j);
+          assertEquals(j, bInfo.getBytesOnDisk()); // correct length even as we write
+          bytesAdded++;
+        }
+      } finally {
+        out.close();
       }
-      dataOut.close();
       b.setNumBytes(blockIdToLen(i));
       fsdataset.finalizeBlock(b);
       assertEquals(blockIdToLen(i), fsdataset.getLength(b));
