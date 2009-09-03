@@ -36,6 +36,8 @@ Append branch (unreleased changes)
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
     sometimes fails with CloseByInterruptException. (hairong)
 
+    HDFS-588. Fix TestFiDataTransferProtocol and TestAppend2 failures. (shv)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES

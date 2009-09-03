@@ -27,7 +27,7 @@ public aspect ClientProtocolAspects {
   public static final Log LOG = LogFactory.getLog(ClientProtocolAspects.class);
 
   pointcut addBlock():
-    call(LocatedBlock ClientProtocol.addBlock(String, String));
+    call(LocatedBlock ClientProtocol.addBlock(String, String,..));
 
   after() returning(LocatedBlock lb): addBlock() {
     PipelineTest pipelineTest = DataTransferTestUtil.getPipelineTest();

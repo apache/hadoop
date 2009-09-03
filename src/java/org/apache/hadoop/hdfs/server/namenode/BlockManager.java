@@ -237,7 +237,7 @@ public class BlockManager {
   }
 
   /**
-   * Commit the last block of the file and complete the penultimate block.
+   * Commit the last block of the file.
    * 
    * @param fileINode file inode
    * @param commitBlock - contains client reported block length and generation
@@ -255,9 +255,6 @@ public class BlockManager {
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + lastBlock.getNumBytes();
     lastBlock.commitBlock(commitBlock);
-
-    // complete the penultimate block
-    completeBlock(fileINode, fileINode.numBlocks()-2);
   }
 
   /**

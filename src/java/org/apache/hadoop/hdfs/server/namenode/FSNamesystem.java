@@ -1101,7 +1101,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
-      // commit the last block and complete the penultimate block
+      // commit the last block
       blockManager.commitLastBlock(pendingFile, previous);
 
       //
@@ -1136,6 +1136,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if (!checkFileProgress(pendingFile, false)) {
         throw new NotReplicatedYetException("Not replicated yet:" + src);
       }
+
+      // complete the penultimate block
+      blockManager.completeBlock(pendingFile, pendingFile.numBlocks()-2);
 
       // allocate new block record block locations in INode.
       newBlock = allocateBlock(src, pathINodes, targets);
@@ -1252,7 +1255,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       return CompleteFileStatus.OPERATION_FAILED;
     } 
 
-    // commit the last block and complete the penultimate block
+    // commit the last block
     blockManager.commitLastBlock(pendingFile, last);
 
     if (!checkFileProgress(pendingFile, true)) {
@@ -1594,6 +1597,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       INodeFileUnderConstruction pendingFile) throws IOException {
     leaseManager.removeLease(pendingFile.clientName, src);
 
+    // complete the penultimate block
+    blockManager.completeBlock(pendingFile, pendingFile.numBlocks()-2);
+
     // The file is no longer pending.
     // Create permanent INode, update blocks
     INodeFile newFile = pendingFile.convertToInodeFile();
@@ -1680,9 +1686,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       return;
     }
 
-    // commit the last block and complete the penultimate block
+    // commit the last block
     blockManager.commitLastBlock(pendingFile, lastblock);
-    
+
     //remove lease, close file
     finalizeINodeFileUnderConstruction(src, pendingFile);
     getEditLog().logSync();
