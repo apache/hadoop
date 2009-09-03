@@ -75,7 +75,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     }
   }
   
-  public void testCheckColumn_WrongOrder() {
+  public void DisabledTestCheckColumn_WrongOrder() {
     //Create a WildcardColumnTracker
     ScanWildcardColumnTracker tracker = 
       new ScanWildcardColumnTracker(VERSIONS);
