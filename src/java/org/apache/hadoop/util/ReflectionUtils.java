@@ -18,21 +18,27 @@
 
 package org.apache.hadoop.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.io.*;
-import java.lang.management.*;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.conf.*;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.DeserializerBase;
+import org.apache.hadoop.io.serializer.SerializationBase;
 import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.Serializer;
+import org.apache.hadoop.io.serializer.SerializerBase;
 
 /**
  * General reflection utils
@@ -269,11 +275,12 @@ public class ReflectionUtils {
     buffer.outBuffer.reset();
     SerializationFactory factory = getFactory(conf);
     Class<T> cls = (Class<T>) src.getClass();
-    Serializer<T> serializer = factory.getSerializer(cls);
+    Map<String, String> metadata = SerializationBase.getMetadataFromClass(cls);
+    SerializerBase<T> serializer = factory.getSerializer(metadata);
     serializer.open(buffer.outBuffer);
     serializer.serialize(src);
     buffer.moveData();
-    Deserializer<T> deserializer = factory.getDeserializer(cls);
+    DeserializerBase<T> deserializer = factory.getDeserializer(metadata);
     deserializer.open(buffer.inBuffer);
     dst = deserializer.deserialize(dst);
     return dst;

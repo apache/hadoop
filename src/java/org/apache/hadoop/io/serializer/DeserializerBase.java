@@ -15,39 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.io.serializer;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 
-/**
- * <p>
- * Provides a facility for serializing objects of type <T> to an
- * {@link OutputStream}.
- * </p>
- * 
- * <p>
- * Serializers are stateful, but must not buffer the output since
- * other producers may write to the output between calls to
- * {@link #serialize(Object)}.
- * </p>
- * @param <T>
- */
-@Deprecated
-public interface Serializer<T> {
-  /**
-   * <p>Prepare the serializer for writing.</p>
-   */
-  void open(OutputStream out) throws IOException;
+import org.apache.hadoop.conf.Configured;
+
+public abstract class DeserializerBase<T> extends Configured
+  implements Closeable, Deserializer<T> {
   
   /**
-   * <p>Serialize <code>t</code> to the underlying output stream.</p>
+   * <p>Prepare the deserializer for reading.</p>
    */
-  void serialize(T t) throws IOException;
+  public abstract void open(InputStream in) throws IOException;
   
   /**
-   * <p>Close the underlying output stream and clear up any resources.</p>
-   */  
-  void close() throws IOException;
+   * <p>
+   * Deserialize the next object from the underlying input stream.
+   * If the object <code>t</code> is non-null then this deserializer
+   * <i>may</i> set its internal state to the next object read from the input
+   * stream. Otherwise, if the object <code>t</code> is null a new
+   * deserialized object will be created.
+   * </p>
+   * @return the deserialized object
+   */
+  public abstract T deserialize(T t) throws IOException;
+  
 }

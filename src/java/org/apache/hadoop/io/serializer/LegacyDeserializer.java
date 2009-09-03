@@ -15,39 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.io.serializer;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 
-/**
- * <p>
- * Provides a facility for serializing objects of type <T> to an
- * {@link OutputStream}.
- * </p>
- * 
- * <p>
- * Serializers are stateful, but must not buffer the output since
- * other producers may write to the output between calls to
- * {@link #serialize(Object)}.
- * </p>
- * @param <T>
- */
-@Deprecated
-public interface Serializer<T> {
-  /**
-   * <p>Prepare the serializer for writing.</p>
-   */
-  void open(OutputStream out) throws IOException;
+@SuppressWarnings("deprecation")
+class LegacyDeserializer<T> extends DeserializerBase<T> {
   
-  /**
-   * <p>Serialize <code>t</code> to the underlying output stream.</p>
-   */
-  void serialize(T t) throws IOException;
+  private Deserializer<T> deserializer;
+
+  public LegacyDeserializer(Deserializer<T> deserializer) {
+    this.deserializer = deserializer;
+  }
+
+  @Override
+  public void open(InputStream in) throws IOException {
+    deserializer.open(in);
+  }
   
-  /**
-   * <p>Close the underlying output stream and clear up any resources.</p>
-   */  
-  void close() throws IOException;
+  @Override
+  public T deserialize(T t) throws IOException {
+    return deserializer.deserialize(t);
+  }
+
+  @Override
+  public void close() throws IOException {
+    deserializer.close();
+  }
+
 }

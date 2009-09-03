@@ -15,39 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.io.serializer;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collections;
+import java.util.Map;
 
-/**
- * <p>
- * Provides a facility for serializing objects of type <T> to an
- * {@link OutputStream}.
- * </p>
- * 
- * <p>
- * Serializers are stateful, but must not buffer the output since
- * other producers may write to the output between calls to
- * {@link #serialize(Object)}.
- * </p>
- * @param <T>
- */
-@Deprecated
-public interface Serializer<T> {
-  /**
-   * <p>Prepare the serializer for writing.</p>
-   */
-  void open(OutputStream out) throws IOException;
+@SuppressWarnings("deprecation")
+class LegacySerializer<T> extends SerializerBase<T> {
   
-  /**
-   * <p>Serialize <code>t</code> to the underlying output stream.</p>
-   */
-  void serialize(T t) throws IOException;
-  
-  /**
-   * <p>Close the underlying output stream and clear up any resources.</p>
-   */  
-  void close() throws IOException;
+  private Serializer<T> serializer;
+
+  public LegacySerializer(Serializer<T> serializer) {
+    this.serializer = serializer;
+  }
+
+  @Override
+  public void open(OutputStream out) throws IOException {
+    serializer.open(out);
+  }
+
+  @Override
+  public void serialize(T t) throws IOException {
+    serializer.serialize(t);
+  }
+
+  @Override
+  public void close() throws IOException {
+    serializer.close();
+  }
+
+  @Override
+  public Map<String, String> getMetadata() throws IOException {
+    return Collections.<String, String>emptyMap();
+  }
+
 }

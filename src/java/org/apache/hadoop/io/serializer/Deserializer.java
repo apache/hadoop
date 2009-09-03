@@ -34,6 +34,7 @@ import java.io.InputStream;
  * </p>
  * @param <T>
  */
+@Deprecated
 public interface Deserializer<T> {
   /**
    * <p>Prepare the deserializer for reading.</p>
