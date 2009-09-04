@@ -278,9 +278,11 @@ public class ThriftServer {
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
         List<Cell> cells = new ArrayList<Cell>();
-        for(KeyValue kv : result.sorted()) {
-          cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
-        }
+	if ( ! result.isEmpty() ) {
+	    for(KeyValue kv : result.sorted()) {
+		cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
+	    }
+	}
         return ThriftUtilities.cellFromHBase(cells.toArray(new Cell[0]));
       } catch (IOException e) {
         throw new IOError(e.getMessage());
@@ -304,12 +306,14 @@ public class ThriftServer {
         get.setTimeRange(Long.MIN_VALUE, timestamp);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
-        List<Cell> cells = new ArrayList<Cell>();
-        KeyValue [] kvs = result.sorted();
-        if (kvs != null) {
-          for(KeyValue kv : kvs) {
-            cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
-          }
+	List<Cell> cells = new ArrayList<Cell>();
+	if ( ! result.isEmpty() ) {
+	    KeyValue [] kvs = result.sorted();
+	    if (kvs != null) {
+		for(KeyValue kv : kvs) {
+		    cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
+		}
+	    }
         }
         return ThriftUtilities.cellFromHBase(cells.toArray(new Cell[0]));
       } catch (IOException e) {
