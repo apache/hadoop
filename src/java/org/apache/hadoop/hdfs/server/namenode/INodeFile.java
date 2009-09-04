@@ -112,8 +112,9 @@ class INodeFile extends INode {
 
   int collectSubtreeBlocksAndClear(List<Block> v) {
     parent = null;
-    for (Block blk : blocks) {
+    for (BlockInfo blk : blocks) {
       v.add(blk);
+      blk.setINode(null);
     }
     blocks = null;
     return 1;

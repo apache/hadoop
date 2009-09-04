@@ -570,19 +570,26 @@ class FSDirectory implements Closeable {
   }
     
   /**
-   * Remove the file from management, return blocks
+   * Delete the target directory and collect the blocks under it
+   * 
+   * @param src Path of a directory to delete
+   * @param collectedBlocks Blocks under the deleted directory
+   * @return true on successful deletion; else false
    */
-  INode delete(String src) {
+  boolean delete(String src, List<Block>collectedBlocks) {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "+src);
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
     waitForReady();
     long now = FSNamesystem.now();
-    INode deletedNode = unprotectedDelete(src, now);
-    if (deletedNode != null) {
-      fsImage.getEditLog().logDelete(src, now);
+    INode removedNode = unprotectedDelete(src, collectedBlocks, now);
+    if (removedNode == null) {
+      return false;
     }
-    return deletedNode;
+    // Blocks will be deleted later by the caller of this method
+    getFSNamesystem().removePathAndBlocks(src, null);
+    fsImage.getEditLog().logDelete(src, now);
+    return true;
   }
   
   /** Return if a directory is empty or not **/
@@ -608,12 +615,30 @@ class FSDirectory implements Closeable {
   /**
    * Delete a path from the name space
    * Update the count at each ancestor directory with quota
+   * <br>
+   * Note: This is to be used by {@link FSEditLog} only.
+   * <br>
    * @param src a string representation of a path to an inode
-   * @param modificationTime the time the inode is removed
-   * @param deletedBlocks the place holder for the blocks to be removed
-   * @return if the deletion succeeds
+   * @param mtime the time the inode is removed
+   * @return deleted inode if deletion succeeds; else null
    */ 
-  INode unprotectedDelete(String src, long modificationTime) {
+  INode unprotectedDelete(String src, long mtime) {
+    List<Block> collectedBlocks = new ArrayList<Block>();
+    INode removedNode = unprotectedDelete(src, collectedBlocks, mtime);
+    getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+    return removedNode;
+  }
+  
+  /**
+   * Delete a path from the name space
+   * Update the count at each ancestor directory with quota
+   * @param src a string representation of a path to an inode
+   * @param collectedBlocks blocks collected from the deleted path
+   * @param mtime the time the inode is removed
+   * @return deleted inode if deletion succeeds; else null
+   */ 
+  INode unprotectedDelete(String src, List<Block> collectedBlocks, 
+      long mtime) {
     src = normalizePath(src);
 
     synchronized (rootDir) {
@@ -624,33 +649,34 @@ class FSDirectory implements Closeable {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
             +"failed to remove "+src+" because it does not exist");
         return null;
-      } else if (inodes.length == 1) { // src is the root
+      }
+      if (inodes.length == 1) { // src is the root
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
             "failed to remove " + src +
             " because the root is not allowed to be deleted");
         return null;
-      } else {
-        try {
-          // Remove the node from the namespace
-          removeChild(inodes, inodes.length-1);
-          // set the parent's modification time
-          inodes[inodes.length-2].setModificationTime(modificationTime);
-          // GC all the blocks underneath the node.
-          ArrayList<Block> v = new ArrayList<Block>();
-          int filesRemoved = targetNode.collectSubtreeBlocksAndClear(v);
-          incrDeletedFileCount(filesRemoved);
-          getFSNamesystem().removePathAndBlocks(src, v);
-          if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
-              +src+" is removed");
-          }
-          return targetNode;
-        } catch(QuotaExceededException e) {
-          NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
-              "failed to remove " + src + " because " + e.getMessage());
-          return null;
-        }
       }
+      int pos = inodes.length - 1;
+      try {
+        // Remove the node from the namespace
+        targetNode = removeChild(inodes, pos);
+      } catch(QuotaExceededException e) {
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
+            "failed to remove " + src + " because " + e.getMessage());
+        return null;
+      }
+      if (targetNode == null) {
+        return null;
+      }
+      // set the parent's modification time
+      inodes[pos-1].setModificationTime(mtime);
+      int filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks);
+      incrDeletedFileCount(filesRemoved);
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
+          +src+" is removed");
+      }
+      return targetNode;
     }
   }
 

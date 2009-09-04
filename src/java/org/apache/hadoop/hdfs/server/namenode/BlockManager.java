@@ -352,12 +352,13 @@ public class BlockManager {
 
   /**
    * Adds block to list of blocks which will be invalidated on specified
-   * datanode and log the move
+   * datanode
    *
    * @param b block
    * @param dn datanode
+   * @param log true to create an entry in the log 
    */
-  void addToInvalidates(Block b, DatanodeInfo dn) {
+  void addToInvalidates(Block b, DatanodeInfo dn, boolean log) {
     Collection<Block> invalidateSet = recentInvalidateSets
         .get(dn.getStorageID());
     if (invalidateSet == null) {
@@ -366,9 +367,22 @@ public class BlockManager {
     }
     if (invalidateSet.add(b)) {
       pendingDeletionBlocksCount++;
-      NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
-          + b.getBlockName() + " is added to invalidSet of " + dn.getName());
+      if (log) {
+        NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
+            + b.getBlockName() + " to " + dn.getName());
+      }
     }
+  }
+
+  /**
+   * Adds block to list of blocks which will be invalidated on specified
+   * datanode and log the operation
+   *
+   * @param b block
+   * @param dn datanode
+   */
+  void addToInvalidates(Block b, DatanodeInfo dn) {
+    addToInvalidates(b, dn, true);
   }
 
   /**
@@ -376,10 +390,16 @@ public class BlockManager {
    * datanodes.
    */
   private void addToInvalidates(Block b) {
+    StringBuilder datanodes = new StringBuilder();
     for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(b); it
         .hasNext();) {
       DatanodeDescriptor node = it.next();
-      addToInvalidates(b, node);
+      addToInvalidates(b, node, false);
+      datanodes.append(node.getName()).append(" ");
+    }
+    if (datanodes.length() != 0) {
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
+          + b.getBlockName() + " to " + datanodes.toString());
     }
   }
 

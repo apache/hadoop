@@ -123,6 +123,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   public static final Log auditLog = LogFactory.getLog(
       FSNamesystem.class.getName() + ".audit");
 
+  static int BLOCK_DELETION_INCREMENT = 1000;
   private boolean isPermissionEnabled;
   private UserGroupInformation fsOwner;
   private String supergroup;
@@ -1385,8 +1386,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if ((!recursive) && (!dir.isDirEmpty(src))) {
         throw new IOException(src + " is non empty");
       }
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+      }
       boolean status = deleteInternal(src, true);
-      getEditLog().logSync();
       if (status && auditLog.isInfoEnabled()) {
         logAuditEvent(UserGroupInformation.getCurrentUGI(),
                       Server.getRemoteIp(),
@@ -1396,25 +1399,68 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     
   /**
-   * Remove the indicated filename from the namespace.  This may
-   * invalidate some blocks that make up the file.
+   * Remove a file/directory from the namespace.
+   * <p>
+   * For large directories, deletion is incremental. The blocks under
+   * the directory are collected and deleted a small number at a time holding
+   * the {@link FSNamesystem} lock.
+   * <p>
+   * For small directory or file the deletion is done in one shot.
    */
-  synchronized boolean deleteInternal(String src, 
+  private boolean deleteInternal(String src, 
       boolean enforcePermission) throws IOException {
+    boolean deleteNow = false;
+    ArrayList<Block> collectedBlocks = new ArrayList<Block>();
+    synchronized(this) {
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot delete " + src, safeMode);
+      }
+      if (enforcePermission && isPermissionEnabled) {
+        checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
+      }
+      // Unlink the target directory from directory tree
+      if (!dir.delete(src, collectedBlocks)) {
+        return false;
+      }
+      deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
+      if (deleteNow) { // Perform small deletes right away
+        removeBlocks(collectedBlocks);
+      }
+    }
+    // Log directory deletion to editlog
+    getEditLog().logSync();
+    if (!deleteNow) {
+      removeBlocks(collectedBlocks); // Incremental deletion of blocks
+    }
+    collectedBlocks.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+      NameNode.stateChangeLog.debug("DIR* Namesystem.delete: "
+        + src +" is removed");
     }
-    if (isInSafeMode())
-      throw new SafeModeException("Cannot delete " + src, safeMode);
-    if (enforcePermission && isPermissionEnabled) {
-      checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
-    }
-
-    return dir.delete(src) != null;
+    return true;
   }
 
+  /** From the given list, incrementally remove the blocks from blockManager */
+  private void removeBlocks(List<Block> blocks) {
+    int start = 0;
+    int end = 0;
+    while (start < blocks.size()) {
+      end = BLOCK_DELETION_INCREMENT + start;
+      end = end > blocks.size() ? blocks.size() : end;
+      synchronized(this) {
+        for (int i=start; i<end; i++) {
+          blockManager.removeBlock(blocks.get(i));
+        }
+      }
+      start = end;
+    }
+  }
+  
   void removePathAndBlocks(String src, List<Block> blocks) {
     leaseManager.removeLeaseWithPrefixPath(src);
+    if (blocks == null) {
+      return;
+    }
     for(Block b : blocks) {
       blockManager.removeBlock(b);
     }
