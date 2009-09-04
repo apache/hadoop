@@ -517,6 +517,9 @@ Trunk (unreleased changes)
     HADOOP-6224. Add a method to WritableUtils performing a bounded read of an
     encoded String. (Jothi Padmanabhan via cdouglas)
 
+    HADOOP-6231. Allow caching of filesystem instances to be disabled on a
+    per-instance basis. (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
