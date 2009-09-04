@@ -193,6 +193,9 @@ Trunk (unreleased changes)
  
     HDFS-15. All replicas end up on 1 rack. (Jitendra Nath Pandey via hairong)
  
+    HDFS-586. TestBlocksWithNotEnoughRacks sometimes fails.
+    (Jitendra Nath Pandey via hairong)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

@@ -1034,7 +1034,7 @@ public class BlockManager {
 
     // handle underReplication/overReplication
     short fileReplication = fileINode.getReplication();
-    if (numCurrentReplica >= fileReplication) {
+    if (!isNeededReplication(storedBlock, fileReplication, numCurrentReplica)) {
       neededReplications.remove(storedBlock, numCurrentReplica,
           num.decommissionedReplicas, fileReplication);
     } else {
