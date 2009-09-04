@@ -30,14 +30,13 @@ Provides HBase Client
  <p>To administer HBase, create and drop tables, list and alter tables, 
  use {@link org.apache.hadoop.hbase.client.HBaseAdmin}.  Once created, table access is via an instance
  of {@link org.apache.hadoop.hbase.client.HTable}.  You add content to a table a row at a time.  To insert,
- create an instance of a {@link org.apache.hadoop.hbase.client.Put} object and after setting it appropriately,
- commit your update using {@link org.apache.hadoop.hbase.client.HTable#put(Put)}.
- To fetch your inserted
- value, use {@link org.apache.hadoop.hbase.client.Get}.  The Get can be specified to be broad -- get all
- on a particular row -- or narrow; return only a single cell value.  
- When finished with your Get settings, invoke {@link org.apache.hadoop.hbase.client.HTable#get(Get)}.  Use
- {@link org.apache.hadoop.hbase.client.Scan} to set up a scanner -- a Cursor-like access.  After
- configuring your Scan instance, call {@link org.apache.hadoop.hbase.client.HTable#getScanner(Scan)} and then
+ create an instance of a {@link org.apache.hadoop.hbase.client.Put} object.  Specify value, target column
+ and optionally a timestamp.  Commit your update using {@link org.apache.hadoop.hbase.client.HTable#put(Put)}.
+ To fetch your inserted value, use {@link org.apache.hadoop.hbase.client.Get}.  The Get can be specified to be broad -- get all
+ on a particular row -- or narrow; i.e. return only a single cell value.   After creating an instance of
+ Get, invoke {@link org.apache.hadoop.hbase.client.HTable#get(Get)}.  Use
+ {@link org.apache.hadoop.hbase.client.Scan} to set up a scanner -- a Cursor- like access.  After
+ creating and configuring your Scan instance, call {@link org.apache.hadoop.hbase.client.HTable#getScanner(Scan)} and then
  invoke next on the returned object.  Both {@link org.apache.hadoop.hbase.client.HTable#get(Get)} and
  {@link org.apache.hadoop.hbase.client.HTable#getScanner(Scan)} return a
 {@link org.apache.hadoop.hbase.client.Result}.
@@ -46,6 +45,9 @@ in different formats.
  Use {@link org.apache.hadoop.hbase.client.Delete} to remove content.
  You can remove individual cells or entire families, etc.  Pass it to
  {@link org.apache.hadoop.hbase.client.HTable#delete(Delete)} to execute.
+ </p>
+ <p>Puts, Gets and Deletes take out a lock on the target row for the duration of their operation.
+ Scans (currently) operate without respect for row locks.
  </p>
  <p>Client code accessing a cluster finds the cluster by querying ZooKeeper.
  This means that the ZooKeeper quorum to use must be on the client CLASSPATH.
