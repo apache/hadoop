@@ -12,6 +12,7 @@ Release 0.21.0 - Unreleased
    HBASE-1798  [Regression] Unable to delete a row in the future
    HBASE-1790  filters are not working correctly (HBASE-1710 HBASE-1807 too)
    HBASE-1779  ThriftServer logged error if getVer() result is empty
+   HBASE-1778  Improve PerformanceEvaluation (Schubert Zhang via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
