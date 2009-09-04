@@ -125,6 +125,9 @@ Trunk (unreleased changes)
     HDFS-173. Namenode will not block until a large directory deletion completes.
     It allows other operations when the deletion is in progress. (suresh)
 
+    HDFS-551. Create new functional test for a block report. (Konstantin
+    Boudnik via hairong)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
