@@ -825,8 +825,10 @@ public class KeyValue implements Writable, HeapSize {
   }
   
   /**
-   * Do not use unless you have to.  Use {@link #getBuffer()} with appropriate
-   * offset and lengths instead.
+   * Returns value in a new byte array.
+   * Primarily for use client-side. If server-side, use
+   * {@link #getBuffer()} with appropriate offsets and lengths instead to
+   * save on allocations.
    * @return Value in a new byte array.
    */
   public byte [] getValue() {

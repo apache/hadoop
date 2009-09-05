@@ -141,7 +141,7 @@ public class Result implements Writable {
    * Map of families to all versions of its qualifiers and values.
    * <p>
    * Returns a three level Map of the form: 
-   * <code>Map<family,Map<qualifier,Map<timestamp,value>>></code>
+   * <code>Map<family,Map&lt;qualifier,Map&lt;timestamp,value>>></code>
    * <p>
    * Note: All other map returning methods make use of this map internally. 
    * @return map from families to qualifiers to versions
@@ -186,7 +186,7 @@ public class Result implements Writable {
   /**
    * Map of families to their most recent qualifiers and values.
    * <p>
-   * Returns a two level Map of the form: <code>Map<family,Map<qualifier,value>></code>
+   * Returns a two level Map of the form: <code>Map<family,Map&lt;qualifier,value>></code>
    * <p>
    * The most recent version of each qualifier will be used.
    * @return map from families to qualifiers and value
@@ -218,7 +218,7 @@ public class Result implements Writable {
   /**
    * Map of qualifiers to values.
    * <p>
-   * Returns a Map of the form: <code>Map<qualifier,value></code>
+   * Returns a Map of the form: <code>Map&lt;qualifier,value></code>
    * @return map of qualifiers to values
    */
   public NavigableMap<byte[], byte[]> getFamilyMap(byte [] family) {
