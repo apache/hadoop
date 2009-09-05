@@ -156,6 +156,16 @@ Trunk (unreleased changes)
 
     HDFS-581. Introduce an iterator over blocks in the block report array. (shv)
 
+    HDFS-549. Add a new target, run-with-fault-inject-testcaseonly, which
+    allows an execution of non-FI tests in FI-enable environment.  (Konstantin
+    Boudnik via szetszwo)
+
+    HDFS-173. Namenode will not block until a large directory deletion completes.
+    It allows other operations when the deletion is in progress. (suresh)
+
+    HDFS-551. Create new functional test for a block report. (Konstantin
+    Boudnik via hairong)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
@@ -224,6 +234,9 @@ Trunk (unreleased changes)
  
     HDFS-15. All replicas end up on 1 rack. (Jitendra Nath Pandey via hairong)
  
+    HDFS-586. TestBlocksWithNotEnoughRacks sometimes fails.
+    (Jitendra Nath Pandey via hairong)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

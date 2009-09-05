@@ -358,6 +358,17 @@
   <!--At this moment there's no special FI test suite thus the normal tests are -->
   <!--being executed with faults injected in place-->
 
+  <!--This target is not included into the the top level list of target
+  for it serves a special "regression" testing purpose of non-FI tests in
+  FI environment -->
+  <target name="run-with-fault-inject-testcaseonly">
+    <fail unless="testcase">Can't run this target without -Dtestcase setting!
+    </fail>
+    <subant buildpath="build.xml" target="run-test-hdfs-fault-inject">
+    	<property name="special.fi.testcasesonly" value="yes"/>
+    </subant>
+  </target>
+
   <target name="run-test-hdfs-fault-inject" depends="injectfaults"
           description="Run Fault Injection related hdfs tests">
     <subant buildpath="build.xml" target="run-test-hdfs">
@@ -636,6 +647,12 @@
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
           <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
+        </batchtest>
+        <!--The following batch is for very special occasions only when
+        a non-FI tests are needed to be executed against FI-environment -->
+        <batchtest todir="${test.build.dir}" if="special.fi.testcasesonly">
+          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
+          <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
       <antcall target="checkfailure"/>
