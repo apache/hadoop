@@ -989,13 +989,12 @@ public class DataNode extends Configured
       // and can be safely GC'ed.
       //
       long brStartTime = now();
-      Block[] bReport = data.getBlockReport();
+      BlockListAsLongs bReport = data.getBlockReport();
 
-      cmd = namenode.blockReport(dnRegistration,
-              BlockListAsLongs.convertToArrayLongs(bReport));
+      cmd = namenode.blockReport(dnRegistration, bReport.getBlockListAsLongs());
       long brTime = now() - brStartTime;
       myMetrics.blockReports.inc(brTime);
-      LOG.info("BlockReport of " + bReport.length +
+      LOG.info("BlockReport of " + bReport.getNumberOfBlocks() +
           " blocks got processed in " + brTime + " msecs");
       //
       // If we have sent the first block report, then wait a random

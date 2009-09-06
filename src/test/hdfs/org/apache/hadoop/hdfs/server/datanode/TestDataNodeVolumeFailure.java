@@ -31,13 +31,11 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -116,8 +114,8 @@ public class TestDataNodeVolumeFailure extends TestCase{
     
     // make sure a block report is sent 
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
-    cluster.getNameNode().blockReport(dn.dnRegistration,
-        BlockListAsLongs.convertToArrayLongs(cluster.getBlockReport(1)));
+    long[] bReport = dn.getFSDataset().getBlockReport().getBlockListAsLongs();
+    cluster.getNameNode().blockReport(dn.dnRegistration, bReport);
 
     // verify number of blocks and files...
     verify(filename, filesize);

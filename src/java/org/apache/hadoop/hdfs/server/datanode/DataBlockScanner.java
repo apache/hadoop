@@ -29,11 +29,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -211,8 +211,8 @@ class DataBlockScanner implements Runnable {
   private void init() {
     
     // get the list of blocks and arrange them in random order
-    Block arr[] = dataset.getBlockReport();
-    Collections.shuffle(Arrays.asList(arr));
+    List<Block> arr = dataset.getFinalizedBlocks();
+    Collections.shuffle(arr);
     
     blockInfoSet = new TreeSet<BlockScanInfo>();
     blockMap = new HashMap<Block, BlockScanInfo>();

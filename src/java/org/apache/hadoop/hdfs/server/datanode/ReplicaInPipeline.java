@@ -92,7 +92,7 @@ class ReplicaInPipeline extends ReplicaInfo
   }
   
   @Override  //ReplicaInfo
-  ReplicaState getState() {
+  public ReplicaState getState() {
     return ReplicaState.TEMPORARY;
   }
   

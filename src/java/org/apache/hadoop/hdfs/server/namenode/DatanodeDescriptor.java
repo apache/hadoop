@@ -25,6 +25,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.io.Text;
@@ -391,11 +393,26 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // scan the report and collect newly reported blocks
     // Note we are taking special precaution to limit tmp blocks allocated
     // as part this block report - which why block list is stored as longs
-    for (Block iblk : newReport) {
+    BlockReportIterator itBR = newReport.getBlockReportIterator();
+    Block iblk = null;
+    ReplicaState iState;
+    while(itBR.hasNext()) {
+      iblk = itBR.next();
+      iState = itBR.getCurrentReplicaState();
       BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
       if(storedBlock == null) {
         // If block is not in blocksMap it does not belong to any file
         toInvalidate.add(new Block(iblk));
+        continue;
+      }
+      switch(iState) {
+      case FINALIZED:
+      case RWR:
+        break;
+      case RBW: // ignore these replicas for now to provide
+      case RUR: // compatibility with current block report processing
+      case TEMPORARY:
+      default:
         continue;
       }
       if(storedBlock.findDatanode(this) < 0) {// Known block, but not on the DN

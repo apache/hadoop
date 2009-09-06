@@ -86,15 +86,29 @@ public interface HdfsConstants {
    */
   static public enum ReplicaState {
     /** Replica is finalized. The state when replica is not modified. */
-    FINALIZED,
+    FINALIZED(0),
     /** Replica is being written to. */
-    RBW,
+    RBW(1),
     /** Replica is waiting to be recovered. */
-    RWR,
+    RWR(2),
     /** Replica is under recovery. */
-    RUR,
+    RUR(3),
     /** Temporary replica: created for replication and relocation only. */
-    TEMPORARY;
+    TEMPORARY(4);
+
+    private int value;
+
+    private ReplicaState(int v) {
+      value = v;
+    }
+
+    public int getValue() {
+      return value;
+    }
+
+    public static ReplicaState getState(int v) {
+      return ReplicaState.values()[v];
+    }
   }
 
   /**

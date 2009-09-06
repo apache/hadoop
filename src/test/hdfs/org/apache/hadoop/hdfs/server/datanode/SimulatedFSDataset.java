@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -31,6 +32,7 @@ import javax.management.StandardMBean;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.metrics.util.MBeanUtil;
@@ -303,10 +305,12 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     blockMap = new HashMap<Block,BInfo>(); 
   }
 
-  public synchronized void injectBlocks(Block[] injectBlocks)
+  public synchronized void injectBlocks(Iterable<Block> injectBlocks)
                                             throws IOException {
     if (injectBlocks != null) {
+      int numInjectedBlocks = 0;
       for (Block b: injectBlocks) { // if any blocks in list is bad, reject list
+        numInjectedBlocks++;
         if (b == null) {
           throw new NullPointerException("Null blocks in block list");
         }
@@ -315,12 +319,12 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         }
       }
       HashMap<Block, BInfo> oldBlockMap = blockMap;
-      blockMap = 
-          new HashMap<Block,BInfo>(injectBlocks.length + oldBlockMap.size());
+      blockMap = new HashMap<Block,BInfo>(
+          numInjectedBlocks + oldBlockMap.size());
       blockMap.putAll(oldBlockMap);
       for (Block b: injectBlocks) {
           BInfo binfo = new BInfo(b, false);
-          blockMap.put(b, binfo);
+          blockMap.put(binfo.theBlock, binfo);
       }
     }
   }
@@ -340,7 +344,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
   }
 
-  public synchronized Block[] getBlockReport() {
+  public synchronized BlockListAsLongs getBlockReport() {
     Block[] blockTable = new Block[blockMap.size()];
     int count = 0;
     for (BInfo b : blockMap.values()) {
@@ -351,7 +355,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (count != blockTable.length) {
       blockTable = Arrays.copyOf(blockTable, count);
     }
-    return blockTable;
+    return new BlockListAsLongs(
+        new ArrayList<Block>(Arrays.asList(blockTable)), null);
   }
 
   public long getCapacity() throws IOException {
@@ -463,7 +468,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       return binfo;
     }
     binfo = new BInfo(b, true);
-    blockMap.put(b, binfo);
+    blockMap.put(binfo.theBlock, binfo);
     return binfo;
   }
 
@@ -479,7 +484,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
             " is being written, and cannot be written to.");
     }
     BInfo binfo = new BInfo(b, true);
-    blockMap.put(b, binfo);
+    blockMap.put(binfo.theBlock, binfo);
     return binfo;
   }
 

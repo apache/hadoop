@@ -33,7 +33,7 @@ import org.apache.hadoop.io.IOUtils;
  * This class is used by datanodes to maintain meta data of its replicas.
  * It provides a general interface for meta information of a replica.
  */
-abstract class ReplicaInfo extends Block {
+abstract public class ReplicaInfo extends Block {
   private FSVolume volume;      // volume where the replica belongs
   private File     dir;         // directory where block & meta files belong
 
@@ -134,7 +134,7 @@ abstract class ReplicaInfo extends Block {
    * Get the replica state
    * @return the replica state
    */
-  abstract ReplicaState getState();
+  abstract public ReplicaState getState();
   
   /**
    * check if this replica has already detached.

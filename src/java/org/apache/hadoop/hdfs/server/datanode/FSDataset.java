@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -1335,20 +1336,34 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /**
-   * Return finalized blocks from the in-memory blockmap
+   * Generates a block report from the in-memory block map.
    */
-  public Block[] getBlockReport() {
-    ArrayList<Block> list =  new ArrayList<Block>(volumeMap.size());
+  public BlockListAsLongs getBlockReport() {
+    ArrayList<ReplicaInfo> finalized =
+      new ArrayList<ReplicaInfo>(volumeMap.size());
+    ArrayList<ReplicaInfo> uc = new ArrayList<ReplicaInfo>();
     synchronized(this) {
       for (ReplicaInfo b : volumeMap.replicas()) {
-        if (b.getState() == ReplicaState.FINALIZED ) {
-          list.add(new Block(b));
-        } else if (supportAppends && b.getState() == ReplicaState.RWR) {
-          list.add(new Block(b));
+        switch(b.getState()) {
+        case FINALIZED:
+          finalized.add(b);
+          break;
+        case RBW:
+        case RWR:
+          uc.add(b);
+          break;
+        case RUR:
+          ReplicaUnderRecovery rur = (ReplicaUnderRecovery)b;
+          uc.add(rur.getOriginalReplica());
+          break;
+        case TEMPORARY:
+          break;
+        default:
+          assert false : "Illegal ReplicaInfo state.";
         }
       }
+      return new BlockListAsLongs(finalized, uc);
     }
-    return list.toArray(new Block[list.size()]);
   }
 
   /**
@@ -1365,6 +1380,19 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
     }
     return list;
+  }
+
+  /**
+   * Get the list of finalized blocks from in-memory blockmap.
+   */
+  synchronized List<Block> getFinalizedBlocks() {
+    ArrayList<Block> finalized = new ArrayList<Block>(volumeMap.size());
+    for (ReplicaInfo b : volumeMap.replicas()) {
+      if(b.getState() == ReplicaState.FINALIZED) {
+        finalized.add(new Block(b));
+      }
+    }
+    return finalized;
   }
 
   /**

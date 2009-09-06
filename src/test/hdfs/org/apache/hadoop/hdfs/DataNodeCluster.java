@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -200,7 +201,7 @@ public class DataNodeCluster {
           }
           for (int i = 1; i <= replication; ++i) { 
             // inject blocks for dn_i into dn_i and replica in dn_i's neighbors 
-            mc.injectBlocks((i_dn + i- 1)% numDataNodes, blocks);
+            mc.injectBlocks((i_dn + i- 1)% numDataNodes, Arrays.asList(blocks));
             System.out.println("Injecting blocks of dn " + i_dn  + " into dn" + 
                 ((i_dn + i- 1)% numDataNodes));
           }

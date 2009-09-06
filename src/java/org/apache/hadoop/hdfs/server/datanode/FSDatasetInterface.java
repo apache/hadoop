@@ -29,6 +29,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
@@ -225,7 +226,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * Returns the block report - the full list of blocks stored
    * @return - the block report - the full list of blocks stored
    */
-  public Block[] getBlockReport();
+  public BlockListAsLongs getBlockReport();
 
   /**
    * Is the block valid?

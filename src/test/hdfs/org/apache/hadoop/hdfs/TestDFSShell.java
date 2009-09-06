@@ -1094,7 +1094,7 @@ public class TestDFSShell extends TestCase {
   static List<File> getBlockFiles(MiniDFSCluster cluster) throws IOException {
     List<File> files = new ArrayList<File>();
     List<DataNode> datanodes = cluster.getDataNodes();
-    Block[][] blocks = cluster.getAllBlockReports();
+    Iterable<Block>[] blocks = cluster.getAllBlockReports();
     for(int i = 0; i < blocks.length; i++) {
       FSDataset ds = (FSDataset)datanodes.get(i).getFSDataset();
       for(Block b : blocks[i]) {

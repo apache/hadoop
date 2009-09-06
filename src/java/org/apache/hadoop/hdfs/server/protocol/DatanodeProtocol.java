@@ -35,10 +35,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 20: SendHeartbeat may return KeyUpdateCommand
-   *     Register returns access keys inside DatanodeRegistration object
+   * 21: blockReport() includes under-construction replicas.
    */
-  public static final long versionID = 20L;
+  public static final long versionID = 21L;
   
   // error code
   final static int NOTIFY = 0;

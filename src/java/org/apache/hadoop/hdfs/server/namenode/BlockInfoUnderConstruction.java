@@ -32,23 +32,72 @@ class BlockInfoUnderConstruction extends BlockInfo {
   private BlockUCState blockUCState;
 
   /**
-   * Block replica locations as assigned when the block was allocated.
+   * Block replicas as assigned when the block was allocated.
    * This defines the pipeline order.
-   * It is not guaranteed that data-nodes actually have corresponding replicas.
    */
-  private DatanodeDescriptor[] locations;
-
-  /**
-   * Block replica states.
-   * Replica at locations[i] has state replicaStates[i].
-   */
-  private ReplicaState[] replicaStates;
+  private ReplicaUnderConstruction[] replicas;
 
   /** A data-node responsible for block recovery. */
   private int primaryNodeIndex = -1;
 
   /** The last time the block was recovered. */
   private long lastRecoveryTime = 0;
+
+  /**
+   * ReplicaUnderConstruction contains information about replicas while
+   * they are under construction.
+   * The GS, the length and the state of the replica is as reported by 
+   * the data-node.
+   * It is not guaranteed, but expected, that data-nodes actually have
+   * corresponding replicas.
+   */
+  static class ReplicaUnderConstruction extends Block {
+    private DatanodeDescriptor expectedLocation;
+    private ReplicaState state;
+
+    ReplicaUnderConstruction(Block block,
+                             DatanodeDescriptor target,
+                             ReplicaState state) {
+      super(block);
+      this.expectedLocation = target;
+      this.state = state;
+    }
+
+    /**
+     * Expected block replica location as assigned when the block was allocated.
+     * This defines the pipeline order.
+     * It is not guaranteed, but expected, that the data-node actually has
+     * the replica.
+     */
+    DatanodeDescriptor getExpectedLocation() {
+      return expectedLocation;
+    }
+
+    /**
+     * Get replica state as reported by the data-node.
+     */
+    ReplicaState getState() {
+      return state;
+    }
+
+    /**
+     * Is data-node the replica belongs to alive.
+     */
+    boolean isAlive() {
+      return expectedLocation.isAlive;
+    }
+
+    @Override // Block
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    @Override // Block
+    public boolean equals(Object obj) {
+      // Sufficient to rely on super's implementation
+      return (this == obj) || super.equals(obj);
+    }
+  }
 
   /**
    * Create block and set its state to
@@ -87,19 +136,27 @@ class BlockInfoUnderConstruction extends BlockInfo {
   }
 
   void setLocations(DatanodeDescriptor[] targets) {
-    this.locations = targets;
     int numLocations = targets == null ? 0 : targets.length;
-    replicaStates = new ReplicaState[numLocations];
+    this.replicas = new ReplicaUnderConstruction[numLocations];
     for(int i = 0; i < numLocations; i++)
-      replicaStates[i] = ReplicaState.RBW;
+      replicas[i] =
+        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW);
   }
 
-  DatanodeDescriptor[] getLocations() {
+  /**
+   * Create array of expected replica locations
+   * (as has been assigned by chooseTargets()).
+   */
+  private DatanodeDescriptor[] getExpectedLocations() {
+    int numLocations = replicas == null ? 0 : replicas.length;
+    DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
+    for(int i = 0; i < numLocations; i++)
+      locations[i] = replicas[i].getExpectedLocation();
     return locations;
   }
 
   int getNumLocations() {
-    return locations == null ? 0 : locations.length;
+    return replicas == null ? 0 : replicas.length;
   }
 
   /**
@@ -134,18 +191,19 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * Find the first alive data-node starting from the previous primary.
    */
   void assignPrimaryDatanode() {
-    if (locations.length == 0) {
+    if (replicas.length == 0) {
       NameNode.stateChangeLog.warn("BLOCK*"
         + " INodeFileUnderConstruction.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
 
     int previous = primaryNodeIndex;
-    for(int i = 1; i <= locations.length; i++) {
-      int j = (previous + i)%locations.length;
-      if (locations[j].isAlive) {
-        DatanodeDescriptor primary = locations[primaryNodeIndex = j]; 
-        primary.addBlockToBeRecovered(this, locations);
+    for(int i = 1; i <= replicas.length; i++) {
+      int j = (previous + i)%replicas.length;
+      if (replicas[j].isAlive()) {
+        primaryNodeIndex = j;
+        DatanodeDescriptor primary = replicas[j].getExpectedLocation(); 
+        primary.addBlockToBeRecovered(this, getExpectedLocations());
         NameNode.stateChangeLog.info("BLOCK* " + this
           + " recovery started, primary=" + primary);
         return;

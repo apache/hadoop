@@ -4,6 +4,8 @@ Append branch (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HDFS-576. Block report includes under-construction replicas. (shv)
+
   NEW FEATURES
 
     HDFS-536. Support hflush at DFSClient. (hairong)

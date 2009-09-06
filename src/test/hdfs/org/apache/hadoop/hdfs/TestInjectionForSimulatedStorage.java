@@ -151,7 +151,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, 20);
 
       
-      Block[][] blocksList = cluster.getAllBlockReports();
+      Iterable<Block>[] blocksList = cluster.getAllBlockReports();
                     
       
       cluster.shutdown();
@@ -174,15 +174,14 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       cluster.waitActive();
       Set<Block> uniqueBlocks = new HashSet<Block>();
       for (int i=0; i<blocksList.length; ++i) {
-        for (int j=0; j < blocksList[i].length; ++j) {
-          uniqueBlocks.add(blocksList[i][j]);
+        for (Block b : blocksList[i]) {
+          uniqueBlocks.add(new Block(b));
         }
       }
       // Insert all the blocks in the first data node
       
       LOG.info("Inserting " + uniqueBlocks.size() + " blocks");
-      Block[] blocks = uniqueBlocks.toArray(new Block[uniqueBlocks.size()]);
-      cluster.injectBlocks(0, blocks);
+      cluster.injectBlocks(0, uniqueBlocks);
       
       dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                   cluster.getNameNodePort()),

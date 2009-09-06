@@ -102,15 +102,16 @@ public class TestBlockReport {
     // mock with newly created blocks
     // I can't use DFSTestUtil.getAllBlocks(fs.open(filePath)) because it
     // will keep the file open which will prevent the effect of the test
-    Block[] blocks = locatedToBlocks(cluster.getNameNode().getBlockLocations(
+    ArrayList<Block> blocks = 
+      locatedToBlocks(cluster.getNameNode().getBlockLocations(
         filePath.toString(), FILE_START,
         AppendTestUtil.FILE_SIZE).getLocatedBlocks(), null);
 
-    LOG.info("Number of blocks allocated " + blocks.length);
-    int[] newLengths = new int[blocks.length];
+    LOG.info("Number of blocks allocated " + blocks.size());
+    int[] newLengths = new int[blocks.size()];
     int tempLen;
-    for (int i = 0; i < blocks.length; i++) {
-      Block b = blocks[i];
+    for (int i = 0; i < blocks.size(); i++) {
+      Block b = blocks.get(i);
       LOG.debug("Block " + b.getBlockName() + " before\t" + "Size " +
           b.getNumBytes());
       LOG.debug("Setting new length");
@@ -122,7 +123,7 @@ public class TestBlockReport {
     }
     cluster.getNameNode().blockReport(
         cluster.listDataNodes()[DN_N0].dnRegistration,
-        BlockListAsLongs.convertToArrayLongs(blocks));
+        new BlockListAsLongs(blocks, null).getBlockListAsLongs());
 
     List<LocatedBlock> blocksAfterReport =
         DFSTestUtil.getAllBlocks(fs.open(filePath));
@@ -174,7 +175,7 @@ public class TestBlockReport {
     for (Integer aRemovedIndex : removedIndex) {
       blocks2Remove.add(lBlocks.get(aRemovedIndex).getBlock());
     }
-    Block[] blocks = locatedToBlocks(lBlocks, removedIndex);
+    ArrayList<Block> blocks = locatedToBlocks(lBlocks, removedIndex);
 
     LOG.debug("Number of blocks allocated " + lBlocks.size());
 
@@ -195,7 +196,7 @@ public class TestBlockReport {
 
     cluster.getNameNode().blockReport(
         cluster.listDataNodes()[DN_N0].dnRegistration,
-        BlockListAsLongs.convertToArrayLongs(blocks));
+        new BlockListAsLongs(blocks, null).getBlockListAsLongs());
 
     cluster.getNamesystem().computeDatanodeWork();
 
@@ -217,8 +218,8 @@ public class TestBlockReport {
         blocks2Remove.size(), cluster.getNamesystem().getUnderReplicatedBlocks());
   }
 
-  private Block[] locatedToBlocks(final List<LocatedBlock> locatedBlks,
-                                  List<Integer> positionsToRemove) {
+  private ArrayList<Block> locatedToBlocks(final List<LocatedBlock> locatedBlks,
+                                           List<Integer> positionsToRemove) {
     int substructLen = 0;
     if (positionsToRemove != null) { // Need to allocated smaller array
       substructLen = positionsToRemove.size();
@@ -232,7 +233,7 @@ public class TestBlockReport {
       }
       newList.add(locatedBlks.get(i).getBlock());
     }
-    return newList.toArray(ret);
+    return newList;
   }
 
   private List<File> findAllFiles(File top, FilenameFilter mask) {

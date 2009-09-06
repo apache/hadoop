@@ -72,7 +72,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
   }
 
   @Override   //ReplicaInfo
-  ReplicaState getState() {
+  public ReplicaState getState() {
     return ReplicaState.RBW;
   }
   

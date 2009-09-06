@@ -60,7 +60,7 @@ class ReplicaWaitingToBeRecovered extends ReplicaInfo {
   }
   
   @Override //ReplicaInfo
-  ReplicaState getState() {
+  public ReplicaState getState() {
     return ReplicaState.RWR;
   }
   
