@@ -308,8 +308,18 @@ public class RawLocalFileSystem extends FileSystem {
    * treat existence as an error.
    */
   public boolean mkdirs(Path f) throws IOException {
+    if(f == null) {
+      throw new IllegalArgumentException("mkdirs path arg is null");
+    }
     Path parent = f.getParent();
     File p2f = pathToFile(f);
+    if(parent != null) {
+      File parent2f = pathToFile(parent);
+      if(parent2f != null && parent2f.exists() && !parent2f.isDirectory()) {
+        throw new FileAlreadyExistsException("Parent path is not a directory: " 
+            + parent);
+      }
+    }
     return (parent == null || mkdirs(parent)) &&
       (p2f.mkdir() || p2f.isDirectory());
   }
@@ -318,7 +328,8 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     boolean b = mkdirs(f);
-    setPermission(f, permission);
+    if(b)
+      setPermission(f, permission);
     return b;
   }
   

@@ -972,6 +972,9 @@ Trunk (unreleased changes)
     HADOOP-6199. Move io.map.skip.index property to core-default from mapred.
     (Amareshwari Sriramadasu via cdouglas)
 
+    HADOOP-6229. Attempt to make a directory under an existing file on
+    LocalFileSystem should throw an Exception. (Boris Shkolnik via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

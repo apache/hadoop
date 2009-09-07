@@ -154,4 +154,26 @@ public class TestLocalFileSystem extends TestCase {
     assertEquals(path.makeQualified(fs), status.getPath());
     cleanupFile(fs, path);
   }
+  
+  public void testMkdirs() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    Path test_dir = new Path(TEST_ROOT_DIR, "test_dir");
+    Path test_file = new Path(TEST_ROOT_DIR, "file1");
+    assertTrue(fs.mkdirs(test_dir));
+   
+    writeFile(fs, test_file);
+    // creating dir over a file
+    Path bad_dir = new Path(test_file, "another_dir");
+    
+    try {
+      fs.mkdirs(bad_dir);
+      fail("Failed to detect existing file in path");
+    } catch (FileAlreadyExistsException e) { }
+    
+    try {
+      fs.mkdirs(null);
+      fail("Failed to detect null in mkdir arg");
+    } catch (IllegalArgumentException e) { }
+  }
 }
