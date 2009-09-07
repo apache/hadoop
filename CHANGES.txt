@@ -78,6 +78,9 @@ Trunk (unreleased changes)
     FileNotFoundException if the directory does not exist, rather than letting
     this be implementation-specific. (Jakob Homan via cdouglas)
 
+    HADOOP-6230. Moved process tree and memory calculator related classes
+    from Common to Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the

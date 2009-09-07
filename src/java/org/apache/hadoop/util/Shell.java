@@ -363,7 +363,7 @@ abstract public class Shell {
       this.run();    
     }
 
-    protected String[] getExecString() {
+    public String[] getExecString() {
       return command;
     }
 
