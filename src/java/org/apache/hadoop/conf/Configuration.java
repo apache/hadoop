@@ -44,6 +44,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -181,6 +182,141 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * the key most recently
    */
   private HashMap<String, String> updatingResource;
+  
+  /**
+   * Class to keep the information about the keys which replace the deprecated
+   * ones.
+   * 
+   * This class stores the new keys which replace the deprecated keys and also
+   * gives a provision to have a custom message for each of the deprecated key
+   * that is being replaced. It also provides method to get the appropriate
+   * warning message which can be logged whenever the deprecated key is used.
+   */
+  private static class DeprecatedKeyInfo {
+    private String[] newKeys;
+    private String customMessage;
+    private boolean accessed;
+    DeprecatedKeyInfo(String[] newKeys, String customMessage) {
+      this.newKeys = newKeys;
+      this.customMessage = customMessage;
+      accessed = false;
+    }
+    DeprecatedKeyInfo(String[] newKeys) {
+      this(newKeys, null);
+    }
+
+    /**
+     * Method to provide the warning message. It gives the custom message if
+     * non-null, and default message otherwise.
+     * @param key the associated deprecated key.
+     * @return message that is to be logged when a deprecated key is used.
+     */
+    private final String getWarningMessage(String key) {
+      String warningMessage;
+      if(customMessage == null) {
+        StringBuilder message = new StringBuilder(key);
+        String deprecatedKeySuffix = " is deprecated. Instead, use ";
+        message.append(deprecatedKeySuffix);
+        for (int i = 0; i < newKeys.length; i++) {
+          message.append(newKeys[i]);
+          if(i != newKeys.length-1) {
+            message.append(", ");
+          }
+        }
+        warningMessage = message.toString();
+      }
+      else {
+        warningMessage = customMessage;
+      }
+      accessed = true;
+      return warningMessage;
+    }
+  }
+  
+  /**
+   * Stores the deprecated keys, the new keys which replace the deprecated keys
+   * and custom message(if any provided).
+   */
+  private static Map<String, DeprecatedKeyInfo> deprecatedKeyMap = 
+    new HashMap<String, DeprecatedKeyInfo>();
+  
+  /**
+   * Adds the deprecated key to the deprecation map.
+   * It does not override any existing entries in the deprecation map.
+   * This is to be used only by the developers in order to add deprecation of
+   * keys, and attempts to call this method after loading resources once,
+   * would lead to <tt>UnsupportedOperationException</tt>
+   * @param key
+   * @param newKeys
+   * @param customMessage
+   */
+  public synchronized static void addDeprecation(String key, String[] newKeys,
+      String customMessage) {
+    if (key == null || key.length() == 0 ||
+        newKeys == null || newKeys.length == 0) {
+      throw new IllegalArgumentException();
+    }
+    if (!isDeprecated(key)) {
+      DeprecatedKeyInfo newKeyInfo;
+      if (customMessage == null) {
+        newKeyInfo = new DeprecatedKeyInfo(newKeys);
+      }
+      else {
+        newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
+      }
+      deprecatedKeyMap.put(key, newKeyInfo);
+    }
+  }
+
+  /**
+   * Adds the deprecated key to the deprecation map when no custom message
+   * is provided.
+   * It does not override any existing entries in the deprecation map.
+   * This is to be used only by the developers in order to add deprecation of
+   * keys, and attempts to call this method after loading resources once,
+   * would lead to <tt>UnsupportedOperationException</tt>
+   * 
+   * @param key Key that is to be deprecated
+   * @param newKeys list of keys that take up the values of deprecated key
+   */
+  public synchronized static void addDeprecation(String key, String[] newKeys) {
+    addDeprecation(key, newKeys, null);
+  }
+  
+  /**
+   * checks whether the given <code>key</code> is deprecated.
+   * 
+   * @param key the parameter which is to be checked for deprecation
+   * @return <code>true</code> if the key is deprecated and 
+   *         <code>false</code> otherwise.
+   */
+  private static boolean isDeprecated(String key) {
+    return deprecatedKeyMap.containsKey(key);
+  }
+ 
+  /**
+   * Checks for the presence of the property <code>name</code> in the
+   * deprecation map. Returns the first of the list of new keys if present
+   * in the deprecation map or the <code>name</code> itself.
+   * @param name the property name
+   * @return the first property in the list of properties mapping
+   *         the <code>name</code> or the <code>name</code> itself.
+   */
+  private String handleDeprecation(String name) {
+    if (isDeprecated(name)) {
+      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
+      if (!keyInfo.accessed) {
+        LOG.warn(keyInfo.getWarningMessage(name));
+      }
+      for (String newKey : keyInfo.newKeys) {
+        if(newKey != null) {
+          name = newKey;
+          break;
+        }
+      }
+    }
+    return name;
+  }
   
   static{
     //print deprecation warning if hadoop-site.xml is found in classpath
@@ -405,40 +541,60 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   /**
    * Get the value of the <code>name</code> property, <code>null</code> if
-   * no such property exists.
+   * no such property exists. If the key is deprecated, it returns the value of
+   * the first key which replaces the deprecated key and is not null
    * 
    * Values are processed for <a href="#VariableExpansion">variable expansion</a> 
    * before being returned. 
    * 
    * @param name the property name.
-   * @return the value of the <code>name</code> property, 
+   * @return the value of the <code>name</code> or its replacing property, 
    *         or null if no such property exists.
    */
   public String get(String name) {
+    name = handleDeprecation(name);
     return substituteVars(getProps().getProperty(name));
   }
 
   /**
    * Get the value of the <code>name</code> property, without doing
-   * <a href="#VariableExpansion">variable expansion</a>.
+   * <a href="#VariableExpansion">variable expansion</a>.If the key is 
+   * deprecated, it returns the value of the first key which replaces 
+   * the deprecated key and is not null.
    * 
    * @param name the property name.
-   * @return the value of the <code>name</code> property, 
-   *         or null if no such property exists.
+   * @return the value of the <code>name</code> property or 
+   *         its replacing property and null if no such property exists.
    */
   public String getRaw(String name) {
+    name = handleDeprecation(name);
     return getProps().getProperty(name);
   }
 
   /** 
-   * Set the <code>value</code> of the <code>name</code> property.
+   * Set the <code>value</code> of the <code>name</code> property. If 
+   * <code>name</code> is deprecated, it sets the <code>value</code> to the keys
+   * that replace the deprecated key.
    * 
    * @param name property name.
    * @param value property value.
    */
   public void set(String name, String value) {
-    getOverlay().setProperty(name, value);
-    getProps().setProperty(name, value);
+    if (deprecatedKeyMap.isEmpty()) {
+      getProps();
+    }
+    if (!isDeprecated(name)) {
+      getOverlay().setProperty(name, value);
+      getProps().setProperty(name, value);
+    }
+    else {
+      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
+      LOG.warn(keyInfo.getWarningMessage(name));
+      for (String newKey : keyInfo.newKeys) {
+        getOverlay().setProperty(newKey, value);
+        getProps().setProperty(newKey, value);
+      }
+    }
   }
   
   /**
@@ -460,8 +616,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /** 
-   * Get the value of the <code>name</code> property. If no such property 
-   * exists, then <code>defaultValue</code> is returned.
+   * Get the value of the <code>name</code>. If the key is deprecated,
+   * it returns the value of the first key which replaces the deprecated key
+   * and is not null.
+   * If no such property exists,
+   * then <code>defaultValue</code> is returned.
    * 
    * @param name property name.
    * @param defaultValue default value.
@@ -469,6 +628,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         doesn't exist.                    
    */
   public String get(String name, String defaultValue) {
+    name = handleDeprecation(name);
     return substituteVars(getProps().getProperty(name, defaultValue));
   }
     
@@ -1180,8 +1340,110 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     for (Object resource : resources) {
       loadResource(properties, resource, quiet);
     }
+    // process for deprecation.
+    processDeprecation();
+  }
+  
+  /**
+   * Flag to ensure that the classes mentioned in the value of the property
+   * <code>hadoop.conf.extra.classes</code> are loaded only once for
+   * all instances of <code>Configuration</code>
+   */
+  private static AtomicBoolean loadedDeprecation = new AtomicBoolean(false);
+  
+  private static final String extraConfKey = "hadoop.conf.extra.classes";
+
+  /**
+   * adds all the deprecations to the deprecatedKeyMap and updates the values of
+   * the appropriate keys
+   */
+  private void processDeprecation() {
+    populateDeprecationMapping();
+    processDeprecatedKeys();
+  }
+  
+  /**
+   * Loads all the classes in mapred and hdfs that extend Configuration and that
+   * have deprecations to be added into deprecatedKeyMap
+   */
+  private synchronized void populateDeprecationMapping() {
+    if (!loadedDeprecation.get()) {
+      // load classes from mapred and hdfs which extend Configuration and have 
+      // deprecations added in their static blocks
+      String classnames = substituteVars(properties.getProperty(extraConfKey));
+      if (classnames == null) {
+        return;
+      }
+      String[] classes = StringUtils.getStrings(classnames);
+      for (String className : classes) {
+        try {
+          Class.forName(className);
+        } catch (ClassNotFoundException e) {
+          LOG.warn(className + " is not in the classpath");
+        }
+      }
+      // make deprecatedKeyMap unmodifiable in order to prevent changes to 
+      // it in user's code.
+      deprecatedKeyMap = Collections.unmodifiableMap(deprecatedKeyMap);
+      // ensure that deprecation processing is done only once for all 
+      // instances of this object
+      loadedDeprecation.set(true);
+    }
   }
 
+  /**
+   * Updates the keys that are replacing the deprecated keys and removes the 
+   * deprecated keys from memory.
+   */
+  private void processDeprecatedKeys() {
+    for (Map.Entry<String, DeprecatedKeyInfo> item : 
+      deprecatedKeyMap.entrySet()) {
+      if (!properties.containsKey(item.getKey())) {
+        continue;
+      }
+      String oldKey = item.getKey();
+      deprecatedKeyMap.get(oldKey).accessed = false;
+      setDeprecatedValue(oldKey, properties.getProperty(oldKey),
+          finalParameters.contains(oldKey));
+      properties.remove(oldKey);
+      if (finalParameters.contains(oldKey)) {
+        finalParameters.remove(oldKey);
+      }
+      if (storeResource) {
+        updatingResource.remove(oldKey);
+      }
+    }
+  }
+  
+  /**
+   * Sets the deprecated key's value to the associated mapped keys
+   * @param attr the deprecated key
+   * @param value the value corresponding to the deprecated key
+   * @param finalParameter flag to indicate if <code>attr</code> is
+   *        marked as final
+   */
+  private void setDeprecatedValue(String attr,
+      String value, boolean finalParameter) {
+    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
+    for (String key:keyInfo.newKeys) {
+      // update replacing keys with deprecated key's value in all cases,
+      // except when the replacing key is already set to final
+      // and finalParameter is false
+      if (finalParameters.contains(key) && !finalParameter) {
+        LOG.warn("An attempt to override final parameter: "+key
+            +";  Ignoring.");
+        continue;
+      }
+      properties.setProperty(key, value);
+      if (storeResource) {
+        updatingResource.put(key, updatingResource.get(attr));
+      }
+      if (finalParameter) {
+        finalParameters.add(key);
+      }
+    }
+  }
+  
   private void loadResource(Properties properties, Object name, boolean quiet) {
     try {
       DocumentBuilderFactory docBuilderFactory 

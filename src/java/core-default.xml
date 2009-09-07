@@ -486,6 +486,10 @@
   </description>
 </property>
 
-
+<property>
+  <name>hadoop.conf.extra.classes</name>
+  <value>org.apache.hadoop.mapred.JobConf</value>
+  <final>true</final>
+</property>
 
 </configuration>
