@@ -512,7 +512,8 @@ Trunk (unreleased changes)
     HADOOP-6176. Add a couple package private methods to AccessTokenHandler
     for testing.  (Kan Zhang via szetszwo)
 
-    HADOOP-6182. Fix ReleaseAudit warnings (Giridharan Kesavan and Lee Tucker via gkesavan)
+    HADOOP-6182. Fix ReleaseAudit warnings (Giridharan Kesavan and Lee Tucker
+    via gkesavan)
 
     HADOOP-6173. Change src/native/packageNativeHadoop.sh to package all
     native library files.  (Hong Tang via szetszwo)
@@ -525,6 +526,10 @@ Trunk (unreleased changes)
 
     HADOOP-6231. Allow caching of filesystem instances to be disabled on a
     per-instance basis. (tomwhite)
+
+    HADOOP-6133. Add a caching layer to Configuration::getClassByName to
+    alleviate a performance regression introduced in a compatibility layer.
+    (Todd Lipcon via cdouglas)
 
   OPTIMIZATIONS
 

@@ -170,6 +170,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   private static final ArrayList<String> defaultResources = 
     new ArrayList<String>();
+
+  private static final Map<ClassLoader, Map<String, Class<?>>>
+    CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, Class<?>>>();
   
   /**
    * Flag to indicate if the storage of resource which updates a key needs 
@@ -1029,7 +1032,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws ClassNotFoundException if the class is not found.
    */
   public Class<?> getClassByName(String name) throws ClassNotFoundException {
-    return Class.forName(name, true, classLoader);
+    Map<String, Class<?>> map;
+    
+    synchronized (CACHE_CLASSES) {
+      map = CACHE_CLASSES.get(classLoader);
+      if (map == null) {
+        map = Collections.synchronizedMap(
+          new WeakHashMap<String, Class<?>>());
+        CACHE_CLASSES.put(classLoader, map);
+      }
+    }
+
+    Class clazz = map.get(name);
+    if (clazz == null) {
+      clazz = Class.forName(name, true, classLoader);
+      if (clazz != null) {
+        // two putters can race here, but they'll put the same class
+        map.put(name, clazz);
+      }
+    }
+
+    return clazz;
   }
 
   /** 
