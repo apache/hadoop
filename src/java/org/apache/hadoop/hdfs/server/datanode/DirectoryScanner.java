@@ -113,7 +113,7 @@ public class DirectoryScanner {
 
     @Override // Object
     public int hashCode() {
-      return 37 * 17 + (int) (blockId^(blockId>>>32));
+      return (int)(blockId^(blockId>>>32));
     }
 
     public long getGenStamp() {

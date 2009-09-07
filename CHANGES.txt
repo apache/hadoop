@@ -128,6 +128,9 @@ Trunk (unreleased changes)
     HDFS-551. Create new functional test for a block report. (Konstantin
     Boudnik via hairong)
 
+    HDFS-288. Redundant computation in hashCode() implementation.
+    (szetszwo via tomwhite)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 

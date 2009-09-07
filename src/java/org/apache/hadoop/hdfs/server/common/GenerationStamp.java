@@ -109,6 +109,6 @@ public class GenerationStamp implements WritableComparable<GenerationStamp> {
 
   /** {@inheritDoc} */
   public int hashCode() {
-    return 37 * 17 + (int) (genstamp^(genstamp>>>32));
+    return (int) (genstamp^(genstamp>>>32));
   }
 }
