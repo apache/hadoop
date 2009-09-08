@@ -181,6 +181,10 @@ Trunk (unreleased changes)
     HADOOP-6235. Adds new method to FileSystem for clients to get server
     defaults. (Kan Zhang via suresh)
 
+    HADOOP-6234. Add new option dfs.umaskmode to set umask in configuration
+    to use octal or symbolic instead of decimal. (Jakob Homan via suresh)
+
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
