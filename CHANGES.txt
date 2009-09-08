@@ -987,6 +987,9 @@ Trunk (unreleased changes)
     HADOOP-6243. Fix a NullPointerException in processing deprecated keys.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HADOOP-6009. S3N listStatus incorrectly returns null instead of empty
+    array when called on empty root. (Ian Nowland via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
