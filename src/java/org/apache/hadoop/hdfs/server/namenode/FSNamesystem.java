@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocat
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.Server;
@@ -200,8 +201,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private long heartbeatExpireInterval;
   //replicationRecheckInterval is how often namenode checks for new replication work
   private long replicationRecheckInterval;
-  // default block size of a file
-  private long defaultBlockSize = 0;
+  private FsServerDefaults serverDefaults;
   // allow appending to hdfs files
   private boolean supportAppends = true;
 
@@ -413,7 +413,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       10 * heartbeatInterval;
     this.replicationRecheckInterval = 
       conf.getInt("dfs.replication.interval", 3) * 1000L;
-    this.defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    this.serverDefaults = new FsServerDefaults(
+        conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE),
+        conf.getInt("io.bytes.per.checksum", DEFAULT_BYTES_PER_CHECKSUM),
+        conf.getInt("dfs.write.packet.size", DEFAULT_WRITE_PACKET_SIZE),
+        (short) conf.getInt("dfs.replication", DEFAULT_REPLICATION_FACTOR),
+        conf.getInt("io.file.buffer.size", DEFAULT_FILE_BUFFER_SIZE));
     this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
     this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
                                          20*(int)(heartbeatInterval/1000));
@@ -505,7 +510,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   long getDefaultBlockSize() {
-    return defaultBlockSize;
+    return serverDefaults.getBlockSize();
+  }
+
+  FsServerDefaults getServerDefaults() {
+    return serverDefaults;
   }
 
   long getAccessTimePrecision() {

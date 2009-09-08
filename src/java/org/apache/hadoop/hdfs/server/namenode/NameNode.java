@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -543,6 +544,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       clientMachine = "";
     }
     return clientMachine;
+  }
+
+  /** {@inheritDoc} */
+  public FsServerDefaults getServerDefaults() throws IOException {
+    return namesystem.getServerDefaults();
   }
 
   /** {@inheritDoc} */

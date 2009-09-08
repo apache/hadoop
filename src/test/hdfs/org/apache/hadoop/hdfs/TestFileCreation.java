@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.log4j.Level;
 
 
@@ -168,6 +170,33 @@ public class TestFileCreation extends junit.framework.TestCase {
     stm.readFully(0, actual);
     checkData(actual, 0, expected, "Read 2");
     stm.close();
+  }
+
+  /**
+   * Test that server default values can be retrieved on the client side
+   */
+  public void testServerDefaults() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setLong("dfs.block.size", FSConstants.DEFAULT_BLOCK_SIZE);
+    conf.setInt("io.bytes.per.checksum", FSConstants.DEFAULT_BYTES_PER_CHECKSUM);
+    conf.setInt("dfs.write.packet.size", FSConstants.DEFAULT_WRITE_PACKET_SIZE);
+    conf.setInt("dfs.replication", FSConstants.DEFAULT_REPLICATION_FACTOR + 1);
+    conf.setInt("io.file.buffer.size", FSConstants.DEFAULT_FILE_BUFFER_SIZE);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf,
+        FSConstants.DEFAULT_REPLICATION_FACTOR + 1, true, null);
+    cluster.waitActive();
+    FileSystem fs = cluster.getFileSystem();
+    try {
+      FsServerDefaults serverDefaults = fs.getServerDefaults();
+      assertEquals(FSConstants.DEFAULT_BLOCK_SIZE, serverDefaults.getBlockSize());
+      assertEquals(FSConstants.DEFAULT_BYTES_PER_CHECKSUM, serverDefaults.getBytesPerChecksum());
+      assertEquals(FSConstants.DEFAULT_WRITE_PACKET_SIZE, serverDefaults.getWritePacketSize());
+      assertEquals(FSConstants.DEFAULT_REPLICATION_FACTOR + 1, serverDefaults.getReplication());
+      assertEquals(FSConstants.DEFAULT_FILE_BUFFER_SIZE, serverDefaults.getFileBufferSize());
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
   }
 
   /**

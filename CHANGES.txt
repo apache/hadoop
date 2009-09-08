@@ -22,6 +22,9 @@ Trunk (unreleased changes)
     HDFS-492. Add two JSON JSP pages to the Namenode for providing corrupt
     blocks/replicas information.  (Bill Zeller via szetszwo)
 
+    HDFS-578. Add support for new FileSystem method for clients to get server
+    defaults. (Kan Zhang via suresh)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file

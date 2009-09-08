@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -43,9 +44,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 45: add create flag for create command, see Hadoop-5438
+   * 46: added a new method getServerDefaults(), see HDFS-578
    */
-  public static final long versionID = 45L;
+  public static final long versionID = 46L;
   
   ///////////////////////////////////////
   // File contents
@@ -72,6 +73,13 @@ public interface ClientProtocol extends VersionedProtocol {
   public LocatedBlocks  getBlockLocations(String src,
                                           long offset,
                                           long length) throws IOException;
+
+  /**
+   * Get server default values for a number of configuration params.
+   * @return a set of server default configuration values
+   * @throws IOException
+   */
+  public FsServerDefaults getServerDefaults() throws IOException;
 
   /**
    * Create a new file entry in the namespace.

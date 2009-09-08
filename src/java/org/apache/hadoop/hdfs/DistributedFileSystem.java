@@ -434,6 +434,12 @@ public class DistributedFileSystem extends FileSystem {
     dfs.metaSave(pathname);
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    return dfs.getServerDefaults();
+  }
+
   /**
    * We need to find the blocks that didn't match.  Likely only one 
    * is corrupt but we will report both to the namenode.  In the future,
