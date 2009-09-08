@@ -59,6 +59,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
+import org.apache.hadoop.hdfs.ByteRangeInputStream;
+
+
 
 /** An implementation of a protocol for accessing filesystems over HTTP.
  * The following implementation provides a limited, read-only interface
@@ -115,6 +118,30 @@ public class HftpFileSystem extends FileSystem {
     } 
   }
 
+
+  /* 
+    Construct URL pointing to file on namenode
+  */
+  URL getNamenodeFileURL(Path f) throws IOException {
+    return getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi);
+  }
+
+  /* 
+    Construct URL pointing to namenode. 
+  */
+  URL getNamenodeURL(String path, String query) throws IOException {
+    try {
+      final URL url = new URI("http", null, nnAddr.getHostName(),
+          nnAddr.getPort(), path, query, null).toURL();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("url=" + url);
+      }
+      return url;
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
   /**
    * Open an HTTP connection to the namenode to read file data and metadata.
    * @param path The path component of the URL
@@ -122,48 +149,17 @@ public class HftpFileSystem extends FileSystem {
    */
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
-    try {
-      final URL url = new URI("http", null, nnAddr.getHostName(),
-          nnAddr.getPort(), path, query, null).toURL();
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("url=" + url);
-      }
-      HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-      connection.setRequestMethod("GET");
-      connection.connect();
-      return connection;
-    } catch (URISyntaxException e) {
-      throw (IOException)new IOException().initCause(e);
-    }
+    final URL url = getNamenodeURL(path, query);
+    HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+    connection.setRequestMethod("GET");
+    connection.connect();
+    return connection;
   }
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
-    HttpURLConnection connection = null;
-    connection = openConnection("/data" + f.toUri().getPath(), "ugi=" + ugi);
-    final InputStream in = connection.getInputStream();
-    return new FSDataInputStream(new FSInputStream() {
-        public int read() throws IOException {
-          return in.read();
-        }
-        public int read(byte[] b, int off, int len) throws IOException {
-          return in.read(b, off, len);
-        }
-
-        public void close() throws IOException {
-          in.close();
-        }
-
-        public void seek(long pos) throws IOException {
-          throw new IOException("Can't seek!");
-        }
-        public long getPos() throws IOException {
-          throw new IOException("Position unknown!");
-        }
-        public boolean seekToNewSource(long targetPos) throws IOException {
-          return false;
-        }
-      });
+    URL u = getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi);
+    return new FSDataInputStream(new ByteRangeInputStream(u));
   }
 
   /** Class to parse and store a listing reply from the server. */

@@ -31,6 +31,9 @@ Trunk (unreleased changes)
     HADOOP-6234. Updated hadoop-core and test jars to propagate new option 
     dfs.umaskmode in configuration. (Jakob Homan via suresh)
 
+    HDFS-235. Add support for byte ranges in HftpFileSystem to serve
+    range of bytes from a file. (Bill Zeller via suresh)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
