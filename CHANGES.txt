@@ -205,6 +205,9 @@ Trunk (unreleased changes)
     HDFS-586. TestBlocksWithNotEnoughRacks sometimes fails.
     (Jitendra Nath Pandey via hairong)
 
+    HADOOP-6243. Fixed a NullPointerException in handling deprecated keys.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
