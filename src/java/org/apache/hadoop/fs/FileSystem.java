@@ -365,6 +365,20 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
   
   /**
+   * Return a set of server default configuration values
+   * @return server default configuration values
+   * @throws IOException
+   */
+  public FsServerDefaults getServerDefaults() throws IOException {
+    Configuration conf = getConf();
+    return new FsServerDefaults(getDefaultBlockSize(), 
+        conf.getInt("io.bytes.per.checksum", 512), 
+        64 * 1024, 
+        getDefaultReplication(), 
+        conf.getInt("io.file.buffer.size", 4096));
+  }
+
+  /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.

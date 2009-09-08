@@ -178,6 +178,9 @@ Trunk (unreleased changes)
     HADOOP-6105. Adds support for automatically handling deprecation of
     configuration keys. (V.V.Chaitanya Krishna via yhemanth)
     
+    HADOOP-6235. Adds new method to FileSystem for clients to get server
+    defaults. (Kan Zhang via suresh)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
