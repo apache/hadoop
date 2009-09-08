@@ -28,7 +28,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * 
  * This is the JMX MBean for reporting the DataNode Activity.
  * The MBean is register using the name
- *        "hadoop:service=DataNode,name=DataNodeActivity-<storageid>"
+ *        "hadoop:service=DataNode,name=DataNodeActivity-<hostname>-<portNumber>"
  * 
  * Many of the activity metrics are sampled and averaged on an interval 
  * which can be specified in the metrics config file.
@@ -57,15 +57,17 @@ public class DataNodeActivityMBean extends MetricsDynamicMBeanBase {
   final private ObjectName mbeanName;
   private Random rand = new Random(); 
 
-  public DataNodeActivityMBean(final MetricsRegistry mr, final String storageId) {
+  public DataNodeActivityMBean(final MetricsRegistry mr,
+      final String datanodeName) {
     super(mr, "Activity statistics at the DataNode");
-    String storageName;
-    if (storageId.equals("")) {// Temp fix for the uninitialized storage
-      storageName = "UndefinedStorageId" + rand.nextInt();
+    String name;
+    if (datanodeName.equals("")) {// Temp fix for the uninitialized name
+      name = "UndefinedDataNodeName" + rand.nextInt();
     } else {
-      storageName = storageId;
+      name = datanodeName.replace(":", "-");
     }
-    mbeanName = MBeanUtil.registerMBean("DataNode", "DataNodeActivity-" + storageName, this);
+    mbeanName = MBeanUtil.registerMBean("DataNode",
+	"DataNodeActivity-" + name, this);
   }
   
 

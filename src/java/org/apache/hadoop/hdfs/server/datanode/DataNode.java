@@ -380,7 +380,7 @@ public class DataNode extends Configured
     this.infoServer.start();
     // adjust info port
     this.dnRegistration.setInfoPort(this.infoServer.getPort());
-    myMetrics = new DataNodeMetrics(conf, dnRegistration.getStorageID());
+    myMetrics = new DataNodeMetrics(conf, dnRegistration.getName());
     
     // set service-level authorization security policy
     if (conf.getBoolean(
