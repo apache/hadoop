@@ -336,6 +336,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     addDefaultResource("core-default.xml");
     addDefaultResource("core-site.xml");
+    //Add code for managing deprecated key mapping
+    //for example
+    //addDeprecation("oldKey1",new String[]{"newkey1","newkey2"});
+    //adds deprecation for oldKey1 to two new keys(newkey1, newkey2).
+    //so get or set of oldKey1 will correctly populate/access values of 
+    //newkey1 and newkey2
   }
   
   private Properties properties;
@@ -1364,56 +1370,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       loadResource(properties, resource, quiet);
     }
     // process for deprecation.
-    processDeprecation();
-  }
-  
-  /**
-   * Flag to ensure that the classes mentioned in the value of the property
-   * <code>hadoop.conf.extra.classes</code> are loaded only once for
-   * all instances of <code>Configuration</code>
-   */
-  private static AtomicBoolean loadedDeprecation = new AtomicBoolean(false);
-  
-  private static final String extraConfKey = "hadoop.conf.extra.classes";
-
-  /**
-   * adds all the deprecations to the deprecatedKeyMap and updates the values of
-   * the appropriate keys
-   */
-  private void processDeprecation() {
-    populateDeprecationMapping();
     processDeprecatedKeys();
   }
-  
-  /**
-   * Loads all the classes in mapred and hdfs that extend Configuration and that
-   * have deprecations to be added into deprecatedKeyMap
-   */
-  private synchronized void populateDeprecationMapping() {
-    if (!loadedDeprecation.get()) {
-      // load classes from mapred and hdfs which extend Configuration and have 
-      // deprecations added in their static blocks
-      String classnames = substituteVars(properties.getProperty(extraConfKey));
-      if (classnames == null) {
-        return;
-      }
-      String[] classes = StringUtils.getStrings(classnames);
-      for (String className : classes) {
-        try {
-          Class.forName(className);
-        } catch (ClassNotFoundException e) {
-          LOG.warn(className + " is not in the classpath");
-        }
-      }
-      // make deprecatedKeyMap unmodifiable in order to prevent changes to 
-      // it in user's code.
-      deprecatedKeyMap = Collections.unmodifiableMap(deprecatedKeyMap);
-      // ensure that deprecation processing is done only once for all 
-      // instances of this object
-      loadedDeprecation.set(true);
-    }
-  }
-
   /**
    * Updates the keys that are replacing the deprecated keys and removes the 
    * deprecated keys from memory.

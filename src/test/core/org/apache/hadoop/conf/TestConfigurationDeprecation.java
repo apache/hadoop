@@ -81,30 +81,27 @@ public class TestConfigurationDeprecation {
     out.write("</property>\n");
   }
   
-  static class MyConf extends Configuration {
-    static {
-      // add deprecation mappings.
-      Configuration.addDeprecation("old.key1", new String[]{"new.key1"});
-      Configuration.addDeprecation("old.key2", new String[]{"new.key2"});
-      Configuration.addDeprecation("old.key3", new String[]{"new.key3"});
-      Configuration.addDeprecation("old.key4", new String[]{"new.key4"});
-      Configuration.addDeprecation("old.key5", new String[]{"new.key5"});
-      Configuration.addDeprecation("old.key6", new String[]{"new.key6"});
-      Configuration.addDeprecation("old.key7", new String[]{"new.key7"});
-      Configuration.addDeprecation("old.key8", new String[]{"new.key8"});
-      Configuration.addDeprecation("old.key9", new String[]{"new.key9"});
-      Configuration.addDeprecation("old.key10", new String[]{"new.key10"});
-      Configuration.addDeprecation("old.key11", new String[]{"new.key11"});
-      Configuration.addDeprecation("old.key12", new String[]{"new.key12"});
-      Configuration.addDeprecation("old.key13", new String[]{"new.key13"});
-      Configuration.addDeprecation("old.key14", new String[]{"new.key14"});
-      Configuration.addDeprecation("old.key15", new String[]{"new.key15"});
-      Configuration.addDeprecation("old.key16", new String[]{"new.key16"});
-      Configuration.addDeprecation("A", new String[]{"B"});
-      Configuration.addDeprecation("C", new String[]{"D"});
-      Configuration.addDeprecation("E", new String[]{"F"});
-      Configuration.addDeprecation("G", new String[]{"H","I"});
-    }
+  private void addDeprecationToConfiguration() {
+    Configuration.addDeprecation("old.key1", new String[]{"new.key1"});
+    Configuration.addDeprecation("old.key2", new String[]{"new.key2"});
+    Configuration.addDeprecation("old.key3", new String[]{"new.key3"});
+    Configuration.addDeprecation("old.key4", new String[]{"new.key4"});
+    Configuration.addDeprecation("old.key5", new String[]{"new.key5"});
+    Configuration.addDeprecation("old.key6", new String[]{"new.key6"});
+    Configuration.addDeprecation("old.key7", new String[]{"new.key7"});
+    Configuration.addDeprecation("old.key8", new String[]{"new.key8"});
+    Configuration.addDeprecation("old.key9", new String[]{"new.key9"});
+    Configuration.addDeprecation("old.key10", new String[]{"new.key10"});
+    Configuration.addDeprecation("old.key11", new String[]{"new.key11"});
+    Configuration.addDeprecation("old.key12", new String[]{"new.key12"});
+    Configuration.addDeprecation("old.key13", new String[]{"new.key13"});
+    Configuration.addDeprecation("old.key14", new String[]{"new.key14"});
+    Configuration.addDeprecation("old.key15", new String[]{"new.key15"});
+    Configuration.addDeprecation("old.key16", new String[]{"new.key16"});
+    Configuration.addDeprecation("A", new String[]{"B"});
+    Configuration.addDeprecation("C", new String[]{"D"});
+    Configuration.addDeprecation("E", new String[]{"F"});
+    Configuration.addDeprecation("G", new String[]{"H","I"});
   }
   
   /**
@@ -123,8 +120,6 @@ public class TestConfigurationDeprecation {
   public void testDeprecation() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
-    appendProperty("hadoop.conf.extra.classes", MyConf.class.getName()
-        + ",myconf1");
     // load keys with default values. Some of them are set to final to
     // test the precedence order between deprecation and being final
     appendProperty("new.key1","default.value1",true);
@@ -145,6 +140,7 @@ public class TestConfigurationDeprecation {
     appendProperty("new.key16","default.value16");
     endConfig();
     Path fileResource = new Path(CONFIG);
+    addDeprecationToConfiguration();
     conf.addResource(fileResource);
     
     out=new BufferedWriter(new FileWriter(CONFIG2));

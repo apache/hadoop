@@ -984,6 +984,9 @@ Trunk (unreleased changes)
     HADOOP-6229. Attempt to make a directory under an existing file on
     LocalFileSystem should throw an Exception. (Boris Shkolnik via tomwhite)
 
+    HADOOP-6243. Fix a NullPointerException in processing deprecated keys.
+    (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
