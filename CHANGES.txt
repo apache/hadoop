@@ -25,6 +25,9 @@ Trunk (unreleased changes)
     HDFS-578. Add support for new FileSystem method for clients to get server
     defaults. (Kan Zhang via suresh)
 
+    HDFS-595. umask settings in configuration may now use octal or symbolic 
+    instead of decimal. (Jakob Homan via suresh)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
