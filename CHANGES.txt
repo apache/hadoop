@@ -36,7 +36,7 @@ Release 0.21.0 - Unreleased
   OPTIMIZATIONS
 
 
-Release 0.20.0 - Unreleased
+Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
   INCOMPATIBLE CHANGES
    HBASE-1147  Modify the scripts to use Zookeeper
    HBASE-1144  Store the ROOT region location in Zookeeper
