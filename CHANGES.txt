@@ -81,6 +81,10 @@ Trunk (unreleased changes)
     HADOOP-6230. Moved process tree and memory calculator related classes
     from Common to Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
+    and suggests using -skpTrash, when moving to trash fails.
+    (Boris Shkolnik via suresh)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
