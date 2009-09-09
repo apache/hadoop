@@ -67,6 +67,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
@@ -125,12 +126,15 @@ import org.apache.hadoop.util.StringUtils;
  ********************************************************/
 public class DFSClient implements FSConstants, java.io.Closeable {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
+  public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   public static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   private final ClientProtocol namenode;
   private final ClientProtocol rpcNamenode;
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
+  private volatile FsServerDefaults serverDefaults;
+  private volatile long serverDefaultsLastUpdate;
   Random r = new Random();
   final String clientName;
   final LeaseChecker leasechecker = new LeaseChecker();
@@ -326,6 +330,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           StringUtils.stringifyException(ie));
       throw ie;
     }
+  }
+
+  /**
+   * Get server default values for a number of configuration params.
+   */
+  public FsServerDefaults getServerDefaults() throws IOException {
+    long now = System.currentTimeMillis();
+    if (now - serverDefaultsLastUpdate > SERVER_DEFAULTS_VALIDITY_PERIOD) {
+      serverDefaults = namenode.getServerDefaults();
+      serverDefaultsLastUpdate = now;
+    }
+    return serverDefaults;
   }
 
   /**

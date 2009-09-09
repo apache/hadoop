@@ -378,15 +378,6 @@
     </subant>
   </target>
 
-  <target name="run-test-hdfs-with-mr-fault-inject" depends="injectfaults"
-          description="Run hdfs Fault Injection related unit tests that require mapred">
-    <subant buildpath="build.xml" target="run-test-hdfs-with-mr">
-      <property name="build.dir" value="${build-fi.dir}"/>
-      <property name="test.fault.inject" value="yes"/>
-      <property name="test.include" value="TestFi*"/>
-    </subant>
-  </target>
-
   <!-- ================================================================== -->
   <!-- Make hadoop-fi.jar including all Fault Iinjected artifacts         -->
   <!-- ================================================================== -->
@@ -702,16 +693,8 @@
            includes="**/${test.include}.java"
            excludes="**/${test.exclude}.java" />
       </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
-        <fileset dir="${test.src.dir}/aop"
-          includes="**/${test.include}.java"
-          excludes="**/${test.exclude}.java" />
-      </batchtest>
       <batchtest todir="${test.build.dir}" if="tests.testcase">
         <fileset dir="${test.src.dir}/hdfs-with-mr" includes="**/${testcase}.java"/>
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
-        <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
     <antcall target="checkfailure"/>
@@ -737,7 +720,6 @@
     <antcall target="run-test-hdfs"/>
     <antcall target="run-test-hdfs-with-mr"/>
     <antcall target="run-test-hdfs-fault-inject"/>
-    <antcall target="run-test-hdfs-with-mr-fault-inject"/>
     <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail>
   </target>

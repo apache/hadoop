@@ -207,6 +207,6 @@ public class Block implements Writable, Comparable<Block> {
   /** {@inheritDoc} */
   public int hashCode() {
     //GenerationStamp is IRRELEVANT and should not be used here
-    return 37 * 17 + (int) (blockId^(blockId>>>32));
+    return (int)(blockId^(blockId>>>32));
   }
 }

@@ -53,6 +53,10 @@ public interface FSConstants {
   public static final int SMALL_BUFFER_SIZE = Math.min(BUFFER_SIZE/2, 512);
   //TODO mb@media-style.com: should be conf injected?
   public static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
+  public static final int DEFAULT_BYTES_PER_CHECKSUM = 512;
+  public static final int DEFAULT_WRITE_PACKET_SIZE = 64 * 1024;
+  public static final short DEFAULT_REPLICATION_FACTOR = 3;
+  public static final int DEFAULT_FILE_BUFFER_SIZE = 4096;
   public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
 
   public static final int SIZE_OF_INTEGER = Integer.SIZE / Byte.SIZE;

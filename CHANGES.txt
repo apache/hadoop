@@ -62,6 +62,18 @@ Trunk (unreleased changes)
     HDFS-492. Add two JSON JSP pages to the Namenode for providing corrupt
     blocks/replicas information.  (Bill Zeller via szetszwo)
 
+    HDFS-578. Add support for new FileSystem method for clients to get server
+    defaults. (Kan Zhang via suresh)
+
+    HDFS-595. umask settings in configuration may now use octal or symbolic 
+    instead of decimal. (Jakob Homan via suresh)
+
+    HADOOP-6234. Updated hadoop-core and test jars to propagate new option 
+    dfs.umaskmode in configuration. (Jakob Homan via suresh)
+
+    HDFS-235. Add support for byte ranges in HftpFileSystem to serve
+    range of bytes from a file. (Bill Zeller via suresh)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
@@ -168,6 +180,12 @@ Trunk (unreleased changes)
     HDFS-551. Create new functional test for a block report. (Konstantin
     Boudnik via hairong)
 
+    HDFS-288. Redundant computation in hashCode() implementation.
+    (szetszwo via tomwhite)
+
+    HDFS-412. Hadoop JMX usage makes Nagios monitoring impossible.
+    (Brian Bockelman via tomwhite)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
@@ -238,6 +256,12 @@ Trunk (unreleased changes)
  
     HDFS-586. TestBlocksWithNotEnoughRacks sometimes fails.
     (Jitendra Nath Pandey via hairong)
+
+    HADOOP-6243. Fixed a NullPointerException in handling deprecated keys.
+    (Sreekanth Ramakrishnan via yhemanth)
+
+    HDFS-605. Do not run fault injection tests in the run-test-hdfs-with-mr
+    target.  (Konstantin Boudnik via szetszwo)
 
 Release 0.20.1 - Unreleased
 
