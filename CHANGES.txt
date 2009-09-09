@@ -32,6 +32,7 @@ Release 0.21.0 - Unreleased
    HBASE-1276  [testing] Upgrade to JUnit 4.x and use @BeforeClass
                annotations to optimize tests
    HBASE-1800  Too many ZK connections
+   HBASE-1819  Update to 0.20.1 hadoop and zk 3.2.1
 
   OPTIMIZATIONS
 
