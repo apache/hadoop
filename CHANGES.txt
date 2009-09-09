@@ -220,6 +220,9 @@ Trunk (unreleased changes)
     HADOOP-6243. Fixed a NullPointerException in handling deprecated keys.
     (Sreekanth Ramakrishnan via yhemanth)
 
+    HDFS-605. Do not run fault injection tests in the run-test-hdfs-with-mr
+    target.  (Konstantin Boudnik via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
