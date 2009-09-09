@@ -1832,14 +1832,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
   }
 
-  /**
-   * Get reference to the replica meta info in the replicasMap. 
-   * To be called from methods that
-   * are synchronized on {@link FSDataset}
-   * @param blockId
-   * @return replica's meta information from the replicas map
-   */
-  ReplicaInfo getBlock(long blockId) {
+  @Override
+  public ReplicaInfo getReplica(long blockId) {
     assert(Thread.holdsLock(this));
     return volumeMap.get(blockId);
   }

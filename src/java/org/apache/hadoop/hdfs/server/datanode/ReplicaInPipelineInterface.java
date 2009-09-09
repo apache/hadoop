@@ -24,13 +24,7 @@ import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStrea
 /** 
  * This defines the interface of a replica in Pipeline that's being written to
  */
-interface ReplicaInPipelineInterface {
-  /**
-   * Get the number of bytes received
-   * @return the number of bytes that have been received
-   */
-  long getNumBytes();
-  
+interface ReplicaInPipelineInterface extends Replica {
   /**
    * Set the number of bytes received
    * @param bytesReceived number of bytes received
@@ -48,12 +42,6 @@ interface ReplicaInPipelineInterface {
    * @param bytesAcked
    */
   void setBytesAcked(long bytesAcked);
-  
-  /**
-   * Get the number of bytes that have written to disk
-   * @return the number of bytes that have written to disk
-   */
-  long getBytesOnDisk();
   
   /**
    * Set the number of bytes on disk

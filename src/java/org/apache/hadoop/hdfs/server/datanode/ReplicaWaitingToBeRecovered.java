@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
@@ -75,10 +74,15 @@ class ReplicaWaitingToBeRecovered extends ReplicaInfo {
   }
   
   @Override //ReplicaInfo
-  long getVisibleLen() throws IOException {
+  public long getVisibleLength() {
     return -1;  //no bytes are visible
   }
   
+  @Override
+  public long getBytesOnDisk() {
+    return getNumBytes();
+  }
+
   @Override  // Object
   public boolean equals(Object o) {
     return super.equals(o);
@@ -87,5 +91,11 @@ class ReplicaWaitingToBeRecovered extends ReplicaInfo {
   @Override  // Object
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return super.toString()
+        + "\n  detached=" + detached;
   }
 }

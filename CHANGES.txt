@@ -33,6 +33,9 @@ Append branch (unreleased changes)
     HDFS-543. Break FSDatasetInterface#writToBlock() into writeToRemporary,
     writeToRBW, ad append. (hairong)
 
+    HDFS-603. Add a new interface, Replica, which is going to replace the use
+    of Block in datanode.  (szetszwo)
+
   BUG FIXES
 
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice

@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DataChecksum;
@@ -107,7 +108,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       }
     }
 
-    synchronized long getGenerationStamp() {
+    synchronized public long getGenerationStamp() {
       return theBlock.getGenerationStamp();
     }
 
@@ -207,6 +208,21 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         SimulatedOutputStream crcStream = new SimulatedOutputStream();
         return new BlockWriteStreams(oStream, crcStream);
       }
+    }
+
+    @Override
+    synchronized public long getBlockId() {
+      return theBlock.getBlockId();
+    }
+
+    @Override
+    synchronized public long getVisibleLength() {
+      return getBytesAcked();
+    }
+
+    @Override
+    public ReplicaState getState() {
+      return null;
     }
 
     @Override
@@ -377,6 +393,11 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       throw new IOException("Finalizing a non existing block " + b);
     }
     return binfo.getNumBytes();
+  }
+
+  @Override
+  public Replica getReplica(long blockId) {
+    return blockMap.get(new Block(blockId));
   }
 
   /** {@inheritDoc} */

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.IOException;
+
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
@@ -66,8 +66,8 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
     super( blockId, len, genStamp, vol, dir, writer);
   }
   
-  @Override   //ReplicaInfo
-  long getVisibleLen() throws IOException {
+  @Override
+  public long getVisibleLength() {
     return getBytesAcked();       // all acked bytes are visible
   }
 

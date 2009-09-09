@@ -317,23 +317,21 @@ public class TestDirectoryScanner extends TestCase {
   }
 
   private void verifyAddition(long blockId, long genStamp, long size) {
-    Block memBlock = fds.getBlock(blockId);
-    assertNotNull(memBlock);
-    ReplicaInfo blockInfo;
+    final ReplicaInfo replicainfo;
     synchronized(fds) {
-      blockInfo = fds.volumeMap.get(memBlock);
+      replicainfo = fds.getReplica(blockId);
     }
-    assertNotNull(blockInfo);
+    assertNotNull(replicainfo);
 
     // Added block has the same file as the one created by the test
     File file = new File(getBlockFile(blockId));
-    assertEquals(file.getName(), blockInfo.getBlockFile().getName());
+    assertEquals(file.getName(), replicainfo.getBlockFile().getName());
 
     // Generation stamp is same as that of created file
-    assertEquals(genStamp, memBlock.getGenerationStamp());
+    assertEquals(genStamp, replicainfo.getGenerationStamp());
 
     // File size matches
-    assertEquals(size, memBlock.getNumBytes());
+    assertEquals(size, replicainfo.getNumBytes());
   }
 
   private void verifyDeletion(long blockId) {
@@ -344,9 +342,9 @@ public class TestDirectoryScanner extends TestCase {
   }
 
   private void verifyGenStamp(long blockId, long genStamp) {
-    Block memBlock;
+    final Replica memBlock;
     synchronized(fds) {
-      memBlock = fds.getBlock(blockId);
+      memBlock = fds.getReplica(blockId);
     }
     assertNotNull(memBlock);
     assertEquals(genStamp, memBlock.getGenerationStamp());

@@ -85,10 +85,9 @@ class ReplicaInPipeline extends ReplicaInfo
     this.writer = writer;
   }
 
-  @Override  //ReplicaInfo
-  long getVisibleLen() throws IOException {
-    // no bytes are visible
-    throw new IOException("No bytes are visible for temporary replicas");
+  @Override
+  public long getVisibleLength() {
+    return -1;
   }
   
   @Override  //ReplicaInfo
@@ -172,5 +171,12 @@ class ReplicaInPipeline extends ReplicaInfo
       IOUtils.closeStream(crcOut);
       throw e;
     }
-  }  
+  }
+  
+  @Override
+  public String toString() {
+    return super.toString()
+        + "\n  bytesAcked=" + bytesAcked
+        + "\n  bytesOnDisk=" + bytesOnDisk;
+  }
 }

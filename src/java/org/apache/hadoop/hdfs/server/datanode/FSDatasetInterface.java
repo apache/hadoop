@@ -95,6 +95,14 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public long getLength(Block b) throws IOException;
 
   /**
+   * Get reference to the replica meta info in the replicasMap. 
+   * To be called from methods that are synchronized on {@link FSDataset}
+   * @param blockId
+   * @return replica from the replicas map
+   */
+  public Replica getReplica(long blockId);
+
+  /**
    * @return the generation stamp stored with the block.
    */
   public Block getStoredBlock(long blkid) throws IOException;

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
@@ -101,8 +100,13 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   }
   
   @Override
-  long getVisibleLen() throws IOException {
-    return original.getVisibleLen();
+  public long getVisibleLength() {
+    return original.getVisibleLength();
+  }
+
+  @Override
+  public long getBytesOnDisk() {
+    return original.getBytesOnDisk();
   }
 
   @Override  //org.apache.hadoop.hdfs.protocol.Block
@@ -143,5 +147,12 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   @Override  // Object
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return super.toString()
+        + "\n  recoveryId=" + recoveryId
+        + "\n  original=" + original;
   }
 }

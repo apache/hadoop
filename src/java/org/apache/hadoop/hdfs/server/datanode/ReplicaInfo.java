@@ -25,7 +25,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FileUtil.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.io.IOUtils;
 
@@ -33,7 +32,7 @@ import org.apache.hadoop.io.IOUtils;
  * This class is used by datanodes to maintain meta data of its replicas.
  * It provides a general interface for meta information of a replica.
  */
-abstract public class ReplicaInfo extends Block {
+abstract public class ReplicaInfo extends Block implements Replica {
   private FSVolume volume;      // volume where the replica belongs
   private File     dir;         // directory where block & meta files belong
 
@@ -129,13 +128,6 @@ abstract public class ReplicaInfo extends Block {
     this.dir = dir;
   }
 
-
-  /**
-   * Get the replica state
-   * @return the replica state
-   */
-  abstract public ReplicaState getState();
-  
   /**
    * check if this replica has already detached.
    * @return true if the replica has already detached or no need to detach; 
@@ -222,12 +214,6 @@ abstract public class ReplicaInfo extends Block {
   }
 
   /**
-   * Get the number of bytes that are visible to readers
-   * @return the number of bytes that are visible to readers
-   */
-  abstract long getVisibleLen() throws IOException;
-  
-  /**
    * Set this replica's generation stamp to be a newer one
    * @param newGS new generation stamp
    * @throws IOException is the new generation stamp is not greater than the current one
@@ -243,7 +229,13 @@ abstract public class ReplicaInfo extends Block {
   
   @Override  //Object
   public String toString() {
-    return getClass().getSimpleName() + " " + super.toString() + 
-    "(volume=" + volume + ", file=" + getBlockFile() + ")";
+    return getClass().getSimpleName()
+        + ", " + super.toString()
+        + ", " + getState()
+        + "\n  getNumBytes()     = " + getNumBytes()
+        + "\n  getBytesOnDisk()  = " + getBytesOnDisk()
+        + "\n  getVisibleLength()= " + getVisibleLength()
+        + "\n  getVolume()       = " + getVolume()
+        + "\n  getBlockFile()    = " + getBlockFile();
   }
 }
