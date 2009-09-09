@@ -184,6 +184,8 @@ Trunk (unreleased changes)
     HADOOP-6234. Add new option dfs.umaskmode to set umask in configuration
     to use octal or symbolic instead of decimal. (Jakob Homan via suresh)
 
+    HADOOP-5073. Add annotation mechanism for interface classification.
+    (Jakob Homan via suresh)
 
   IMPROVEMENTS
 
