@@ -14,6 +14,7 @@ Release 0.21.0 - Unreleased
    HBASE-1779  ThriftServer logged error if getVer() result is empty
    HBASE-1778  Improve PerformanceEvaluation (Schubert Zhang via Stack)
    HBASE-1751  Fix KeyValue javadoc on getValue for client-side
+   HBASE-1824  [stargate] default timestamp should be LATEST_TIMESTAMP
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

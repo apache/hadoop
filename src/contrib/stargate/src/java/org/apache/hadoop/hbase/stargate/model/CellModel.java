@@ -58,7 +58,7 @@ import com.google.protobuf.ByteString;
 public class CellModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
   
-  private long timestamp;
+  private long timestamp = HConstants.LATEST_TIMESTAMP;
   private byte[] column;
   private byte[] value;
 
