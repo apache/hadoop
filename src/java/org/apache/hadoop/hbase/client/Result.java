@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -69,6 +71,7 @@ public class Result implements Writable {
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
+  private ImmutableBytesWritable bytes = null;
 
   /**
    * Constructor used for Writable.
@@ -92,6 +95,15 @@ public class Result implements Writable {
   public Result(List<KeyValue> kvs) {
     this(kvs.toArray(new KeyValue[0]));
   }
+  
+  /**
+   * Instantiate a Result from the specified raw binary format.
+   * @param bytes raw binary format of Result
+   * @param numKeys number of KeyValues in Result
+   */
+  public Result(ImmutableBytesWritable bytes) {
+    this.bytes = bytes;
+  }
 
   /**
    * Method for retrieving the row that this result is for
@@ -99,8 +111,10 @@ public class Result implements Writable {
    */
   public synchronized byte [] getRow() {
     if (this.row == null) {
-      this.row =
-        this.kvs == null || this.kvs.length == 0? null: this.kvs[0].getRow();
+      if(this.kvs == null) {
+        readFields();
+      }
+      this.row = this.kvs.length == 0? null: this.kvs[0].getRow();
     }
     return this.row;
   }
@@ -110,6 +124,9 @@ public class Result implements Writable {
    * @return unsorted array of KeyValues
    */
   public KeyValue[] raw() {
+    if(this.kvs == null) {
+      readFields();
+    }
     return kvs;
   }
 
@@ -119,6 +136,9 @@ public class Result implements Writable {
    * @return The sorted list of KeyValue's.
    */
   public List<KeyValue> list() {
+    if(this.kvs == null) {
+      readFields();
+    }
     return Arrays.asList(sorted());
   }
 
@@ -352,6 +372,9 @@ public class Result implements Writable {
    * @return a RowResult
    */
   public RowResult getRowResult() {
+    if(this.kvs == null) {
+      readFields();
+    }
     return RowResult.createRowResult(Arrays.asList(kvs));
   }
   
@@ -367,10 +390,25 @@ public class Result implements Writable {
   }
   
   /**
+   * Returns the raw binary encoding of this Result.<p>
+   * 
+   * Please note, there may be an offset into the underlying byte array of the
+   * returned ImmutableBytesWritable.  Be sure to use both 
+   * {@link ImmutableBytesWritable#get()} and {@link ImmutableBytesWritable#getOffset()}
+   * @return pointer to raw binary of Result
+   */
+  public ImmutableBytesWritable getBytes() {
+    return this.bytes;
+  }
+  
+  /**
    * Check if the underlying KeyValue [] is empty or not
    * @return true if empty
    */
   public boolean isEmpty() {
+    if(this.kvs == null) {
+      readFields();
+    }
     return this.kvs == null || this.kvs.length == 0;
   }
   
@@ -378,6 +416,9 @@ public class Result implements Writable {
    * @return the size of the underlying KeyValue []
    */
   public int size() {
+    if(this.kvs == null) {
+      readFields();
+    }
     return this.kvs == null? 0: this.kvs.length;
   }
   
@@ -411,20 +452,33 @@ public class Result implements Writable {
   throws IOException {
     familyMap = null;
     row = null;
-    int numKeys = in.readInt();
-    this.kvs = new KeyValue[numKeys];
-    if(numKeys == 0) {
+    int totalBuffer = in.readInt();
+    if(totalBuffer == 0) {
+      bytes = null;
       return;
     }
-    int totalBuffer = in.readInt();
-    byte [] buf = new byte[totalBuffer];
-    int offset = 0;
-    for(int i=0; i<numKeys; i++) {
-      int keyLength = in.readInt();
-      in.readFully(buf, offset, keyLength);
-      kvs[i] = new KeyValue(buf, offset, keyLength);
+    byte [] raw = new byte[totalBuffer];
+    in.readFully(raw, 0, totalBuffer);
+    bytes = new ImmutableBytesWritable(raw, 0, totalBuffer);
+  }
+  
+  //Create KeyValue[] when needed
+  private void readFields() {
+    if(bytes == null) {
+      this.kvs = new KeyValue[0];
+      return;
+    }
+    byte [] buf = bytes.get();
+    int offset = bytes.getOffset();
+    int finalOffset = bytes.getSize() + offset;
+    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    while(offset < finalOffset) {
+      int keyLength = Bytes.toInt(buf, offset);
+      offset += Bytes.SIZEOF_INT;
+      kvs.add(new KeyValue(buf, offset, keyLength));
       offset += keyLength;
     }
+    this.kvs = kvs.toArray(new KeyValue[kvs.size()]);
   }
   
   public void write(final DataOutput out)
@@ -432,11 +486,9 @@ public class Result implements Writable {
     if(isEmpty()) {
       out.writeInt(0);
     } else {
-      int len = this.kvs.length;
-      out.writeInt(len);
       int totalLen = 0;
       for(KeyValue kv : kvs) {
-        totalLen += kv.getLength();
+        totalLen += kv.getLength() + Bytes.SIZEOF_INT;
       }
       out.writeInt(totalLen);
       for(KeyValue kv : kvs) {
@@ -455,11 +507,12 @@ public class Result implements Writable {
     out.writeInt(results.length);
     int bufLen = 0;
     for(Result result : results) {
+      bufLen += Bytes.SIZEOF_INT;
       if(result == null || result.isEmpty()) {
         continue;
       }
       for(KeyValue key : result.raw()) {
-        bufLen += key.getLength();
+        bufLen += key.getLength() + Bytes.SIZEOF_INT;
       }
     }
     out.writeInt(bufLen);
@@ -488,14 +541,22 @@ public class Result implements Writable {
     int offset = 0;
     for(int i=0;i<numResults;i++) {
       int numKeys = in.readInt();
-      KeyValue [] keys = new KeyValue[numKeys];
+      offset += Bytes.SIZEOF_INT;
+      if(numKeys == 0) {
+        results[i] = new Result((ImmutableBytesWritable)null);
+        continue;
+      }
+      int initialOffset = offset;
       for(int j=0;j<numKeys;j++) {
         int keyLen = in.readInt();
+        Bytes.putInt(buf, offset, keyLen);
+        offset += Bytes.SIZEOF_INT;
         in.readFully(buf, offset, keyLen);
-        keys[j] = new KeyValue(buf, offset, keyLen);
         offset += keyLen;
       }
-      results[i] = new Result(keys);
+      int totalLength = offset - initialOffset;
+      results[i] = new Result(new ImmutableBytesWritable(buf, initialOffset, 
+          totalLength));
     }
     return results;
   }
