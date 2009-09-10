@@ -39,6 +39,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -147,11 +148,7 @@ public class RowResource implements Constants {
         Put put = new Put(row.getKey());
         for (CellModel cell: row.getCells()) {
           byte [][] parts = KeyValue.parseColumn(cell.getColumn());
-          if (cell.hasUserTimestamp()) {
-            put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
-          } else {
-            put.add(parts[0], parts[1], cell.getValue());
-          }
+          put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
         }
         table.put(put);
         if (LOG.isDebugEnabled()) {
@@ -188,7 +185,7 @@ public class RowResource implements Constants {
       if (columns != null) {
         column = columns[0];
       }
-      long timestamp = -1;
+      long timestamp = HConstants.LATEST_TIMESTAMP;
       List<String> vals = headers.getRequestHeader("X-Row");
       if (vals != null && !vals.isEmpty()) {
         row = Bytes.toBytes(vals.get(0));
@@ -206,11 +203,7 @@ public class RowResource implements Constants {
       }
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
-      if (timestamp >= 0) {
-        put.add(parts[0], parts[1], timestamp, message);
-      } else {
-        put.add(parts[0], parts[1], message);
-      }
+      put.add(parts[0], parts[1], timestamp, message);
       table = pool.getTable(this.table);
       table.put(put);
       if (LOG.isDebugEnabled()) {
