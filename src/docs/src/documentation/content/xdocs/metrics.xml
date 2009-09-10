@@ -63,5 +63,118 @@
       in ganglia, the stats are aggregated rather than reported per instance.
       </p>
     </section>
+
+    <section>
+      <title> Using with JMX </title>
+      <p>
+      In addition to the standard output contexts supported by the Hadoop 
+      metrics package, you can also export HBase metrics via Java Management 
+      Extensions (JMX).  This will allow viewing HBase stats in JConsole or 
+      any other JMX client.
+      </p>
+      <section>
+      <title>Enable HBase stats collection</title>
+      <p>
+      To enable JMX support in HBase, first edit 
+      <code>$HBASE_HOME/conf/hadoop-metrics.properties</code> to support 
+      metrics refreshing. (If you've already configured 
+      <code>hadoop-metrics.properties</code> for another output context, 
+      you can skip this step).
+      </p>
+      <source>
+# Configuration of the "hbase" context for null
+hbase.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
+hbase.period=60
+
+# Configuration of the "jvm" context for null
+jvm.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
+jvm.period=60
+
+# Configuration of the "rpc" context for null
+rpc.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
+rpc.period=60
+      </source>
+      </section>
+      <section>
+      <title>Setup JMX remote access</title>
+      <p>
+      For remote access, you will need to configure JMX remote passwords 
+      and access profiles.  Create the files:
+      </p>
+      <dl>
+        <dt><code>$HBASE_HOME/conf/jmxremote.passwd</code> (set permissions 
+        to 600)</dt>
+        <dd>
+        <source>
+monitorRole monitorpass
+controlRole controlpass
+        </source>
+        </dd>
+        
+        <dt><code>$HBASE_HOME/conf/jmxremote.access</code></dt>
+        <dd>
+        <source>
+monitorRole readonly
+controlRole readwrite
+        </source>
+        </dd>
+      </dl>
+      </section>
+      <section>
+      <title>Configure JMX in HBase startup</title>
+      <p>
+      Finally, edit the <code>$HBASE_HOME/conf/hbase-env.sh</code> and 
+      <code>$HBASE_HOME/bin/hbase</code> scripts for JMX support: 
+      </p>
+      <dl>
+        <dt><code>$HBASE_HOME/conf/hbase-env.sh</code></dt>
+        <dd>
+        <p>Add the lines:</p>
+        <source>
+JMX_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false"
+JMX_OPTS="$JMX_OPTS -Dcom.sun.management.jmxremote.password.file=$HBASE_HOME/conf/jmxremote.passwd"
+JMX_OPTS="$JMX_OPTS -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/jmxremote.access"
+
+export HBASE_MASTER_OPTS="$JMX_OPTS -Dcom.sun.management.jmxremote.port=10101"
+export HBASE_REGIONSERVER_OPTS="$JMX_OPTS -Dcom.sun.management.jmxremote.port=10102"
+        </source>
+        </dd>
+        <dt><code>$HBASE_HOME/bin/hbase</code></dt>
+        <dd>
+        <p>Towards the end of the script, replace the lines:</p>
+        <source>
+ # figure out which class to run
+if [ "$COMMAND" = "shell" ] ; then
+  CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
+elif [ "$COMMAND" = "master" ] ; then
+  CLASS='org.apache.hadoop.hbase.master.HMaster'
+elif [ "$COMMAND" = "regionserver" ] ; then
+  CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
+        </source>
+        <p>
+        with the lines: (adding the "HBASE_OPTS=..." lines for "master" and
+        "regionserver" commands)
+        </p>
+        <source>
+ # figure out which class to run
+if [ "$COMMAND" = "shell" ] ; then
+  CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
+elif [ "$COMMAND" = "master" ] ; then
+  CLASS='org.apache.hadoop.hbase.master.HMaster'
+  HBASE_OPTS="$HBASE_OPTS $HBASE_MASTER_OPTS"
+elif [ "$COMMAND" = "regionserver" ] ; then
+  CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
+  HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
+        </source>
+        </dd>
+      </dl>
+      <p>
+      After restarting the processes you want to monitor, you should now be 
+      able to run JConsole (included with the JDK since JDK 5.0) to view 
+      the statistics via JMX.  HBase MBeans are exported under the 
+      <strong><code>hadoop</code></strong> domain in JMX.
+      </p>
+      </section>
+    </section>
   </body>
 </document>

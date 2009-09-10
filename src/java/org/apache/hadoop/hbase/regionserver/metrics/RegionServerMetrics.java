@@ -47,6 +47,7 @@ public class RegionServerMetrics implements Updater {
   private long lastUpdate = System.currentTimeMillis();
   private static final int MB = 1024*1024;
   private MetricsRegistry registry = new MetricsRegistry();
+  private final RegionServerStatistics statistics;
     
   public final MetricsTimeVaryingRate atomicIncrementTime =
       new MetricsTimeVaryingRate("atomicIncrementTime", registry);
@@ -112,13 +113,18 @@ public class RegionServerMetrics implements Updater {
     context.registerUpdater(this);
     // Add jvmmetrics.
     JvmMetrics.init("RegionServer", name);
+
+    // export for JMX
+    statistics = new RegionServerStatistics(this.registry, name);
+
     LOG.info("Initialized");
   }
-  
+
   public void shutdown() {
-    // nought to do.
+    if (statistics != null)
+      statistics.shutdown();
   }
-    
+
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
@@ -141,7 +147,7 @@ public class RegionServerMetrics implements Updater {
     this.metricsRecord.update();
     this.lastUpdate = System.currentTimeMillis();
   }
-  
+
   public void resetAllMinMax() {
     // Nothing to do
   }
