@@ -999,6 +999,9 @@ Trunk (unreleased changes)
     HADOOP-6009. S3N listStatus incorrectly returns null instead of empty
     array when called on empty root. (Ian Nowland via tomwhite)
 
+    HADOOP-6181.  Fix .eclipse.templates/.classpath for avro and jets3t jar
+    files.  (Carlos Valiente via szetszwo)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
