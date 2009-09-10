@@ -22,6 +22,9 @@ Append branch (unreleased changes)
     support of dfs writes/hflush. It also updates a replica's bytes received,
     bytes on disk, and bytes acked after receiving a packet. (hairong)
 
+    HDFS-585. Datanode should serve up to visible length of a replica for read
+    requests.  (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.

@@ -46,13 +46,18 @@ class BlockSender implements java.io.Closeable, FSConstants {
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
   private Block block; // the block to read from
+
+  /** the replica to read from */
+  private final Replica replica;
+  /** The visible length of a replica. */
+  private final long replicaVisibleLength;
+
   private InputStream blockIn; // data stream
   private long blockInPosition = -1; // updated while using transferTo().
   private DataInputStream checksumIn; // checksum datastream
   private DataChecksum checksum; // checksum stream
   private long offset; // starting position to read
   private long endOffset; // ending position
-  private long blockLength;
   private int bytesPerChecksum; // chunk size
   private int checksumSize; // checksum size
   private boolean corruptChecksumOk; // if need to verify checksum
@@ -86,10 +91,29 @@ class BlockSender implements java.io.Closeable, FSConstants {
       throws IOException {
     try {
       this.block = block;
+      synchronized(datanode.data) { 
+        this.replica = datanode.data.getReplica(block.getBlockId());
+        if (replica == null) {
+          throw new IOException("Replica not found for " + block);
+        }
+        this.replicaVisibleLength = replica.getVisibleLength();
+      }
+      if (replica.getGenerationStamp() < block.getGenerationStamp()) {
+        throw new IOException(
+            "replica.getGenerationStamp() < block.getGenerationStamp(), block="
+            + block + ", replica=" + replica);
+      }
+      if (replicaVisibleLength < 0) {
+        throw new IOException("The replica is not readable, block="
+            + block + ", replica=" + replica);
+      }
+      if (DataNode.LOG.isDebugEnabled()) {
+        DataNode.LOG.debug("block=" + block + ", replica=" + replica);
+      }
+      
       this.chunkOffsetOK = chunkOffsetOK;
       this.corruptChecksumOk = corruptChecksumOk;
       this.verifyChecksum = verifyChecksum;
-      this.blockLength = datanode.data.getLength(block);
       this.transferToAllowed = datanode.transferToAllowed;
       this.clientTraceFmt = clientTraceFmt;
 
@@ -119,18 +143,18 @@ class BlockSender implements java.io.Closeable, FSConstants {
        * blockLength.
        */        
       bytesPerChecksum = checksum.getBytesPerChecksum();
-      if (bytesPerChecksum > 10*1024*1024 && bytesPerChecksum > blockLength){
+      if (bytesPerChecksum > 10*1024*1024 && bytesPerChecksum > replicaVisibleLength) {
         checksum = DataChecksum.newDataChecksum(checksum.getChecksumType(),
-                                   Math.max((int)blockLength, 10*1024*1024));
+            Math.max((int)replicaVisibleLength, 10*1024*1024));
         bytesPerChecksum = checksum.getBytesPerChecksum();        
       }
       checksumSize = checksum.getChecksumSize();
 
       if (length < 0) {
-        length = blockLength;
+        length = replicaVisibleLength;
       }
 
-      endOffset = blockLength;
+      endOffset = replicaVisibleLength;
       if (startOffset < 0 || startOffset > endOffset
           || (length + startOffset) > endOffset) {
         String msg = " Offset " + startOffset + " and length " + length
@@ -162,6 +186,18 @@ class BlockSender implements java.io.Closeable, FSConstants {
         }
       }
       seqno = 0;
+
+      //sleep a few times if getBytesOnDisk() < visible length
+      for(int i = 0; i < 30 && replica.getBytesOnDisk() < replicaVisibleLength; i++) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException ie) {
+          throw new IOException(ie);
+        }
+      }
+      if (DataNode.LOG.isDebugEnabled()) {
+        DataNode.LOG.debug("replica=" + replica);
+      }
 
       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
     } catch (IOException ioe) {
@@ -420,7 +456,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       close();
     }
 
-    blockReadFully = (initialOffset == 0 && offset >= blockLength);
+    blockReadFully = initialOffset == 0 && offset >= replicaVisibleLength;
 
     return totalRead;
   }
