@@ -103,8 +103,9 @@ public class GzipCodec extends DefaultCodec {
     
     /**
      * Allow subclasses to directly set the inflater stream.
+     * @throws IOException
      */
-    protected GzipInputStream(DecompressorStream in) {
+    protected GzipInputStream(DecompressorStream in) throws IOException {
       super(in);
     }
 

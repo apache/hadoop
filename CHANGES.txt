@@ -187,6 +187,9 @@ Trunk (unreleased changes)
     HADOOP-5073. Add annotation mechanism for interface classification.
     (Jakob Homan via suresh)
 
+    HADOOP-4012. Provide splitting support for bzip2 compressed files. (Abdul
+    Qadeer via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

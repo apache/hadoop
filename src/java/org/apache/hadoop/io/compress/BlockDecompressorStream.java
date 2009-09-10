@@ -38,9 +38,10 @@ public class BlockDecompressorStream extends DecompressorStream {
    * @param in input stream
    * @param decompressor decompressor to use
    * @param bufferSize size of buffer
+ * @throws IOException
    */
   public BlockDecompressorStream(InputStream in, Decompressor decompressor, 
-                                 int bufferSize) {
+                                 int bufferSize) throws IOException {
     super(in, decompressor, bufferSize);
   }
   
@@ -49,12 +50,13 @@ public class BlockDecompressorStream extends DecompressorStream {
    * 
    * @param in input stream
    * @param decompressor decompressor to use
+ * @throws IOException
    */
-  public BlockDecompressorStream(InputStream in, Decompressor decompressor) {
+  public BlockDecompressorStream(InputStream in, Decompressor decompressor) throws IOException {
     super(in, decompressor);
   }
 
-  protected BlockDecompressorStream(InputStream in) {
+  protected BlockDecompressorStream(InputStream in) throws IOException {
     super(in);
   }
 
