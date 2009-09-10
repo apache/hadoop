@@ -319,9 +319,11 @@ abstract class BaseScanner extends Chore implements HConstants {
         family.getName());
       // Look for reference files.  Call listStatus with an anonymous
       // instance of PathFilter.
+      LOG.debug("Looking for reference files in: " + p);
       FileStatus [] ps = this.master.fs.listStatus(p,
           new PathFilter () {
             public boolean accept(Path path) {
+              LOG.debug("isReference: " + path);
               return StoreFile.isReference(path);
             }
           }

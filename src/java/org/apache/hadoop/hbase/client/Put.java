@@ -17,6 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.client;
 
 import java.io.DataInput;
@@ -341,7 +342,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
       int totalLen = in.readInt();
       byte [] buf = new byte[totalLen];
       int offset = 0;
-      for(int j=0;j<numKeys;j++) {
+      for (int j = 0; j < numKeys; j++) {
         int keyLength = in.readInt();
         in.readFully(buf, offset, keyLength);
         keys.add(new KeyValue(buf, offset, keyLength));
