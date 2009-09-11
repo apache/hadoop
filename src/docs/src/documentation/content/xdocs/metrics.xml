@@ -123,8 +123,8 @@ controlRole readwrite
       <section>
       <title>Configure JMX in HBase startup</title>
       <p>
-      Finally, edit the <code>$HBASE_HOME/conf/hbase-env.sh</code> and 
-      <code>$HBASE_HOME/bin/hbase</code> scripts for JMX support: 
+      Finally, edit the <code>$HBASE_HOME/conf/hbase-env.sh</code>
+      script to add JMX support: 
       </p>
       <dl>
         <dt><code>$HBASE_HOME/conf/hbase-env.sh</code></dt>
@@ -137,34 +137,6 @@ JMX_OPTS="$JMX_OPTS -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/
 
 export HBASE_MASTER_OPTS="$JMX_OPTS -Dcom.sun.management.jmxremote.port=10101"
 export HBASE_REGIONSERVER_OPTS="$JMX_OPTS -Dcom.sun.management.jmxremote.port=10102"
-        </source>
-        </dd>
-        <dt><code>$HBASE_HOME/bin/hbase</code></dt>
-        <dd>
-        <p>Towards the end of the script, replace the lines:</p>
-        <source>
- # figure out which class to run
-if [ "$COMMAND" = "shell" ] ; then
-  CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
-elif [ "$COMMAND" = "master" ] ; then
-  CLASS='org.apache.hadoop.hbase.master.HMaster'
-elif [ "$COMMAND" = "regionserver" ] ; then
-  CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
-        </source>
-        <p>
-        with the lines: (adding the "HBASE_OPTS=..." lines for "master" and
-        "regionserver" commands)
-        </p>
-        <source>
- # figure out which class to run
-if [ "$COMMAND" = "shell" ] ; then
-  CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
-elif [ "$COMMAND" = "master" ] ; then
-  CLASS='org.apache.hadoop.hbase.master.HMaster'
-  HBASE_OPTS="$HBASE_OPTS $HBASE_MASTER_OPTS"
-elif [ "$COMMAND" = "regionserver" ] ; then
-  CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
-  HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
         </source>
         </dd>
       </dl>
