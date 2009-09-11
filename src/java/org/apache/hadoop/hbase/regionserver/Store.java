@@ -217,7 +217,10 @@ public class Store implements HConstants, HeapSize {
     this.storefiles.putAll(loadStoreFiles());
 
     // Do reconstruction log.
-    runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
+    long newId = runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
+    if (newId != -1) {
+      this.maxSeqId = newId; // start with the log id we just recovered.
+    }
   }
 
   HColumnDescriptor getFamily() {
@@ -245,13 +248,14 @@ public class Store implements HConstants, HeapSize {
    * @param reconstructionLog
    * @param msid
    * @param reporter
+   * @return the new max sequence id as per the log
    * @throws IOException
    */
-  private void runReconstructionLog(final Path reconstructionLog,
+  private long runReconstructionLog(final Path reconstructionLog,
     final long msid, final Progressable reporter)
   throws IOException {
     try {
-      doReconstructionLog(reconstructionLog, msid, reporter);
+      return doReconstructionLog(reconstructionLog, msid, reporter);
     } catch (EOFException e) {
       // Presume we got here because of lack of HADOOP-1700; for now keep going
       // but this is probably not what we want long term.  If we got here there
@@ -268,6 +272,7 @@ public class Store implements HConstants, HeapSize {
         " opening " + Bytes.toString(this.storeName), e);
       throw e;
     }
+    return -1;
   }
 
   /*
@@ -277,20 +282,22 @@ public class Store implements HConstants, HeapSize {
    * We can ignore any log message that has a sequence ID that's equal to or 
    * lower than maxSeqID.  (Because we know such log messages are already 
    * reflected in the MapFiles.)
+   *
+   * @return the new max sequence id as per the log, or -1 if no log recovered
    */
-  private void doReconstructionLog(final Path reconstructionLog,
+  private long doReconstructionLog(final Path reconstructionLog,
     final long maxSeqID, final Progressable reporter)
   throws UnsupportedEncodingException, IOException {
     if (reconstructionLog == null || !this.fs.exists(reconstructionLog)) {
       // Nothing to do.
-      return;
+      return -1;
     }
     // Check its not empty.
     FileStatus [] stats = this.fs.listStatus(reconstructionLog);
     if (stats == null || stats.length == 0) {
       LOG.warn("Passed reconstruction log " + reconstructionLog +
         " is zero-length");
-      return;
+      return -1;
     }
     // TODO: This could grow large and blow heap out.  Need to get it into
     // general memory usage accounting.
@@ -352,8 +359,21 @@ public class Store implements HConstants, HeapSize {
       if (LOG.isDebugEnabled()) {
         LOG.debug("flushing reconstructionCache");
       }
-      internalFlushCache(reconstructedCache, maxSeqIdInLog + 1);
+
+      long newFileSeqNo = maxSeqIdInLog + 1;
+      StoreFile sf = internalFlushCache(reconstructedCache, newFileSeqNo);
+      // add it to the list of store files with maxSeqIdInLog+1
+      if (sf == null) {
+        throw new IOException("Flush failed with a null store file");
+      }
+      // Add new file to store files.  Clear snapshot too while we have the
+      // Store write lock.
+      this.storefiles.put(newFileSeqNo, sf);
+      notifyChangedReadersObservers();
+
+      return newFileSeqNo;
     }
+    return -1; // the reconstructed cache was 0 sized
   }
 
   /*
