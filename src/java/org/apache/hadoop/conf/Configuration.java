@@ -44,7 +44,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -297,6 +296,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return deprecatedKeyMap.containsKey(key);
   }
  
+  /**
+   * Check whether or not the deprecated key has been specified in the
+   * configuration file rather than the new key
+   * 
+   * Returns false if the specified key is not included in the deprecated
+   * key mapping.
+   * 
+   * @param oldKey Old configuration key 
+   * @return If the old configuration key was specified rather than the new one
+   */
+  public boolean deprecatedKeyWasSet(String oldKey) {
+    return isDeprecated(oldKey) && deprecatedKeyMap.get(oldKey).accessed;
+  }
+  
   /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present

@@ -19,6 +19,8 @@
 package org.apache.hadoop.conf;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -303,6 +305,29 @@ public class TestConfigurationDeprecation {
     assertEquals("valueG", conf.get("G"));
     assertEquals("valueG", conf.get("H"));
     assertEquals("valueG", conf.get("I"));
+  }
+  
+  // Ensure that wasDeprecatedKeySet returns the correct result under
+  // the three code paths possible 
+  @Test
+  public void testWasDeprecatedKeySet() {
+    Configuration.addDeprecation("oldKeyA", new String [] { "newKeyA"});
+    Configuration.addDeprecation("oldKeyB", new String [] { "newKeyB"});
+    
+    // Used the deprecated key rather than the new, therefore should trigger
+    conf.set("oldKeyA", "AAA");
+    assertEquals("AAA", conf.get("newKeyA"));
+    assertTrue(conf.deprecatedKeyWasSet("oldKeyA"));
+  
+    // There is a deprecated key, but it wasn't specified. Therefore, don't trigger
+    conf.set("newKeyB", "AndrewBird");
+    assertEquals("AndrewBird", conf.get("newKeyB"));
+    assertFalse(conf.deprecatedKeyWasSet("oldKeyB"));
+    
+    // Not a deprecated key, therefore shouldn't trigger deprecatedKeyWasSet
+    conf.set("BrandNewKey", "BrandNewValue");
+    assertEquals("BrandNewValue", conf.get("BrandNewKey"));
+    assertFalse(conf.deprecatedKeyWasSet("BrandNewKey"));
   }
 
 }

@@ -547,6 +547,9 @@ Trunk (unreleased changes)
     alleviate a performance regression introduced in a compatibility layer.
     (Todd Lipcon via cdouglas)
 
+    HADOOP-6252. Provide a method to determine if a deprecated key is set in
+    config file. (Jakob Homan via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
