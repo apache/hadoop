@@ -232,163 +232,40 @@ public class TestStore extends TestCase {
   //////////////////////////////////////////////////////////////////////////////
   // IncrementColumnValue tests
   //////////////////////////////////////////////////////////////////////////////
-  /**
-   * Testing if the update in place works. When you want to update a value that
-   * is already in memstore, you don't delete it and put a new one, but just 
-   * update the value in the original KeyValue
-   * @throws IOException
+  /*
+   * test the internal details of how ICV works, especially during a flush scenario.
    */
-  public void testIncrementColumnValue_UpdatingInPlace() throws IOException {
-    init(this.getName());
-
-    //Put data in memstore
-    long value = 1L;
-    long amount = 3L;
-    this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
-    
-    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
-    assertEquals(value+amount, vas.value);
-    store.add(vas.kv);
-    Get get = new Get(row);
-    get.addColumn(family, qf1);
-    NavigableSet<byte[]> qualifiers = 
-      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    qualifiers.add(qf1);
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    this.store.get(get, qualifiers, result);
-    assertEquals(value + amount, Bytes.toLong(result.get(0).getValue()));
-  }
-
-  /**
-   * Same as above but for a negative number
-   * @throws IOException
-   */
-  public void testIncrementColumnValue_UpdatingInPlace_Negative() 
-  throws IOException {
-    init(this.getName());
-
-    //Put data in memstore
-    long value = 3L;
-    long amount = -1L;
-    this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
-    
-    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
-    assertEquals(vas.value, value+amount);
-    store.add(vas.kv);
-    Get get = new Get(row);
-    get.addColumn(family, qf1);
-    NavigableSet<byte[]> qualifiers = 
-      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    qualifiers.add(qf1);
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    this.store.get(get, qualifiers, result);
-    assertEquals(value + amount, Bytes.toLong(result.get(0).getValue()));
-  }
-  
-  /**
-   * When there is no mathing key already, adding a new.
-   * @throws IOException
-   */
-  public void testIncrementColumnValue_AddingNew() throws IOException {
-    init(this.getName());
-    
-    //Put data in memstore
-    long value = 1L;
-    long amount = 3L;
-    this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
-    this.store.add(new KeyValue(row, family, qf2, Bytes.toBytes(value)));
-    
-    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf3, amount);
-    store.add(vas.kv);
-    Get get = new Get(row);
-    get.addColumn(family, qf3);
-    NavigableSet<byte[]> qualifiers = 
-      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    qualifiers.add(qf3);
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    this.store.get(get, qualifiers, result);
-    assertEquals(amount, Bytes.toLong(result.get(0).getValue()));
-  }
-
-  /**
-   * When we have the key in a file add a new key + value to memstore with the 
-   * updates value. 
-   * @throws IOException
-   */
-  public void testIncrementColumnValue_UpdatingFromSF() throws IOException {
-    init(this.getName());
-    
-    //Put data in memstore
-    long value = 1L;
-    long amount = 3L;
-    this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
-    this.store.add(new KeyValue(row, family, qf2, Bytes.toBytes(value)));
-    
-    flush(1);
-    
-    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
-    store.add(vas.kv);
-    Get get = new Get(row);
-    get.addColumn(family, qf1);
-    NavigableSet<byte[]> qualifiers = 
-      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    qualifiers.add(qf1);
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    this.store.get(get, qualifiers, result);
-    assertEquals(value + amount, Bytes.toLong(result.get(0).getValue()));
-  }
-
-  /**
-   * Same as testIncrementColumnValue_AddingNew() except that the keys are
-   * checked in file not in memstore
-   * @throws IOException
-   */
-  public void testIncrementColumnValue_AddingNewAfterSFCheck() 
-  throws IOException {
-    init(this.getName());
-    
-    //Put data in memstore
-    long value = 1L;
-    long amount = 3L;
-    this.store.add(new KeyValue(row, family, qf1, Bytes.toBytes(value)));
-    this.store.add(new KeyValue(row, family, qf2, Bytes.toBytes(value)));
-    
-    flush(1);
-    
-    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf3, amount);
-    store.add(vas.kv);
-    Get get = new Get(row);
-    get.addColumn(family, qf3);
-    NavigableSet<byte[]> qualifiers = 
-      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    qualifiers.add(qf3);
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    this.store.get(get, qualifiers, result);
-    assertEquals(amount, Bytes.toLong(result.get(0).getValue()));
-  }
-
   public void testIncrementColumnValue_ICVDuringFlush()
     throws IOException {
     init(this.getName());
 
-    long value = 1L;
-    long amount = 3L;
+    long oldValue = 1L;
+    long newValue = 3L;
     this.store.add(new KeyValue(row, family, qf1,
         System.currentTimeMillis(),
-        Bytes.toBytes(value)));
+        Bytes.toBytes(oldValue)));
 
     // snapshot the store.
     this.store.snapshot();
 
-    // incrment during the snapshot...
+    // add other things:
+    this.store.add(new KeyValue(row, family, qf2,
+        System.currentTimeMillis(),
+        Bytes.toBytes(oldValue)));
 
-    Store.ICVResult vas = this.store.incrementColumnValue(row, family, qf1, amount);
+    // update during the snapshot.
+    long ret = this.store.updateColumnValue(row, family, qf1, newValue);
+
+    // memstore should have grown by some amount.
+    assertTrue(ret > 0);
 
     // then flush.
     this.store.flushCache(id++);
     assertEquals(1, this.store.getStorefiles().size());
-    assertEquals(0, this.store.memstore.kvset.size());
+    // from the one we inserted up there, and a new one
+    assertEquals(2, this.store.memstore.kvset.size());
 
+    // how many key/values for this row are there?
     Get get = new Get(row);
     get.addColumn(family, qf1);
     get.setMaxVersions(); // all versions.
@@ -398,12 +275,15 @@ public class TestStore extends TestCase {
     cols.add(qf1);
 
     this.store.get(get, cols, results);
-    // only one, because Store.ICV doesnt add to memcache.
-    assertEquals(1, results.size());
+    assertEquals(2, results.size());
 
-    // but the timestamps should be different...
-    long icvTs = vas.kv.getTimestamp();
-    long storeTs = results.get(0).getTimestamp();
-    assertTrue(icvTs != storeTs);
+    long ts1 = results.get(0).getTimestamp();
+    long ts2 = results.get(1).getTimestamp();
+
+    assertTrue(ts1 > ts2);
+
+    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
+    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+
   }
 }

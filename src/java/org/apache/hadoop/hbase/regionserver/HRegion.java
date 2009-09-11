@@ -2317,25 +2317,47 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     boolean flush = false;
     // Lock row
     Integer lid = obtainRowLock(row);
-    long result = 0L;
+    long result = amount;
     try {
       Store store = stores.get(family);
-      // Determine what to do and perform increment on returned KV, no insertion 
-      Store.ICVResult vas =
-        store.incrementColumnValue(row, family, qualifier, amount);
-      // Write incremented value to WAL before inserting
+
+      // Get the old value:
+      Get get = new Get(row);
+      get.addColumn(family, qualifier);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      NavigableSet<byte[]> qualifiers = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      qualifiers.add(qualifier);
+      store.get(get, qualifiers, results);
+
+      if (!results.isEmpty()) {
+        byte [] oldValue = results.get(0).getValue();
+        KeyValue kv = results.get(0);
+        byte [] buffer = kv.getBuffer();
+        int valueOffset = kv.getValueOffset();
+        result += Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG);
+      }
+
+      // bulid the KeyValue now:
+      KeyValue newKv = new KeyValue(row, family,
+          qualifier, System.currentTimeMillis(),
+          Bytes.toBytes(result));
+
+      // now log it:
       if (writeToWAL) {
         long now = System.currentTimeMillis();
         List<KeyValue> edits = new ArrayList<KeyValue>(1);
-        edits.add(vas.kv);
+        edits.add(newKv);
         this.log.append(regionInfo.getRegionName(),
           regionInfo.getTableDesc().getName(), edits,
           (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
       }
-      // Insert to the Store
-      store.add(vas.kv);
-      result = vas.value;
-      long size = this.memstoreSize.addAndGet(vas.sizeAdded);
+
+      // Now request the ICV to the store, this will set the timestamp
+      // appropriately depending on if there is a value in memcache or not.
+      // returns the
+      long size = store.updateColumnValue(row, family, qualifier, result);
+
+      size = this.memstoreSize.addAndGet(size);
       flush = isFlushSize(size);
     } finally {
       releaseRowLock(lid);

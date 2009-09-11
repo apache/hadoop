@@ -60,9 +60,13 @@ public class TestHRegion extends HBaseTestCase {
   // Test names
   private final byte[] tableName = Bytes.toBytes("testtable");;
   private final byte[] qual1 = Bytes.toBytes("qual1");
+  private final byte[] qual2 = Bytes.toBytes("qual2");
+  private final byte[] qual3 = Bytes.toBytes("qual3");
   private final byte[] value1 = Bytes.toBytes("value1");
   private final byte[] value2 = Bytes.toBytes("value2");
   private final byte [] row = Bytes.toBytes("rowA");
+  private final byte [] row2 = Bytes.toBytes("rowB");
+  private final byte [] row3 = Bytes.toBytes("rowC");
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
@@ -1246,7 +1250,6 @@ public class TestHRegion extends HBaseTestCase {
     byte [] col2 = Bytes.toBytes("Pub222");
 
 
-
     Put put = new Put(row1);
     put.add(family, col1, Bytes.toBytes(10L));
     region.put(put);
@@ -1275,11 +1278,166 @@ public class TestHRegion extends HBaseTestCase {
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(false, s.next(results));
     assertEquals(0, results.size());
-
-
-
-    
   }
+
+  public void testIncrementColumnValue_UpdatingInPlace() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    region.put(put);
+
+    long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    
+    assertEquals(value+amount, result);
+
+    Store store = region.getStore(fam1);
+    assertEquals(1, store.memstore.kvset.size());
+    assertTrue(store.memstore.snapshot.isEmpty());
+
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_ConcurrentFlush() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    region.put(put);
+
+    // now increment during a flush
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          region.flushcache();
+        } catch (IOException e) {
+          LOG.info("test ICV, got IOE during flushcache()");
+        }
+      }
+    };
+    t.start();
+    long r = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    assertEquals(value+amount, r);
+
+    // this also asserts there is only 1 KeyValue in the set.
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_UpdatingInPlace_Negative()
+    throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 3L;
+    long amount = -1L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    region.put(put);
+
+    long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    assertEquals(value+amount, result);
+
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_AddingNew()
+    throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    put.add(fam1, qual2, Bytes.toBytes(value));
+    region.put(put);
+
+    long result = region.incrementColumnValue(row, fam1, qual3, amount, true);
+    assertEquals(amount, result);
+
+    Get get = new Get(row);
+    get.addColumn(fam1, qual3);
+    Result rr = region.get(get, null);
+    assertEquals(1, rr.size());
+
+    // ensure none of the other cols were incremented.
+    assertICV(row, fam1, qual1, value);
+    assertICV(row, fam1, qual2, value);
+    assertICV(row, fam1, qual3, amount);
+  }
+
+  public void testIncrementColumnValue_UpdatingFromSF() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    put.add(fam1, qual2, Bytes.toBytes(value));
+    region.put(put);
+
+    // flush to disk.
+    region.flushcache();
+
+    Store store = region.getStore(fam1);
+    assertEquals(0, store.memstore.kvset.size());
+
+    long r = region.incrementColumnValue(row, fam1, qual1, amount, true);
+    assertEquals(value+amount, r);
+
+    assertICV(row, fam1, qual1, value+amount);
+  }
+
+  public void testIncrementColumnValue_AddingNewAfterSFCheck()
+    throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    put.add(fam1, qual2, Bytes.toBytes(value));
+    region.put(put);
+    region.flushcache();
+
+    Store store = region.getStore(fam1);
+    assertEquals(0, store.memstore.kvset.size());
+
+    long r = region.incrementColumnValue(row, fam1, qual3, amount, true);
+    assertEquals(amount, r);
+
+    assertICV(row, fam1, qual3, amount);
+
+    region.flushcache();
+
+    // ensure that this gets to disk.
+    assertICV(row, fam1, qual3, amount);
+  }
+
+  private void assertICV(byte [] row,
+                         byte [] familiy,
+                         byte[] qualifier,
+                         long amount) throws IOException {
+    // run a get and see?
+    Get get = new Get(row);
+    get.addColumn(familiy, qualifier);
+    Result result = region.get(get, null);
+    assertEquals(1, result.size());
+
+    KeyValue kv = result.raw()[0];
+    long r = Bytes.toLong(kv.getValue());
+    assertEquals(amount, r);
+  }
+
+
   
   public void testScanner_Wildcard_FromMemStoreAndFiles_EnforceVersions()
   throws IOException {

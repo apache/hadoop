@@ -436,7 +436,7 @@ public class Store implements HConstants, HeapSize {
       lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Adds a value to the memstore
    * 
@@ -1462,37 +1462,22 @@ public class Store implements HConstants, HeapSize {
     scanner.get(result);
   }
 
-  /*
-   * Data structure to hold incrementColumnValue result.
-   */
-  static class ICVResult {
-    final long value;
-    final long sizeAdded;
-    final KeyValue kv;
-
-    ICVResult(long value, long sizeAdded, KeyValue kv) {
-      this.value = value;
-      this.sizeAdded = sizeAdded;
-      this.kv = kv;
-    }
-  }
-
   /**
    * Increments the value for the given row/family/qualifier
    * @param row
    * @param f
    * @param qualifier
-   * @param amount
-   * @return The new value.
+   * @param newValue the new value to set into memstore
+   * @return memstore size delta
    * @throws IOException
    */
-  public ICVResult incrementColumnValue(byte [] row, byte [] f,
-      byte [] qualifier, long amount)
+  public long updateColumnValue(byte [] row, byte [] f,
+      byte [] qualifier, long newValue)
   throws IOException {
-    long value = 0;
     List<KeyValue> result = new ArrayList<KeyValue>();
     KeyComparator keyComparator = this.comparator.getRawComparator();
 
+    KeyValue kv = null;
     // Setting up the QueryMatcher
     Get get = new Get(row);
     NavigableSet<byte[]> qualifiers =
@@ -1501,78 +1486,41 @@ public class Store implements HConstants, HeapSize {
     QueryMatcher matcher = new QueryMatcher(get, f, qualifiers, this.ttl,
       keyComparator, 1);
 
-    boolean newTs = true;
-    KeyValue kv = null;
-    // Read from memstore first:
-    this.memstore.internalGet(this.memstore.kvset,
-                                  matcher, result);
-    if (!result.isEmpty()) {
-      kv = result.get(0).clone();
-      newTs = false;
-    } else {
-      // try the snapshot.
-      this.memstore.internalGet(this.memstore.snapshot,
-          matcher, result);
-      if (!result.isEmpty()) {
-        kv = result.get(0).clone();
-      }
-    }
+    // lock memstore snapshot for this critical section:
+    this.lock.readLock().lock();
+    memstore.readLockLock();
+    try {
+      int memstoreCode = this.memstore.getWithCode(matcher, result);
 
-    if (kv != null) {
-      // Received early-out from memstore
-      // Make a copy of the KV and increment it
-      byte [] buffer = kv.getBuffer();
-      int valueOffset = kv.getValueOffset();
-      value = Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG) + amount;
-      Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(value), 0,
-        Bytes.SIZEOF_LONG);
-      if (newTs) {
-        long currTs = System.currentTimeMillis();
-        if (currTs == kv.getTimestamp()) {
-          currTs++; // just in case something wacky happens.
-        }
-        byte [] stampBytes = Bytes.toBytes(currTs);
-        Bytes.putBytes(buffer, kv.getTimestampOffset(), stampBytes, 0,
+      if (memstoreCode != 0) {
+        // was in memstore (or snapshot)
+        kv = result.get(0).clone();
+        byte [] buffer = kv.getBuffer();
+        int valueOffset = kv.getValueOffset();
+        Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(newValue), 0,
             Bytes.SIZEOF_LONG);
+        if (memstoreCode == 2) {
+          // from snapshot, assign new TS
+          long currTs = System.currentTimeMillis();
+          if (currTs == kv.getTimestamp()) {
+            currTs++; // unlikely but catastrophic
+          }
+          Bytes.putBytes(buffer, kv.getTimestampOffset(),
+              Bytes.toBytes(currTs), 0, Bytes.SIZEOF_LONG);
+        }
+      } else {
+        kv = new KeyValue(row, f, qualifier,
+            System.currentTimeMillis(),
+            Bytes.toBytes(newValue));
       }
-      return new ICVResult(value, 0, kv);
+      return add(kv);
+      // end lock
+    } finally {
+      memstore.readLockUnlock();
+      this.lock.readLock().unlock();
     }
-    // Check if we even have storefiles
-    if(this.storefiles.isEmpty()) {
-      return createNewKeyValue(row, f, qualifier, value, amount);
-    }
-    
-    // Get storefiles for this store
-    List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-    for (StoreFile sf : this.storefiles.descendingMap().values()) {
-      Reader r = sf.getReader();
-      if (r == null) {
-        LOG.warn("StoreFile " + sf + " has a null Reader");
-        continue;
-      }
-      storefileScanners.add(r.getScanner());
-    }
-    
-    // StoreFileGetScan will handle reading this store's storefiles
-    StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
-    
-    // Run a GET scan and put results into the specified list 
-    scanner.get(result);
-    if(result.size() > 0) {
-      value = Bytes.toLong(result.get(0).getValue());
-    }
-    return createNewKeyValue(row, f, qualifier, value, amount);
   }
   
-  private ICVResult createNewKeyValue(byte [] row, byte [] f, 
-      byte [] qualifier, long value, long amount) {
-    long newValue = value + amount;
-    KeyValue newKv = new KeyValue(row, f, qualifier,
-        System.currentTimeMillis(),
-        Bytes.toBytes(newValue));
-    return new ICVResult(newValue, newKv.heapSize(), newKv);
-  }
-
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
       (5 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
