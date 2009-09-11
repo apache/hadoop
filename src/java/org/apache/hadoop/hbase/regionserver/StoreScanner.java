@@ -43,6 +43,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   private Store store;
   private ScanQueryMatcher matcher;
   private KeyValueHeap heap;
+  private boolean cacheBlocks;
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
   private final AtomicBoolean closing = new AtomicBoolean(false);
@@ -52,6 +53,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    */
   StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns) {
     this.store = store;
+    this.cacheBlocks = scan.getCacheBlocks();
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         columns, store.ttl, store.comparator.getRawComparator(),
         store.versionsToReturn(scan.getMaxVersions()));
@@ -77,6 +79,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    */
   StoreScanner(Store store, Scan scan, KeyValueScanner [] scanners) {
     this.store = store;
+    this.cacheBlocks = false;
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         null, store.ttl, store.comparator.getRawComparator(),
         store.versionsToReturn(scan.getMaxVersions()));
@@ -96,6 +99,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       final NavigableSet<byte[]> columns,
       final KeyValueScanner [] scanners) {
     this.store = null;
+    this.cacheBlocks = scan.getCacheBlocks();
     this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl, 
         comparator.getRawComparator(), scan.getMaxVersions());
 
@@ -215,7 +219,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
         LOG.warn("StoreFile " + sf + " has null Reader");
         continue;
       }
-      s.add(r.getScanner());
+      s.add(r.getScanner(cacheBlocks));
     }
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(s.size()+1);

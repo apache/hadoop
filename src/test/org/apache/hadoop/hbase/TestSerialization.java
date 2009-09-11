@@ -359,6 +359,7 @@ public class TestSerialization extends HBaseTestCase {
 
     assertTrue(Bytes.equals(scan.getStartRow(), desScan.getStartRow()));
     assertTrue(Bytes.equals(scan.getStopRow(), desScan.getStopRow()));
+    assertEquals(scan.getCacheBlocks(), desScan.getCacheBlocks());
     Set<byte[]> set = null;
     Set<byte[]> desSet = null;
     
