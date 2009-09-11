@@ -1008,6 +1008,10 @@ Trunk (unreleased changes)
     HADOOP-6181.  Fix .eclipse.templates/.classpath for avro and jets3t jar
     files.  (Carlos Valiente via szetszwo)
 
+    HADOOP-6196. Fix a bug in SequenceFile.Reader where syncing within the
+    header would cause the reader to read the sync marker as a record. (Jay
+    Booth via cdouglas)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

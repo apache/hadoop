@@ -1397,6 +1397,7 @@ public class SequenceFile {
     private byte[] syncCheck = new byte[SYNC_HASH_SIZE];
     private boolean syncSeen;
 
+    private long headerEnd;
     private long end;
     private int keyLength;
     private int recordLength;
@@ -1546,6 +1547,7 @@ public class SequenceFile {
       
       if (version > 1) {                          // if version > 1
         in.readFully(sync);                       // read sync bytes
+        headerEnd = in.getPos();                  // record end of header
       }
       
       // Initialize... *not* if this we are constructing a temporary Reader
@@ -2207,6 +2209,14 @@ public class SequenceFile {
     public synchronized void sync(long position) throws IOException {
       if (position+SYNC_SIZE >= end) {
         seek(end);
+        return;
+      }
+
+      if (position < headerEnd) {
+        // seek directly to first record
+        in.seek(headerEnd);
+        // note the sync marker "seen" in the header
+        syncSeen = true;
         return;
       }
 
