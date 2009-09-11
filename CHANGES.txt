@@ -8,6 +8,9 @@ Trunk (unreleased changes)
     FileNotFoundException from FileSystem::listStatus rather than returning
     null. (Jakob Homan via cdouglas)
 
+    HDFS-602. DistributedFileSystem mkdirs throws FileAlreadyExistsException
+    instead of FileNotFoundException. (Boris Shkolnik via suresh)
+
   NEW FEATURES
 
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
