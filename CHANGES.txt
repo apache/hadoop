@@ -226,6 +226,9 @@ Trunk (unreleased changes)
     HDFS-605. Do not run fault injection tests in the run-test-hdfs-with-mr
     target.  (Konstantin Boudnik via szetszwo)
 
+    HDFS-606. Fix ConcurrentModificationException in invalidateCorruptReplicas()
+    (shv)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
