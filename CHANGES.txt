@@ -190,6 +190,9 @@ Trunk (unreleased changes)
     HADOOP-4012. Provide splitting support for bzip2 compressed files. (Abdul
     Qadeer via cdouglas)
 
+    HADOOP-6246. Add backward compatibility support to use deprecated decimal 
+    umask from old configuration. (Jakob Homan via suresh)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

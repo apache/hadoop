@@ -181,10 +181,14 @@ public class FsPermission implements Writable {
         otheraction.and(umask.otheraction.not()));
   }
 
-  /** umask property label */
+  /** umask property label Deprecated key may be removed in version .23 */
   public static final String DEPRECATED_UMASK_LABEL = "dfs.umask"; 
   public static final String UMASK_LABEL = "dfs.umaskmode";
   public static final int DEFAULT_UMASK = 0022;
+  { Configuration.addDeprecation(DEPRECATED_UMASK_LABEL,
+      new String [] {UMASK_LABEL}, DEPRECATED_UMASK_LABEL + " is deprecated, " +
+            "use " + UMASK_LABEL + " with octal or symbolic specifications."); 
+  }
 
   /** Get the user file creation mask (umask) */
   public static FsPermission getUMask(Configuration conf) {
@@ -195,16 +199,11 @@ public class FsPermission implements Writable {
     if(conf != null) {
       String confUmask = conf.get(UMASK_LABEL);
       if(confUmask != null) { // UMASK_LABEL is set
-        umask = new UmaskParser(confUmask).getUMask();
-      } else { // check for deprecated key label
-        int oldStyleValue = conf.getInt(DEPRECATED_UMASK_LABEL, Integer.MIN_VALUE);
-        if(oldStyleValue != Integer.MIN_VALUE) { // Property was set with old key
-          LOG.warn(DEPRECATED_UMASK_LABEL + " configuration key is deprecated. " +
-              "Convert to " + UMASK_LABEL + ", using octal or symbolic umask " +
-              "specifications.");
-          umask = oldStyleValue;
-        }
-      }
+        if(conf.deprecatedKeyWasSet(DEPRECATED_UMASK_LABEL)) 
+          umask = Integer.parseInt(confUmask); // Evaluate as decimal value
+        else
+          umask = new UmaskParser(confUmask).getUMask();
+      } 
     }
     
     return new FsPermission((short)umask);
