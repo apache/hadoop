@@ -46,8 +46,10 @@ public class TestScannerModel extends TestCase {
       " startRow=\"YWJyYWNhZGFicmE=\"" + 
       " endTime=\"1245393318192\"" +
       " endRow=\"enp5eng=\"" +
-      " column=\"Y29sdW1uMQ== Y29sdW1uMjpmb28=\"" +
-      " batch=\"100\"/>";
+      " batch=\"100\">" +
+        "<column>Y29sdW1uMQ==</column>" +
+        "<column>Y29sdW1uMjpmb28=</column>" +
+      "</Scanner>";
 
   private static final String AS_PB = 
     "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf" +

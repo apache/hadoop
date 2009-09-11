@@ -84,9 +84,11 @@
     <element name="Scanner" type="tns:Scanner"></element>
     
     <complexType name="Scanner">
+    	<sequence>
+    		<element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
+    	</sequence>
     	<attribute name="startRow" type="base64Binary"></attribute>
     	<attribute name="endRow" type="base64Binary"></attribute>
-    	<attribute name="columns" type="base64Binary"></attribute>
     	<attribute name="batch" type="int"></attribute>
     	<attribute name="startTime" type="int"></attribute>
     	<attribute name="endTime" type="int"></attribute>

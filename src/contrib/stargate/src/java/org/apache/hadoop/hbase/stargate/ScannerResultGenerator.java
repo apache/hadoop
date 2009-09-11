@@ -56,7 +56,15 @@ public class ScannerResultGenerator extends ResultGenerator {
         scan = new Scan(rowspec.getStartRow());
       }
       if (rowspec.hasColumns()) {
-        scan.addColumns(rowspec.getColumns());
+        byte[][] columns = rowspec.getColumns();
+        for (byte[] column: columns) {
+          byte[][] split = KeyValue.parseColumn(column);
+          if (split[1] != null) {
+            scan.addColumn(split[0], split[1]);
+          } else {
+            scan.addFamily(split[0]);
+          }
+        }
       } else {
         for (HColumnDescriptor family:
             table.getTableDescriptor().getFamilies()) {

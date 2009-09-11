@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -40,9 +41,11 @@ import com.google.protobuf.ByteString;
  * 
  * <pre>
  * &lt;complexType name="Scanner"&gt;
+ *   &lt;sequence>
+ *     &lt;element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"/&gt;
+ *   &lt;/sequence&gt;
  *   &lt;attribute name="startRow" type="base64Binary"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="endRow" type="base64Binary"&gt;&lt;/attribute&gt;
- *   &lt;attribute name="columns" type="base64Binary"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="batch" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="startTime" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="endTime" type="int"&gt;&lt;/attribute&gt;
@@ -145,9 +148,9 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
-   * @return list of columns of interest, or empty for all
+   * @return list of columns of interest in column:qualifier format, or empty for all
    */
-  @XmlAttribute(name="column")
+  @XmlElement(name="column")
   public List<byte[]> getColumns() {
     return columns;
   }
@@ -188,6 +191,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
    */
   public void setEndRow(byte[] endRow) {
     this.endRow = endRow;
+  }
+
+  /**
+   * @param columns list of columns of interest in column:qualifier format, or empty for all
+   */
+  public void setColumns(List<byte[]> columns) {
+    this.columns = columns;
   }
 
   /**

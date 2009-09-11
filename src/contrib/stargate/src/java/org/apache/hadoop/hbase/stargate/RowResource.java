@@ -272,9 +272,17 @@ public class RowResource implements Constants {
     for (byte[] column: rowspec.getColumns()) {
       byte[][] split = KeyValue.parseColumn(column);
       if (rowspec.hasTimestamp()) {
-        delete.deleteColumns(split[0], split[1], rowspec.getTimestamp());
+        if (split[1] != null) {
+          delete.deleteColumns(split[0], split[1], rowspec.getTimestamp());
+        } else {
+          delete.deleteFamily(split[0], rowspec.getTimestamp());
+        }
       } else {
-        delete.deleteColumns(split[0], split[1]);
+        if (split[1] != null) {
+          delete.deleteColumns(split[0], split[1]);
+        } else {
+          delete.deleteFamily(split[0]);
+        }
       }
     }
     HTablePool pool;
