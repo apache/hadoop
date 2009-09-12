@@ -27,7 +27,6 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.io.ObjectWritable;
 
 /**
@@ -127,15 +126,17 @@ public abstract class CompareFilter implements Filter {
     }
   }
   
+  private static final HBaseConfiguration hbc = new HBaseConfiguration();
+  
   public void readFields(DataInput in) throws IOException {
     compareOp = CompareOp.valueOf(in.readUTF());
     comparator = (WritableByteArrayComparable)
-        HbaseObjectWritable.readObject(in, null);
+        ObjectWritable.readObject(in, hbc);
   }
 
   public void write(DataOutput out) throws IOException {
     out.writeUTF(compareOp.name());
     ObjectWritable.writeObject(out, comparator,
-        WritableByteArrayComparable.class, null);
+        WritableByteArrayComparable.class, hbc);
   }
 }

@@ -20,6 +20,7 @@ Release 0.21.0 - Unreleased
    HBASE-1824  [stargate] default timestamp should be LATEST_TIMESTAMP
    HBASE-1740  ICV has a subtle race condition only visible under high load
    HBASE-1808  [stargate] fix how columns are specified for scanners
+   HBASE-1828  CompareFilters are broken from client-side
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
