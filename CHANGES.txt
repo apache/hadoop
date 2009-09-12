@@ -229,6 +229,9 @@ Trunk (unreleased changes)
     HDFS-606. Fix ConcurrentModificationException in invalidateCorruptReplicas()
     (shv)
 
+    HDFS-601. TestBlockReport obtains data directories directly from
+    MiniHDFSCluster. (Konstantin Boudnik via shv)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
