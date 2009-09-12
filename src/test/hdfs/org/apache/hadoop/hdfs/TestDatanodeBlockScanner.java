@@ -131,7 +131,7 @@ public class TestDatanodeBlockScanner extends TestCase {
 
   public static boolean corruptReplica(String blockName, int replica) throws IOException {
     Random random = new Random();
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     boolean corrupted = false;
     for (int i=replica*2; i<replica*2+2; i++) {
       File blockFile = new File(baseDir, "data" + (i+1) + 
@@ -183,7 +183,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     assertTrue(blocks.get(0).isCorrupt() == false);
 
     // Corrupt random replica of block 
-    corruptReplica(block, rand);
+    assertTrue(corruptReplica(block, rand));
 
     // Restart the datanode hoping the corrupt block to be reported
     cluster.restartDataNode(rand);
@@ -203,9 +203,9 @@ public class TestDatanodeBlockScanner extends TestCase {
   
     // Corrupt all replicas. Now, block should be marked as corrupt
     // and we should get all the replicas 
-    corruptReplica(block, 0);
-    corruptReplica(block, 1);
-    corruptReplica(block, 2);
+    assertTrue(corruptReplica(block, 0));
+    assertTrue(corruptReplica(block, 1));
+    assertTrue(corruptReplica(block, 2));
 
     // Read the file to trigger reportBadBlocks by client
     try {
@@ -410,7 +410,7 @@ public class TestDatanodeBlockScanner extends TestCase {
    * Change the length of a block at datanode dnIndex
    */
   static boolean changeReplicaLength(String blockName, int dnIndex, int lenDelta) throws IOException {
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
       File blockFile = new File(baseDir, "data" + (i+1) + 
           MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
@@ -426,7 +426,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   
   private static void waitForBlockDeleted(String blockName, int dnIndex) 
   throws IOException, InterruptedException {
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1) + 
         MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
     File blockFile2 = new File(baseDir, "data" + (2*dnIndex+2) + 

@@ -1136,8 +1136,10 @@ public class BlockManager {
     boolean gotException = false;
     if (nodes == null)
       return;
-    for (Iterator<DatanodeDescriptor> it = nodes.iterator(); it.hasNext(); ) {
-      DatanodeDescriptor node = it.next();
+    // make a copy of the array of nodes in order to avoid
+    // ConcurrentModificationException, when the block is removed from the node
+    DatanodeDescriptor[] nodesCopy = nodes.toArray(new DatanodeDescriptor[0]);
+    for (DatanodeDescriptor node : nodesCopy) {
       try {
         invalidateBlock(blk, node);
       } catch (IOException e) {

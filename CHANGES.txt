@@ -54,6 +54,9 @@ Trunk (unreleased changes)
     FileNotFoundException from FileSystem::listStatus rather than returning
     null. (Jakob Homan via cdouglas)
 
+    HDFS-602. DistributedFileSystem mkdirs throws FileAlreadyExistsException
+    instead of FileNotFoundException. (Boris Shkolnik via suresh)
+
   NEW FEATURES
 
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
@@ -268,6 +271,15 @@ Trunk (unreleased changes)
 
     HDFS-605. Do not run fault injection tests in the run-test-hdfs-with-mr
     target.  (Konstantin Boudnik via szetszwo)
+
+    HDFS-606. Fix ConcurrentModificationException in invalidateCorruptReplicas()
+    (shv)
+
+    HDFS-601. TestBlockReport obtains data directories directly from
+    MiniHDFSCluster. (Konstantin Boudnik via shv)
+
+    HDFS-614. TestDatanodeBlockScanner obtains data directories directly from
+    MiniHDFSCluster. (shv)
 
 Release 0.20.1 - Unreleased
 
