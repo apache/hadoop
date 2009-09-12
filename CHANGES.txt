@@ -232,6 +232,9 @@ Trunk (unreleased changes)
     HDFS-601. TestBlockReport obtains data directories directly from
     MiniHDFSCluster. (Konstantin Boudnik via shv)
 
+    HDFS-614. TestDatanodeBlockScanner obtains data directories directly from
+    MiniHDFSCluster. (shv)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS
