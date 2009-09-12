@@ -248,6 +248,12 @@ HBASE SHELL COMMANDS:
            hbase> scan '.META.', {COLUMNS => 'info:regioninfo'}
            hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, \\
              STARTROW => 'xyz'}
+           
+           For experts, there is an additional option -- CACHE_BLOCKS -- which
+           switches block caching for the scanner on (true) or off (false).  By
+           default it is enabled.  Examples:
+           
+           hbase> scan 't1', {COLUMNS => ['c1', 'c2'], CACHE_BLOCKS => false}
 
  status    Show cluster status. Can be 'summary', 'simple', or 'detailed'. The
            default is 'summary'. Examples:

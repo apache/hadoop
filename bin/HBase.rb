@@ -11,10 +11,12 @@ include_class('java.lang.Integer') {|package,name| "J#{name}" }
 include_class('java.lang.Long') {|package,name| "J#{name}" }
 include_class('java.lang.Boolean') {|package,name| "J#{name}" }
 
+import org.apache.hadoop.hbase.KeyValue
 import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.Get
 import org.apache.hadoop.hbase.client.Put
+import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.client.Delete
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.io.BatchUpdate
@@ -43,6 +45,7 @@ module HBase
   LIMIT = "LIMIT"
   METHOD = "METHOD"
   MAXLENGTH = "MAXLENGTH"
+  CACHE_BLOCKS = "CACHE_BLOCKS"
 
   # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
   class Admin
@@ -392,42 +395,56 @@ module HBase
         filter = args["FILTER"] || nil
         startrow = args["STARTROW"] || ""
         stoprow = args["STOPROW"] || nil
-        timestamp = args["TIMESTAMP"] || HConstants::LATEST_TIMESTAMP
+        timestamp = args["TIMESTAMP"] || nil
         columns = args["COLUMNS"] || getAllColumns()
+        cache = args["CACHE_BLOCKS"] || true
         
         if columns.class == String
           columns = [columns]
         elsif columns.class != Array
           raise ArgumentError.new("COLUMNS must be specified as a String or an Array")
         end
-        cs = columns.to_java(java.lang.String)
-        
         if stoprow
-          s = @table.getScanner(cs, startrow, stoprow, timestamp)
+          scan = Scan.new(startrow.to_java_bytes, stoprow.to_java_bytes)
         else
-          s = @table.getScanner(cs, startrow, timestamp, filter) 
+          scan = Scan.new(startrow.to_java_bytes)
         end
+        for c in columns
+          split = KeyValue.parseColumn(c.to_java_bytes)
+          if split[1] != nil
+            scan.addColumn(split[0], split[1])
+          else
+            scan.addFamily(split[0])
+          end
+        end
+        if filter != nil
+          scan.setFilter(filter)
+        end
+        if timestamp != nil
+          scan.setTimeStamp(timestamp)
+        end
+        scan.setCacheBlocks(cache)
       else
-        columns = getAllColumns()
-        s = @table.getScanner(columns.to_java(java.lang.String))
+        scan = Scan.new()
       end
+      s = @table.getScanner(scan)
       count = 0
       @formatter.header(["ROW", "COLUMN+CELL"])
       i = s.iterator()
       while i.hasNext()
-        r = i.next()
+        r = i.next().getRowResult()
         row = String.from_java_bytes r.getRow()
+        count += 1
+        if limit != -1 and count >= limit
+          break
+        end
         for k, v in r
           column = String.from_java_bytes k
           cell = toString(column, v, maxlength)
           @formatter.row([row, "column=%s, %s" % [column, cell]])
         end
-        count += 1
-        if limit != -1 and count >= limit
-          break
-        end
       end
-      @formatter.footer(now)
+      @formatter.footer(now, count)
     end
 
     def put(row, column, value, timestamp = nil)
@@ -529,9 +546,9 @@ module HBase
     
     def count(interval = 1000)
       now = Time.now
-      columns = getAllColumns()
-      cs = columns.to_java(java.lang.String)
-      s = @table.getScanner(cs)
+      scan = Scan.new()
+      scan.setCacheBlocks(false)
+      s = @table.getScanner(scan)
       count = 0
       i = s.iterator()
       @formatter.header()
