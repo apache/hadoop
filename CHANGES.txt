@@ -235,6 +235,8 @@ Trunk (unreleased changes)
     HDFS-614. TestDatanodeBlockScanner obtains data directories directly from
     MiniHDFSCluster. (shv)
 
+    HDFS-612. Remove the use of org.mortbay.log.Log in FSDataset.  (szetszwo)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

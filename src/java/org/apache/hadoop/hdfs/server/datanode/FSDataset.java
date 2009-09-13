@@ -52,7 +52,6 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.mortbay.log.Log;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -568,10 +567,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           }
         }
         volumes = fsvs; // replace array of volumes
+        DataNode.LOG.info("Completed FSVolumeSet.checkDirs. Removed "
+            + removed_vols.size() + " volumes. List of current volumes: "
+            + this);
       }
-      Log.info("Completed FSVolumeSet.checkDirs. Removed=" + removed_size + 
-          "volumes. List of current volumes: " +   toString());
-      
+
       return removed_vols;
     }
       
@@ -1307,7 +1307,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     try {
       f = validateBlockFile(b);
     } catch(IOException e) {
-      Log.warn("Block " + b + " is not valid:",e);
+      DataNode.LOG.warn("Block " + b + " is not valid:",e);
     }
     
     return f != null;
@@ -1501,7 +1501,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
     } // end of sync
     mlsec = System.currentTimeMillis() - mlsec;
-    DataNode.LOG.warn(">>>>>>>>>>>>Removed " + removed_blocks + " out of " + total_blocks +
+    DataNode.LOG.warn("Removed " + removed_blocks + " out of " + total_blocks +
         "(took " + mlsec + " millisecs)");
 
     // report the error
