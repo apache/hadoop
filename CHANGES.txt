@@ -45,6 +45,7 @@ Release 0.21.0 - Unreleased
                each daemon type
    HBASE-1823  Ability for Scanners to bypass the block cache
    HBASE-1827  Add disabling block cache scanner flag to the shell
+   HBASE-1835  Add more delete tests
 
   OPTIMIZATIONS
 
