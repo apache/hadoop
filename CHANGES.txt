@@ -25,6 +25,8 @@ Append branch (unreleased changes)
     HDFS-585. Datanode should serve up to visible length of a replica for read
     requests.  (szetszwo)
 
+    HDFS-604. Block report processing for append. (shv)
+
   IMPROVEMENTS
 
     HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
@@ -35,7 +37,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * Block replicas as assigned when the block was allocated.
    * This defines the pipeline order.
    */
-  private ReplicaUnderConstruction[] replicas;
+  private List<ReplicaUnderConstruction> replicas;
 
   /** A data-node responsible for block recovery. */
   private int primaryNodeIndex = -1;
@@ -78,6 +80,13 @@ class BlockInfoUnderConstruction extends BlockInfo {
      */
     ReplicaState getState() {
       return state;
+    }
+
+    /**
+     * Set replica state.
+     */
+    void setState(ReplicaState s) {
+      state = s;
     }
 
     /**
@@ -137,10 +146,10 @@ class BlockInfoUnderConstruction extends BlockInfo {
 
   void setLocations(DatanodeDescriptor[] targets) {
     int numLocations = targets == null ? 0 : targets.length;
-    this.replicas = new ReplicaUnderConstruction[numLocations];
+    this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
     for(int i = 0; i < numLocations; i++)
-      replicas[i] =
-        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW);
+      replicas.add(
+        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
   }
 
   /**
@@ -148,15 +157,15 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * (as has been assigned by chooseTargets()).
    */
   private DatanodeDescriptor[] getExpectedLocations() {
-    int numLocations = replicas == null ? 0 : replicas.length;
+    int numLocations = replicas == null ? 0 : replicas.size();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
     for(int i = 0; i < numLocations; i++)
-      locations[i] = replicas[i].getExpectedLocation();
+      locations[i] = replicas.get(i).getExpectedLocation();
     return locations;
   }
 
   int getNumLocations() {
-    return replicas == null ? 0 : replicas.length;
+    return replicas == null ? 0 : replicas.size();
   }
 
   /**
@@ -191,18 +200,18 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * Find the first alive data-node starting from the previous primary.
    */
   void assignPrimaryDatanode() {
-    if (replicas.length == 0) {
+    if (replicas.size() == 0) {
       NameNode.stateChangeLog.warn("BLOCK*"
         + " INodeFileUnderConstruction.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
 
     int previous = primaryNodeIndex;
-    for(int i = 1; i <= replicas.length; i++) {
-      int j = (previous + i)%replicas.length;
-      if (replicas[j].isAlive()) {
+    for(int i = 1; i <= replicas.size(); i++) {
+      int j = (previous + i)%replicas.size();
+      if (replicas.get(j).isAlive()) {
         primaryNodeIndex = j;
-        DatanodeDescriptor primary = replicas[j].getExpectedLocation(); 
+        DatanodeDescriptor primary = replicas.get(j).getExpectedLocation(); 
         primary.addBlockToBeRecovered(this, getExpectedLocations());
         NameNode.stateChangeLog.info("BLOCK* " + this
           + " recovery started, primary=" + primary);
@@ -221,6 +230,15 @@ class BlockInfoUnderConstruction extends BlockInfo {
       lastRecoveryTime = now;
     }
     return expired;
+  }
+
+  void addReplicaIfNotPresent(DatanodeDescriptor dn,
+                     Block block,
+                     ReplicaState rState) {
+    for(ReplicaUnderConstruction r : replicas)
+      if(r.getExpectedLocation() == dn)
+        return;
+    replicas.add(new ReplicaUnderConstruction(block, dn, rState));
   }
 
   @Override // BlockInfo
