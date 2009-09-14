@@ -86,6 +86,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -2239,7 +2240,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private final LinkedList<Packet> dataQueue = new LinkedList<Packet>();
     private final LinkedList<Packet> ackQueue = new LinkedList<Packet>();
     private Packet currentPacket = null;
-    private DataStreamer streamer = new DataStreamer();
+    private DataStreamer streamer;
     private long currentSeqno = 0;
     private long bytesCurBlock = 0; // bytes writen in current block
     private int packetSize = 0; // write packet size, including the header.
@@ -2346,6 +2347,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         buffer.reset();
         return buffer;
       }
+      
+      // get the packet's last byte's offset in the block
+      long getLastByteOffsetBlock() {
+        return offsetInBlock + dataPos - dataStart;
+      }
     }
   
     //
@@ -2360,7 +2366,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       private static final int MAX_RECOVERY_ERROR_COUNT = 5; // try block recovery 5 times
       private int recoveryErrorCount = 0; // number of times block recovery failed
       private volatile boolean streamerClosed = false;
-      private Block block;
+      private Block block; // its length is number of bytes acked
       private AccessToken accessToken;
       private DataOutputStream blockStream;
       private DataInputStream blockReplyStream;
@@ -2368,7 +2374,73 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       private volatile DatanodeInfo[] nodes = null; // list of targets for current block
       volatile boolean hasError = false;
       volatile int errorIndex = 0;
-  
+      private BlockConstructionStage stage;  // block construction stage
+      private long bytesSent = 0; // number of bytes that've been sent
+
+      /**
+       * Default construction for file create
+       */
+      private DataStreamer() {
+        stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
+      }
+      
+      /**
+       * Construct a data streamer for append
+       * @param lastBlock last block of the file to be appended
+       * @param stat status of the file to be appended
+       * @param bytesPerChecksum number of bytes per checksum
+       * @throws IOException if error occurs
+       */
+      private DataStreamer(LocatedBlock lastBlock, FileStatus stat,
+          int bytesPerChecksum) throws IOException {
+        stage = BlockConstructionStage.PIPELINE_SETUP_APPEND;
+        block = lastBlock.getBlock();
+        bytesSent = block.getNumBytes();
+        accessToken = lastBlock.getAccessToken();
+        long usedInLastBlock = stat.getLen() % blockSize;
+        int freeInLastBlock = (int)(blockSize - usedInLastBlock);
+
+        // calculate the amount of free space in the pre-existing 
+        // last crc chunk
+        int usedInCksum = (int)(stat.getLen() % bytesPerChecksum);
+        int freeInCksum = bytesPerChecksum - usedInCksum;
+
+        // if there is space in the last block, then we have to 
+        // append to that block
+        if (freeInLastBlock == blockSize) {
+          throw new IOException("The last block for file " + 
+              src + " is full.");
+        }
+
+        if (usedInCksum > 0 && freeInCksum > 0) {
+          // if there is space in the last partial chunk, then 
+          // setup in such a way that the next packet will have only 
+          // one chunk that fills up the partial chunk.
+          //
+          computePacketChunkSize(0, freeInCksum);
+          resetChecksumChunk(freeInCksum);
+          appendChunk = true;
+        } else {
+          // if the remaining space in the block is smaller than 
+          // that expected size of of a packet, then create 
+          // smaller size packet.
+          //
+          computePacketChunkSize(Math.min(writePacketSize, freeInLastBlock), 
+              bytesPerChecksum);
+        }
+
+        // setup pipeline to append to the last block XXX retries??
+        nodes = lastBlock.getLocations();
+        errorIndex = -1;   // no errors yet.
+        if (nodes.length < 1) {
+          throw new IOException("Unable to retrieve blocks locations " +
+              " for last block " + block +
+              "of file " + src);
+
+        }
+        processDatanodeError(true, true);
+      }
+
       /*
        * streamer thread is the only thread that opens streams to datanode, 
        * and closes them. Any error recovery is also done by this thread.
@@ -2419,6 +2491,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                   " block " + block);
               response = new ResponseProcessor(nodes);
               response.start();
+              stage = BlockConstructionStage.DATA_STREAMING;
             }
 
             if (offsetInBlock >= blockSize) {
@@ -2441,7 +2514,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             // write out data to remote datanode
             blockStream.write(buf.array(), buf.position(), buf.remaining());
             blockStream.flush();
-
+            
+            // update bytesSent
+            long tmpBytesSent = one.getLastByteOffsetBlock();
+            if (bytesSent < tmpBytesSent) {
+              bytesSent = tmpBytesSent;
+            }
+            
             if (one.lastPacketInBlock) {
               synchronized (dataQueue) {
                 while (!streamerClosed && !hasError && ackQueue.size() != 0 && clientRunning) {
@@ -2450,21 +2529,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                   } catch (InterruptedException  e) {
                   }
                 }
-                // update block length
-                block.setNumBytes(offsetInBlock + one.dataPos - one.dataStart);
               }
               
               if (ackQueue.isEmpty()) { // done receiving all acks
-                if (response != null) {
-                  response.close(); // notify responder to close
-                }
                 // indicate end-of-block
                 blockStream.writeInt(0);
                 blockStream.flush();
               }
-            } else {
-              // update block length
-              block.setNumBytes(offsetInBlock + one.dataPos - one.dataStart);
             }
             if (LOG.isDebugEnabled()) {
               LOG.debug("DataStreamer block " + block +
@@ -2494,6 +2565,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             closeResponder();
             closeStream();
             nodes = null;
+            stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
           }
           if (progress != null) { progress.progress(); }
 
@@ -2588,12 +2660,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               // verify seqno from datanode
               long seqno = blockReplyStream.readLong();
               LOG.debug("DFSClient received ack for seqno " + seqno);
+              Packet one = null;
               if (seqno == -1) {
                 continue;
               } else if (seqno == -2) {
                 // no nothing
               } else {
-                Packet one = null;
                 synchronized (dataQueue) {
                   one = ackQueue.getFirst();
                 }
@@ -2618,6 +2690,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 }
               }
 
+              if (one != null) {
+                // update bytesAcked
+                block.setNumBytes(one.getLastByteOffsetBlock());
+              }
+              
               synchronized (dataQueue) {
                 ackQueue.removeFirst();
                 dataQueue.notifyAll();
@@ -2813,6 +2890,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           long startTime = System.currentTimeMillis();
           lb = locateFollowingBlock(startTime);
           block = lb.getBlock();
+          block.setNumBytes(0);
           accessToken = lb.getAccessToken();
           nodes = lb.getLocations();
 
@@ -2882,9 +2960,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               DataNode.SMALL_BUFFER_SIZE));
           blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
+          // send the request: newGS now uses a dummy value 0 for now
           DataTransferProtocol.Sender.opWriteBlock(out,
-              block.getBlockId(), block.getGenerationStamp(), nodes.length,
-              recoveryFlag, client, null, nodes, accessToken);
+              block.getBlockId(), block.getGenerationStamp(),
+              nodes.length, recoveryFlag?stage.getRecoveryStage():stage, 0,
+              block.getNumBytes(), bytesSent, client, null, nodes, accessToken);
           checksum.writeHeader(out);
           out.flush();
 
@@ -2973,54 +3053,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         } 
       }
 
-      void initAppend(LocatedBlock lastBlock, FileStatus stat,
-          int bytesPerChecksum) throws IOException {
-        block = lastBlock.getBlock();
-        accessToken = lastBlock.getAccessToken();
-        long usedInLastBlock = stat.getLen() % blockSize;
-        int freeInLastBlock = (int)(blockSize - usedInLastBlock);
-
-        // calculate the amount of free space in the pre-existing 
-        // last crc chunk
-        int usedInCksum = (int)(stat.getLen() % bytesPerChecksum);
-        int freeInCksum = bytesPerChecksum - usedInCksum;
-
-        // if there is space in the last block, then we have to 
-        // append to that block
-        if (freeInLastBlock > blockSize) {
-          throw new IOException("The last block for file " + 
-              src + " is full.");
-        }
-
-        if (usedInCksum > 0 && freeInCksum > 0) {
-          // if there is space in the last partial chunk, then 
-          // setup in such a way that the next packet will have only 
-          // one chunk that fills up the partial chunk.
-          //
-          computePacketChunkSize(0, freeInCksum);
-          resetChecksumChunk(freeInCksum);
-          appendChunk = true;
-        } else {
-          // if the remaining space in the block is smaller than 
-          // that expected size of of a packet, then create 
-          // smaller size packet.
-          //
-          computePacketChunkSize(Math.min(writePacketSize, freeInLastBlock), 
-              bytesPerChecksum);
-        }
-
-        // setup pipeline to append to the last block XXX retries??
-        nodes = lastBlock.getLocations();
-        errorIndex = -1;   // no errors yet.
-        if (nodes.length < 1) {
-          throw new IOException("Unable to retrieve blocks locations " +
-              " for last block " + block +
-              "of file " + src);
-
-        }
-        processDatanodeError(true, true);
-      }
-
       Block getBlock() {
         return block;
       }
@@ -3105,6 +3137,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                        NSQuotaExceededException.class,
                                        DSQuotaExceededException.class);
       }
+      streamer = new DataStreamer();
       streamer.start();
     }
   
@@ -3124,9 +3157,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (lastBlock != null) {
         // indicate that we are appending to an existing block
         bytesCurBlock = lastBlock.getBlockSize();
-        streamer.initAppend(lastBlock, stat, bytesPerChecksum);
+        streamer = new DataStreamer(lastBlock, stat, bytesPerChecksum);
       } else {
         computePacketChunkSize(writePacketSize, bytesPerChecksum);
+        streamer = new DataStreamer();
       }
       streamer.start();
     }

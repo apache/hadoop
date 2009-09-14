@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.io.IOUtils;
@@ -208,7 +209,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
    */
   @Override
   protected void opWriteBlock(DataInputStream in, long blockId, long blockGs,
-      int pipelineSize, boolean isRecovery,
+      int pipelineSize, BlockConstructionStage stage,
+      long newGs, long minBytesRcvd, long maxBytesRcvd,
       String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
       AccessToken accessToken) throws IOException {
 
@@ -254,7 +256,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
       blockReceiver = new BlockReceiver(block, in, 
           s.getRemoteSocketAddress().toString(),
           s.getLocalSocketAddress().toString(),
-          isRecovery, client, srcDataNode, datanode);
+          stage, newGs, minBytesRcvd, maxBytesRcvd,
+          client, srcDataNode, datanode);
 
       //
       // Open network conn to backup machine, if 
@@ -282,8 +285,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
           // Write header: Copied from DFSClient.java!
           DataTransferProtocol.Sender.opWriteBlock(mirrorOut,
-              block.getBlockId(), block.getGenerationStamp(), pipelineSize,
-              isRecovery, client, srcDataNode, targets, accessToken);
+              blockId, blockGs, 
+              pipelineSize, stage, newGs, minBytesRcvd, maxBytesRcvd, client, 
+              srcDataNode, targets, accessToken);
 
           blockReceiver.writeChecksumHeader(mirrorOut);
           mirrorOut.flush();
@@ -569,7 +573,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       blockReceiver = new BlockReceiver(
           block, proxyReply, proxySock.getRemoteSocketAddress().toString(),
           proxySock.getLocalSocketAddress().toString(),
-          false, "", null, datanode);
+          null, 0, 0, 0, "", null, datanode);
 
       // receive a block
       blockReceiver.receiveBlock(null, null, null, null, 

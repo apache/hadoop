@@ -208,7 +208,7 @@
      </Match>
 
      <!--
-       CreateBlockWriteStreams and getTmpInputStreams are pretty much like a stream constructor.
+       getTmpInputStreams is pretty much like a stream constructor.
        The newly created streams are not supposed to be closed in the constructor. So ignore
        the OBL warning.
      -->
@@ -218,4 +218,12 @@
        <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
      </Match>
 
+     <!--
+      ResponseProccessor is thread that is designed to catch RuntimeException.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.DFSClient$DFSOutputStream$DataStreamer$ResponseProcessor" />
+       <Method name="run" />
+       <Bug pattern="REC_CATCH_EXCEPTION" />
+     </Match>
  </FindBugsFilter>

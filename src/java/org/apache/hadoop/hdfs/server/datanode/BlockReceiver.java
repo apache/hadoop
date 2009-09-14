@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
@@ -80,31 +81,49 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   final private ReplicaInPipelineInterface replicaInfo;
 
   BlockReceiver(Block block, DataInputStream in, String inAddr,
-                String myAddr, boolean isRecovery, String clientName, 
-                DatanodeInfo srcDataNode, DataNode datanode) throws IOException {
+                String myAddr, BlockConstructionStage stage, 
+                long newGs, long minBytesRcvd, long maxBytesRcvd, 
+                String clientName, DatanodeInfo srcDataNode, DataNode datanode)
+                throws IOException {
     try{
       this.block = block;
       this.in = in;
       this.inAddr = inAddr;
       this.myAddr = myAddr;
-      this.isRecovery = isRecovery;
       this.clientName = clientName;
       this.srcDataNode = srcDataNode;
       this.datanode = datanode;
-      this.checksum = DataChecksum.newDataChecksum(in);
-      this.bytesPerChecksum = checksum.getBytesPerChecksum();
-      this.checksumSize = checksum.getChecksumSize();
       this.finalized = datanode.data.isValidBlock(block);
       //
       // Open local disk out
       //
       if (clientName.length() == 0) { //replication or move
         replicaInfo = datanode.data.writeToTemporary(block);
-      } else if (finalized && isRecovery) { // client append
-        replicaInfo = datanode.data.append(block);
-        this.finalized = false;
-      } else { // client write
-        replicaInfo = datanode.data.writeToRbw(block, isRecovery);
+      } else {
+        switch (stage) {
+        case PIPELINE_SETUP_CREATE:
+          isRecovery = false;
+          replicaInfo = datanode.data.writeToRbw(block, isRecovery);
+          break;
+        case PIPELINE_SETUP_STREAMING_RECOVERY:
+          isRecovery = true;
+          if (finalized) {
+            replicaInfo = datanode.data.append(block);
+            finalized = false;
+          } else {
+            replicaInfo = datanode.data.writeToRbw(block, isRecovery);
+          }
+          break;
+        case PIPELINE_SETUP_APPEND:
+        case PIPELINE_SETUP_APPEND_RECOVERY:
+          isRecovery = true;
+          replicaInfo = datanode.data.append(block);
+          finalized = false;
+          break;
+        case PIPELINE_CLOSE_RECOVERY:
+        default: throw new IOException("Unsupported stage " + stage + 
+              " while receiving block " + block + " from " + inAddr);
+        }
       }
       streams = replicaInfo.createStreams();
       if (streams != null) {
@@ -117,6 +136,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         if (datanode.blockScanner != null && isRecovery) {
           datanode.blockScanner.deleteBlock(block);
         }
+        
+        // read checksum meta information
+        this.checksum = DataChecksum.newDataChecksum(in);
+        this.bytesPerChecksum = checksum.getBytesPerChecksum();
+        this.checksumSize = checksum.getChecksumSize();
       }
     } catch (BlockAlreadyExistsException bae) {
       throw bae;

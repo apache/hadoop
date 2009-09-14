@@ -4,6 +4,8 @@ Append branch (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HDFS-544. Add a "rbw" subdir to DataNode data directory. (hairong)
+
     HDFS-576. Block report includes under-construction replicas. (shv)
 
   NEW FEATURES
@@ -12,8 +14,6 @@ Append branch (unreleased changes)
 
     HDFS-517. Introduce BlockInfoUnderConstruction to reflect block replica
     states while writing. (shv)
-
-    HDFS-544. Add a "rbw" subdir to DataNode data directory. (hairong)
 
     HDFS-565. Introduce block committing logic during new block allocation
     and file close. (shv)
@@ -40,6 +40,9 @@ Append branch (unreleased changes)
 
     HDFS-603. Add a new interface, Replica, which is going to replace the use
     of Block in datanode.  (szetszwo)
+
+    HDFS-589. Change block write protocol to support pipeline recovery. 
+    (hairong)  
 
   BUG FIXES
 
