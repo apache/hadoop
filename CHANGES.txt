@@ -149,6 +149,9 @@ Trunk (unreleased changes)
     HDFS-412. Hadoop JMX usage makes Nagios monitoring impossible.
     (Brian Bockelman via tomwhite)
 
+    HDFS-472. Update hdfsproxy documentation. Adds a setup guide and design
+    document. (Zhiyong Zhang via cdouglas)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 

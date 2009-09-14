@@ -1,0 +1,601 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title> HDFS Proxy Guide</title>
+  </header>
+
+  <body>
+    <section>
+      <title> Introduction </title>
+      <p> HDFS Proxy is a proxy server through which a hadoop client (through HSFTP) or a standard
+        HTTPS client (wget, curl, etc) can talk to a hadoop server and more importantly pull data from
+        the sever. It put an access control layer in front of hadoop namenode server and
+        extends its functionalities to allow hadoop cross-version data transfer. </p>     
+    </section>
+
+    <section>
+      <title> Goals and Use Cases </title>
+      <section>
+        <title> Data Transfer from HDFS clusters </title>
+        <ul>
+          <li>User uses HSFTP protocol (hadoop distcp/fs, etc) to access HDFS proxy to copy out data stored on one or more HDFS clusters.</li>
+          <li>User uses HTTPS protocol (curl, wget, etc) to access HDFS proxy to copy out data stored on one or more HDFS clusters </li>
+        </ul>
+      </section>
+      
+      <section>
+        <title> Cross-version Data Transfer </title>
+        <p>There are multiple HDFS clusters and possibly in different hadoop versions, each holding
+          different data. A client need to access these data in a standard way without worrying about
+          version compatibility issues. </p>
+      </section>
+      
+      <section>
+        <title> User Access Control </title>
+        <ul>
+          <li>User Access Control through SSL certificates</li>
+          <li>User Access Control through LDAP (Lightweight Directory Access Protocol) server</li>
+        </ul>
+      </section>
+      
+    </section>
+    
+    <section>
+      <title> Comparison with NameNode's H(S)FTP Interface </title>
+      <p>NameNode has a http listener started at <code>dfs.http.address</code> with default port 50070 when NameNode is started and it provided a HFTP interface for the client. Also it could have a https listener started at <code>dfs.https.address</code> if <code>dfs.https.enable</code> is defined as true (by default, <code>dfs.https.enable</code> is not defined) to provide a HSFTP interface for client.</p>
+      <section>
+        <title>Advantages of Proxy Over NameNode HTTP(S) server</title>
+        <ol>
+          <li>We can centralize access control layer to the proxy part so that NameNode server can lower its burden. In this sense, HDFS proxy plays a filtering role to control data access to NameNode and DataNodes. It is especially useful if the HDFS system has some sensitive data in it. 
+          </li>
+          <li> After modulizing HDFS proxy into a standalone package, we can decouple the complexity of HDFS system and expand the proxy functionalities without worring about affecting other HDFS system features.
+          </li>
+        </ol>
+      </section>
+      <section>
+        <title>Disadvantages of Using Proxy Instead of Getting Data Directly from H(S)FTP Interface: Slower in speed. This is due to</title>
+        <ol>
+          <li>HDFS proxy need to first copy data from source cluster, then transfer the data out to the client.</li>
+          <li> Unlike H(S)FTP interface, where file status listing, etc., is through NameNode server, and real data transfer is redirected to the real DataNode server, all data transfer under HDFS proxy is through the proxy server.</li>
+        </ol>        
+      </section>
+
+    </section>
+    
+    <section>
+      <title> Design </title>
+      <section>
+        <title> Design Overview </title>
+        <figure src="images/hdfsproxy-overview.jpg" alt="HDFS Proxy Architecture"/>
+        <p>As shown in the above figure, in the client-side, proxy server will accept requests from HSFTP client and HTTPS client. The requests will pass through a filter module (containing one or more filters) for access control checking. Then the requests will go through a delegation module, whose responsibility is to direct the requests to the right client version for accessing the source cluster. After that, the delegated client will talk to the source cluster server through RPC protocol using servlets. </p>
+      </section>
+  
+      <section>
+        <title> Filter Module: Proxy Authentication and Access Control </title>
+        <figure src="images/hdfsproxy-server.jpg" alt="HDFS Proxy Filters"/>
+        
+        <p> To realize proxy authentication and access control, we used a servlet filter. The filter module is very
+          flexible, it can be installed or disabled by simply changing the corresponding items in deployment
+          descriptor file (web.xml). We implemented two filters in the proxy code: ProxyFilter and LdapIpDirFilter. The process of how each filter works is listed as below.</p>
+               
+        <section>
+          <title>SSL certificate-based proxyFilter</title>
+          <ol>
+            <li>A user will use a pre-issued SSL certificate to access the proxy.</li>
+            <li>The proxy server will authenticate the user certificate.</li>
+            <li>The user’s authenticated identity (extracted from the user’s SSL certificate) is used to check access to data on the proxy.</li>
+            <li>User access information is stored in two configuration files, user-certs.xml and user-permissions.xml.</li>
+            <li>The proxy will forward the user’s authenticated identity to HDFS clusters for HDFS file permission checking</li>
+          </ol>
+        </section>
+        
+        <section>
+          <title>LDAP-based LdapIpDirFilter</title>
+          <ol>
+            <li>A standalone LDAP server need to be set-up to store user information as entries, and each entry contains userId, user group, IP address(es), allowable HDFS directories, etc.</li>
+            <li>An LDAP entry may contain multiple IP addresses with the same userId and group attribute to realize headless account.</li>
+            <li>Upon receiving a request, the proxy server will extract the user's Ip adress from the request header, query the LDAP server with the IP address to get the direcotry permission information, then compare that with the user request path to make a allow/deny decision.</li>
+          </ol>
+        </section>
+        <p>SSL-based proxyFilter provides strong PKI authentication and encryption, proxy server can create a self-signed CA using OpenSSL and use that CA to sign and issue certificates to clients. </p>
+        <p>Managing access information through configuration files is a convenient way to start and easy to set-up for a small user group. However, to scale to a large user group and to handle account management operations such as add, delete, and change access, a separate package or a different mechanism like LDAP server is needed.</p>
+        <p>The schema for the entry attributes in the LDAP server should match what is used in the proxy. The schema that is currently used in proxy is configurable through hdfsproxy-default.xml, but the attributes should always contain IP address (default as uniqueMember), userId (default as uid), user group (default as userClass), and alloable HDFS directories (default as documentLocation).</p>
+        <p>Users can also write their own filters to plug in the filter chain to realize extended functionalities.</p>
+      </section>
+      
+      <section>
+        <title> Delegation Module: HDFS Cross-version Data Transfer </title>
+        <figure src="images/hdfsproxy-forward.jpg" alt="HDFS Proxy Forwarding"/> 
+        <p>As shown in the Figure, the delegation module contains two parts: </p>
+        <ol>
+          <li>A Forwarding war, which plays the role of identifying the requests and directing the requests to the right HDFS client RPC version. </li>
+          <li>Several RPC client versions necessary to talk to all the HDFS source cluster servers. </li>
+        </ol>
+        <p>All servlets are packaged in the WAR files.</p>
+        <p>Strictly speaking, HDFS proxy does not by itself solve HDFS cross-version communication problem. However, through wrapping all the RPC client versions and delegating the client requests to the right version of RPC clients, HDFS proxy functions as if it can talk to multiple source clusters in different hadoop versions.</p>
+        <p>Packaging the servlets in the WAR files has several advantages:</p>
+        <ol>
+          <li>It reduces the complexity of writing our own ClassLoaders for different RPC clients. Servlet
+          container (Tomcat) already uses separate ClassLoaders for different WAR files.</li>
+          <li>Packaging is done by the Servlet container (Tomcat). For each client WAR file, its Servlets
+          only need to worry about its own version of source HDFS clusters.</li>
+        </ol>
+        <p>Note that the inter-communication between servlets in the forwarding war and that in the specific client version war can only be through built-in data types such as int, String, etc, as such data types are loaded first through common classloader. </p>
+      </section>
+      
+      <section>
+        <title> Servlets: Where Data transfer Occurs</title>
+        <p>Proxy server functionality is implemented using servlets deployed under servlet container. Specifically, there are 3 proxy servlets <code>ProxyListPathsServlet</code>, <code>ProxyFileDataServlet</code>, and <code>ProxyStreamFile</code>. Together, they implement the same H(S)FTP interface as the original <code>ListPathsServlet</code>, <code>FileDataServlet</code>, and <code>StreamFile</code> servlets do on an HDFS cluster. In fact, the proxy servlets are subclasses of the original servlets with minor changes like retrieving client UGI from the proxy server, etc. All these three servlets are put into the client war files.</p>
+        <p>The forwarding proxy, which was implemented through <code>ProxyForwardServlet</code>, is put in a separate web application (ROOT.war). All client requests should be sent to the forwarding proxy. The forwarding proxy does not implement any functionality by itself. Instead, it simply forwards client requests to the right web applications with the right servlet paths.</p>
+        <p>Forwarding servlets forward requests to servlets in the right web applications through servlet cross-context communication by setting <code>crossContext="true"</code> in servlet container's configuration file</p>
+        <p>Proxy server will install a servlet, <code>ProxyFileForward</code>, which is a subclass of <code>ProxyForwardServlet</code>, on path /file, which exposes a simple HTTPS GET interface (internally delegates the work to <code>ProxyStreamFile</code> servlet via forwarding mechanism discussed above). This interface supports standard HTTP clients like curl, wget, etc. HTTPS client requests on the wire should look like <code>https://proxy_address/file/file_path</code></p>
+      </section>
+      
+      <section>
+        <title> Load Balancing and Identifying Requests through Domain Names </title>
+        <figure src="images/request-identify.jpg" alt="Request Identification"/> 
+        <p>The delegation module relies on the forwarding WAR to be able to identify the requests so that it can direct the requests to the right HDFS client RPC versions. Identifying the requests through Domain Name, which can be extracted from the request header, is a straightforward way. Note that Domain Name can have many alias through CNAME. By exploiting such a feature, we can create a Domain Name, then create many alias of this domain name, and finally make these alias correspond to different client RPC request versions. As the same time, we may need many servers to do load balancing. We can make all these servers (with different IP addresses) point to the same Domain Name in a Round-robin fashion. By doing this, we can realize default load-balancing if we have multiple through proxy servers running in the back-end.</p>
+      </section>
+    
+    </section>
+    
+    <section>
+      <title> Jetty-based Installation and Configuration </title>
+      <p>With Jetty-based installation, only part of proxy features are supported.</p>
+      <section>
+        <title> Supporting Features </title>
+        <ul>
+          <li>Single Hadoop source cluster data transfer</li>
+          <li>Single Hadoop version data transfer</li>
+          <li>Authenticate users via user SSL certificates with <code>ProxyFilter</code> installed</li>
+          <li>Enforce access control based on configuration files.</li>
+        </ul>
+      </section>
+      
+      <section>
+        <title> Configuration Files </title>
+        <ol>
+          <li>
+            <strong>hdfsproxy-default.xml</strong>
+            <table>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td>hdfsproxy.https.address</td>
+                <td>the SSL port that hdfsproxy listens on. </td>
+              </tr>
+              <tr>
+                <td>hdfsproxy.hosts</td>
+                <td>location of hdfsproxy-hosts file. </td>
+              </tr>
+              <tr>
+                <td>hdfsproxy.dfs.namenode.address</td>
+                <td>namenode address of the HDFS cluster being proxied. </td>
+              </tr>
+              <tr>
+                <td>hdfsproxy.https.server.keystore.resource</td>
+                <td>location of the resource from which ssl server keystore information will be extracted. </td>
+              </tr>
+              <tr>
+                <td>hdfsproxy.user.permissions.file.location</td>
+                <td>location of the user permissions file. </td>
+              </tr>
+              <tr>
+                <td>hdfsproxy.user.certs.file.location</td>
+                <td>location of the user certs file. </td>
+              </tr>
+              <tr>
+                <td>hdfsproxy.ugi.cache.ugi.lifetime</td>
+                <td> The lifetime (in minutes) of a cached ugi. </td>
+              </tr>
+            </table>     
+          </li>              
+          <li>     
+            <strong>ssl-server.xml</strong>
+            <table>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td>ssl.server.truststore.location</td>
+                <td>location of the truststore. </td>
+              </tr>
+              <tr>
+                <td>ssl.server.truststore.password</td>
+                <td>truststore password. </td>
+              </tr>
+              <tr>
+                <td>ssl.server.keystore.location</td>
+                <td>location of the keystore. </td>
+              </tr>
+              <tr>
+                <td>ssl.server.keystore.password</td>
+                <td>keystore password. </td>
+              </tr>
+              <tr>
+                <td>ssl.server.keystore.keypassword</td>
+                <td>key password. </td>
+              </tr>
+            </table>
+          </li>
+          <li>     
+            <strong>user-certs.xml</strong>
+            <table>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td colspan="2">This file defines the mappings from username to comma seperated list of certificate serial numbers that the user is allowed to use. One mapping per user. Wildcard characters, such as "*" and "?", are not recognized. Any leading or trailing whitespaces are stripped/ignored. In order for a user to be able to do "clearUgiCache" and "reloadPermFiles" command, the certification serial number he use must also belong to the user "Admin". 
+                </td>
+              </tr>
+            </table>
+          </li>
+          <li>
+            <strong>user-permissions.xml</strong>
+            <table>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td colspan="2">This file defines the mappings from user name to comma seperated list of directories/files that the user is allowed to access. One mapping per user. Wildcard characters, such as "*" and "?", are not recognized. For example, to match "/output" directory, one can use "/output" or "/output/", but not "/output/*". Note that any leading or trailing whitespaces are stripped/ignored for the name field. 
+                </td>
+              </tr>
+            </table>
+          </li> 
+        </ol>
+      </section>
+      <section>
+        <title> Build Process </title>        
+        <p>Under <code>$HADOOP_HDFS_HOME</code> do the following <br/>
+          <code> $ ant clean tar</code> <br/>
+          <code> $ cd src/contrib/hdfsproxy/</code> <br/>
+          <code> $ ant clean tar</code> <br/>
+          The <code>hdfsproxy-*.tar.gz</code> file will be generated under <code>$HADOOP_HDFS_HOME/build/contrib/hdfsproxy/</code>. Use this tar ball to proceed for the server start-up/shutdown process after necessary configuration. 
+        </p>
+      </section>  
+      <section>
+        <title> Server Start up and Shutdown</title>        
+        <p> Starting up a Jetty-based HDFS Proxy server is similar to starting up an HDFS cluster. Simply run <code>hdfsproxy</code> shell command. The main configuration file is <code>hdfsproxy-default.xml</code>, which should be on the classpath. <code>hdfsproxy-env.sh</code> can be used to set up environmental variables. In particular, <code>JAVA_HOME</code> should be set. As listed above, additional configuration files include <code>user-certs.xml</code>, <code>user-permissions.xml</code> and <code>ssl-server.xml</code>, which are used to specify allowed user certs, allowed directories/files, and ssl keystore information for the proxy, respectively. The location of these files can be specified in <code>hdfsproxy-default.xml</code>. Environmental variable <code>HDFSPROXY_CONF_DIR</code> can be used to point to the directory where these configuration files are located. The configuration files (<code>hadoop-site.xml</code>, or <code>core-site.xml</code> and <code>hdfs-site.xml</code>) of the proxied HDFS cluster should also be available on the classpath .
+        </p>
+        <p> Mirroring those used in HDFS, a few shell scripts are provided to start and stop a group of proxy servers. The hosts to run hdfsproxy on are specified in <code>hdfsproxy-hosts</code> file, one host per line. All hdfsproxy servers are stateless and run independently from each other.  </p>
+        <p>
+          To start a group of proxy servers, do <br/>
+          <code> $ start-hdfsproxy.sh </code> 
+        </p>
+        <p>
+          To stop a group of proxy servers, do <br/>
+          <code> $ stop-hdfsproxy.sh </code> 
+        </p>
+        <p> 
+          To trigger reloading of <code>user-certs.xml</code> and <code>user-permissions.xml</code> files on all proxy servers listed in the <code>hdfsproxy-hosts</code> file, do <br/>       
+        <code> $ hdfsproxy -reloadPermFiles </code> 
+        </p>
+        <p>To clear the UGI caches on all proxy servers, do <br/>
+          <code> $ hdfsproxy -clearUgiCache </code> 
+        </p>
+      </section>     
+      
+      <section>
+        <title> Verification </title>
+        <p> Use HSFTP client <br/>
+          <code>bin/hadoop fs -ls "hsftp://proxy.address:port/"</code>
+        </p>
+      </section>
+
+    </section>      
+    
+    <section>
+        <title> Tomcat-based Installation and Configuration </title>
+        <p>With tomcat-based installation, all HDFS Proxy features are supported</p>
+        <section>
+          <title> Supporting Features </title>
+          <ul>
+            <li>Multiple Hadoop source cluster data transfer</li>
+            <li>Multiple Hadoop version data transfer</li>
+            <li>Authenticate users via user SSL certificates with <code>ProxyFilter</code> installed</li>
+            <li>Authentication and authorization via LDAP with <code>LdapIpDirFilter</code> installed</li>
+            <li>Access control based on configuration files if <code>ProxyFilter</code> is installed.</li>
+            <li>Access control based on LDAP entries if <code>LdapIpDirFilter</code> is installed.</li>
+            <li>Standard HTTPS Get Support for file transfer</li>
+          </ul>
+        </section>
+        
+        
+        <section>
+          <title> Source Cluster Related Configuration </title>
+          <ol>
+            <li>
+              <strong>hdfsproxy-default.xml</strong>
+              <table>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td>fs.default.name</td>
+                  <td>Source Cluster NameNode address</td>
+                </tr>
+                <tr>
+                  <td>dfs.block.size</td>
+                  <td>The block size for file tranfers</td>
+                </tr>
+                <tr>
+                  <td>io.file.buffer.size</td>
+                  <td> The size of buffer for use in sequence files. The size of this buffer should probably be a multiple of hardware page size (4096 on Intel x86), and it determines how much data is buffered during read and write operations </td>
+                </tr>
+              </table>   
+            </li>
+          </ol>
+        </section>
+      
+        <section>
+          <title> SSL Related Configuration </title>
+          <ol>
+            <li>
+              <strong>hdfsproxy-default.xml</strong>
+              <table>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td>hdfsproxy.user.permissions.file.location</td>
+                  <td>location of the user permissions file. </td>
+                </tr>
+                <tr>
+                  <td>hdfsproxy.user.certs.file.location</td>
+                  <td>location of the user certs file. </td>
+                </tr>
+                <tr>
+                  <td>hdfsproxy.ugi.cache.ugi.lifetime</td>
+                  <td> The lifetime (in minutes) of a cached ugi. </td>
+                </tr>
+              </table>     
+            </li>              
+            <li>     
+              <strong>user-certs.xml</strong>
+              <table>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td colspan="2">This file defines the mappings from username to comma seperated list of certificate serial numbers that the user is allowed to use. One mapping per user. Wildcard characters, such as "*" and "?", are not recognized. Any leading or trailing whitespaces are stripped/ignored. In order for a user to be able to do "clearUgiCache" and "reloadPermFiles" command, the certification serial number he use must also belong to the user "Admin". 
+                  </td>
+                </tr>
+              </table>
+            </li>
+            <li>
+              <strong>user-permissions.xml</strong>
+              <table>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td colspan="2">This file defines the mappings from user name to comma seperated list of directories/files that the user is allowed to access. One mapping per user. Wildcard characters, such as "*" and "?", are not recognized. For example, to match "/output" directory, one can use "/output" or "/output/", but not "/output/*". Note that any leading or trailing whitespaces are stripped/ignored for the name field. 
+                  </td>
+                </tr>
+              </table>
+            </li> 
+          </ol>
+        </section>
+        
+        <section>
+          <title> LDAP Related Configuration </title>
+          <ol>
+            <li>
+              <strong>hdfsproxy-default.xml</strong>
+              <table>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td>hdfsproxy.ldap.initial.context.factory</td>
+                  <td>LDAP context factory. </td>
+                </tr>
+                <tr>
+                  <td>hdfsproxy.ldap.provider.url</td>
+                  <td>LDAP server address. </td>
+                </tr>
+                <tr>
+                  <td>hdfsproxy.ldap.role.base</td>
+                  <td>LDAP role base. </td>
+                </tr>
+              </table>     
+            </li>              
+          </ol>
+        </section>
+        
+        
+        <section>
+          <title> Tomcat Server Related Configuration </title>
+          <ol>
+            <li>
+              <strong>tomcat-forward-web.xml</strong>
+              <table>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td colspan="2">This deployment descritor file defines how servlets and filters are installed in the forwarding war (ROOT.war). The default filter installed is <code>LdapIpDirFilter</code>, you can change to <code>ProxyFilter</code> with <code>org.apache.hadoop.hdfsproxy.ProxyFilter</code> as you <code>filter-class</code>. </td>
+                </tr>
+              </table>     
+            </li>
+            <li>
+              <strong>tomcat-web.xml</strong>
+              <table>                
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td colspan="2">This deployment descritor file defines how servlets and filters are installed in the client war. The default filter installed is <code>LdapIpDirFilter</code>, you can change to <code>ProxyFilter</code> with <code>org.apache.hadoop.hdfsproxy.ProxyFilter</code> as you <code>filter-class</code>. </td>
+                </tr>
+              </table>     
+            </li>
+            <li>
+              <strong>$TOMCAT_HOME/conf/server.xml</strong>
+              <table>                
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td colspan="2"> You need to change Tomcat's server.xml file under $TOMCAT_HOME/conf as detailed in <a href="http://tomcat.apache.org/tomcat-6.0-doc/ssl-howto.html">tomcat 6 ssl-howto</a>. Set <code>clientAuth="true"</code> if you need to authenticate client. 
+                  </td>
+                </tr>
+              </table>     
+            </li>
+            <li>
+              <strong>$TOMCAT_HOME/conf/context.xml</strong>
+              <table>                
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td colspan="2"> You need to change Tomcat's context.xml file under $TOMCAT_HOME/conf by adding <code>crossContext="true"</code> after <code>Context</code>.
+                  </td>
+                </tr>
+              </table>     
+            </li>
+          </ol>
+        </section>
+        <section>
+          <title> Build and Deployment Process </title>  
+          <section>
+            <title> Build forwarding war (ROOT.war) </title>
+            <p>Suppose hdfsproxy-default.xml has been properly configured and it is under ${user.home}/proxy-root-conf dir. Under <code>$HADOOP_HDFS_HOME</code> do the following <br/>
+              <code> $ export HDFSPROXY_CONF_DIR=${user.home}/proxy-root-conf</code> <br/>
+              <code> $ ant clean tar</code> <br/>
+              <code> $ cd src/contrib/hdfsproxy/</code> <br/>
+              <code> $ ant clean forward</code> <br/>
+              The <code>hdfsproxy-forward-*.war</code> file will be generated under <code>$HADOOP_HDFS_HOME/build/contrib/hdfsproxy/</code>. Copy this war file to tomcat's webapps directory and rename it at ROOT.war (if ROOT dir already exists, remove it first) for deployment. 
+            </p>
+          </section>
+          <section>
+            <title> Build cluster client war (client.war) </title>
+            <p>Suppose hdfsproxy-default.xml has been properly configured and it is under ${user.home}/proxy-client-conf dir. Under <code>$HADOOP_HDFS_HOME</code> do the following <br/>
+              <code> $ export HDFSPROXY_CONF_DIR=${user.home}/proxy-client-conf</code> <br/>
+              <code> $ ant clean tar</code> <br/>
+              <code> $ cd src/contrib/hdfsproxy/</code> <br/>
+              <code> $ ant clean war</code> <br/>
+              The <code>hdfsproxy-*.war</code> file will be generated under <code>$HADOOP_HDFS_HOME/build/contrib/hdfsproxy/</code>. Copy this war file to tomcat's webapps directory and rename it properly for deployment. 
+            </p>
+          </section>
+          <section>
+            <title> Handle Multiple Source Clusters </title>
+            <p> To proxy for multiple source clusters, you need to do the following:</p>
+            <ol>
+              <li>Build multiple client war with different names and different hdfsproxy-default.xml configurations</li>
+              <li>Make multiple alias using CNAME of the same Domain Name</li>
+              <li>Make sure the first part of the alias match the corresponding client war file name. For example, you have two source clusters, sc1 and sc2, and you made two alias of the same domain name, proxy1.apache.org and proxy2.apache.org, then you need to name the client war file as proxy1.war and proxy2.war respectively for your deployment.</li>
+            </ol>
+          </section>
+        </section>  
+        
+        <section>
+          <title> Server Start up and Shutdown</title>        
+          <p> Starting up and shutting down Tomcat-based HDFS Proxy server is no more than starting up and shutting down tomcat server with tomcat's bin/startup.sh and bin/shutdown.sh script.</p>
+          <p> If you need to authenticate client certs, you need either set <code>truststoreFile</code> and <code>truststorePass</code> following <a href="http://tomcat.apache.org/tomcat-6.0-doc/ssl-howto.html">tomcat 6 ssl-howto</a> in the configuration stage or give the truststore location by doing the following <br/>
+            <code>export JAVA_OPTS="-Djavax.net.ssl.trustStore=${user.home}/truststore-location -Djavax.net.ssl.trustStorePassword=trustpass"</code> <br/>
+            before you start-up tomcat.
+          </p>
+        </section>     
+        <section>
+          <title> Verification </title>
+          <p>HTTPS client <br/>
+            <code>curl -k "https://proxy.address:port/file/file-path"</code> <br/>
+            <code>wget --no-check-certificate "https://proxy.address:port/file/file-path"</code>
+          </p>
+          <p>HADOOP client <br/>
+            <code>bin/hadoop fs -ls "hsftp://proxy.address:port/"</code>
+          </p>
+        </section>
+        
+    </section>    
+    
+    <section>
+      <title> Hadoop Client Configuration </title>
+      <ul>
+        <li>
+          <strong>ssl-client.xml</strong>
+          <table>            
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+            </tr>
+            <tr>
+              <td>ssl.client.do.not.authenticate.server</td>
+              <td>if true, trust all server certificates, like curl's -k option</td>
+            </tr>
+            <tr>
+              <td>ssl.client.truststore.location</td>
+              <td>Location of truststore</td>
+            </tr>
+            <tr>
+              <td>ssl.client.truststore.password</td>
+              <td> truststore password </td>
+            </tr>
+            <tr>
+              <td>ssl.client.truststore.type</td>
+              <td> truststore type </td>
+            </tr>
+            <tr>
+              <td>ssl.client.keystore.location</td>
+              <td> Location of keystore </td>
+            </tr>
+            <tr>
+              <td>ssl.client.keystore.password</td>
+              <td> keystore password </td>
+            </tr>
+            <tr>
+              <td>ssl.client.keystore.type</td>
+              <td> keystore type </td>
+            </tr>
+            <tr>
+              <td>ssl.client.keystore.keypassword</td>
+              <td> keystore key password </td>
+            </tr>
+            <tr>
+              <td>ssl.expiration.warn.days</td>
+              <td> server certificate expiration war days threshold, 0 means no warning should be issued </td>
+            </tr>
+          </table>   
+        </li>
+      </ul>
+    </section>
+
+
+
+  </body>
+</document>
