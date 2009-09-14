@@ -51,11 +51,16 @@ import org.apache.hadoop.hbase.util.Bytes;
  * {@link #deleteColumn(byte [],byte [],long) deleteColumn}
  * for each column version to delete.
  * <p>
- * Specifying timestamps calling constructor, deleteFamily, and deleteColumns
- * will delete all versions with a timestamp less than or equal to that
- * specified.  Specifying a timestamp to deleteColumn will delete versions
- * only with a timestamp equal to that specified.
- * <p>The timestamp passed to the constructor is only used ONLY for delete of
+ * Specifying timestamps, deleteFamily and deleteColumns will delete all
+ * versions with a timestamp less than or equal to that passed.  If no
+ * timestamp is specified, an entry is added with a timestamp of 'now'
+ * where 'now' is the servers's System.currentTimeMillis().
+ * Specifying a timestamp to the deleteColumn method will
+ * delete versions only with a timestamp equal to that specified.
+ * If no timestamp is passed to deleteColumn, internally, it figures the
+ * most recent cell's timestamp and adds a delete at that timestamp; i.e.
+ * it deletes the most recently added cell.
+ * <p>The timestamp passed to the constructor is used ONLY for delete of
  * rows.  For anything less -- a deleteColumn, deleteColumns or
  * deleteFamily -- then you need to use the method overrides that take a
  * timestamp.  The constructor timestamp is not referenced.

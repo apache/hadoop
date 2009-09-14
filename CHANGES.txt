@@ -22,6 +22,8 @@ Release 0.21.0 - Unreleased
    HBASE-1808  [stargate] fix how columns are specified for scanners
    HBASE-1828  CompareFilters are broken from client-side
    HBASE-1836  test of indexed hbase broken
+   HBASE-1838  [javadoc] Add javadoc to Delete explaining behavior when no
+               timestamp provided
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
