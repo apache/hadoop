@@ -139,7 +139,7 @@ public class Result implements Writable {
     if(this.kvs == null) {
       readFields();
     }
-    return Arrays.asList(sorted());
+    return isEmpty()? null: Arrays.asList(sorted());
   }
 
   /**

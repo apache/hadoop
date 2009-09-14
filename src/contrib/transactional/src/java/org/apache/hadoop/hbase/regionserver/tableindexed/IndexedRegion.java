@@ -260,9 +260,11 @@ class IndexedRegion extends TransactionalRegion {
     if (result == null || result.raw() == null) {
       return currentColumnValues;
     }
-    
-    for(KeyValue kv : result.list()) {
-      currentColumnValues.put(kv.getColumn(), kv.getValue());
+    List<KeyValue> list = result.list();
+    if (list != null) {
+      for(KeyValue kv : result.list()) {
+        currentColumnValues.put(kv.getColumn(), kv.getValue());
+      }
     }
     return currentColumnValues;
   }
