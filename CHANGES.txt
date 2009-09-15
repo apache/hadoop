@@ -25,6 +25,7 @@ Release 0.21.0 - Unreleased
    HBASE-1838  [javadoc] Add javadoc to Delete explaining behavior when no
                timestamp provided
    HBASE-1821  Filtering by SingleColumnValueFilter bug
+   HBASE-1840  RowLock fails when used with IndexTable (Keith Thomas via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

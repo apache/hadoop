@@ -93,11 +93,11 @@ class IndexedRegion extends TransactionalRegion {
   @Override
   public void put(Put put, Integer lockId, boolean writeToWAL)
       throws IOException {
-    updateIndexes(put); // Do this first because will want to see the old row
+    updateIndexes(put, lockId); // Do this first because will want to see the old row
     super.put(put, lockId, writeToWAL);
   }
 
-  private void updateIndexes(Put put) throws IOException {
+  private void updateIndexes(Put put, Integer lockId) throws IOException {
     List<IndexSpecification> indexesToUpdate = new LinkedList<IndexSpecification>();
 
     // Find the indexes we need to update
@@ -119,7 +119,7 @@ class IndexedRegion extends TransactionalRegion {
       oldGet.addColumn(neededCol);  
     }
     
-    Result oldResult = super.get(oldGet, null);
+    Result oldResult = super.get(oldGet, lockId);
     
     // Add the old values to the new if they are not there
     if (oldResult != null && oldResult.raw() != null) {

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowLock; 
 import org.apache.hadoop.hbase.regionserver.tableindexed.IndexedRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -55,6 +56,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
   private IndexedTableAdmin admin;
   private IndexedTable table;
   private Random random = new Random();
+  private HTableDescriptor desc;
 
   /** constructor */
   public TestIndexedTable() {
@@ -68,7 +70,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
   protected void setUp() throws Exception {
     super.setUp();
 
-    HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
+    desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(FAMILY_COLON));
 
     IndexedTableDescriptor indexDesc = new IndexedTableDescriptor(desc);
@@ -118,6 +120,68 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     Assert.assertEquals(numRowsExpected, numRows);
   }
 
+  private void assertRowUpdated(int updatedRow, int expectedRowValue)
+      throws IndexNotFoundException, IOException {
+    ResultScanner scanner = table.getIndexedScanner(INDEX_COL_A, null, null,
+        null, null, null);
+    byte[] persistedRowValue = null;
+    for (Result rowResult : scanner) {
+      byte[] row = rowResult.getRow();
+      byte[] value = rowResult.getValue(COL_A);
+      if (Bytes.toString(row).equals(Bytes.toString(PerformanceEvaluation.format(updatedRow)))) {        
+        persistedRowValue = value;
+        LOG.info("update found: row [" + Bytes.toString(row)
+          + "] value [" + Bytes.toString(value) + "]");
+      }
+      else
+        LOG.info("updated index scan : row [" + Bytes.toString(row)
+          + "] value [" + Bytes.toString(value) + "]");
+    }
+    scanner.close();
+
+    Assert.assertEquals(Bytes.toString(PerformanceEvaluation.format(expectedRowValue)),  
+                                    Bytes.toString(persistedRowValue));
+  }
+
+  private void updateRow(int row, int newValue) throws IOException {
+      Put update = new Put(PerformanceEvaluation.format(row));
+      byte[] valueA = PerformanceEvaluation.format(newValue);
+      update.add(FAMILY, QUAL_A, valueA);
+      table.put(update);
+      LOG.info("Updated row [" + Bytes.toString(update.getRow()) + "] val: ["
+          + Bytes.toString(valueA) + "]");
+  }
+
+  private void updateLockedRow(int row, int newValue) throws IOException {
+      RowLock lock = table.lockRow(PerformanceEvaluation.format(row));
+      Put update = new Put(PerformanceEvaluation.format(row), lock);
+      byte[] valueA = PerformanceEvaluation.format(newValue);
+      update.add(FAMILY, QUAL_A, valueA);
+      LOG.info("Updating row [" + Bytes.toString(update.getRow()) + "] val: ["
+          + Bytes.toString(valueA) + "]");
+      table.put(update);
+      LOG.info("Updated row [" + Bytes.toString(update.getRow()) + "] val: ["
+          + Bytes.toString(valueA) + "]");
+      table.unlockRow(lock);
+  } 
+
+  private void updateLockedRowNoAutoFlush(int row, int newValue) throws IOException {
+      table.flushCommits();
+      table.setAutoFlush(false);
+      RowLock lock = table.lockRow(PerformanceEvaluation.format(row));
+      Put update = new Put(PerformanceEvaluation.format(row), lock);
+      byte[] valueA = PerformanceEvaluation.format(newValue);
+      update.add(FAMILY, QUAL_A, valueA);
+      LOG.info("Updating row [" + Bytes.toString(update.getRow()) + "] val: ["
+          + Bytes.toString(valueA) + "]");
+      table.put(update);
+      LOG.info("Updated row [" + Bytes.toString(update.getRow()) + "] val: ["
+          + Bytes.toString(valueA) + "]");
+      table.flushCommits();
+      table.close();
+      table = new IndexedTable(conf, desc.getName());
+  } 
+
   public void testMultipleWrites() throws IOException {
     writeInitalRows();
     writeInitalRows(); // Update the rows.
@@ -131,4 +195,28 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     
     assertRowsInOrder(NUM_ROWS - 1);    
   }
+
+  public void testRowUpdate() throws IOException {
+    writeInitalRows();
+    int row = NUM_ROWS - 2;
+    int value = MAX_VAL + 111;
+    updateRow(row, value);
+    assertRowUpdated(row, value);
+  }
+
+  public void testLockedRowUpdate() throws IOException {
+    writeInitalRows();
+    int row = NUM_ROWS - 2;
+    int value = MAX_VAL + 111;
+    updateLockedRow(row, value);
+    assertRowUpdated(row, value);
+  } 
+
+  public void testLockedRowUpdateNoAutoFlush() throws IOException {
+    writeInitalRows();
+    int row = NUM_ROWS - 4;
+    int value = MAX_VAL + 2222;
+    updateLockedRowNoAutoFlush(row, value);
+    assertRowUpdated(row, value);
+  } 
 }
