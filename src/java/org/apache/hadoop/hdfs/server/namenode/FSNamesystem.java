@@ -90,7 +90,7 @@ import javax.security.auth.login.LoginException;
  * 4)  machine --> blocklist (inverted #2)
  * 5)  LRU cache of updated-heartbeat machines
  ***************************************************/
-public class FSNamesystem implements FSConstants, FSNamesystemMBean {
+public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterStats {
   public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
   public static final String AUDIT_FORMAT =
     "ugi=%s\t" +  // ugi
@@ -1123,7 +1123,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     // choose targets for the new block to be allocated.
     DatanodeDescriptor targets[] = blockManager.replicator.chooseTarget(
-        replication, clientNode, null, blockSize);
+        src, replication, clientNode, blockSize);
     if (targets.length < blockManager.minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +
                             targets.length + " nodes, instead of " +
@@ -2344,8 +2344,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
                               Block b, short replication,
                               DatanodeDescriptor addedNode,
-                              DatanodeDescriptor delNodeHint) {
+                              DatanodeDescriptor delNodeHint,
+                              BlockPlacementPolicy replicator) {
     // first form a rack to datanodes map and
+    INodeFile inode = blockManager.getINode(b);
     HashMap<String, ArrayList<DatanodeDescriptor>> rackMap =
       new HashMap<String, ArrayList<DatanodeDescriptor>>();
     for (Iterator<DatanodeDescriptor> iter = nonExcess.iterator();
@@ -2389,17 +2391,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
             (priSet.contains(delNodeHint) || (addedNode != null && !priSet.contains(addedNode))) ) {
           cur = delNodeHint;
       } else { // regular excessive replica removal
-        Iterator<DatanodeDescriptor> iter = 
-          priSet.isEmpty() ? remains.iterator() : priSet.iterator();
-          while( iter.hasNext() ) {
-            DatanodeDescriptor node = iter.next();
-            long free = node.getRemaining();
-
-            if (minSpace > free) {
-              minSpace = free;
-              cur = node;
-            }
-          }
+        cur = replicator.chooseReplicaToDelete(inode, b, replication, priSet, remains);
       }
 
       firstOne = false;

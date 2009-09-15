@@ -117,7 +117,7 @@ public class BlockManager {
   Random r = new Random();
 
   // for block replicas placement
-  ReplicationTargetChooser replicator;
+  BlockPlacementPolicy replicator;
 
   BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
     this(fsn, conf, DEFAULT_INITIAL_MAP_CAPACITY);
@@ -134,8 +134,8 @@ public class BlockManager {
   }
 
   void setConfigurationParameters(Configuration conf) throws IOException {
-    this.replicator = new ReplicationTargetChooser(
-                         conf.getBoolean("dfs.replication.considerLoad", true),
+    this.replicator = BlockPlacementPolicy.getInstance(
+                         conf,
                          namesystem,
                          namesystem.clusterMap);
 
@@ -639,12 +639,13 @@ public class BlockManager {
     int requiredReplication, numEffectiveReplicas;
     List<DatanodeDescriptor> containingNodes;
     DatanodeDescriptor srcNode;
+    INodeFile fileINode = null;
     int additionalReplRequired;
 
     synchronized (namesystem) {
       synchronized (neededReplications) {
         // block should belong to a file
-        INodeFile fileINode = blocksMap.getINode(block);
+        fileINode = blocksMap.getINode(block);
         // abandoned block or block reopened for append
         if(fileINode == null || fileINode.isUnderConstruction()) {
           neededReplications.remove(block, priority); // remove from neededReplications
@@ -691,9 +692,11 @@ public class BlockManager {
     }
 
     // choose replication targets: NOT HOLDING THE GLOBAL LOCK
+    // It is costly to extract the filename for which chooseTargets is called,
+    // so for now we pass in the Inode itself.
     DatanodeDescriptor targets[] = 
-                       replicator.chooseTarget(additionalReplRequired,
-                       srcNode, containingNodes, null, block.getNumBytes());
+                       replicator.chooseTarget(fileINode, additionalReplRequired,
+                       srcNode, containingNodes, block.getNumBytes());
     if(targets.length == 0)
       return false;
 
@@ -701,7 +704,7 @@ public class BlockManager {
       synchronized (neededReplications) {
         // Recheck since global lock was released
         // block should belong to a file
-        INodeFile fileINode = blocksMap.getINode(block);
+        fileINode = blocksMap.getINode(block);
         // abandoned block or block reopened for append
         if(fileINode == null || fileINode.isUnderConstruction()) {
           neededReplications.remove(block, priority); // remove from neededReplications
@@ -1162,7 +1165,7 @@ public class BlockManager {
       }
     }
     namesystem.chooseExcessReplicates(nonExcess, block, replication, 
-        addedNode, delNodeHint);
+        addedNode, delNodeHint, replicator);
   }
 
   void addToExcessReplicate(DatanodeInfo dn, Block block) {

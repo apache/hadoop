@@ -37,6 +37,9 @@ Trunk (unreleased changes)
     HDFS-235. Add support for byte ranges in HftpFileSystem to serve
     range of bytes from a file. (Bill Zeller via suresh)
 
+    HDFS-385. Add support for an experimental API that allows a module external
+    to HDFS to specify how HDFS blocks should be placed. (dhruba)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
