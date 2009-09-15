@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * deleteFamily -- then you need to use the method overrides that take a
  * timestamp.  The constructor timestamp is not referenced.
  */
-public class Delete implements Writable {
+public class Delete implements Writable, Row, Comparable<Row> {
   private byte [] row = null;
   // This ts is only used when doing a deleteRow.  Anything less, 
   private long ts;
@@ -120,6 +120,10 @@ public class Delete implements Writable {
     this.ts = d.getTimeStamp();
     this.lockId = d.getLockId();
     this.familyMap.putAll(d.getFamilyMap());
+  }
+
+  public int compareTo(final Row d) {
+    return Bytes.compareTo(this.getRow(), d.getRow());
   }
 
   /**

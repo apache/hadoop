@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -49,7 +50,7 @@ public class TestClient extends HBaseClusterTestCase {
     super();
   }
   
-  public void XtestSuperSimple() throws Exception {
+  public void testSuperSimple() throws Exception {
     byte [] TABLE = Bytes.toBytes("testSuperSimple");
     HTable ht = createTable(TABLE, FAMILY);
     Put put = new Put(ROW);
@@ -1071,7 +1072,6 @@ public class TestClient extends HBaseClusterTestCase {
   }
   
   public void testDeletes() throws Exception {
-    
     byte [] TABLE = Bytes.toBytes("testDeletes");
     
     byte [][] ROWS = makeNAscii(ROW, 6);
@@ -1318,8 +1318,38 @@ public class TestClient extends HBaseClusterTestCase {
     assertTrue(Bytes.equals(result.sorted()[0].getValue(), VALUES[1]));
     assertTrue(Bytes.equals(result.sorted()[1].getValue(), VALUES[2]));
     scanner.close();
+    
+    // Add test of bulk deleting.
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      put = new Put(bytes);
+      put.add(FAMILIES[0], QUALIFIER, bytes);
+      ht.put(put);
+    }
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      get = new Get(bytes);
+      get.addFamily(FAMILIES[0]);
+      result = ht.get(get);
+      assertTrue(result.size() == 1);
+    }
+    ArrayList<Delete> deletes = new ArrayList<Delete>();
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      delete = new Delete(bytes);
+      delete.deleteFamily(FAMILIES[0]);
+      deletes.add(delete);
+    }
+    ht.delete(deletes);
+    for (int i = 0; i < 10; i++) {
+      byte [] bytes = Bytes.toBytes(i);
+      get = new Get(bytes);
+      get.addFamily(FAMILIES[0]);
+      result = ht.get(get);
+      assertTrue(result.size() == 0);
+    }
   }
-  
+
   /**
    * Baseline "scalability" test.
    * 

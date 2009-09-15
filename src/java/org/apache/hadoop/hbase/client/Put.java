@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * for each column to be inserted, execute {@link #add(byte[], byte[], byte[]) add} or
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
-public class Put implements HeapSize, Writable, Comparable<Put> {
+public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   private byte [] row = null;
   private long timestamp = HConstants.LATEST_TIMESTAMP;
   private long lockId = -1L;
@@ -158,10 +158,10 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     int res = Bytes.compareTo(this.row, 0, row.length, 
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
     if(res != 0) {
-    	throw new IOException("The row in the recently added KeyValue " + 
-    			Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(), 
-    			kv.getRowLength()) + " doesn't match the original one " + 
-    			Bytes.toStringBinary(this.row));
+      throw new IOException("The row in the recently added KeyValue " + 
+          Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(), 
+        kv.getRowLength()) + " doesn't match the original one " + 
+        Bytes.toStringBinary(this.row));
     }
     list.add(kv);
     familyMap.put(family, list);
@@ -293,7 +293,7 @@ public class Put implements HeapSize, Writable, Comparable<Put> {
     return sb.toString();
   }
   
-  public int compareTo(Put p) {
+  public int compareTo(Row p) {
     return Bytes.compareTo(this.getRow(), p.getRow());
   }
   

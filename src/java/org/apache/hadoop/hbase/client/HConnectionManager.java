@@ -65,6 +65,9 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
 public class HConnectionManager implements HConstants {
+  private static final Delete [] DELETE_ARRAY_TYPE = new Delete[0];
+  private static final Put [] PUT_ARRAY_TYPE = new Put[0];
+  
   /*
    * Not instantiable.
    */
@@ -1054,84 +1057,166 @@ public class HConnectionManager implements HConstants {
       return location;
     }
 
-    public int processBatchOfRows(ArrayList<Put> list, byte[] tableName)
-        throws IOException {
-      if (list.isEmpty()) {
-        return 0;
+    /*
+     * Helper class for batch updates.
+     * Holds code shared doing batch puts and batch deletes.
+     */
+    private abstract class Batch {
+      final HConnection c;
+
+      private Batch(final HConnection c) {
+        this.c = c;
       }
-      boolean retryOnlyOne = false;
-      if (list.size() > 1) {
-        Collections.sort(list);
-      }
-      List<Put> currentPuts = new ArrayList<Put>();
-      HRegionLocation location =
-        getRegionLocationForRowWithRetries(tableName, list.get(0).getRow(),
-            false);
-      byte [] currentRegion = location.getRegionInfo().getRegionName();
-      byte [] region = currentRegion;
-      boolean isLastRow = false;
-      Put [] putarray = new Put[0];
-      int i, tries;
-      for (i = 0, tries = 0; i < list.size() && tries < this.numRetries; i++) {
-        Put put = list.get(i);
-        currentPuts.add(put);
-        // If the next Put goes to a new region, then we are to clear
-        // currentPuts now during this cycle.
-        isLastRow = (i + 1) == list.size();
-        if (!isLastRow) {
-          location = getRegionLocationForRowWithRetries(tableName,
-            list.get(i + 1).getRow(), false);
-          region = location.getRegionInfo().getRegionName();
+
+      /**
+       * This is the method subclasses must implement.
+       * @param currentList
+       * @param tableName
+       * @param row
+       * @return Count of items processed or -1 if all.
+       * @throws IOException
+       * @throws RuntimeException
+       */
+      abstract int doCall(final List<Row> currentList,
+        final byte [] row, final byte [] tableName)
+      throws IOException, RuntimeException;
+
+      /**
+       * Process the passed <code>list</code>.
+       * @param list
+       * @param tableName
+       * @return Count of how many added or -1 if all added.
+       * @throws IOException
+       */
+      int process(final ArrayList<? extends Row> list, final byte[] tableName)
+      throws IOException {
+        byte [] region = getRegionName(tableName, list.get(0).getRow(), false);
+        byte [] currentRegion = region;
+        boolean isLastRow = false;
+        boolean retryOnlyOne = false;
+        List<Row> currentList = new ArrayList<Row>();
+        int i, tries;
+        for (i = 0, tries = 0; i < list.size() && tries < numRetries; i++) {
+          Row row = list.get(i);
+          currentList.add(row);
+          // If the next record goes to a new region, then we are to clear
+          // currentList now during this cycle.
+          isLastRow = (i + 1) == list.size();
+          if (!isLastRow) {
+            region = getRegionName(tableName, list.get(i + 1).getRow(), false);
+          }
+          if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
+            int index = doCall(currentList, row.getRow(), tableName);
+            // index is == -1 if all processed successfully, else its index
+            // of last record successfully processed.
+            if (index != -1) {
+              if (tries == numRetries - 1) {
+                throw new RetriesExhaustedException("Some server, retryOnlyOne=" +
+                  retryOnlyOne + ", index=" + index + ", islastrow=" + isLastRow +
+                  ", tries=" + tries + ", numtries=" + numRetries + ", i=" + i +
+                  ", listsize=" + list.size() + ", region=" +
+                  Bytes.toStringBinary(region), currentRegion, row.getRow(),
+                  tries, new ArrayList<Throwable>());
+              }
+              tries = doBatchPause(currentRegion, tries);
+              i = i - currentList.size() + index;
+              retryOnlyOne = true;
+              // Reload location.
+              region = getRegionName(tableName, list.get(i + 1).getRow(), true);
+            } else {
+              // Reset these flags/counters on successful batch Put
+              retryOnlyOne = false;
+              tries = 0;
+            }
+            currentRegion = region;
+            currentList.clear();
+          }
         }
-        if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
-          final Put [] puts = currentPuts.toArray(putarray);
-          int index = getRegionServerWithRetries(new ServerCallable<Integer>(
-              this, tableName, put.getRow()) {
+        return i;
+      }
+
+      /*
+       * @param t
+       * @param r
+       * @param re
+       * @return Region name that holds passed row <code>r</code>
+       * @throws IOException
+       */
+      private byte [] getRegionName(final byte [] t, final byte [] r,
+        final boolean re)
+      throws IOException {
+        HRegionLocation location = getRegionLocationForRowWithRetries(t, r, re);
+        return location.getRegionInfo().getRegionName();
+      }
+
+      /*
+       * Do pause processing before retrying...
+       * @param currentRegion
+       * @param tries
+       * @return New value for tries.
+       */
+      private int doBatchPause(final byte [] currentRegion, final int tries) {
+        int localTries = tries;
+        long sleepTime = getPauseTime(tries);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Reloading region " + Bytes.toStringBinary(currentRegion) +
+            " location because regionserver didn't accept updates; tries=" +
+            tries + " of max=" + numRetries + ", waiting=" + sleepTime + "ms");
+        }
+        try {
+          Thread.sleep(sleepTime);
+          localTries++;
+        } catch (InterruptedException e) {
+          // continue
+        }
+        return localTries;
+      }
+    }
+
+    public int processBatchOfRows(final ArrayList<Put> list,
+      final byte[] tableName)
+    throws IOException {
+      if (list.isEmpty()) return 0;
+      if (list.size() > 1) Collections.sort(list);
+      Batch b = new Batch(this) {
+        @Override
+        int doCall(final List<Row> currentList, final byte [] row,
+          final byte [] tableName)
+        throws IOException, RuntimeException {
+          final Put [] puts = currentList.toArray(PUT_ARRAY_TYPE);
+          return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
+              tableName, row) {
             public Integer call() throws IOException {
               return server.put(location.getRegionInfo().getRegionName(), puts);
             }
           });
-          // index is == -1 if all puts processed successfully, else its index
-          // of last Put successfully processed.
-          if (index != -1) {
-            if (tries == numRetries - 1) {
-              throw new RetriesExhaustedException("Some server, retryOnlyOne=" +
-                retryOnlyOne + ", index=" + index + ", islastrow=" + isLastRow +
-                ", tries=" + tries + ", numtries=" + numRetries + ", i=" + i +
-                ", listsize=" + list.size() + ", location=" + location +
-                ", region=" + Bytes.toStringBinary(region),
-                currentRegion, put.getRow(), tries, new ArrayList<Throwable>());
-            }
-            long sleepTime = getPauseTime(tries);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Reloading region " + Bytes.toStringBinary(currentRegion) +
-                " location because regionserver didn't accept updates; " +
-                "tries=" + tries + " of max=" + this.numRetries +
-                ", waiting=" + sleepTime + "ms");
-            }
-            try {
-              Thread.sleep(sleepTime);
-              tries++;
-            } catch (InterruptedException e) {
-              // continue
-            }
-            i = i - puts.length + index;
-            retryOnlyOne = true;
-            // Reload location.
-            location = getRegionLocationForRowWithRetries(tableName, 
-              list.get(i + 1).getRow(), true);
-            region = location.getRegionInfo().getRegionName();
-          } else {
-            // Reset these flags/counters on successful batch Put
-            retryOnlyOne = false;
-            tries = 0;
-          }
-          currentRegion = region;
-          currentPuts.clear();
         }
-      }
-      return i;
+      };
+      return b.process(list, tableName);
     }
+
+    public int processBatchOfDeletes(final ArrayList<Delete> list,
+      final byte[] tableName)
+    throws IOException {
+      if (list.isEmpty()) return 0;
+      if (list.size() > 1) Collections.sort(list);
+      Batch b = new Batch(this) {
+        @Override
+        int doCall(final List<Row> currentList, final byte [] row,
+          final byte [] tableName)
+        throws IOException, RuntimeException {
+          final Delete [] deletes = currentList.toArray(DELETE_ARRAY_TYPE);
+          return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
+                tableName, row) {
+              public Integer call() throws IOException {
+                return server.delete(location.getRegionInfo().getRegionName(),
+                  deletes);
+              }
+            });
+          }
+        };
+        return b.process(list, tableName);
+      }
 
     void close(boolean stopProxy) {
       if (master != null) {

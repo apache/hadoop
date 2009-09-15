@@ -183,12 +183,22 @@ public interface HConnection {
   
     
   /**
-   * Process a batch of rows. Currently it only works for updates until 
-   * HBASE-880 is available. Does the retries.
-   * @param list A batch of rows to process
+   * Process a batch of Puts. Does the retries.
+   * @param list A batch of Puts to process.
    * @param tableName The name of the table
+   * @return Count of committed Puts.  On fault, < list.size().
    * @throws IOException
    */
   public int processBatchOfRows(ArrayList<Put> list, byte[] tableName)
-      throws IOException;
+  throws IOException;
+
+  /**
+   * Process a batch of Deletes. Does the retries.
+   * @param list A batch of Deletes to process.
+   * @return Count of committed Deletes. On fault, < list.size().
+   * @param tableName The name of the table
+   * @throws IOException
+   */
+  public int processBatchOfDeletes(ArrayList<Delete> list, byte[] tableName)
+  throws IOException;
 }

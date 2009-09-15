@@ -1798,7 +1798,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
   }
-  
+
   public int put(final byte[] regionName, final Put [] puts)
   throws IOException {
     // Count of Puts processed.
@@ -1824,7 +1824,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // All have been processed successfully.
     return -1;
   }
-  
 
   /**
    * 
@@ -1989,7 +1988,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   //
   // Methods that do the actual work for the remote API
   //
-  
   public void delete(final byte [] regionName, final Delete delete)
   throws IOException {
     checkOpen();
@@ -2006,7 +2004,33 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
   }
-  
+
+  public int delete(final byte[] regionName, final Delete [] deletes)
+  throws IOException {
+    // Count of Deletes processed.
+    int i = 0;
+    checkOpen();
+    try {
+      boolean writeToWAL = true;
+      this.cacheFlusher.reclaimMemStoreMemory();
+      Integer[] locks = new Integer[deletes.length];
+      HRegion region = getRegion(regionName);
+      for (i = 0; i < deletes.length; i++) {
+        this.requestCount.incrementAndGet();
+        locks[i] = getLockFromId(deletes[i].getLockId());
+        region.delete(deletes[i], locks[i], writeToWAL);
+      }
+    } catch (WrongRegionException ex) {
+      LOG.debug("Batch deletes: " + i, ex);
+      return i;
+    } catch (NotServingRegionException ex) {
+      return i;
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
+    // All have been processed successfully.
+    return -1;
+  }
 
   public long lockRow(byte [] regionName, byte [] row)
   throws IOException {
