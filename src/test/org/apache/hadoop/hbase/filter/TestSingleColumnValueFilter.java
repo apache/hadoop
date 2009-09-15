@@ -80,16 +80,20 @@ public class TestSingleColumnValueFilter extends TestCase {
 
   private void basicFilterTests(Filter filter)
       throws Exception {
-    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
-    assertFalse("basicFilter1", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
-    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
-    assertTrue("basicFilter2", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
+    assertTrue("basicFilter1", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_3);
-    assertTrue("basicFilter3", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    assertTrue("basicFilter2", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_4);
-    assertTrue("basicFilter4", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
-    assertFalse("basicFilterAllRemaining", filter.filterAllRemaining());
+    assertTrue("basicFilter3", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("basicFilterNotNull", filter.filterRow());
+    filter.reset();
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
+    assertTrue("basicFilter4", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
+    assertTrue("basicFilter4", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
+    assertFalse("basicFilterAllRemaining", filter.filterAllRemaining());
+    assertTrue("basicFilterNotNull", filter.filterRow());
   }
 
   private void substrFilterTests(Filter filter) 
@@ -100,7 +104,7 @@ public class TestSingleColumnValueFilter extends TestCase {
       filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
       FULLSTRING_2);
-    assertFalse("substrFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    assertTrue("substrFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("substrFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("substrFilterNotNull", filter.filterRow());
   }
@@ -113,7 +117,7 @@ public class TestSingleColumnValueFilter extends TestCase {
       filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
       FULLSTRING_2);
-    assertFalse("regexFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    assertTrue("regexFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("regexFilterNotNull", filter.filterRow());
   }    

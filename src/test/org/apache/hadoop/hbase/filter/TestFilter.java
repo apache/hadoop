@@ -789,6 +789,123 @@ public class TestFilter extends HBaseTestCase {
     
   }
   
+  public void testSingleColumnValueFilter() throws IOException {
+    
+    // From HBASE-1821
+    // Desired action is to combine two SCVF in a FilterList
+    // Want to return only rows that match both conditions
+    
+    // Need to change one of the group one columns to use group two value
+    Put p = new Put(ROWS_ONE[2]);
+    p.add(FAMILIES[0], QUALIFIERS_ONE[2], VALUES[1]);
+    this.region.put(p);
+    
+    // Now let's grab rows that have Q_ONE[0](VALUES[0]) and Q_ONE[2](VALUES[1])
+    // Since group two rows don't have these qualifiers, they will pass
+    // so limiting scan to group one
+    List<Filter> filters = new ArrayList<Filter>();
+    filters.add(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0],
+        CompareOp.EQUAL, VALUES[0]));
+    filters.add(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[2],
+        CompareOp.EQUAL, VALUES[1]));
+    Filter f = new FilterList(Operator.MUST_PASS_ALL, filters);
+    Scan s = new Scan(ROWS_ONE[0], ROWS_TWO[0]);
+    s.addFamily(FAMILIES[0]);
+    s.setFilter(f);
+    // Expect only one row, all qualifiers
+    KeyValue [] kvs = {
+        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[1]),
+        new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0])
+    };
+    verifyScanNoEarlyOut(s, 1, 3);
+    verifyScanFull(s, kvs);
+    
+    // In order to get expected behavior without limiting to group one
+    // need to wrap SCVFs in SkipFilters
+    filters = new ArrayList<Filter>();
+    filters.add(new SkipFilter(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0],
+        CompareOp.EQUAL, VALUES[0])));
+    filters.add(new SkipFilter(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[2],
+        CompareOp.EQUAL, VALUES[1])));
+    f = new FilterList(Operator.MUST_PASS_ALL, filters);
+    s = new Scan(ROWS_ONE[0], ROWS_TWO[0]);
+    s.addFamily(FAMILIES[0]);
+    s.setFilter(f);
+    // Expect same KVs
+    verifyScanNoEarlyOut(s, 1, 3);
+    verifyScanFull(s, kvs);
+
+    // More tests from HBASE-1821 for Clint and filterIfMissing flag
+    
+    byte [][] ROWS_THREE = {
+        Bytes.toBytes("rowThree-0"), Bytes.toBytes("rowThree-1"),
+        Bytes.toBytes("rowThree-2"), Bytes.toBytes("rowThree-3")
+    };
+
+    // Give row 0 and 2 QUALIFIERS_ONE[0] (VALUE[0] VALUE[1])
+    // Give row 1 and 3 QUALIFIERS_ONE[1] (VALUE[0] VALUE[1])
+    
+    KeyValue [] srcKVs = new KeyValue [] {
+        new KeyValue(ROWS_THREE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+        new KeyValue(ROWS_THREE[1], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[1]),
+        new KeyValue(ROWS_THREE[2], FAMILIES[0], QUALIFIERS_ONE[1], VALUES[0]),
+        new KeyValue(ROWS_THREE[3], FAMILIES[0], QUALIFIERS_ONE[1], VALUES[1])
+    };
+    
+    for(KeyValue kv : srcKVs) {
+      this.region.put(new Put(kv.getRow()).add(kv));
+    }
+    
+    // Match VALUES[0] against QUALIFIERS_ONE[0] with filterIfMissing = false
+    // Expect 3 rows (0, 2, 3)
+    SingleColumnValueFilter scvf = new SingleColumnValueFilter(FAMILIES[0], 
+        QUALIFIERS_ONE[0], CompareOp.EQUAL, VALUES[0]);
+    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s.addFamily(FAMILIES[0]);
+    s.setFilter(scvf);
+    kvs = new KeyValue [] { srcKVs[0], srcKVs[2], srcKVs[3] };
+    verifyScanFull(s, kvs);
+    
+    // Match VALUES[0] against QUALIFIERS_ONE[0] with filterIfMissing = true
+    // Expect 1 row (0)
+    scvf = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0],
+        CompareOp.EQUAL, VALUES[0]);
+    scvf.setFilterIfMissing(true);
+    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s.addFamily(FAMILIES[0]);
+    s.setFilter(scvf);
+    kvs = new KeyValue [] { srcKVs[0] };
+    verifyScanFull(s, kvs);
+    
+    // Match VALUES[1] against QUALIFIERS_ONE[1] with filterIfMissing = true
+    // Expect 1 row (3)
+    scvf = new SingleColumnValueFilter(FAMILIES[0], 
+        QUALIFIERS_ONE[1], CompareOp.EQUAL, VALUES[1]);
+    scvf.setFilterIfMissing(true);
+    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s.addFamily(FAMILIES[0]);
+    s.setFilter(scvf);
+    kvs = new KeyValue [] { srcKVs[3] };
+    verifyScanFull(s, kvs);
+    
+    // Add QUALIFIERS_ONE[1] to ROWS_THREE[0] with VALUES[0]
+    KeyValue kvA = new KeyValue(ROWS_THREE[0], FAMILIES[0], QUALIFIERS_ONE[1], VALUES[0]);
+    this.region.put(new Put(kvA.getRow()).add(kvA));
+    
+    // Match VALUES[1] against QUALIFIERS_ONE[1] with filterIfMissing = true
+    // Expect 1 row (3)
+    scvf = new SingleColumnValueFilter(FAMILIES[0], 
+        QUALIFIERS_ONE[1], CompareOp.EQUAL, VALUES[1]);
+    scvf.setFilterIfMissing(true);
+    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s.addFamily(FAMILIES[0]);
+    s.setFilter(scvf);
+    kvs = new KeyValue [] { srcKVs[3] };
+    verifyScanFull(s, kvs);
+    
+  }
+  
   private void verifyScan(Scan s, long expectedRows, long expectedKeys) 
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
@@ -843,8 +960,10 @@ public class TestFilter extends HBaseTestCase {
       done = scanner.next(results);
       Arrays.sort(results.toArray(new KeyValue[results.size()]),
           KeyValue.COMPARATOR);
+      if(results.isEmpty()) break;
       assertTrue("Scanned too many keys! Only expected " + kvs.length + 
-          " total but already scanned " + (results.size() + idx), 
+          " total but already scanned " + (results.size() + idx) + 
+          (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"), 
           kvs.length >= idx + results.size());
       for(KeyValue kv : results) {
         LOG.info("row=" + row + ", result=" + kv.toString() + 
