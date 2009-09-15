@@ -556,6 +556,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                      FsPermission masked,
                              String clientName, 
                              EnumSetWritable<CreateFlag> flag,
+                             boolean createParent,
                              short replication,
                              long blockSize
                              ) throws IOException {
@@ -571,7 +572,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.startFile(src,
         new PermissionStatus(UserGroupInformation.getCurrentUGI().getUserName(),
             null, masked),
-        clientName, clientMachine, flag.get(), replication, blockSize);
+        clientName, clientMachine, flag.get(), createParent, replication, blockSize);
     myMetrics.numFilesCreated.inc();
     myMetrics.numCreateFileOps.inc();
   }

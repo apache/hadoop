@@ -44,9 +44,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 46: added a new method getServerDefaults(), see HDFS-578
+   * 47: create() takes an additional boolean param createParent.
    */
-  public static final long versionID = 46L;
+  public static final long versionID = 47L;
   
   ///////////////////////////////////////
   // File contents
@@ -101,6 +101,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param clientName name of the current client.
    * @param flag indicates whether the file should be 
    * overwritten if it already exists or create if it does not exist or append.
+   * @param createParent create missing parent directory if true
    * @param replication block replication factor.
    * @param blockSize maximum block size.
    * 
@@ -115,6 +116,7 @@ public interface ClientProtocol extends VersionedProtocol {
                      FsPermission masked,
                              String clientName, 
                              EnumSetWritable<CreateFlag> flag, 
+                             boolean createParent,
                              short replication,
                              long blockSize
                              ) throws IOException;

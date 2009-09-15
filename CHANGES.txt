@@ -155,6 +155,8 @@ Trunk (unreleased changes)
     HDFS-472. Update hdfsproxy documentation. Adds a setup guide and design
     document. (Zhiyong Zhang via cdouglas)
 
+    HDFS-617. Support non-recursive create().  (Kan Zhang via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
