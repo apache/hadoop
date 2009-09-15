@@ -556,6 +556,9 @@ Trunk (unreleased changes)
     HADOOP-5879. Read compression level and strategy from Configuration for
     gzip compression. (He Yongqiang via cdouglas)
 
+    HADOOP-6216. Support comments in host files.  (Ravi Phulari and Dmytro
+    Molkov via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

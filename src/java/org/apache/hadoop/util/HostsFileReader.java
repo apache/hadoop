@@ -58,7 +58,12 @@ public class HostsFileReader {
         String[] nodes = line.split("[ \t\n\f\r]+");
         if (nodes != null) {
           for (int i = 0; i < nodes.length; i++) {
+            if (nodes[i].trim().startsWith("#")) {
+              // Everything from now on is a comment
+              break;
+            }
             if (!nodes[i].equals("")) {
+              LOG.info("Adding " + nodes[i] + " to the list of hosts from " + filename);
               set.add(nodes[i]);  // might need to add canonical name
             }
           }
