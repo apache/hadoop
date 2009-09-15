@@ -1018,6 +1018,9 @@ Trunk (unreleased changes)
     header would cause the reader to read the sync marker as a record. (Jay
     Booth via cdouglas)
 
+    HADOOP-6250. Modify test-patch to delete copied XML files before running
+    patch build. (Rahul Kumar Singh via yhemanth)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
