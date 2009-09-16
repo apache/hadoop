@@ -27,8 +27,6 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,45 +36,38 @@ public class TestKeyValue extends TestCase {
 
   public void testColumnCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");
-    byte [] column1 = Bytes.toBytes("abc:def");
-    byte [] column2 = Bytes.toBytes("abcd:ef");
+    byte [] family1 = Bytes.toBytes("abc");
+    byte [] qualifier1 = Bytes.toBytes("def");
     byte [] family2 = Bytes.toBytes("abcd");
-    byte [] qualifier2 = Bytes.toBytes("ef"); 
-    KeyValue aaa = new KeyValue(a, column1, 0L, Type.Put, a);
-    assertFalse(aaa.matchingColumn(column2));
-    assertTrue(aaa.matchingColumn(column1));
-    aaa = new KeyValue(a, column2, 0L, Type.Put, a);
-    assertFalse(aaa.matchingColumn(column1));
+    byte [] qualifier2 = Bytes.toBytes("ef");
+    
+    KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, Type.Put, a);
+    assertFalse(aaa.matchingColumn(family2, qualifier2));
+    assertTrue(aaa.matchingColumn(family1, qualifier1));
+    aaa = new KeyValue(a, family2, qualifier2, 0L, Type.Put, a);
+    assertFalse(aaa.matchingColumn(family1, qualifier1));
     assertTrue(aaa.matchingColumn(family2,qualifier2));
-    column1 = Bytes.toBytes("abcd:");
-    aaa = new KeyValue(a, column1, 0L, Type.Put, a);
-    assertTrue(aaa.matchingColumn(family2,null));
+    byte [] nullQualifier = new byte[0];
+    aaa = new KeyValue(a, family1, nullQualifier, 0L, Type.Put, a);
+    assertTrue(aaa.matchingColumn(family1,null));
     assertFalse(aaa.matchingColumn(family2,qualifier2));
-    // Previous test had an assertFalse that I don't understand
-    //    assertFalse(KeyValue.COMPARATOR.
-    //    compareColumns(aaa, column1, 0, column1.length, 4) == 0);
   }
 
   public void testBasics() throws Exception {
     LOG.info("LOWKEY: " + KeyValue.LOWESTKEY.toString());
     check(Bytes.toBytes(getName()),
-      Bytes.toBytes(getName() + ":" + getName()), 1,
+      Bytes.toBytes(getName()), Bytes.toBytes(getName()), 1,
       Bytes.toBytes(getName()));
-    // Test empty value and empty column -- both should work.
-    check(Bytes.toBytes(getName()), null, 1, null);
-    check(HConstants.EMPTY_BYTE_ARRAY, null, 1, null);
+    // Test empty value and empty column -- both should work. (not empty fam)
+    check(Bytes.toBytes(getName()), Bytes.toBytes(getName()), null, 1, null);
+    check(HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes(getName()), null, 1, null);
   }
   
-  private void check(final byte [] row, final byte [] column,
+  private void check(final byte [] row, final byte [] family, byte [] qualifier,
     final long timestamp, final byte [] value) {
-    KeyValue kv = new KeyValue(row, column, timestamp, value);
+    KeyValue kv = new KeyValue(row, family, qualifier, timestamp, value);
     assertTrue(Bytes.compareTo(kv.getRow(), row) == 0);
-    if (column != null && column.length > 0) {
-      int index = KeyValue.getFamilyDelimiterIndex(column, 0, column.length);
-      byte [] family = new byte [index];
-      System.arraycopy(column, 0, family, 0, family.length);
-      assertTrue(kv.matchingFamily(family));
-    }
+    assertTrue(kv.matchingColumn(family, qualifier));
     // Call toString to make sure it works.
     LOG.info(kv.toString());
   }
@@ -84,9 +75,11 @@ public class TestKeyValue extends TestCase {
   public void testPlainCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");
     final byte [] b = Bytes.toBytes("bbb");
-    final byte [] column = Bytes.toBytes("col:umn");
-    KeyValue aaa = new KeyValue(a, column, a);
-    KeyValue bbb = new KeyValue(b, column, b);
+    final byte [] fam = Bytes.toBytes("col");
+    final byte [] qf = Bytes.toBytes("umn");
+//    final byte [] column = Bytes.toBytes("col:umn");
+    KeyValue aaa = new KeyValue(a, fam, qf, a);
+    KeyValue bbb = new KeyValue(b, fam, qf, b);
     byte [] keyabb = aaa.getKey();
     byte [] keybbb = bbb.getKey();
     assertTrue(KeyValue.COMPARATOR.compare(aaa, bbb) < 0);
@@ -103,15 +96,15 @@ public class TestKeyValue extends TestCase {
     assertTrue(KeyValue.KEY_COMPARATOR.compare(keyabb, 0, keyabb.length, keyabb,
       0, keyabb.length) == 0);
     // Do compare with different timestamps.
-    aaa = new KeyValue(a, column, 1, a);
-    bbb = new KeyValue(a, column, 2, a);
+    aaa = new KeyValue(a, fam, qf, 1, a);
+    bbb = new KeyValue(a, fam, qf, 2, a);
     assertTrue(KeyValue.COMPARATOR.compare(aaa, bbb) > 0);
     assertTrue(KeyValue.COMPARATOR.compare(bbb, aaa) < 0);
     assertTrue(KeyValue.COMPARATOR.compare(aaa, aaa) == 0);
     // Do compare with different types.  Higher numbered types -- Delete
     // should sort ahead of lower numbers; i.e. Put
-    aaa = new KeyValue(a, column, 1, KeyValue.Type.Delete, a);
-    bbb = new KeyValue(a, column, 1, a);
+    aaa = new KeyValue(a, fam, qf, 1, KeyValue.Type.Delete, a);
+    bbb = new KeyValue(a, fam, qf, 1, a);
     assertTrue(KeyValue.COMPARATOR.compare(aaa, bbb) < 0);
     assertTrue(KeyValue.COMPARATOR.compare(bbb, aaa) > 0);
     assertTrue(KeyValue.COMPARATOR.compare(aaa, aaa) == 0);
@@ -126,7 +119,8 @@ public class TestKeyValue extends TestCase {
     assertTrue(c.compare(b, a) < 0);
     KeyValue aa = new KeyValue(Bytes.toBytes(".META.,,1"), now);
     KeyValue bb = new KeyValue(Bytes.toBytes(".META.,,1"), 
-        Bytes.toBytes("info:regioninfo"), 1235943454602L);
+        Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1235943454602L,
+        (byte[])null);
     assertTrue(c.compare(aa, bb) < 0);
     
     // Meta compares
@@ -138,13 +132,16 @@ public class TestKeyValue extends TestCase {
     assertTrue(c.compare(bbb, aaa) < 0);
     
     KeyValue aaaa = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,,1236023996656"),
-        Bytes.toBytes("info:regioninfo"), 1236024396271L);
+        Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1236024396271L,
+        (byte[])null);
     assertTrue(c.compare(aaaa, bbb) < 0);
     
     KeyValue x = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,row_0500,1236034574162"),
-        Bytes.toBytes(""), 9223372036854775807L);
+        Bytes.toBytes("info"), Bytes.toBytes(""), 9223372036854775807L,
+        (byte[])null);
     KeyValue y = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,row_0500,1236034574162"),
-        Bytes.toBytes("info:regioninfo"), 1236034574912L);
+        Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1236034574912L,
+        (byte[])null);
     assertTrue(c.compare(x, y) < 0);
     comparisons(new KeyValue.MetaComparator());
     comparisons(new KeyValue.KVComparator());
@@ -161,19 +158,21 @@ public class TestKeyValue extends TestCase {
     // % sorts before , so if we don't do special comparator, rowB would
     // come before rowA.
     KeyValue rowA = new KeyValue(Bytes.toBytes("testtable,www.hbase.org/,1234"),
-      Bytes.toBytes(""), Long.MAX_VALUE);
+      Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     KeyValue rowB = new KeyValue(Bytes.toBytes("testtable,www.hbase.org/%20,99999"),
-      Bytes.toBytes(""), Long.MAX_VALUE);
+        Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
 
-    rowA = new KeyValue(Bytes.toBytes("testtable,,1234"), Bytes.toBytes(""), Long.MAX_VALUE);
-    rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"), Bytes.toBytes(""), Long.MAX_VALUE);
+    rowA = new KeyValue(Bytes.toBytes("testtable,,1234"), Bytes.toBytes("fam"), 
+        Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
+    rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"), 
+        Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
 
-    rowA = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/,1234,4321"), Bytes.toBytes(""),
-      Long.MAX_VALUE);
-    rowB = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/%20,99999,99999"), Bytes.toBytes(""),
-      Long.MAX_VALUE);
+    rowA = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/,1234,4321"), 
+        Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
+    rowB = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/%20,99999,99999"), 
+        Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.ROOT_COMPARATOR.compare(rowA, rowB) < 0);
   }
 
@@ -200,13 +199,15 @@ public class TestKeyValue extends TestCase {
 
   public void testBinaryKeys() throws Exception {
     Set<KeyValue> set = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
-    byte [] column = Bytes.toBytes("col:umn");
-    KeyValue [] keys = {new KeyValue(Bytes.toBytes("aaaaa,\u0000\u0000,2"), column, 2),
-      new KeyValue(Bytes.toBytes("aaaaa,\u0001,3"), column, 3),
-      new KeyValue(Bytes.toBytes("aaaaa,,1"), column, 1),
-      new KeyValue(Bytes.toBytes("aaaaa,\u1000,5"), column, 5),
-      new KeyValue(Bytes.toBytes("aaaaa,a,4"), column, 4),
-      new KeyValue(Bytes.toBytes("a,a,0"), column, 0),
+    final byte [] fam = Bytes.toBytes("col");
+    final byte [] qf = Bytes.toBytes("umn");
+    final byte [] nb = new byte[0];
+    KeyValue [] keys = {new KeyValue(Bytes.toBytes("aaaaa,\u0000\u0000,2"), fam, qf, 2, nb),
+      new KeyValue(Bytes.toBytes("aaaaa,\u0001,3"), fam, qf, 3, nb),
+      new KeyValue(Bytes.toBytes("aaaaa,,1"), fam, qf, 1, nb),
+      new KeyValue(Bytes.toBytes("aaaaa,\u1000,5"), fam, qf, 5, nb),
+      new KeyValue(Bytes.toBytes("aaaaa,a,4"), fam, qf, 4, nb),
+      new KeyValue(Bytes.toBytes("a,a,0"), fam, qf, 0, nb),
     };
     // Add to set with bad comparator
     for (int i = 0; i < keys.length; i++) {
@@ -235,12 +236,12 @@ public class TestKeyValue extends TestCase {
     }
     // Make up -ROOT- table keys.
     KeyValue [] rootKeys = {
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u0000\u0000,0,2"), column, 2),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u0001,0,3"), column, 3),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,,0,1"), column, 1),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u1000,0,5"), column, 5),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,a,0,4"), column, 4),
-        new KeyValue(Bytes.toBytes(".META.,,0"), column, 0),
+        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u0000\u0000,0,2"), fam, qf, 2, nb),
+        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u0001,0,3"), fam, qf, 3, nb),
+        new KeyValue(Bytes.toBytes(".META.,aaaaa,,0,1"), fam, qf, 1, nb),
+        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u1000,0,5"), fam, qf, 5, nb),
+        new KeyValue(Bytes.toBytes(".META.,aaaaa,a,0,4"), fam, qf, 4, nb),
+        new KeyValue(Bytes.toBytes(".META.,,0"), fam, qf, 0, nb),
       };
     // This will output the keys incorrectly.
     set = new TreeSet<KeyValue>(new KeyValue.MetaComparator());

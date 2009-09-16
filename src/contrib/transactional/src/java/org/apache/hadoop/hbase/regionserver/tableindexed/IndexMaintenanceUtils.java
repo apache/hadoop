@@ -24,7 +24,7 @@ import java.util.SortedMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ColumnNameParseException;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.client.tableindexed.IndexedTable;
@@ -45,22 +45,28 @@ public class IndexMaintenanceUtils {
         update.add(IndexedTable.INDEX_COL_FAMILY_NAME, IndexedTable.INDEX_BASE_ROW, row);
 
         try {
-        for (byte[] col : indexSpec.getIndexedColumns()) {
-            byte[] val = columnValues.get(col);
-            if (val == null) {
-                throw new RuntimeException("Unexpected missing column value. [" + Bytes.toString(col) + "]");
-            }
-            byte [][] colSeperated = HStoreKey.parseColumn(col);
-            update.add(colSeperated[0], colSeperated[1], val);
-        }
-
-        for (byte[] col : indexSpec.getAdditionalColumns()) {
-            byte[] val = columnValues.get(col);
-            if (val != null) {
-              byte [][] colSeperated = HStoreKey.parseColumn(col);
-              update.add(colSeperated[0], colSeperated[1], val);
-            }
-        }
+          for (byte[] col : indexSpec.getIndexedColumns()) {
+              byte[] val = columnValues.get(col);
+              if (val == null) {
+                  throw new RuntimeException("Unexpected missing column value. [" + Bytes.toString(col) + "]");
+              }
+              byte [][] colSeparated = KeyValue.parseColumn(col);
+              if(colSeparated.length == 1) {
+                throw new ColumnNameParseException("Expected family:qualifier but only got a family");
+              }
+              update.add(colSeparated[0], colSeparated[1], val);
+          }
+  
+          for (byte[] col : indexSpec.getAdditionalColumns()) {
+              byte[] val = columnValues.get(col);
+              if (val != null) {
+                byte [][] colSeparated = KeyValue.parseColumn(col);
+                if(colSeparated.length == 1) {
+                  throw new ColumnNameParseException("Expected family:qualifier but only got a family");
+                }
+                update.add(colSeparated[0], colSeparated[1], val);
+              }
+          }
         } catch (ColumnNameParseException e) {
           throw new RuntimeException(e);
         }

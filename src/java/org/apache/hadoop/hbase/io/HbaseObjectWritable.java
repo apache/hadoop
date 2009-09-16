@@ -113,8 +113,6 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(HConstants.Modify.class, code++);
     addToMap(HMsg.class, code++);
     addToMap(HMsg[].class, code++);
-    addToMap(RowFilterInterface.class, code++);
-    addToMap(RowFilterSet.class, code++);
     addToMap(HRegion.class, code++);
     addToMap(HRegion[].class, code++);
     addToMap(HRegionInfo.class, code++);

@@ -23,13 +23,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.client.Put;
 
 /**
  * A region server that will OOME.
- * Everytime {@link #batchUpdate(Text, long, BatchUpdate)} is called, we add
+ * Everytime {@link #put(regionName, Put)} is called, we add
  * keep around a reference to the batch.  Use this class to test OOME extremes.
  * Needs to be started manually as in
  * <code>${HBASE_HOME}/bin/hbase ./bin/hbase org.apache.hadoop.hbase.OOMERegionServer start</code>.

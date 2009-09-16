@@ -36,11 +36,11 @@ import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapred.MiniMRCluster; 
+import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
@@ -54,21 +54,15 @@ public class TestTableMapReduce extends MultiRegionTable {
   private static final Log LOG = LogFactory.getLog(TestTableMapReduce.class);
 
   static final String MULTI_REGION_TABLE_NAME = "mrtest";
-  static final byte[] INPUT_COLUMN = Bytes.toBytes("contents:");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
-  static final byte[] OUTPUT_COLUMN = Bytes.toBytes("text:");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
   
-  private static final byte [][] columns = new byte [][] {
-    INPUT_COLUMN, OUTPUT_COLUMN
-  };
-
   /** constructor */ 
   public TestTableMapReduce() {
-    super(Bytes.toString(INPUT_COLUMN));
+    super(Bytes.toString(INPUT_FAMILY));
     desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
-    desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
+    desc.addFamily(new HColumnDescriptor(INPUT_FAMILY));
+    desc.addFamily(new HColumnDescriptor(OUTPUT_FAMILY));
   }
 
   /**
@@ -190,7 +184,8 @@ public class TestTableMapReduce extends MultiRegionTable {
    */
   private void verifyAttempt(final HTable table) throws IOException, NullPointerException {
     Scan scan = new Scan();
-    scan.addColumns(columns);
+    scan.addFamily(INPUT_FAMILY);
+    scan.addFamily(OUTPUT_FAMILY);
     ResultScanner scanner = table.getScanner(scan);
     try {
       for (Result r : scanner) {

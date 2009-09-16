@@ -24,12 +24,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableMap;
-import java.util.SortedMap;
 
-import junit.framework.TestCase;
 import junit.framework.AssertionFailedError;
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,11 +38,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -325,7 +320,11 @@ public abstract class HBaseTestCase extends TestCase {
               }
               byte[][] split =
                 KeyValue.parseColumn(Bytes.toBytes(sb.toString()));
-              put.add(split[0], split[1], t);
+              if(split.length == 1) {
+                put.add(split[0], new byte[0], t);
+              } else {
+                put.add(split[0], split[1], t);
+              }
               updater.put(put);
               count++;
             } catch (RuntimeException ex) {
@@ -387,14 +386,16 @@ public abstract class HBaseTestCase extends TestCase {
     public Result get(Get get) throws IOException;
     
     /**
-     * @param columns
+     * @param family
+     * @param qualifiers
      * @param firstRow
      * @param ts
      * @return scanner for specified columns, first row and timestamp
      * @throws IOException
      */
-    public ScannerIncommon getScanner(byte [] [] columns, byte [] firstRow,
-      long ts) throws IOException;
+    public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
+        byte [] firstRow, long ts)
+    throws IOException;
   }
   
   /**
@@ -423,23 +424,16 @@ public abstract class HBaseTestCase extends TestCase {
       return region.get(get, null);
     }
     
-    public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow,
-      long ts) 
-    throws IOException {
-      Scan scan = new Scan(firstRow);
-      scan.addColumns(columns);
-      scan.setTimeRange(0, ts);
-      return new 
-        InternalScannerIncommon(region.getScanner(scan));
-    }
-    
-    //New
     public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
         byte [] firstRow, long ts) 
       throws IOException {
         Scan scan = new Scan(firstRow);
-        for(int i=0; i<qualifiers.length; i++){
-          scan.addColumn(HConstants.CATALOG_FAMILY, qualifiers[i]);
+        if(qualifiers == null || qualifiers.length == 0) {
+          scan.addFamily(family);
+        } else {
+          for(int i=0; i<qualifiers.length; i++){
+            scan.addColumn(HConstants.CATALOG_FAMILY, qualifiers[i]);
+          }
         }
         scan.setTimeRange(0, ts);
         return new 
@@ -483,19 +477,26 @@ public abstract class HBaseTestCase extends TestCase {
     public Result get(Get get) throws IOException {
       return table.get(get);
     }
-    
-    public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow, long ts) 
-    throws IOException {
+
+    public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
+        byte [] firstRow, long ts) 
+      throws IOException {
       Scan scan = new Scan(firstRow);
-      scan.addColumns(columns);
-      scan.setTimeStamp(ts);
+      if(qualifiers == null || qualifiers.length == 0) {
+        scan.addFamily(family);
+      } else {
+        for(int i=0; i<qualifiers.length; i++){
+          scan.addColumn(HConstants.CATALOG_FAMILY, qualifiers[i]);
+        }
+      }
+      scan.setTimeRange(0, ts);
       return new 
         ClientScannerIncommon(table.getScanner(scan));
     }
   }
   
   public interface ScannerIncommon 
-  extends Iterable<Map.Entry<HStoreKey, SortedMap<byte [], Cell>>> {
+  extends Iterable<Result> {
     public boolean next(List<KeyValue> values)
     throws IOException;
     
@@ -545,7 +546,7 @@ public abstract class HBaseTestCase extends TestCase {
       scanner.close();
     }
     
-    public Iterator<Map.Entry<HStoreKey, SortedMap<byte [], Cell>>> iterator() {
+    public Iterator<Result> iterator() {
       throw new UnsupportedOperationException();
     }
   }

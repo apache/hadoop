@@ -26,25 +26,25 @@ import java.util.Random;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MultiRegionTable;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MultiSearcher;
@@ -59,23 +59,17 @@ public class TestTableIndex extends MultiRegionTable {
   private static final Log LOG = LogFactory.getLog(TestTableIndex.class);
 
   static final byte[] TABLE_NAME = Bytes.toBytes("moretest");
-  static final byte[] INPUT_COLUMN = Bytes.toBytes("contents:");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
-  static final byte[] OUTPUT_COLUMN = Bytes.toBytes("text:");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
   static final String ROWKEY_NAME = "key";
   static final String INDEX_DIR = "testindex";
-  private static final byte [][] columns = new byte [][] {
-    INPUT_COLUMN,
-    OUTPUT_COLUMN
-  };
 
   /** default constructor */
   public TestTableIndex() {
-    super(Bytes.toString(INPUT_COLUMN));
+    super(Bytes.toString(INPUT_FAMILY));
     desc = new HTableDescriptor(TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
-    desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
+    desc.addFamily(new HColumnDescriptor(INPUT_FAMILY));
+    desc.addFamily(new HColumnDescriptor(OUTPUT_FAMILY));
   }
 
     @Override
@@ -136,7 +130,7 @@ public class TestTableIndex extends MultiRegionTable {
   private String createIndexConfContent() {
     StringBuffer buffer = new StringBuffer();
     buffer.append("<configuration><column><property>" +
-      "<name>hbase.column.name</name><value>" + INPUT_COLUMN +
+      "<name>hbase.column.name</name><value>" + Bytes.toString(INPUT_FAMILY) +
       "</value></property>");
     buffer.append("<property><name>hbase.column.store</name> " +
       "<value>true</value></property>");
@@ -170,7 +164,8 @@ public class TestTableIndex extends MultiRegionTable {
   throws IOException {
     HTable table = new HTable(conf, TABLE_NAME);
     Scan scan = new Scan();
-    scan.addColumns(columns);
+    scan.addFamily(INPUT_FAMILY);
+    scan.addFamily(OUTPUT_FAMILY);
     ResultScanner scanner = table.getScanner(scan);
     try {
       for (Result r : scanner) {
@@ -222,7 +217,8 @@ public class TestTableIndex extends MultiRegionTable {
 
       HTable table = new HTable(conf, TABLE_NAME);
       Scan scan = new Scan();
-      scan.addColumns(columns);
+      scan.addFamily(INPUT_FAMILY);
+      scan.addFamily(OUTPUT_FAMILY);
       scanner = table.getScanner(scan);
 
       IndexConfiguration indexConf = new IndexConfiguration();

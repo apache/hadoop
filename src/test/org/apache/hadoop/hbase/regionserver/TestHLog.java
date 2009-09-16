@@ -76,9 +76,11 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         for (int i = 0; i < howmany; i++) {
           for (int j = 0; j < howmany; j++) {
             List<KeyValue> edit = new ArrayList<KeyValue>();
+            byte [] family = Bytes.toBytes("column");
+            byte [] qualifier = Bytes.toBytes(Integer.toString(j));
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
-            edit.add(new KeyValue(rowName, column, System.currentTimeMillis(),
-              column));
+            edit.add(new KeyValue(rowName, family, qualifier, 
+                System.currentTimeMillis(), column));
             System.out.println("Region " + i + ": " + edit);
             log.append(Bytes.toBytes("" + i), tableName, edit,
               false, System.currentTimeMillis());
@@ -144,7 +146,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long timestamp = System.currentTimeMillis();
       List<KeyValue> cols = new ArrayList<KeyValue>();
       for (int i = 0; i < COL_COUNT; i++) {
-        cols.add(new KeyValue(row, Bytes.toBytes("column:" + Integer.toString(i)),
+        cols.add(new KeyValue(row, Bytes.toBytes("column"), 
+            Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
       log.append(regionName, tableName, cols, false, System.currentTimeMillis());

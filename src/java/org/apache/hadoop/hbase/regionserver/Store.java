@@ -1027,7 +1027,6 @@ public class Store implements HConstants, HeapSize {
     return this.storefiles.size();
   }
   
-
   /*
    * @param wantedVersions How many versions were asked for.
    * @return wantedVersions or this families' VERSIONS.
@@ -1392,31 +1391,6 @@ public class Store implements HConstants, HeapSize {
     }
     return true;
   }
-
-  /**
-   * @param kv
-   * @param columns Can be null
-   * @return True if column matches.
-   */
-  static boolean matchingColumns(final KeyValue kv, final Set<byte []> columns) {
-    if (columns == null) {
-      return true;
-    }
-    // Only instantiate columns if lots of columns to test.
-    if (columns.size() > 100) {
-      return columns.contains(kv.getColumn());
-    }
-    for (byte [] column: columns) {
-      if (kv.matchingColumn(column)) {
-        return true;
-      }
-    }
-    return false;
-  }
-  
-  //
-  // HBASE-880/1249/1304
-  //
   
   /**
    * Retrieve results from this store given the specified Get parameters.

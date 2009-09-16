@@ -60,11 +60,11 @@ public class MultiRegionTable extends HBaseClusterTestCase {
   protected HTableDescriptor desc;
 
   /**
-   * @param columnName the column to populate.
+   * @param familyName the family to populate.
    */
-  public MultiRegionTable(final String columnName) {
+  public MultiRegionTable(final String familyName) {
     super();
-    this.columnFamily = Bytes.toBytes(columnName);
+    this.columnFamily = Bytes.toBytes(familyName);
     // These are needed for the new and improved Map/Reduce framework
     System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));

@@ -100,7 +100,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
 
     ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
     String quorumServers = zkw.getQuorumServers();
-    int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
+    int sessionTimeout = 5 * 1000; // 5 seconds
     HConnection connection = HConnectionManager.getConnection(conf);
     ZooKeeperWrapper connectionZK = connection.getZooKeeperWrapper();
     long sessionID = connectionZK.getSessionID();
@@ -122,7 +122,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
   
       ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
       String quorumServers = zkw.getQuorumServers();
-      int sessionTimeout = conf.getInt("zookeeper.session.timeout", 2 * 1000);
+      int sessionTimeout = 5 * 1000; // 5 seconds
 
       HRegionServer rs = cluster.getRegionServer(0);
       ZooKeeperWrapper rsZK = rs.getZooKeeperWrapper();
@@ -138,7 +138,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
   
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor desc = new HTableDescriptor("test");
-      HColumnDescriptor family = new HColumnDescriptor("fam:");
+      HColumnDescriptor family = new HColumnDescriptor("fam");
       desc.addFamily(family);
       admin.createTable(desc);
   

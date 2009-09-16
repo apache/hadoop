@@ -32,6 +32,7 @@ import javax.xml.bind.Unmarshaller;
 import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.stargate.client.Client;
 import org.apache.hadoop.hbase.stargate.client.Cluster;
@@ -79,8 +80,10 @@ public class TestRowResource extends MiniClusterTestCase {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN_1));
-    htd.addFamily(new HColumnDescriptor(COLUMN_2));
+    htd.addFamily(new HColumnDescriptor(KeyValue.parseColumn(
+        Bytes.toBytes(COLUMN_1))[0]));
+    htd.addFamily(new HColumnDescriptor(KeyValue.parseColumn(
+        Bytes.toBytes(COLUMN_2))[0]));
     admin.createTable(htd);
   }
 

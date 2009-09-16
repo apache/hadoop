@@ -782,19 +782,22 @@ public class MemStore implements HeapSize {
     long size = 0;
     final int count = 10000;
     byte [] column = Bytes.toBytes("col:umn");
+    byte [] fam = Bytes.toBytes("col");
+    byte [] qf = Bytes.toBytes("umn");
+    byte [] empty = new byte[0];
     for (int i = 0; i < count; i++) {
       // Give each its own ts
-      size += memstore1.add(new KeyValue(Bytes.toBytes(i), column, i));
+      size += memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
     }
     LOG.info("memstore1 estimated size=" + size);
     for (int i = 0; i < count; i++) {
-      size += memstore1.add(new KeyValue(Bytes.toBytes(i), column, i));
+      size += memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
     }
     LOG.info("memstore1 estimated size (2nd loading of same data)=" + size);
     // Make a variably sized memstore.
     MemStore memstore2 = new MemStore();
     for (int i = 0; i < count; i++) {
-      size += memstore2.add(new KeyValue(Bytes.toBytes(i), column, i,
+      size += memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i,
         new byte[i]));
     }
     LOG.info("memstore2 estimated size=" + size);

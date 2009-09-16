@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.XmlValue;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.CellMessage.Cell;
 
@@ -74,6 +75,15 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
    */
   public CellModel(byte[] column, byte[] value) {
     this(column, HConstants.LATEST_TIMESTAMP, value);
+  }
+
+  /**
+   * Constructor from KeyValue
+   * @param kv
+   */
+  public CellModel(KeyValue kv) {
+    this(KeyValue.makeColumn(kv.getFamily(), kv.getQualifier()), 
+        kv.getTimestamp(), kv.getValue());
   }
 
   /**

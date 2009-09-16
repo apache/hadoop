@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -1678,12 +1677,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private final KeyValueHeap storeHeap;
     private final byte [] stopRow;
     private Filter filter;
-    private RowFilterInterface oldFilter;
     private List<KeyValue> results = new ArrayList<KeyValue>();
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
       this.filter = scan.getFilter();
-      this.oldFilter = scan.getOldFilter();
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
       } else {
@@ -1710,9 +1707,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private void resetFilters() {
       if (filter != null) {
         filter.reset();
-      }
-      if (oldFilter != null) {
-        oldFilter.reset();
       }
     }
 
@@ -1760,8 +1754,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           continue;
         }
         // see if current row should be filtered based on row key
-        if ((filter != null && filter.filterRowKey(row, 0, row.length)) ||
-            (oldFilter != null && oldFilter.filterRowKey(row, 0, row.length))) {
+        if (filter != null && filter.filterRowKey(row, 0, row.length)) {
           if(!results.isEmpty() && !Bytes.equals(currentRow, row)) {
             return true;
           }

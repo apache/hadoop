@@ -413,7 +413,6 @@ public class PerformanceEvaluation implements HConstants {
    * @param cmd Command to run.
    * @throws IOException
    */
-  @SuppressWarnings("unused")
   private void doMultipleClients(final String cmd) throws IOException {
     final List<Thread> threads = new ArrayList<Thread>(this.N);
     final int perClientRows = R/N;

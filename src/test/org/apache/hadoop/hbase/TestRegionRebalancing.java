@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 
@@ -45,7 +44,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   
   final byte[] FIVE_HUNDRED_KBYTES;
   
-  final byte [] COLUMN_NAME = Bytes.toBytes("col:");
+  final byte [] FAMILY_NAME = Bytes.toBytes("col");
   
   /** constructor */
   public TestRegionRebalancing() {
@@ -56,7 +55,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     }
     
     desc = new HTableDescriptor("test");
-    desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
+    desc.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
   
   /**
@@ -225,8 +224,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     HRegion region = createNewHRegion(desc, startKey, endKey);
     byte [] keyToWrite = startKey == null ? Bytes.toBytes("row_000") : startKey;
     Put put = new Put(keyToWrite);
-    byte [][] famAndQf = KeyValue.parseColumn(COLUMN_NAME);
-    put.add(famAndQf[0], famAndQf[1], Bytes.toBytes("test"));
+    put.add(FAMILY_NAME, null, Bytes.toBytes("test"));
     region.put(put);
     region.close();
     region.getLog().closeAndDelete();

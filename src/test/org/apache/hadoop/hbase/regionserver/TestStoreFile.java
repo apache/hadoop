@@ -19,21 +19,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Test HStoreFile
@@ -86,13 +85,13 @@ public class TestStoreFile extends HBaseTestCase {
   private void writeStoreFile(final HFile.Writer writer)
   throws IOException {
     long now = System.currentTimeMillis();
-    byte [] column =
-      Bytes.toBytes(getName() + KeyValue.COLUMN_FAMILY_DELIMITER + getName());
+    byte [] fam = Bytes.toBytes(getName());
+    byte [] qf = Bytes.toBytes(getName());
     try {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
           byte[] b = new byte[] { (byte) d, (byte) e };
-          writer.append(new KeyValue(b, column, now, b));
+          writer.append(new KeyValue(b, fam, qf, now, b));
         }
       }
     } finally {
@@ -118,37 +117,39 @@ public class TestStoreFile extends HBaseTestCase {
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
-    HStoreKey hsk = HStoreKey.create(reader.midkey());
-    byte [] midkey = hsk.getRow();
-    hsk = HStoreKey.create(reader.getLastKey());
-    byte [] finalKey = hsk.getRow();
+    KeyValue kv = KeyValue.createKeyValueFromKey(reader.midkey());
+    byte [] midRow = kv.getRow();
+    kv = KeyValue.createKeyValueFromKey(reader.getLastKey());
+    byte [] finalRow = kv.getRow();
     // Make a reference
-    Path refPath = StoreFile.split(fs, dir, hsf, reader.midkey(), Range.top);
+    Path refPath = StoreFile.split(fs, dir, hsf, midRow, Range.top);
     StoreFile refHsf = new StoreFile(this.fs, refPath, true, conf, false);
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
     HFileScanner s = refHsf.getReader().getScanner();
     for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
       ByteBuffer bb = s.getKey();
-      hsk = HStoreKey.create(bb.array(), bb.arrayOffset(), bb.limit());
+      kv = KeyValue.createKeyValueFromKey(bb);
       if (first) {
-        assertTrue(Bytes.equals(hsk.getRow(), midkey));
+        assertTrue(Bytes.equals(kv.getRow(), midRow));
         first = false;
       }
     }
-    assertTrue(Bytes.equals(hsk.getRow(), finalKey));
+    assertTrue(Bytes.equals(kv.getRow(), finalRow));
   }
 
   private void checkHalfHFile(final StoreFile f)
   throws IOException {
     byte [] midkey = f.getReader().midkey();
+    KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
+    byte [] midRow = midKV.getRow();
     // Create top split.
     Path topDir = Store.getStoreHomedir(this.testDir, 1,
       Bytes.toBytes(f.getPath().getParent().getName()));
     if (this.fs.exists(topDir)) {
       this.fs.delete(topDir, true);
     }
-    Path topPath = StoreFile.split(this.fs, topDir, f, midkey, Range.top);
+    Path topPath = StoreFile.split(this.fs, topDir, f, midRow, Range.top);
     // Create bottom split.
     Path bottomDir = Store.getStoreHomedir(this.testDir, 2,
       Bytes.toBytes(f.getPath().getParent().getName()));
@@ -156,14 +157,13 @@ public class TestStoreFile extends HBaseTestCase {
       this.fs.delete(bottomDir, true);
     }
     Path bottomPath = StoreFile.split(this.fs, bottomDir,
-      f, midkey, Range.bottom);
+      f, midRow, Range.bottom);
     // Make readers on top and bottom.
     HFile.Reader top = new StoreFile(this.fs, topPath, true, conf, false).getReader();
     HFile.Reader bottom = new StoreFile(this.fs, bottomPath, true, conf, false).getReader();
     ByteBuffer previous = null;
-    LOG.info("Midkey: " + Bytes.toString(midkey));
-    byte [] midkeyBytes = new HStoreKey(midkey).getBytes();
-    ByteBuffer bbMidkeyBytes = ByteBuffer.wrap(midkeyBytes);
+    LOG.info("Midkey: " + midKV.toString());
+    ByteBuffer bbMidkeyBytes = ByteBuffer.wrap(midkey);
     try {
       // Now make two HalfMapFiles and assert they can read the full backing
       // file, one from the top and the other from the bottom.
@@ -177,7 +177,7 @@ public class TestStoreFile extends HBaseTestCase {
         key = topScanner.getKey();
         
         assertTrue(topScanner.getReader().getComparator().compare(key.array(),
-          key.arrayOffset(), key.limit(), midkeyBytes, 0, midkeyBytes.length) >= 0);
+          key.arrayOffset(), key.limit(), midkey, 0, midkey.length) >= 0);
         if (first) {
           first = false;
           LOG.info("First in top: " + Bytes.toString(Bytes.toBytes(key)));
@@ -233,17 +233,17 @@ public class TestStoreFile extends HBaseTestCase {
         if (first) {
           first = false;
           first = false;
-          HStoreKey keyhsk = HStoreKey.create(key);
-          LOG.info("First top when key < bottom: " + keyhsk);
-          String tmp = Bytes.toString(keyhsk.getRow());
+          KeyValue keyKV = KeyValue.createKeyValueFromKey(key);
+          LOG.info("First top when key < bottom: " + keyKV);
+          String tmp = Bytes.toString(keyKV.getRow());
           for (int i = 0; i < tmp.length(); i++) {
             assertTrue(tmp.charAt(i) == 'a');
           }
         }
       }
-      HStoreKey keyhsk = HStoreKey.create(key);
-      LOG.info("Last top when key < bottom: " + keyhsk);
-      String tmp = Bytes.toString(keyhsk.getRow());
+      KeyValue keyKV = KeyValue.createKeyValueFromKey(key);
+      LOG.info("Last top when key < bottom: " + keyKV);
+      String tmp = Bytes.toString(keyKV.getRow());
       for (int i = 0; i < tmp.length(); i++) {
         assertTrue(tmp.charAt(i) == 'z');
       }
@@ -265,18 +265,18 @@ public class TestStoreFile extends HBaseTestCase {
         key = bottomScanner.getKey();
         if (first) {
           first = false;
-          keyhsk = HStoreKey.create(key);
-          LOG.info("First bottom when key > top: " + keyhsk);
-          tmp = Bytes.toString(keyhsk.getRow());
+          keyKV = KeyValue.createKeyValueFromKey(key);
+          LOG.info("First bottom when key > top: " + keyKV);
+          tmp = Bytes.toString(keyKV.getRow());
           for (int i = 0; i < tmp.length(); i++) {
             assertTrue(tmp.charAt(i) == 'a');
           }
         }
       }
-      keyhsk = HStoreKey.create(key);
-      LOG.info("Last bottom when key > top: " + keyhsk);
+      keyKV = KeyValue.createKeyValueFromKey(key);
+      LOG.info("Last bottom when key > top: " + keyKV);
       for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(Bytes.toString(keyhsk.getRow()).charAt(i) == 'z');
+        assertTrue(Bytes.toString(keyKV.getRow()).charAt(i) == 'z');
       }
       count = 0;
       topScanner = top.getScanner();

@@ -45,7 +45,7 @@ public interface CodeToClassAndBack {
   /**
    * Class list for supported classes
    */
-  public Class<?>[] classList = {byte[].class, Cell.class};
+  public Class<?>[] classList = {byte[].class};
   
   /**
    * The static loader that is used instead of the static constructor in

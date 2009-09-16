@@ -76,7 +76,11 @@ public class TestScannerResource extends MiniClusterTestCase {
             k[1] = b2;
             k[2] = b3;
             Put put = new Put(k);
-            put.add(famAndQf[0], famAndQf[1], k);
+            if(famAndQf.length == 1) {
+              put.add(famAndQf[0], new byte[0], k);
+            } else {
+              put.add(famAndQf[0], famAndQf[1], k);
+            }
             table.put(put);
             count++;
           }
@@ -107,8 +111,10 @@ public class TestScannerResource extends MiniClusterTestCase {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN_1));
-    htd.addFamily(new HColumnDescriptor(COLUMN_2));
+    htd.addFamily(new HColumnDescriptor(KeyValue.parseColumn(
+        Bytes.toBytes(COLUMN_1))[0]));
+    htd.addFamily(new HColumnDescriptor(KeyValue.parseColumn(
+        Bytes.toBytes(COLUMN_2))[0]));
     admin.createTable(htd);
     expectedRows1 = insertData(TABLE, COLUMN_1, 1.0);
     expectedRows2 = insertData(TABLE, COLUMN_2, 0.5);

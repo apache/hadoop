@@ -232,9 +232,9 @@ public class StressTestTransactions extends HBaseClusterTestCase {
 
       TransactionState transactionState = transactionManager.beginTransaction();
       int row1Amount = Bytes.toInt(table.get(transactionState,
-          new Get(row1).addColumn(COL)).getValue(COL));
+          new Get(row1).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
       int row2Amount = Bytes.toInt(table.get(transactionState,
-          new Get(row2).addColumn(COL)).getValue(COL));
+          new Get(row2).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
 
       row1Amount -= transferAmount;
       row2Amount += transferAmount;
@@ -257,7 +257,8 @@ public class StressTestTransactions extends HBaseClusterTestCase {
       int totalSum = 0;
       for (int i = 0; i < NUM_ST_ROWS; i++) {
         totalSum += Bytes.toInt(table.get(transactionState,
-            new Get(makeSTRow(i)).addColumn(COL)).getValue(COL));
+            new Get(makeSTRow(i)).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, 
+                QUAL_A));
       }
 
       transactionManager.tryCommit(transactionState);
@@ -309,9 +310,9 @@ public class StressTestTransactions extends HBaseClusterTestCase {
 
       TransactionState transactionState = transactionManager.beginTransaction();
       int table1Amount = Bytes.toInt(table1.get(transactionState,
-          new Get(row).addColumn(COL)).getValue(COL));
+          new Get(row).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
       int table2Amount = Bytes.toInt(table2.get(transactionState,
-          new Get(row).addColumn(COL)).getValue(COL));
+          new Get(row).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
 
       table1Amount -= transferAmount;
       table2Amount += transferAmount;
@@ -337,7 +338,7 @@ public class StressTestTransactions extends HBaseClusterTestCase {
       int[] amounts = new int[tables.length];
       for (int i = 0; i < tables.length; i++) {
         int amount = Bytes.toInt(tables[i].get(transactionState,
-            new Get(row).addColumn(COL)).getValue(COL));
+            new Get(row).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
         amounts[i] = amount;
         totalSum += amount;
       }
@@ -397,15 +398,15 @@ public class StressTestTransactions extends HBaseClusterTestCase {
       int thisTableSum = 0;
       for (int i = 0; i < NUM_ST_ROWS; i++) {
         byte[] row = makeSTRow(i);
-        thisTableSum += Bytes.toInt(table.get(new Get(row).addColumn(COL))
-            .getValue(COL));
+        thisTableSum += Bytes.toInt(table.get(new Get(row).addColumn(FAMILY, QUAL_A))
+            .getValue(FAMILY, QUAL_A));
       }
       Assert.assertEquals(SingleTableTransactionThread.TOTAL_SUM, thisTableSum);
 
       for (int i = 0; i < NUM_MT_ROWS; i++) {
         byte[] row = makeMTRow(i);
-        mtSums[i] += Bytes.toInt(table.get(new Get(row).addColumn(COL))
-            .getValue(COL));
+        mtSums[i] += Bytes.toInt(table.get(new Get(row).addColumn(FAMILY, QUAL_A))
+            .getValue(FAMILY, QUAL_A));
       }
     }
 

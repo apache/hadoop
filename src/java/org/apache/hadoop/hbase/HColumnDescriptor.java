@@ -29,9 +29,6 @@ import java.util.Map;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
-import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
-import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -47,7 +44,7 @@ import agilejson.TOJSON;
  * column and recreating it. If there is data stored in the column, it will be
  * deleted when the column is deleted.
  */
-public class HColumnDescriptor implements ISerializable, WritableComparable<HColumnDescriptor> {
+public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
   // For future backward compatibility
 
   // Version 3 was when column names become byte arrays and when we picked up
@@ -150,7 +147,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * The other attributes are defaulted.
    * 
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and end in a <code>:<code>
+   * letter -- and may not contain a <code>:<code>
    */
   public HColumnDescriptor(final String familyName) {
     this(Bytes.toBytes(familyName));
@@ -161,7 +158,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * The other attributes are defaulted.
    * 
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and end in a <code>:<code>
+   * letter -- and may not contain a <code>:<code>
    */
   public HColumnDescriptor(final byte [] familyName) {
     this (familyName == null || familyName.length <= 0?
@@ -188,7 +185,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and end in a <code>:<code>
+   * letter -- and may not contain a <code>:<code>
    * @param maxVersions Maximum number of versions to keep
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
@@ -199,8 +196,8 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @param bloomFilter Enable the specified bloom filter for this column
    * 
    * @throws IllegalArgumentException if passed a family name that is made of 
-   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
-   * end in a <code>:</code>
+   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
+   * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
@@ -210,43 +207,11 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
     this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
       DEFAULT_BLOCKSIZE, timeToLive, bloomFilter);
   }
-
-  /**
-   * Backwards compatible Constructor.  Maximum value length is no longer
-   * configurable.
-   * 
-   * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and end in a <code>:<code>
-   * @param maxVersions Maximum number of versions to keep
-   * @param compression Compression type
-   * @param inMemory If true, column data should be kept in an HRegionServer's
-   * cache
-   * @param blockCacheEnabled If true, MapFile blocks should be cached
-   * @param blocksize
-   * @param maxValueLength Restrict values to &lt;= this value (UNSUPPORTED)
-   * @param timeToLive Time-to-live of cell contents, in seconds
-   * (use HConstants.FOREVER for unlimited TTL)
-   * @param bloomFilter Enable the specified bloom filter for this column
-   * 
-   * @throws IllegalArgumentException if passed a family name that is made of 
-   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
-   * end in a <code>:</code>
-   * @throws IllegalArgumentException if the number of versions is &lt;= 0
-   * @deprecated As of hbase 0.20.0, max value length no longer supported
-   */
-//  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
-//      final String compression, final boolean inMemory,
-//      final boolean blockCacheEnabled, final int blocksize,
-//      final int maxValueLength, 
-//      final int timeToLive, final boolean bloomFilter) {
-//    this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
-//        blocksize, timeToLive, bloomFilter);
-//  }
   
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and end in a <code>:<code>
+   * letter -- and may not contain a <code>:<code>
    * @param maxVersions Maximum number of versions to keep
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
@@ -258,16 +223,16 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
    * @param bloomFilter Enable the specified bloom filter for this column
    * 
    * @throws IllegalArgumentException if passed a family name that is made of 
-   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
-   * end in a <code>:</code>
+   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
+   * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
       final int timeToLive, final boolean bloomFilter) {
-    this.name = stripColon(familyName);
-    isLegalFamilyName(this.name);
+    isLegalFamilyName(familyName);
+    this.name = familyName;
 
     if (maxVersions <= 0) {
       // TODO: Allow maxVersion of 0 to be the way you say "Keep all versions".
@@ -282,17 +247,6 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
       valueOf(compression.toUpperCase()));
     setBloomfilter(bloomFilter);
     setBlocksize(blocksize);
-  }
-
-  private static byte [] stripColon(final byte [] n) {
-    byte col = n[n.length-1];
-    if (col == ':') {
-      // strip.
-      byte [] res = new byte[n.length-1];
-      System.arraycopy(n, 0, res, 0, n.length-1);
-      return res;
-    }
-    return n;
   }
 
   /**
@@ -311,7 +265,7 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
       throw new IllegalArgumentException("Family names cannot start with a " +
         "period: " + Bytes.toString(b));
     }
-    for (int i = 0; i < (b.length - 1); i++) {
+    for (int i = 0; i < b.length; i++) {
       if (Character.isISOControl(b[i]) || b[i] == ':') {
         throw new IllegalArgumentException("Illegal character <" + b[i] +
           ">. Family names cannot contain control characters or colons: " +
@@ -324,18 +278,11 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
   /**
    * @return Name of this column family
    */
+  @TOJSON(fieldName = "name", base64=true)
   public byte [] getName() {
     return name;
   }
-
-  /**
-   * @return Name of this column family with colon as required by client API
-   */
-  @TOJSON(fieldName = "name", base64=true)
-  public byte [] getNameWithColon() {
-    return Bytes.add(this.name, new byte[]{':'});
-  }
-
+  
   /**
    * @return Name of this column family
    */
@@ -683,12 +630,5 @@ public class HColumnDescriptor implements ISerializable, WritableComparable<HCol
         result = 1;
     }
     return result;
-  }
-
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
-   */
-  public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
-    serializer.serializeColumnDescriptor(this);    
   }
 }

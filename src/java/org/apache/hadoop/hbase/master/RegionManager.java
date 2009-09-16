@@ -734,8 +734,6 @@ class RegionManager implements HConstants {
     byte [] regionName = region.getRegionName();
     
     Put put = new Put(regionName);
-    byte [] infoBytes = Writables.getBytes(info);
-    String infoString = new String(infoBytes);
     put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
     server.put(metaRegionName, put);
     

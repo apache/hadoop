@@ -34,10 +34,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -191,7 +189,7 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
           for (Result r : scanner) {
             assertTrue(Bytes.equals(r.getRow(), row));
             assertEquals(1, r.size());
-            byte[] bytes = r.getRowResult().get(HConstants.CATALOG_FAMILY).getValue();
+            byte[] bytes = r.value();
             assertNotNull(bytes);
             assertTrue(tableName.equals(Bytes.toString(bytes)));
           }

@@ -20,13 +20,11 @@ package org.apache.hadoop.hbase.thrift;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
@@ -57,7 +55,8 @@ public class ThriftUtilities {
     if (in.name == null || in.name.length <= 0) {
       throw new IllegalArgument("column name is empty");
     }
-    HColumnDescriptor col = new HColumnDescriptor(in.name,
+    byte [] parsedName = KeyValue.parseColumn(in.name)[0];
+    HColumnDescriptor col = new HColumnDescriptor(parsedName,
         in.maxVersions, comp.getName(), in.inMemory, in.blockCacheEnabled,
         in.timeToLive, bloom);
     return col;
@@ -73,7 +72,7 @@ public class ThriftUtilities {
    */
   static public ColumnDescriptor colDescFromHbase(HColumnDescriptor in) {
     ColumnDescriptor col = new ColumnDescriptor();
-    col.name = in.getName();
+    col.name = Bytes.add(in.getName(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY);
     col.maxVersions = in.getMaxVersions();
     col.compression = in.getCompression().toString();
     col.inMemory = in.isInMemory();
@@ -81,7 +80,7 @@ public class ThriftUtilities {
     col.bloomFilterType = Boolean.toString(in.isBloomfilter());
     return col;
   }
-  
+
   /**
    * This utility method creates a list of Thrift TCell "struct" based on
    * an Hbase Cell object. The empty list is returned if the input is null.
@@ -90,7 +89,7 @@ public class ThriftUtilities {
    *          Hbase Cell object
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(Cell in) {
+  static public List<TCell> cellFromHBase(KeyValue in) {
     List<TCell> list = new ArrayList<TCell>(1);
     if (in != null) {
       list.add(new TCell(in.getValue(), in.getTimestamp()));
@@ -104,7 +103,7 @@ public class ThriftUtilities {
    * @param in Hbase Cell array
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(Cell[] in) {
+  static public List<TCell> cellFromHBase(KeyValue[] in) {
     List<TCell> list = null;
     if (in != null) {
       list = new ArrayList<TCell>(in.length);
@@ -126,62 +125,26 @@ public class ThriftUtilities {
    *          Hbase RowResult object
    * @return Thrift TRowResult array
    */
-  static public List<TRowResult> rowResultFromHBase(RowResult[] in) {
+  static public List<TRowResult> rowResultFromHBase(Result[] in) {
     List<TRowResult> results = new ArrayList<TRowResult>();
-    for ( RowResult result_ : in) {
-        if(null == result_) {
+    for ( Result result_ : in) {
+        if(result_ == null || result_.isEmpty()) {
             continue;
         }
         TRowResult result = new TRowResult();
         result.row = result_.getRow();
         result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
-        for (Map.Entry<byte[], Cell> entry : result_.entrySet()){
-            Cell cell = entry.getValue();
-            result.columns.put(entry.getKey(),
-                new TCell(cell.getValue(), cell.getTimestamp()));
-
+        for(KeyValue kv : result_.sorted()) {
+          result.columns.put(KeyValue.makeColumn(kv.getFamily(), 
+              kv.getQualifier()), new TCell(kv.getValue(), kv.getTimestamp()));
         }
         results.add(result);
     }
     return results;
   }
-  static public List<TRowResult> rowResultFromHBase(RowResult in) {
-    RowResult [] result = { in };
-    return rowResultFromHBase(result);
-  }
-
-  /**
-   * This utility method creates a list of Thrift TRowResult "struct" based on
-   * an Hbase RowResult object. The empty list is returned if the input is
-   * null.
-   * 
-   * @param in
-   *          Hbase RowResult object
-   * @return Thrift TRowResult array
-   */
-  static public List<TRowResult> rowResultFromHBase(Result[] in) {
-    List<TRowResult> results = new ArrayList<TRowResult>();
-    for ( Result result_ : in) {
-        if(null == result_) {
-            continue;
-        }
-        RowResult rowResult_ = result_.getRowResult();
-        TRowResult result = new TRowResult();
-        result.row = rowResult_.getRow();
-        result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
-        for (Map.Entry<byte[], Cell> entry : rowResult_.entrySet()){
-            Cell cell = entry.getValue();
-            result.columns.put(entry.getKey(),
-                new TCell(cell.getValue(), cell.getTimestamp()));
-
-        }
-        results.add(result);
-    }
-    return results;
-  }
+  
   static public List<TRowResult> rowResultFromHBase(Result in) {
     Result [] result = { in };
     return rowResultFromHBase(result);
   }
 }
-

@@ -93,7 +93,7 @@ public class TestTHLogRecovery extends HBaseClusterTestCase {
     super.setUp();
 
     HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(FAMILY_COLON));
+    desc.addFamily(new HColumnDescriptor(FAMILY));
     admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     table = new TransactionalTable(conf, desc.getName());
@@ -203,12 +203,12 @@ public class TestTHLogRecovery extends HBaseClusterTestCase {
 
   private void verify(final int numRuns) throws IOException {
     // Reads
-    int row1 = Bytes.toInt(table.get(new Get(ROW1).addColumn(COL_A)).getValue(
-        COL_A));
-    int row2 = Bytes.toInt(table.get(new Get(ROW2).addColumn(COL_A)).getValue(
-        COL_A));
-    int row3 = Bytes.toInt(table.get(new Get(ROW3).addColumn(COL_A)).getValue(
-        COL_A));
+    int row1 = Bytes.toInt(table.get(new Get(ROW1).addColumn(FAMILY, QUAL_A))
+        .getValue(FAMILY, QUAL_A));
+    int row2 = Bytes.toInt(table.get(new Get(ROW2).addColumn(FAMILY, QUAL_A))
+        .getValue(FAMILY, QUAL_A));
+    int row3 = Bytes.toInt(table.get(new Get(ROW3).addColumn(FAMILY, QUAL_A))
+        .getValue(FAMILY, QUAL_A));
 
     assertEquals(TOTAL_VALUE - 2 * numRuns, row1);
     assertEquals(numRuns, row2);
@@ -222,11 +222,11 @@ public class TestTHLogRecovery extends HBaseClusterTestCase {
 
     // Reads
     int row1 = Bytes.toInt(table.get(transactionState,
-        new Get(ROW1).addColumn(COL_A)).getValue(COL_A));
+        new Get(ROW1).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
     int row2 = Bytes.toInt(table.get(transactionState,
-        new Get(ROW2).addColumn(COL_A)).getValue(COL_A));
+        new Get(ROW2).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
     int row3 = Bytes.toInt(table.get(transactionState,
-        new Get(ROW3).addColumn(COL_A)).getValue(COL_A));
+        new Get(ROW3).addColumn(FAMILY, QUAL_A)).getValue(FAMILY, QUAL_A));
 
     row1 -= 2;
     row2 += 1;

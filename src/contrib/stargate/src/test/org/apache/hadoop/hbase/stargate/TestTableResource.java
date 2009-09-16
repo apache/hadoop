@@ -29,6 +29,7 @@ import javax.xml.bind.JAXBException;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.stargate.client.Client;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.stargate.model.TableModel;
 import org.apache.hadoop.hbase.stargate.model.TableInfoModel;
 import org.apache.hadoop.hbase.stargate.model.TableListModel;
 import org.apache.hadoop.hbase.stargate.model.TableRegionModel;
+import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestTableResource extends MiniClusterTestCase {
   private static String TABLE = "TestTableResource";
@@ -65,7 +67,8 @@ public class TestTableResource extends MiniClusterTestCase {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN));
+    htd.addFamily(new HColumnDescriptor(KeyValue.parseColumn(
+        Bytes.toBytes(COLUMN))[0]));
     admin.createTable(htd);
     new HTable(conf, TABLE);
   }

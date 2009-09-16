@@ -21,7 +21,6 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Get;
 
 /**
  * This filter is used to filter based on column value. It takes an 

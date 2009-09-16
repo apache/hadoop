@@ -36,11 +36,7 @@ import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
-import org.apache.hadoop.hbase.io.BatchOperation;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -63,8 +59,9 @@ public class TestSerialization extends HBaseTestCase {
 
   public void testKeyValue() throws Exception {
     byte [] row = Bytes.toBytes(getName());
-    byte [] column = Bytes.toBytes(getName() + ":" + getName());
-    KeyValue original = new KeyValue(row, column);
+    byte [] family = Bytes.toBytes(getName());
+    byte [] qualifier = Bytes.toBytes(getName());
+    KeyValue original = new KeyValue(row, family, qualifier);
     byte [] bytes = Writables.getBytes(original);
     KeyValue newone = (KeyValue)Writables.getWritable(bytes, new KeyValue());
     assertTrue(KeyValue.COMPARATOR.compare(original, newone) == 0);
@@ -108,32 +105,9 @@ public class TestSerialization extends HBaseTestCase {
    * Test RegionInfo serialization
    * @throws Exception
    */
-  public void testRowResult() throws Exception {
-    HbaseMapWritable<byte [], Cell> m = new HbaseMapWritable<byte [], Cell>();
-    byte [] b = Bytes.toBytes(getName());
-    m.put(b, new Cell(b, System.currentTimeMillis()));
-    RowResult rr = new RowResult(b, m);
-    byte [] mb = Writables.getBytes(rr);
-    RowResult deserializedRr =
-      (RowResult)Writables.getWritable(mb, new RowResult());
-    assertTrue(Bytes.equals(rr.getRow(), deserializedRr.getRow()));
-    byte [] one = rr.get(b).getValue();
-    byte [] two = deserializedRr.get(b).getValue();
-    assertTrue(Bytes.equals(one, two));
-    Writables.copyWritable(rr, deserializedRr);
-    one = rr.get(b).getValue();
-    two = deserializedRr.get(b).getValue();
-    assertTrue(Bytes.equals(one, two));
-    
-  }
-
-  /**
-   * Test RegionInfo serialization
-   * @throws Exception
-   */
   public void testRegionInfo() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(getName());
-    String [] families = new String [] {"info:", "anchor:"};
+    String [] families = new String [] {"info", "anchor"};
     for (int i = 0; i < families.length; i++) {
       htd.addFamily(new HColumnDescriptor(families[i]));
     }
@@ -159,43 +133,7 @@ public class TestSerialization extends HBaseTestCase {
       (HServerInfo)Writables.getWritable(b, new HServerInfo());
     assertTrue(hsi.equals(deserializedHsi));
   }
-  
-  /**
-   * Test BatchUpdate serialization
-   * @throws Exception
-   */
-  public void testBatchUpdate() throws Exception {
-    // Add row named 'testName'.
-    BatchUpdate bu = new BatchUpdate(getName());
-    // Add a column named same as row.
-    bu.put(getName(), getName().getBytes());
-    byte [] b = Writables.getBytes(bu);
-    BatchUpdate bubu =
-      (BatchUpdate)Writables.getWritable(b, new BatchUpdate());
-    // Assert rows are same.
-    assertTrue(Bytes.equals(bu.getRow(), bubu.getRow()));
-    // Assert has same number of BatchOperations.
-    int firstCount = 0;
-    for (@SuppressWarnings("unused")BatchOperation bo: bubu) {
-      firstCount++;
-    }
-    // Now deserialize again into same instance to ensure we're not
-    // accumulating BatchOperations on each deserialization.
-    BatchUpdate bububu = (BatchUpdate)Writables.getWritable(b, bubu);
-    // Assert rows are same again.
-    assertTrue(Bytes.equals(bu.getRow(), bububu.getRow()));
-    int secondCount = 0;
-    for (@SuppressWarnings("unused")BatchOperation bo: bububu) {
-      secondCount++;
-    }
-    assertEquals(firstCount, secondCount);
-  }
-  
-  
-  //
-  // HBASE-880
-  //
-  
+    
   public void testPut() throws Exception{
     byte[] row = "row".getBytes();
     byte[] fam = "fam".getBytes();

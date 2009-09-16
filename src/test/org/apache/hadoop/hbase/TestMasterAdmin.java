@@ -29,11 +29,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestMasterAdmin extends HBaseClusterTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
-  private static final byte [] COLUMN_NAME = Bytes.toBytes("col1:");
+  private static final byte [] FAMILY_NAME = Bytes.toBytes("col1");
   private static HTableDescriptor testDesc;
   static {
     testDesc = new HTableDescriptor("testadmin1");
-    testDesc.addFamily(new HColumnDescriptor(COLUMN_NAME));
+    testDesc.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
   
   private HBaseAdmin admin;
@@ -71,16 +71,16 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
       // Expected
     }
 
-    admin.addColumn(testDesc.getName(), new HColumnDescriptor("col2:"));
+    admin.addColumn(testDesc.getName(), new HColumnDescriptor("col2"));
     admin.enableTable(testDesc.getName());
     try {
-      admin.deleteColumn(testDesc.getName(), Bytes.toBytes("col2:"));
+      admin.deleteColumn(testDesc.getName(), Bytes.toBytes("col2"));
     } catch(TableNotDisabledException e) {
       // Expected
     }
 
     admin.disableTable(testDesc.getName());
-    admin.deleteColumn(testDesc.getName(), Bytes.toBytes("col2:"));
+    admin.deleteColumn(testDesc.getName(), Bytes.toBytes("col2"));
     admin.deleteTable(testDesc.getName());
   }
 }

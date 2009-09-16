@@ -40,12 +40,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
-import org.apache.hadoop.hbase.filter.InclusiveStopRowFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
-import org.apache.hadoop.hbase.filter.PrefixRowFilter;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -184,23 +180,13 @@ public class TestScanner extends HBaseTestCase {
       Scan scan = new Scan();
       scan.setFilter(newFilter);
       rowPrefixFilter(scan);
-      RowFilterInterface oldFilter = new PrefixRowFilter(Bytes.toBytes("ab"));
-      scan = new Scan();
-      scan.setOldFilter(oldFilter);
-      rowPrefixFilter(scan);
       
       byte[] stopRow = Bytes.toBytes("bbc");
       newFilter = new WhileMatchFilter(new InclusiveStopFilter(stopRow));
       scan = new Scan();
       scan.setFilter(newFilter);
       rowInclusiveStopFilter(scan, stopRow);
-      
-      oldFilter = new WhileMatchRowFilter(
-          new InclusiveStopRowFilter(stopRow));
-      scan = new Scan();
-      scan.setOldFilter(oldFilter);
-      rowInclusiveStopFilter(scan, stopRow);
-      
+
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();

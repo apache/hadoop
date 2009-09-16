@@ -30,8 +30,6 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
@@ -76,10 +74,6 @@ public class TestHbaseObjectWritable extends TestCase {
     // Do 'known' Writable type.
     obj = doType(conf, new Text(""), Text.class);
     assertTrue(obj instanceof Text);
-    // Try type that should get transferred old fashion way.
-    obj = doType(conf, new StopRowFilter(HConstants.EMPTY_BYTE_ARRAY),
-        RowFilterInterface.class);
-    assertTrue(obj instanceof StopRowFilter);
     // Check that filters can be serialized
     obj = doType(conf, new PrefixFilter(HConstants.EMPTY_BYTE_ARRAY),
       PrefixFilter.class);

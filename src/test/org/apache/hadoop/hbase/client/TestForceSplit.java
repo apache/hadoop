@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestForceSplit extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(TestForceSplit.class);
   private static final byte[] tableName = Bytes.toBytes("test");
-  private static final byte[] columnName = Bytes.toBytes("a:");
+  private static final byte[] familyName = Bytes.toBytes("a");
 
   @Override
   protected void setUp() throws Exception {
@@ -56,7 +56,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
   public void testForceSplit() throws Exception {
     // create the test table
     HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(columnName));
+    htd.addFamily(new HColumnDescriptor(familyName));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(htd);
     final HTable table = new HTable(conf, tableName);
@@ -69,8 +69,7 @@ public class TestForceSplit extends HBaseClusterTestCase {
           k[1] = b2;
           k[2] = b3;
           Put put = new Put(k);
-          byte [][] famAndQf = KeyValue.parseColumn(columnName);
-          put.add(famAndQf[0], famAndQf[1], k);
+          put.add(familyName, new byte[0], k);
           table.put(put);
           rowCount++;
         }

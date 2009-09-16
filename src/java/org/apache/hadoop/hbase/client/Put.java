@@ -112,19 +112,6 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   /**
    * Add the specified column and value, with the specified timestamp as 
    * its version to this Put operation.
-   * @param column Old style column name with family and qualifier put together
-   * with a colon.
-   * @param ts version timestamp
-   * @param value column value
-   */
-  public Put add(byte [] column, long ts, byte [] value) {
-    byte [][] parts = KeyValue.parseColumn(column);
-    return add(parts[0], parts[1], ts, value);
-  }
-
-  /**
-   * Add the specified column and value, with the specified timestamp as 
-   * its version to this Put operation.
    * @param family family name
    * @param qualifier column qualifier
    * @param ts version timestamp

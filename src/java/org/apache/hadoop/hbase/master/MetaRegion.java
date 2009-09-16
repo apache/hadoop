@@ -19,11 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.Arrays;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.util.Bytes;
 
 

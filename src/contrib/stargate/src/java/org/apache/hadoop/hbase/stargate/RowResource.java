@@ -91,9 +91,7 @@ public class RowResource implements Constants {
           rowKey = value.getRow();
           rowModel = new RowModel(rowKey);
         }
-        rowModel.addCell(
-          new CellModel(value.getColumn(), value.getTimestamp(),
-              value.getValue()));
+        rowModel.addCell(new CellModel(value));
         value = generator.next();
       } while (value != null);
       model.addRow(rowModel);
@@ -148,7 +146,11 @@ public class RowResource implements Constants {
         Put put = new Put(row.getKey());
         for (CellModel cell: row.getCells()) {
           byte [][] parts = KeyValue.parseColumn(cell.getColumn());
-          put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          if(parts.length == 1) {
+            put.add(parts[0], new byte[0], cell.getTimestamp(), cell.getValue());
+          } else {
+            put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          }
         }
         table.put(put);
         if (LOG.isDebugEnabled()) {
@@ -203,7 +205,11 @@ public class RowResource implements Constants {
       }
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
-      put.add(parts[0], parts[1], timestamp, message);
+      if(parts.length == 1) {
+        put.add(parts[0], new byte[0], timestamp, message);
+      } else {
+        put.add(parts[0], parts[1], timestamp, message);
+      }
       table = pool.getTable(this.table);
       table.put(put);
       if (LOG.isDebugEnabled()) {
@@ -272,13 +278,13 @@ public class RowResource implements Constants {
     for (byte[] column: rowspec.getColumns()) {
       byte[][] split = KeyValue.parseColumn(column);
       if (rowspec.hasTimestamp()) {
-        if (split[1] != null) {
+        if (split.length == 2) {
           delete.deleteColumns(split[0], split[1], rowspec.getTimestamp());
         } else {
           delete.deleteFamily(split[0], rowspec.getTimestamp());
         }
       } else {
-        if (split[1] != null) {
+        if (split.length == 2) {
           delete.deleteColumns(split[0], split[1]);
         } else {
           delete.deleteFamily(split[0]);

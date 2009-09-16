@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -127,7 +128,14 @@ public class BuildTableIndex {
     // number of indexes to partition into
     job.setNumReduceTasks(numReduceTasks);
     Scan scan = new Scan();
-    scan.addColumns(columnNames.toString());
+    for(String columnName : columnNames.toString().split(" ")) {
+      String [] fields = columnName.split(":");
+      if(fields.length == 1) {
+        scan.addFamily(Bytes.toBytes(fields[0]));
+      } else {
+        scan.addColumn(Bytes.toBytes(fields[0]), Bytes.toBytes(fields[1]));
+      }
+    }
     // use identity map (a waste, but just as an example)
     IdentityTableMapper.initJob(tableName, scan, 
       IdentityTableMapper.class, job);

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -71,7 +72,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     super.setUp();
 
     desc = new HTableDescriptor(TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(FAMILY_COLON));
+    desc.addFamily(new HColumnDescriptor(FAMILY));
 
     IndexedTableDescriptor indexDesc = new IndexedTableDescriptor(desc);
     // Create a new index that does lexicographic ordering on COL_A
@@ -107,7 +108,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     int numRows = 0;
     byte[] lastColA = null;
     for (Result rowResult : scanner) {
-      byte[] colA = rowResult.getValue(COL_A);
+      byte[] colA = rowResult.getValue(FAMILY, QUAL_A);
       LOG.info("index scan : row [" + Bytes.toString(rowResult.getRow())
           + "] value [" + Bytes.toString(colA) + "]");
       if (lastColA != null) {
@@ -127,7 +128,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     byte[] persistedRowValue = null;
     for (Result rowResult : scanner) {
       byte[] row = rowResult.getRow();
-      byte[] value = rowResult.getValue(COL_A);
+      byte[] value = rowResult.getValue(FAMILY, QUAL_A);
       if (Bytes.toString(row).equals(Bytes.toString(PerformanceEvaluation.format(updatedRow)))) {        
         persistedRowValue = value;
         LOG.info("update found: row [" + Bytes.toString(row)
@@ -191,7 +192,7 @@ public class TestIndexedTable extends HBaseClusterTestCase {
   public void testDelete() throws IOException {
     writeInitalRows();
     // Delete the first row;
-    table.deleteAll(PerformanceEvaluation.format(0));
+    table.delete(new Delete(PerformanceEvaluation.format(0)));
     
     assertRowsInOrder(NUM_ROWS - 1);    
   }

@@ -24,22 +24,20 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ColumnNameParseException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.tableindexed.IndexMaintenanceUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -88,16 +86,13 @@ public class IndexedTableAdmin extends HBaseAdmin {
     HTableDescriptor indexTableDesc = new HTableDescriptor(indexSpec
         .getIndexedTableName(baseTableName));
     Set<byte[]> families = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    families.add(IndexedTable.INDEX_COL_FAMILY);
+    families.add(IndexedTable.INDEX_COL_FAMILY_NAME);
     for (byte[] column : indexSpec.getAllColumns()) {
-      families.add(Bytes.add(HStoreKey.getFamily(column),
-          new byte[] { HStoreKey.COLUMN_FAMILY_DELIMITER }));
+      families.add(KeyValue.parseColumn(column)[0]);
     }
-
     for (byte[] colFamily : families) {
       indexTableDesc.addFamily(new HColumnDescriptor(colFamily));
     }
-
     return indexTableDesc;
   }
   
@@ -135,13 +130,23 @@ public class IndexedTableAdmin extends HBaseAdmin {
   private void reIndexTable(byte[] baseTableName, IndexSpecification indexSpec) throws IOException {
     HTable baseTable = new HTable(baseTableName);
     HTable indexTable = new HTable(indexSpec.getIndexedTableName(baseTableName));
-    for (RowResult rowResult : baseTable.getScanner(indexSpec.getAllColumns())) {
+    Scan baseScan = new Scan();
+    for(byte [] column : indexSpec.getAllColumns()) {
+      byte [][] famQf = KeyValue.parseColumn(column);
+      if(famQf.length == 1) {
+        baseScan.addFamily(famQf[0]);
+      } else {
+        baseScan.addColumn(famQf[0], famQf[1]);
+      }
+    }
+    for (Result result : baseTable.getScanner(baseScan)) {
       SortedMap<byte[], byte[]> columnValues = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
-      for (Entry<byte[], Cell> entry : rowResult.entrySet()) {
-        columnValues.put(entry.getKey(), entry.getValue().getValue());
+      for(KeyValue kv : result.sorted()) {
+        columnValues.put(Bytes.add(kv.getFamily(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY, 
+            kv.getQualifier()), kv.getValue());
       }
       if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, columnValues)) {
-        Put indexUpdate = IndexMaintenanceUtils.createIndexUpdate(indexSpec, rowResult.getRow(), columnValues);
+        Put indexUpdate = IndexMaintenanceUtils.createIndexUpdate(indexSpec, result.getRow(), columnValues);
         indexTable.put(indexUpdate);
       }
     }

@@ -7,7 +7,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -296,6 +295,7 @@ public class TestHBaseAdmin extends HBaseClusterTestCase {
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
+  @SuppressWarnings("unused")
   private byte [][] makeN(byte [] base, int n) {
     byte [][] ret = new byte[n][];
     for(int i=0;i<n;i++) {

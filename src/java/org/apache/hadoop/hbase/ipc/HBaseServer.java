@@ -910,7 +910,7 @@ public abstract class HBaseServer {
           
           CurCall.set(call);
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
-          UserGroupInformation.setCurrentUGI(call.connection.ticket);
+          UserGroupInformation.setCurrentUser(call.connection.ticket);
           try {
             value = call(call.param, call.timestamp);             // make the call
           } catch (Throwable e) {
@@ -918,7 +918,7 @@ public abstract class HBaseServer {
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
-          UserGroupInformation.setCurrentUGI(previous);
+          UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
 
           if (buf.size() > buffersize) {

@@ -44,7 +44,8 @@ public class TestMemStore extends TestCase {
   private static final int ROW_COUNT = 10;
   private static final int QUALIFIER_COUNT = ROW_COUNT;
   private static final byte [] FAMILY = Bytes.toBytes("column");
-  private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
+  private static final byte [] CONTENTS = Bytes.toBytes("contents");
+  private static final byte [] BASIC = Bytes.toBytes("basic");
   private static final String CONTENTSTR = "contentstr";
 
   @Override
@@ -192,7 +193,7 @@ public class TestMemStore extends TestCase {
       byte [] kk = Bytes.toBytes(k);
       byte [] row =
         Bytes.toBytes(".META.,table," + Bytes.toString(kk) + ",1," + k);
-      KeyValue key = new KeyValue(row, CONTENTS_BASIC,
+      KeyValue key = new KeyValue(row, CONTENTS, BASIC,
         System.currentTimeMillis(),
         (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
       mc.add(key);
@@ -635,12 +636,12 @@ public class TestMemStore extends TestCase {
   }
 
   private KeyValue getDeleteKV(byte [] row) {
-    return new KeyValue(row, Bytes.toBytes("test_col:"),
+    return new KeyValue(row, Bytes.toBytes("test_col"), null,
       HConstants.LATEST_TIMESTAMP, KeyValue.Type.Delete, null);
   }
 
   private KeyValue getKV(byte [] row, byte [] value) {
-    return new KeyValue(row, Bytes.toBytes("test_col:"),
+    return new KeyValue(row, Bytes.toBytes("test_col"), null,
       HConstants.LATEST_TIMESTAMP, value);
   }
 }

@@ -221,7 +221,7 @@ public class TestClient extends HBaseClusterTestCase {
     byte [] TABLE = Bytes.toBytes("testSingleRowMultipleFamily");
 
     byte [][] ROWS = makeN(ROW, 3);
-    byte [][] FAMILIES = makeN(FAMILY, 10);
+    byte [][] FAMILIES = makeNAscii(FAMILY, 10);
     byte [][] QUALIFIERS = makeN(QUALIFIER, 10);
     byte [][] VALUES = makeN(VALUE, 10);
    
@@ -1075,7 +1075,7 @@ public class TestClient extends HBaseClusterTestCase {
     byte [] TABLE = Bytes.toBytes("testDeletes");
     
     byte [][] ROWS = makeNAscii(ROW, 6);
-    byte [][] FAMILIES = makeN(FAMILY, 3);
+    byte [][] FAMILIES = makeNAscii(FAMILY, 3);
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
     

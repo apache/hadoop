@@ -30,13 +30,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -275,32 +273,6 @@ public class Result implements Writable {
     return entry == null? null: entry.getValue();
   }
 
-  public Cell getCellValue(byte[] family, byte[] qualifier) {
-    Map.Entry<Long,byte[]> val = getKeyValue(family, qualifier);
-    if (val == null)
-      return null;
-    return new Cell(val.getValue(), val.getKey());
-  }
-
-  /**
-   * @return First KeyValue in this Result as a Cell or null if empty.
-   */
-  public Cell getCellValue() {
-    return isEmpty()? null: new Cell(kvs[0].getValue(), kvs[0].getTimestamp());
-  }
-
-  /**
-   * @return This Result as array of Cells or null if empty.
-   */
-  public Cell [] getCellValues() {
-    if (isEmpty()) return null;
-    Cell [] results = new Cell[kvs.length];
-    for (int i = 0; i < kvs.length; i++) {
-      results[i] = new Cell(kvs[i].getValue(), kvs[i].getTimestamp());
-    }
-    return results;
-  }
-
   private Map.Entry<Long,byte[]> getKeyValue(byte[] family, byte[] qualifier) {
     if(this.familyMap == null) {
       getMap();
@@ -328,21 +300,6 @@ public class Result implements Writable {
   }
   
   /**
-   * Get the latest version of the specified column,
-   * using <pre>family:qualifier</pre> notation.
-   * @param column column in family:qualifier notation
-   * @return value of latest version of column, null if none found
-   */
-  public byte [] getValue(byte [] column) {
-    try {
-      byte [][] split = KeyValue.parseColumn(column);
-      return getValue(split[0], split[1]);
-    } catch(Exception e) {
-      return null;
-    }
-  }
-  
-  /**
    * Checks for existence of the specified column.
    * @param family family name
    * @param qualifier column qualifier
@@ -366,18 +323,7 @@ public class Result implements Writable {
     }
     return true;
   }
-  
-  /**
-   * Returns this Result in the old return format, {@link RowResult}.
-   * @return a RowResult
-   */
-  public RowResult getRowResult() {
-    if(this.kvs == null) {
-      readFields();
-    }
-    return RowResult.createRowResult(Arrays.asList(kvs));
-  }
-  
+    
   /**
    * Returns the value of the first column in the Result.
    * @return value of the first column

@@ -24,7 +24,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Writable;
 
@@ -131,18 +130,6 @@ public class Writables {
   }
 
   /**
-   * @param cell Cell object containing the serialized HRegionInfo
-   * @return A HRegionInfo instance built out of passed <code>cell</code>.
-   * @throws IOException
-   */
-  public static HRegionInfo getHRegionInfo(final Cell cell) throws IOException {
-    if (cell == null) {
-      return null;
-    }
-    return getHRegionInfo(cell.getValue());
-  }
-
-  /**
    * Copy one Writable to another.  Copies bytes using data streams.
    * @param src Source Writable
    * @param tgt Target Writable
@@ -170,27 +157,5 @@ public class Writables {
       dis.close();
     }
     return tgt;
-  }
-
-  /**
-   * @param c
-   * @return Cell value as a UTF-8 String
-   */
-  public static String cellToString(Cell c) {
-    if (c == null) {
-      return "";
-    }
-    return Bytes.toString(c.getValue());
-  }
-  
-  /**
-   * @param c
-   * @return Cell as a long.
-   */
-  public static long cellToLong(Cell c) {
-    if (c == null) {
-      return 0;
-    }
-    return Bytes.toLong(c.getValue());
   }
 }

@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -96,7 +97,14 @@ public class RowCounter {
       sb.append(args[i]);
     }
     Scan scan = new Scan();
-    scan.addColumns(sb.toString());
+    for(String columnName : sb.toString().split(" ")) {
+      String [] fields = columnName.split(":");
+      if(fields.length == 1) {
+        scan.addFamily(Bytes.toBytes(fields[0]));
+      } else {
+        scan.addColumn(Bytes.toBytes(fields[0]), Bytes.toBytes(fields[1]));
+      }
+    }
     // Second argument is the table name.
     TableMapReduceUtil.initTableMapperJob(args[1], scan,
       RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);

@@ -29,7 +29,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -46,7 +45,7 @@ public class IndexedTable extends TransactionalTable {
   // TODO move these schema constants elsewhere
   public static final byte[] INDEX_COL_FAMILY_NAME = Bytes.toBytes("__INDEX__");
   public static final byte[] INDEX_COL_FAMILY = Bytes.add(
-      INDEX_COL_FAMILY_NAME, new byte[] { HStoreKey.COLUMN_FAMILY_DELIMITER });
+      INDEX_COL_FAMILY_NAME, KeyValue.COLUMN_FAMILY_DELIM_ARRAY);
   public static final byte[] INDEX_BASE_ROW = Bytes.toBytes("ROW");
   public static final byte[] INDEX_BASE_ROW_COLUMN = Bytes.add(
       INDEX_COL_FAMILY, INDEX_BASE_ROW);
@@ -114,7 +113,14 @@ public class IndexedTable extends TransactionalTable {
 
     Scan indexScan = new Scan();
     indexScan.setFilter(indexFilter);
-    indexScan.addColumns(allIndexColumns);
+    for(byte [] column : allIndexColumns) {
+      byte [][] famQf = KeyValue.parseColumn(column);
+      if(famQf.length == 1) {
+        indexScan.addFamily(famQf[0]);
+      } else {
+        indexScan.addColumn(famQf[0], famQf[1]);
+      }
+    }
     if (indexStartRow != null) {
       indexScan.setStartRow(indexStartRow);
     }
@@ -174,24 +180,32 @@ public class IndexedTable extends TransactionalTable {
       for (int i = 0; i < indexResult.length; i++) {
         Result row = indexResult[i];
         
-        byte[] baseRow = row.getValue(INDEX_BASE_ROW_COLUMN);
+        byte[] baseRow = row.getValue(INDEX_COL_FAMILY_NAME, INDEX_BASE_ROW);
         LOG.debug("next index row [" + Bytes.toString(row.getRow())
             + "] -> base row [" + Bytes.toString(baseRow) + "]");
         Result baseResult = null;
         if (columns != null && columns.length > 0) {
           LOG.debug("Going to base table for remaining columns");
           Get baseGet = new Get(baseRow);
-          baseGet.addColumns(columns);
+          for(byte [] column : columns) {
+            byte [][] famQf = KeyValue.parseColumn(column);
+            if(famQf.length == 1) {
+              baseGet.addFamily(famQf[0]);
+            } else {
+              baseGet.addColumn(famQf[0], famQf[1]);
+            }
+          }
           baseResult = IndexedTable.this.get(baseGet);
         }
         
         List<KeyValue> results = new ArrayList<KeyValue>();
         for (KeyValue indexKV : row.list()) {
-          byte[] col = indexKV.getColumn();
-          if (HStoreKey.matchingFamily(INDEX_COL_FAMILY_NAME, col)) {
+          if (indexKV.matchingFamily(INDEX_COL_FAMILY_NAME)) {
             continue;
           }
-          results.add(new KeyValue(baseRow, indexKV.getColumn(), indexKV.getTimestamp(), KeyValue.Type.Put, indexKV.getValue()));
+          results.add(new KeyValue(baseRow, indexKV.getFamily(), 
+              indexKV.getQualifier(), indexKV.getTimestamp(), KeyValue.Type.Put, 
+              indexKV.getValue()));
         }
         
         if (baseResult != null) {

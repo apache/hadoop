@@ -30,9 +30,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -80,7 +78,6 @@ public class Scan implements Writable {
   private int caching = -1;
   private boolean cacheBlocks = true;
   private Filter filter = null;
-  private RowFilterInterface oldFilter = null;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
@@ -128,7 +125,6 @@ public class Scan implements Writable {
     maxVersions = scan.getMaxVersions();
     caching = scan.getCaching();
     filter = scan.getFilter(); // clone?
-    oldFilter = scan.getOldFilter(); // clone?
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -172,89 +168,6 @@ public class Scan implements Writable {
     familyMap.put(family, set);
 
     return this;
-  }
-
-  /**
-   * Parses a combined family and qualifier and adds either both or just the 
-   * family in case there is not qualifier. This assumes the older colon 
-   * divided notation, e.g. "data:contents" or "meta:".
-   * <p>
-   * Note: It will through an error when the colon is missing.
-   * 
-   * @param familyAndQualifier
-   * @return A reference to this instance.
-   * @throws IllegalArgumentException When the colon is missing.
-   */
-  public Scan addColumn(byte[] familyAndQualifier) {
-    byte [][] fq = KeyValue.parseColumn(familyAndQualifier);
-    if (fq.length > 1 && fq[1] != null && fq[1].length > 0) {
-      addColumn(fq[0], fq[1]);  
-    } else {
-      addFamily(fq[0]);
-    }
-    return this;
-  }
-  
-  /**
-   * Adds an array of columns specified using old format, family:qualifier.
-   * <p>
-   * Overrides previous calls to addFamily for any families in the input.
-   * 
-   * @param columns array of columns, formatted as <pre>family:qualifier</pre>
-   */
-  public Scan addColumns(byte [][] columns) {
-    for (int i = 0; i < columns.length; i++) {
-      addColumn(columns[i]);
-    }
-    return this;
-  }
-
-  /**
-   * Convenience method to help parse old style (or rather user entry on the
-   * command line) column definitions, e.g. "data:contents mime:". The columns
-   * must be space delimited and always have a colon (":") to denote family
-   * and qualifier.
-   * 
-   * @param columns  The columns to parse.
-   * @return A reference to this instance.
-   */
-  public Scan addColumns(String columns) {
-    String[] cols = columns.split(" ");
-    for (String col : cols) {
-      addColumn(Bytes.toBytes(col));
-    }
-    return this;
-  }
-
-  /**
-   * Helps to convert the binary column families and qualifiers to a text 
-   * representation, e.g. "data:mimetype data:contents meta:". Binary values
-   * are properly encoded using {@link Bytes#toBytesBinary(String)}.
-   * 
-   * @return The columns in an old style string format.
-   */
-  public String getInputColumns() {
-    String cols = "";
-    for (Map.Entry<byte[], NavigableSet<byte[]>> e : 
-      familyMap.entrySet()) {
-      byte[] fam = e.getKey();
-      if (cols.length() > 0) cols += " ";
-      NavigableSet<byte[]> quals = e.getValue();
-      // check if this family has qualifiers
-      if (quals != null && quals.size() > 0) {
-        String cs = "";
-        for (byte[] qual : quals) {
-          if (cs.length() > 0) cs += " ";
-          // encode values to make parsing easier later
-          cs += Bytes.toStringBinary(fam) + ":" + Bytes.toStringBinary(qual);
-        }
-        cols += cs;
-      } else {
-        // only add the family but with old style delimiter 
-        cols += Bytes.toStringBinary(fam) + ":";
-      }
-    }
-    return cols;
   }
   
   /**
@@ -337,19 +250,6 @@ public class Scan implements Writable {
     return this;
   }
 
-  /**
-   * Set an old-style filter interface to use. Note: not all features of the
-   * old style filters are supported.
-   * 
-   * @deprecated
-   * @param filter
-   * @return The scan instance. 
-   */
-  public Scan setOldFilter(RowFilterInterface filter) {
-    oldFilter = filter;
-    return this;
-  }
-  
   /**
    * Setting the familyMap
    * @param familyMap
@@ -437,19 +337,10 @@ public class Scan implements Writable {
   }
 
   /**
-   * Get the old style filter, if there is one.
-   * @deprecated
-   * @return null or instance
-   */
-  public RowFilterInterface getOldFilter() {
-    return oldFilter;
-  }
-  
-  /**
    * @return true is a filter has been specified, false if not
    */
   public boolean hasFilter() {
-    return filter != null || oldFilter != null;
+    return filter != null;
   }
   
   /**
@@ -550,11 +441,6 @@ public class Scan implements Writable {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
     }
-    if (in.readBoolean()) {
-      this.oldFilter =
-        (RowFilterInterface)createForName(Bytes.toString(Bytes.readByteArray(in)));
-      this.oldFilter.readFields(in);
-    }
     this.tr = new TimeRange();
     tr.readFields(in);
     int numFamilies = in.readInt();
@@ -585,13 +471,6 @@ public class Scan implements Writable {
       out.writeBoolean(true);
       Bytes.writeByteArray(out, Bytes.toBytes(filter.getClass().getName()));
       filter.write(out);
-    }
-    if (this.oldFilter == null) {
-      out.writeBoolean(false);
-    } else {
-      out.writeBoolean(true);
-      Bytes.writeByteArray(out, Bytes.toBytes(oldFilter.getClass().getName()));
-      oldFilter.write(out);
     }
     tr.write(out);
     out.writeInt(familyMap.size());

@@ -188,7 +188,8 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
     for (Result r: scanner) {
       for (KeyValue kv : r.sorted()) {
         assertEquals(TIMESTAMP.get(kv.getTimestamp()), (Boolean)Bytes.toBoolean(kv.getValue()));
-        log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(kv.getColumn())
+        log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(kv.getFamily())
+            + "\t" + Bytes.toString(kv.getQualifier())
             + "\t" + kv.getTimestamp() + "\t" + Bytes.toBoolean(kv.getValue()));
       }
     }

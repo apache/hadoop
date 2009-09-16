@@ -107,7 +107,8 @@ extends TableMapper<ImmutableBytesWritable,Result> implements Configurable {
     int numCols = columns.length;
     if (numCols > 0) {
       for (KeyValue value: r.list()) {
-        byte [] column = value.getColumn();
+        byte [] column = KeyValue.makeColumn(value.getFamily(), 
+            value.getQualifier());
         for (int i = 0; i < numCols; i++) {
           if (Bytes.equals(column, columns[i])) {
             foundList.add(value.getValue());

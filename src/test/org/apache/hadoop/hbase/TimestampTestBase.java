@@ -19,14 +19,11 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -39,11 +36,9 @@ public class TimestampTestBase extends HBaseTestCase {
   private static final long T1 = 100L;
   private static final long T2 = 200L;
   
-  private static final String COLUMN_NAME = "colfamily1:contents";
+  private static final byte [] FAMILY_NAME = Bytes.toBytes("colfamily1");
+  private static final byte [] QUALIFIER_NAME = Bytes.toBytes("contents");
   
-  private static final byte [] COLUMN = Bytes.toBytes(COLUMN_NAME);
-  private static final byte [][] COLUMNS =
-    new byte [][] {Bytes.toBytes("colfamily1")};
   private static final byte [] ROW = Bytes.toBytes("row");
 
     /*
@@ -91,12 +86,7 @@ public class TimestampTestBase extends HBaseTestCase {
     put(incommon, T1);
 
     Delete delete = new Delete(ROW);
-    byte [][] famAndQf = KeyValue.parseColumn(COLUMN);
-    if (famAndQf[1].length == 0){
-      delete.deleteFamily(famAndQf[0], T2);
-    } else {
-      delete.deleteColumns(famAndQf[0], famAndQf[1], T2);
-    }
+    delete.deleteColumns(FAMILY_NAME, QUALIFIER_NAME, T2);
     incommon.delete(delete, null, true);
  
     // Should only be current value in set.  Assert this is so
@@ -111,10 +101,8 @@ public class TimestampTestBase extends HBaseTestCase {
     final long currentTime)
   throws IOException {
     Get get = null;
-    byte [][] famAndQf = null;
     get = new Get(ROW);
-    famAndQf = KeyValue.parseColumn(COLUMN);
-    get.addColumn(famAndQf[0], famAndQf[1]);
+    get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
     get.setMaxVersions(3);
     Result result = incommon.get(get);
     assertEquals(1, result.size());
@@ -134,48 +122,42 @@ public class TimestampTestBase extends HBaseTestCase {
   throws IOException {
     // Assert that 'latest' is what we expect.
     Get get = null;
-    byte [][] famAndQf = null;
     get = new Get(ROW);
-    famAndQf = KeyValue.parseColumn(COLUMN);
-    get.addColumn(famAndQf[0], famAndQf[1]);
+    get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
     Result r = incommon.get(get);
-    byte [] bytes = r.getValue(famAndQf[0], famAndQf[1]);
+    byte [] bytes = r.getValue(FAMILY_NAME, QUALIFIER_NAME);
     long t = Bytes.toLong(bytes);
     assertEquals(tss[0], t);
 
     // Now assert that if we ask for multiple versions, that they come out in
     // order.
     get = new Get(ROW);
-    famAndQf = KeyValue.parseColumn(COLUMN);
-    get.addColumn(famAndQf[0], famAndQf[1]);
+    get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
     get.setMaxVersions(tss.length);
     Result result = incommon.get(get);
-    List<Cell> cells = new ArrayList<Cell>();
-    for(KeyValue kv : result.sorted()) {
-      cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
-    }
-    assertEquals(tss.length, cells.size());
-    for (int i = 0; i < cells.size(); i++) {
-      long ts = Bytes.toLong(cells.get(i).getValue());
-      assertEquals(ts, tss[i]);
+    KeyValue [] kvs = result.sorted();
+    assertEquals(kvs.length, tss.length);
+    for(int i=0;i<kvs.length;i++) {
+      t = Bytes.toLong(kvs[i].getValue());
+      assertEquals(tss[i], t);
     }
     
+    // Determine highest stamp to set as next max stamp
+    long maxStamp = kvs[0].getTimestamp();
+        
     // Specify a timestamp get multiple versions.
     get = new Get(ROW);
-    famAndQf = KeyValue.parseColumn(COLUMN);
-    get.addColumn(famAndQf[0], famAndQf[1]);
-    get.setTimeStamp(tss[0]);
-    get.setMaxVersions(cells.size() - 1);
+    get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+    get.setTimeRange(0, maxStamp);
+    get.setMaxVersions(kvs.length - 1);
     result = incommon.get(get);
-    cells = new ArrayList<Cell>();
-    for(KeyValue kv : result.sorted()) {
-      cells.add(new Cell(kv.getValue(), kv.getTimestamp()));
+    kvs = result.sorted();
+    assertEquals(kvs.length, tss.length - 1);
+    for(int i=1;i<kvs.length;i++) {
+      t = Bytes.toLong(kvs[i-1].getValue());
+      assertEquals(tss[i], t);
     }
-    for (int i = 1; i < cells.size(); i++) {
-      long ts = Bytes.toLong(cells.get(i).getValue());
-      assertEquals(ts, tss[i]);
-    }
-    
+        
     // Test scanner returns expected version
     assertScanContentTimestamp(incommon, tss[0]);
   }
@@ -215,7 +197,7 @@ public class TimestampTestBase extends HBaseTestCase {
   public static int assertScanContentTimestamp(final Incommon in, final long ts)
   throws IOException {
     ScannerIncommon scanner =
-      in.getScanner(COLUMNS, HConstants.EMPTY_START_ROW, ts);
+      in.getScanner(COLUMNS[0], null, HConstants.EMPTY_START_ROW, ts);
     int count = 0;
     try {
       // TODO FIX
@@ -263,8 +245,7 @@ public class TimestampTestBase extends HBaseTestCase {
     if(ts != HConstants.LATEST_TIMESTAMP) {
       put.setTimeStamp(ts);
     }
-    byte [][] famAndQf = KeyValue.parseColumn(COLUMN);
-    put.add(famAndQf[0], famAndQf[1], bytes);
+    put.add(FAMILY_NAME, QUALIFIER_NAME, bytes);
     loader.put(put);
   }
   
@@ -287,12 +268,7 @@ public class TimestampTestBase extends HBaseTestCase {
   throws IOException {
     Delete delete = ts == HConstants.LATEST_TIMESTAMP?
       new Delete(ROW): new Delete(ROW, ts, null);
-    byte [][] famAndQf = KeyValue.parseColumn(column == null? COLUMN: column);
-    if (famAndQf[1].length == 0) {
-      delete.deleteFamily(famAndQf[0], ts);
-    } else {
-      delete.deleteColumn(famAndQf[0], famAndQf[1], ts);
-    }
+    delete.deleteColumn(FAMILY_NAME, QUALIFIER_NAME, ts);
     loader.delete(delete, null, true);
   }
 

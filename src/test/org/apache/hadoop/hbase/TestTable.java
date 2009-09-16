@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** Tests table creation restrictions*/
@@ -134,7 +133,7 @@ public class TestTable extends HBaseClusterTestCase {
   public void testReadOnlyTable() throws Exception {
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTableDescriptor desc = new HTableDescriptor(getName());
-    byte[] colName = Bytes.toBytes("test:");
+    byte[] colName = Bytes.toBytes("test");
     desc.addFamily(new HColumnDescriptor(colName));
     desc.setReadOnly(true);
     admin.createTable(desc);

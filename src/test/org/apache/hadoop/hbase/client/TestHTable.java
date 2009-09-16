@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Tests HTable
  */
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
-  private static final HColumnDescriptor column =
+  private static final HColumnDescriptor family1 =
     new HColumnDescriptor(CATALOG_FAMILY);
 
   private static final byte [] nosuchTable = Bytes.toBytes("nosuchTable");
@@ -52,13 +52,13 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
   public void testGet() throws IOException {
     HTable table = null;
     try {
-      HColumnDescriptor column2 =
-        new HColumnDescriptor(Bytes.toBytes("info2:"));
+      HColumnDescriptor family2 =
+        new HColumnDescriptor(Bytes.toBytes("info2"));
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor testTableADesc =
         new HTableDescriptor(tableAname);
-      testTableADesc.addFamily(column);
-      testTableADesc.addFamily(column2);
+      testTableADesc.addFamily(family1);
+      testTableADesc.addFamily(family2);
       admin.createTable(testTableADesc);
       
       table = new HTable(conf, tableAname);
@@ -151,10 +151,10 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     }
     
     HTableDescriptor tableAdesc = new HTableDescriptor(tableAname);
-    tableAdesc.addFamily(column);
+    tableAdesc.addFamily(family1);
     
     HTableDescriptor tableBdesc = new HTableDescriptor(tableBname);
-    tableBdesc.addFamily(column);
+    tableBdesc.addFamily(family1);
 
     // create a couple of tables
     
@@ -274,13 +274,13 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
   }
 
   public void testGetClosestRowBefore() throws IOException {
-    HColumnDescriptor column2 =
-      new HColumnDescriptor(Bytes.toBytes("info2:"));
+    HColumnDescriptor family2 =
+      new HColumnDescriptor(Bytes.toBytes("info2"));
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTableDescriptor testTableADesc =
       new HTableDescriptor(tableAname);
-    testTableADesc.addFamily(column);
-    testTableADesc.addFamily(column2);
+    testTableADesc.addFamily(family1);
+    testTableADesc.addFamily(family2);
     admin.createTable(testTableADesc);
     
     byte[] firstRow = Bytes.toBytes("ro");
@@ -334,7 +334,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
      HBaseAdmin admin = new HBaseAdmin(conf);
      HTableDescriptor testTableADesc =
        new HTableDescriptor("table");
-     testTableADesc.addFamily(column);
+     testTableADesc.addFamily(family1);
      admin.createTable(testTableADesc);
 
      // This should throw a TableNotFoundException, it has not been created

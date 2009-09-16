@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 import org.apache.commons.logging.Log;
@@ -236,35 +237,6 @@ public class KeyValue implements Writable, HeapSize {
     this.length = length;
   }
 
-  /** Temporary constructors until 880/1249 is committed to remove deps */
-  
-  /**
-   * Temporary.
-   */
-  public KeyValue(final byte [] row, final byte [] column) {
-    this(row, column, HConstants.LATEST_TIMESTAMP, null);
-  }
-  
-  public KeyValue(final byte [] row, final byte [] column, long ts) {
-    this(row, column, ts, null);
-  }
-  
-  public KeyValue(final byte [] row, final byte [] column, long ts,
-      byte [] value) {
-    this(row, column, ts, Type.Put, value);
-  }
-  
-  public KeyValue(final byte [] row, final byte [] column, long ts, Type type,
-      byte [] value) {
-    int rlength = row == null ? 0 : row.length;
-    int vlength = value == null ? 0 : value.length;
-    int clength = column == null ? 0 : column.length;
-    this.bytes = createByteArray(row, 0, rlength, column, 0, clength,
-        ts, type, value, 0, vlength);
-    this.length = this.bytes.length;
-    this.offset = 0;
-  }
-  
   /** Constructors that build a new backing byte array from fields */
   
   /**
@@ -912,25 +884,6 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Primarily for use client-side.  Returns the column of this KeyValue in the
-   * deprecated format: <i>family:qualifier</i>, and in a new byte array.<p>
-   * 
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and 
-   * lengths instead.
-   * @return Returns column. Makes a copy.  Inserts delimiter.
-   */
-  public byte [] getColumn() {
-    int fo = getFamilyOffset();
-    int fl = getFamilyLength(fo);
-    int ql = getQualifierLength();
-    byte [] result = new byte[fl + 1 + ql];
-    System.arraycopy(this.bytes, fo, result, 0, fl);
-    result[fl] = COLUMN_FAMILY_DELIMITER;
-    System.arraycopy(this.bytes, fo + fl, result, fl + 1, ql);
-    return result;
-  }
-
-  /**
    * Primarily for use client-side.  Returns the family of this KeyValue in a 
    * new byte array.<p>
    * 
@@ -1074,23 +1027,6 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * @param column Column with delimiter
-   * @return True if column matches.
-   */
-  public boolean matchingColumn(final byte [] column) {
-    int index = getFamilyDelimiterIndex(column, 0, column.length);
-    int rl = getRowLength();
-    int o = getFamilyOffset(rl);
-    int fl = getFamilyLength(o);
-    int ql = getQualifierLength(rl,fl);
-    if(Bytes.compareTo(column, 0, index, this.bytes, o, fl) != 0) {
-      return false;
-    }
-    return Bytes.compareTo(column, index + 1, column.length - (index + 1),
-        this.bytes, o + fl, ql) == 0;
-  }
-
-  /**
    *
    * @param family column family
    * @param qualifier column qualifier
@@ -1158,19 +1094,24 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * Splits a column in family:qualifier form into separate byte arrays.
-   * 
+   * <p>
+   * Not recommend to be used as this is old-style API.
    * @param c  The column.
    * @return The parsed column.
    */
   public static byte [][] parseColumn(byte [] c) {
-    final byte [][] result = new byte [2][];
     final int index = getDelimiter(c, 0, c.length, COLUMN_FAMILY_DELIMITER);
     if (index == -1) {
-      // If no delimiter, return <code>c</code> as family and null qualifier.
-      result[0] = c;
-      result[1] = null;
-      return result;
+      // If no delimiter, return array of size 1
+      return new byte [][] { c };
+    } else if(index == c.length - 1) {
+      // Only a family, return array size 1
+      byte [] family = new byte[c.length-1];
+      System.arraycopy(c, 0, family, 0, family.length);
+      return new byte [][] { family };
     }
+    // Family and column, return array size 2
+    final byte [][] result = new byte [2][];
     result[0] = new byte [index];
     System.arraycopy(c, 0, result[0], 0, index);
     final int len = c.length - (index + 1);
@@ -1178,6 +1119,18 @@ public class KeyValue implements Writable, HeapSize {
     System.arraycopy(c, index + 1 /*Skip delimiter*/, result[1], 0,
       len);
     return result;
+  }
+  
+  /**
+   * Makes a column in family:qualifier form from separate byte arrays.
+   * <p>
+   * Not recommended for usage as this is old-style API.
+   * @param family
+   * @param qualifier
+   * @return family:qualifier
+   */
+  public static byte [] makeColumn(byte [] family, byte [] qualifier) {
+    return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
   }
   
   /**
@@ -1549,6 +1502,24 @@ public class KeyValue implements Writable, HeapSize {
   public static KeyValue createFirstOnRow(final byte [] row, final byte [] f,
       final byte [] q, final long ts) {
     return new KeyValue(row, f, q, ts, Type.Maximum);
+  }
+  
+  /**
+   * @param b
+   * @return A KeyValue made of a byte array that holds the key-only part.
+   * Needed to convert hfile index members to KeyValues.
+   */
+  public static KeyValue createKeyValueFromKey(final byte [] b) {
+    return createKeyValueFromKey(b, 0, b.length);
+  }
+  
+  /**
+   * @param b
+   * @return A KeyValue made of a byte buffer that holds the key-only part.
+   * Needed to convert hfile index members to KeyValues.
+   */
+  public static KeyValue createKeyValueFromKey(final ByteBuffer bb) {
+    return createKeyValueFromKey(bb.array(), bb.arrayOffset(), bb.limit());
   }
   
   /**

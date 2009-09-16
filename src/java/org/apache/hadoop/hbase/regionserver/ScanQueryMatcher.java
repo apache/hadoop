@@ -24,7 +24,6 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -32,8 +31,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A query matcher that is specifically designed for the scan case.
  */
 public class ScanQueryMatcher extends QueryMatcher {
-  // have to support old style filter for now.
-  private RowFilterInterface oldFilter;
   // Optimization so we can skip lots of compares when we decide to skip
   // to the next row.
   private boolean stickyNextRow;
@@ -57,7 +54,6 @@ public class ScanQueryMatcher extends QueryMatcher {
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
     this.stopKey = KeyValue.createFirstOnRow(scan.getStopRow());
     this.filter = scan.getFilter();
-    this.oldFilter = scan.getOldFilter();
     
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
@@ -83,9 +79,6 @@ public class ScanQueryMatcher extends QueryMatcher {
    */
   public MatchCode match(KeyValue kv) {
     if (filter != null && filter.filterAllRemaining()) {
-      return MatchCode.DONE_SCAN;
-    } else if (oldFilter != null && oldFilter.filterAllRemaining()) {
-      // the old filter runs only if the other filter didnt work.
       return MatchCode.DONE_SCAN;
     }
 

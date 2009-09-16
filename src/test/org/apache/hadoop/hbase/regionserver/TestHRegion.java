@@ -96,10 +96,6 @@ public class TestHRegion extends HBaseTestCase {
       exception = true;
     }
     assertTrue(exception);
-    // Can I add it using old style call?
-    p = new Put(b);
-    p.add(cfwithcolon, System.currentTimeMillis(), cfwithcolon);
-    this.region.put(p);
   }
 
   //////////////////////////////////////////////////////////////////////////////

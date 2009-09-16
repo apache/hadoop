@@ -33,9 +33,6 @@ import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.rest.exception.HBaseRestException;
-import org.apache.hadoop.hbase.rest.serializer.IRestSerializer;
-import org.apache.hadoop.hbase.rest.serializer.ISerializable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -45,8 +42,7 @@ import agilejson.TOJSON;
  * HTableDescriptor contains the name of an HTable, and its
  * column families.
  */
-public class HTableDescriptor implements WritableComparable<HTableDescriptor>,
-ISerializable {
+public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   // Changes prior to version 3 were not recorded here.
   // Version 3 adds metadata as a map where keys and values are byte[].
@@ -658,11 +654,4 @@ ISerializable {
             HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),
             false, false,  8 * 1024,
             HConstants.WEEK_IN_SECONDS, false)});
-
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.rest.xml.IOutputXML#toXML()
-   */
-  public void restSerialize(IRestSerializer serializer) throws HBaseRestException {
-    serializer.serializeTableDescriptor(this);
-  }
 }

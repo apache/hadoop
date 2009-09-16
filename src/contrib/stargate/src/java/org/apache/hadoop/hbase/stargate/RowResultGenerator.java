@@ -41,7 +41,15 @@ public class RowResultGenerator extends ResultGenerator {
     try {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
-        get.addColumns(rowspec.getColumns());
+        byte [][] columns = rowspec.getColumns();
+        for(byte [] column : columns) {
+          byte [][] famQf = KeyValue.parseColumn(column);
+          if(famQf.length == 1) {
+            get.addFamily(famQf[0]);
+          } else {
+            get.addColumn(famQf[0], famQf[1]);
+          }
+        }
       } else {
         // rowspec does not explicitly specify columns, return them all
         for (HColumnDescriptor family:

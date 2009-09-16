@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 
 /**

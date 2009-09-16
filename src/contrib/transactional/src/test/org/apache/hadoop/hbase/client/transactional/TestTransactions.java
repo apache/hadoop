@@ -71,7 +71,7 @@ public class TestTransactions extends HBaseClusterTestCase {
     super.setUp();
 
     HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(FAMILY_COLON));
+    desc.addFamily(new HColumnDescriptor(FAMILY));
     admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     table = new TransactionalTable(conf, desc.getName());
@@ -118,13 +118,14 @@ public class TestTransactions extends HBaseClusterTestCase {
     TransactionState transactionState = transactionManager.beginTransaction();
 
     int originalValue = Bytes.toInt(table.get(transactionState,
-        new Get(ROW1).addColumn(COL_A)).value());
+        new Get(ROW1).addColumn(FAMILY, QUAL_A)).value());
     int newValue = originalValue + 1;
 
     table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
         .toBytes(newValue)));
 
-    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(COL_A));
+    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(FAMILY, 
+        QUAL_A));
     Assert.assertEquals(newValue, Bytes.toInt(row1_A.value()));
   }
 
@@ -132,7 +133,7 @@ public class TestTransactions extends HBaseClusterTestCase {
     TransactionState transactionState = transactionManager.beginTransaction();
 
     int originalValue = Bytes.toInt(table.get(transactionState,
-        new Get(ROW1).addColumn(COL_A)).value());
+        new Get(ROW1).addColumn(FAMILY, QUAL_A)).value());
     int newValue = originalValue + 1;
     table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
         .toBytes(newValue)));
@@ -175,12 +176,13 @@ public class TestTransactions extends HBaseClusterTestCase {
   private TransactionState makeTransaction1() throws IOException {
     TransactionState transactionState = transactionManager.beginTransaction();
 
-    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(COL_A));
+    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(FAMILY, 
+        QUAL_A));
 
     table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, row1_A
-        .getValue(COL_A)));
+        .getValue(FAMILY, QUAL_A)));
     table.put(transactionState, new Put(ROW3).add(FAMILY, QUAL_A, row1_A
-        .getValue(COL_A)));
+        .getValue(FAMILY, QUAL_A)));
 
     return transactionState;
   }
@@ -189,9 +191,10 @@ public class TestTransactions extends HBaseClusterTestCase {
   private TransactionState makeTransaction2() throws IOException {
     TransactionState transactionState = transactionManager.beginTransaction();
 
-    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(COL_A));
+    Result row1_A = table.get(transactionState, new Get(ROW1).addColumn(FAMILY, 
+        QUAL_A));
 
-    int value = Bytes.toInt(row1_A.getValue(COL_A));
+    int value = Bytes.toInt(row1_A.getValue(FAMILY, QUAL_A));
 
     table.put(transactionState, new Put(ROW1).add(FAMILY, QUAL_A, Bytes
         .toBytes(value + 1)));
