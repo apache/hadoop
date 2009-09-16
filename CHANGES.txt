@@ -1024,6 +1024,9 @@ Trunk (unreleased changes)
     HADOOP-6250. Modify test-patch to delete copied XML files before running
     patch build. (Rahul Kumar Singh via yhemanth)
 
+    HADOOP-6257. Two TestFileSystem classes are confusing
+    hadoop-hdfs-hdfwithmr. (Philip Zeyliger via tomwhite)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES

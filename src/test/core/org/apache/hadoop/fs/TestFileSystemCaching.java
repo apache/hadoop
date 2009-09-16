@@ -26,7 +26,7 @@ import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
-public class TestFileSystem {
+public class TestFileSystemCaching {
 
   @Test
   public void testCacheEnabled() throws Exception {
@@ -36,7 +36,7 @@ public class TestFileSystem {
     FileSystem fs2 = FileSystem.get(new URI("cachedfile://a"), conf);
     assertSame(fs1, fs2);
   }
-  
+
   @Test
   public void testCacheDisabled() throws Exception {
     Configuration conf = new Configuration();
