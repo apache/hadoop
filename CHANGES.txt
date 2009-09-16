@@ -26,6 +26,7 @@ Release 0.21.0 - Unreleased
                timestamp provided
    HBASE-1821  Filtering by SingleColumnValueFilter bug
    HBASE-1840  RowLock fails when used with IndexTable (Keith Thomas via Stack)
+   HBASE-818   HFile code review and refinement (Schubert Zhang via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

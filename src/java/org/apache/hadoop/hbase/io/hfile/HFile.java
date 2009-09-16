@@ -168,7 +168,7 @@ public class HFile {
     protected String name;
 
     // Total uncompressed bytes, maybe calculate a compression ratio later.
-    private int totalBytes = 0;
+    private long totalBytes = 0;
 
     // Total # of key/value entries, ie: how many times add() was called.
     private int entryCount = 0;
@@ -320,13 +320,12 @@ public class HFile {
      */
     private void finishBlock() throws IOException {
       if (this.out == null) return;
-      long size = releaseCompressingStream(this.out);
+      int size = releaseCompressingStream(this.out);
       this.out = null;
       blockKeys.add(firstKey);
-      int written = longToInt(size);
       blockOffsets.add(Long.valueOf(blockBegin));
-      blockDataSizes.add(Integer.valueOf(written));
-      this.totalBytes += written;
+      blockDataSizes.add(Integer.valueOf(size));
+      this.totalBytes += size;
     }
 
     /*
@@ -620,7 +619,7 @@ public class HFile {
       appendFileInfo(this.fileinfo, FileInfo.AVG_KEY_LEN,
         Bytes.toBytes(avgKeyLen), false);
       int avgValueLen = this.entryCount == 0? 0:
-        (int)(this.keylength/this.entryCount);
+        (int)(this.valuelength/this.entryCount);
       appendFileInfo(this.fileinfo, FileInfo.AVG_VALUE_LEN,
         Bytes.toBytes(avgValueLen), false);
       appendFileInfo(this.fileinfo, FileInfo.COMPARATOR,
@@ -898,7 +897,7 @@ public class HFile {
       if (blockIndex == null) {
         throw new IOException("Block index not loaded");
       }
-      if (block < 0 || block > blockIndex.count) {
+      if (block < 0 || block >= blockIndex.count) {
         throw new IOException("Requested block is out of range: " + block +
           ", max: " + blockIndex.count);
       }
@@ -1251,6 +1250,7 @@ public class HFile {
           block.rewind();
           currKeyLen = block.getInt();
           currValueLen = block.getInt();
+          return true;
         }
         currBlock = 0;
         block = reader.readBlock(currBlock, cacheBlocks);
