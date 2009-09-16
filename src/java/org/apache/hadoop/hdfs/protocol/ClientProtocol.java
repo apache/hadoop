@@ -44,9 +44,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 47: create() takes an additional boolean param createParent.
+   * 48: modified mkdirs() to take an additional boolean parameter
    */
-  public static final long versionID = 47L;
+  public static final long versionID = 48L;
   
   ///////////////////////////////////////
   // File contents
@@ -260,6 +260,7 @@ public interface ClientProtocol extends VersionedProtocol {
    *
    * @param src The path of the directory being created
    * @param masked The masked permission of the directory being created
+   * @param createParent create missing parent directory if true
    * @return True if the operation success.
    * @throws {@link AccessControlException} if permission to create file is 
    * denied by the system. As usually on the client side the exception will 
@@ -267,7 +268,8 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws QuotaExceededException if the operation would violate 
    *                                any quota restriction.
    */
-  public boolean mkdirs(String src, FsPermission masked) throws IOException;
+  public boolean mkdirs(String src, FsPermission masked, boolean createParent)
+      throws IOException;
 
   /**
    * Get a listing of the indicated directory

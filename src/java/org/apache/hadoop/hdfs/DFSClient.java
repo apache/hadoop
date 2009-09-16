@@ -969,8 +969,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   /**
    */
+  @Deprecated
   public boolean mkdirs(String src) throws IOException {
-    return mkdirs(src, null);
+    return mkdirs(src, null, true);
   }
 
   /**
@@ -980,10 +981,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param src The path of the directory being created
    * @param permission The permission of the directory being created.
    * If permission == null, use {@link FsPermission#getDefault()}.
+   * @param createParent create missing parent directory if true
    * @return True if the operation success.
-   * @see ClientProtocol#mkdirs(String, FsPermission)
+   * @see ClientProtocol#mkdirs(String, FsPermission, boolean)
    */
-  public boolean mkdirs(String src, FsPermission permission)throws IOException{
+  public boolean mkdirs(String src, FsPermission permission, boolean createParent)throws IOException{
     checkOpen();
     if (permission == null) {
       permission = FsPermission.getDefault();
@@ -991,11 +993,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
     LOG.debug(src + ": masked=" + masked);
     try {
-      return namenode.mkdirs(src, masked);
+      return namenode.mkdirs(src, masked, createParent);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
+                                     FileNotFoundException.class,
                                      FileAlreadyExistsException.class);
     }
   }

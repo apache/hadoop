@@ -335,7 +335,7 @@ public class NamenodeFsck {
     String target = lostFound + file.getPath();
     String errmsg = "Failed to move " + file.getPath() + " to /lost+found";
     try {
-      if (!namenode.mkdirs(target, file.getPermission())) {
+      if (!namenode.mkdirs(target, file.getPermission(), true)) {
         LOG.warn(errmsg);
         return;
       }
@@ -501,7 +501,7 @@ public class NamenodeFsck {
       
       final FileStatus lfStatus = dfs.getFileInfo(lfName);
       if (lfStatus == null) { // not exists
-        lfInitedOk = dfs.mkdirs(lfName);
+        lfInitedOk = dfs.mkdirs(lfName, null, true);
         lostFound = lfName;
       } else if (!lfStatus.isDir()) { // exists but not a directory
         LOG.warn("Cannot use /lost+found : a regular file with this name exists.");

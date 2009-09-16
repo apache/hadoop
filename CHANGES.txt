@@ -157,6 +157,8 @@ Trunk (unreleased changes)
 
     HDFS-617. Support non-recursive create().  (Kan Zhang via szetszwo)
 
+    HDFS-618. Support non-recursive mkdir().  (Kan Zhang via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
