@@ -247,6 +247,8 @@ Trunk (unreleased changes)
 
     HDFS-612. Remove the use of org.mortbay.log.Log in FSDataset.  (szetszwo)
 
+    HDFS-622. checkMinReplication should count live nodes only. (shv)
+
 Release 0.20.1 - Unreleased
 
   IMPROVEMENTS

@@ -233,7 +233,7 @@ public class BlockManager {
    * @return true if the block has minimum replicas
    */
   boolean checkMinReplication(Block block) {
-    return (blocksMap.numNodes(block) >= minReplication);
+    return (countNodes(block).liveReplicas() >= minReplication);
   }
 
   /**
