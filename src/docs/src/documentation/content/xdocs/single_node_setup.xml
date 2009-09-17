@@ -21,7 +21,7 @@
 <document>
   
   <header>
-    <title>Quick Start</title>
+    <title>Single Node Setup</title>
   </header>
   
   <body>
@@ -29,16 +29,14 @@
     <section>
       <title>Purpose</title>
       
-      <p>The purpose of this document is to help you get a single-node Hadoop 
-      installation up and running very quickly so that you can get a flavour
-      of the Hadoop Distributed File System 
-      (see <a href="hdfs_design.html"> <acronym title="Hadoop Distributed File System">HDFS</acronym> Architecture</a>) and 
-      the Map/Reduce framework; that is, perform simple operations on HDFS and 
-      run example jobs.</p>
+      <p>This document describes how to set up and configure a single-node Hadoop
+      installation so that you can quickly perform simple operations using Hadoop
+      MapReduce and the Hadoop Distributed File System (HDFS).</p>
+      
     </section>
     
     <section id="PreReqs">
-      <title>Pre-requisites</title>
+      <title>Prerequisites</title>
       
       <section>
         <title>Supported Platforms</title>
@@ -163,42 +161,41 @@
       <section>
         <title>Configuration</title>
         <p>Use the following:
-        <br/>
+        <br/><br/>
         <code>conf/core-site.xml</code>:</p>
-        <table>
-        <tr><td>&lt;configuration&gt;</td></tr>
-
-          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;fs.default.name&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;hdfs://localhost:9000&lt;/value&gt;</td></tr>
-          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
-
-        <tr><td>&lt;/configuration&gt;</td></tr>
-        </table>
+        
+        <source>
+&lt;configuration&gt;
+     &lt;property&gt;
+         &lt;name&gt;fs.default.name&lt;/name&gt;
+         &lt;value&gt;hdfs://localhost:9000&lt;/value&gt;
+     &lt;/property&gt;
+&lt;/configuration&gt;
+</source>
       
-        <p><br/><code>conf/hdfs-site.xml</code>:</p>
-        <table>
-        <tr><td>&lt;configuration&gt;</td></tr>
-
-          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;dfs.replication&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</td></tr>
-          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
-
-        <tr><td>&lt;/configuration&gt;</td></tr>
-        </table>
+        <p><br/><code>conf/hdfs-site.xml</code>:</p>  
+<source>
+&lt;configuration&gt;
+     &lt;property&gt;
+         &lt;name&gt;dfs.replication&lt;/name&gt;
+         &lt;value&gt;1&lt;/value&gt;
+     &lt;/property&gt;
+&lt;/configuration&gt;
+</source>        
+        
       
         <p><br/><code>conf/mapred-site.xml</code>:</p>
-        <table>
-        <tr><td>&lt;configuration&gt;</td></tr>
-
-          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;mapred.job.tracker&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9001&lt;/value&gt;</td></tr>
-          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
-
-        <tr><td>&lt;/configuration&gt;</td></tr>
-        </table>
+<source>
+&lt;configuration&gt;
+     &lt;property&gt;
+         &lt;name&gt;mapred.job.tracker&lt;/name&gt;
+         &lt;value&gt;localhost:9001&lt;/value&gt;
+     &lt;/property&gt;
+&lt;/configuration&gt;
+</source>        
+        
+        
+        
       </section>
 
       <section>
@@ -283,7 +280,7 @@
       <title>Fully-Distributed Operation</title>
       
 	  <p>For information on setting up fully-distributed, non-trivial clusters
-	  see <a href="cluster_setup.html">Hadoop Cluster Setup</a>.</p>  
+	  see <a href="cluster_setup.html">Cluster Setup</a>.</p>  
     </section>
     
     <p>

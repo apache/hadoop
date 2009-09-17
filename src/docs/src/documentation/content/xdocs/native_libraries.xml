@@ -149,7 +149,7 @@
         </li>
       </ul>
 
-      <p>Once you have the pre-requisites use the standard <code>build.xml</code> 
+      <p>Once you have the prerequisites use the standard <code>build.xml</code> 
       and pass along the <code>compile.native</code> flag (set to 
       <code>true</code>) to build the native hadoop library:</p>
 
@@ -186,13 +186,13 @@
       </section>
     </section>
     <section>
-      <title> Loading native libraries through DistributedCache </title>
+      <title> Loading Native Libraries Through DistributedCache </title>
       <p>User can load native shared libraries through  
-      <a href="mapred_tutorial.html#DistributedCache">DistributedCache</a>
-      for <em>distributing</em> and <em>symlinking</em> the library files</p>
+      <a href="http://hadoop.apache.org/mapreduce/docs/current/mapred_tutorial.html#DistributedCache">DistributedCache</a> 
+      for <em>distributing</em> and <em>symlinking</em> the library files.</p>
       
       <p>Here is an example, describing how to distribute the library and
-      load it from map/reduce task. </p>
+      load it from a MapReduce task. </p>
       <ol>
       <li> First copy the library to the HDFS. <br/>
       <code>bin/hadoop fs -copyFromLocal mylib.so.1 /libraries/mylib.so.1</code>
@@ -202,7 +202,7 @@
       <code> DistributedCache.addCacheFile("hdfs://host:port/libraries/mylib.so.1#mylib.so", conf);
       </code>
       </li>
-      <li> The map/reduce task can contain: <br/>
+      <li> The MapReduce task can contain: <br/>
       <code> System.loadLibrary("mylib.so"); </code>
       </li>
       </ol>

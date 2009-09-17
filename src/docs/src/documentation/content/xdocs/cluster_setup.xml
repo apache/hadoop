@@ -33,20 +33,20 @@
       Hadoop clusters ranging from a few nodes to extremely large clusters with 
       thousands of nodes.</p>
       <p>
-      To play with Hadoop, you may first want to install Hadoop on a single machine (see <a href="quickstart.html"> Hadoop Quick Start</a>).
+      To play with Hadoop, you may first want to install Hadoop on a single machine (see <a href="single_node_setup.html"> Single Node Setup</a>).
       </p>
     </section>
     
     <section>
-      <title>Pre-requisites</title>
+      <title>Prerequisites</title>
       
       <ol>
         <li>
-          Make sure all <a href="quickstart.html#PreReqs">requisite</a> software 
+          Make sure all <a href="single_node_setup.html#PreReqs">required software</a> 
           is installed on all nodes in your cluster.
         </li>
         <li>
-          <a href="quickstart.html#Download">Get</a> the Hadoop software.
+          <a href="single_node_setup.html#Download">Download</a> the Hadoop software.
         </li>
       </ol>
     </section>
@@ -81,7 +81,7 @@
         <ol>
           <li>
             Read-only default configuration - 
-            <a href="ext:core-default">src/core/core-default.xml</a>, 
+            <a href="ext:common-default">src/common/common-default.xml</a>, 
             <a href="ext:hdfs-default">src/hdfs/hdfs-default.xml</a> and 
             <a href="ext:mapred-default">src/mapred/mapred-default.xml</a>.
           </li>
@@ -94,8 +94,8 @@
         </ol>
       
         <p>To learn more about how the Hadoop framework is controlled by these 
-        configuration files, look 
-        <a href="ext:api/org/apache/hadoop/conf/configuration">here</a>.</p>
+        configuration files see
+        <a href="ext:api/org/apache/hadoop/conf/configuration">Class Configuration</a>.</p>
       
         <p>Additionally, you can control the Hadoop scripts found in the 
         <code>bin/</code> directory of the distribution, by setting site-specific 
@@ -271,16 +271,6 @@
 		        TaskTrackers.
 		      </td>
   		    </tr>
-		  </table>
-      
-      <p><br/><code> conf/mapred-queues.xml</code></p>
-      
-      <table>
-       <tr>
-          <th>Parameter</th>
-          <th>Value</th> 
-          <th>Notes</th>
-       </tr>
         <tr>
           <td>mapred.queue.names</td>
           <td>Comma separated list of queues to which jobs can be submitted.</td>
@@ -289,8 +279,8 @@
             with the name as <em>default</em>. Hence, this parameter's
             value should always contain the string <em>default</em>.
             Some job schedulers supported in Hadoop, like the 
-            <a href="capacity_scheduler.html">Capacity 
-            Scheduler</a>, support multiple queues. If such a scheduler is
+            <a href="http://hadoop.apache.org/mapreduce/docs/current/capacity_scheduler.html">Capacity Scheduler</a>, 
+            support multiple queues. If such a scheduler is
             being used, the list of configured queue names must be
             specified here. Once queues are defined, users can submit
             jobs to a queue using the property name 
@@ -313,6 +303,16 @@
             <em>mapred.queue.queue-name.acl-name</em>, defined below.
           </td>
         </tr>
+		  </table>
+      
+      <p><br/><code> conf/mapred-queue-acls.xml</code></p>
+      
+      <table>
+       <tr>
+          <th>Parameter</th>
+          <th>Value</th> 
+          <th>Notes</th>
+       </tr>
         <tr>
           <td>mapred.queue.<em>queue-name</em>.acl-submit-job</td>
           <td>List of users and groups that can submit jobs to the
@@ -338,15 +338,6 @@
             a blank at the beginning of the value. Note that an
             owner of a job can always change the priority or kill
             his/her own job, irrespective of the ACLs.
-          </td>
-        </tr>
-        <tr>
-          <td>mapred.queue.<em>queue-name</em>.state</td>
-          <td>Specifies whether <em>queue-name</em> is running or stopped</td> 
-          <td>
-            Jobs can be submitted to a queue only if it is in the 
-            <em>running</em> state. However, jobs which are already running
-            when a queue is stopped will be allowed to finish.
           </td>
         </tr>
       </table>
@@ -401,10 +392,18 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.child.java.opts</td>
+                    <td>mapred.map.child.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
-                      Larger heap-size for child jvms of maps/reduces. 
+                      Larger heap-size for child jvms of maps. 
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapred.reduce.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+                      Larger heap-size for child jvms of reduces. 
                     </td>
                   </tr>
                   <tr>
@@ -474,9 +473,17 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.child.java.opts</td>
+                    <td>mapred.map.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+                      Larger heap-size for child jvms of maps. 
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapred.reduce.child.java.opts</td>
                     <td>-Xmx1024M</td>
-                    <td>Larger heap-size for child jvms of maps/reduces.</td>
+                    <td>Larger heap-size for child jvms of reduces.</td>
                   </tr>
                 </table>
               </li>
@@ -486,18 +493,18 @@
         <title> Memory management</title>
         <p>Users/admins can also specify the maximum virtual memory 
         of the launched child-task, and any sub-process it launches 
-        recursively, using <code>mapred.child.ulimit</code>. Note that
-        the value set here is a per process limit.
-        The value for <code>mapred.child.ulimit</code> should be specified 
-        in kilo bytes (KB). And also the value must be greater than
+        recursively, using <code>mapred.{map|reduce}.child.ulimit</code>. Note 
+        that the value set here is a per process limit.
+        The value for <code>mapred.{map|reduce}.child.ulimit</code> should be 
+        specified in kilo bytes (KB). And also the value must be greater than
         or equal to the -Xmx passed to JavaVM, else the VM might not start. 
         </p>
         
         <p>Note: <code>mapred.child.java.opts</code> are used only for 
         configuring the launched child tasks from task tracker. Configuring 
-        the memory options for daemons is documented in 
+        the memory options for daemons is documented under 
         <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
-        cluster_setup.html </a></p>
+        Configuring the Environment of the Hadoop Daemons</a>.</p>
         
         <p>The memory available to some parts of the framework is also
         configurable. In map and reduce tasks, performance may be influenced
@@ -658,11 +665,13 @@
             distribution. The task tracker uses this executable to 
             launch and kill tasks. The setuid executable switches to
             the user who has submitted the job and launches or kills
-            the tasks. Currently, this task controller 
-            opens up permissions to local files and directories used 
-            by the tasks such as the job jar files, distributed archive 
-            files, intermediate files and task log files. In future,
-            it is expected that stricter file permissions are used.
+            the tasks. For maximum security, this task controller 
+            sets up restricted permissions and user/group ownership of
+            local files and directories used by the tasks such as the
+            job jar files, intermediate files and task log files. Currently
+            permissions on distributed cache files are opened up to be
+            accessible by all users. In future, it is expected that stricter
+            file permissions are set for these files too.
             </td>
             </tr>
             </table>
@@ -704,18 +713,32 @@
             </p>
             
             <p>
-            The executable must be deployed as a setuid executable, by changing
-            the ownership to <em>root</em>, group ownership to that of tasktracker
-            and giving it permissions <em>4510</em>.Please take a note that,
-            group which owns task-controller should contain only tasktracker
-            as its memeber and not users who submit jobs.
+            The executable must have specific permissions as follows. The
+            executable should have <em>6050 or --Sr-s---</em> permissions
+            user-owned by root(super-user) and group-owned by a group 
+            of which only the TaskTracker's user is the sole group member. 
+            For example, let's say that the TaskTracker is run as user
+            <em>mapred</em> who is part of the groups <em>users</em> and
+            <em>mapredGroup</em> any of them being the primary group.
+            Let also be that <em>users</em> has both <em>mapred</em> and
+            another user <em>X</em> as its members, while <em>mapredGroup</em>
+            has only <em>mapred</em> as its member. Going by the above
+            description, the setuid/setgid executable should be set
+            <em>6050 or --Sr-s---</em> with user-owner as <em>mapred</em> and
+            group-owner as <em>mapredGroup</em> which has
+            only <em>mapred</em> as its member(and not <em>users</em> which has
+            <em>X</em> also as its member besides <em>mapred</em>).
             </p>
             
             <p>The executable requires a configuration file called 
             <em>taskcontroller.cfg</em> to be
             present in the configuration directory passed to the ant target 
             mentioned above. If the binary was not built with a specific 
-            conf directory, the path defaults to <em>/path-to-binary/../conf</em>.
+            conf directory, the path defaults to
+            <em>/path-to-binary/../conf</em>. The configuration file must be
+            owned by the user running TaskTracker (user <em>mapred</em> in the
+            above example), group-owned by anyone and should have the
+            permissions <em>0400 or r--------</em>.
             </p>
             
             <p>The executable requires following configuration items to be 
@@ -730,16 +753,80 @@
             validate paths passed to the setuid executable in order to prevent
             arbitrary paths being passed to it.</td>
             </tr>
+            <tr>
+            <td>hadoop.log.dir</td>
+            <td>Path to hadoop log directory. Should be same as the value which
+            the TaskTracker is started with. This is required to set proper
+            permissions on the log files so that they can be written to by the user's
+            tasks and read by the TaskTracker for serving on the web UI.</td>
+            </tr>
             </table>
 
             <p>
-            The LinuxTaskController requires that paths leading up to
+            The LinuxTaskController requires that paths including and leading up to
             the directories specified in
-            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to be 755
-            and directories themselves having 777 permissions.
+            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to be set 755
+            permissions.
             </p>
             </section>
             
+          </section>
+          <section>
+            <title>Monitoring Health of TaskTracker Nodes</title>
+            <p>Hadoop Map/Reduce provides a mechanism by which administrators 
+            can configure the TaskTracker to run an administrator supplied
+            script periodically to determine if a node is healthy or not.
+            Administrators can determine if the node is in a healthy state
+            by performing any checks of their choice in the script. If the
+            script detects the node to be in an unhealthy state, it must print
+            a line to standard output beginning with the string <em>ERROR</em>.
+            The TaskTracker spawns the script periodically and checks its 
+            output. If the script's output contains the string <em>ERROR</em>,
+            as described above, the node's status is reported as 'unhealthy'
+            and the node is black-listed on the JobTracker. No further tasks 
+            will be assigned to this node. However, the
+            TaskTracker continues to run the script, so that if the node
+            becomes healthy again, it will be removed from the blacklisted
+            nodes on the JobTracker automatically. The node's health
+            along with the output of the script, if it is unhealthy, is
+            available to the administrator in the JobTracker's web interface.
+            The time since the node was healthy is also displayed on the 
+            web interface.
+            </p>
+            
+            <section>
+            <title>Configuring the Node Health Check Script</title>
+            <p>The following parameters can be used to control the node health 
+            monitoring script in <em>mapred-site.xml</em>.</p>
+            <table>
+            <tr><th>Name</th><th>Description</th></tr>
+            <tr><td><code>mapred.healthChecker.script.path</code></td>
+            <td>Absolute path to the script which is periodically run by the 
+            TaskTracker to determine if the node is 
+            healthy or not. The file should be executable by the TaskTracker.
+            If the value of this key is empty or the file does 
+            not exist or is not executable, node health monitoring
+            is not started.</td>
+            </tr>
+            <tr>
+            <td><code>mapred.healthChecker.interval</code></td>
+            <td>Frequency at which the node health script is run, 
+            in milliseconds</td>
+            </tr>
+            <tr>
+            <td><code>mapred.healthChecker.script.timeout</code></td>
+            <td>Time after which the node health script will be killed by
+            the TaskTracker if unresponsive.
+            The node is marked unhealthy. if node health script times out.</td>
+            </tr>
+            <tr>
+            <td><code>mapred.healthChecker.script.args</code></td>
+            <td>Extra arguments that can be passed to the node health script 
+            when launched.
+            These should be comma separated list of arguments. </td>
+            </tr>
+            </table>
+            </section>
           </section>
           
         </section>
