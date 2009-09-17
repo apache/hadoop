@@ -34,8 +34,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,6 +58,14 @@ public class TestSerialization extends HBaseTestCase {
   @Override
   protected void tearDown() throws Exception {
     super.tearDown();
+  }
+
+  public void testCompareFilter() throws Exception {
+    Filter f = new RowFilter(CompareOp.EQUAL,
+      new BinaryComparator(Bytes.toBytes("testRowOne-2")));
+    byte [] bytes = Writables.getBytes(f);
+    Filter ff = (Filter)Writables.getWritable(bytes, new RowFilter());
+    assertNotNull(ff);
   }
 
   public void testKeyValue() throws Exception {
