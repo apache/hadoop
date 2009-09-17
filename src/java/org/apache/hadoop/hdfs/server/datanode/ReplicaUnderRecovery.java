@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.File;
+import java.io.IOException;
 
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 
@@ -154,5 +158,45 @@ class ReplicaUnderRecovery extends ReplicaInfo {
     return super.toString()
         + "\n  recoveryId=" + recoveryId
         + "\n  original=" + original;
+  }
+
+  Info createInfo() {
+    return new Info(this); 
+  }
+
+  /** Replica recovery information. */
+  static class Info extends Block{
+    private ReplicaState originalState;
+
+    private Info(ReplicaUnderRecovery rur) {
+      super(rur);
+      originalState = rur.getOrignalReplicaState();
+    }
+
+    ReplicaState getOriginalReplicaState() {
+      return originalState;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      super.readFields(in);
+      originalState = ReplicaState.read(in); 
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      super.write(out);
+      originalState.write(out);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
   }
 }

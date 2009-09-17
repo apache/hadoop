@@ -21,19 +21,20 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery.Info;
 import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * This tests InterDataNodeProtocol for block handling. 
@@ -110,5 +111,88 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
     finally {
       if (cluster != null) {cluster.shutdown();}
     }
+  }
+
+  private static ReplicaInfo createReplicaInfo(Block b) {
+    return new ReplicaBeingWritten(b.getBlockId(), b.getGenerationStamp(),
+        null, null);
+  }
+
+  private static void assertEquals(ReplicaInfo originalInfo, Info recoveryInfo) {
+    Assert.assertEquals(originalInfo.getBlockId(), recoveryInfo.getBlockId());
+    Assert.assertEquals(originalInfo.getGenerationStamp(), recoveryInfo.getGenerationStamp());
+    Assert.assertEquals(originalInfo.getBytesOnDisk(), recoveryInfo.getNumBytes());
+    Assert.assertEquals(originalInfo.getState(), recoveryInfo.getOriginalReplicaState());
+  }
+
+  /** Test {@link FSDataset#initReplicaRecovery(ReplicasMap, Block, long)} */
+  @Test
+  public void testInitReplicaRecovery() throws IOException {
+    final long firstblockid = 10000L;
+    final long gs = 7777L;
+    final long length = 22L;
+    final ReplicasMap map = new ReplicasMap();
+    final Block[] blocks = new Block[5];
+    for(int i = 0; i < blocks.length; i++) {
+      blocks[i] = new Block(firstblockid + i, length, gs);
+      map.add(createReplicaInfo(blocks[i]));
+    }
+    
+    { 
+      //normal case
+      final Block b = blocks[0];
+      final ReplicaInfo originalInfo = map.get(b);
+
+      final long recoveryid = gs + 1;
+      final Info recoveryInfo = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid);
+      assertEquals(originalInfo, recoveryInfo);
+
+      final ReplicaUnderRecovery updatedInfo = (ReplicaUnderRecovery)map.get(b);
+      Assert.assertEquals(originalInfo.getBlockId(), updatedInfo.getBlockId());
+      Assert.assertEquals(recoveryid, updatedInfo.getRecoveryID());
+
+      //recover one more time 
+      final long recoveryid2 = gs + 2;
+      final Info recoveryInfo2 = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid2);
+      assertEquals(originalInfo, recoveryInfo2);
+
+      final ReplicaUnderRecovery updatedInfo2 = (ReplicaUnderRecovery)map.get(b);
+      Assert.assertEquals(originalInfo.getBlockId(), updatedInfo2.getBlockId());
+      Assert.assertEquals(recoveryid2, updatedInfo2.getRecoveryID());
+      
+      //case RecoveryInProgressException
+      try {
+        FSDataset.initReplicaRecovery(map, b, recoveryid);
+        Assert.fail();
+      }
+      catch(RecoveryInProgressException ripe) {
+        System.out.println("GOOD: getting " + ripe);
+      }
+    }
+
+    { //replica not found
+      final long recoveryid = gs + 1;
+      final Block b = new Block(firstblockid - 1, length, gs);
+      try {
+        FSDataset.initReplicaRecovery(map, b, recoveryid);
+        Assert.fail();
+      }
+      catch(ReplicaNotFoundException rnfe) {
+        System.out.println("GOOD: getting " + rnfe);
+      }
+    }
+    
+    { //case "THIS IS NOT SUPPOSED TO HAPPEN"
+      final long recoveryid = gs - 1;
+      final Block b = new Block(firstblockid + 1, length, gs);
+      try {
+        FSDataset.initReplicaRecovery(map, b, recoveryid);
+        Assert.fail();
+      }
+      catch(IOException ioe) {
+        System.out.println("GOOD: getting " + ioe);
+      }
+    }
+
   }
 }

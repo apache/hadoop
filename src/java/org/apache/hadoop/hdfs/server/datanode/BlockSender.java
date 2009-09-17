@@ -94,7 +94,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       synchronized(datanode.data) { 
         this.replica = datanode.data.getReplica(block.getBlockId());
         if (replica == null) {
-          throw new IOException("Replica not found for " + block);
+          throw new ReplicaNotFoundException(block);
         }
         this.replicaVisibleLength = replica.getVisibleLength();
       }

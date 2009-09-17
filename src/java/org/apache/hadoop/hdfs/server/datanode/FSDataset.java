@@ -1836,4 +1836,66 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     assert(Thread.holdsLock(this));
     return volumeMap.get(blockId);
   }
+
+  /** Initialize a replica recovery. */
+  synchronized ReplicaUnderRecovery.Info initReplicaRecovery(
+      Block block, long recoveryId) throws IOException {
+    return initReplicaRecovery(volumeMap, block, recoveryId);
+  }
+
+  /** static version of {@link #initReplicaRecovery(Block, long)}. */
+  static ReplicaUnderRecovery.Info initReplicaRecovery(
+      ReplicasMap map, Block block, long recoveryId) throws IOException {
+    final ReplicaInfo replica = map.get(block.getBlockId());
+    DataNode.LOG.info("initReplicaRecovery: block=" + block
+        + ", recoveryId=" + recoveryId
+        + ", replica=" + replica);
+
+    //check replica
+    if (replica == null) {
+      throw new ReplicaNotFoundException(block);
+    }
+
+    //stop writer if there is any
+    if (replica instanceof ReplicaInPipeline) {
+      ((ReplicaInPipeline)replica).stopWriter();
+    }
+
+    //check generation stamp
+    if (replica.getGenerationStamp() < block.getGenerationStamp()) {
+      throw new IOException(
+          "replica.getGenerationStamp() < block.getGenerationStamp(), block="
+          + block + ", replica=" + replica);
+    }
+
+    //check recovery id
+    if (replica.getGenerationStamp() >= recoveryId) {
+      throw new IOException("THIS IS NOT SUPPOSED TO HAPPEN:"
+          + " replica.getGenerationStamp() >= recoveryId = " + recoveryId
+          + ", block=" + block + ", replica=" + replica);
+    }
+
+    //check RUR
+    final ReplicaUnderRecovery rur;
+    if (replica.getState() == ReplicaState.RUR) {
+      rur = (ReplicaUnderRecovery)replica;
+      if (rur.getRecoveryID() >= recoveryId) {
+        throw new RecoveryInProgressException(
+            "rur.getRecoveryID() >= recoveryId = " + recoveryId
+            + ", block=" + block + ", rur=" + rur);
+      }
+      final long oldRecoveryID = rur.getRecoveryID();
+      rur.setRecoveryID(recoveryId);
+      DataNode.LOG.info("initReplicaRecovery: update recovery id for " + block
+          + " from " + oldRecoveryID + " to " + recoveryId);
+    }
+    else {
+      rur = new ReplicaUnderRecovery(replica, recoveryId);
+      map.add(rur);
+      DataNode.LOG.info("initReplicaRecovery: changing replica state for "
+          + block + " from " + replica.getState()
+          + " to " + rur.getState());
+    }
+    return rur.createInfo();
+  }
 }

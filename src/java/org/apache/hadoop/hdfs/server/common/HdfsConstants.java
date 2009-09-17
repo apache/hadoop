@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /************************************
  * Some handy internal HDFS constants
  *
@@ -108,6 +112,16 @@ public interface HdfsConstants {
 
     public static ReplicaState getState(int v) {
       return ReplicaState.values()[v];
+    }
+
+    /** Read from in */
+    public static ReplicaState read(DataInput in) throws IOException {
+      return values()[in.readByte()];
+    }
+
+    /** Write to out */
+    public void write(DataOutput out) throws IOException {
+      out.writeByte(ordinal());
     }
   }
 
