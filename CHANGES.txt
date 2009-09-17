@@ -2,6 +2,7 @@ HBase Change Log
 Release 0.21.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-1822  Remove the deprecated APIs
+   HBASE-1848  Fixup shell for HBASE-1822
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
