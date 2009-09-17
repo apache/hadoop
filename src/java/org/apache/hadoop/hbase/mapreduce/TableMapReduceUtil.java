@@ -58,11 +58,11 @@ public class TableMapReduceUtil {
       Class<? extends WritableComparable> outputKeyClass, 
       Class<? extends Writable> outputValueClass, Job job) throws IOException {
     job.setInputFormatClass(TableInputFormat.class);
-    job.setMapOutputValueClass(outputValueClass);
-    job.setMapOutputKeyClass(outputKeyClass);
+    if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
+    if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
     job.getConfiguration().set(TableInputFormat.INPUT_TABLE, table);
-    job.getConfiguration().set(TableInputFormat.SCAN, 
+    job.getConfiguration().set(TableInputFormat.SCAN,
       convertScanToString(scan));
   }
 
@@ -125,7 +125,7 @@ public class TableMapReduceUtil {
     Class<? extends TableReducer> reducer, Job job, Class partitioner)
   throws IOException {
     job.setOutputFormatClass(TableOutputFormat.class);
-    job.setReducerClass(reducer);
+    if (reducer != null) job.setReducerClass(reducer);
     job.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, table);
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(Put.class);

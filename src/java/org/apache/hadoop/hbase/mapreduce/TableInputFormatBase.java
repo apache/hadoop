@@ -248,7 +248,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     if (trr == null) {
       trr = new TableRecordReader();
     }
-    Scan sc = new Scan(scan);
+    Scan sc = new Scan(this.scan);
     sc.setStartRow(tSplit.getStartRow());
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
@@ -275,9 +275,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
     if (table == null) {
       throw new IOException("No table was provided.");
-    }
-    if (!scan.hasFamilies()) {
-      throw new IOException("Expecting at least one column.");
     }
     int realNumSplits = startKeys.length;
     InputSplit[] splits = new InputSplit[realNumSplits];
@@ -319,7 +316,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * @return The internal scan instance.
    */
   public Scan getScan() {
-    if (scan == null) scan = new Scan();
+    if (this.scan == null) this.scan = new Scan();
     return scan;
   }
 

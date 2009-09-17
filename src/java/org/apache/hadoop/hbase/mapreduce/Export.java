@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,53 +22,45 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
- * A job with a just a map phase to count rows. Map outputs table rows IF the 
- * input row has columns that have content.
+ * Export an HBase table.
+ * Writes content to sequence files up in HDFS.  Use {@link Import} to read it
+ * back in again.
  */
-public class RowCounter {
-  
-  /** Name of this 'program'. */
-  static final String NAME = "rowcounter";
+public class Export {
+  final static String NAME = "export";
 
   /**
-   * Mapper that runs the count.
+   * Mapper.
    */
-  static class RowCounterMapper
+  static class Exporter
   extends TableMapper<ImmutableBytesWritable, Result> {
-    
-    /** Counter enumeration to count the actual rows. */
-    public static enum Counters {ROWS}
-
     /**
-     * Maps the data.
-     * 
      * @param row  The current table row key.
-     * @param values  The columns.
+     * @param value  The columns.
      * @param context  The current context.
      * @throws IOException When something is broken with the data.
      * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, 
      *   org.apache.hadoop.mapreduce.Mapper.Context)
      */
     @Override
-    public void map(ImmutableBytesWritable row, Result values,
+    public void map(ImmutableBytesWritable row, Result value,
       Context context)
     throws IOException {
-      for (KeyValue value: values.list()) {
-        if (value.getValue().length > 0) {
-          context.getCounter(Counters.ROWS).increment(1);
-          break;
-        }
+      try {
+        context.write(row, value);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
       }
     }
   }
@@ -81,37 +73,32 @@ public class RowCounter {
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
-  public static Job createSubmittableJob(Configuration conf, String[] args) 
+  public static Job createSubmittableJob(Configuration conf, String[] args)
   throws IOException {
     String tableName = args[0];
+    Path outputDir = new Path(args[1]);
     Job job = new Job(conf, NAME + "_" + tableName);
-    job.setJarByClass(RowCounter.class);
-    // Columns are space delimited
-    StringBuilder sb = new StringBuilder();
-    final int columnoffset = 1;
-    for (int i = columnoffset; i < args.length; i++) {
-      if (i > columnoffset) {
-        sb.append(" ");
-      }
-      sb.append(args[i]);
-    }
-    Scan scan = new Scan();
-    if (sb.length() > 0) {
-      for (String columnName :sb.toString().split(" ")) {
-        String [] fields = columnName.split(":");
-        if(fields.length == 1) {
-          scan.addFamily(Bytes.toBytes(fields[0]));
-        } else {
-          scan.addColumn(Bytes.toBytes(fields[0]), Bytes.toBytes(fields[1]));
-        }
-      }
-    } 
-    // Second argument is the table name.
-    job.setOutputFormatClass(NullOutputFormat.class);
-    TableMapReduceUtil.initTableMapperJob(tableName, scan,
-      RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
+    job.setJarByClass(Exporter.class);
+    // TODO: Allow passing filter and subset of rows/columns.
+    TableMapReduceUtil.initTableMapperJob(tableName, new Scan(),
+      Exporter.class, null, null, job);
+    // No reducers.  Just write straight to output files.
     job.setNumReduceTasks(0);
+    job.setOutputFormatClass(SequenceFileOutputFormat.class);
+    job.setOutputKeyClass(ImmutableBytesWritable.class);
+    job.setOutputValueClass(Result.class);
+    FileOutputFormat.setOutputPath(job, outputDir);
     return job;
+  }
+
+  /*
+   * @param errorMsg Error message.  Can be null.
+   */
+  private static void usage(final String errorMsg) {
+    if (errorMsg != null && errorMsg.length() > 0) {
+      System.err.println("ERROR: " + errorMsg);
+    }
+    System.err.println("Usage: Export <tablename> <outputdir>");
   }
 
   /**
@@ -123,9 +110,8 @@ public class RowCounter {
   public static void main(String[] args) throws Exception {
     HBaseConfiguration conf = new HBaseConfiguration();
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-    if (otherArgs.length < 1) {
-      System.err.println("ERROR: Wrong number of parameters: " + args.length);
-      System.err.println("Usage: RowCounter <tablename> [<column1> <column2>...]");
+    if (otherArgs.length < 2) {
+      usage("Wrong number of arguments: " + otherArgs.length);
       System.exit(-1);
     }
     Job job = createSubmittableJob(conf, otherArgs);

@@ -59,6 +59,7 @@ Release 0.21.0 - Unreleased
    HBASE-1835  Add more delete tests
    HBASE-1574  Client and server APIs to do batch deletes
    HBASE-1833  hfile.main fixes
+   HBASE-1684  Backup (Export/Import) contrib tool for 0.20
 
   OPTIMIZATIONS
 
