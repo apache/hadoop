@@ -33,6 +33,7 @@ Release 0.21.0 - Unreleased
                for when Writable is not Configurable (Stack via jgray)
    HBASE-1847  Delete latest of a null qualifier when non-null qualifiers
                exist throws a RuntimeException 
+   HBASE-1850  src/examples/mapred do not compile after HBASE-1822
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
