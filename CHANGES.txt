@@ -193,6 +193,9 @@ Trunk (unreleased changes)
     HADOOP-6246. Add backward compatibility support to use deprecated decimal 
     umask from old configuration. (Jakob Homan via suresh)
 
+    HADOOP-4952. Add new improved file system interface FileContext for the
+    application writer (Sanjay Radia via suresh)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

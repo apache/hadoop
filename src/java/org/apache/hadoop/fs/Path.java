@@ -126,6 +126,13 @@ public class Path implements Comparable {
     initialize(scheme, authority, path);
   }
 
+  /**
+   * Construct a path from a URI
+   */
+  public Path(URI aUri) {
+    uri = aUri;
+  }
+  
   /** Construct a Path from components. */
   public Path(String scheme, String authority, String path) {
     checkPathArg( path );
@@ -175,10 +182,23 @@ public class Path implements Comparable {
     return FileSystem.get(this.toUri(), conf);
   }
 
-  /** True if the directory of this path is absolute. */
-  public boolean isAbsolute() {
+  /**
+   *  True if the path component (i.e. directory) of this URI is absolute.
+   */
+  public boolean isUriPathAbsolute() {
     int start = hasWindowsDrive(uri.getPath(), true) ? 3 : 0;
     return uri.getPath().startsWith(SEPARATOR, start);
+   }
+  
+  /** True if the directory of this path is absolute. */
+  /**
+   * There is some ambiguity here. An absolute path is a slash
+   * relative name without a scheme or an authority.
+   * So either this method was incorrectly named or its
+   * implementation is incorrect.
+   */
+  public boolean isAbsolute() {
+     return isUriPathAbsolute();
   }
 
   /** Returns the final component of this path.*/
@@ -265,29 +285,41 @@ public class Path implements Comparable {
     return depth;
   }
 
-  /** Returns a qualified path object. */
+  
+  /**
+   *  Returns a qualified path object.
+   *  
+   *  Deprecated - use {@link #makeQualified(URI, Path)}
+   */
+ 
+  @Deprecated
   public Path makeQualified(FileSystem fs) {
+    return makeQualified(fs.getUri(), fs.getWorkingDirectory());
+  }
+  
+  
+  /** Returns a qualified path object. */
+  public Path makeQualified(URI defaultUri, Path workingDir ) {
     Path path = this;
     if (!isAbsolute()) {
-      path = new Path(fs.getWorkingDirectory(), this);
+      path = new Path(workingDir, this);
     }
 
     URI pathUri = path.toUri();
-    URI fsUri = fs.getUri();
       
     String scheme = pathUri.getScheme();
     String authority = pathUri.getAuthority();
 
     if (scheme != null &&
-        (authority != null || fsUri.getAuthority() == null))
+        (authority != null || defaultUri.getAuthority() == null))
       return path;
 
     if (scheme == null) {
-      scheme = fsUri.getScheme();
+      scheme = defaultUri.getScheme();
     }
 
     if (authority == null) {
-      authority = fsUri.getAuthority();
+      authority = defaultUri.getAuthority();
       if (authority == null) {
         authority = "";
       }

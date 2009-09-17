@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -244,7 +243,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
     checkPath(path);
-    return path.makeQualified(this);
+    return path.makeQualified(this.getUri(), this.getWorkingDirectory());
   }
     
   /** create a file with the provided permission
@@ -362,6 +361,26 @@ public abstract class FileSystem extends Configured implements Closeable {
     String[] name = { "localhost:50010" };
     String[] host = { "localhost" };
     return new BlockLocation[] { new BlockLocation(name, host, 0, file.getLen()) };
+  }
+ 
+
+  /**
+   * Return an array containing hostnames, offset and size of 
+   * portions of the given file.  For a nonexistent 
+   * file or regions, null will be returned.
+   *
+   * This call is most helpful with DFS, where it returns 
+   * hostnames of machines that contain the given file.
+   *
+   * The FileSystem will simply return an elt containing 'localhost'.
+   */
+  public BlockLocation[] getFileBlockLocations(Path p, 
+      long start, long len) throws IOException {
+    if (p == null) {
+      throw new NullPointerException();
+    }
+    FileStatus file = getFileStatus(p);
+    return getFileBlockLocations(file, start, len);
   }
   
   /**
@@ -555,7 +574,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Opens an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * @param f the file name to open.
-   * @param permission
+   * @param permission - applied against umask
    * @param flag determines the semantic of this create.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
@@ -569,6 +588,46 @@ public abstract class FileSystem extends Configured implements Closeable {
       EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException ;
   
+  /*
+   * This version of the create method assumes that the permission 
+   * of create does not matter.
+   * It has been added to support the FileContext that processes the permission
+   * with umask before calling this method.
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected FSDataOutputStream primitiveCreate(Path f,
+     FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
+     short replication, long blockSize, Progressable progress,
+     int bytesPerChecksum) throws IOException {
+    
+    // Default impl  assumes that permissions do not matter and 
+    // nor does the bytesPerChecksum  hence
+    // calling the regular create is good enough.
+    // FSs that implement permissions should override this.
+    
+    return this.create(f, absolutePermission, flag, bufferSize, replication,
+        blockSize, progress);
+  }
+  
+
+  /**
+   * This version of the mkdirs method assumes that the permission.
+   * It has been added to support the FileContext that processes the the permission
+   * with umask before calling this method.
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected boolean primitiveMkdir(Path f, FsPermission absolutePermission)
+    throws IOException {
+    // Default impl is to assume that permissions do not matter and hence
+    // calling the regular mkdirs is good enough.
+    // FSs that implement permissions should override this.
+   return this.mkdirs(f, absolutePermission);
+  }
+
 
   /**
    * Creates the given Path as a brand-new zero-length file.  If
@@ -1142,8 +1201,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The default implementation returns "/user/$USER/".
    */
   public Path getHomeDirectory() {
-    return new Path("/user/"+System.getProperty("user.name"))
-      .makeQualified(this);
+    return this.makeQualified(
+        new Path("/user/"+System.getProperty("user.name")));
   }
 
 
@@ -1160,6 +1219,23 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the directory pathname
    */
   public abstract Path getWorkingDirectory();
+  
+  
+  /**
+   * Note: with the new FilesContext class, getWorkingDirectory()
+   * will be removed. 
+   * The working directory is implemented in FilesContext.
+   * 
+   * Some file systems like LocalFileSystem have an initial workingDir
+   * that we use as the starting workingDir. For other file systems
+   * like HDFS there is no built in notion of an inital workingDir.
+   * 
+   * @return if there is built in notion of workingDir then it
+   * is returned; else a null is returned.
+   */
+  protected Path getInitialWorkingDirectory() {
+    return null;
+  }
 
   /**
    * Call {@link #mkdirs(Path, FsPermission)} with default permission.
