@@ -215,6 +215,9 @@ public class TestDFSClientRetries extends TestCase {
 
     public void setTimes(String src, long mtime, long atime) throws IOException {}
 
+    public LocatedBlock getNewStampForPipeline(Block block, String clientName)
+    throws IOException { return null; }
+
   }
   
   public void testNotYetReplicatedErrors() throws IOException
