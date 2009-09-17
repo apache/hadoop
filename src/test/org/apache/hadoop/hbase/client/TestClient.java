@@ -1070,7 +1070,7 @@ public class TestClient extends HBaseClusterTestCase {
         result.size() == 9);
     
   }
-  
+
   public void testDeletes() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDeletes");
     
@@ -1113,6 +1113,9 @@ public class TestClient extends HBaseClusterTestCase {
     put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
     put.add(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
     put.add(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
+    put.add(FAMILIES[0], null, ts[4], VALUES[4]);
+    put.add(FAMILIES[0], null, ts[2], VALUES[2]);
+    put.add(FAMILIES[0], null, ts[3], VALUES[3]);
     ht.put(put);
     
     delete = new Delete(ROW);
@@ -1120,7 +1123,7 @@ public class TestClient extends HBaseClusterTestCase {
     ht.delete(delete);
     
     get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
+    get.addColumn(FAMILIES[0], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
@@ -1129,13 +1132,23 @@ public class TestClient extends HBaseClusterTestCase {
         0, 2);
     
     scan = new Scan(ROW);
-    scan.addFamily(FAMILIES[0]);
+    scan.addColumn(FAMILIES[0], QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
+    
+    // Test for HBASE-1847
+    delete = new Delete(ROW);
+    delete.deleteColumn(FAMILIES[0], null);
+    ht.delete(delete);
+    
+    // Cleanup null qualifier
+    delete = new Delete(ROW);
+    delete.deleteColumns(FAMILIES[0], null);
+    ht.delete(delete);
     
     // Expected client behavior might be that you can re-put deleted values
     // But alas, this is not to be.  We can't put them back in either case.

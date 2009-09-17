@@ -1160,7 +1160,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           NavigableSet<byte []> qualifiers =
             new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
           byte [] q = kv.getQualifier();
-          if (q != null && q.length > 0) qualifiers.add(kv.getQualifier());
+          if(q == null) q = HConstants.EMPTY_BYTE_ARRAY;
+          qualifiers.add(q);
           get(store, g, qualifiers, result);
           if (result.isEmpty()) {
             // Nothing to delete

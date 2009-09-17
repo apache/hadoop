@@ -30,6 +30,8 @@ Release 0.21.0 - Unreleased
    HBASE-818   HFile code review and refinement (Schubert Zhang via Stack)
    HBASE-1830  HbaseObjectWritable methods should allow null HBCs
                for when Writable is not Configurable (Stack via jgray)
+   HBASE-1847  Delete latest of a null qualifier when non-null qualifiers
+               exist throws a RuntimeException 
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
