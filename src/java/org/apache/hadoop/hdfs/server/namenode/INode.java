@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
  * This is a base INode class containing common fields for file and 
  * directory inodes.
  */
-abstract class INode implements Comparable<byte[]> {
+abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   protected byte[] name;
   protected INodeDirectory parent;
   protected long modificationTime;
@@ -244,6 +244,12 @@ abstract class INode implements Comparable<byte[]> {
    */
   void setLocalName(byte[] name) {
     this.name = name;
+  }
+
+  /** {@inheritDoc} */
+  public String getFullPathName() {
+    // Get the full path name of this inode.
+    return FSDirectory.getFullPathName(this);
   }
 
   /** {@inheritDoc} */

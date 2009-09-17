@@ -45,6 +45,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 		<native_lib    				label="Native Libraries" 					href="native_libraries.html" />
 		<streaming 				label="Streaming"          				href="streaming.html" />
 		<fair_scheduler 			label="Fair Scheduler" 					href="fair_scheduler.html"/>
+        <hdfsproxy 			label="HDFS Proxy" 					href="hdfsproxy.html"/>
 		<cap_scheduler 		label="Capacity Scheduler" 			href="capacity_scheduler.html"/>
 		<SLA					 	label="Service Level Authorization" 	href="service_level_auth.html"/>
 		<vaidya    					label="Vaidya" 								href="vaidya.html"/>

@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HDFS-235. Add support for byte ranges in HftpFileSystem to serve
     range of bytes from a file. (Bill Zeller via suresh)
 
+    HDFS-385. Add support for an experimental API that allows a module external
+    to HDFS to specify how HDFS blocks should be placed. (dhruba)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
@@ -200,6 +203,13 @@ Trunk (unreleased changes)
     HDFS-412. Hadoop JMX usage makes Nagios monitoring impossible.
     (Brian Bockelman via tomwhite)
 
+    HDFS-472. Update hdfsproxy documentation. Adds a setup guide and design
+    document. (Zhiyong Zhang via cdouglas)
+
+    HDFS-617. Support non-recursive create().  (Kan Zhang via szetszwo)
+
+    HDFS-618. Support non-recursive mkdir().  (Kan Zhang via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
@@ -285,6 +295,10 @@ Trunk (unreleased changes)
 
     HDFS-614. TestDatanodeBlockScanner obtains data directories directly from
     MiniHDFSCluster. (shv)
+
+    HDFS-612. Remove the use of org.mortbay.log.Log in FSDataset.  (szetszwo)
+
+    HDFS-622. checkMinReplication should count live nodes only. (shv)
 
 Release 0.20.1 - Unreleased
 

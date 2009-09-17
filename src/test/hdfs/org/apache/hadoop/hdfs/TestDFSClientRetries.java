@@ -157,7 +157,7 @@ public class TestDFSClientRetries extends TestCase {
     
     public FsServerDefaults getServerDefaults() throws IOException { return null; }
     
-    public void create(String src, FsPermission masked, String clientName, EnumSetWritable<CreateFlag> flag, short replication, long blockSize) throws IOException {}
+    public void create(String src, FsPermission masked, String clientName, EnumSetWritable<CreateFlag> flag, boolean createParent, short replication, long blockSize) throws IOException {}
     
     public LocatedBlock append(String src, String clientName) throws IOException { return null; }
 
@@ -179,7 +179,7 @@ public class TestDFSClientRetries extends TestCase {
 
     public boolean delete(String src, boolean recursive) throws IOException { return false; }
 
-    public boolean mkdirs(String src, FsPermission masked) throws IOException { return false; }
+    public boolean mkdirs(String src, FsPermission masked, boolean createParent) throws IOException { return false; }
 
     public FileStatus[] getListing(String src) throws IOException { return null; }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -733,6 +735,99 @@ public class TestFileCreation extends junit.framework.TestCase {
     } finally {
       cluster.shutdown();
     }
+  }
+  
+  /**
+   * Test file creation using createNonRecursive().
+   */
+  public void testFileCreationNonRecursive() throws IOException {
+    Configuration conf = new Configuration();
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    final Path path = new Path("/" + System.currentTimeMillis()
+        + "-testFileCreationNonRecursive");
+    FSDataOutputStream out = null;
+
+    try {
+      IOException expectedException = null;
+      final String nonExistDir = "/non-exist-" + System.currentTimeMillis();
+
+      fs.delete(new Path(nonExistDir), true);
+      EnumSet<CreateFlag> createFlag = EnumSet.of(CreateFlag.CREATE);
+      // Create a new file in root dir, should succeed
+      out = createNonRecursive(fs, path, 1, createFlag);
+      out.close();
+      // Create a file when parent dir exists as file, should fail
+      expectedException = null;
+      try {
+        createNonRecursive(fs, new Path(path, "Create"), 1, createFlag);
+      } catch (IOException e) {
+        expectedException = e;
+      }
+      assertTrue("Create a file when parent directory exists as a file"
+          + " should throw FileAlreadyExistsException ",
+          expectedException != null
+              && expectedException instanceof FileAlreadyExistsException);
+      fs.delete(path, true);
+      // Create a file in a non-exist directory, should fail
+      final Path path2 = new Path(nonExistDir + "/testCreateNonRecursive");
+      expectedException = null;
+      try {
+        createNonRecursive(fs, path2, 1, createFlag);
+      } catch (IOException e) {
+        expectedException = e;
+      }
+      assertTrue("Create a file in a non-exist dir using"
+          + " createNonRecursive() should throw FileNotFoundException ",
+          expectedException != null
+              && expectedException instanceof FileNotFoundException);
+
+      EnumSet<CreateFlag> overwriteFlag = EnumSet.of(CreateFlag.OVERWRITE);
+      // Overwrite a file in root dir, should succeed
+      out = createNonRecursive(fs, path, 1, overwriteFlag);
+      out.close();
+      // Overwrite a file when parent dir exists as file, should fail
+      expectedException = null;
+      try {
+        createNonRecursive(fs, new Path(path, "Overwrite"), 1, overwriteFlag);
+      } catch (IOException e) {
+        expectedException = e;
+      }
+      assertTrue("Overwrite a file when parent directory exists as a file"
+          + " should throw FileAlreadyExistsException ",
+          expectedException != null
+              && expectedException instanceof FileAlreadyExistsException);
+      fs.delete(path, true);
+      // Overwrite a file in a non-exist directory, should fail
+      final Path path3 = new Path(nonExistDir + "/testOverwriteNonRecursive");
+      expectedException = null;
+      try {
+        createNonRecursive(fs, path3, 1, overwriteFlag);
+      } catch (IOException e) {
+        expectedException = e;
+      }
+      assertTrue("Overwrite a file in a non-exist dir using"
+          + " createNonRecursive() should throw FileNotFoundException ",
+          expectedException != null
+              && expectedException instanceof FileNotFoundException);
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
+  // creates a file using DistributedFileSystem.createNonRecursive()
+  static FSDataOutputStream createNonRecursive(FileSystem fs, Path name,
+      int repl, EnumSet<CreateFlag> flag) throws IOException {
+    System.out.println("createNonRecursive: Created " + name + " with " + repl
+        + " replica.");
+    FSDataOutputStream stm = ((DistributedFileSystem) fs).createNonRecursive(
+        name, FsPermission.getDefault(), flag, fs.getConf().getInt(
+            "io.file.buffer.size", 4096), (short) repl, (long) blockSize, null);
+    return stm;
   }
   
   // creates a file with the flag api

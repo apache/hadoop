@@ -209,6 +209,18 @@ public class DistributedFileSystem extends FileSystem {
         statistics);
   }
 
+  /**
+   * Same as create(), except fails if parent directory doesn't already exist.
+   * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable)
+   */
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flag, int bufferSize, short replication,
+      long blockSize, Progressable progress) throws IOException {
+
+    return new FSDataOutputStream(dfs.create(getPathName(f), permission, flag,
+        false, replication, blockSize, progress, bufferSize), statistics);
+  }
+
   @Override
   public boolean setReplication(Path src, 
                                 short replication
@@ -268,9 +280,17 @@ public class DistributedFileSystem extends FileSystem {
     return stats;
   }
 
+  /**
+   * Create a directory with given name and permission, only when
+   * parent directory exists.
+   */
+  public boolean mkdir(Path f, FsPermission permission) throws IOException {
+    return dfs.mkdirs(getPathName(f), permission, false);
+  }
+
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
-    return dfs.mkdirs(getPathName(f), permission);
+    return dfs.mkdirs(getPathName(f), permission, true);
   }
 
   /** {@inheritDoc} */

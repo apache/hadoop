@@ -523,6 +523,23 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   /**
+   * Call
+   * {@link #create(String,FsPermission,EnumSet,boolean,short,long,Progressable,int)}
+   * with createParent set to true.
+   */
+  public OutputStream create(String src, 
+      FsPermission permission,
+      EnumSet<CreateFlag> flag, 
+      short replication,
+      long blockSize,
+      Progressable progress,
+      int buffersize
+      ) throws IOException {
+    return create(src, permission, flag, true,
+        replication, blockSize, progress, buffersize);
+  }
+
+  /**
    * Create a new dfs file with the specified block replication 
    * with write-progress reporting and return an output stream for writing
    * into the file.  
@@ -531,14 +548,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param permission The permission of the directory being created.
    * If permission == null, use {@link FsPermission#getDefault()}.
    * @param flag do not check for file existence if true
+   * @param createParent create missing parent directory if true
    * @param replication block replication
    * @return output stream
    * @throws IOException
-   * @see ClientProtocol#create(String, FsPermission, String, EnumSetWritable, short, long)
+   * @see ClientProtocol#create(String, FsPermission, String, EnumSetWritable, boolean, short, long)
    */
   public OutputStream create(String src, 
                              FsPermission permission,
                              EnumSet<CreateFlag> flag, 
+                             boolean createParent,
                              short replication,
                              long blockSize,
                              Progressable progress,
@@ -551,7 +570,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
     LOG.debug(src + ": masked=" + masked);
     OutputStream result = new DFSOutputStream(src, masked,
-        flag, replication, blockSize, progress, buffersize,
+        flag, createParent, replication, blockSize, progress, buffersize,
         conf.getInt("io.bytes.per.checksum", 512));
     leasechecker.put(src, result);
     return result;
@@ -951,8 +970,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   /**
    */
+  @Deprecated
   public boolean mkdirs(String src) throws IOException {
-    return mkdirs(src, null);
+    return mkdirs(src, null, true);
   }
 
   /**
@@ -962,10 +982,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param src The path of the directory being created
    * @param permission The permission of the directory being created.
    * If permission == null, use {@link FsPermission#getDefault()}.
+   * @param createParent create missing parent directory if true
    * @return True if the operation success.
-   * @see ClientProtocol#mkdirs(String, FsPermission)
+   * @see ClientProtocol#mkdirs(String, FsPermission, boolean)
    */
-  public boolean mkdirs(String src, FsPermission permission)throws IOException{
+  public boolean mkdirs(String src, FsPermission permission, boolean createParent)throws IOException{
     checkOpen();
     if (permission == null) {
       permission = FsPermission.getDefault();
@@ -973,11 +994,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
     LOG.debug(src + ": masked=" + masked);
     try {
-      return namenode.mkdirs(src, masked);
+      return namenode.mkdirs(src, masked, createParent);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
+                                     FileNotFoundException.class,
                                      FileAlreadyExistsException.class);
     }
   }
@@ -3120,10 +3142,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     /**
      * Create a new output stream to the given DataNode.
-     * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
+     * @see ClientProtocol#create(String, FsPermission, String, EnumSetWritable, boolean, short, long)
      */
     DFSOutputStream(String src, FsPermission masked, EnumSet<CreateFlag> flag,
-        short replication, long blockSize, Progressable progress,
+        boolean createParent, short replication, long blockSize, Progressable progress,
         int buffersize, int bytesPerChecksum) throws IOException {
       this(src, blockSize, progress, bytesPerChecksum);
 
@@ -3131,9 +3153,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
       try {
         namenode.create(
-            src, masked, clientName, new EnumSetWritable<CreateFlag>(flag), replication, blockSize);
+            src, masked, clientName, new EnumSetWritable<CreateFlag>(flag), createParent, replication, blockSize);
       } catch(RemoteException re) {
         throw re.unwrapRemoteException(AccessControlException.class,
+                                       FileAlreadyExistsException.class,
+                                       FileNotFoundException.class,
                                        NSQuotaExceededException.class,
                                        DSQuotaExceededException.class);
       }

@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
@@ -90,7 +91,7 @@ import javax.security.auth.login.LoginException;
  * 4)  machine --> blocklist (inverted #2)
  * 5)  LRU cache of updated-heartbeat machines
  ***************************************************/
-public class FSNamesystem implements FSConstants, FSNamesystemMBean {
+public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterStats {
   public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
   public static final String AUDIT_FORMAT =
     "ugi=%s\t" +  // ugi
@@ -818,6 +819,24 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return dir.getPreferredBlockSize(filename);
   }
 
+  /*
+   * Verify that parent dir exists
+   */
+  private void verifyParentDir(String src) throws FileAlreadyExistsException,
+      FileNotFoundException {
+    Path parent = new Path(src).getParent();
+    if (parent != null) {
+      INode[] pathINodes = dir.getExistingPathINodes(parent.toString());
+      if (pathINodes[pathINodes.length - 1] == null) {
+        throw new FileNotFoundException("Parent directory doesn't exist: "
+            + parent.toString());
+      } else if (!pathINodes[pathINodes.length - 1].isDirectory()) {
+        throw new FileAlreadyExistsException("Parent path is not a directory: "
+            + parent.toString());
+      }
+    }
+  }
+
   /**
    * Create a new file entry in the namespace.
    * 
@@ -828,10 +847,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   void startFile(String src, PermissionStatus permissions,
                  String holder, String clientMachine,
-                 EnumSet<CreateFlag> flag, short replication, long blockSize
+                 EnumSet<CreateFlag> flag, boolean createParent, 
+                 short replication, long blockSize
                 ) throws IOException {
     startFileInternal(src, permissions, holder, clientMachine, flag,
-        replication, blockSize);
+        createParent, replication, blockSize);
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
@@ -846,6 +866,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                               String holder, 
                                               String clientMachine, 
                                               EnumSet<CreateFlag> flag,
+                                              boolean createParent,
                                               short replication,
                                               long blockSize
                                               ) throws IOException {
@@ -857,6 +878,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: src=" + src
           + ", holder=" + holder
           + ", clientMachine=" + clientMachine
+          + ", createParent=" + createParent
           + ", replication=" + replication
           + ", overwrite=" + overwrite
           + ", append=" + append);
@@ -881,6 +903,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       else {
         checkAncestorAccess(src, FsAction.WRITE);
       }
+    }
+
+    if (!createParent) {
+      verifyParentDir(src);
     }
 
     try {
@@ -940,7 +966,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           else {
             //append & create a nonexist file equals to overwrite
             this.startFileInternal(src, permissions, holder, clientMachine,
-                EnumSet.of(CreateFlag.OVERWRITE), replication, blockSize);
+                EnumSet.of(CreateFlag.OVERWRITE), createParent, replication, blockSize);
             return;
           }
         } else if (myFile.isDirectory()) {
@@ -1016,7 +1042,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                             " Please refer to dfs.support.append configuration parameter.");
     }
     startFileInternal(src, null, holder, clientMachine, EnumSet.of(CreateFlag.APPEND), 
-                      (short)blockManager.maxReplication, (long)0);
+                      false, (short)blockManager.maxReplication, (long)0);
     getEditLog().logSync();
 
     //
@@ -1128,7 +1154,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     // choose targets for the new block to be allocated.
     DatanodeDescriptor targets[] = blockManager.replicator.chooseTarget(
-        replication, clientNode, null, blockSize);
+        src, replication, clientNode, blockSize);
     if (targets.length < blockManager.minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +
                             targets.length + " nodes, instead of " +
@@ -1511,9 +1537,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Create all the necessary directories
    */
-  public boolean mkdirs(String src, PermissionStatus permissions
-      ) throws IOException {
-    boolean status = mkdirsInternal(src, permissions);
+  public boolean mkdirs(String src, PermissionStatus permissions,
+      boolean createParent) throws IOException {
+    boolean status = mkdirsInternal(src, permissions, createParent);
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
@@ -1528,7 +1554,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Create all the necessary directories
    */
   private synchronized boolean mkdirsInternal(String src,
-      PermissionStatus permissions) throws IOException {
+      PermissionStatus permissions, boolean createParent) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     if (isPermissionEnabled) {
       checkTraverse(src);
@@ -1545,6 +1571,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     if (isPermissionEnabled) {
       checkAncestorAccess(src, FsAction.WRITE);
+    }
+
+    if (!createParent) {
+      verifyParentDir(src);
     }
 
     // validate that we have enough inodes. This is, at best, a 
@@ -2372,8 +2402,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
                               Block b, short replication,
                               DatanodeDescriptor addedNode,
-                              DatanodeDescriptor delNodeHint) {
+                              DatanodeDescriptor delNodeHint,
+                              BlockPlacementPolicy replicator) {
     // first form a rack to datanodes map and
+    INodeFile inode = blockManager.getINode(b);
     HashMap<String, ArrayList<DatanodeDescriptor>> rackMap =
       new HashMap<String, ArrayList<DatanodeDescriptor>>();
     for (Iterator<DatanodeDescriptor> iter = nonExcess.iterator();
@@ -2417,17 +2449,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
             (priSet.contains(delNodeHint) || (addedNode != null && !priSet.contains(addedNode))) ) {
           cur = delNodeHint;
       } else { // regular excessive replica removal
-        Iterator<DatanodeDescriptor> iter = 
-          priSet.isEmpty() ? remains.iterator() : priSet.iterator();
-          while( iter.hasNext() ) {
-            DatanodeDescriptor node = iter.next();
-            long free = node.getRemaining();
-
-            if (minSpace > free) {
-              minSpace = free;
-              cur = node;
-            }
-          }
+        cur = replicator.chooseReplicaToDelete(inode, b, replication, priSet, remains);
       }
 
       firstOne = false;
