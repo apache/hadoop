@@ -200,6 +200,9 @@ Trunk (unreleased changes)
     This permits one to take advantage of both Avro's RPC versioning
     features and Hadoop's proven RPC scalability.  (cutting)
 
+    HADOOP-6267. Permit building contrib modules located in external
+    source trees.  (Todd Lipcon via cutting)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
