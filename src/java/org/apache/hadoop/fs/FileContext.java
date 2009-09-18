@@ -39,6 +39,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Options.CreateOpts;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Progressable;
@@ -454,98 +456,6 @@ public final class FileContext {
     return path.makeQualified(defaultFS.getUri(), getWorkingDirectory());
   } 
 
-  /**
-   * Class to support the varargs for create() options.
-   *
-   */
-  public static class CreateOpts {
-    private CreateOpts() { };
-    public static BlockSize blockSize(long bs) { 
-      return new BlockSize(bs);
-    }
-    public static BufferSize bufferSize(short bs) { 
-      return new BufferSize(bs);
-    }
-    public static ReplicationFactor repFac(short rf) { 
-      return new ReplicationFactor(rf);
-    }
-    public static BytesPerChecksum bytesPerChecksum(short crc) {
-      return new BytesPerChecksum(crc);
-    }
-    public static Perms perms(FsPermission perm) {
-      return new Perms(perm);
-    }
-    
-    static class BlockSize extends CreateOpts {
-      private final long blockSize;
-      protected BlockSize(long bs) {
-        if (bs <= 0) {
-          throw new IllegalArgumentException(
-                        "Block size must be greater than 0");
-        }
-        blockSize = bs; 
-      }
-      long getValue() { return blockSize; }
-    }
-    
-    static class ReplicationFactor extends CreateOpts {
-      private final short replication;
-      protected ReplicationFactor(short rf) { 
-        if (rf <= 0) {
-          throw new IllegalArgumentException(
-                      "Replication must be greater than 0");
-        }
-        replication = rf;
-      }
-      short getValue() { return replication; }
-    }
-    
-    static class BufferSize extends CreateOpts {
-      private final int bufferSize;
-      protected BufferSize(short bs) {
-        if (bs <= 0) {
-          throw new IllegalArgumentException(
-                        "Buffer size must be greater than 0");
-        }
-        bufferSize = bs; 
-      }
-      int getValue() { return bufferSize; }
-    }
-    
-    static class BytesPerChecksum extends CreateOpts {
-      private final int bytesPerChecksum;
-      protected BytesPerChecksum(short bpc) { 
-        if (bpc <= 0) {
-          throw new IllegalArgumentException(
-                        "Bytes per checksum must be greater than 0");
-        }
-        bytesPerChecksum = bpc; 
-      }
-      int getValue() { return bytesPerChecksum; }
-    }
-    
-    static class Perms extends CreateOpts {
-      private final FsPermission permissions;
-      protected Perms(FsPermission perm) { 
-        if(perm == null) {
-          throw new IllegalArgumentException("Permissions must not be null");
-        }
-        permissions = perm; 
-      }
-      FsPermission getValue() { return permissions; }
-    }
-    
-    static class Progress extends CreateOpts {
-      private final Progressable progress;
-      protected Progress(Progressable prog) { 
-        if(prog == null) {
-          throw new IllegalArgumentException("Progress must not be null");
-        }
-        progress = prog;
-      }
-      Progressable getValue() { return progress; }
-    }
-  }
   
   /**
    * Create or overwrite file on indicated path and returns an output stream
@@ -717,15 +627,33 @@ public final class FileContext {
     return getFSofPath(absF).setReplication(absF, replication);
   }
 
- /**
-  * Renames Path src to Path dst. 
-  *  
-  * @param src
-  * @param dst
-  * @throws IOException if a rename is attempted across URI filessystem or
-  * across volumes within a file system.
-  */
-  public void rename(final Path src, final Path dst)
+  /**
+   * Renames Path src to Path dst
+   * <ul>
+   * <li
+   * <li>Fails if src is a file and dst is a directory.
+   * <li>Fails if src is a directory and dst is a file.
+   * <li>Fails if the parent of dst does not exist or is a file.
+   * </ul>
+   * <p>
+   * If OVERWRITE option is not passed as an argument, rename fails
+   * if the dst already exists.
+   * <p>
+   * If OVERWRITE option is passed as an argument, rename overwrites
+   * the dst if it is a file or an empty directory. Rename fails if dst is
+   * a non-empty directory.
+   * <p>
+   * Note that atomicity of rename is dependent on the file system
+   * implementation. Please refer to the file system documentation for
+   * details
+   * <p>
+   * 
+   * @param src path to be renamed
+   * @param dst new path after rename
+   * @throws IOException on failure
+   */
+  @SuppressWarnings("deprecation")
+  public void rename(final Path src, final Path dst, final Rename... options)
     throws IOException {
     final Path absSrc  = fixRelativePart(src);
     final Path absDst = fixRelativePart(dst);
@@ -734,10 +662,7 @@ public final class FileContext {
     if(!srcFS.getUri().equals(dstFS.getUri())) {
       throw new IOException("Renames across FileSystems not supported");
     }
-    if(srcFS.rename(absSrc, absDst)) {
-      return;
-    }
-    throw new IOException("bug in underlying filesystem");
+    srcFS.rename(absSrc, absDst, options);
   }
   
   /**

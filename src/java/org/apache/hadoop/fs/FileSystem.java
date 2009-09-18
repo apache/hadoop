@@ -41,6 +41,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -689,9 +690,98 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Renames Path src to Path dst.  Can take place on local fs
    * or remote DFS.
+   * @throws IOException on failure
+   * @return true if rename is successful
    */
   public abstract boolean rename(Path src, Path dst) throws IOException;
-    
+
+  /**
+   * Renames Path src to Path dst
+   * <ul>
+   * <li
+   * <li>Fails if src is a file and dst is a directory.
+   * <li>Fails if src is a directory and dst is a file.
+   * <li>Fails if the parent of dst does not exist or is a file.
+   * </ul>
+   * <p>
+   * If OVERWRITE option is not passed as an argument, rename fails
+   * if the dst already exists.
+   * <p>
+   * If OVERWRITE option is passed as an argument, rename overwrites
+   * the dst if it is a file or an empty directory. Rename fails if dst is
+   * a non-empty directory.
+   * <p>
+   * Note that atomicity of rename is dependent on the file system
+   * implementation. Please refer to the file system documentation for
+   * details. This default implementation is non atomic.
+   * <p>
+   * This method is deprecated since it is a temporary method added to 
+   * support the transition from FileSystem to FileContext for user 
+   * applications.
+   * 
+   * @param src path to be renamed
+   * @param dst new path after rename
+   * @throws IOException on failure
+   */
+  @Deprecated
+  protected void rename(final Path src, final Path dst,
+      final Rename... options) throws IOException {
+    // Default implementation
+    final FileStatus srcStatus = getFileStatus(src);
+    if (srcStatus == null) {
+      throw new FileNotFoundException("rename source " + src + " not found.");
+    }
+
+    boolean overwrite = false;
+    if (null != options) {
+      for (Rename option : options) {
+        if (option == Rename.OVERWRITE) {
+          overwrite = true;
+        }
+      }
+    }
+
+    FileStatus dstStatus;
+    try {
+      dstStatus = getFileStatus(dst);
+    } catch (IOException e) {
+      dstStatus = null;
+    }
+    if (dstStatus != null) {
+      if (srcStatus.isDir() != dstStatus.isDir()) {
+        throw new IOException("Source " + src + " Destination " + dst
+            + " both should be either file or directory");
+      }
+      if (!overwrite) {
+        throw new FileAlreadyExistsException("rename destination " + dst
+            + " already exists.");
+      }
+      // Delete the destination that is a file or an empty directory
+      if (dstStatus.isDir()) {
+        FileStatus[] list = listStatus(dst);
+        if (list != null && list.length != 0) {
+          throw new IOException(
+              "rename cannot overwrite non empty destination directory " + dst);
+        }
+      }
+      delete(dst, false);
+    } else {
+      final Path parent = dst.getParent();
+      final FileStatus parentStatus = getFileStatus(parent);
+      if (parentStatus == null) {
+        throw new FileNotFoundException("rename destination parent " + parent
+            + " not found.");
+      }
+      if (!parentStatus.isDir()) {
+        throw new ParentNotDirectoryException("rename destination parent " + parent
+            + " is a file.");
+      }
+    }
+    if (!rename(src, dst)) {
+      throw new IOException("rename from " + src + " to " + dst + " failed.");
+    }
+  }
+  
   /** Delete a file.
    *
    * @param f the path to delete.

@@ -20,20 +20,15 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.Random;
 
-import org.junit.*;
-
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileContext.CreateOpts;
+import org.apache.hadoop.fs.Options.CreateOpts;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * <p>
@@ -96,6 +91,11 @@ public abstract class FileContextMainOperationsBaseTest  {
     return true;
   }
 
+  
+  protected IOException unwrapException(IOException e) {
+    return e;
+  }
+  
   @Test
   public void testFsStatus() throws Exception {
     FsStatus fsStatus = fc.getFsStatus(null);
@@ -402,36 +402,77 @@ public abstract class FileContextMainOperationsBaseTest  {
   @Test
   public void testRenameNonExistentPath() throws Exception {
     if (!renameSupported()) return;
-    Path src = getTestRootPath("test/hadoop/NonExistingPath");
+    Path src = getTestRootPath("test/hadoop/nonExistent");
     Path dst = getTestRootPath("test/new/newpath");
     try {
-      fc.rename(src, dst);
-      Assert.assertTrue("rename of non existing path should have Assert.failed",
-                                                    false);
-    } catch (Exception e) {
-      // expected
+      rename(src, dst, false, false, false, Rename.NONE);
+      Assert.fail("Should throw FileNotFoundException");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+    }
+
+    try {
+      rename(src, dst, false, false, false, Rename.OVERWRITE);
+      Assert.fail("Should throw FileNotFoundException");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
   }
 
   @Test
-  public void testRenameFileMoveToNonExistentDirectory() throws Exception {
+  public void testRenameFileToNonExistentDirectory() throws Exception {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/file");
     createFile(src);
-    Path dst = getTestRootPath("test/NonExisting/foo");
-    rename(src, dst, false, true, false);
+    Path dst = getTestRootPath("test/nonExistent/newfile");
+    
+    try {
+      rename(src, dst, false, true, false, Rename.NONE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+    }
+
+    try {
+      rename(src, dst, false, true, false, Rename.OVERWRITE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+    }
   }
 
   @Test
-  public void testRenameFileMoveToExistingDirectory() throws Exception {
+  public void testRenameFileToDestinationWithParentFile() throws Exception {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/file");
     createFile(src);
-    Path dst = getTestRootPath("test/Existing/newfile");
-    fc.mkdirs(dst.getParent(), FsPermission.getDefault());
-    rename(src, dst, true, false, true);
+    Path dst = getTestRootPath("test/parentFile/newfile");
+    createFile(dst.getParent());
+    
+    try {
+      rename(src, dst, false, true, false, Rename.NONE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+    }
+
+    try {
+      rename(src, dst, false, true, false, Rename.OVERWRITE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+    }
+  }
+
+  @Test
+  public void testRenameFileToExistingParent() throws Exception {
+    if (!renameSupported()) return;
+    
+    Path src = getTestRootPath("test/hadoop/file");
+    createFile(src);
+    Path dst = getTestRootPath("test/new/newfile");
+    fc.mkdirs(dst.getParent(), FileContext.DEFAULT_PERM);
+    rename(src, dst, true, false, true, Rename.OVERWRITE);
   }
 
   @Test
@@ -440,9 +481,19 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     Path src = getTestRootPath("test/hadoop/file");
     createFile(src);
-    Path dst = getTestRootPath("test/existing/existingFile");
+    Path dst = getTestRootPath("test/new/existingFile");
     createFile(dst);
-    rename(src, dst, true, false, true);
+    
+    // Fails without overwrite option
+    try {
+      rename(src, dst, false, true, false, Rename.NONE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    
+    // Succeeds with overwrite option
+    rename(src, dst, true, false, true, Rename.OVERWRITE);
   }
 
   @Test
@@ -451,37 +502,66 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     Path src = getTestRootPath("test/hadoop/file");
     createFile(src);
-    Path dst = getTestRootPath("test/existing/existingDir");
-    fc.mkdirs(dst, FsPermission.getDefault());
-    rename(src, dst, true, false, true);
-    Assert.assertTrue("Destination changed",
-        fc.exists(getTestRootPath("test/existing/existingDir/file")));
+    Path dst = getTestRootPath("test/new/existingDir");
+    fc.mkdirs(dst, FileContext.DEFAULT_PERM);
+    
+    // Fails without overwrite option
+    try {
+      rename(src, dst, false, false, true, Rename.NONE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+    }
+    
+    // File cannot be renamed as directory
+    try {
+      rename(src, dst, false, false, true, Rename.OVERWRITE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+    }
   }
-  
+
   @Test
-  public void testRenameDirectoryMoveToNonExistentDirectory() 
-    throws Exception {
+  public void testRenameDirectoryToNonExistentParent() throws Exception {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FsPermission.getDefault());
-    Path dst = getTestRootPath("test/nonExisting/newdir");
-    rename(src, dst, false, true, false);
+    fc.mkdirs(src, FileContext.DEFAULT_PERM);
+    Path dst = getTestRootPath("test/nonExistent/newdir");
+    
+    try {
+      rename(src, dst, false, true, false, Rename.NONE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+    }
+
+    try {
+      rename(src, dst, false, true, false, Rename.OVERWRITE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+    }
   }
-  
+
   @Test
-  public void testRenameDirectoryMoveToExistingDirectory() throws Exception {
+  public void testRenameDirectoryAsNonExistentDirectory() throws Exception {
+    testRenameDirectoryAsNonExistentDirectory(Rename.NONE);
+    tearDown();
+    testRenameDirectoryAsNonExistentDirectory(Rename.OVERWRITE);
+  }
+
+  private void testRenameDirectoryAsNonExistentDirectory(Rename... options) throws Exception {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FsPermission.getDefault());
+    fc.mkdirs(src, FileContext.DEFAULT_PERM);
     createFile(getTestRootPath("test/hadoop/dir/file1"));
     createFile(getTestRootPath("test/hadoop/dir/subdir/file2"));
     
     Path dst = getTestRootPath("test/new/newdir");
-    fc.mkdirs(dst.getParent(), FsPermission.getDefault());
-    rename(src, dst, true, false, true);
+    fc.mkdirs(dst.getParent(), FileContext.DEFAULT_PERM);
     
+    rename(src, dst, true, false, true, options);
     Assert.assertFalse("Nested file1 exists",
         fc.exists(getTestRootPath("test/hadoop/dir/file1")));
     Assert.assertFalse("Nested file2 exists",
@@ -491,40 +571,55 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertTrue("Renamed nested exists",
         fc.exists(getTestRootPath("test/new/newdir/subdir/file2")));
   }
-  
+
   @Test
-  public void testRenameDirectoryAsExistingFile() throws Exception {
+  public void testRenameDirectoryAsNonEmptyDirectory() throws Exception {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FsPermission.getDefault());
-    Path dst = getTestRootPath("test/new/newfile");
-    createFile(dst);
-    rename(src, dst, false, true, true);
-  }
-  
-  @Test
-  public void testRenameDirectoryAsExistingDirectory() throws Exception {
-    if (!renameSupported()) return;
-    
-    Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FsPermission.getDefault());
+    fc.mkdirs(src, FileContext.DEFAULT_PERM);
     createFile(getTestRootPath("test/hadoop/dir/file1"));
     createFile(getTestRootPath("test/hadoop/dir/subdir/file2"));
     
     Path dst = getTestRootPath("test/new/newdir");
-    fc.mkdirs(dst, FsPermission.getDefault());
-    rename(src, dst, true, false, true);
-    Assert.assertTrue("Destination changed",
-        fc.exists(getTestRootPath("test/new/newdir/dir")));    
-    Assert.assertFalse("Nested file1 exists",
-        fc.exists(getTestRootPath("test/hadoop/dir/file1")));
-    Assert.assertFalse("Nested file2 exists",
-        fc.exists(getTestRootPath("test/hadoop/dir/subdir/file2")));
-    Assert.assertTrue("Renamed nested file1 exists",
-        fc.exists(getTestRootPath("test/new/newdir/dir/file1")));
-    Assert.assertTrue("Renamed nested exists",
-        fc.exists(getTestRootPath("test/new/newdir/dir/subdir/file2")));
+    fc.mkdirs(dst, FileContext.DEFAULT_PERM);
+    createFile(getTestRootPath("test/new/newdir/file1"));
+    // Fails without overwrite option
+    try {
+      rename(src, dst, false, true, false, Rename.NONE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Succeeds with overwrite option
+    try {
+      rename(src, dst, false, true, false, Rename.OVERWRITE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException ex) {
+      // Expected exception
+    }
+  }
+
+  @Test
+  public void testRenameDirectoryAsFile() throws Exception {
+    if (!renameSupported()) return;
+    
+    Path src = getTestRootPath("test/hadoop/dir");
+    fc.mkdirs(src, FileContext.DEFAULT_PERM);
+    Path dst = getTestRootPath("test/new/newfile");
+    createFile(dst);
+    // Fails without overwrite option
+    try {
+      rename(src, dst, false, true, true, Rename.NONE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException e) {
+    }
+    // Directory cannot be renamed as existing file
+    try {
+      rename(src, dst, false, true, true, Rename.OVERWRITE);
+      Assert.fail("Expected exception is not thrown");
+    } catch (IOException ex) {
+    }
   }
 
   @Test
@@ -556,16 +651,10 @@ public abstract class FileContextMainOperationsBaseTest  {
   }
   
   private void rename(Path src, Path dst, boolean renameShouldSucceed,
-      boolean srcExists, boolean dstExists) throws IOException {
-    try {
-      fc.rename(src, dst);
-      if (!renameShouldSucceed)
-        Assert.fail("rename should have thrown exception");
-    } catch (Exception e) {
-      if (renameShouldSucceed)
-        Assert.fail("rename should have suceeded, but threw exception");
-    }
-
+      boolean srcExists, boolean dstExists, Rename... options) throws IOException {
+    fc.rename(src, dst, options);
+    if (!renameShouldSucceed)
+      Assert.fail("rename should have thrown exception");
     Assert.assertEquals("Source exists", srcExists, fc.exists(src));
     Assert.assertEquals("Destination exists", dstExists, fc.exists(dst));
   }

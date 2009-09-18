@@ -203,6 +203,9 @@ Trunk (unreleased changes)
     HADOOP-6267. Permit building contrib modules located in external
     source trees.  (Todd Lipcon via cutting)
 
+    HADOOP-6240. Add new FileContext rename operation that posix compliant
+    that allows overwriting existing destination. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

@@ -17,24 +17,20 @@
  */
 package org.apache.hadoop.fs;
 
-
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.junit.Before;
+/**
+ * Indicates that the parent of specified Path is not a directory
+ * as expected.
+ */
+public class ParentNotDirectoryException extends IOException {
+  private static final long serialVersionUID = 1L;
 
-public class TestLocalFSFileContextMainOperations extends FileContextMainOperationsBaseTest {
-
-  @Before
-  public void setUp() throws Exception {
-    fc = FileContext.getLocalFSFileContext();
-    super.setUp();
+  public ParentNotDirectoryException() {
+    super();
   }
-  
-  static Path wd = null;
-  protected Path getDefaultWorkingDirectory() throws IOException {
-    if (wd == null)
-      wd = FileSystem.getLocal(new Configuration()).getWorkingDirectory();
-    return wd;
+
+  public ParentNotDirectoryException(String msg) {
+    super(msg);
   }
 }
