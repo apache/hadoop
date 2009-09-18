@@ -25,15 +25,23 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.classification.*;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.*;
 
 /**
  * The FileContext class provides an interface to the application writer for
@@ -124,6 +132,18 @@ import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.*;
 
 public final class FileContext {
   
+  public static final Log LOG = LogFactory.getLog(FileContext.class);
+  
+  /**
+   * List of files that should be deleted on JVM shutdown
+   */
+  final static Map<FileContext, Set<Path>> deleteOnExit = 
+    new IdentityHashMap<FileContext, Set<Path>>();
+
+  /** JVM shutdown hook thread */
+  final static FileContextFinalizer finalizer = 
+    new FileContextFinalizer();
+  
   /**
    * The FileContext is defined by.
    *  1) defaultFS (slash)
@@ -179,6 +199,28 @@ public final class FileContext {
     }
   }
 
+  /**
+   * Delete all the paths that were marked as delete-on-exit.
+   */
+  static void processDeleteOnExit() {
+    synchronized (deleteOnExit) {
+      Set<Entry<FileContext, Set<Path>>> set = deleteOnExit.entrySet();
+      for (Entry<FileContext, Set<Path>> entry : set) {
+        FileContext fc = entry.getKey();
+        Set<Path> paths = entry.getValue();
+        for (Path path : paths) {
+          try {
+            fc.delete(path, true);
+          }
+          catch (IOException e) {
+            LOG.warn("Ignoring failure to deleteOnExit for path " + path);
+          }
+        }
+      }
+      deleteOnExit.clear();
+    }
+  }
+  
   /**
    * Pathnames with scheme and relative path are illegal.
    * @param path to be checked
@@ -886,6 +928,32 @@ public final class FileContext {
     return getFSofPath(absF).listStatus(absF);
   }
 
+  /**
+   * Mark a path to be deleted on JVM shutdown.
+   * 
+   * @param f the existing path to delete.
+   * @return  true if deleteOnExit is successful, otherwise false.
+   * @throws IOException
+   */
+  public boolean deleteOnExit(Path f) throws IOException {
+    if (!exists(f)) {
+      return false;
+    }
+    synchronized (deleteOnExit) {
+      if (deleteOnExit.isEmpty() && !finalizer.isAlive()) {
+        Runtime.getRuntime().addShutdownHook(finalizer);
+      }
+      
+      Set<Path> set = deleteOnExit.get(this);
+      if (set == null) {
+        set = new TreeSet<Path>();
+        deleteOnExit.put(this, set);
+      }
+      set.add(f);
+    }
+    return true;
+  }
+  
   private final Util util;
   public Util util() {
     return util;
@@ -1419,5 +1487,14 @@ public final class FileContext {
     URI dstUri = qualPath2.toUri();
     return (srcUri.getAuthority().equals(dstUri.getAuthority()) && srcUri
         .getAuthority().equals(dstUri.getAuthority()));
+  }
+  
+  /**
+   * Deletes all the paths in deleteOnExit on JVM shutdown
+   */
+  static class FileContextFinalizer extends Thread {
+    public synchronized void run() {
+      processDeleteOnExit();
+    }
   }
 }
