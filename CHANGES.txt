@@ -7,6 +7,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-112. Add counters for reduce input, output records to the new API.
     (Jothi Padmanabhan via cdouglas)
 
+    HADOOP-6231.  Allow caching of filesystem instances to be disabled on a
+    per-instance basis (Tom White and Ben Slusky via mahadev)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
