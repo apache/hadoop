@@ -164,6 +164,8 @@ Trunk (unreleased changes)
     HDFS-574. Split the documentation between the subprojects.
     (Corinne Chandel via omalley)
 
+    HDFS-598. Eclipse launch task for HDFS. (Eli Collins via tomwhite)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
