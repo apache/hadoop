@@ -47,6 +47,8 @@ Trunk (unreleased changes)
     missing blocks from the HDFS logs.
     (Bill Zeller, Jithendra Pandey via suresh).
 
+    HDFS-610. Support o.a.h.fs.FileContext.  (Sanjay Radia via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
