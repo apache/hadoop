@@ -161,6 +161,9 @@ Trunk (unreleased changes)
 
     HDFS-618. Support non-recursive mkdir().  (Kan Zhang via szetszwo)
 
+    HDFS-574. Split the documentation between the subprojects.
+    (Corinne Chandel via omalley)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
