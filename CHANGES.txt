@@ -565,6 +565,8 @@ Trunk (unreleased changes)
     HADOOP-6217. Update documentation for project split. (Corinne Chandel via 
     omalley)
 
+    HADOOP-6268. Add ivy jar to .gitignore. (Todd Lipcon via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

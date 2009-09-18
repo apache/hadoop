@@ -30,6 +30,7 @@ conf/hadoop-policy.xml
 conf/capacity-scheduler.xml
 conf/mapred-queue-acls.xml
 docs/api/
+ivy/ivy-2.0.0-rc2.jar
 logs/
 src/contrib/ec2/bin/hadoop-ec2-env.sh
 src/docs/build
