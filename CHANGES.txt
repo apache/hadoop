@@ -40,6 +40,8 @@ Trunk (unreleased changes)
     HDFS-385. Add support for an experimental API that allows a module external
     to HDFS to specify how HDFS blocks should be placed. (dhruba)
 
+    HADOOP-4952. Update hadoop-core and test jars to propagate new FileContext file system application interface. (Sanjay Radia via suresh).
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
