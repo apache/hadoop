@@ -1035,6 +1035,10 @@ Trunk (unreleased changes)
     HADOOP-6257. Two TestFileSystem classes are confusing
     hadoop-hdfs-hdfwithmr. (Philip Zeyliger via tomwhite)
 
+    HADOOP-6151. Added a input filter to all of the http servlets that quotes
+    html characters in the parameters, to prevent cross site scripting 
+    attacks. (omalley)
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
