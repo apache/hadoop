@@ -271,15 +271,19 @@
     </dependency>
     <dependency org="org.apache.hadoop"
       name="avro"
-      rev="1.0.0"
+      rev="${avro.version}"
       conf="common->default"/>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
-      rev="1.0.1"
+      rev="${jackson.version}"
       conf="common->default"/>
     <dependency org="com.thoughtworks.paranamer"
       name="paranamer"
-      rev="1.5"
+      rev="${paranamer.version}"
+      conf="common->default"/>
+    <dependency org="com.thoughtworks.paranamer"
+      name="paranamer-ant"
+      rev="${paranamer.version}"
       conf="common->default"/>
     </dependencies>
   

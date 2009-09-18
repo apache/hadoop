@@ -196,6 +196,10 @@ Trunk (unreleased changes)
     HADOOP-4952. Add new improved file system interface FileContext for the
     application writer (Sanjay Radia via suresh)
 
+    HADOOP-6170. Add facility to tunnel Avro RPCs through Hadoop RPCs.
+    This permits one to take advantage of both Avro's RPC versioning
+    features and Hadoop's proven RPC scalability.  (cutting)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

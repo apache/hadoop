@@ -85,7 +85,7 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
             || "null".equals(clazz.getEnclosingClass().getName())) ? 
               clazz.getPackage().getName() + "." 
               : (clazz.getEnclosingClass().getName() + "$"));
-      return new ReflectDatumReader(ReflectData.getSchema(clazz), prefix);
+      return new ReflectDatumReader(ReflectData.get().getSchema(clazz), prefix);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -93,7 +93,7 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
 
   @Override
   protected Schema getSchema(Object t, Map<String, String> metadata) {
-    return ReflectData.getSchema(t.getClass());
+    return ReflectData.get().getSchema(t.getClass());
   }
 
   @Override

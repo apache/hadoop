@@ -460,6 +460,14 @@
       <classpath refid="test.core.classpath"/>
      </javac>
 
+    <taskdef
+       name="paranamer" 
+       classname="com.thoughtworks.paranamer.ant.ParanamerGeneratorTask">
+      <classpath refid="classpath" />
+    </taskdef>
+    <paranamer sourceDirectory="${test.src.dir}/core"
+	       outputDirectory="${test.core.build.classes}"/>
+
     <delete dir="${test.cache.data}"/>
     <mkdir dir="${test.cache.data}"/>
     <copy file="${test.src.dir}/core/org/apache/hadoop/cli/testConf.xml" todir="${test.cache.data}"/>

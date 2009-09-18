@@ -50,7 +50,7 @@ public class AvroSpecificSerialization
     try {
       Class<SpecificRecord> clazz = (Class<SpecificRecord>)
         getClassFromMetadata(metadata);
-      return new SpecificDatumReader(clazz.newInstance().schema());
+      return new SpecificDatumReader(clazz.newInstance().getSchema());
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -58,7 +58,7 @@ public class AvroSpecificSerialization
 
   @Override
   protected Schema getSchema(SpecificRecord t, Map<String, String> metadata) {
-    return t.schema();
+    return t.getSchema();
   }
 
   @Override
