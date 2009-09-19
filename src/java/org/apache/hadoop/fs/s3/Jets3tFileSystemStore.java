@@ -98,7 +98,10 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
     bucket = new S3Bucket(uri.getHost());
 
-    this.bufferSize = conf.getInt("io.file.buffer.size", 4096);
+    this.bufferSize = conf.getInt(
+                       S3FileSystemConfigKeys.S3_STREAM_BUFFER_SIZE_KEY,
+                       S3FileSystemConfigKeys.S3_STREAM_BUFFER_SIZE_DEFAULT
+		      );
   }
 
   public String getVersion() throws IOException {

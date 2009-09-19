@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * AccessTokenHandler can be instantiated in 2 modes, master mode and slave
@@ -49,9 +50,13 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class AccessTokenHandler {
   private static final Log LOG = LogFactory.getLog(AccessTokenHandler.class);
-  public static final String STRING_ENABLE_ACCESS_TOKEN = "dfs.access.token.enable";
-  public static final String STRING_ACCESS_KEY_UPDATE_INTERVAL = "dfs.access.key.update.interval";
-  public static final String STRING_ACCESS_TOKEN_LIFETIME = "dfs.access.token.lifetime";
+  public static final String STRING_ENABLE_ACCESS_TOKEN =
+                         CommonConfigurationKeys.FS_ACCESS_TOKEN_ENABLE_KEY;
+  public static final String STRING_ACCESS_KEY_UPDATE_INTERVAL =
+                         CommonConfigurationKeys.FS_ACCESS_KEY_UPDATE_INTERVAL_KEY;
+  public static final String STRING_ACCESS_TOKEN_LIFETIME =
+                         CommonConfigurationKeys.FS_ACCESS_TOKEN_LIFETIME_KEY;
+
 
   private final boolean isMaster;
   /*

@@ -598,6 +598,9 @@ Trunk (unreleased changes)
     HADOOP-6271. Add recursive and non recursive create and mkdir to 
     FileContext. (Sanjay Radia via suresh)
 
+    HADOOP-6233. Rename configuration keys towards API standardization and
+    backward compatibility. (Jithendra Pandey via suresh)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.

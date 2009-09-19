@@ -59,6 +59,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -184,7 +185,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * the key most recently
    */
   private HashMap<String, String> updatingResource;
-  
+ 
   /**
    * Class to keep the information about the keys which replace the deprecated
    * ones.
@@ -355,6 +356,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     //adds deprecation for oldKey1 to two new keys(newkey1, newkey2).
     //so get or set of oldKey1 will correctly populate/access values of 
     //newkey1 and newkey2
+    addDeprecatedKeys();
   }
   
   private Properties properties;
@@ -1742,4 +1744,34 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  //Load deprecated keys in common
+  private static void addDeprecatedKeys() {
+    Configuration.addDeprecation("topology.script.file.name", 
+               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY});
+    Configuration.addDeprecation("topology.script.number.args", 
+               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY});
+    Configuration.addDeprecation("hadoop.configured.node.mapping", 
+               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY});
+    Configuration.addDeprecation("topology.node.switch.mapping.impl", 
+               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY});
+    Configuration.addDeprecation("dfs.umask", 
+               new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY},
+               "dfs.umask is deprecated, use " + 
+               CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY + 
+               " with octal or symbolic specifications.");
+    Configuration.addDeprecation("dfs.df.interval", 
+               new String[]{CommonConfigurationKeys.FS_DF_INTERVAL_KEY});
+    Configuration.addDeprecation("dfs.client.buffer.dir", 
+               new String[]{CommonConfigurationKeys.FS_CLIENT_BUFFER_DIR_KEY});
+    Configuration.addDeprecation("hadoop.native.lib", 
+               new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
+    Configuration.addDeprecation("dfs.access.token.enable", 
+               new String[]{CommonConfigurationKeys.FS_ACCESS_TOKEN_ENABLE_KEY});
+    Configuration.addDeprecation("dfs.access.key.update.interval", 
+               new String[]{CommonConfigurationKeys.FS_ACCESS_KEY_UPDATE_INTERVAL_KEY});
+    Configuration.addDeprecation("dfs.access.token.lifetime", 
+               new String[]{CommonConfigurationKeys.FS_ACCESS_TOKEN_LIFETIME_KEY});
+    Configuration.addDeprecation("fs.default.name", 
+               new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
+  }
 }

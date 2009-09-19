@@ -26,6 +26,7 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * A collection of factories to create the right 
@@ -60,7 +61,9 @@ public class ZlibFactory {
    *         and can be loaded for this job, else <code>false</code>
    */
   public static boolean isNativeZlibLoaded(Configuration conf) {
-    return nativeZlibLoaded && conf.getBoolean("hadoop.native.lib", true); 
+    return nativeZlibLoaded && conf.getBoolean(
+                          CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, 
+                          CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_DEFAULT);
   }
   
   /**

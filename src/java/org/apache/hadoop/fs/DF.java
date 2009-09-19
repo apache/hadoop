@@ -25,6 +25,7 @@ import java.util.EnumSet;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
 
 /** Filesystem disk space usage statistics.  Uses the unix 'df' program.
@@ -72,7 +73,7 @@ public class DF extends Shell {
   }
 
   public DF(File path, Configuration conf) throws IOException {
-    this(path, conf.getLong("dfs.df.interval", DF.DF_INTERVAL_DEFAULT));
+    this(path, conf.getLong(CommonConfigurationKeys.FS_DF_INTERVAL_KEY, DF.DF_INTERVAL_DEFAULT));
   }
 
   public DF(File path, long dfInterval) throws IOException {

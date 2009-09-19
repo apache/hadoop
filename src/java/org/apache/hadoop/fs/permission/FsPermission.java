@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -183,12 +184,10 @@ public class FsPermission implements Writable {
 
   /** umask property label Deprecated key may be removed in version .23 */
   public static final String DEPRECATED_UMASK_LABEL = "dfs.umask"; 
-  public static final String UMASK_LABEL = "dfs.umaskmode";
-  public static final int DEFAULT_UMASK = 0022;
-  { Configuration.addDeprecation(DEPRECATED_UMASK_LABEL,
-      new String [] {UMASK_LABEL}, DEPRECATED_UMASK_LABEL + " is deprecated, " +
-            "use " + UMASK_LABEL + " with octal or symbolic specifications."); 
-  }
+  public static final String UMASK_LABEL = 
+                  CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY;
+  public static final int DEFAULT_UMASK = 
+                  CommonConfigurationKeys.FS_PERMISSIONS_UMASK_DEFAULT;
 
   /** Get the user file creation mask (umask) */
   public static FsPermission getUMask(Configuration conf) {

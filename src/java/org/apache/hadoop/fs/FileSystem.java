@@ -44,6 +44,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -68,7 +69,10 @@ import org.apache.hadoop.util.ReflectionUtils;
  * implementation is DistributedFileSystem.
  *****************************************************************/
 public abstract class FileSystem extends Configured implements Closeable {
-  public static final String FS_DEFAULT_NAME_KEY = "fs.default.name";
+  public static final String FS_DEFAULT_NAME_KEY = 
+                   CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
+  public static final String DEFAULT_FS = 
+                   CommonConfigurationKeys.FS_DEFAULT_NAME_DEFAULT;
 
   public static final Log LOG = LogFactory.getLog(FileSystem.class);
 
@@ -104,7 +108,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the uri of the default filesystem
    */
   public static URI getDefaultUri(Configuration conf) {
-    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, "file:///")));
+    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
   }
 
   /** Set the default filesystem URI in a configuration.
