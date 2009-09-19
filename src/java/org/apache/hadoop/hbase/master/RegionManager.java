@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -105,7 +104,6 @@ class RegionManager implements HConstants {
   private final int maxAssignInOneGo;
 
   final HMaster master;
-  private final RegionHistorian historian;
   private final LoadBalancer loadBalancer;
 
   /** Set of regions to split. */
@@ -137,7 +135,6 @@ class RegionManager implements HConstants {
     HBaseConfiguration conf = master.getConfiguration();
 
     this.master = master;
-    this.historian = RegionHistorian.getInstance();
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -324,31 +321,6 @@ class RegionManager implements HConstants {
     LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
     rs.setPendingOpen(sinfo.getServerName());
     this.regionsInTransition.put(regionName, rs);
-
-    // Since the meta/root may not be available at this moment, we
-    try {
-      // TODO move this into an actual class, and use the RetryableMetaOperation
-      master.toDoQueue.put(
-        new RegionServerOperation(master) {
-            protected boolean process() throws IOException {
-              if (!rootAvailable() || !metaTableAvailable()) {
-                return true; // the two above us will put us on the delayed queue
-              }
-              
-              // this call can cause problems if meta/root is offline!
-              historian.addRegionAssignment(rs.getRegionInfo(),
-                  sinfo.getServerName());
-              return true;
-            }
-          public String toString() {
-            return "RegionAssignmentHistorian from " + sinfo.getServerName();
-          }
-        }
-      );
-    } catch (InterruptedException e) {
-      // ignore and don't write the region historian
-      LOG.info("doRegionAssignment: Couldn't queue the region historian due to exception: " + e);
-    }
 
     returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
   }

@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -112,7 +111,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * Once set, it is never cleared.
    */
   final AtomicBoolean closing = new AtomicBoolean(false);
-  private final RegionHistorian historian;
 
   //////////////////////////////////////////////////////////////////////////////
   // Members
@@ -220,7 +218,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.conf = null;
     this.flushListener = null;
     this.fs = null;
-    this.historian = null;
     this.memstoreFlushSize = 0;
     this.log = null;
     this.regionCompactionDir = null;
@@ -261,7 +258,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     String encodedNameStr = Integer.toString(this.regionInfo.getEncodedName());
     this.regiondir = new Path(basedir, encodedNameStr);
-    this.historian = RegionHistorian.getInstance();
     if (LOG.isDebugEnabled()) {
       // Write out region name as string and its encoded name.
       LOG.debug("Opening region " + this + ", encoded=" +
@@ -668,8 +664,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         LOG.debug("Cleaned up " + FSUtils.getPath(splits) + " " + deleted);
       }
       HRegion regions[] = new HRegion [] {regionA, regionB};
-      this.historian.addRegionSplit(this.regionInfo,
-        regionA.getRegionInfo(), regionB.getRegionInfo());
       return regions;
     }
   }
@@ -785,7 +779,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
             startTime);
         LOG.info("compaction completed on region " + this + " in " + timeTaken);
-        this.historian.addRegionCompaction(regionInfo, timeTaken);
       } finally {
         synchronized (writestate) {
           writestate.compacting = false;
@@ -970,14 +963,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     
     if (LOG.isDebugEnabled()) {
       long now = System.currentTimeMillis();
-      String timeTaken = StringUtils.formatTimeDiff(now, startTime);
       LOG.debug("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
         ", compaction requested=" + compactionRequested);
-      if (!regionInfo.isMetaRegion()) {
-        this.historian.addRegionFlush(regionInfo, timeTaken);
-      }
     }
     return compactionRequested;
   }
@@ -1834,10 +1823,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
-    // Note in historian the creation of new region.
-    if (!info.isMetaRegion()) {
-      RegionHistorian.getInstance().addRegionCreation(info);
-    }
     HRegion region = new HRegion(tableDir,
       new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
       fs, conf, info, null);
@@ -2381,7 +2366,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (3 * Bytes.SIZEOF_LONG) + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
-      (20 * ClassSize.REFERENCE) + ClassSize.OBJECT);
+      (19 * ClassSize.REFERENCE) + ClassSize.OBJECT);
   
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) + 
@@ -2390,7 +2375,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       (16 * ClassSize.CONCURRENT_HASHMAP_ENTRY) + 
       (16 * ClassSize.CONCURRENT_HASHMAP_SEGMENT) +
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY +
-      RegionHistorian.FIXED_OVERHEAD + HLog.FIXED_OVERHEAD +
       ClassSize.align(ClassSize.OBJECT + (5 * Bytes.SIZEOF_BOOLEAN)) +
       (3 * ClassSize.REENTRANT_LOCK));
   

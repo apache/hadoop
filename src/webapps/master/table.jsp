@@ -131,15 +131,11 @@
     int infoPort = serverAddressToServerInfos.get(
         hriEntry.getValue()).getInfoPort();
     
-    String urlRegionHistorian =
-        "/regionhistorian.jsp?regionname="+
-                Bytes.toStringBinary(hriEntry.getKey().getRegionName());
-
     String urlRegionServer =
         "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";
 %>
 <tr>
-  <td><a href="<%= urlRegionHistorian %>"><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></a></td>
+  <td><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></td>
   <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + infoPort %></a></td>
   <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
   <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>

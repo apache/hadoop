@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.Get;
@@ -438,7 +437,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     /*
      * Clean up and close up shop
      */
-    RegionHistorian.getInstance().offline();
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {

@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,8 +65,6 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
       // back on the toDoQueue
       return true;
     }
-
-    final RegionHistorian historian = RegionHistorian.getInstance();
     HRegionInterface server =
         master.connection.getHRegionConnection(getMetaRegion().getServer());
     LOG.info(regionInfo.getRegionNameAsString() + " open on " +
@@ -83,13 +80,6 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(metaRegionName) + " with startcode=" +
       serverInfo.getStartCode() + ", server=" + serverInfo.getServerAddress());
-    if (!historian.isOnline()) {
-      // This is safest place to do the onlining of the historian in
-      // the master.  When we get to here, we know there is a .META.
-      // for the historian to go against.
-      historian.online(this.master.getConfiguration());
-    }
-    historian.addRegionOpen(regionInfo, serverInfo.getServerAddress());
     synchronized (master.regionManager) {
       if (isMetaTable) {
         // It's a meta region.
