@@ -27,9 +27,9 @@
  
   <property name="Name" value="Hadoop-Hdfs"/>
   <property name="name" value="hadoop-hdfs"/>
-  <property name="version" value="0.21.0-dev"/>
-  <property name="hadoop-core.version" value="0.21.0-dev"/>
-  <property name="hadoop-mr.version" value="0.21.0-dev"/>
+  <property name="version" value="0.22.0-dev"/>
+  <property name="hadoop-core.version" value="0.22.0-dev"/>
+  <property name="hadoop-mr.version" value="0.22.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
   <property name="test.hdfswithmr.final.name" value="${name}-hdfswithmr-test-${version}"/>

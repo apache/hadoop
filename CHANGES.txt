@@ -4,6 +4,18 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.21.0 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
     HDFS-538. Per the contract elucidated in HADOOP-6201, throw
     FileNotFoundException from FileSystem::listStatus rather than returning
     null. (Jakob Homan via cdouglas)
@@ -263,7 +275,7 @@ Trunk (unreleased changes)
 
     HDFS-622. checkMinReplication should count live nodes only. (shv)
 
-Release 0.20.1 - Unreleased
+Release 0.20.1 - 2009-09-01
 
   IMPROVEMENTS
 
