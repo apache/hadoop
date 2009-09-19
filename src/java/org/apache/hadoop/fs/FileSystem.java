@@ -41,6 +41,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
@@ -589,10 +590,9 @@ public abstract class FileSystem extends Configured implements Closeable {
       EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException ;
   
-  /*
-   * This version of the create method assumes that the permission 
-   * of create does not matter.
-   * It has been added to support the FileContext that processes the permission
+  /*.
+   * This create has been added to support the FileContext that processes
+   * the permission
    * with umask before calling this method.
    * This a temporary method added to support the transition from FileSystem
    * to FileContext for user applications.
@@ -612,10 +612,115 @@ public abstract class FileSystem extends Configured implements Closeable {
         blockSize, progress);
   }
   
+  
+  /*.
+   * This create has been added to support the FileContext that passes
+   * an absolute permission with (ie umask was already applied) 
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected FSDataOutputStream primitiveCreate(final Path f,
+      final EnumSet<CreateFlag> createFlag,
+      CreateOpts... opts) throws IOException {
+    checkPath(f);
+    int bufferSize = -1;
+    short replication = -1;
+    long blockSize = -1;
+    int bytesPerChecksum = -1;
+    FsPermission permission = null;
+    Progressable progress = null;
+    Boolean createParent = null;
+ 
+    for (CreateOpts iOpt : opts) {
+      if (CreateOpts.BlockSize.class.isInstance(iOpt)) {
+        if (blockSize != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        blockSize = ((CreateOpts.BlockSize) iOpt).getValue();
+      } else if (CreateOpts.BufferSize.class.isInstance(iOpt)) {
+        if (bufferSize != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        bufferSize = ((CreateOpts.BufferSize) iOpt).getValue();
+      } else if (CreateOpts.ReplicationFactor.class.isInstance(iOpt)) {
+        if (replication != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        replication = ((CreateOpts.ReplicationFactor) iOpt).getValue();
+      } else if (CreateOpts.BytesPerChecksum.class.isInstance(iOpt)) {
+        if (bytesPerChecksum != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        bytesPerChecksum = ((CreateOpts.BytesPerChecksum) iOpt).getValue();
+      } else if (CreateOpts.Perms.class.isInstance(iOpt)) {
+        if (permission != null) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        permission = ((CreateOpts.Perms) iOpt).getValue();
+      } else if (CreateOpts.Progress.class.isInstance(iOpt)) {
+        if (progress != null) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        progress = ((CreateOpts.Progress) iOpt).getValue();
+      } else if (CreateOpts.CreateParent.class.isInstance(iOpt)) {
+        if (createParent != null) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        createParent = ((CreateOpts.CreateParent) iOpt).getValue();
+      } else {
+        throw new IllegalArgumentException("Unkown CreateOpts of type " +
+            iOpt.getClass().getName());
+      }
+    }
+    if (blockSize % bytesPerChecksum != 0) {
+      throw new IllegalArgumentException(
+          "blockSize should be a multiple of checksumsize");
+    }
+    
+    FsServerDefaults ssDef = getServerDefaults();
+    
+    if (blockSize == -1) {
+      blockSize = ssDef.getBlockSize();
+    }
+    if (bufferSize == -1) {
+      bufferSize = ssDef.getFileBufferSize();
+    }
+    if (replication == -1) {
+      replication = ssDef.getReplication();
+    }
+    if (permission == null) {
+      permission = FsPermission.getDefault();
+    }
+    if (createParent == null) {
+      createParent = false;
+    }
+    
+    // Default impl  assumes that permissions do not matter and 
+    // nor does the bytesPerChecksum  hence
+    // calling the regular create is good enough.
+    // FSs that implement permissions should override this.
+
+    if (!createParent) { // parent must exist.
+      // since this.create makes parent dirs automatically
+      // we must throw exception if parent does not exist.
+      final FileStatus stat = getFileStatus(f.getParent());
+      if (stat == null) {
+        throw new FileNotFoundException("Missing parent:" + f);
+      }
+      if (!stat.isDir()) {
+          throw new ParentNotDirectoryException("parent is not a dir:" + f);
+      }
+      // parent does exist - go ahead with create of file.
+    }
+    return this.create(f, permission, createFlag, bufferSize, replication,
+        blockSize, progress);
+  }
+  
 
   /**
-   * This version of the mkdirs method assumes that the permission.
-   * It has been added to support the FileContext that processes the the permission
+   * This version of the mkdirs method assumes that the permission is absolute.
+   * It has been added to support the FileContext that processes the permission
    * with umask before calling this method.
    * This a temporary method added to support the transition from FileSystem
    * to FileContext for user applications.
@@ -627,6 +732,39 @@ public abstract class FileSystem extends Configured implements Closeable {
     // calling the regular mkdirs is good enough.
     // FSs that implement permissions should override this.
    return this.mkdirs(f, absolutePermission);
+  }
+
+
+  /**
+   * This version of the mkdirs method assumes that the permission is absolute.
+   * It has been added to support the FileContext that processes the permission
+   * with umask before calling this method.
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected void primitiveMkdir(Path f, FsPermission absolutePermission, 
+                    boolean createParent)
+    throws IOException {
+    
+    if (!createParent) { // parent must exist.
+      // since the this.mkdirs makes parent dirs automatically
+      // we must throw exception if parent does not exist.
+      final FileStatus stat = getFileStatus(f.getParent());
+      if (stat == null) {
+        throw new FileNotFoundException("Missing parent:" + f);
+      }
+      if (!stat.isDir()) {
+          throw new ParentNotDirectoryException("parent is not a dir");
+      }
+      // parent does exist - go ahead with mkdir of leaf
+    }
+    // Default impl is to assume that permissions do not matter and hence
+    // calling the regular mkdirs is good enough.
+    // FSs that implement permissions should override this.
+    if (!this.mkdirs(f, absolutePermission)) {
+      throw new IOException("mkdir of "+ f + " failed");
+    }
   }
 
 

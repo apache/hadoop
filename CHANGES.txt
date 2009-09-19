@@ -595,6 +595,9 @@ Trunk (unreleased changes)
     HADOOP-6166. Further improve the performance of the pure-Java CRC32
     implementation. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-6271. Add recursive and non recursive create and mkdir to 
+    FileContext. (Sanjay Radia via suresh)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.

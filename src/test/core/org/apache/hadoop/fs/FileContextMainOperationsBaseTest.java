@@ -70,7 +70,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   
   @Before
   public void setUp() throws Exception {
-    fc.mkdirs(getTestRootPath("test"), FileContext.DEFAULT_PERM);
+    fc.mkdir(getTestRootPath("test"), FileContext.DEFAULT_PERM, true);
   }
   
   @After
@@ -121,13 +121,13 @@ public abstract class FileContextMainOperationsBaseTest  {
     // cd using a relative path
     Path relativeDir = new Path("existingDir1");
     Path absoluteDir = new Path(workDir.getParent(),"existingDir1");
-    fc.mkdirs(absoluteDir, FileContext.DEFAULT_PERM);
+    fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(relativeDir);
     Assert.assertEquals(absoluteDir,
                                         fc.getWorkingDirectory());
     // cd using a absolute path
     absoluteDir = getTestRootPath("test/existingDir2");
-    fc.mkdirs(absoluteDir, FileContext.DEFAULT_PERM);
+    fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
     
@@ -146,7 +146,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     // Try a URI
     absoluteDir = new Path("file:///tmp/existingDir");
-    fc.mkdirs(absoluteDir, FileContext.DEFAULT_PERM);
+    fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
 
@@ -158,12 +158,12 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertFalse(fc.exists(testDir));
     Assert.assertFalse(fc.isFile(testDir));
 
-    Assert.assertTrue(fc.mkdirs(testDir, FsPermission.getDefault()));
+    fc.mkdir(testDir, FsPermission.getDefault(), true);
 
     Assert.assertTrue(fc.exists(testDir));
     Assert.assertFalse(fc.isFile(testDir));
     
-    Assert.assertTrue(fc.mkdirs(testDir, FsPermission.getDefault()));
+    fc.mkdir(testDir, FsPermission.getDefault(), true);
 
     Assert.assertTrue(fc.exists(testDir));
     Assert.assertFalse(fc.isFile(testDir));
@@ -182,14 +182,14 @@ public abstract class FileContextMainOperationsBaseTest  {
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
     Path testDir = getTestRootPath("test/hadoop");
     Assert.assertFalse(fc.exists(testDir));
-    Assert.assertTrue(fc.mkdirs(testDir, FsPermission.getDefault()));
+    fc.mkdir(testDir, FsPermission.getDefault(), true);
     Assert.assertTrue(fc.exists(testDir));
     
     createFile(getTestRootPath("test/hadoop/file"));
     
     Path testSubDir = getTestRootPath("test/hadoop/file/subdir");
     try {
-      fc.mkdirs(testSubDir, FsPermission.getDefault());
+      fc.mkdir(testSubDir, FsPermission.getDefault(), true);
       Assert.fail("Should throw IOException.");
     } catch (IOException e) {
       // expected
@@ -198,7 +198,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     Path testDeepSubDir = getTestRootPath("test/hadoop/file/deep/sub/dir");
     try {
-      fc.mkdirs(testDeepSubDir, FsPermission.getDefault());
+      fc.mkdir(testDeepSubDir, FsPermission.getDefault(), true);
       Assert.fail("Should throw IOException.");
     } catch (IOException e) {
       // expected
@@ -236,7 +236,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertFalse(fc.exists(testDirs[0]));
 
     for (Path path : testDirs) {
-      Assert.assertTrue(fc.mkdirs(path, FsPermission.getDefault()));
+      fc.mkdir(path, FsPermission.getDefault(), true);
     }
 
     FileStatus[] paths = fc.listStatus(getTestRootPath("test"));
@@ -290,7 +290,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   private void writeReadAndDelete(int len) throws IOException {
     Path path = getTestRootPath("test/hadoop/file");
     
-    fc.mkdirs(path.getParent(), FsPermission.getDefault());
+    fc.mkdir(path.getParent(), FsPermission.getDefault(), true);
 
     FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE), 
         CreateOpts.repFac((short) 1), CreateOpts.blockSize(getBlockSize()));
@@ -320,7 +320,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   public void testOverwrite() throws IOException {
     Path path = getTestRootPath("test/hadoop/file");
     
-    fc.mkdirs(path.getParent(), FsPermission.getDefault());
+    fc.mkdir(path.getParent(), FsPermission.getDefault(), true);
 
     createFile(path);
     
@@ -368,7 +368,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path subdir = getTestRootPath("test/hadoop/subdir");
     
     createFile(file);
-    Assert.assertTrue("Created subdir", fc.mkdirs(subdir, FsPermission.getDefault()));
+    fc.mkdir(subdir,FsPermission.getDefault(), true);
     
     Assert.assertTrue("File exists", fc.exists(file));
     Assert.assertTrue("Dir exists", fc.exists(dir));
@@ -393,7 +393,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   @Test
   public void testDeleteEmptyDirectory() throws IOException {
     Path dir = getTestRootPath("test/hadoop");
-    Assert.assertTrue(fc.mkdirs(dir, FsPermission.getDefault()));
+    fc.mkdir(dir, FsPermission.getDefault(), true);
     Assert.assertTrue("Dir exists", fc.exists(dir));
     Assert.assertTrue("Deleted", fc.delete(dir, false));
     Assert.assertFalse("Dir doesn't exist", fc.exists(dir));
@@ -471,7 +471,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path src = getTestRootPath("test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath("test/new/newfile");
-    fc.mkdirs(dst.getParent(), FileContext.DEFAULT_PERM);
+    fc.mkdir(dst.getParent(), FileContext.DEFAULT_PERM, true);
     rename(src, dst, true, false, true, Rename.OVERWRITE);
   }
 
@@ -503,7 +503,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path src = getTestRootPath("test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath("test/new/existingDir");
-    fc.mkdirs(dst, FileContext.DEFAULT_PERM);
+    fc.mkdir(dst, FileContext.DEFAULT_PERM, true);
     
     // Fails without overwrite option
     try {
@@ -525,7 +525,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FileContext.DEFAULT_PERM);
+    fc.mkdir(src, FileContext.DEFAULT_PERM, true);
     Path dst = getTestRootPath("test/nonExistent/newdir");
     
     try {
@@ -554,12 +554,12 @@ public abstract class FileContextMainOperationsBaseTest  {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FileContext.DEFAULT_PERM);
+    fc.mkdir(src, FileContext.DEFAULT_PERM, true);
     createFile(getTestRootPath("test/hadoop/dir/file1"));
     createFile(getTestRootPath("test/hadoop/dir/subdir/file2"));
     
     Path dst = getTestRootPath("test/new/newdir");
-    fc.mkdirs(dst.getParent(), FileContext.DEFAULT_PERM);
+    fc.mkdir(dst.getParent(), FileContext.DEFAULT_PERM, true);
     
     rename(src, dst, true, false, true, options);
     Assert.assertFalse("Nested file1 exists",
@@ -577,12 +577,12 @@ public abstract class FileContextMainOperationsBaseTest  {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FileContext.DEFAULT_PERM);
+    fc.mkdir(src, FileContext.DEFAULT_PERM, true);
     createFile(getTestRootPath("test/hadoop/dir/file1"));
     createFile(getTestRootPath("test/hadoop/dir/subdir/file2"));
     
     Path dst = getTestRootPath("test/new/newdir");
-    fc.mkdirs(dst, FileContext.DEFAULT_PERM);
+    fc.mkdir(dst, FileContext.DEFAULT_PERM, true);
     createFile(getTestRootPath("test/new/newdir/file1"));
     // Fails without overwrite option
     try {
@@ -605,7 +605,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath("test/hadoop/dir");
-    fc.mkdirs(src, FileContext.DEFAULT_PERM);
+    fc.mkdir(src, FileContext.DEFAULT_PERM, true);
     Path dst = getTestRootPath("test/new/newfile");
     createFile(dst);
     // Fails without overwrite option
@@ -638,14 +638,17 @@ public abstract class FileContextMainOperationsBaseTest  {
     //HADOOP-4760 according to Closeable#close() closing already-closed 
     //streams should have no effect. 
     Path src = getTestRootPath("test/hadoop/file");
-    FSDataOutputStream out = fc.create(src, EnumSet.of(CreateFlag.CREATE));
+    FSDataOutputStream out = fc.create(src, EnumSet.of(CreateFlag.CREATE),
+            Options.CreateOpts.createParent());
+    
     out.writeChar('H'); //write some data
     out.close();
     out.close();
   }
 
   protected void createFile(Path path) throws IOException {
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE));
+    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
+        Options.CreateOpts.createParent());
     out.write(data, 0, data.length);
     out.close();
   }

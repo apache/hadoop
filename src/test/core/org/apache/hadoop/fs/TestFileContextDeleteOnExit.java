@@ -23,6 +23,7 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.fs.Options.CreateOpts;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,7 +63,8 @@ public class TestFileContextDeleteOnExit {
   }
   
   private void createFile(FileContext fc, Path path) throws IOException {
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE));
+    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
+        CreateOpts.createParent());
     out.write(data, 0, data.length);
     out.close();
   }

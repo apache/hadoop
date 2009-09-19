@@ -23,7 +23,7 @@ import org.apache.hadoop.util.Progressable;
 /**
  * This class contains options related to file system operations.
  */
-public class Options {
+public final class Options {
   /**
    * Class to support the varargs for create() options.
    *
@@ -44,6 +44,12 @@ public class Options {
     }
     public static Perms perms(FsPermission perm) {
       return new Perms(perm);
+    }
+    public static CreateParent createParent() {
+      return new CreateParent(true);
+    }
+    public static CreateParent donotCreateParent() {
+      return new CreateParent(false);
     }
     
     static class BlockSize extends CreateOpts {
@@ -114,6 +120,13 @@ public class Options {
         progress = prog;
       }
       Progressable getValue() { return progress; }
+    }
+    
+    static class CreateParent extends CreateOpts {
+      private final Boolean createParent;
+      protected CreateParent(boolean createPar) {
+        createParent = createPar;}
+      Boolean getValue() { return createParent; }
     }
   }
 

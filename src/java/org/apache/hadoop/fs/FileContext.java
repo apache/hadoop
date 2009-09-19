@@ -467,6 +467,9 @@ public final class FileContext {
    *     Permission - umask is applied against permisssion:
    *                  default FsPermissions:getDefault()
    *                  @see #setPermission(Path, FsPermission)
+   *     CreateParent - create missing parent path
+   *                  default is to not create parents
+   *     
    *                The defaults for the following are  SS defaults of the
    *                file server implementing the tart path.
    *                Not all parameters make sense for all kinds of filesystem
@@ -475,9 +478,11 @@ public final class FileContext {
    *    Blocksize - block size for file blocks
    *    ReplicationFactor - replication for blocks
    *    BytesPerChecksum - bytes per checksum
+   *                     
    *    
    * @throws IOException
    */
+  @SuppressWarnings("deprecation") // call to primitiveCreate
   public FSDataOutputStream create(final Path f,
                                     final EnumSet<CreateFlag> createFlag,
                                     CreateOpts... opts)
@@ -485,99 +490,57 @@ public final class FileContext {
     Path absF = fixRelativePart(f);
     FileSystem fsOfAbsF = getFSofPath(absF);
 
-    int bufferSize = -1;
-    short replication = -1;
-    long blockSize = -1;
-    int bytesPerChecksum = -1;
+    // If one of the options is a permission, extract it & apply umask
+    // If not, add a default Perms and apply umask;
+    // FileSystem#create
+
     FsPermission permission = null;
-    Progressable progress = null;
- 
-    for (CreateOpts iOpt : opts) {
-      if (CreateOpts.BlockSize.class.isInstance(iOpt)) {
-        if (blockSize != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
+
+    if (opts != null) {
+      for (int i = 0; i < opts.length; ++i) {
+        if (opts[i] instanceof CreateOpts.Perms) {
+          if (permission != null) 
+            throw new IllegalArgumentException("multiple permissions varargs");
+          permission = ((CreateOpts.Perms) opts[i]).getValue();
+          opts[i] = CreateOpts.perms(permission.applyUMask(umask));
         }
-        blockSize = ((CreateOpts.BlockSize) iOpt).getValue();
-      } else if (CreateOpts.BufferSize.class.isInstance(iOpt)) {
-        if (bufferSize != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        bufferSize = ((CreateOpts.BufferSize) iOpt).getValue();
-      } else if (CreateOpts.ReplicationFactor.class.isInstance(iOpt)) {
-        if (replication != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        replication = ((CreateOpts.ReplicationFactor) iOpt).getValue();
-      } else if (CreateOpts.BytesPerChecksum.class.isInstance(iOpt)) {
-        if (bytesPerChecksum != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        bytesPerChecksum = ((CreateOpts.BytesPerChecksum) iOpt).getValue();
-      } else if (CreateOpts.Perms.class.isInstance(iOpt)) {
-        if (permission != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        permission = ((CreateOpts.Perms) iOpt).getValue();
-      } else if (CreateOpts.Progress.class.isInstance(iOpt)) {
-        if (progress != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        progress = ((CreateOpts.Progress) iOpt).getValue();
-      } else {
-        throw new IllegalArgumentException("Unkown CreateOpts of type " +
-            iOpt.getClass().getName());
       }
     }
-    if (blockSize % bytesPerChecksum != 0) {
-      throw new IllegalArgumentException(
-          "blockSize should be a multiple of checksumsize");
-    }
-    
-    FsServerDefaults ssDef = fsOfAbsF.getServerDefaults();
-    
-    if (blockSize == -1) {
-      blockSize = ssDef.getBlockSize();
-    }
-    if (bufferSize == -1) {
-      bufferSize = ssDef.getFileBufferSize();
-    }
-    if (replication == -1) {
-      replication = ssDef.getReplication();
-    }
-    if (bytesPerChecksum == -1) {
-      bytesPerChecksum = ssDef.getBytesPerChecksum();
-    }
-    if (permission == null) {
-      permission = FsPermission.getDefault();
-    }
 
-    FsPermission absPerms = (permission == null ? 
-        FsPermission.getDefault() : permission).applyUMask(umask);
-
-    return fsOfAbsF.primitiveCreate(absF, absPerms, createFlag,
-                bufferSize, replication, blockSize, progress, bytesPerChecksum);
+    CreateOpts[] theOpts = opts;
+    if (permission == null) { // no permission was set
+      CreateOpts[] newOpts = new CreateOpts[opts.length + 1];
+      System.arraycopy(opts, 0, newOpts, 0, opts.length);
+      newOpts[opts.length] = 
+        CreateOpts.perms(FsPermission.getDefault().applyUMask(umask));
+      theOpts = newOpts;
+    }
+    return fsOfAbsF.primitiveCreate(absF, createFlag, theOpts);
   }
   
   /**
    * Make the given file and all non-existent parents into
-   * directories. Has the semantics of Unix 'mkdir -p'.
-   * Existence of the directory hierarchy is not an error.
+   * directories.
    * 
    * @param dir - the dir to make
    * @param permission - permissions is set permission&~umask
-   * @return true if the operation succeeds; false if dir already exists 
-   * @throws IOException when operation fails (e.g. permissions) etc.
+   * @param createParent - if true then missing parent dirs are created
+   *                       if false then parent must exist
+   * @throws IOException when operation fails not authorized or 
+   *   if parent does not exist and createParent is false.
    */
-  public boolean mkdirs(final Path dir, final FsPermission permission)
+  @SuppressWarnings("deprecation") // call to primitiveMkdir
+  public void mkdir(final Path dir, final FsPermission permission,
+      final boolean createParent)
     throws IOException {
     Path absDir = fixRelativePart(dir);
     FsPermission absFerms = (permission == null ? 
           FsPermission.getDefault() : permission).applyUMask(umask);
-    return getFSofPath(absDir).primitiveMkdir(absDir, absFerms);
+    getFSofPath(absDir).primitiveMkdir(absDir, absFerms, createParent);
   }
 
-  /** Delete a file.
-   *
+  /**
+   * Delete a file.
    * @param f the path to delete.
    * @param recursive if path is a directory and set to 
    * true, the directory is deleted else throws an exception. In
@@ -1196,10 +1159,8 @@ public final class FileContext {
       checkDest(qSrc.getName(), qDst, false);
       if (isDirectory(qSrc)) {
         checkDependencies(qSrc, qDst);
-        if (!mkdirs(qDst, FsPermission.getDefault())) {
-          throw new IOException("Failed to create destination directory `" +
-              qDst + "'");
-        }
+        mkdir(qDst, FsPermission.getDefault(), true);
+
         FileStatus[] contents = FileContext.this.listStatus(qSrc);
         for (FileStatus content : contents) {
           copy(content.getPath(), new Path(qDst, content.getPath()),
