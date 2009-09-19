@@ -433,6 +433,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         LOG.warn("No response from master on reportForDuty. Sleeping and " +
           "then trying again.");
       }
+      HMsg outboundArray[] = null;
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
@@ -454,12 +455,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
             " milliseconds - retrying");
         }
         if ((now - lastMsg) >= msgInterval) {
-          HMsg outboundArray[] = null;
-          synchronized(this.outboundMsgs) {
-            outboundArray =
-              this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
-            this.outboundMsgs.clear();
-          }
           try {
             doMetrics();
             MemoryUsage memory =
@@ -472,9 +467,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
             }
             this.serverInfo.setLoad(hsl);
             this.requestCount.set(0);
+            outboundArray = getOutboundMsgs(outboundArray);
             HMsg msgs[] = hbaseMaster.regionServerReport(
               serverInfo, outboundArray, getMostLoadedRegions());
             lastMsg = System.currentTimeMillis();
+            outboundArray = updateOutboundMsgs(outboundArray);
             if (this.quiesced.get() && onlineRegions.size() == 0) {
               // We've just told the master we're exiting because we aren't
               // serving any regions. So set the stop bit and exit.
@@ -683,6 +680,34 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
 
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  /*
+   * @param msgs Current outboundMsgs array
+   * @return Messages to send or returns current outboundMsgs if it already had
+   * content to send.
+   */
+  private HMsg [] getOutboundMsgs(final HMsg [] msgs) {
+    // If passed msgs are not null, means we haven't passed them to master yet.
+    if (msgs != null) return msgs;
+    synchronized(this.outboundMsgs) {
+      return this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
+    }
+  }
+
+  /*
+   * @param msgs Messages we sent the master.
+   * @return Null
+   */
+  private HMsg [] updateOutboundMsgs(final HMsg [] msgs) {
+    if (msgs == null) return null;
+    synchronized(this.outboundMsgs) {
+      for (HMsg m: msgs) {
+        int index = this.outboundMsgs.indexOf(m);
+        if (index != -1) this.outboundMsgs.remove(index);
+      }
+    }
+    return null;
   }
 
   /**

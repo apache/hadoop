@@ -34,6 +34,8 @@ Release 0.21.0 - Unreleased
    HBASE-1847  Delete latest of a null qualifier when non-null qualifiers
                exist throws a RuntimeException 
    HBASE-1850  src/examples/mapred do not compile after HBASE-1822
+   HBASE-1853  Each time around the regionserver core loop, we clear the
+               messages to pass master, even if we failed to deliver them
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
