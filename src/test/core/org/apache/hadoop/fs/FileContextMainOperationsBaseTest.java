@@ -51,6 +51,10 @@ import org.junit.Test;
  */
 public abstract class FileContextMainOperationsBaseTest  {
   
+  private static String TEST_DIR_AAA2 = "test/hadoop2/aaa";
+  private static String TEST_DIR_AAA = "test/hadoop/aaa";
+  private static String TEST_DIR_AXA = "test/hadoop/axa";
+  private static String TEST_DIR_AXX = "test/hadoop/axx";
   
   private static String TEST_ROOT_DIR =
     System.getProperty("test.build.data", "/tmp");
@@ -61,6 +65,23 @@ public abstract class FileContextMainOperationsBaseTest  {
 
   
   protected static FileContext fc;
+  
+  final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+    public boolean accept(final Path file) {
+      return true;
+    }
+  };
+
+  //A test filter with returns any path containing a "b" 
+  final private static PathFilter TEST_X_FILTER = new PathFilter() {
+    public boolean accept(Path file) {
+      if(file.toString().contains("x") || file.toString().contains("X"))
+        return true;
+      else
+        return false;
+    }     
+  };
+  
   private static byte[] data = new byte[getBlockSize() * 2]; // two blocks of data
   {
     for (int i = 0; i < data.length; i++) {
@@ -260,6 +281,293 @@ public abstract class FileContextMainOperationsBaseTest  {
 
     paths = fc.listStatus(getTestRootPath("test/hadoop/a"));
     Assert.assertEquals(0, paths.length);
+  }
+  
+  @Test
+  public void testListStatusFilterWithNoMatches() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA2),
+                        getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX), };
+    
+   if (fc.exists(testDirs[0]) == false) {
+     for (Path path : testDirs) {
+       fc.mkdir(path, FsPermission.getDefault(), true);
+     }
+   }
+
+    //listStatus with filters returns empty correctly
+    FileStatus[] filteredPaths = fc.util().listStatus(getTestRootPath("test"), 
+                                                      TEST_X_FILTER);
+    Assert.assertEquals(0,filteredPaths.length);
+    
+  }
+  
+  public void testListStatusFilterWithSomeMatches() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AAA2), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+
+    //should return 2 paths ("/test/hadoop/axa2" and "/test/hadoop/axx2")
+    FileStatus[] filteredPaths = fc.util().listStatus(getTestRootPath("test/hadoop"), 
+                                                      TEST_X_FILTER);
+    Assert.assertEquals(2,filteredPaths.length);
+    Assert.assertTrue(getTestRootPath(TEST_DIR_AXA).equals(filteredPaths[0].getPath()) ||
+        getTestRootPath(TEST_DIR_AXA).equals(filteredPaths[1].getPath()));
+    Assert.assertTrue(getTestRootPath(TEST_DIR_AXX).equals(filteredPaths[0].getPath()) ||
+        getTestRootPath(TEST_DIR_AXX).equals(filteredPaths[1].getPath()));
+  }
+  
+  @Test
+  public void testListStatusFilterWithAnArrayOrPaths() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AAA2), };
+    Path[] targetDirs = { getTestRootPath("test"),
+                          getTestRootPath("test/hadoop"), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+
+    //test using a path[]
+    FileStatus[] filteredPaths = fc.util().listStatus(targetDirs, TEST_X_FILTER);
+    Assert.assertEquals(2,filteredPaths.length);
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), 
+                        filteredPaths[0].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), 
+                        filteredPaths[1].getPath()); 
+   
+  }
+  
+  @Test
+  public void testGlobStatusThrowsExceptionForNonExistentFile() throws Exception {
+    try {
+      //This should throw a FileNotFoundException
+      fc.util().globStatus(getTestRootPath("test/hadoopfsdf/?"));
+      Assert.fail("Should throw FileNotFoundException");
+    } catch (FileNotFoundException fnfe) {
+      // expected
+    }
+  }
+  
+  @Test
+  public void testGlobStatusWithNoMatchesInPath() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AAA2), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+
+    //should return nothing
+    FileStatus[] paths = fc.util().globStatus(getTestRootPath("test/hadoop/?"));
+    Assert.assertEquals(0, paths.length);
+  }
+  
+  @Test
+  public void testGlobStatusSomeMatchesInDirectories() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AAA2), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //Should return two items ("/test/hadoop" and "/test/hadoop2")
+    FileStatus[] paths = fc.util().globStatus(getTestRootPath("test/hadoop*"));
+    Assert.assertEquals(2, paths.length);
+    Assert.assertEquals(getTestRootPath("test/hadoop"), paths[0].getPath());
+    Assert.assertEquals(getTestRootPath("test/hadoop2"), paths[1].getPath());
+  }
+  
+  @Test
+  public void testGlobStatusWithMultipleWildCardMatches() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AAA2), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+
+    //Should return all 4 items ("/test/hadoop/aaa", "/test/hadoop/axa"
+    //"/test/hadoop/axx", and "/test/hadoop2/axx")
+    FileStatus[] paths = fc.util().globStatus(getTestRootPath("test/hadoop*/*"));
+    Assert.assertEquals(4, paths.length);
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA), paths[0].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), paths[1].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), paths[2].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA2), paths[3].getPath());
+  }
+  
+  @Test
+  public void testGlobStatusWithMultipleMatchesOfSingleChar() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AAA2), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //Should return only 2 items ("/test/hadoop/axa", "/test/hadoop/axx")
+    FileStatus[] paths = fc.util().globStatus(getTestRootPath("test/hadoop/ax?"));
+    Assert.assertEquals(2, paths.length);
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), paths[0].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), paths[1].getPath());
+  }
+  
+  @Test
+  public void testGlobStatusFilterWithEmptyPathResults() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AXX), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //This should return an empty set
+    FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/?"), 
+                                                      DEFAULT_FILTER);
+    Assert.assertEquals(0,filteredPaths.length);
+  }
+  
+  @Test
+  public void testGlobStatusFilterWithSomePathMatchesAndTrivialFilter() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AXX), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //This should return all three (aaa, axa, axx)
+    FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/*"), 
+                                                      DEFAULT_FILTER);  
+    Assert.assertEquals(3,filteredPaths.length);
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA), 
+                        filteredPaths[0].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), 
+                        filteredPaths[1].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), 
+                        filteredPaths[2].getPath());
+  }
+  
+  @Test
+  public void testGlobStatusFilterWithMultipleWildCardMatchesAndTrivialFilter() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AXX), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //This should return all three (aaa, axa, axx)
+    FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/a??"), 
+                                                      DEFAULT_FILTER);
+    Assert.assertEquals(3,filteredPaths.length);
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA), filteredPaths[0].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), filteredPaths[1].getPath());
+  }
+  
+  @Test
+  public void testGlobStatusFilterWithMultiplePathMatchesAndNonTrivialFilter() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AXX), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //This should return two (axa, axx)
+    FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/*"), 
+                                                      TEST_X_FILTER);  
+    Assert.assertEquals(2,filteredPaths.length);
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), 
+                        filteredPaths[0].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), 
+                        filteredPaths[1].getPath());
+  }
+  
+  @Test
+  public void testGlobStatusFilterWithNoMatchingPathsAndNonTrivialFilter() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AXX), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //This should return an empty set
+    FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/?"), 
+                                                      TEST_X_FILTER);
+    Assert.assertEquals(0,filteredPaths.length);
+  }
+  
+  @Test
+  public void testGlobStatusFilterWithMultiplePathWildcardsAndNonTrivialFilter() throws Exception {
+    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
+                        getTestRootPath(TEST_DIR_AXA),
+                        getTestRootPath(TEST_DIR_AXX),
+                        getTestRootPath(TEST_DIR_AXX), };
+
+    if (fc.exists(testDirs[0]) == false) {
+      for (Path path : testDirs) {
+        fc.mkdir(path, FsPermission.getDefault(), true);
+      }
+    }
+    
+    //This should return two (axa, axx)
+    FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/a??"), 
+                                                      TEST_X_FILTER);
+    Assert.assertEquals(2,filteredPaths.length);
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), filteredPaths[0].getPath());
+    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), filteredPaths[1].getPath());
   }
   
   @Test
