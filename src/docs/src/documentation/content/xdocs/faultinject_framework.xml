@@ -21,41 +21,40 @@
 
 <document>
   <header>
-    <title>Fault injection Framework and Development Guide</title>
+    <title>Fault Injection Framework and Development Guide</title>
   </header>
 
   <body>
     <section>
       <title>Introduction</title>
-      <p>The following is a brief help for Hadoops' Fault Injection (FI)
-        Framework and Developer's Guide for those who will be developing
-        their own faults (aspects).
+      <p>This guide provides an overview of the Hadoop Fault Injection (FI) framework for those
+      who will be developing their own faults (aspects).
       </p>
-      <p>An idea of Fault Injection (FI) is fairly simple: it is an
+      <p>The idea of fault injection is fairly simple: it is an
         infusion of errors and exceptions into an application's logic to
         achieve a higher coverage and fault tolerance of the system.
-        Different implementations of this idea are available at this day.
+        Different implementations of this idea are available today.
         Hadoop's FI framework is built on top of Aspect Oriented Paradigm
         (AOP) implemented by AspectJ toolkit.
       </p>
     </section>
     <section>
       <title>Assumptions</title>
-      <p>The current implementation of the framework assumes that the faults it
-        will be emulating are of non-deterministic nature. i.e. the moment
-        of a fault's happening isn't known in advance and is a coin-flip
-        based.
+      <p>The current implementation of the FI framework assumes that the faults it
+        will be emulating are of non-deterministic nature. That is,  the moment
+        of a fault's happening isn't known in advance and is a coin-flip based.
       </p>
     </section>
+    
     <section>
       <title>Architecture of the Fault Injection Framework</title>
       <figure src="images/FI-framework.gif" alt="Components layout" />
+      
       <section>
-        <title>Configuration management</title>
-        <p>This piece of the framework allow to
-          set expectations for faults to happen. The settings could be applied
-          either statically (in advance) or in a runtime. There's two ways to
-          configure desired level of faults in the framework:
+        <title>Configuration Management</title>
+        <p>This piece of the FI framework allows you to set expectations for faults to happen. 
+        The settings can be applied either statically (in advance) or in runtime. 
+        The desired level of faults in the framework can be configured two ways:
         </p>
         <ul>
           <li>
@@ -71,31 +70,31 @@
           </li>
         </ul>
       </section>
+      
       <section>
-        <title>Probability model</title>
-        <p>This fundamentally is a coin flipper. The methods of this class are
+        <title>Probability Model</title>
+        <p>This is fundamentally a coin flipper. The methods of this class are
           getting a random number between 0.0
-          and 1.0 and then checking if new number has happened to be in the
-          range of
-          0.0 and a configured level for the fault in question. If that
-          condition
-          is true then the fault will occur.
+          and 1.0 and then checking if a new number has happened in the
+          range of 0.0 and a configured level for the fault in question. If that
+          condition is true then the fault will occur.
         </p>
-        <p>Thus, to guarantee a happening of a fault one needs to set an
+        <p>Thus, to guarantee the happening of a fault one needs to set an
           appropriate level to 1.0.
           To completely prevent a fault from happening its probability level
-          has to be set to 0.0
+          has to be set to 0.0.
         </p>
-        <p><strong>Nota bene</strong>: default probability level is set to 0
+        <p><strong>Note</strong>: The default probability level is set to 0
           (zero) unless the level is changed explicitly through the
           configuration file or in the runtime. The name of the default
           level's configuration parameter is
           <code>fi.*</code>
         </p>
       </section>
+      
       <section>
-        <title>Fault injection mechanism: AOP and AspectJ</title>
-        <p>In the foundation of Hadoop's fault injection framework lays
+        <title>Fault Injection Mechanism: AOP and AspectJ</title>
+        <p>The foundation of Hadoop's FI framework includes a
           cross-cutting concept implemented by AspectJ. The following basic
           terms are important to remember:
         </p>
@@ -122,8 +121,9 @@
           </li>
         </ul>
       </section>
+      
       <section>
-        <title>Existing join points</title>
+        <title>Existing Join Points</title>
         <p>
           The following readily available join points are provided by AspectJ:
         </p>
@@ -154,7 +154,7 @@
       </section>
     </section>
     <section>
-      <title>Aspects examples</title>
+      <title>Aspect Example</title>
       <source>
 package org.apache.hadoop.hdfs.server.datanode;
 
@@ -191,17 +191,22 @@ public aspect BlockReceiverAspects {
     }
   }
 }
-      </source>
-      <p>
-        The aspect has two main parts: the join point
+</source>
+
+      <p>The aspect has two main parts: </p>
+       <ul>
+        <li>The join point
         <code>pointcut callReceivepacket()</code>
         which servers as an identification mark of a specific point (in control
-        and/or data flow) in the life of an application. A call to the advice -
+        and/or data flow) in the life of an application. </li>
+        
+       <li> A call to the advice -
         <code>before () throws IOException : callReceivepacket()</code>
-        - will be
-        <a href="#Putting+it+all+together">injected</a>
-        before that specific spot of the application's code.
-      </p>
+        - will be injected (see
+        <a href="#Putting+it+all+together">Putting It All Together</a>)
+        before that specific spot of the application's code.</li>
+        </ul>
+      
 
       <p>The pointcut identifies an invocation of class'
         <code>java.io.OutputStream write()</code>
@@ -210,8 +215,8 @@ public aspect BlockReceiverAspects {
         take place within the body of method
         <code>receivepacket()</code>
         from class<code>BlockReceiver</code>.
-        The method can have any parameters and any return type. possible
-        invocations of
+        The method can have any parameters and any return type. 
+        Possible invocations of
         <code>write()</code>
         method happening anywhere within the aspect
         <code>BlockReceiverAspects</code>
@@ -222,24 +227,22 @@ public aspect BlockReceiverAspects {
         class. In such a case the names of the faults have to be different
         if a developer wants to trigger them separately.
       </p>
-      <p><strong>Note 2</strong>: After
-        <a href="#Putting+it+all+together">injection step</a>
+      <p><strong>Note 2</strong>: After the injection step (see
+        <a href="#Putting+it+all+together">Putting It All Together</a>)
         you can verify that the faults were properly injected by
-        searching for
-        <code>ajc</code>
-        keywords in a disassembled class file.
+        searching for <code>ajc</code> keywords in a disassembled class file.
       </p>
 
     </section>
     
     <section>
-      <title>Fault naming convention &amp; namespaces</title>
-      <p>For the sake of unified naming
+      <title>Fault Naming Convention and Namespaces</title>
+      <p>For the sake of a unified naming
       convention the following two types of names are recommended for a
       new aspects development:</p>
       <ul>
-        <li>Activity specific notation (as
-          when we don't care about a particular location of a fault's
+        <li>Activity specific notation 
+          (when we don't care about a particular location of a fault's
           happening). In this case the name of the fault is rather abstract:
           <code>fi.hdfs.DiskError</code>
         </li>
@@ -251,14 +254,11 @@ public aspect BlockReceiverAspects {
     </section>
 
     <section>
-      <title>Development tools</title>
+      <title>Development Tools</title>
       <ul>
-        <li>Eclipse
-          <a href="http://www.eclipse.org/ajdt/">AspectJ
-            Development Toolkit
-          </a>
-          might help you in the aspects' development
-          process.
+        <li>The Eclipse
+          <a href="http://www.eclipse.org/ajdt/">AspectJ Development Toolkit</a> 
+          may help you when developing aspects
         </li>
         <li>IntelliJ IDEA provides AspectJ weaver and Spring-AOP plugins
         </li>
@@ -266,60 +266,67 @@ public aspect BlockReceiverAspects {
     </section>
 
     <section>
-      <title>Putting it all together</title>
-      <p>Faults (or aspects) have to injected (or woven) together before
-        they can be used. Here's a step-by-step instruction how this can be
-        done.</p>
-      <p>Weaving aspects in place:</p>
-      <source>
+      <title>Putting It All Together</title>
+      <p>Faults (aspects) have to injected (or woven) together before
+        they can be used. Follow these instructions:</p>
+        
+    <ul>
+      <li>To weave aspects in place use:
+<source>
 % ant injectfaults
-      </source>
-      <p>If you
-        misidentified the join point of your aspect then you'll see a
-        warning similar to this one below when 'injectfaults' target is
-        completed:</p>
-        <source>
+</source>
+      </li>
+      
+      <li>If you
+        misidentified the join point of your aspect you will see a
+        warning (similar to the one shown here) when 'injectfaults' target is
+        completed:
+<source>
 [iajc] warning at
 src/test/aop/org/apache/hadoop/hdfs/server/datanode/ \
           BlockReceiverAspects.aj:44::0
 advice defined in org.apache.hadoop.hdfs.server.datanode.BlockReceiverAspects
 has not been applied [Xlint:adviceDidNotMatch]
-        </source>
-      <p>It isn't an error, so the build will report the successful result.
-
-        To prepare dev.jar file with all your faults weaved in
-      place run (HDFS-475 pending)</p>
-        <source>
+</source>
+        </li>
+        
+      <li>It isn't an error, so the build will report the successful result. <br />
+     To prepare dev.jar file with all your faults weaved in place (HDFS-475 pending) use:
+<source>
 % ant jar-fault-inject
-        </source>
+</source>
+        </li>
 
-      <p>Test jars can be created by</p>
-        <source>
+     <li>To create test jars use:
+<source>
 % ant jar-test-fault-inject
-        </source>
+</source>
+      </li>
 
-      <p>To run HDFS tests with faults injected:</p>
-        <source>
+     <li>To run HDFS tests with faults injected use:
+<source>
 % ant run-test-hdfs-fault-inject
-        </source>
+</source>
+      </li>
+    </ul>
+        
       <section>
-        <title>How to use fault injection framework</title>
-        <p>Faults could be triggered by the following two meanings:
+        <title>How to Use the Fault Injection Framework</title>
+        <p>Faults can be triggered as follows:
         </p>
         <ul>
-          <li>In the runtime as:
-            <source>
+          <li>During runtime:
+<source>
 % ant run-test-hdfs -Dfi.hdfs.datanode.BlockReceiver=0.12
-            </source>
-            To set a certain level, e.g. 25%, of all injected faults one can run
+</source>
+            To set a certain level, for example 25%, of all injected faults use:
             <br/>
-            <source>
+<source>
 % ant run-test-hdfs-fault-inject -Dfi.*=0.25
-            </source>
+</source>
           </li>
-          <li>or from a program as follows:
-          </li>
-        </ul>
+          <li>From a program:
+  
         <source>
 package org.apache.hadoop.fs;
 
@@ -354,23 +361,23 @@ public class DemoFiTest extends TestCase {
     //Cleaning up test test environment
   }
 }
-        </source>
+</source>
+        </li>
+        </ul>
+        
         <p>
-          as you can see above these two methods do the same thing. They are
-          setting the probability level of
-          <code>hdfs.datanode.BlockReceiver</code>
-          at 12%.
-          The difference, however, is that the program provides more
-          flexibility and allows to turn a fault off when a test doesn't need
-          it anymore.
+          As you can see above these two methods do the same thing. They are
+          setting the probability level of <code>hdfs.datanode.BlockReceiver</code>
+          at 12%. The difference, however, is that the program provides more
+          flexibility and allows you to turn a fault off when a test no longer needs it.
         </p>
       </section>
     </section>
 
     <section>
-      <title>Additional information and contacts</title>
-      <p>This two sources of information seem to be particularly
-        interesting and worth further reading:
+      <title>Additional Information and Contacts</title>
+      <p>These two sources of information are particularly
+        interesting and worth reading:
       </p>
       <ul>
         <li>
@@ -381,9 +388,8 @@ public class DemoFiTest extends TestCase {
         <li>AspectJ Cookbook (ISBN-13: 978-0-596-00654-9)
         </li>
       </ul>
-      <p>Should you have any farther comments or questions to the author
-        check
-        <a href="http://issues.apache.org/jira/browse/HDFS-435">HDFS-435</a>
+      <p>If you have additional comments or questions for the author check
+        <a href="http://issues.apache.org/jira/browse/HDFS-435">HDFS-435</a>.
       </p>
     </section>
   </body>

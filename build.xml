@@ -27,9 +27,9 @@
  
   <property name="Name" value="Hadoop-Hdfs"/>
   <property name="name" value="hadoop-hdfs"/>
-  <property name="version" value="0.21.0-dev"/>
-  <property name="hadoop-core.version" value="0.21.0-dev"/>
-  <property name="hadoop-mr.version" value="0.21.0-dev"/>
+  <property name="version" value="0.22.0-dev"/>
+  <property name="hadoop-core.version" value="0.22.0-dev"/>
+  <property name="hadoop-mr.version" value="0.22.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
   <property name="test.hdfswithmr.final.name" value="${name}-hdfswithmr-test-${version}"/>
@@ -43,7 +43,6 @@
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="contrib.dir" value="${basedir}/src/contrib"/>
   <property name="docs.src" value="${basedir}/src/docs"/>
-  <property name="src.docs.cn" value="${basedir}/src/docs/cn"/>
   <property name="changes.src" value="${docs.src}/changes"/>
 
   <property name="build.dir" value="${basedir}/build"/>
@@ -63,7 +62,6 @@
             value="${sun.arch.data.model}"/>
 
   <property name="build.docs" value="${build.dir}/docs"/>
-  <property name="build.docs.cn" value="${build.dir}/docs/cn"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.javadoc.timestamp" value="${build.javadoc}/index.html" />
   <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
@@ -821,22 +819,6 @@
     <style basedir="${hdfs.src.dir}" destdir="${build.docs}"
            includes="hdfs-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
-    <antcall target="cn-docs"/>
-  </target>
-
-  <target name="cn-docs" depends="forrest.check, init" 
-       description="Generate forrest-based Chinese documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." 
-        if="forrest.home">
-    <exec dir="${src.docs.cn}" executable="${forrest.home}/bin/forrest" failonerror="true">
-      <env key="LANG" value="en_US.utf8"/>
-      <env key="JAVA_HOME" value="${java5.home}"/>
-    </exec>
-    <copy todir="${build.docs.cn}">
-      <fileset dir="${src.docs.cn}/build/site/" />
-    </copy>
-    <style basedir="${hdfs.src.dir}" destdir="${build.docs.cn}"
-           includes="hdfs-default.xml" style="conf/configuration.xsl"/>
-    <antcall target="changes-to-html"/>
   </target>
 
   <target name="forrest.check" unless="forrest.home" depends="java5.check">
@@ -1150,7 +1132,6 @@
     <delete dir="${build.dir}"/>
     <delete dir="${build-fi.dir}"/>
     <delete dir="${docs.src}/build"/>
-    <delete dir="${src.docs.cn}/build"/>
   </target>
 
   <!-- ================================================================== -->

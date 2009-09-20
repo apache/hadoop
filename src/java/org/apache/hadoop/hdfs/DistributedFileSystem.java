@@ -177,6 +177,13 @@ public class DistributedFileSystem extends FileSystem {
     }
     return dfs.getBlockLocations(getPathName(file.getPath()), start, len);
   }
+  
+  @Override
+  public BlockLocation[] getFileBlockLocations(Path p, 
+      long start, long len) throws IOException {
+    return dfs.getBlockLocations(getPathName(p), start, len);
+
+  }
 
   @Override
   public void setVerifyChecksum(boolean verifyChecksum) {
@@ -203,11 +210,21 @@ public class DistributedFileSystem extends FileSystem {
     EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
 
-    return new FSDataOutputStream
-       (dfs.create(getPathName(f), permission,
+    return new FSDataOutputStream(dfs.create(getPathName(f), permission,
                    flag, replication, blockSize, progress, bufferSize),
         statistics);
   }
+  
+  @SuppressWarnings("deprecation")
+  @Override
+  protected FSDataOutputStream primitiveCreate(Path f,
+    FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
+    short replication, long blockSize, Progressable progress,
+    int bytesPerChecksum) throws IOException {
+    return new FSDataOutputStream(dfs.primitiveCreate(getPathName(f),
+        absolutePermission, flag, true, replication, blockSize,
+        progress, bufferSize, bytesPerChecksum),statistics);
+   } 
 
   /**
    * Same as create(), except fails if parent directory doesn't already exist.
@@ -291,6 +308,13 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     return dfs.mkdirs(getPathName(f), permission, true);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  protected boolean primitiveMkdir(Path f, FsPermission absolutePermission)
+    throws IOException {
+    return dfs.primitiveMkdir(getPathName(f), absolutePermission);
   }
 
   /** {@inheritDoc} */
