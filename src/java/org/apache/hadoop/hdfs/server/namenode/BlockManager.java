@@ -1102,15 +1102,18 @@ public class BlockManager {
     int numCurrentReplica = numLiveReplicas
       + pendingReplications.getNumReplicas(storedBlock);
 
+    if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
+        numLiveReplicas >= minReplication)
+      storedBlock = completeBlock(fileINode, storedBlock);
+
     // check whether safe replication is reached for the block
-    namesystem.incrementSafeBlockCount(numCurrentReplica);
+    // only complete blocks are counted towards that
+    if(!storedBlock.isUnderConstruction())
+      namesystem.incrementSafeBlockCount(numCurrentReplica);
 
     // if file is under construction, then check whether the block
     // can be completed
     if (fileINode.isUnderConstruction()) {
-      if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
-          numLiveReplicas >= minReplication)
-        storedBlock = completeBlock(fileINode, storedBlock);
       return storedBlock;
     }
 

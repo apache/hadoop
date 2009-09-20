@@ -3371,7 +3371,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   void setBlockTotal() {
     if (safeMode == null)
       return;
-    safeMode.setBlockTotal((int)getBlocksTotal());
+    safeMode.setBlockTotal((int)getCompleteBlocksTotal());
   }
 
   /**
@@ -3379,6 +3379,33 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   public long getBlocksTotal() {
     return blockManager.getTotalBlocks();
+  }
+
+  /**
+   * Get the total number of COMPLETE blocks in the system.
+   * For safe mode only complete blocks are counted.
+   */
+  long getCompleteBlocksTotal() {
+    // Calculate number of blocks under construction
+    long numUCBlocks = 0;
+    for (Lease lease : leaseManager.getSortedLeases()) {
+      for(String path : lease.getPaths()) {
+        INode node = dir.getFileINode(path);
+        assert node != null : "Found a lease for nonexisting file.";
+        assert node.isUnderConstruction() :
+          "Found a lease for file that is not under construction.";
+        INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
+        BlockInfo[] blocks = cons.getBlocks();
+        if(blocks == null)
+          continue;
+        for(BlockInfo b : blocks) {
+          if(b.isUnderConstruction())
+            numUCBlocks++;
+        }
+      }
+    }
+    LOG.info("Number of blocks under construction: " + numUCBlocks);
+    return getBlocksTotal() - numUCBlocks;
   }
 
   /**

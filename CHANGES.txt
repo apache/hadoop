@@ -8,6 +8,8 @@ Append branch (unreleased changes)
 
     HDFS-576. Block report includes under-construction replicas. (shv)
 
+    HDFS-636. SafeMode counts complete blocks only. (shv)
+
   NEW FEATURES
 
     HDFS-536. Support hflush at DFSClient. (hairong)

@@ -30,8 +30,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.log4j.Level;
 
 public class TestRenameWhileOpen extends junit.framework.TestCase {
-  private static final long LEASE_PERIOD = 500L;
-
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -54,7 +52,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setFloat("dfs.safemode.threshold.pct", 0.5f);
+    conf.setInt("dfs.safemode.threshold.pct", 1);
     conf.setBoolean("dfs.support.append", true);
 
     // create cluster
@@ -106,7 +104,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
                                    null, null, null);
-      waitLeaseRecovery(cluster);
+      cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
@@ -138,7 +136,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setFloat("dfs.safemode.threshold.pct", 0.5f);
+    conf.setInt("dfs.safemode.threshold.pct", 1);
     conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 2************************************");
 
@@ -178,7 +176,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
                                    null, null, null);
-      waitLeaseRecovery(cluster);
+      cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
@@ -211,7 +209,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setFloat("dfs.safemode.threshold.pct", 0.5f);
+    conf.setInt("dfs.safemode.threshold.pct", 1);
     conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 3************************************");
 
@@ -243,7 +241,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
                                    null, null, null);
-      waitLeaseRecovery(cluster);
+      cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
@@ -274,7 +272,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setFloat("dfs.safemode.threshold.pct", 0.5f);
+    conf.setInt("dfs.safemode.threshold.pct", 1);
     conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 4************************************");
 
@@ -305,7 +303,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
                                    null, null, null);
-      waitLeaseRecovery(cluster);
+      cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
@@ -323,15 +321,6 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     } finally {
       fs.close();
       cluster.shutdown();
-    }
-  }
-
-  void waitLeaseRecovery(MiniDFSCluster cluster) {
-    cluster.setLeasePeriod(LEASE_PERIOD, LEASE_PERIOD);
-    // wait for the lease to expire
-    try {
-      Thread.sleep(5 * LEASE_PERIOD);
-    } catch (InterruptedException e) {
     }
   }
 }
