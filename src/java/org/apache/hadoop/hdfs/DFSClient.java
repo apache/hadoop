@@ -575,35 +575,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     leasechecker.put(src, result);
     return result;
   }
-  
-  /**
-   * Same as {{@link #create(String, FsPermission, EnumSet, short, long,
-   *  Progressable, int)}   except that the permission
-   *   is absolute (ie has already been masked with umask.
-   * 
-   */
-  public OutputStream primitiveCreate(String src, 
-                             FsPermission absPermission,
-                             EnumSet<CreateFlag> flag,
-                             boolean createParent,
-                             short replication,
-                             long blockSize,
-                             Progressable progress,
-                             int buffersize,
-                             int bytesPerChecksum)
-    throws IOException {
-    checkOpen();
-    if (absPermission == null) {
-      absPermission = 
-        FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf));
-    } 
-    LOG.debug(src + ": masked=" + absPermission);
-    OutputStream result = new DFSOutputStream(src, absPermission,
-        flag, createParent, replication, blockSize, progress, buffersize,
-        bytesPerChecksum);
-    leasechecker.put(src, result);
-    return result;
-  } 
 
   /**
    * Append to an existing HDFS file.  
@@ -1030,28 +1001,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      DSQuotaExceededException.class,
                                      FileNotFoundException.class,
                                      FileAlreadyExistsException.class);
-    }
-  }
-  
-  /**
-   * Same {{@link #mkdirs(String, FsPermission, boolean)} except
-   * that the permissions has already been masked against umask.
-   */
-  public boolean primitiveMkdir(String src, FsPermission absPermission)
-    throws IOException{
-    checkOpen();
-    if (absPermission == null) {
-      absPermission = 
-        FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf));
-    } 
-
-    LOG.debug(src + ": masked=" + absPermission);
-    try {
-      return namenode.mkdirs(src, absPermission, true);
-    } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-                                     NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
     }
   }
 

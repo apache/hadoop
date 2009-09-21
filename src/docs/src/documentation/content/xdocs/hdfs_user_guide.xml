@@ -24,7 +24,7 @@
 
   <header>
     <title>
-      HDFS Users Guide
+      HDFS User Guide
     </title>
   </header>
 
@@ -32,8 +32,9 @@
     <section> <title>Purpose</title>
       <p>
  This document is a starting point for users working with
- Hadoop Distributed File System (HDFS) either as a part of a Hadoop cluster  
- or as a stand-alone general purpose distributed file system.
+ Hadoop Distributed File System (HDFS) either as a part of a
+ <a href="http://hadoop.apache.org/">Hadoop</a>
+ cluster or as a stand-alone general purpose distributed file system.
  While HDFS is designed to "just work" in many environments, a working
  knowledge of HDFS helps greatly with configuration improvements and
  diagnostics on a specific cluster.
@@ -45,7 +46,7 @@
  HDFS is the primary distributed storage used by Hadoop applications. A
  HDFS cluster primarily consists of a NameNode that manages the
  file system metadata and DataNodes that store the actual data. The
- <a href="hdfs_design.html">HDFS Architecture Guide</a> describes HDFS in detail. This user guide primarily deals with 
+ <a href="hdfs_design.html">HDFS Architecture</a> describes HDFS in detail. This user guide primarily deals with 
  the interaction of users and administrators with HDFS clusters. 
  The <a href="images/hdfsarchitecture.gif">HDFS architecture diagram</a> depicts 
  basic interactions among NameNode, the DataNodes, and the clients. 
@@ -60,7 +61,8 @@
     <li>
     	Hadoop, including HDFS, is well suited for distributed storage
     	and distributed processing using commodity hardware. It is fault
-    	tolerant, scalable, and extremely simple to expand. MapReduce, 
+    	tolerant, scalable, and extremely simple to expand.
+    	<a href="mapred_tutorial.html">Map/Reduce</a>,
     	well known for its simplicity and applicability for large set of
     	distributed applications, is an integral part of Hadoop.
     </li>
@@ -132,17 +134,18 @@
     </li>
     </ul>
     
-    </section> <section> <title> Prerequisites </title>
+    </section> <section> <title> Pre-requisites </title>
     <p>
- 	The following documents describe how to install and set up a Hadoop cluster: 
+ 	The following documents describe installation and set up of a
+ 	Hadoop cluster : 
     </p>
  	<ul>
  	<li>
- 		<a href="http://hadoop.apache.org/common/docs/current/single_node_setup.html">Single Node Setup</a>
+ 		<a href="quickstart.html">Hadoop Quick Start</a>
  		for first-time users.
  	</li>
  	<li>
- 		<a href="http://hadoop.apache.org/common/docs/current/cluster_setup.html">Cluster Setup</a>
+ 		<a href="cluster_setup.html">Hadoop Cluster Setup</a>
  		for large, distributed clusters.
  	</li>
     </ul>
@@ -170,15 +173,14 @@
       Hadoop includes various shell-like commands that directly
       interact with HDFS and other file systems that Hadoop supports.
       The command
-      <code>bin/hdfs dfs -help</code>
+      <code>bin/hadoop fs -help</code>
       lists the commands supported by Hadoop
       shell. Furthermore, the command
-      <code>bin/hdfs dfs -help command-name</code>
+      <code>bin/hadoop fs -help command-name</code>
       displays more detailed help for a command. These commands support
-      most of the normal files system operations like copying files,
+      most of the normal files ystem operations like copying files,
       changing file permissions, etc. It also supports a few HDFS
-      specific operations like changing replication of files. 
-      For more information see <a href="http://hadoop.apache.org/common/docs/current/file_system_shell.html">File System Shell Guide</a>.
+      specific operations like changing replication of files.
      </p>
 
    <section> <title> DFSAdmin Command </title>
@@ -221,19 +223,17 @@
     </li>
    	</ul>
    	<p>
-   	  For command usage, see  
-   	  <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#dfsadmin">dfsadmin</a>.
+   	  For command usage, see <a href="commands_manual.html#dfsadmin">dfsadmin command</a>.
    	</p>  
    </section>
    
    </section> 
 	<section> <title>Secondary NameNode</title>
-   <note>
-   The Secondary NameNode has been deprecated. 
-   Instead, consider using the 
-   <a href="hdfs_user_guide.html#Checkpoint+node">Checkpoint Node</a> or 
-   <a href="hdfs_user_guide.html#Backup+node">Backup Node</a>.
-   </note>
+   <p>
+     The Secondary NameNode has been deprecated; considering using the 
+   <a href="hdfs_user_guide.html#Checkpoint+node">Checkpoint node</a> or 
+   <a href="hdfs_user_guide.html#Backup+node">Backup node</a> instead.
+   </p>
    <p>	
      The NameNode stores modifications to the file system as a log
      appended to a native file system file, <code>edits</code>. 
@@ -277,11 +277,10 @@
      read by the primary NameNode if necessary.
    </p>
    <p>
-     For command usage, see  
-     <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#secondarynamenode">secondarynamenode</a>.
+     For command usage, see <a href="commands_manual.html#secondarynamenode"><code>secondarynamenode</code> command</a>.
    </p>
    
-   </section><section> <title> Checkpoint Node </title>
+   </section><section> <title> Checkpoint node </title>
    <p>NameNode persists its namespace using two files: <code>fsimage</code>,
       which is the latest checkpoint of the namespace and <code>edits</code>,
       a journal (log) of changes to the namespace since the checkpoint.
@@ -330,17 +329,17 @@
    </p>
    <p>Multiple checkpoint nodes may be specified in the cluster configuration file.</p>
    <p>
-     For command usage, see  
-     <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#namenode">namenode</a>.
+     For command usage, see
+     <a href="commands_manual.html#namenode"><code>namenode</code> command</a>.
    </p>
    </section>
 
-   <section> <title> Backup Node </title>
+   <section> <title> Backup node </title>
    <p>	
     The Backup node provides the same checkpointing functionality as the 
     Checkpoint node, as well as maintaining an in-memory, up-to-date copy of the
     file system namespace that is always synchronized with the active NameNode state.
-    Along with accepting a journal stream of file system edits from 
+    Along with accepting a journal stream of filesystem edits from 
     the NameNode and persisting this to disk, the Backup node also applies 
     those edits into its own copy of the namespace in memory, thus creating 
     a backup of the namespace.
@@ -385,12 +384,12 @@
     For a complete discussion of the motivation behind the creation of the 
     Backup node and Checkpoint node, see 
     <a href="https://issues.apache.org/jira/browse/HADOOP-4539">HADOOP-4539</a>.
-    For command usage, see  
-     <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#namenode">namenode</a>.
+    For command usage, see 
+    <a href="commands_manual.html#namenode"><code>namenode</code> command</a>.
    </p>
    </section>
 
-   <section> <title> Import Checkpoint </title>
+   <section> <title> Import checkpoint </title>
    <p>
      The latest checkpoint can be imported to the NameNode if
      all other copies of the image and the edits files are lost.
@@ -419,8 +418,8 @@
      consistent, but does not modify it in any way.
    </p>
    <p>
-     For command usage, see  
-      <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#namenode">namenode</a>.
+     For command usage, see
+     <a href="commands_manual.html#namenode"><code>namenode</code> command</a>.
    </p>
    </section>
 
@@ -462,8 +461,7 @@
       <a href="http://issues.apache.org/jira/browse/HADOOP-1652">HADOOP-1652</a>.
     </p>
     <p>
-     For command usage, see  
-     <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#balancer">balancer</a>.
+     For command usage, see <a href="commands_manual.html#balancer">balancer command</a>.
    </p>
     
    </section> <section> <title> Rack Awareness </title>
@@ -514,8 +512,7 @@
       <code>fsck</code> ignores open files but provides an option to select all files during reporting.
       The HDFS <code>fsck</code> command is not a
       Hadoop shell command. It can be run as '<code>bin/hadoop fsck</code>'.
-      For command usage, see  
-      <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#fsck">fsck</a>.
+      For command usage, see <a href="commands_manual.html#fsck"><code>fsck</code> command</a>. 
       <code>fsck</code> can be run on the whole file system or on a subset of files.
      </p>
      
@@ -530,7 +527,7 @@
       of Hadoop and rollback the cluster to the state it was in 
       before
       the upgrade. HDFS upgrade is described in more detail in 
-      <a href="http://wiki.apache.org/hadoop/Hadoop%20Upgrade">Hadoop Upgrade</a> Wiki page.
+      <a href="http://wiki.apache.org/hadoop/Hadoop%20Upgrade">upgrade wiki</a>.
       HDFS can have one such backup at a time. Before upgrading,
       administrators need to remove existing backup using <code>bin/hadoop
       dfsadmin -finalizeUpgrade</code> command. The following
@@ -574,13 +571,13 @@
       treated as the superuser for HDFS. Future versions of HDFS will
       support network authentication protocols like Kerberos for user
       authentication and encryption of data transfers. The details are discussed in the 
-      <a href="hdfs_permissions_guide.html">Permissions Guide</a>.
+      <a href="hdfs_permissions_guide.html">HDFS Admin Guide: Permissions</a>.
      </p>
      
    </section> <section> <title> Scalability </title>
      <p>
-      Hadoop currently runs on clusters with thousands of nodes. The  
-      <a href="http://wiki.apache.org/hadoop/PoweredBy">PoweredBy</a> Wiki page 
+      Hadoop currently runs on clusters with thousands of nodes.
+      <a href="http://wiki.apache.org/hadoop/PoweredBy">Powered By Hadoop</a>
       lists some of the organizations that deploy Hadoop on large
       clusters. HDFS has one NameNode for each cluster. Currently
       the total memory available on NameNode is the primary scalability
@@ -588,8 +585,8 @@
       files stored in HDFS helps with increasing cluster size without
       increasing memory requirements on NameNode.
    
-      The default configuration may not suite very large clustes. The 
-      <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a> Wiki page lists
+      The default configuration may not suite very large clustes.
+      <a href="http://wiki.apache.org/hadoop/FAQ">Hadoop FAQ</a> page lists
       suggested configuration improvements for large Hadoop clusters.
      </p>
      
@@ -602,16 +599,15 @@
       </p>
       <ul>
       <li>
-        <a href="http://hadoop.apache.org/">Hadoop Site</a>: The home page for the Apache Hadoop site.
+        <a href="http://hadoop.apache.org/">Hadoop Home Page</a>: The start page for everything Hadoop.
       </li>
       <li>
-        <a href="http://wiki.apache.org/hadoop/FrontPage">Hadoop Wiki</a>:
-        The home page (FrontPage) for the Hadoop Wiki. Unlike the released documentation, 
-        which is part of Hadoop source tree, Hadoop Wiki is
+        <a href="http://wiki.apache.org/hadoop/FrontPage">Hadoop Wiki</a>
+        : Front page for Hadoop Wiki documentation. Unlike this
+        guide which is part of Hadoop source tree, Hadoop Wiki is
         regularly edited by Hadoop Community.
       </li>
-      <li> <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>: 
-      The FAQ Wiki page.
+      <li> <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a> from Hadoop Wiki.
       </li>
       <li>
         Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/">
@@ -627,7 +623,7 @@
          description of most of the configuration variables available.
       </li>
       <li>
-        <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html">Hadoop Commands Guide</a>: Hadoop commands usage.
+        <a href="commands_manual.html">Hadoop Command Guide</a>: commands usage.
       </li>
       </ul>
      </section>
