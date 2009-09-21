@@ -20,13 +20,16 @@
 
 <document>
 
- <header> <title> HDFS Quotas Guide</title> </header>
+ <header> <title>Quotas Guide</title> </header>
 
  <body>
+ 
+ <section> <title>Overview</title>
 
- <p> The Hadoop Distributed File System (HDFS) allows the administrator to set quotas for the number of names used and the
+ <p> The Hadoop Distributed File System (HDFS) allows the <strong>administrator</strong> to set quotas for the number of names used and the
 amount of space used for individual directories. Name quotas and space quotas operate independently, but the administration and
 implementation of the two types of quotas are closely parallel. </p>
+</section>
 
 <section> <title>Name Quotas</title>
 

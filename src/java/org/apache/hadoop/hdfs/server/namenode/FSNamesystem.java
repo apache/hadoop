@@ -2443,7 +2443,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     boolean firstOne = true;
     while (nonExcess.size() - replication > 0) {
       DatanodeInfo cur = null;
-      long minSpace = Long.MAX_VALUE;
 
       // check if we can del delNodeHint
       if (firstOne && delNodeHint !=null && nonExcess.contains(delNodeHint) &&
