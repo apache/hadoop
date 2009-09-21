@@ -1,6 +1,7 @@
 Hadoop Change Log
 
 Trunk (unreleased changes)
+
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
