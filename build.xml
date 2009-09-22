@@ -32,7 +32,6 @@
   <property name="hadoop-mr.version" value="0.22.0-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
-  <property name="test.hdfswithmr.final.name" value="${name}-hdfswithmr-test-${version}"/>
   <property name="ant.final.name" value="${name}-ant-${version}"/>
   <property name="year" value="2009"/>
 
@@ -90,7 +89,6 @@
   <property name="test.junit.maxmemory" value="512m" />
 
   <property name="test.hdfs.build.classes" value="${test.build.dir}/classes"/>
-  <property name="test.hdfs.with.mr.build.classes" value="${test.build.dir}/hdfs-with-mr/classes"/>
   <property name="test.hdfs.with.mr.classpath.id" value="test.hdfs.with.mr.classpath"/>
 
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
@@ -396,21 +394,13 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
 
-  <target name="jar-test-fault-inject" depends="jar-hdfs-test-fault-inject, jar-hdfswithmr-test-fault-inject"
+  <target name="jar-test-fault-inject" depends="jar-hdfs-test-fault-inject"
           description="Make hadoop-test.jar files"/>
 
   <target name="jar-hdfs-test-fault-inject" description="Make hadoop-test-fi.jar">
     <subant buildpath="build.xml" target="jar-hdfs-test">
       <property name="build.dir" value="${build-fi.dir}"/>
       <property name="test.hdfs.final.name" value="${name}-test-${version}-fi"/>
-    </subant>
-  </target>
-
-  <target name="jar-hdfswithmr-test-fault-inject" description="Make hadoop-hdfswithmr-test-fi.jar">
-    <subant buildpath="build.xml" target="jar-hdfswithmr-test">
-      <property name="build.dir" value="${build-fi.dir}"/>
-      <property name="test.hdfswithmr.final.name"
-                value="${name}-hdsfwithmr-test-${version}-fi"/>
     </subant>
   </target>
 
@@ -479,30 +469,12 @@
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV19" todir="${test.cache.data}"/>
   </target>
 
-  <target name="compile-hdfs-with-mr-test" depends="compile-hdfs-test">
-    <mkdir dir="${test.hdfs.with.mr.build.classes}"/>
-    <javac 
-      encoding="${build.encoding}" 
-      srcdir="${test.src.dir}/hdfs-with-mr"
-      includes="org/apache/hadoop/**/*.java"
-      destdir="${test.hdfs.with.mr.build.classes}"
-      debug="${javac.debug}"
-      optimize="${javac.optimize}"
-      target="${javac.version}"
-      source="${javac.version}"
-      deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args} ${javac.args.warnings}" />
-      <classpath refid="test.hdfs.with.mr.classpath"/>
-    </javac>
-  </target>
-
-
   <!-- ================================================================== -->
   <!-- Make hadoop-test.jar                                               -->
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="jar-test" depends="jar-hdfs-test, jar-hdfswithmr-test" description="Make hadoop-test.jar"/> 
+  <target name="jar-test" depends="jar-hdfs-test" description="Make hadoop-test.jar"/> 
 
   <target name="jar-hdfs-test" depends="compile-hdfs-test" description="Make hadoop-hdfs-test.jar">
     <copy todir="${test.build.classes}">
@@ -513,24 +485,6 @@
          <manifest>
            <attribute name="Main-Class"
                       value="org/apache/hadoop/test/HdfsTestDriver"/>
-          <section name="org/apache/hadoop">
-            <attribute name="Implementation-Title" value="${ant.project.name}"/>
-            <attribute name="Implementation-Version" value="${version}"/>
-            <attribute name="Implementation-Vendor" value="Apache"/>
-          </section>
-         </manifest>
-    </jar>
-  </target>
-
-  <target name="jar-hdfswithmr-test" depends="compile-hdfs-with-mr-test" description="Make hadoop-hdfswithmr-test.jar"> 
-    <copy todir="${test.build.classes}">
-      <fileset dir="${test.hdfs.with.mr.build.classes}"/>
-    </copy>
-    <jar jarfile="${build.dir}/${test.hdfswithmr.final.name}.jar"
-         basedir="${test.build.classes}">
-         <manifest>
-           <attribute name="Main-Class"
-                      value="org/apache/hadoop/test/HdfsWithMRTestDriver"/>
           <section name="org/apache/hadoop">
             <attribute name="Implementation-Title" value="${ant.project.name}"/>
             <attribute name="Implementation-Version" value="${version}"/>
@@ -646,20 +600,10 @@
     <fail unless="continueOnFailure">Tests failed!</fail>
   </target>
 
-  <target name="test-contrib" depends="compile, compile-hdfs-with-mr-test" description="Run contrib unit tests">
-    <subant target="test">
-       <property name="version" value="${version}"/>
-       <property name="hadoop-version" value="${hadoop-core.version}"/>
-       <property name="clover.jar" value="${clover.jar}"/>
-       <fileset file="${contrib.dir}/build.xml"/>
-    </subant> 
-  </target>
-
   <target name="test-core" description="Run hdfs unit tests">
     <delete file="${test.build.dir}/testsfailed"/>
     <property name="continueOnFailure" value="true"/>
     <antcall target="run-test-hdfs"/>
-    <antcall target="run-test-hdfs-with-mr"/>
     <antcall target="run-test-hdfs-fault-inject"/>
     <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail>
