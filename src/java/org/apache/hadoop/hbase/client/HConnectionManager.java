@@ -329,6 +329,8 @@ public class HConnectionManager implements HConstants {
           } catch (IOException e) {
             if (tries == numRetries - 1) {
               // This was our last chance - don't bother sleeping
+              LOG.info("getMaster attempt " + tries + " of " + this.numRetries +
+                " failed; no more retrying.", e);
               break;
             }
             LOG.info("getMaster attempt " + tries + " of " + this.numRetries +
@@ -847,7 +849,7 @@ public class HConnectionManager implements HConstants {
     public HRegionInterface getHRegionConnection(
         HServerAddress regionServer, boolean getMaster) 
     throws IOException {
-      if(getMaster) {
+      if (getMaster) {
         getMaster();
       }
       HRegionInterface server;
@@ -925,9 +927,9 @@ public class HConnectionManager implements HConstants {
               "Timed out trying to locate root region");
         }
 
-        // get a connection to the region server
-        HRegionInterface server = getHRegionConnection(rootRegionAddress);
         try {
+          // Get a connection to the region server
+          HRegionInterface server = getHRegionConnection(rootRegionAddress);
           // if this works, then we're good, and we have an acceptable address,
           // so we can stop doing retries and return the result.
           server.getRegionInfo(HRegionInfo.ROOT_REGIONINFO.getRegionName());

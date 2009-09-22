@@ -36,6 +36,8 @@ Release 0.21.0 - Unreleased
    HBASE-1850  src/examples/mapred do not compile after HBASE-1822
    HBASE-1853  Each time around the regionserver core loop, we clear the
                messages to pass master, even if we failed to deliver them
+   HBASE-1815  HBaseClient can get stuck in an infinite loop while attempting
+               to contact a failed regionserver
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

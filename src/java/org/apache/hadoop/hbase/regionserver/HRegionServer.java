@@ -567,24 +567,20 @@ public class HRegionServer implements HConstants, HRegionInterface,
             if (e instanceof IOException) {
               e = RemoteExceptionHandler.checkIOException((IOException) e);
             }
-            if (tries < this.numRetries) {
-              LOG.warn("Processing message (Retry: " + tries + ")", e);
-              tries++;
-            } else {
-              LOG.error("Exceeded max retries: " + this.numRetries, e);
-              if (checkFileSystem()) {
-                // Filesystem is OK.  Something is up w/ ZK or master.  Sleep
-                // a little while if only to stop our logging many times a
-                // millisecond.
-                Thread.sleep(1000);
-              }
+            tries++;
+            if (tries > 0 && (tries % this.numRetries) == 0) {
+              // Check filesystem every so often.
+              checkFileSystem();
             }
             if (this.stopRequested.get()) {
-                LOG.info("Stop was requested, clearing the toDo " +
-                        "despite of the exception");
-                toDo.clear();
-                continue;
+              LOG.info("Stop requested, clearing toDo despite exception");
+              toDo.clear();
+              continue;
             }
+            LOG.warn("Attempt=" + tries, e);
+            // No point retrying immediately; this is probably connection to
+            // master issue.  Doing below will cause us to sleep.
+            lastMsg = System.currentTimeMillis();
           }
         }
         // Do some housekeeping before going to sleep

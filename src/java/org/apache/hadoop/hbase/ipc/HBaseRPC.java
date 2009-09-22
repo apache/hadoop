@@ -417,14 +417,12 @@ public class HBaseRPC {
       try {
         return getProxy(protocol, clientVersion, addr, conf);
       } catch(ConnectException se) {  // namenode has not been started
-        LOG.info("Server at " + addr + " not available yet, Zzzzz...");
         ioe = se;
         if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
           LOG.info("Server at " + addr + " could not be reached after " +
-                  reconnectAttempts + " tries, giving up.");
-          throw new RetriesExhaustedException(addr.toString(), "unknown".getBytes(),
-                  "unknown".getBytes(), reconnectAttempts - 1,
-                  new ArrayList<Throwable>());
+            reconnectAttempts + " tries, giving up.");
+          throw new RetriesExhaustedException("Failed setting up proxy to " +
+            addr.toString() + " after attempts=" + reconnectAttempts);
       }
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);

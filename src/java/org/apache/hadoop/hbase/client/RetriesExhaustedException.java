@@ -26,6 +26,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  */ 
 public class RetriesExhaustedException extends IOException {
   private static final long serialVersionUID = 1876775844L;
+
+  public RetriesExhaustedException(final String msg) {
+    super(msg);
+  }
+
   /** 
    * Create a new RetriesExhaustedException from the list of prior failures.
    * @param serverName name of HRegionServer
@@ -35,11 +40,9 @@ public class RetriesExhaustedException extends IOException {
    * @param exceptions List of exceptions that failed before giving up
    */ 
   public RetriesExhaustedException(String serverName, final byte [] regionName,
-      final byte []  row,
-      int numTries, List<Throwable> exceptions) {
+      final byte []  row, int numTries, List<Throwable> exceptions) {
     super(getMessage(serverName, regionName, row, numTries, exceptions));
   }
-  
 
   private static String getMessage(String serverName, final byte [] regionName,
       final byte [] row,

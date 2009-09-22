@@ -76,6 +76,7 @@ public class HBaseClient {
   final protected int maxIdleTime; //connections will be culled if it was idle for 
                            //maxIdleTime msecs
   final protected int maxRetries; //the max. no. of retries for socket connections
+  final protected long failureSleep; // Time to sleep before retry on failure.
   protected boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected boolean tcpKeepAlive; // if T then use keepalives
   protected int pingInterval; // how often sends ping to the server in msecs
@@ -308,10 +309,7 @@ public class HBaseClient {
             this.socket.setSoTimeout(pingInterval);
             break;
           } catch (SocketTimeoutException toe) {
-            /* The max number of retries is 45,
-             * which amounts to 20s*45 = 15 minutes retries.
-             */
-            handleConnectionFailure(timeoutFailures++, 45, toe);
+            handleConnectionFailure(timeoutFailures++, maxRetries, toe);
           } catch (IOException ie) {
             handleConnectionFailure(ioFailures++, maxRetries, ie);
           }
@@ -338,7 +336,7 @@ public class HBaseClient {
     /* Handle connection failures
      *
      * If the current number of retries is equal to the max number of retries,
-     * stop retrying and throw the exception; Otherwise backoff 1 second and
+     * stop retrying and throw the exception; Otherwise backoff N seconds and
      * try connecting again.
      *
      * This Method is only called from inside setupIOstreams(), which is
@@ -368,11 +366,12 @@ public class HBaseClient {
 
       // otherwise back off and retry
       try {
-        Thread.sleep(1000);
+        Thread.sleep(failureSleep);
       } catch (InterruptedException ignored) {}
       
       LOG.info("Retrying connect to server: " + remoteId.getAddress() + 
-          ". Already tried " + curRetries + " time(s).");
+        " after sleeping " + failureSleep + "ms. Already tried " + curRetries +
+        " time(s).");
     }
 
     /* Write the header for each connection
@@ -636,10 +635,11 @@ public class HBaseClient {
       SocketFactory factory) {
     this.valueClass = valueClass;
     this.maxIdleTime = 
-      conf.getInt("ipc.client.connection.maxidletime", 10000); //10s
-    this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
-    this.tcpNoDelay = conf.getBoolean("ipc.client.tcpnodelay", false);
-    this.tcpKeepAlive = conf.getBoolean("ipc.client.tcpkeepalive", true);
+      conf.getInt("hbase.ipc.client.connection.maxidletime", 10000); //10s
+    this.maxRetries = conf.getInt("hbase.ipc.client.connect.max.retries", 0);
+    this.failureSleep = conf.getInt("hbase.client.pause", 2000);
+    this.tcpNoDelay = conf.getBoolean("hbase.ipc.client.tcpnodelay", false);
+    this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
     this.pingInterval = getPingInterval(conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("The ping interval is" + this.pingInterval + "ms.");
