@@ -187,6 +187,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-598. Eclipse launch task for HDFS. (Eli Collins via tomwhite)
 
+    HDFS-641. Move all of the components that depend on map/reduce to 
+    map/reduce. (omalley)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
