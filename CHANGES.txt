@@ -11,9 +11,7 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
-    HADOOP-6274. Fix TestLocalFSFileContextMainOperations test failure. (Gary Murry via suresh).
   
-
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -618,6 +616,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6271. Add recursive and non recursive create and mkdir to 
     FileContext. (Sanjay Radia via suresh)
 
+    HADOOP-6261. Add URI based tests for FileContext. 
+    (Ravi Pulari via suresh).
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
@@ -1074,6 +1075,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6151. Added a input filter to all of the http servlets that quotes
     html characters in the parameters, to prevent cross site scripting 
     attacks. (omalley)
+
+    HADOOP-6274. Fix TestLocalFSFileContextMainOperations test failure.
+    (Gary Murry via suresh).
 
 Release 0.20.1 - 2009-09-01
 
