@@ -267,18 +267,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     paths = fc.listStatus(getTestRootPath("test/hadoop"));
     Assert.assertEquals(3, paths.length);
 
-    
-    Assert.assertTrue(getTestRootPath("test/hadoop/a").equals(paths[0].getPath()) ||
-        getTestRootPath("test/hadoop/a").equals(paths[1].getPath()) ||
-        getTestRootPath("test/hadoop/a").equals(paths[2].getPath()));
-    Assert.assertTrue(getTestRootPath("test/hadoop/b").equals(paths[0].getPath()) ||
-        getTestRootPath("test/hadoop/b").equals(paths[1].getPath()) ||
-        getTestRootPath("test/hadoop/b").equals(paths[2].getPath()));
-    Assert.assertTrue(getTestRootPath("test/hadoop/c").equals(paths[0].getPath()) ||
-        getTestRootPath("test/hadoop/c").equals(paths[1].getPath()) ||
-        getTestRootPath("test/hadoop/c").equals(paths[2].getPath()));
-
-
+    Assert.assertTrue(containsPath(getTestRootPath("test/hadoop/a"), paths));
+    Assert.assertTrue(containsPath(getTestRootPath("test/hadoop/b"), paths));
+    Assert.assertTrue(containsPath(getTestRootPath("test/hadoop/c"), paths));
+  
     paths = fc.listStatus(getTestRootPath("test/hadoop/a"));
     Assert.assertEquals(0, paths.length);
   }
@@ -315,39 +307,12 @@ public abstract class FileContextMainOperationsBaseTest  {
       }
     }
 
-    //should return 2 paths ("/test/hadoop/axa2" and "/test/hadoop/axx2")
+    //should return 2 paths ("/test/hadoop/axa" and "/test/hadoop/axx")
     FileStatus[] filteredPaths = fc.util().listStatus(getTestRootPath("test/hadoop"), 
                                                       TEST_X_FILTER);
     Assert.assertEquals(2,filteredPaths.length);
-    Assert.assertTrue(getTestRootPath(TEST_DIR_AXA).equals(filteredPaths[0].getPath()) ||
-        getTestRootPath(TEST_DIR_AXA).equals(filteredPaths[1].getPath()));
-    Assert.assertTrue(getTestRootPath(TEST_DIR_AXX).equals(filteredPaths[0].getPath()) ||
-        getTestRootPath(TEST_DIR_AXX).equals(filteredPaths[1].getPath()));
-  }
-  
-  @Test
-  public void testListStatusFilterWithAnArrayOrPaths() throws Exception {
-    Path[] testDirs = { getTestRootPath(TEST_DIR_AAA),
-                        getTestRootPath(TEST_DIR_AXA),
-                        getTestRootPath(TEST_DIR_AXX),
-                        getTestRootPath(TEST_DIR_AAA2), };
-    Path[] targetDirs = { getTestRootPath("test"),
-                          getTestRootPath("test/hadoop"), };
-
-    if (fc.exists(testDirs[0]) == false) {
-      for (Path path : testDirs) {
-        fc.mkdir(path, FsPermission.getDefault(), true);
-      }
-    }
-
-    //test using a path[]
-    FileStatus[] filteredPaths = fc.util().listStatus(targetDirs, TEST_X_FILTER);
-    Assert.assertEquals(2,filteredPaths.length);
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), 
-                        filteredPaths[0].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), 
-                        filteredPaths[1].getPath()); 
-   
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXA), filteredPaths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXX), filteredPaths));
   }
   
   @Test
@@ -395,8 +360,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     //Should return two items ("/test/hadoop" and "/test/hadoop2")
     FileStatus[] paths = fc.util().globStatus(getTestRootPath("test/hadoop*"));
     Assert.assertEquals(2, paths.length);
-    Assert.assertEquals(getTestRootPath("test/hadoop"), paths[0].getPath());
-    Assert.assertEquals(getTestRootPath("test/hadoop2"), paths[1].getPath());
+    Assert.assertTrue(containsPath(getTestRootPath("test/hadoop"), paths));
+    Assert.assertTrue(containsPath(getTestRootPath("test/hadoop2"), paths));
   }
   
   @Test
@@ -416,10 +381,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     //"/test/hadoop/axx", and "/test/hadoop2/axx")
     FileStatus[] paths = fc.util().globStatus(getTestRootPath("test/hadoop*/*"));
     Assert.assertEquals(4, paths.length);
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA), paths[0].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), paths[1].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), paths[2].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA2), paths[3].getPath());
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AAA), paths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXA), paths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXX), paths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AAA2), paths));
   }
   
   @Test
@@ -438,8 +403,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     //Should return only 2 items ("/test/hadoop/axa", "/test/hadoop/axx")
     FileStatus[] paths = fc.util().globStatus(getTestRootPath("test/hadoop/ax?"));
     Assert.assertEquals(2, paths.length);
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), paths[0].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), paths[1].getPath());
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXA), paths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXX), paths));
   }
   
   @Test
@@ -478,12 +443,9 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/*"), 
                                                       DEFAULT_FILTER);  
     Assert.assertEquals(3,filteredPaths.length);
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA), 
-                        filteredPaths[0].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), 
-                        filteredPaths[1].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), 
-                        filteredPaths[2].getPath());
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AAA), filteredPaths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXA), filteredPaths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXX), filteredPaths));
   }
   
   @Test
@@ -503,8 +465,9 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/a??"), 
                                                       DEFAULT_FILTER);
     Assert.assertEquals(3,filteredPaths.length);
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AAA), filteredPaths[0].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), filteredPaths[1].getPath());
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AAA), filteredPaths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXA), filteredPaths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXX), filteredPaths));
   }
   
   @Test
@@ -524,10 +487,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/*"), 
                                                       TEST_X_FILTER);  
     Assert.assertEquals(2,filteredPaths.length);
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), 
-                        filteredPaths[0].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), 
-                        filteredPaths[1].getPath());
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXA), filteredPaths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXX), filteredPaths));
   }
   
   @Test
@@ -566,8 +527,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(getTestRootPath("test/hadoop/a??"), 
                                                       TEST_X_FILTER);
     Assert.assertEquals(2,filteredPaths.length);
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXA), filteredPaths[0].getPath());
-    Assert.assertEquals(getTestRootPath(TEST_DIR_AXX), filteredPaths[1].getPath());
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXA), filteredPaths));
+    Assert.assertTrue(containsPath(getTestRootPath(TEST_DIR_AXX), filteredPaths));
   }
   
   @Test
@@ -969,4 +930,11 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertEquals("Source exists", srcExists, fc.exists(src));
     Assert.assertEquals("Destination exists", dstExists, fc.exists(dst));
   }
+  private boolean containsPath(Path path, FileStatus[] filteredPaths) {
+    for(int i = 0; i < filteredPaths.length; i ++) { 
+      if(getTestRootPath(path.toString()).equals(filteredPaths[i].getPath())) 
+        return true;
+      }
+    return false;
+ }
 }

@@ -1061,6 +1061,8 @@ Trunk (unreleased changes)
     html characters in the parameters, to prevent cross site scripting 
     attacks. (omalley)
 
+    HADOOP-6274. Fix TestLocalFSFileContextMainOperations test failure. (Gary Murry via suresh).
+
 Release 0.20.1 - Unreleased
 
   INCOMPATIBLE CHANGES
