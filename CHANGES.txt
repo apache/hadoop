@@ -11,6 +11,8 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+    HADOOP-6274. Fix TestLocalFSFileContextMainOperations test failure. (Gary Murry via suresh).
+  
 
 Release 0.21.0 - Unreleased
 
