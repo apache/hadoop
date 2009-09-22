@@ -11,6 +11,7 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+  HDFS-640. Fixed TestHDFSFileContextMainOperations.java build failure. (suresh)
 
 
 Release 0.21.0 - Unreleased
