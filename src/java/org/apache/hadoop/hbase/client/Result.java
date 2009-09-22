@@ -398,6 +398,7 @@ public class Result implements Writable {
   throws IOException {
     familyMap = null;
     row = null;
+    kvs = null;
     int totalBuffer = in.readInt();
     if(totalBuffer == 0) {
       bytes = null;
@@ -410,7 +411,7 @@ public class Result implements Writable {
   
   //Create KeyValue[] when needed
   private void readFields() {
-    if(bytes == null) {
+    if (bytes == null) {
       this.kvs = new KeyValue[0];
       return;
     }
