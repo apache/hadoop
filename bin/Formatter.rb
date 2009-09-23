@@ -2,12 +2,20 @@
 module Formatter
   # Base abstract class for results formatting.
   class Formatter
+    def is_kernel?(obj)
+      obj.kind_of?(Module) and obj.name == "Kernel"
+    end
+
     # Takes an output stream and a print width.
-    def initialize(o, w = 100)
-      raise TypeError.new("Type %s of parameter %s is not IO" % [o.class, o]) \
-        unless o.instance_of? IO
-      @out = o
-      @maxWidth = w
+    def initialize(opts={})
+      defaults = {:output_stream => Kernel, :format_width => 100}
+      options = defaults.merge(opts)
+
+      @out = options[:output_stream]
+      raise TypeError.new("Type %s of parameter %s is not IO" % [@out.class, @out]) \
+        unless @out.instance_of? IO or is_kernel?(@out)
+
+      @maxWidth = options[:format_width]
       @rowCount = 0
     end
 
@@ -27,7 +35,7 @@ module Formatter
       end
       if args.class == String
         output(@maxWidth, args)
-        puts
+        @out.puts
         return
       end
       # TODO: Look at the type.  Is it RowResult?
@@ -35,7 +43,7 @@ module Formatter
         splits = split(@maxWidth, dump(args[0]))
         for l in splits
           output(@maxWidth, l)
-          puts
+          @out.puts
         end
       elsif args.length == 2
         col1width = (not widths or widths.length == 0) ? @maxWidth / 4 : @maxWidth * widths[0] / 100
@@ -57,7 +65,7 @@ module Formatter
           @out.print(" ")
           output(col2width, splits2[index])
           index += 1
-          puts
+          @out.puts
         end
       else
         # Print a space to set off multi-column rows

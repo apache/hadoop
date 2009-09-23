@@ -43,6 +43,7 @@ Release 0.21.0 - Unreleased
    HBASE-1857  WrongRegionException when setting region online after .META.
                split (Cosmin Lehane via Stack)
    HBASE-1809  NPE thrown in BoundedRangeFileInputStream
+   HBASE-1859  Misc shell fixes patch (Kyle Oba via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

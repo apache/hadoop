@@ -71,7 +71,8 @@ for arg in found
   ARGV.delete(arg)
 end
 # Presume console format.
-@formatter = Formatter::Console.new(STDOUT, format_width)
+# Formatter takes an :output_stream parameter, if you don't want STDOUT.
+@formatter = Formatter::Console.new(:format_width => format_width)
 # TODO, etc.  @formatter = Formatter::XHTML.new(STDOUT)
 
 # Setup the HBase module.  Create a configuration.
@@ -100,9 +101,6 @@ promoteConstants(org.apache.hadoop.hbase.HColumnDescriptor.constants)
 promoteConstants(org.apache.hadoop.hbase.HTableDescriptor.constants)
 promoteConstants(HBase.constants)
 
-# If script2run, try running it.  Will go on to run the shell unless
-# script calls 'exit' or 'exit 0' or 'exit errcode'.
-load(script2run) if script2run
 
 # Start of the hbase shell commands.
 
@@ -427,6 +425,12 @@ end
 def split(tableNameOrRegionName)
   admin().split(tableNameOrRegionName)
 end
+
+
+# If script2run, try running it.  Will go on to run the shell unless
+# script calls 'exit' or 'exit 0' or 'exit errcode'.
+load(script2run) if script2run
+
 
 # Output a banner message that tells users where to go for help
 puts <<HERE
