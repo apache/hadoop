@@ -13,6 +13,7 @@ Trunk (unreleased changes)
   BUG FIXES
   HDFS-640. Fixed TestHDFSFileContextMainOperations.java build failure. (suresh)
 
+  HDFS-637. DataNode sends a Success ack when block write fails. (hairong)
 
 Release 0.21.0 - Unreleased
 
