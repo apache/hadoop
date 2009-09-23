@@ -25,6 +25,7 @@ Input/OutputFormats, a table indexing MapReduce job, and utility
 <ul>
 <li><a href="#classpath">HBase, MapReduce and the CLASSPATH</a></li>
 <li><a href="#sink">HBase as MapReduce job data source and sink</a></li>
+<li><a href="#bulk">Bulk Import writing HFiles directly</a></li>
 <li><a href="#examples">Example Code</a></li>
 </ul>
 
@@ -82,7 +83,7 @@ specify source/sink table and column names in your configuration.</p>
 <p>Reading from hbase, the TableInputFormat asks hbase for the list of
 regions and makes a map-per-region or <code>mapred.map.tasks maps</code>,
 whichever is smaller (If your job only has two maps, up mapred.map.tasks
-to a number > number of regions). Maps will run on the adjacent TaskTracker
+to a number &gt; number of regions). Maps will run on the adjacent TaskTracker
 if you are running a TaskTracer and RegionServer per node.
 Writing, it may make sense to avoid the reduce step and write yourself back into
 hbase from inside your map. You'd do this when your job does not need the sort
@@ -102,6 +103,48 @@ when your table is large and your upload is not such that it will greatly
 alter the number of existing regions when done; otherwise use the default
 partitioner.
 </p>
+
+<h2><a name="bulk">Bulk import writing HFiles directly</a></h2>
+<p>If importing into a new table, its possible to by-pass the HBase API
+and write your content directly to the filesystem properly formatted as
+HBase data files (HFiles).  Your import will run faster, perhaps as much
+as an order of magnitude faster if not more.
+</p>
+<p>You will need to write a MapReduce job.  The map task will know how to
+pull from your data source.  Your reduce task will need to be hooked up to
+{@link org.apache.hadoop.hbase.mapreduce.HFileOutputFormat}.  It expects to receive a row id and a value.
+The row id must be formatted as a {@link org.apache.hadoop.hbase.io.ImmutableBytesWritable} and the
+value as a {@link org.apache.hadoop.hbase.KeyValue} (A KeyValue holds he value for a cell and
+its coordinates; row/family/qualifier/timestamp, etc.).  Your reduce task
+will also need to emit the KeyValues in order.  See {@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer}
+for an example reducer that emits KeyValues in order.
+</p>
+<p>Most importantly, you will also need to ensure that your MapReduce job
+ensures a total ordering among all keys.  MapReduce by default distributes
+keys among reducers using a Partitioner that hashes on the map task output
+key: i.e. the reducer a key ends up in is by default determined as follows
+<code> (key.hashCode() &amp; Integer.MAX_VALUE) % numReduceTasks</code>.
+Keys are sorted by the MapReduce framework before they are passed to the reducer
+BUT the sort is scoped to the particular reducer.  Its not a global sort.
+Given the default hash Partitioner, if the keys were 0-4 (inclusive), and you
+had configured two reducers, reducer 0 would have get keys 0, 2 and 4 whereas
+reducer 1 would get keys 1 and 3 (in order).  For your bulk import to work,
+the keys need to be orderd so reducer 0 gets keys 0-2 and reducer 1 gets keys
+3-4 (See TotalOrderPartitioner up in hadoop for more on what this means). 
+To achieve total ordering, you will likely need to write a Partitioner
+that is intimate with your tables key namespace and that knows how
+to distribute keys among the reducers so a total order is maintained.
+</p>
+<p>See org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat for an example that puts together
+{@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer} and {@link org.apache.hadoop.hbase.mapreduce.HFileOutputFormat}.</p>
+
+<p>HFileOutputFormat writes HFiles.  When your MapReduce file finishes, in your
+output directory you will have many HFiles.  Run the script <code>bin/loadtable.rb</code>
+to move the files from the MapReduce output directory under hbase.  See head of script
+for how to run it.  This script
+also adds the new table data to the hbase catalog tables.  When the script completes,
+on the next run of the hbase metascanner -- it usually runs every minute -- your
+new table should be visible and populated.</p>
 
 <h2><a name="examples">Example Code</a></h2>
 <h3>Sample Row Counter</h3>

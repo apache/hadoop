@@ -397,15 +397,16 @@ public class StoreFile implements HConstants {
 
   /**
    * @param fs
-   * @param p
+   * @param dir Directory to create file in.
    * @return random filename inside passed <code>dir</code>
    */
-  static Path getUniqueFile(final FileSystem fs, final Path p)
+  public static Path getUniqueFile(final FileSystem fs, final Path dir)
   throws IOException {
-    if (!fs.getFileStatus(p).isDir()) {
-      throw new IOException("Expecting a directory");
+    if (!fs.getFileStatus(dir).isDir()) {
+      throw new IOException("Expecting " + dir.toString() +
+        " to be a directory");
     }
-    return fs.getFileStatus(p).isDir()? getRandomFilename(fs, p): p;
+    return fs.getFileStatus(dir).isDir()? getRandomFilename(fs, dir): dir;
   }
 
   /**

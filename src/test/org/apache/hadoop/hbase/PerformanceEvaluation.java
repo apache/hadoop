@@ -94,8 +94,8 @@ public class PerformanceEvaluation implements HConstants {
   private static final int ONE_GB = 1024 * 1024 * 1000;
   private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
   
-  static final byte [] FAMILY_NAME = Bytes.toBytes("info");
-  static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
+  public static final byte [] FAMILY_NAME = Bytes.toBytes("info");
+  public static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
   
   protected static final HTableDescriptor TABLE_DESCRIPTOR;
   static {
@@ -780,7 +780,7 @@ public class PerformanceEvaluation implements HConstants {
    * consumes about 30% of CPU time.
    * @return Generated random value to insert into a table cell.
    */
-  static byte[] generateValue(final Random r) {
+  public static byte[] generateValue(final Random r) {
     byte [] b = new byte [ROW_LENGTH];
     r.nextBytes(b);
     return b;
