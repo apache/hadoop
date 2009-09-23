@@ -1406,34 +1406,38 @@ public class Store implements HConstants, HeapSize {
     // Column matching and version enforcement
     QueryMatcher matcher = new QueryMatcher(get, this.family.getName(), columns,
       this.ttl, keyComparator, versionsToReturn(get.getMaxVersions()));
-    
-    // Read from memstore
-    if(this.memstore.get(matcher, result)) {
-      // Received early-out from memstore
-      return;
-    }
-    
-    // Check if we even have storefiles
-    if (this.storefiles.isEmpty()) {
-      return;
-    }
-    
-    // Get storefiles for this store
-    List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-    for (StoreFile sf : this.storefiles.descendingMap().values()) {
-      HFile.Reader r = sf.getReader();
-      if (r == null) {
-        LOG.warn("StoreFile " + sf + " has a null Reader");
-        continue;
+    this.lock.readLock().lock();
+    try {
+      // Read from memstore
+      if(this.memstore.get(matcher, result)) {
+        // Received early-out from memstore
+        return;
       }
-      storefileScanners.add(r.getScanner());
+    
+      // Check if we even have storefiles
+      if (this.storefiles.isEmpty()) {
+        return;
+      }
+    
+      // Get storefiles for this store
+      List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
+      for (StoreFile sf : this.storefiles.descendingMap().values()) {
+        HFile.Reader r = sf.getReader();
+        if (r == null) {
+          LOG.warn("StoreFile " + sf + " has a null Reader");
+          continue;
+        }
+        storefileScanners.add(r.getScanner());
+      }
+    
+      // StoreFileGetScan will handle reading this store's storefiles
+      StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
+    
+      // Run a GET scan and put results into the specified list 
+      scanner.get(result);
+    } finally {
+      this.lock.readLock().unlock();
     }
-    
-    // StoreFileGetScan will handle reading this store's storefiles
-    StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
-    
-    // Run a GET scan and put results into the specified list 
-    scanner.get(result);
   }
 
   /**
