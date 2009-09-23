@@ -120,7 +120,7 @@ public class HTablePool {
     }
   }
 
-  private HTableInterface createHTable(String tableName) {
+  protected HTableInterface createHTable(String tableName) {
     return this.tableFactory.createHTableInterface(config, Bytes.toBytes(tableName));
   }
 }

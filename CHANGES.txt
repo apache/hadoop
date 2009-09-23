@@ -73,6 +73,7 @@ Release 0.21.0 - Unreleased
    HBASE-1833  hfile.main fixes
    HBASE-1684  Backup (Export/Import) contrib tool for 0.20
    HBASE-1854  Remove the Region Historian
+   HBASE-1860  Change HTablePool#createHTable from private to protected
 
   OPTIMIZATIONS
 
