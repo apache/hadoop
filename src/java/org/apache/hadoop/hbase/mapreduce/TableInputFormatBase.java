@@ -269,12 +269,12 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
+    if (table == null) {
+      throw new IOException("No table was provided.");
+    }
     byte [][] startKeys = table.getStartKeys();
     if (startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region.");
-    }
-    if (table == null) {
-      throw new IOException("No table was provided.");
     }
     int realNumSplits = startKeys.length;
     InputSplit[] splits = new InputSplit[realNumSplits];
