@@ -33,6 +33,7 @@ public class TestHtmlQuoting {
     assertTrue(HtmlQuoting.needsQuoting("&"));
     assertFalse(HtmlQuoting.needsQuoting(""));
     assertFalse(HtmlQuoting.needsQuoting("ab\ncdef"));
+    assertFalse(HtmlQuoting.needsQuoting(null));
   }
 
   @Test public void testQuoting() throws Exception {
@@ -41,6 +42,7 @@ public class TestHtmlQuoting {
     assertEquals("&amp;&amp;&amp;", HtmlQuoting.quoteHtmlChars("&&&"));
     assertEquals(" &apos;\n", HtmlQuoting.quoteHtmlChars(" '\n"));
     assertEquals("&quot;", HtmlQuoting.quoteHtmlChars("\""));
+    assertEquals(null, HtmlQuoting.quoteHtmlChars(null));
   }
 
   private void runRoundTrip(String str) throws Exception {
@@ -53,6 +55,7 @@ public class TestHtmlQuoting {
     runRoundTrip("<>&'\"");
     runRoundTrip("ab>cd<ef&ghi'\"");
     runRoundTrip("A string\n with no quotable chars in it!");
+    runRoundTrip(null);
     StringBuilder buffer = new StringBuilder();
     for(char ch=0; ch < 127; ++ch) {
       buffer.append(ch);

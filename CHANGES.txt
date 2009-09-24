@@ -702,8 +702,9 @@ Release 0.21.0 - Unreleased
 
     HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)
 
-    HADOOP-5219. Adds a new property io.seqfile.local.dir for use by SequenceFile,
-    which earlier used mapred.local.dir. (Sharad Agarwal via ddas)
+    HADOOP-5219. Adds a new property io.seqfile.local.dir for use by
+    SequenceFile, which earlier used mapred.local.dir. (Sharad Agarwal
+    via ddas)
 
     HADOOP-5300. Fix ant javadoc-dev target and the typo in the class name
     NameNodeActivtyMBean.  (szetszwo)
@@ -720,7 +721,7 @@ Release 0.21.0 - Unreleased
     HADOOP-5383. Avoid building an unused string in NameNode's 
     verifyReplication(). (Raghu Angadi)
 
-    HADOOP-5347. Create a job output directory for the bbp examples.  (szetszwo)
+    HADOOP-5347. Create a job output directory for the bbp examples. (szetszwo)
 
     HADOOP-5341. Make hadoop-daemon scripts backwards compatible with the
     changes in HADOOP-4868. (Sharad Agarwal via yhemanth)
@@ -826,8 +827,8 @@ Release 0.21.0 - Unreleased
     in the JobTracker to get the FileSystem objects as per the JobTracker's
     configuration. (Amar Kamat via ddas) 
 
-    HADOOP-5648. Not able to generate gridmix.jar on the already compiled version of hadoop.
-    (gkesavan)	
+    HADOOP-5648. Not able to generate gridmix.jar on the already compiled 
+    version of hadoop. (gkesavan)	
 
     HADOOP-5808. Fix import never used javac warnings in hdfs. (szetszwo)
 
@@ -911,7 +912,8 @@ Release 0.21.0 - Unreleased
     in DataBlockScanner.  (Kan Zhang via szetszwo)
 
     HADOOP-4864. Fixes a problem to do with -libjars with multiple jars when
-    client and cluster reside on different OSs. (Amareshwari Sriramadasu via ddas)
+    client and cluster reside on different OSs. (Amareshwari Sriramadasu via 
+    ddas)
 
     HADOOP-5623. Fixes a problem to do with status messages getting overwritten
     in streaming jobs. (Rick Cox and Jothi Padmanabhan via ddas)
@@ -919,8 +921,8 @@ Release 0.21.0 - Unreleased
     HADOOP-5895. Fixes computation of count of merged bytes for logging.
     (Ravi Gummadi via ddas)
 
-    HADOOP-5805. problem using top level s3 buckets as input/output directories.
-    (Ian Nowland via tomwhite)
+    HADOOP-5805. problem using top level s3 buckets as input/output 
+    directories. (Ian Nowland via tomwhite)
    
     HADOOP-5940. trunk eclipse-plugin build fails while trying to copy 
     commons-cli jar from the lib dir (Giridharan Kesavan via gkesavan)
@@ -1019,8 +1021,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6123. Add missing classpaths in hadoop-config.sh.  (Sharad Agarwal
     via szetszwo)
 
-    HADOOP-6172. Fix jar file names in hadoop-config.sh and include ${build.src}
-    as a part of the source list in build.xml.  (Hong Tang via szetszwo)
+    HADOOP-6172. Fix jar file names in hadoop-config.sh and include 
+    ${build.src} as a part of the source list in build.xml.  (Hong Tang via 
+    szetszwo)
 
     HADOOP-6124. Fix javac warning detection in test-patch.sh.  (Giridharan
     Kesavan via szetszwo)
@@ -1078,6 +1081,9 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6274. Fix TestLocalFSFileContextMainOperations test failure.
     (Gary Murry via suresh).
+
+    HADOOP-6281. Avoid null pointer exceptions when the jsps don't have 
+    paramaters (omalley)
 
 Release 0.20.1 - 2009-09-01
 
