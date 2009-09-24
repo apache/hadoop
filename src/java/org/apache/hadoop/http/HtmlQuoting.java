@@ -60,6 +60,9 @@ public class HtmlQuoting {
    * @return does the string contain any of the active html characters?
    */
   public static boolean needsQuoting(String str) {
+    if (str == null) {
+      return false;
+    }
     byte[] bytes = str.getBytes();
     return needsQuoting(bytes, 0 , bytes.length);
   }
@@ -92,6 +95,9 @@ public class HtmlQuoting {
    * @return the quoted string
    */
   public static String quoteHtmlChars(String item) {
+    if (item == null) {
+      return null;
+    }
     byte[] bytes = item.getBytes();
     if (needsQuoting(bytes, 0, bytes.length)) {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -145,6 +151,9 @@ public class HtmlQuoting {
    * @return the unquoted string
    */
   public static String unquoteHtmlChars(String item) {
+    if (item == null) {
+      return null;
+    }
     int next = item.indexOf('&');
     // nothing was quoted
     if (next == -1) {
