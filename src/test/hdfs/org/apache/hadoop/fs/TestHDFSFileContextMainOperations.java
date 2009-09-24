@@ -44,7 +44,7 @@ public class TestHDFSFileContextMainOperations extends
     fc = FileContext.getFileContext(cluster.getFileSystem());
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UnixUserGroupInformation.login().getUserName()));
-    fc.mkdirs(defaultWorkingDirectory, FileContext.DEFAULT_PERM);
+    fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 
       

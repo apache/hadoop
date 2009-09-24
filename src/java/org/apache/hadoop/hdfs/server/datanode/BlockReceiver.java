@@ -914,6 +914,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
+        boolean isInterrupted = false;
         try {
             DataTransferProtocol.Status op = SUCCESS;
             boolean didRead = false;
@@ -941,7 +942,12 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                                 " for block " + block +
                                 " waiting for local datanode to finish write.");
                     }
-                    wait();
+                    try {
+                      wait();
+                    } catch (InterruptedException e) {
+                      isInterrupted = true;
+                      throw e;
+                    }
                   }
                   pkt = ackQueue.removeFirst();
                   expected = pkt.seqno;
@@ -967,7 +973,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               }
             }
 
-            if (Thread.interrupted()) {
+            if (Thread.interrupted() || isInterrupted) {
               /* The receiver thread cancelled this thread. 
                * We could also check any other status updates from the 
                * receiver thread (e.g. if it is ok to write to replyOut). 
