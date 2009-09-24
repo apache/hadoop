@@ -19,6 +19,7 @@
 .settings
 .svn
 build/
+build.properties
 conf/masters
 conf/slaves
 conf/hadoop-env.sh
