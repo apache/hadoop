@@ -45,6 +45,8 @@ Release 0.21.0 - Unreleased
    HBASE-1809  NPE thrown in BoundedRangeFileInputStream
    HBASE-1859  Misc shell fixes patch (Kyle Oba via Stack)
    HBASE-1865  0.20.0 TableInputFormatBase NPE
+   HBASE-1866  Scan(Scan) copy constructor does not copy value of
+               cacheBlocks
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
