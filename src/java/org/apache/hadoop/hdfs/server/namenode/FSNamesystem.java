@@ -3753,24 +3753,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return nextGenerationStamp();
   }
 
-  /**
-   * Get a new generation stamp together with an access token for 
-   * a block under construction
-   * 
-   * This method is called for recovering a failed pipeline or setting up
-   * a pipeline to append to a block.
-   * 
-   * @param block a block
-   * @param clientName the name of a client
-   * @return a located block with a new generation stamp and an access token
-   * @throws IOException if any error occurs
-   */
-  synchronized LocatedBlock getNewStampForPipeline(Block block, String clientName) 
+
+  private INodeFileUnderConstruction checkUCBlock(Block block, String clientName) 
   throws IOException {
     // check safe mode
     if (isInSafeMode())
       throw new SafeModeException("Cannot get a new generation stamp and an " +
-      		"access token for block " + block, safeMode);
+                                "access token for block " + block, safeMode);
     
     // check stored block state
     BlockInfo storedBlock = blockManager.getStoredBlock(block);
@@ -3794,6 +3783,26 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           " is accessed by a non lease holder " + clientName); 
     }
 
+    return pendingFile;
+  }
+  
+  /**
+   * Get a new generation stamp together with an access token for 
+   * a block under construction
+   * 
+   * This method is called for recovering a failed pipeline or setting up
+   * a pipeline to append to a block.
+   * 
+   * @param block a block
+   * @param clientName the name of a client
+   * @return a located block with a new generation stamp and an access token
+   * @throws IOException if any error occurs
+   */
+  synchronized LocatedBlock updateBlockForPipeline(Block block, 
+      String clientName) throws IOException {
+    // check vadility of parameters
+    checkUCBlock(block, clientName);
+    
     // get a new generation stamp and an access token
     block.setGenerationStamp(nextGenerationStamp());
     LocatedBlock locatedBlock = new LocatedBlock(block, new DatanodeInfo[0]);
@@ -3804,6 +3813,72 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return locatedBlock;
   }
   
+  
+  /**
+   * Update a pipeline for a block under construction
+   * 
+   * @param clientName the name of the client
+   * @param oldblock and old block
+   * @param newBlock a new block with a new generation stamp and length
+   * @param newNodes datanodes in the pipeline
+   * @throws IOException if any error occurs
+   */
+  synchronized void updatePipeline(String clientName, Block oldBlock, 
+      Block newBlock, DatanodeID[] newNodes)
+      throws IOException {
+    LOG.info("updatePipeline(block=" + oldBlock
+        + ", newGenerationStamp=" + newBlock.getGenerationStamp()
+        + ", newLength=" + newBlock.getNumBytes()
+        + ", newNodes=" + Arrays.asList(newNodes)
+        + ", clientName=" + clientName
+        + ")");
+
+    // check the vadility of the block and lease holder name
+    final INodeFileUnderConstruction pendingFile = 
+      checkUCBlock(oldBlock, clientName);
+    final BlockInfo oldblockinfo = pendingFile.getLastBlock();
+
+    // check new GS & length: this is not expected
+    if (newBlock.getGenerationStamp() <= oldblockinfo.getGenerationStamp() ||
+        newBlock.getNumBytes() < oldblockinfo.getNumBytes()) {
+      String msg = "Update " + oldBlock + " (len = " + 
+      oldblockinfo.getNumBytes() + ") to an older state: " + newBlock + 
+      " (len = " + newBlock.getNumBytes() +")";
+      LOG.warn(msg);
+      throw new IOException(msg);
+    }
+    
+    // Remove old block from blocks map. This always have to be done
+    // because the generation stamp of this block is changing.
+    blockManager.removeBlockFromMap(oldblockinfo);
+
+    // update last block, construct newblockinfo and add it to the blocks map
+    BlockInfoUnderConstruction newblockinfo = 
+      new BlockInfoUnderConstruction(
+          newBlock, pendingFile.getReplication());
+    blockManager.addINode(newblockinfo, pendingFile);
+
+    // find the DatanodeDescriptor objects
+    DatanodeDescriptor[] descriptors = null;
+    if (newNodes.length > 0) {
+      descriptors = new DatanodeDescriptor[newNodes.length];
+      for(int i = 0; i < newNodes.length; i++) {
+        descriptors[i] = getDatanode(newNodes[i]);
+      }
+    }
+    // add locations into the INodeUnderConstruction
+    pendingFile.setLastBlock(newblockinfo, descriptors);
+
+    // persist blocks only if append is supported
+    String src = leaseManager.findPath(pendingFile);
+    if (supportAppends) {
+      dir.persistBlocks(src, pendingFile);
+      getEditLog().logSync();
+    }
+    LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);
+    return;
+  }
+
   // rename was successful. If any part of the renamed subtree had
   // files that were being written to, update with new filename.
   //

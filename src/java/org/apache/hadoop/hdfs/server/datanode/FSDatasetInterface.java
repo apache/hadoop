@@ -180,34 +180,63 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   }
     
   /**
-   * Creates a temporary replica and returns output streams to write data and CRC
+   * Creates a temporary replica and returns the meta information of the replica
    * 
    * @param b block
-   * @return the meata info of the replica which is being written to
+   * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface writeToTemporary(Block b) throws IOException;
-
-  /**
-   * Creates/recovers a RBW replica and returns output streams to 
-   * write data and CRC
-   * 
-   * @param b block
-   * @param isRecovery True if this is part of error recovery, otherwise false
-   * @return the meata info of the replica which is being written to
-   * @throws IOException if an error occurs
-   */
-  public ReplicaInPipelineInterface writeToRbw(Block b, boolean isRecovery)
+  public ReplicaInPipelineInterface createTemporary(Block b)
   throws IOException;
 
   /**
-   * Append to a finalized replica and returns output streams to write data and CRC
+   * Creates a RBW replica and returns the meta info of the replica
+   * 
    * @param b block
+   * @return the meta info of the replica which is being written to
+   * @throws IOException if an error occurs
+   */
+  public ReplicaInPipelineInterface createRbw(Block b) throws IOException;
+
+  /**
+   * Recovers a RBW replica and returns the meta info of the replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param minBytesRcvd the minimum number of bytes that the replica could have
+   * @param maxBytesRcvd the maximum number of bytes that the replica could have
+   * @return the meta info of the replica which is being written to
+   * @throws IOException if an error occurs
+   */
+  public ReplicaInPipelineInterface recoverRbw(Block b, 
+      long newGS, long minBytesRcvd, long maxBytesRcvd)
+  throws IOException;
+
+  /**
+   * Append to a finalized replica and returns the meta info of the replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param expectedBlockLen the number of bytes the replica is expected to have
    * @return the meata info of the replica which is being written to
    * @throws IOException
    */
-  public ReplicaInPipelineInterface append(Block b) throws IOException;
+  public ReplicaInPipelineInterface append(Block b, 
+      long newGS, long expectedBlockLen) throws IOException;
 
+  /**
+   * Recover a failed append to a finalized replica
+   * and returns the meta info of the replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param expectedBlockLen the number of bytes the replica is expected to have
+   * @return the meta info of the replica which is being written to
+   * @throws IOException
+   */
+  public ReplicaInPipelineInterface recoverAppend(Block b,
+      long newGS, long expectedBlockLen) throws IOException;
+  
   /**
    * Update the block to the new generation stamp and length.  
    */

@@ -1094,36 +1094,61 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   @Override  // FSDatasetInterface
-  public ReplicaInPipelineInterface append(Block b)
-      throws IOException {
+  public synchronized ReplicaInPipelineInterface append(Block b,
+      long newGS, long expectedBlockLen) throws IOException {
     // If the block was successfully finalized because all packets
     // were successfully processed at the Datanode but the ack for
     // some of the packets were not received by the client. The client 
     // re-opens the connection and retries sending those packets.
     // The other reason is that an "append" is occurring to this block.
     
-    ReplicaInfo replicaInfo = volumeMap.get(b);
     // check the validity of the parameter
-    if (replicaInfo == null) {
-      throw new BlockNotFoundException(
-          BlockNotFoundException.NON_EXISTENT_REPLICA + b);
-    }  
-    if (replicaInfo.getState() != ReplicaState.FINALIZED) {
-      throw new BlockNotFoundException(
-          BlockNotFoundException.UNFINALIZED_REPLICA + b);
+    if (newGS < b.getGenerationStamp()) {
+      throw new IOException("The new generation stamp " + newGS + 
+          " should be greater than the replica " + b + "'s generation stamp");
     }
-    
-    DataNode.LOG.info("Reopen Block for append " + b);
+    ReplicaInfo replicaInfo = volumeMap.get(b);
+    if (replicaInfo == null) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
+    }  
+    DataNode.LOG.info("Appending to replica " + replicaInfo);
+    if (replicaInfo.getState() != ReplicaState.FINALIZED) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.UNFINALIZED_REPLICA + b);
+    }
+    if (replicaInfo.getNumBytes() != expectedBlockLen) {
+      throw new IOException("Corrupted replica " + replicaInfo + 
+          " with a length of " + replicaInfo.getNumBytes() + 
+          " expected length is " + expectedBlockLen);
+    }
 
+    return append((FinalizedReplica)replicaInfo, newGS, b.getNumBytes());
+  }
+  
+  /** Append to a finalized replica
+   * Change a finalized replica to be a RBW replica and 
+   * bump its generation stamp to be the newGS
+   * 
+   * @param replicaInfo a finalized replica
+   * @param newGS new generation stamp
+   * @param estimateBlockLen estimate generation stamp
+   * @return a RBW replica
+   * @throws IOException if moving the replica from finalized directory 
+   *         to rbw directory fails
+   */
+  private synchronized ReplicaBeingWritten append(FinalizedReplica replicaInfo, 
+      long newGS, long estimateBlockLen) throws IOException {
     // unlink the finalized replica
     replicaInfo.detachBlock(1);
     
-    // construct a RBW replica
+    // construct a RBW replica with the new GS
     File blkfile = replicaInfo.getBlockFile();
-    FSVolume v = volumes.getNextVolume(b.getNumBytes());
-    File newBlkFile = v.createRbwFile(b);
+    FSVolume v = volumes.getNextVolume(estimateBlockLen);
+    File newBlkFile = v.createRbwFile(replicaInfo);
     File oldmeta = replicaInfo.getMetaFile();
-    ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(replicaInfo,
+    ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(
+        replicaInfo.getBlockId(), replicaInfo.getNumBytes(), newGS,
         v, newBlkFile.getParentFile(), Thread.currentThread());
     File newmeta = newReplicaInfo.getMetaFile();
 
@@ -1132,7 +1157,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       DataNode.LOG.debug("Renaming " + oldmeta + " to " + newmeta);
     }
     if (!oldmeta.renameTo(newmeta)) {
-      throw new IOException("Block " + b + " reopen failed. " +
+      throw new IOException("Block " + replicaInfo + " reopen failed. " +
                             " Unable to move meta file  " + oldmeta +
                             " to rbw dir " + newmeta);
     }
@@ -1140,13 +1165,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     // rename block file to rbw directory
     if (DataNode.LOG.isDebugEnabled()) {
       DataNode.LOG.debug("Renaming " + blkfile + " to " + newBlkFile);
+      DataNode.LOG.debug("Old block file length is " + blkfile.length());
     }
     if (!blkfile.renameTo(newBlkFile)) {
       if (!newmeta.renameTo(oldmeta)) {  // restore the meta file
         DataNode.LOG.warn("Cannot move meta file " + newmeta + 
             "back to the finalized directory " + oldmeta);
       }
-      throw new IOException("Block " + b + " reopen failed. " +
+      throw new IOException("Block " + replicaInfo + " reopen failed. " +
                               " Unable to move block file " + blkfile +
                               " to rbw dir " + newBlkFile);
     }
@@ -1157,47 +1183,165 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return newReplicaInfo;
   }
 
-  @Override
-  public ReplicaInPipelineInterface writeToRbw(Block b, boolean isRecovery)
-      throws IOException {
-    ReplicaInfo replicaInfo = volumeMap.get(b);
-    ReplicaBeingWritten newReplicaInfo;
-    if (replicaInfo == null) { // create a new block
-      FSVolume v = volumes.getNextVolume(b.getNumBytes());
-      // create a rbw file to hold block in the designated volume
-      File f = v.createRbwFile(b);
-      newReplicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
-          b.getGenerationStamp(), v, f.getParentFile());
-      volumeMap.add(newReplicaInfo);
-    } else {
-      if (!isRecovery) {
-        throw new BlockAlreadyExistsException("Block " + b +
-        " already exists in state " + replicaInfo.getState() +
-        " and thus cannot be created.");
-      }
-      if (replicaInfo.getState() != ReplicaState.RBW) {
-        throw new BlockNotFoundException(
-            BlockNotFoundException.NON_RBW_REPLICA + b);
-      }
-      newReplicaInfo = (ReplicaBeingWritten)replicaInfo;
-      synchronized (this) {
-        //
-        // Is it already in the write process?
-        //
-        newReplicaInfo.stopWriter();
-        newReplicaInfo.setWriter(Thread.currentThread());
+  @Override  // FSDatasetInterface
+  public synchronized ReplicaInPipelineInterface recoverAppend(Block b,
+      long newGS, long expectedBlockLen) throws IOException {
+    DataNode.LOG.info("Recover failed append to " + b);
+
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockId());
+    if (replicaInfo == null) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
+    }
+    
+    // check generation stamp
+    long replicaGenerationStamp = replicaInfo.getGenerationStamp();
+    if (replicaGenerationStamp < b.getGenerationStamp() ||
+        replicaGenerationStamp > newGS) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.UNEXPECTED_GS_REPLICA + replicaGenerationStamp
+          + ". Expected GS range is [" + b.getGenerationStamp() + ", " + 
+          newGS + "].");
+    }
+    
+    // stop the previous writer before check a replica's length
+    long replicaLen = replicaInfo.getNumBytes();
+    if (replicaInfo.getState() == ReplicaState.RBW) {
+      ReplicaBeingWritten rbw = (ReplicaBeingWritten)replicaInfo;
+      // kill the previous writer
+      rbw.stopWriter();
+      rbw.setWriter(Thread.currentThread());
+      // check length: bytesRcvd, bytesOnDisk, and bytesAcked should be the same
+      if (replicaLen != rbw.getBytesOnDisk() 
+          || replicaLen != rbw.getBytesAcked()) {
+        throw new ReplicaAlreadyExistsException("RBW replica " + replicaInfo + 
+            "bytesRcvd(" + rbw.getNumBytes() + "), bytesOnDisk(" + 
+            rbw.getBytesOnDisk() + "), and bytesAcked(" + rbw.getBytesAcked() +
+            ") are not the same.");
       }
     }
+    
+    // check block length
+    if (replicaLen != expectedBlockLen) {
+      throw new IOException("Corrupted replica " + replicaInfo + 
+          " with a length of " + replicaLen + 
+          " expected length is " + expectedBlockLen);
+    }
 
+    // change the replica's state/gs etc.
+    switch (replicaInfo.getState()) {
+    case FINALIZED:
+      return append((FinalizedReplica)replicaInfo, newGS, b.getNumBytes());
+    case RBW:
+      bumpReplicaGS(replicaInfo, newGS);
+      return (ReplicaBeingWritten)replicaInfo;
+    default:
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA + replicaInfo);
+    }
+  }
+
+  /**
+   * Bump a replica's generation stamp to a new one.
+   * Its on-disk meta file name is renamed to be the new one too.
+   * 
+   * @param replicaInfo a replica
+   * @param newGS new generation stamp
+   * @throws IOException if rename fails
+   */
+  private void bumpReplicaGS(ReplicaInfo replicaInfo, 
+      long newGS) throws IOException { 
+    long oldGS = replicaInfo.getGenerationStamp();
+    File oldmeta = replicaInfo.getMetaFile();
+    replicaInfo.setGenerationStamp(newGS);
+    File newmeta = replicaInfo.getMetaFile();
+
+    // rename meta file to new GS
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("Renaming " + oldmeta + " to " + newmeta);
+    }
+    if (!oldmeta.renameTo(newmeta)) {
+      replicaInfo.setGenerationStamp(oldGS); // restore old GS
+      throw new IOException("Block " + (Block)replicaInfo + " reopen failed. " +
+                            " Unable to move meta file  " + oldmeta +
+                            " to " + newmeta);
+    }
+  }
+
+  @Override
+  public synchronized ReplicaInPipelineInterface createRbw(Block b)
+      throws IOException {
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockId());
+    if (replicaInfo != null) {
+      throw new ReplicaAlreadyExistsException("Block " + b +
+      " already exists in state " + replicaInfo.getState() +
+      " and thus cannot be created.");
+    }
+    // create a new block
+    FSVolume v = volumes.getNextVolume(b.getNumBytes());
+    // create a rbw file to hold block in the designated volume
+    File f = v.createRbwFile(b);
+    ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
+        b.getGenerationStamp(), v, f.getParentFile());
+    volumeMap.add(newReplicaInfo);
     return newReplicaInfo;
   }
   
   @Override
-  public ReplicaInPipelineInterface writeToTemporary(Block b)
+  public synchronized ReplicaInPipelineInterface recoverRbw(Block b,
+      long newGS, long minBytesRcvd, long maxBytesRcvd)
       throws IOException {
-    ReplicaInfo replicaInfo = volumeMap.get(b);
+    DataNode.LOG.info("Recover the RBW replica " + b);
+
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockId());
+    if (replicaInfo == null) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
+    }
+    
+    // check the replica's state
+    if (replicaInfo.getState() != ReplicaState.RBW) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.NON_RBW_REPLICA + replicaInfo);
+    }
+    ReplicaBeingWritten rbw = (ReplicaBeingWritten)replicaInfo;
+    
+    DataNode.LOG.info("Recovering replica " + rbw);
+
+    // Stop the previous writer
+    rbw.stopWriter();
+    rbw.setWriter(Thread.currentThread());
+
+    // check generation stamp
+    long replicaGenerationStamp = rbw.getGenerationStamp();
+    if (replicaGenerationStamp < b.getGenerationStamp() ||
+        replicaGenerationStamp > newGS) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.UNEXPECTED_GS_REPLICA + b +
+          ". Expected GS range is [" + b.getGenerationStamp() + ", " + 
+          newGS + "].");
+    }
+    
+    // check replica length
+    if (rbw.getBytesAcked() < minBytesRcvd || rbw.getNumBytes() > maxBytesRcvd){
+      throw new ReplicaNotFoundException("Unmatched length replica " + 
+          replicaInfo + ": BytesAcked = " + rbw.getBytesAcked() + 
+          " BytesRcvd = " + rbw.getNumBytes() + " are not in the range of [" + 
+          minBytesRcvd + ", " + maxBytesRcvd + "].");
+    }
+
+    // bump the replica's generation stamp to newGS
+    bumpReplicaGS(rbw, newGS);
+    
+    return rbw;
+  }
+  
+  @Override
+  public synchronized ReplicaInPipelineInterface createTemporary(Block b)
+      throws IOException {
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockId());
     if (replicaInfo != null) {
-      throw new BlockAlreadyExistsException("Block " + b +
+      throw new ReplicaAlreadyExistsException("Block " + b +
           " already exists in state " + replicaInfo.getState() +
           " and thus cannot be created.");
     }

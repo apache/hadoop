@@ -467,10 +467,11 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   @Override
-  public ReplicaInPipelineInterface append(Block b) throws IOException {
+  public synchronized ReplicaInPipelineInterface append(Block b,
+      long newGS, long expectedBlockLen) throws IOException {
     BInfo binfo = blockMap.get(b);
     if (binfo == null || !binfo.isFinalized()) {
-      throw new BlockNotFoundException("Block " + b
+      throw new ReplicaNotFoundException("Block " + b
           + " is not valid, and cannot be appended to.");
     }
     binfo.unfinalizeBlock();
@@ -478,30 +479,51 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   @Override
-  public synchronized ReplicaInPipelineInterface writeToRbw(Block b,
-      boolean isRecovery) throws IOException {
-    if (isValidBlock(b)) {
-      throw new BlockAlreadyExistsException("Block " + b
-          + " is valid, and cannot be written to.");
-    }
+  public synchronized ReplicaInPipelineInterface recoverAppend(Block b,
+      long newGS, long expectedBlockLen) throws IOException {
     BInfo binfo = blockMap.get(b);
-    if (isRecovery && binfo != null) {
-      return binfo;
+    if (binfo == null || !binfo.isFinalized()) {
+      throw new ReplicaNotFoundException("Block " + b
+          + " is not valid, and cannot be appended to.");
     }
-    binfo = new BInfo(b, true);
-    blockMap.put(binfo.theBlock, binfo);
+    if (binfo.isFinalized()) {
+      binfo.unfinalizeBlock();
+    }
+    binfo.theBlock.setGenerationStamp(newGS);
     return binfo;
   }
 
   @Override
-  public synchronized ReplicaInPipelineInterface writeToTemporary(Block b)
+  public synchronized ReplicaInPipelineInterface recoverRbw(Block b,
+      long newGS, long minBytesRcvd, long maxBytesRcvd) throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if ( binfo == null) {
+      throw new ReplicaNotFoundException("Block " + b
+          + " does not exist, and cannot be appended to.");
+    }
+    if (binfo.isFinalized()) {
+      throw new ReplicaAlreadyExistsException("Block " + b
+          + " is valid, and cannot be written to.");
+    }
+    binfo.theBlock.setGenerationStamp(newGS);
+    return binfo;
+  }
+
+  @Override
+  public synchronized ReplicaInPipelineInterface createRbw(Block b) 
+  throws IOException {
+    return createTemporary(b);
+  }
+
+  @Override
+  public synchronized ReplicaInPipelineInterface createTemporary(Block b)
       throws IOException {
     if (isValidBlock(b)) {
-          throw new BlockAlreadyExistsException("Block " + b + 
+          throw new ReplicaAlreadyExistsException("Block " + b + 
               " is valid, and cannot be written to.");
       }
     if (isBeingWritten(b)) {
-        throw new BlockAlreadyExistsException("Block " + b + 
+        throw new ReplicaAlreadyExistsException("Block " + b + 
             " is being written, and cannot be written to.");
     }
     BInfo binfo = new BInfo(b, true);

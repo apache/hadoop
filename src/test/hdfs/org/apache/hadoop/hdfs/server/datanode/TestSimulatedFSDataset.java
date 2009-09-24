@@ -64,7 +64,7 @@ public class TestSimulatedFSDataset extends TestCase {
     int bytesAdded = 0;
     for (int i = startingBlockId; i < startingBlockId+NUMBLOCKS; ++i) {
       Block b = new Block(i, 0, 0); // we pass expected len as zero, - fsdataset should use the sizeof actual data written
-      ReplicaInPipelineInterface bInfo = fsdataset.writeToRbw(b, false);
+      ReplicaInPipelineInterface bInfo = fsdataset.createRbw(b);
       BlockWriteStreams out = bInfo.createStreams();
       try {
         OutputStream dataOut  = out.dataOut;

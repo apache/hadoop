@@ -15,6 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
@@ -22,12 +24,30 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.Block;
 
 /**
- * Exception indicating that a replica is not found.
+ * Exception indicating that DataNode does not have a replica
+ * that matches the target block.  
  */
 class ReplicaNotFoundException extends IOException {
   private static final long serialVersionUID = 1L;
+  final static String NON_RBW_REPLICA = "Cannot recover a non-RBW replica ";
+  final static String UNFINALIZED_REPLICA = 
+    "Cannot append to an unfinalized replica ";
+  final static String UNFINALIZED_AND_NONRBW_REPLICA = 
+    "Cannot recover appending to a replica that's not FINALIZED and not RBW ";
+  final static String NON_EXISTENT_REPLICA =
+    "Cannot append to a non-existent replica ";
+  final static String UNEXPECTED_GS_REPLICA =
+    "Cannot append to a replica with unexpeted generation stamp ";
+
+  public ReplicaNotFoundException() {
+    super();
+  }
 
   ReplicaNotFoundException(Block b) {
     super("Replica not found for " + b);
+  }
+  
+  public ReplicaNotFoundException(String msg) {
+    super(msg);
   }
 }

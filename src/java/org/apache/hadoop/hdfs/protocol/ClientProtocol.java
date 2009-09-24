@@ -44,8 +44,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 49: added a new method getNewStampForPipeline(Block, String) 
-   * to support pipeline recovery
+   * 49: added two new methods to support pipeline recovery and append
+   *     updateBlockForPipeline(Block, String) and
+   *     updatePipeline(String, Block, Block, DatanodeID[])
    */
   public static final long versionID = 49L;
   
@@ -524,6 +525,19 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return a located block with a new generation stamp and an access token
    * @throws IOException if any error occurs
    */
-  public LocatedBlock getNewStampForPipeline(Block block, String clientName) 
+  public LocatedBlock updateBlockForPipeline(Block block, String clientName) 
+  throws IOException;
+
+  /**
+   * Update a pipeline for a block under construction
+   * 
+   * @param clientName the name of the client
+   * @param oldBlock the old block
+   * @param newBlock the new block containing new generation stamp and length
+   * @param newNodes datanodes in the pipeline
+   * @throws IOException if any error occurs
+   */
+  public void updatePipeline(String clientName, Block oldBlock, 
+      Block newBlock, DatanodeID[] newNodes)
   throws IOException;
 }

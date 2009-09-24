@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
 
 /** This class implements some of tests posted in HADOOP-2658. */
 public class TestFileAppend3 extends junit.framework.TestCase {
-  static final long BLOCK_SIZE = 64 * 1024;
+  static final long BLOCK_SIZE = 3 * 64 * 1024;
   static final short REPLICATION = 3;
   static final int DATANODE_NUM = 5;
 
@@ -220,6 +220,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     FSDataOutputStream out = fs.append(p);
     final int len2 = (int)BLOCK_SIZE/2; 
     AppendTestUtil.write(out, len1, len2);
+    out.sync();
     
     //c. Rename file to file.new.
     final Path pnew = new Path(p + ".new");

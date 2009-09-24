@@ -22,22 +22,17 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 
 /**
- * Exception indicating that DataNode does not have a replica
- * that matches the target block.  
+ * Exception indicating that the target block already exists 
+ * and is not set to be recovered/overwritten.  
  */
-class BlockNotFoundException extends IOException {
+class ReplicaAlreadyExistsException extends IOException {
   private static final long serialVersionUID = 1L;
-  final static String NON_RBW_REPLICA = "Cannot recover a non-RBW replica";
-  final static String UNFINALIZED_REPLICA = 
-    "Cannot append to an unfinalized replica ";
-  final static String NON_EXISTENT_REPLICA =
-    "Cannot append to a non-existent replica ";
 
-  public BlockNotFoundException() {
+  public ReplicaAlreadyExistsException() {
     super();
   }
 
-  public BlockNotFoundException(String msg) {
+  public ReplicaAlreadyExistsException(String msg) {
     super(msg);
   }
 }

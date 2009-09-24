@@ -672,11 +672,19 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   @Override
-  public LocatedBlock getNewStampForPipeline(Block block, String clientName)
+  public LocatedBlock updateBlockForPipeline(Block block, String clientName)
   throws IOException {
-    return namesystem.getNewStampForPipeline(block, clientName);
+    return namesystem.updateBlockForPipeline(block, clientName);
   }
 
+
+  @Override
+  public void updatePipeline(String clientName, Block oldBlock,
+      Block newBlock, DatanodeID[] newNodes)
+      throws IOException {
+    namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes);
+  }
+  
   /** {@inheritDoc} */
   public void commitBlockSynchronization(Block block,
       long newgenerationstamp, long newlength,

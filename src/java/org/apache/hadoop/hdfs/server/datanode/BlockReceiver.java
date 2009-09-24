@@ -56,7 +56,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
   private Block block; // the block to receive
-  protected boolean finalized;
   private DataInputStream in = null; // from where data are read
   private DataChecksum checksum; // from where chunks of a block can be read
   private OutputStream out = null; // to block file at local disk
@@ -73,7 +72,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private Daemon responder = null;
   private BlockTransferThrottler throttler;
   private FSDataset.BlockWriteStreams streams;
-  private boolean isRecovery = false;
   private String clientName;
   DatanodeInfo srcDataNode = null;
   private Checksum partialCrc = null;
@@ -93,34 +91,41 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       this.clientName = clientName;
       this.srcDataNode = srcDataNode;
       this.datanode = datanode;
-      this.finalized = datanode.data.isValidBlock(block);
       //
       // Open local disk out
       //
       if (clientName.length() == 0) { //replication or move
-        replicaInfo = datanode.data.writeToTemporary(block);
+        replicaInfo = datanode.data.createTemporary(block);
       } else {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
-          isRecovery = false;
-          replicaInfo = datanode.data.writeToRbw(block, isRecovery);
+          replicaInfo = datanode.data.createRbw(block);
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
-          isRecovery = true;
-          if (finalized) {
-            replicaInfo = datanode.data.append(block);
-            finalized = false;
+          if (datanode.data.isValidBlock(block)) {
+            // pipeline failed after the replica is finalized. This will be 
+            // handled differently when pipeline close/recovery is introduced
+            replicaInfo = datanode.data.append(block, newGs, maxBytesRcvd);
           } else {
-            replicaInfo = datanode.data.writeToRbw(block, isRecovery);
+            replicaInfo = datanode.data.recoverRbw(
+                block, newGs, minBytesRcvd, maxBytesRcvd);
           }
+          block.setGenerationStamp(newGs);
           break;
         case PIPELINE_SETUP_APPEND:
-        case PIPELINE_SETUP_APPEND_RECOVERY:
-          isRecovery = true;
-          replicaInfo = datanode.data.append(block);
-          finalized = false;
+          replicaInfo = datanode.data.append(block, newGs, minBytesRcvd);
+          if (datanode.blockScanner != null) { // remove from block scanner
+            datanode.blockScanner.deleteBlock(block);
+          }
+          block.setGenerationStamp(newGs);
           break;
-        case PIPELINE_CLOSE_RECOVERY:
+        case PIPELINE_SETUP_APPEND_RECOVERY:
+          replicaInfo = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
+          if (datanode.blockScanner != null) { // remove from block scanner
+            datanode.blockScanner.deleteBlock(block);
+          }
+          block.setGenerationStamp(newGs);
+          break;
         default: throw new IOException("Unsupported stage " + stage + 
               " while receiving block " + block + " from " + inAddr);
         }
@@ -131,20 +136,24 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
                                                   streams.checksumOut, 
                                                   SMALL_BUFFER_SIZE));
-        // If this block is for appends, then remove it from periodic
-        // validation.
-        if (datanode.blockScanner != null && isRecovery) {
-          datanode.blockScanner.deleteBlock(block);
-        }
         
         // read checksum meta information
         this.checksum = DataChecksum.newDataChecksum(in);
         this.bytesPerChecksum = checksum.getBytesPerChecksum();
         this.checksumSize = checksum.getChecksumSize();
+        
+        // write data chunk header if creating a new replica
+        if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE 
+            || clientName.length() == 0) {
+          BlockMetadataHeader.writeHeader(checksumOut, checksum);
+        } else {
+          datanode.data.setChannelPosition(block, streams, 0, 
+              BlockMetadataHeader.getHeaderSize());
+        }
       }
-    } catch (BlockAlreadyExistsException bae) {
+    } catch (ReplicaAlreadyExistsException bae) {
       throw bae;
-    } catch (BlockNotFoundException bne) {
+    } catch (ReplicaNotFoundException bne) {
       throw bne;
     } catch(IOException ioe) {
       IOUtils.closeStream(this);
@@ -494,7 +503,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
 
       try {
-        if (!finalized  && replicaInfo.getBytesOnDisk()<offsetInBlock) {
+        if (replicaInfo.getBytesOnDisk()<offsetInBlock) {
           //finally write to the disk :
           setBlockPosition(offsetInBlock-len);
           
@@ -561,10 +570,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       throttler = throttlerArg;
 
     try {
-      // write data chunk header
-      if (!finalized) {
-        BlockMetadataHeader.writeHeader(checksumOut, checksum);
-      }
       if (clientName.length() > 0) {
         responder = new Daemon(datanode.threadGroup, 
                                new PacketResponder(this, block, mirrIn, 
@@ -644,21 +649,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
    * Sets the file pointer in the local block file to the specified value.
    */
   private void setBlockPosition(long offsetInBlock) throws IOException {
-    if (finalized) {
-      if (!isRecovery) {
-        throw new IOException("Write to offset " + offsetInBlock +
-                              " of block " + block +
-                              " that is already finalized.");
-      }
-      if (offsetInBlock > datanode.data.getLength(block)) {
-        throw new IOException("Write to offset " + offsetInBlock +
-                              " of block " + block +
-                              " that is already finalized and is of size " +
-                              datanode.data.getLength(block));
-      }
-      return;
-    }
-
     if (datanode.data.getChannelPosition(block, streams) == offsetInBlock) {
       return;                   // nothing to do 
     }
@@ -852,26 +842,24 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             // If this is the last packet in block, then close block
             // file and finalize the block before responding success
             if (pkt.lastPacketInBlock) {
-              if (!receiver.finalized) {
-                receiver.close();
-                final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
-                block.setNumBytes(replicaInfo.getNumBytes());
-                datanode.data.finalizeBlock(block);
-                datanode.myMetrics.blocksWritten.inc();
-                datanode.notifyNamenodeReceivedBlock(block, 
-                    DataNode.EMPTY_DEL_HINT);
-                if (ClientTraceLog.isInfoEnabled() &&
-                    receiver.clientName.length() > 0) {
-                  long offset = 0;
-                  ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
-                        receiver.inAddr, receiver.myAddr, block.getNumBytes(),
-                        "HDFS_WRITE", receiver.clientName, offset,
-                        datanode.dnRegistration.getStorageID(), block, endTime-startTime));
-                } else {
-                  LOG.info("Received block " + block + 
-                           " of size " + block.getNumBytes() + 
-                           " from " + receiver.inAddr);
-                }
+              receiver.close();
+              final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
+              block.setNumBytes(replicaInfo.getNumBytes());
+              datanode.data.finalizeBlock(block);
+              datanode.myMetrics.blocksWritten.inc();
+              datanode.notifyNamenodeReceivedBlock(block, 
+                  DataNode.EMPTY_DEL_HINT);
+              if (ClientTraceLog.isInfoEnabled() &&
+                  receiver.clientName.length() > 0) {
+                long offset = 0;
+                ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
+                    receiver.inAddr, receiver.myAddr, block.getNumBytes(),
+                    "HDFS_WRITE", receiver.clientName, offset,
+                    datanode.dnRegistration.getStorageID(), block, endTime-startTime));
+              } else {
+                LOG.info("Received block " + block + 
+                    " of size " + block.getNumBytes() + 
+                    " from " + receiver.inAddr);
               }
               lastPacket = true;
             }
@@ -879,6 +867,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             replyOut.writeLong(expected);
             SUCCESS.write(replyOut);
             replyOut.flush();
+            if (pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
+              replicaInfo.setBytesAcked(pkt.lastByteInBlock);
+            }
         } catch (Exception e) {
           LOG.warn("IOException in BlockReceiver.lastNodeRun: ", e);
           if (running) {
@@ -911,6 +902,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
 
       boolean lastPacketInBlock = false;
+      Packet pkt = null;
       final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
@@ -933,7 +925,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               } else {
                 LOG.debug("PacketResponder " + numTargets + " got seqno = " + 
                     seqno);
-                Packet pkt = null;
                 synchronized (this) {
                   while (running && datanode.shouldRun && ackQueue.size() == 0) {
                     if (LOG.isDebugEnabled()) {
@@ -951,9 +942,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                   }
                   pkt = ackQueue.removeFirst();
                   expected = pkt.seqno;
-                  if (pkt.lastByteInBlock > replicaInfo.getBytesAcked()) {
-                    replicaInfo.setBytesAcked(pkt.lastByteInBlock);
-                  }
                   notifyAll();
                   LOG.debug("PacketResponder " + numTargets + " seqno = " + seqno);
                   if (seqno != expected) {
@@ -994,7 +982,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             
             // If this is the last packet in block, then close block
             // file and finalize the block before responding success
-            if (lastPacketInBlock && !receiver.finalized) {
+            if (lastPacketInBlock) {
               receiver.close();
               final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
               block.setNumBytes(replicaInfo.getNumBytes());
@@ -1025,12 +1013,14 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                       " responded my status " +
                       " for seqno " + expected);
 
+            boolean success = true;
             // forward responses from downstream datanodes.
             for (int i = 0; i < numTargets && datanode.shouldRun; i++) {
               try {
                 if (op == SUCCESS) {
                   op = Status.read(mirrorIn);
                   if (op != SUCCESS) {
+                    success = false;
                     LOG.debug("PacketResponder for block " + block +
                               ": error code received from downstream " +
                               " datanode[" + i + "] " + op);
@@ -1038,6 +1028,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                 }
               } catch (Throwable e) {
                 op = ERROR;
+                success = false;
               }
               op.write(replyOut);
             }
@@ -1045,6 +1036,10 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             LOG.debug("PacketResponder " + block + " " + numTargets + 
                       " responded other status " + " for seqno " + expected);
 
+            if (pkt != null && success && 
+                pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
+              replicaInfo.setBytesAcked(pkt.lastByteInBlock);
+            }
             // If we were unable to read the seqno from downstream, then stop.
             if (expected == -2) {
               running = false;

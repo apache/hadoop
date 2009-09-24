@@ -55,7 +55,7 @@ public class TestClientProtocolForPipelineRecovery {
 
       // test getNewStampAndToken on a finalized block
       try {
-        namenode.getNewStampForPipeline(firstBlock, "");
+        namenode.updateBlockForPipeline(firstBlock, "");
         Assert.fail("Can not get a new GS from a finalized block");
       } catch (IOException e) {
         Assert.assertTrue(e.getMessage().contains("is not under Construction"));
@@ -66,7 +66,7 @@ public class TestClientProtocolForPipelineRecovery {
         long newBlockId = firstBlock.getBlockId() + 1;
         Block newBlock = new Block(newBlockId, 0, 
             firstBlock.getGenerationStamp());
-        namenode.getNewStampForPipeline(newBlock, "");
+        namenode.updateBlockForPipeline(newBlock, "");
         Assert.fail("Cannot get a new GS from a non-existent block");
       } catch (IOException e) {
         Assert.assertTrue(e.getMessage().contains("does not exist"));
@@ -92,7 +92,7 @@ public class TestClientProtocolForPipelineRecovery {
         // test non-lease holder
         DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
         try {
-          namenode.getNewStampForPipeline(firstBlock, "test" + dfs.clientName);
+          namenode.updateBlockForPipeline(firstBlock, "test" + dfs.clientName);
           Assert.fail("Cannot get a new GS for a non lease holder");
         } catch (LeaseExpiredException e) {
           Assert.assertTrue(e.getMessage().startsWith("Lease mismatch"));
@@ -100,14 +100,14 @@ public class TestClientProtocolForPipelineRecovery {
 
         // test null lease holder
         try {
-          namenode.getNewStampForPipeline(firstBlock, null);
+          namenode.updateBlockForPipeline(firstBlock, null);
           Assert.fail("Cannot get a new GS for a null lease holder");
         } catch (LeaseExpiredException e) {
           Assert.assertTrue(e.getMessage().startsWith("Lease mismatch"));
         }
 
         // test getNewStampAndToken on a rbw block
-        namenode.getNewStampForPipeline(firstBlock, dfs.clientName);
+        namenode.updateBlockForPipeline(firstBlock, dfs.clientName);
       } finally {
         IOUtils.closeStream(out);
       }

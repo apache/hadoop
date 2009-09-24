@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -165,13 +166,13 @@ public class TestDataTransferProtocol extends TestCase {
     sendRecvData(description, false);
   }
   
-  private void testWrite(Block block, BlockConstructionStage stage, 
+  private void testWrite(Block block, BlockConstructionStage stage, long newGS,
       String description, Boolean eofExcepted) throws IOException {
     sendBuf.reset();
     recvBuf.reset();
     DataTransferProtocol.Sender.opWriteBlock(sendOut, 
         block.getBlockId(), block.getGenerationStamp(), 0,
-        stage, 0L, 0L, 0L, "cl", null,
+        stage, newGS, block.getNumBytes(), block.getNumBytes(), "cl", null,
         new DatanodeInfo[1], AccessToken.DUMMY_TOKEN);
     if (eofExcepted) {
       ERROR.write(recvOut);
@@ -198,23 +199,29 @@ public class TestDataTransferProtocol extends TestCase {
       // get the first blockid for the file
       Block firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
       // test PIPELINE_SETUP_CREATE on a finalized block
-      testWrite(firstBlock, BlockConstructionStage.PIPELINE_SETUP_CREATE,
+      testWrite(firstBlock, BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L,
           "Cannot create an existing block", true);
       // test PIPELINE_DATA_STREAMING on a finalized block
-      testWrite(firstBlock, BlockConstructionStage.DATA_STREAMING,
+      testWrite(firstBlock, BlockConstructionStage.DATA_STREAMING, 0L,
           "Unexpected stage", true);
       // test PIPELINE_SETUP_STREAMING_RECOVERY on an existing block
+      long newGS = firstBlock.getGenerationStamp() + 1;
       testWrite(firstBlock, 
-          BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY,
-          "Successful for now", false);
+          BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY, 
+          newGS, "Successful for now", false);
+      firstBlock.setGenerationStamp(newGS);
       // test PIPELINE_SETUP_APPEND on an existing block
+      newGS = firstBlock.getGenerationStamp() + 1;
       testWrite(firstBlock, 
           BlockConstructionStage.PIPELINE_SETUP_APPEND,
-          "Append to a finalized replica", false);
-      // test PIPELINE_SETUP_APPEND on an existing block
+          newGS, "Append to a finalized replica", false);
+      firstBlock.setGenerationStamp(newGS);
+      // test PIPELINE_SETUP_APPEND_RECOVERY on an existing block
+      newGS = firstBlock.getGenerationStamp() + 1;
       testWrite(firstBlock, 
-          BlockConstructionStage.PIPELINE_SETUP_APPEND_RECOVERY,
+          BlockConstructionStage.PIPELINE_SETUP_APPEND_RECOVERY, newGS,
           "Recover appending to a finalized replica", false);
+      firstBlock.setGenerationStamp(newGS);
 
       /* Test writing to a new block */
       long newBlockId = firstBlock.getBlockId() + 1;
@@ -222,48 +229,58 @@ public class TestDataTransferProtocol extends TestCase {
           firstBlock.getGenerationStamp());
 
       // test PIPELINE_SETUP_CREATE on a new block
-      testWrite(newBlock, BlockConstructionStage.PIPELINE_SETUP_CREATE,
+      testWrite(newBlock, BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L,
           "Create a new block", false);
       // test PIPELINE_SETUP_STREAMING_RECOVERY on a new block
+      newGS = newBlock.getGenerationStamp() + 1;
       newBlock.setBlockId(newBlock.getBlockId()+1);
       testWrite(newBlock, 
-          BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY,
-          "Recover a new block", false);
+          BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY, newGS,
+          "Recover a new block", true);
+      
       // test PIPELINE_SETUP_APPEND on a new block
-      newBlock.setBlockId(newBlock.getBlockId()+1);
+      newGS = newBlock.getGenerationStamp() + 1;
       testWrite(newBlock, 
-          BlockConstructionStage.PIPELINE_SETUP_APPEND,
+          BlockConstructionStage.PIPELINE_SETUP_APPEND, newGS,
           "Cannot append to a new block", true);
+
       // test PIPELINE_SETUP_APPEND_RECOVERY on a new block
       newBlock.setBlockId(newBlock.getBlockId()+1);
+      newGS = newBlock.getGenerationStamp() + 1;
       testWrite(newBlock, 
-          BlockConstructionStage.PIPELINE_SETUP_APPEND_RECOVERY,
+          BlockConstructionStage.PIPELINE_SETUP_APPEND_RECOVERY, newGS,
           "Cannot append to a new block", true);
 
       /* Test writing to RBW replicas */
-      // change first block to a RBW
-      DFSOutputStream out = (DFSOutputStream)(fileSys.append(file).
+      Path file1 = new Path("dataprotocol1.dat");    
+      DFSTestUtil.createFile(fileSys, file1, 1L, (short)numDataNodes, 0L);
+      DFSOutputStream out = (DFSOutputStream)(fileSys.append(file1).
           getWrappedStream()); 
       out.write(1);
       out.hflush();
-      FSDataInputStream in = fileSys.open(file);
+      FSDataInputStream in = fileSys.open(file1);
       firstBlock = DFSTestUtil.getAllBlocks(in).get(0).getBlock();
+      firstBlock.setNumBytes(2L);
       
       try {
         // test PIPELINE_SETUP_CREATE on a RBW block
-        testWrite(firstBlock, BlockConstructionStage.PIPELINE_SETUP_CREATE,
+        testWrite(firstBlock, BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L,
             "Cannot create a RBW block", true);
         // test PIPELINE_SETUP_APPEND on an existing block
+        newGS = newBlock.getGenerationStamp() + 1;
         testWrite(firstBlock, BlockConstructionStage.PIPELINE_SETUP_APPEND,
-            "Cannot append to a RBW replica", true);
+            newGS, "Cannot append to a RBW replica", true);
         // test PIPELINE_SETUP_APPEND on an existing block
         testWrite(firstBlock, 
             BlockConstructionStage.PIPELINE_SETUP_APPEND_RECOVERY,
-            "Cannot append to a RBW replica", true);
+            newGS, "Recover append to a RBW replica", false);
+        firstBlock.setGenerationStamp(newGS);
         // test PIPELINE_SETUP_STREAMING_RECOVERY on a RBW block
+        newGS = firstBlock.getGenerationStamp() + 1;
         testWrite(firstBlock, 
             BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY,
-            "Recover a RBW replica", false);
+            newGS, "Recover a RBW replica", false);
+        firstBlock.setGenerationStamp(newGS);
       } finally {
         IOUtils.closeStream(in);
         IOUtils.closeStream(out);

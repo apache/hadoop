@@ -35,6 +35,9 @@ Append branch (unreleased changes)
     HDFS-592. Allow clients to fetch a new generation stamp from NameNode for
     pipeline recovery. (hairong)
 
+    HDFS-624. Support a new algorithm for pipeline recovery and pipeline setup 
+    for append. (hairong)
+
   IMPROVEMENTS
 
     HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.
