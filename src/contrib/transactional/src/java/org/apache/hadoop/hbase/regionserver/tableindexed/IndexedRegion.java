@@ -244,7 +244,7 @@ class IndexedRegion extends TransactionalRegion {
         }
       }
       
-      Result oldRow = super.get(get, null);
+      Result oldRow = super.get(get, lockid);
       SortedMap<byte[], byte[]> oldColumnValues = convertToValueMap(oldRow);
       
       
@@ -255,7 +255,7 @@ class IndexedRegion extends TransactionalRegion {
       // Handle if there is still a version visible.
       if (delete.getTimeStamp() != HConstants.LATEST_TIMESTAMP) {
         get.setTimeRange(1, delete.getTimeStamp());
-        oldRow = super.get(get, null);
+        oldRow = super.get(get, lockid);
         SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(oldRow);
         
         for (IndexSpecification indexSpec : getIndexes()) {

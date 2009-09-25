@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowLock; 
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.tableindexed.IndexedRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -144,6 +145,24 @@ public class TestIndexedTable extends HBaseClusterTestCase {
                                     Bytes.toString(persistedRowValue));
   }
 
+  private void assertRowDeleted(int numRowsExpected)
+      throws IndexNotFoundException, IOException {
+    // Check the size of the primary table
+    ResultScanner scanner = table.getScanner(new Scan());
+    int numRows = 0;
+    for (Result rowResult : scanner) {
+      byte[] colA = rowResult.getValue(FAMILY, QUAL_A);
+      LOG.info("primary scan : row [" + Bytes.toString(rowResult.getRow())
+          + "] value [" + Bytes.toString(colA) + "]");
+      numRows++;
+    }
+    scanner.close();
+    Assert.assertEquals(numRowsExpected, numRows);
+
+    // Check the size of the index tables
+    assertRowsInOrder(numRowsExpected); 
+  }
+
   private void updateRow(int row, int newValue) throws IOException {
       Put update = new Put(PerformanceEvaluation.format(row));
       byte[] valueA = PerformanceEvaluation.format(newValue);
@@ -220,4 +239,15 @@ public class TestIndexedTable extends HBaseClusterTestCase {
     updateLockedRowNoAutoFlush(row, value);
     assertRowUpdated(row, value);
   } 
+
+  public void testLockedRowDelete() throws IOException {
+    writeInitalRows();
+    // Delete the first row;
+    byte[] row = PerformanceEvaluation.format(0);
+    RowLock lock = table.lockRow(row);
+    table.delete(new Delete(row, HConstants.LATEST_TIMESTAMP, lock));
+    table.unlockRow(lock);    
+
+    assertRowDeleted(NUM_ROWS - 1);  
+  }
 }
