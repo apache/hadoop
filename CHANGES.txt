@@ -11,6 +11,9 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+  
+  HDFS-646. Fix test-patch failure by adding test-contrib ant target.
+  (gkesavan)
 
 Release 0.21.0 - Unreleased
 
