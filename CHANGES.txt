@@ -47,6 +47,8 @@ Release 0.21.0 - Unreleased
    HBASE-1865  0.20.0 TableInputFormatBase NPE
    HBASE-1866  Scan(Scan) copy constructor does not copy value of
                cacheBlocks
+   HBASE-1869  IndexedTable delete fails when used in conjunction with RowLock()
+               (Keith Thomas via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
