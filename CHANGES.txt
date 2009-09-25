@@ -55,6 +55,8 @@ Append branch (unreleased changes)
     HDFS-589. Change block write protocol to support pipeline recovery. 
     (hairong)  
 
+    HDFS-652. Replace BlockInfo.isUnderConstruction() with isComplete() (shv)
+
   BUG FIXES
 
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice

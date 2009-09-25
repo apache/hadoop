@@ -567,14 +567,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     BlockInfo curBlock;
     while(totalSize<size && iter.hasNext()) {
       curBlock = iter.next();
-      if(curBlock.isUnderConstruction())  continue;
+      if(!curBlock.isComplete())  continue;
       totalSize += addBlock(curBlock, results);
     }
     if(totalSize<size) {
       iter = node.getBlockIterator(); // start from the beginning
       for(int i=0; i<startBlock&&totalSize<size; i++) {
         curBlock = iter.next();
-        if(curBlock.isUnderConstruction())  continue;
+        if(!curBlock.isComplete())  continue;
         totalSize += addBlock(curBlock, results);
       }
     }
@@ -3399,7 +3399,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         if(blocks == null)
           continue;
         for(BlockInfo b : blocks) {
-          if(b.isUnderConstruction())
+          if(!b.isComplete())
             numUCBlocks++;
         }
       }
@@ -3739,7 +3739,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       throw new IOException(msg);
     }
     INodeFile fileINode = storedBlock.getINode();
-    if(!fileINode.isUnderConstruction() || !storedBlock.isUnderConstruction()) {
+    if(!fileINode.isUnderConstruction() || storedBlock.isComplete()) {
       String msg = block + 
             " is already commited, file or block is not under construction().";
       LOG.info(msg);

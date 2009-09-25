@@ -490,7 +490,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
       break;
     case RBW:
     case RWR:
-      if(storedBlock.isUnderConstruction())
+      if(!storedBlock.isComplete())
         ((BlockInfoUnderConstruction)storedBlock).addReplicaIfNotPresent(
                                                       this, block, rState);
       else

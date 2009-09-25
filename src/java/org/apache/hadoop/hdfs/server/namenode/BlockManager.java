@@ -254,7 +254,7 @@ public class BlockManager {
     BlockInfo lastBlock = fileINode.getLastBlock();
     if(lastBlock == null)
       return; // no blocks in file yet
-    if(!lastBlock.isUnderConstruction())
+    if(lastBlock.isComplete())
       return; // already completed (e.g. by syncBlock)
     assert lastBlock.getNumBytes() <= commitBlock.getNumBytes() :
       "commitBlock length is less than the stored one "
@@ -274,7 +274,7 @@ public class BlockManager {
     if(blkIndex < 0)
       return null;
     BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
-    if(!curBlock.isUnderConstruction())
+    if(curBlock.isComplete())
       return curBlock;
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)curBlock;
     if(ucBlock.numNodes() < minReplication)
@@ -1108,7 +1108,7 @@ public class BlockManager {
 
     // check whether safe replication is reached for the block
     // only complete blocks are counted towards that
-    if(!storedBlock.isUnderConstruction())
+    if(storedBlock.isComplete())
       namesystem.incrementSafeBlockCount(numCurrentReplica);
 
     // if file is under construction, then check whether the block

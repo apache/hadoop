@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -94,8 +93,8 @@ public class TestBlockUnderConstruction {
     // all blocks but the last two should be regular blocks
     for(; idx < blocks.length - 2; idx++) {
       curBlock = blocks[idx];
-      assertFalse("Block is not under construction: " + curBlock,
-          curBlock.isUnderConstruction());
+      assertTrue("Block is not complete: " + curBlock,
+          curBlock.isComplete());
       assertTrue("Block is not in BlocksMap: " + curBlock,
           ns.blockManager.getStoredBlock(curBlock) == curBlock);
     }
@@ -107,8 +106,8 @@ public class TestBlockUnderConstruction {
       assertTrue("Block " + curBlock +
           " isUnderConstruction = " + inode.isUnderConstruction() +
           " expected to be " + isFileOpen,
-          (isFileOpen && !curBlock.isUnderConstruction()) ||
-          (!isFileOpen && curBlock.isUnderConstruction() == 
+          (isFileOpen && curBlock.isComplete()) ||
+          (!isFileOpen && !curBlock.isComplete() == 
             (curBlock.getBlockUCState() ==
               BlockUCState.COMMITTED)));
       assertTrue("Block is not in BlocksMap: " + curBlock,
@@ -117,10 +116,10 @@ public class TestBlockUnderConstruction {
 
     // the last block is under construction if the file is not closed
     curBlock = blocks[idx]; // last block
-    assertTrue("Block " + curBlock +
-        " isUnderConstruction = " + inode.isUnderConstruction() +
+    assertEquals("Block " + curBlock +
+        " isComplete = " + curBlock.isComplete() +
         " expected to be " + isFileOpen,
-        curBlock.isUnderConstruction() == isFileOpen);
+        isFileOpen, !curBlock.isComplete());
     assertTrue("Block is not in BlocksMap: " + curBlock,
         ns.blockManager.getStoredBlock(curBlock) == curBlock);
   }

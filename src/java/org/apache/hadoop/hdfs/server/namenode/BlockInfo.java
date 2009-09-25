@@ -284,10 +284,12 @@ class BlockInfo extends Block {
   }
 
   /**
-   * Is this block being constructed?
+   * Is this block complete?
+   * 
+   * @return true if the state of the block is {@link BlockUCState#COMPLETE}
    */
-  boolean isUnderConstruction() {
-    return !getBlockUCState().equals(BlockUCState.COMPLETE);
+  boolean isComplete() {
+    return getBlockUCState().equals(BlockUCState.COMPLETE);
   }
 
   /**
@@ -297,7 +299,7 @@ class BlockInfo extends Block {
    */
   BlockInfoUnderConstruction convertToBlockUnderConstruction(
       BlockUCState s, DatanodeDescriptor[] targets) {
-    if(!isUnderConstruction()) {
+    if(isComplete()) {
       return new BlockInfoUnderConstruction(
           this, getINode().getReplication(), s, targets);
     }
