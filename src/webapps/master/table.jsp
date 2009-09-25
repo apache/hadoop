@@ -110,7 +110,7 @@
 <tr>
   <td><%= Bytes.toString(meta.getRegionName()) %></td>
     <td><a href="<%= url %>"><%= meta.getServer().getHostname().toString() + ":" + infoPort %></a></td>
-    <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td>-</td>
+    <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td><%= Bytes.toString(meta.getEndKey()) %></td>
 </tr>
 <%  } %>
 </table>

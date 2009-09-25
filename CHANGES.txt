@@ -80,6 +80,8 @@ Release 0.21.0 - Unreleased
    HBASE-1854  Remove the Region Historian
    HBASE-1860  Change HTablePool#createHTable from private to protected
    HBASE-48    Bulk load tools
+   HBASE-1855  HMaster web application doesn't show the region end key in the
+               table detail page (Andrei Dragomir via Stack)
 
   OPTIMIZATIONS
 
