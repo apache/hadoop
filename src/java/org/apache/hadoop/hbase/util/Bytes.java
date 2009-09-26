@@ -492,7 +492,7 @@ public class Bytes {
    * @param offset
    * @return Float made from passed byte array.
    */
-  private static float toFloat(byte [] bytes, int offset) {
+  public static float toFloat(byte [] bytes, int offset) {
     int i = toInt(bytes, offset);
     return Float.intBitsToFloat(i);
   }

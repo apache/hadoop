@@ -84,6 +84,7 @@ Release 0.21.0 - Unreleased
    HBASE-48    Bulk load tools
    HBASE-1855  HMaster web application doesn't show the region end key in the
                table detail page (Andrei Dragomir via Stack)
+   HBASE-1870  Bytes.toFloat(byte[], int) is marked private
 
   OPTIMIZATIONS
 
