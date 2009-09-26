@@ -528,7 +528,7 @@ public class FSEditLog {
                                       clientMachine, 
                                       null);
             fsDir.replaceNode(path, node, cons);
-            fsNamesys.leaseManager.addLease(cons.clientName, path);
+            fsNamesys.leaseManager.addLease(cons.getClientName(), path);
           }
           break;
         } 

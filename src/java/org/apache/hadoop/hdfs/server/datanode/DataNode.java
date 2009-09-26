@@ -34,6 +34,7 @@ import java.security.SecureRandom;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -77,6 +79,7 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -913,7 +916,7 @@ public class DataNode extends Configured
       processDistributedUpgradeCommand((UpgradeCommand)cmd);
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:
-      recoverBlocks(bcmd.getBlocks(), bcmd.getTargets());
+      recoverBlocks(((BlockRecoveryCommand)cmd).getRecoveringBlocks());
       break;
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
       LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
@@ -1515,16 +1518,16 @@ public class DataNode extends Configured
     return info;
   }
 
-  public Daemon recoverBlocks(final Block[] blocks, final DatanodeInfo[][] targets) {
+  public Daemon recoverBlocks(final Collection<RecoveringBlock> blocks) {
     Daemon d = new Daemon(threadGroup, new Runnable() {
       /** Recover a list of blocks. It is run by the primary datanode. */
       public void run() {
-        for(int i = 0; i < blocks.length; i++) {
+        for(RecoveringBlock b : blocks) {
           try {
-            logRecoverBlock("NameNode", blocks[i], targets[i]);
-            recoverBlock(blocks[i], false, targets[i], true);
+            logRecoverBlock("NameNode", b.getBlock(), b.getLocations());
+            recoverBlock(b);
           } catch (IOException e) {
-            LOG.warn("recoverBlocks FAILED, blocks[" + i + "]=" + blocks[i], e);
+            LOG.warn("recoverBlocks FAILED: " + b, e);
           }
         }
       }
@@ -1580,9 +1583,9 @@ public class DataNode extends Configured
   }
 
   /** Recover a block */
-  private LocatedBlock recoverBlock(Block block, boolean keepLength,
-      DatanodeInfo[] targets, boolean closeFile) throws IOException {
-
+  private LocatedBlock recoverBlock(RecoveringBlock rBlock) throws IOException {
+    Block block = rBlock.getBlock();
+    DatanodeInfo[] targets = rBlock.getLocations();
     DatanodeID[] datanodeids = (DatanodeID[])targets;
     // If the block is already being recovered, then skip recovering it.
     // This can happen if the namenode and client start recovering the same
@@ -1609,16 +1612,9 @@ public class DataNode extends Configured
               this: DataNode.createInterDataNodeProtocolProxy(id, getConf());
           BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
           if (info != null && info.getGenerationStamp() >= block.getGenerationStamp()) {
-            if (keepLength) {
-              if (info.getNumBytes() == block.getNumBytes()) {
-                syncList.add(new BlockRecord(id, datanode, new Block(info)));
-              }
-            }
-            else {
-              syncList.add(new BlockRecord(id, datanode, new Block(info)));
-              if (info.getNumBytes() < minlength) {
-                minlength = info.getNumBytes();
-              }
+            syncList.add(new BlockRecord(id, datanode, new Block(info)));
+            if (info.getNumBytes() < minlength) {
+              minlength = info.getNumBytes();
             }
           }
         } catch (IOException e) {
@@ -1633,10 +1629,8 @@ public class DataNode extends Configured
         throw new IOException("All datanodes failed: block=" + block
             + ", datanodeids=" + Arrays.asList(datanodeids));
       }
-      if (!keepLength) {
-        block.setNumBytes(minlength);
-      }
-      return syncBlock(block, syncList, targets, closeFile);
+      block.setNumBytes(minlength);
+      return syncBlock(rBlock, syncList);
     } finally {
       synchronized (ongoingRecovery) {
         ongoingRecovery.remove(block);
@@ -1645,20 +1639,22 @@ public class DataNode extends Configured
   }
 
   /** Block synchronization */
-  private LocatedBlock syncBlock(Block block, List<BlockRecord> syncList,
-      DatanodeInfo[] targets, boolean closeFile) throws IOException {
+  private LocatedBlock syncBlock(RecoveringBlock rBlock,
+                                 List<BlockRecord> syncList) throws IOException {
+    Block block = rBlock.getBlock();
+    long newGenerationStamp = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
       LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
-          + "), syncList=" + syncList + ", closeFile=" + closeFile);
+          + "), syncList=" + syncList);
     }
 
     //syncList.isEmpty() that all datanodes do not have the block
     //so the block can be deleted.
     if (syncList.isEmpty()) {
-      namenode.commitBlockSynchronization(block, 0, 0, closeFile, true,
-          DatanodeID.EMPTY_ARRAY);
+      namenode.commitBlockSynchronization(block, newGenerationStamp, 0,
+          true, true, DatanodeID.EMPTY_ARRAY);
       //always return a new access token even if everything else stays the same
-      LocatedBlock b = new LocatedBlock(block, targets);
+      LocatedBlock b = new LocatedBlock(block, rBlock.getLocations());
       if (isAccessTokenEnabled) {
         b.setAccessToken(accessTokenHandler.generateToken(null, b.getBlock()
             .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.WRITE)));
@@ -1668,12 +1664,12 @@ public class DataNode extends Configured
 
     List<DatanodeID> successList = new ArrayList<DatanodeID>();
 
-    long generationstamp = namenode.nextGenerationStamp(block);
-    Block newblock = new Block(block.getBlockId(), block.getNumBytes(), generationstamp);
+    Block newblock =
+      new Block(block.getBlockId(), block.getNumBytes(), newGenerationStamp);
 
     for(BlockRecord r : syncList) {
       try {
-        r.datanode.updateBlock(r.block, newblock, closeFile);
+        r.datanode.updateBlock(r.block, newblock, true);
         successList.add(r.id);
       } catch (IOException e) {
         InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="
@@ -1685,7 +1681,7 @@ public class DataNode extends Configured
       DatanodeID[] nlist = successList.toArray(new DatanodeID[successList.size()]);
 
       namenode.commitBlockSynchronization(block,
-          newblock.getGenerationStamp(), newblock.getNumBytes(), closeFile, false,
+          newblock.getGenerationStamp(), newblock.getNumBytes(), true, false,
           nlist);
       DatanodeInfo[] info = new DatanodeInfo[nlist.length];
       for (int i = 0; i < nlist.length; i++) {
@@ -1712,10 +1708,12 @@ public class DataNode extends Configured
   
   // ClientDataNodeProtocol implementation
   /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public LocatedBlock recoverBlock(Block block, boolean keepLength, DatanodeInfo[] targets
       ) throws IOException {
     logRecoverBlock("Client", block, targets);
-    return recoverBlock(block, keepLength, targets, false);
+    assert false : "ClientDatanodeProtocol.recoverBlock: should never be called.";
+    return null;
   }
 
   private static void logRecoverBlock(String who,

@@ -10,6 +10,8 @@ Append branch (unreleased changes)
 
     HDFS-636. SafeMode counts complete blocks only. (shv)
 
+    HDFS-644. Lease recovery, concurrency support. (shv)
+
   NEW FEATURES
 
     HDFS-536. Support hflush at DFSClient. (hairong)

@@ -15,17 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 
 /**
  * Exception indicating that a replica is already being recovery.
  */
-class RecoveryInProgressException extends IOException {
+public class RecoveryInProgressException extends IOException {
   private static final long serialVersionUID = 1L;
 
-  RecoveryInProgressException(String msg) {
+  public RecoveryInProgressException(String msg) {
     super(msg);
   }
 }

@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 
 
 class INodeFileUnderConstruction extends INodeFile {
-  final String clientName;         // lease holder
+  private  String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
   
@@ -62,6 +62,10 @@ class INodeFileUnderConstruction extends INodeFile {
 
   String getClientName() {
     return clientName;
+  }
+
+  void setClientName(String clientName) {
+    this.clientName = clientName;
   }
 
   String getClientMachine() {

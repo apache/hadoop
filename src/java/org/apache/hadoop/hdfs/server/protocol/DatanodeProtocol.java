@@ -35,9 +35,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 21: blockReport() includes under-construction replicas.
+   * 22: BlockRecoveryCommand introduced in reply to sendHeartbeat().
    */
-  public static final long versionID = 21L;
+  public static final long versionID = 22L;
   
   // error code
   final static int NOTIFY = 0;

@@ -46,6 +46,13 @@ class BlockInfoUnderConstruction extends BlockInfo {
   private long lastRecoveryTime = 0;
 
   /**
+   * The new generation stamp, which this block will have
+   * after the recovery succeeds. Also used as a recovery id to identify
+   * the right recovery if any of the abandoned recoveries re-appear.
+   */
+  private long blockRecoveryId = 0;
+
+  /**
    * ReplicaUnderConstruction contains information about replicas while
    * they are under construction.
    * The GS, the length and the state of the replica is as reported by 
@@ -123,7 +130,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
     assert getBlockUCState() != BlockUCState.COMPLETE :
       "BlockInfoUnderConstruction cannot be in COMPLETE state";
     this.blockUCState = state;
-    setLocations(targets);
+    setExpectedLocations(targets);
   }
 
   /**
@@ -144,7 +151,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
     return new BlockInfo(this);
   }
 
-  void setLocations(DatanodeDescriptor[] targets) {
+  void setExpectedLocations(DatanodeDescriptor[] targets) {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
     for(int i = 0; i < numLocations; i++)
@@ -156,7 +163,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * Create array of expected replica locations
    * (as has been assigned by chooseTargets()).
    */
-  private DatanodeDescriptor[] getExpectedLocations() {
+  DatanodeDescriptor[] getExpectedLocations() {
     int numLocations = replicas == null ? 0 : replicas.size();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
     for(int i = 0; i < numLocations; i++)
@@ -164,7 +171,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
     return locations;
   }
 
-  int getNumLocations() {
+  int getNumExpectedLocations() {
     return replicas == null ? 0 : replicas.size();
   }
 
@@ -179,6 +186,10 @@ class BlockInfoUnderConstruction extends BlockInfo {
 
   void setBlockUCState(BlockUCState s) {
     blockUCState = s;
+  }
+
+  long getBlockRecoveryId() {
+    return blockRecoveryId;
   }
 
   /**
@@ -197,9 +208,12 @@ class BlockInfoUnderConstruction extends BlockInfo {
 
   /**
    * Initialize lease recovery for this block.
-   * Find the first alive data-node starting from the previous primary.
+   * Find the first alive data-node starting from the previous primary and
+   * make it primary.
    */
-  void assignPrimaryDatanode() {
+  void initializeBlockRecovery(long recoveryId) {
+    setBlockUCState(BlockUCState.UNDER_RECOVERY);
+    blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
       NameNode.stateChangeLog.warn("BLOCK*"
         + " INodeFileUnderConstruction.initLeaseRecovery:"
@@ -212,7 +226,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
       if (replicas.get(j).isAlive()) {
         primaryNodeIndex = j;
         DatanodeDescriptor primary = replicas.get(j).getExpectedLocation(); 
-        primary.addBlockToBeRecovered(this, getExpectedLocations());
+        primary.addBlockToBeRecovered(this);
         NameNode.stateChangeLog.info("BLOCK* " + this
           + " recovery started, primary=" + primary);
         return;

@@ -306,7 +306,7 @@ class BlockInfo extends Block {
     // the block is already under construction
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
     ucBlock.setBlockUCState(s);
-    ucBlock.setLocations(targets);
+    ucBlock.setExpectedLocations(targets);
     ucBlock.setLastRecoveryTime(0);
     return ucBlock;
   }

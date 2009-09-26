@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.metrics.util.MBeanUtil;
@@ -1414,7 +1415,9 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   public synchronized void finalizeBlock(Block b) throws IOException {
     ReplicaInfo replicaInfo = getReplicaInfo(b);
     if (replicaInfo.getState() == ReplicaState.FINALIZED) {
-      throw new IOException("Block " + b + " is already finalized.");
+      // this is legal, when recovery happens on a file that has
+      // been opened for append but never modified
+      return;
     }
     ReplicaInfo newReplicaInfo = null;
     if (replicaInfo.getState() == ReplicaState.RUR &&

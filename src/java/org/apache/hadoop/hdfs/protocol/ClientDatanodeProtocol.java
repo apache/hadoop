@@ -42,6 +42,7 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
    * generated access token is returned as part of the return value.
    * @throws IOException
    */
+  @Deprecated // not used anymore - should be removed
   LocatedBlock recoverBlock(Block block, boolean keepLength,
       DatanodeInfo[] targets) throws IOException;
 }
