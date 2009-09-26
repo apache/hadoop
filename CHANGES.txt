@@ -51,6 +51,8 @@ Release 0.21.0 - Unreleased
                (Keith Thomas via Stack)
    HBASE-1858  Master can't split logs created by THBase (Clint Morgan via
                Andrew Purtell)
+   HBASE-1871  Wrong type used in TableMapReduceUtil.initTableReduceJob()
+               (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
