@@ -12,6 +12,9 @@ Append branch (unreleased changes)
 
     HDFS-644. Lease recovery, concurrency support. (shv)
 
+   HDFS-570. Get last block length from a data-node when opening a file
+   being written to. (Tsz Wo (Nicholas), SZE via shv)
+
   NEW FEATURES
 
     HDFS-536. Support hflush at DFSClient. (hairong)
@@ -42,9 +45,6 @@ Append branch (unreleased changes)
 
    HDFS-627. Support replica update in data-node.
    (Tsz Wo (Nicholas), SZE and Hairong Kuang via shv)
-
-   HDFS-570. Get last block length from a data-node when opening a file
-   being written to. (Tsz Wo (Nicholas), SZE via shv)
 
   IMPROVEMENTS
 
