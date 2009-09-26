@@ -713,14 +713,51 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (doAccessTime && isAccessTimeSupported()) {
       dir.setTimes(src, inode, -1, now(), false);
     }
-    final Block[] blocks = inode.getBlocks();
+    final BlockInfo[] blocks = inode.getBlocks();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
+    }
     if (blocks == null) {
       return null;
     }
-    final List<LocatedBlock> results = blocks.length == 0?
-        new ArrayList<LocatedBlock>(0):
-        blockManager.getBlockLocations(blocks, offset, length, Integer.MAX_VALUE);
-    return inode.createLocatedBlocks(results);
+
+    if (blocks.length == 0) {
+      return new LocatedBlocks(0, inode.isUnderConstruction(),
+          Collections.<LocatedBlock>emptyList(), null, false);
+    } else {
+      final long n = inode.computeFileSize(false);
+      final List<LocatedBlock> locatedblocks = blockManager.getBlockLocations(
+          blocks, offset, length, Integer.MAX_VALUE);
+      final BlockInfo last = inode.getLastBlock();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("last = " + last);
+      }
+
+      if (!last.isComplete()) {
+        final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)last;
+        final DatanodeDescriptor[] locations = uc.getExpectedLocations();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("locations = " + java.util.Arrays.asList(locations));
+        }
+        return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
+            createLocatedBlock(uc, locations, n, false), false);
+      }
+      else {
+        return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
+            blockManager.getBlockLocation(last, n-last.getNumBytes()), true);
+      }
+    }
+  }
+
+  /** Create a LocatedBlock. */
+  LocatedBlock createLocatedBlock(final Block b, final DatanodeInfo[] locations,
+      final long offset, final boolean corrupt) throws IOException {
+    final LocatedBlock lb = new LocatedBlock(b, locations, offset, corrupt);
+    if (isAccessTokenEnabled) {
+      lb.setAccessToken(accessTokenHandler.generateToken(b.getBlockId(),
+          EnumSet.of(AccessTokenHandler.AccessMode.READ)));
+    }
+    return lb;
   }
 
   /**

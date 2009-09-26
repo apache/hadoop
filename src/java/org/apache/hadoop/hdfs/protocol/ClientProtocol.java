@@ -44,11 +44,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 49: added two new methods to support pipeline recovery and append
-   *     updateBlockForPipeline(Block, String) and
-   *     updatePipeline(String, Block, Block, DatanodeID[])
+   * 50: change LocatedBlocks to include last block information.
    */
-  public static final long versionID = 49L;
+  public static final long versionID = 50L;
   
   ///////////////////////////////////////
   // File contents

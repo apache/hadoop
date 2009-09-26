@@ -1725,4 +1725,19 @@ public class DataNode extends Configured
     LOG.info(who + " calls recoverBlock(block=" + block
         + ", targets=[" + msg + "])");
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getReplicaVisibleLength(final Block block) throws IOException {
+    final Replica replica = data.getReplica(block.getBlockId());
+    if (replica == null) {
+      throw new ReplicaNotFoundException(block);
+    }
+    if (replica.getGenerationStamp() < block.getGenerationStamp()) {
+      throw new IOException(
+          "replica.getGenerationStamp() < block.getGenerationStamp(), block="
+          + block + ", replica=" + replica);
+    }
+    return replica.getVisibleLength();
+  }
 }

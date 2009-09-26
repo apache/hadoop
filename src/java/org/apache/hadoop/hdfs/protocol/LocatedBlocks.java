@@ -36,6 +36,8 @@ public class LocatedBlocks implements Writable {
   private long fileLength;
   private List<LocatedBlock> blocks; // array of blocks with prioritized locations
   private boolean underConstruction;
+  private LocatedBlock lastLocatedBlock = null;
+  private boolean isLastBlockComplete = false;
 
   LocatedBlocks() {
     fileLength = 0;
@@ -43,11 +45,15 @@ public class LocatedBlocks implements Writable {
     underConstruction = false;
   }
   
-  public LocatedBlocks(long flength, List<LocatedBlock> blks, boolean isUnderConstuction) {
-
+  /** public Constructor */
+  public LocatedBlocks(long flength, boolean isUnderConstuction,
+      List<LocatedBlock> blks, 
+      LocatedBlock lastBlock, boolean isLastBlockCompleted) {
     fileLength = flength;
     blocks = blks;
     underConstruction = isUnderConstuction;
+    this.lastLocatedBlock = lastBlock;
+    this.isLastBlockComplete = isLastBlockCompleted;
   }
   
   /**
@@ -57,6 +63,16 @@ public class LocatedBlocks implements Writable {
     return blocks;
   }
   
+  /** Get the last located block. */
+  public LocatedBlock getLastLocatedBlock() {
+    return lastLocatedBlock;
+  }
+  
+  /** Is the last block completed? */
+  public boolean isLastBlockComplete() {
+    return isLastBlockComplete;
+  }
+
   /**
    * Get located block.
    */
@@ -161,6 +177,15 @@ public class LocatedBlocks implements Writable {
   public void write(DataOutput out) throws IOException {
     out.writeLong(this.fileLength);
     out.writeBoolean(underConstruction);
+
+    //write the last located block
+    final boolean isNull = lastLocatedBlock == null;
+    out.writeBoolean(isNull);
+    if (!isNull) {
+      lastLocatedBlock.write(out);
+    }
+    out.writeBoolean(isLastBlockComplete);
+
     // write located blocks
     int nrBlocks = locatedBlockCount();
     out.writeInt(nrBlocks);
@@ -175,6 +200,14 @@ public class LocatedBlocks implements Writable {
   public void readFields(DataInput in) throws IOException {
     this.fileLength = in.readLong();
     underConstruction = in.readBoolean();
+
+    //read the last located block
+    final boolean isNull = in.readBoolean();
+    if (!isNull) {
+      lastLocatedBlock = LocatedBlock.read(in);
+    }
+    isLastBlockComplete = in.readBoolean();
+
     // read located blocks
     int nrBlocks = in.readInt();
     this.blocks = new ArrayList<LocatedBlock>(nrBlocks);
@@ -183,5 +216,19 @@ public class LocatedBlocks implements Writable {
       blk.readFields(in);
       this.blocks.add(blk);
     }
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public String toString() {
+    final StringBuilder b = new StringBuilder(getClass().getSimpleName());
+    b.append("{")
+     .append("\n  fileLength=").append(fileLength)
+     .append("\n  underConstruction=").append(underConstruction)
+     .append("\n  blocks=").append(blocks)
+     .append("\n  lastLocatedBlock=").append(lastLocatedBlock)
+     .append("\n  isLastBlockComplete=").append(isLastBlockComplete)
+     .append("}");
+    return b.toString();
   }
 }

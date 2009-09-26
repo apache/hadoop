@@ -1611,6 +1611,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private BlockReader blockReader = null;
     private boolean verifyChecksum;
     private LocatedBlocks locatedBlocks = null;
+    private long lastBlockBeingWrittenLength = 0;
     private DatanodeInfo currentNode = null;
     private Block currentBlock = null;
     private long pos = 0;
@@ -1643,6 +1644,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     synchronized void openInfo() throws IOException {
       LocatedBlocks newInfo = callGetBlockLocations(namenode, src, 0, prefetchSize);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("newInfo = " + newInfo);
+      }
       if (newInfo == null) {
         throw new IOException("Cannot open filename " + src);
       }
@@ -1657,11 +1661,39 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
       }
       this.locatedBlocks = newInfo;
+      this.lastBlockBeingWrittenLength = 
+          locatedBlocks.isLastBlockComplete()? 0:
+              readBlockLength(locatedBlocks.getLastLocatedBlock()); 
       this.currentNode = null;
+    }
+
+    /** Read the block length from one of the datanodes. */
+    private long readBlockLength(LocatedBlock locatedblock) throws IOException {
+      if (locatedblock == null || locatedblock.getLocations().length == 0) {
+        return 0;
+      }
+      for(DatanodeInfo datanode : locatedblock.getLocations()) {
+        try {
+          final ClientDatanodeProtocol cdp = createClientDatanodeProtocolProxy(
+              datanode, conf);
+          final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
+          if (n >= 0) {
+            return n;
+          }
+        }
+        catch(IOException ioe) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Faild to getReplicaVisibleLength from datanode "
+                + datanode + " for block " + locatedblock.getBlock(), ioe);
+          }
+        }
+      }
+      throw new IOException("Cannot obtain block length for " + locatedblock);
     }
     
     public synchronized long getFileLength() {
-      return (locatedBlocks == null) ? 0 : locatedBlocks.getFileLength();
+      return locatedBlocks == null? 0:
+          locatedBlocks.getFileLength() + lastBlockBeingWrittenLength;
     }
 
     /**
@@ -1697,17 +1729,36 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private synchronized LocatedBlock getBlockAt(long offset,
         boolean updatePosition) throws IOException {
       assert (locatedBlocks != null) : "locatedBlocks is null";
-      // search cached blocks first
-      int targetBlockIdx = locatedBlocks.findBlock(offset);
-      if (targetBlockIdx < 0) { // block is not cached
-        targetBlockIdx = LocatedBlocks.getInsertIndex(targetBlockIdx);
-        // fetch more blocks
-        LocatedBlocks newBlocks;
-        newBlocks = callGetBlockLocations(namenode, src, offset, prefetchSize);
-        assert (newBlocks != null) : "Could not find target position " + offset;
-        locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
+
+      final LocatedBlock blk;
+
+      //check offset
+      if (offset < 0 || offset >= getFileLength()) {
+        throw new IOException("offset < 0 || offset > getFileLength(), offset="
+            + offset
+            + ", updatePosition=" + updatePosition
+            + ", locatedBlocks=" + locatedBlocks);
       }
-      LocatedBlock blk = locatedBlocks.get(targetBlockIdx);
+      else if (offset >= locatedBlocks.getFileLength()) {
+        // offset to the portion of the last block,
+        // which is not known to the name-node yet;
+        // getting the last block 
+        blk = locatedBlocks.getLastLocatedBlock();
+      }
+      else {
+        // search cached blocks first
+        int targetBlockIdx = locatedBlocks.findBlock(offset);
+        if (targetBlockIdx < 0) { // block is not cached
+          targetBlockIdx = LocatedBlocks.getInsertIndex(targetBlockIdx);
+          // fetch more blocks
+          LocatedBlocks newBlocks;
+          newBlocks = callGetBlockLocations(namenode, src, offset, prefetchSize);
+          assert (newBlocks != null) : "Could not find target position " + offset;
+          locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
+        }
+        blk = locatedBlocks.get(targetBlockIdx);
+      }
+
       // update current position
       if (updatePosition) {
         this.pos = offset;
@@ -1744,6 +1795,27 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private synchronized List<LocatedBlock> getBlockRange(long offset, 
                                                           long length) 
                                                         throws IOException {
+      final List<LocatedBlock> blocks;
+      if (locatedBlocks.isLastBlockComplete()) {
+        blocks = getFinalizedBlockRange(offset, length);
+      }
+      else {
+        if (length + offset > locatedBlocks.getFileLength()) {
+          length = locatedBlocks.getFileLength() - offset;
+        }
+        blocks = getFinalizedBlockRange(offset, length);
+        blocks.add(locatedBlocks.getLastLocatedBlock());
+      }
+      return blocks;
+    }
+
+    /**
+     * Get blocks in the specified range.
+     * Includes only the complete blocks.
+     * Fetch them from the namenode if not cached.
+     */
+    private synchronized List<LocatedBlock> getFinalizedBlockRange(
+        long offset, long length) throws IOException {
       assert (locatedBlocks != null) : "locatedBlocks is null";
       List<LocatedBlock> blockRange = new ArrayList<LocatedBlock>();
       // search cached blocks first

@@ -29,9 +29,9 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 4: never return null and always return a newly generated access token
+   * 5: add getReplicaVisibleLength(..)
    */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
 
   /** Start generation-stamp recovery for specified block
    * @param block the specified block
@@ -45,4 +45,7 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
   @Deprecated // not used anymore - should be removed
   LocatedBlock recoverBlock(Block block, boolean keepLength,
       DatanodeInfo[] targets) throws IOException;
+
+  /** Return the visible length of a replica. */
+  long getReplicaVisibleLength(Block b) throws IOException;
 }

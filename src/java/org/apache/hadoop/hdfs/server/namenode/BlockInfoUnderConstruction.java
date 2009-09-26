@@ -266,4 +266,17 @@ class BlockInfoUnderConstruction extends BlockInfo {
     // Sufficient to rely on super's implementation
     return (this == obj) || super.equals(obj);
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public String toString() {
+    final StringBuilder b = new StringBuilder(getClass().getSimpleName());
+    b.append("{")
+     .append("\n  blockUCState=").append(blockUCState)
+     .append("\n  replicas=").append(replicas)
+     .append("\n  primaryNodeIndex=").append(primaryNodeIndex)
+     .append("\n  lastRecoveryTime=").append(lastRecoveryTime)
+     .append("}");
+    return b.toString();
+  }
 }
