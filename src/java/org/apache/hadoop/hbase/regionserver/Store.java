@@ -309,7 +309,7 @@ public class Store implements HConstants, HeapSize {
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
       reconstructionLog, this.conf);
     try {
-      HLogKey key = new HLogKey();
+      HLogKey key = HLog.newKey(conf);
       KeyValue val = new KeyValue();
       long skippedEdits = 0;
       long editsCount = 0;
@@ -327,8 +327,7 @@ public class Store implements HConstants, HeapSize {
         }
         // Check this edit is for me. Also, guard against writing the special
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
-        if (/* commented out for now - stack via jgray key.isTransactionEntry() || */
-            val.matchingFamily(HLog.METAFAMILY) ||
+        if (val.matchingFamily(HLog.METAFAMILY) ||
           !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
           !val.matchingFamily(family.getName())) {
           continue;

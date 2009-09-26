@@ -49,6 +49,8 @@ Release 0.21.0 - Unreleased
                cacheBlocks
    HBASE-1869  IndexedTable delete fails when used in conjunction with RowLock()
                (Keith Thomas via Stack)
+   HBASE-1858  Master can't split logs created by THBase (Clint Morgan via
+               Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -105,23 +105,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logRecoveryMangaer.getCommitsFromLog(
         filename, -1, null);
 
-    assertEquals(1, commits.size());
-    assertTrue(commits.containsKey(transactionId));
-    assertEquals(3, commits.get(transactionId).size());
-
-    List<KeyValue> updates = commits.get(transactionId);
-
-    KeyValue update1 = updates.get(0);
-    assertTrue(Bytes.equals(row1, update1.getRow()));
-    assertTrue(Bytes.equals(val1, update1.getValue()));
-
-    KeyValue update2 = updates.get(1);
-    assertTrue(Bytes.equals(row2, update2.getRow()));
-    assertTrue(Bytes.equals(val2, update2.getValue()));
-
-    KeyValue update3 = updates.get(2);
-    assertTrue(Bytes.equals(row3, update3.getRow()));
-    assertTrue(Bytes.equals(val3, update3.getValue()));
+    assertNull(commits);
 
   }
 
@@ -153,7 +137,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logRecoveryMangaer.getCommitsFromLog(
         filename, -1, null);
 
-    assertEquals(0, commits.size());
+    assertNull(commits);
   }
 
   /**
@@ -190,9 +174,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
-    assertEquals(2, commits.size());
-    assertEquals(2, commits.get(transaction1Id).size());
-    assertEquals(1, commits.get(transaction2Id).size());
+    assertNull(commits);
   }
 
   /**
@@ -229,8 +211,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
-    assertEquals(1, commits.size());
-    assertEquals(2, commits.get(transaction1Id).size());
+    assertNull(commits);
   }
 
   /**
@@ -267,8 +248,7 @@ public class TestTHLog extends HBaseTestCase implements
     Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
-    assertEquals(1, commits.size());
-    assertEquals(1, commits.get(transaction2Id).size());
+    assertNull(commits);
   }
 
   // FIXME Cannot do this test without a global transacton manager

@@ -823,6 +823,22 @@ public class HLog implements HConstants, Syncable {
       this.w = w;
     }
   }
+  
+   static Class<? extends HLogKey> getKeyClass(HBaseConfiguration conf) {
+     return (Class<? extends HLogKey>) conf
+        .getClass("hbase.regionserver.hlog.keyclass", HLogKey.class);
+  }
+  
+   static HLogKey newKey(HBaseConfiguration conf) throws IOException {
+    Class<? extends HLogKey> keyClass = getKeyClass(conf);
+    try {
+      return keyClass.newInstance();
+    } catch (InstantiationException e) {
+      throw new IOException("cannot create hlog key");
+    } catch (IllegalAccessException e) {
+      throw new IOException("cannot create hlog key");
+    }
+  }
 
   /*
    * @param rootDir
@@ -875,7 +891,7 @@ public class HLog implements HConstants, Syncable {
           try {
             in = new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
             try {
-              HLogKey key = new HLogKey();
+              HLogKey key = newKey(conf);
               KeyValue val = new KeyValue();
               while (in.next(key, val)) {
                 byte [] regionName = key.getRegionName();
@@ -890,7 +906,7 @@ public class HLog implements HConstants, Syncable {
                 count++;
                 // Make the key and value new each time; otherwise same instance
                 // is used over and over.
-                key = new HLogKey();
+                key = newKey(conf);
                 val = new KeyValue();
               }
               LOG.debug("Pushed=" + count + " entries from " +
@@ -960,7 +976,7 @@ public class HLog implements HConstants, Syncable {
                     }
                     SequenceFile.Writer w =
                       SequenceFile.createWriter(fs, conf, logfile,
-                        HLogKey.class, KeyValue.class, getCompressionType(conf));
+                        getKeyClass(conf), KeyValue.class, getCompressionType(conf));
                     wap = new WriterAndPath(logfile, w);
                     logWriters.put(key, wap);
                     if (LOG.isDebugEnabled()) {
@@ -970,7 +986,7 @@ public class HLog implements HConstants, Syncable {
 
                     if (old != null) {
                       // Copy from existing log file
-                      HLogKey oldkey = new HLogKey();
+                      HLogKey oldkey = newKey(conf);
                       KeyValue oldval = new KeyValue();
                       for (; old.next(oldkey, oldval); count++) {
                         if (LOG.isDebugEnabled() && count > 0

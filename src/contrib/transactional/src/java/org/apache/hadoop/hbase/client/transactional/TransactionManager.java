@@ -152,6 +152,8 @@ public class TransactionManager {
     
     if (status == TransactionalRegionInterface.COMMIT_OK) {
       doCommit(transactionState);
+    } else if (status == TransactionalRegionInterface.COMMIT_OK_READ_ONLY) {
+      transactionLogger.forgetTransaction(transactionState.getTransactionId());
     }
     LOG.debug("Committed transaction ["+transactionState.getTransactionId()+"] in ["+((System.currentTimeMillis()-startTime))+"]ms");
   }
@@ -187,7 +189,7 @@ public class TransactionManager {
       }
       throw new CommitUnsuccessfulException(e);
     }
-    // TODO: Transaction log can be deleted now ...
+    transactionLogger.forgetTransaction(transactionState.getTransactionId());
   }
 
   /**
@@ -230,6 +232,7 @@ public class TransactionManager {
                 + "]. Ignoring.");
       }
     }
+    transactionLogger.forgetTransaction(transactionState.getTransactionId());
   }
   
   public synchronized JtaXAResource getXAResource() {

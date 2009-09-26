@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver.transactional;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -163,9 +165,10 @@ class TransactionState {
     
     // TODO take deletes into account as well
     
-    List<KeyValue> localKVs = new LinkedList<KeyValue>();
-    
-    for (Put put : puts) {
+    List<KeyValue> localKVs = new ArrayList<KeyValue>();
+    List<Put> reversedPuts = new ArrayList<Put>(puts);
+    Collections.reverse(reversedPuts);
+    for (Put put : reversedPuts) {
       if (!Bytes.equals(get.getRow(), put.getRow())) {
         continue;
       }

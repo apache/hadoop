@@ -43,6 +43,10 @@ TransactionalRegionServer.  This is done by setting
 <i>org.apache.hadoop.hbase.ipc.TransactionalRegionInterface</i> and
 <i>hbase.regionserver.impl </i> to
 <i>org.apache.hadoop.hbase.regionserver.transactional.TransactionalRegionServer</i>
+Additionally, to properly recover from the write-ahead-log, the transactional log 
+key class must be registered by setting <i>hbase.regionserver.hlog.keyclass</i>
+to <i>org.apache.hadoop.hbase.regionserver.transactional.THLogKey</i>
+
 
 <p> 
 The read set claimed by a transactional scanner is determined from the start and

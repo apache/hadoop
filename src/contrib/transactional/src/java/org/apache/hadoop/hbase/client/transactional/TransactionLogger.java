@@ -44,16 +44,22 @@ public interface TransactionLogger {
    */
   long createNewTransactionLog();
 
-  /**
+  /** Get the status of a transaction.
    * @param transactionId
    * @return transaction status
    */
   TransactionStatus getStatusForTransaction(long transactionId);
 
-  /**
+  /** Set the status for a transaction.
    * @param transactionId
    * @param status
    */
   void setStatusForTransaction(long transactionId, TransactionStatus status);
+  
+  /** This transaction's state is no longer needed.
+   * 
+   * @param transactionId
+   */
+  void forgetTransaction(long transactionId);
 
 }

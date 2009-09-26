@@ -997,6 +997,9 @@ public class KeyValue implements Writable, HeapSize {
    * @return True if matching families.
    */
   public boolean matchingFamily(final byte [] family) {
+    if (this.length == 0 || this.bytes.length == 0) {
+      return false;
+    }
     int o = getFamilyOffset();
     int l = getFamilyLength(o);
     return Bytes.compareTo(family, 0, family.length, this.bytes, o, l) == 0;

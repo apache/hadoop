@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.transactional.HBaseBackedTransactionLogger;
 import org.apache.hadoop.hbase.client.transactional.UnknownTransactionException;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
@@ -130,14 +131,19 @@ public class TransactionalRegion extends HRegion {
       final long minSeqId, final long maxSeqId, final Progressable reporter)
       throws UnsupportedEncodingException, IOException {
     super.doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
-
+    
+    // We can ignore doing anything with the Trx Log table, it is not-transactional.
+    if (super.getTableDesc().getNameAsString().equals(HBaseBackedTransactionLogger.TABLE_NAME)) {
+      return;
+    }
+        
     THLogRecoveryManager recoveryManager = new THLogRecoveryManager(this);
     Map<Long, List<KeyValue>> commitedTransactionsById = recoveryManager
         .getCommitsFromLog(oldLogFile, minSeqId, reporter);
 
     if (commitedTransactionsById != null && commitedTransactionsById.size() > 0) {
       LOG.debug("found " + commitedTransactionsById.size()
-          + " COMMITED transactions");
+          + " COMMITED transactions to recover.");
 
       for (Entry<Long, List<KeyValue>> entry : commitedTransactionsById
           .entrySet()) {
@@ -150,12 +156,11 @@ public class TransactionalRegion extends HRegion {
         }
       }
 
-      // LOG.debug("Flushing cache"); // We must trigger a cache flush,
-      // otherwise
-      // we will would ignore the log on subsequent failure
-      // if (!super.flushcache()) {
-      // LOG.warn("Did not flush cache");
-      // }
+       LOG.debug("Flushing cache"); // We must trigger a cache flush,
+       //otherwise we will would ignore the log on subsequent failure
+       if (!super.flushcache()) {
+         LOG.warn("Did not flush cache");
+       }
     }
   }
 
@@ -362,6 +367,7 @@ public class TransactionalRegion extends HRegion {
       }
       // Otherwise we were read-only and commitable, so we can forget it.
       state.setStatus(Status.COMMITED);
+      this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
       retireTransaction(state);
       return TransactionalRegionInterface.COMMIT_OK_READ_ONLY;
     }
@@ -459,15 +465,19 @@ public class TransactionalRegion extends HRegion {
     LOG.debug("Commiting transaction: " + state.toString() + " to "
         + super.getRegionInfo().getRegionNameAsString());
 
-    this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
 
+    // FIXME potential mix up here if some deletes should come before the puts.
     for (Put update : state.getPuts()) {
-      this.put(update, false); // Don't need to WAL these
+      this.put(update, true);
     }
     
     for (Delete delete : state.getDeleteSet()) {
-      this.delete(delete, null, false);
+      this.delete(delete, null, true);
     }
+    
+    // Now the transaction lives in the WAL, we can writa a commit to the log 
+    // so we don't have to recover it.
+    this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
 
     state.setStatus(Status.COMMITED);
     if (state.hasWrite()

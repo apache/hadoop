@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.regionserver.transactional;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.transactional.HBaseBackedTransactionLogger;
 import org.apache.hadoop.hbase.client.transactional.TransactionLogger;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.SequenceFile;
@@ -74,6 +75,10 @@ class THLogRecoveryManager {
   
 
   /**
+   * Go through the WAL, and look for transactions that were started, but never
+   * completed. If the transaction was committed, then those edits will need to
+   * be applied.
+   * 
    * @param reconstructionLog
    * @param maxSeqID
    * @param reporter
@@ -98,7 +103,7 @@ class THLogRecoveryManager {
     }
 
     SortedMap<Long, List<KeyValue>> pendingTransactionsById = new TreeMap<Long, List<KeyValue>>();
-    SortedMap<Long, List<KeyValue>> commitedTransactionsById = new TreeMap<Long, List<KeyValue>>();
+    Set<Long> commitedTransactions = new HashSet<Long>();
     Set<Long> abortedTransactions = new HashSet<Long>();
 
     SequenceFile.Reader logReader = new SequenceFile.Reader(fileSystem,
@@ -118,8 +123,10 @@ class THLogRecoveryManager {
           2000);
 
       while (logReader.next(key, val)) {
-        LOG.debug("Processing edit: key: " + key.toString() + " val: "
-            + val.toString());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Processing edit: key: " + key.toString() + " val: "
+              + val.toString());
+        }
         if (key.getLogSeqNum() < maxSeqID) {
           skippedEdits++;
           continue;
@@ -135,12 +142,12 @@ class THLogRecoveryManager {
 
         case START:
           if (updates != null || abortedTransactions.contains(transactionId)
-              || commitedTransactionsById.containsKey(transactionId)) {
+              || commitedTransactions.contains(transactionId)) {
             LOG.error("Processing start for transaction: " + transactionId
                 + ", but have already seen start message");
             throw new IOException("Corrupted transaction log");
           }
-          updates = new LinkedList<KeyValue>();
+          updates = new ArrayList<KeyValue>();
           pendingTransactionsById.put(transactionId, updates);
           startCount++;
           break;
@@ -179,18 +186,13 @@ class THLogRecoveryManager {
                 + ", but also have abort message");
             throw new IOException("Corrupted transaction log");
           }
-          if (updates.size() == 0) {
-            LOG
-                .warn("Transaciton " + transactionId
-                    + " has no writes in log. ");
-          }
-          if (commitedTransactionsById.containsKey(transactionId)) {
+          if (commitedTransactions.contains(transactionId)) {
             LOG.error("Processing commit for transaction: " + transactionId
                 + ", but have already commited transaction with that id");
             throw new IOException("Corrupted transaction log");
           }
           pendingTransactionsById.remove(transactionId);
-          commitedTransactionsById.put(transactionId, updates);
+          commitedTransactions.add(transactionId);
           commitCount++;
           break;
           default:
@@ -213,23 +215,28 @@ class THLogRecoveryManager {
     }
 
     if (pendingTransactionsById.size() > 0) {
-      resolvePendingTransaction(pendingTransactionsById, commitedTransactionsById);
+      return resolvePendingTransaction(pendingTransactionsById);
     }
      
 
-    return commitedTransactionsById;
+    return null;
   }
   
-  private void resolvePendingTransaction(
-      SortedMap<Long, List<KeyValue>> pendingTransactionsById,
-      SortedMap<Long, List<KeyValue>> commitedTransactionsById) {
+  private SortedMap<Long, List<KeyValue>> resolvePendingTransaction(
+      SortedMap<Long, List<KeyValue>> pendingTransactionsById
+      ) {
+    SortedMap<Long, List<KeyValue>> commitedTransactionsById = new TreeMap<Long, List<KeyValue>>();
+    
     LOG.info("Region log has " + pendingTransactionsById.size()
         + " unfinished transactions. Going to the transaction log to resolve");
 
-    for (Entry<Long, List<KeyValue>> entry : pendingTransactionsById
-        .entrySet()) {
+    for (Entry<Long, List<KeyValue>> entry : pendingTransactionsById.entrySet()) {
+      if (entry.getValue().isEmpty()) {
+        LOG.debug("Skipping resolving trx ["+entry.getKey()+"] has no writes.");
+      }
       TransactionLogger.TransactionStatus transactionStatus = getGlobalTransactionLog()
           .getStatusForTransaction(entry.getKey());
+      
       if (transactionStatus == null) {
         throw new RuntimeException("Cannot resolve tranasction ["
             + entry.getKey() + "] from global tx log.");
@@ -241,12 +248,28 @@ class THLogRecoveryManager {
         commitedTransactionsById.put(entry.getKey(), entry.getValue());
         break;
       case PENDING:
+        LOG
+            .warn("Transaction ["
+                + entry.getKey()
+                + "] is still pending. Asumming it will not commit."
+                + " If it eventually does commit, then we loose transactional semantics.");
+        // TODO this could possibly be handled by waiting and seeing what happens.  
         break;
       }
     }
+    return commitedTransactionsById;
   }
 
-  private TransactionLogger getGlobalTransactionLog() {
-    return null;
+  private TransactionLogger globalTransactionLog = null;
+  
+  private synchronized TransactionLogger getGlobalTransactionLog() {
+    if (globalTransactionLog == null) {
+      try {
+    globalTransactionLog = new HBaseBackedTransactionLogger();
+      } catch (IOException e) {
+        throw new RuntimeException(e); 
+      }
+    }
+    return globalTransactionLog;
   }
 }
