@@ -196,4 +196,61 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
     }
 
   }
+
+  /** Test {@link FSDataset#updateReplicaUnderRecovery(ReplicaUnderRecovery, long, long)} */
+  @Test
+  public void testUpdateReplicaUnderRecovery() throws IOException {
+    final Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster(conf, 3, true, null);
+      cluster.waitActive();
+
+      //create a file
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      String filestr = "/foo";
+      Path filepath = new Path(filestr);
+      DFSTestUtil.createFile(dfs, filepath, 1024L, (short)3, 0L);
+
+      //get block info
+      final LocatedBlock locatedblock = getLastLocatedBlock(
+          dfs.getClient().getNamenode(), filestr);
+      final DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
+      Assert.assertTrue(datanodeinfo.length > 0);
+
+      //get DataNode and FSDataset objects
+      final DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
+      Assert.assertTrue(datanode != null);
+      Assert.assertTrue(datanode.data instanceof FSDataset);
+      final FSDataset fsdataset = (FSDataset)datanode.data;
+
+      //initReplicaRecovery
+      final Block b = locatedblock.getBlock();
+      final long recoveryid = b.getGenerationStamp() + 1;
+      final long newlength = b.getNumBytes() - 1;
+      FSDataset.initReplicaRecovery(fsdataset.volumeMap, b, recoveryid);
+
+      //check replica
+      final ReplicaInfo replica = fsdataset.getReplica(b.getBlockId());
+      Assert.assertTrue(replica instanceof ReplicaUnderRecovery);
+      final ReplicaUnderRecovery rur = (ReplicaUnderRecovery)replica;
+
+      //check meta data before update
+      FSDataset.checkReplicaFiles(rur);
+
+      //update
+      final FinalizedReplica finalized = fsdataset.updateReplicaUnderRecovery(
+          rur, recoveryid, newlength);
+
+      //check meta data after update
+      FSDataset.checkReplicaFiles(finalized);
+      Assert.assertEquals(b.getBlockId(), finalized.getBlockId());
+      Assert.assertEquals(recoveryid, finalized.getGenerationStamp());
+      Assert.assertEquals(newlength, finalized.getNumBytes());
+
+    } finally {
+      if (cluster != null) cluster.shutdown();
+    }
+  }
 }
