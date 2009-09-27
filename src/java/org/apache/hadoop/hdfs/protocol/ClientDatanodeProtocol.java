@@ -29,22 +29,9 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 5: add getReplicaVisibleLength(..)
+   * 6: recoverBlock() removed.
    */
-  public static final long versionID = 5L;
-
-  /** Start generation-stamp recovery for specified block
-   * @param block the specified block
-   * @param keepLength keep the block length
-   * @param targets the list of possible locations of specified block
-   * @return either a new generation stamp, or the original generation stamp. 
-   * Regardless of whether a new generation stamp is returned, a newly 
-   * generated access token is returned as part of the return value.
-   * @throws IOException
-   */
-  @Deprecated // not used anymore - should be removed
-  LocatedBlock recoverBlock(Block block, boolean keepLength,
-      DatanodeInfo[] targets) throws IOException;
+  public static final long versionID = 6L;
 
   /** Return the visible length of a replica. */
   long getReplicaVisibleLength(Block b) throws IOException;

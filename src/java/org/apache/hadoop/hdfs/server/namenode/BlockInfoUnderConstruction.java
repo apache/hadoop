@@ -42,9 +42,6 @@ class BlockInfoUnderConstruction extends BlockInfo {
   /** A data-node responsible for block recovery. */
   private int primaryNodeIndex = -1;
 
-  /** The last time the block was recovered. */
-  private long lastRecoveryTime = 0;
-
   /**
    * The new generation stamp, which this block will have
    * after the recovery succeeds. Also used as a recovery id to identify
@@ -234,18 +231,6 @@ class BlockInfoUnderConstruction extends BlockInfo {
     }
   }
 
-  /**
-   * Update lastRecoveryTime if expired.
-   * @return true if lastRecoveryTimeis updated. 
-   */
-  boolean setLastRecoveryTime(long now) {
-    boolean expired = now - lastRecoveryTime > NameNode.LEASE_RECOVER_PERIOD;
-    if (expired) {
-      lastRecoveryTime = now;
-    }
-    return expired;
-  }
-
   void addReplicaIfNotPresent(DatanodeDescriptor dn,
                      Block block,
                      ReplicaState rState) {
@@ -275,7 +260,6 @@ class BlockInfoUnderConstruction extends BlockInfo {
      .append("\n  blockUCState=").append(blockUCState)
      .append("\n  replicas=").append(replicas)
      .append("\n  primaryNodeIndex=").append(primaryNodeIndex)
-     .append("\n  lastRecoveryTime=").append(lastRecoveryTime)
      .append("}");
     return b.toString();
   }

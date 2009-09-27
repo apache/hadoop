@@ -667,10 +667,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /** {@inheritDoc} */
-  public long nextGenerationStamp(Block block) throws IOException{
-    return namesystem.nextGenerationStampForBlock(block);
-  }
-
   @Override
   public LocatedBlock updateBlockForPipeline(Block block, String clientName)
   throws IOException {

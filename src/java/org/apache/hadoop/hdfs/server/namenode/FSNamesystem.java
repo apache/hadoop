@@ -3866,33 +3866,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return gs;
   }
 
-  /**
-   * Verifies that the block is associated with a file that has a lease.
-   * Increments, logs and then returns the stamp
-   */
-  synchronized long nextGenerationStampForBlock(Block block) throws IOException {
-    BlockInfo storedBlock = blockManager.getStoredBlock(block);
-    if (storedBlock == null) {
-      String msg = block + " is already commited, storedBlock == null.";
-      LOG.info(msg);
-      throw new IOException(msg);
-    }
-    INodeFile fileINode = storedBlock.getINode();
-    if(!fileINode.isUnderConstruction() || storedBlock.isComplete()) {
-      String msg = block + 
-            " is already commited, file or block is not under construction().";
-      LOG.info(msg);
-      throw new IOException(msg);
-    }
-    if(!((BlockInfoUnderConstruction)storedBlock).setLastRecoveryTime(now())) {
-      String msg = block + " is beening recovered, ignoring this request.";
-      LOG.info(msg);
-      throw new IOException(msg);
-    }
-    return nextGenerationStamp();
-  }
-
-
   private INodeFileUnderConstruction checkUCBlock(Block block, String clientName) 
   throws IOException {
     // check safe mode

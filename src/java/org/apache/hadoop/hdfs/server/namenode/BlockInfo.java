@@ -307,7 +307,6 @@ class BlockInfo extends Block {
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
     ucBlock.setBlockUCState(s);
     ucBlock.setExpectedLocations(targets);
-    ucBlock.setLastRecoveryTime(0);
     return ucBlock;
   }
 
