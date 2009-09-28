@@ -67,6 +67,9 @@ Append branch (unreleased changes)
 
     HDFS-652. Replace BlockInfo.isUnderConstruction() with isComplete() (shv)
 
+    HDFS-648. Change some methods in AppendTestUtil to public.  (Konstantin
+    Boudnik via szetszwo)
+
   BUG FIXES
 
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
