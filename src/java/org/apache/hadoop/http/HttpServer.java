@@ -584,12 +584,16 @@ public class HttpServer implements FilterContainer {
 
       @SuppressWarnings("unchecked")
       @Override
-      public Map<String, String> getParameterMap() {
-        Map<String, String> result = new HashMap<String,String>();
-        Map<String, String> raw = rawRequest.getParameterMap();
-        for (Map.Entry<String,String> item: raw.entrySet()) {
-          result.put(HtmlQuoting.quoteHtmlChars(item.getKey()), 
-                     HtmlQuoting.quoteHtmlChars(item.getValue()));
+      public Map<String, String[]> getParameterMap() {
+        Map<String, String[]> result = new HashMap<String,String[]>();
+        Map<String, String[]> raw = rawRequest.getParameterMap();
+        for (Map.Entry<String,String[]> item: raw.entrySet()) {
+          String[] rawValue = item.getValue();
+          String[] cookedValue = new String[rawValue.length];
+          for(int i=0; i< rawValue.length; ++i) {
+            cookedValue[i] = HtmlQuoting.quoteHtmlChars(rawValue[i]);
+          }
+          result.put(HtmlQuoting.quoteHtmlChars(item.getKey()), cookedValue);
         }
         return result;
       }
