@@ -89,13 +89,13 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   }
 
   @Override //ReplicaInfo
-  boolean isDetached() {
-    return original.isDetached();
+  boolean isUnlinked() {
+    return original.isUnlinked();
   }
 
   @Override //ReplicaInfo
-  void setDetached() {
-    original.setDetached();
+  void setUnlinked() {
+    original.setUnlinked();
   }
   
   @Override //ReplicaInfo

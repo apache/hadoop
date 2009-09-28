@@ -77,6 +77,9 @@ Append branch (unreleased changes)
 
     HDFS-588. Fix TestFiDataTransferProtocol and TestAppend2 failures. (shv)
 
+    HDFS-550. DataNode restarts may introduce corrupt/duplicated/lost replicas
+    when handling detached replicas. (hairong)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES

@@ -191,16 +191,48 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return Block.GRANDFATHER_GENERATION_STAMP;
     }
 
-    void getVolumeMap(ReplicasMap volumeMap, FSVolume volume) {
+    void getVolumeMap(ReplicasMap volumeMap, FSVolume volume) 
+    throws IOException {
       if (children != null) {
         for (int i = 0; i < children.length; i++) {
           children[i].getVolumeMap(volumeMap, volume);
         }
       }
 
+      recoverTempUnlinkedBlock();
       volume.addToReplicasMap(volumeMap, dir, true);
     }
         
+    /**
+     * Recover unlinked tmp files on datanode restart. If the original block
+     * does not exist, then the tmp file is renamed to be the
+     * original file name; otherwise the tmp file is deleted.
+     */
+    private void recoverTempUnlinkedBlock() throws IOException {
+      File files[] = dir.listFiles();
+      for (File file : files) {
+        if (!FSDataset.isUnlinkTmpFile(file)) {
+          continue;
+        }
+        File blockFile = getOrigFile(file);
+        if (blockFile.exists()) {
+          //
+          // If the original block file still exists, then no recovery
+          // is needed.
+          //
+          if (!file.delete()) {
+            throw new IOException("Unable to cleanup unlinked tmp file " +
+                file);
+          }
+        } else {
+          if (!file.renameTo(blockFile)) {
+            throw new IOException("Unable to cleanup detached file " +
+                file);
+          }
+        }
+      }
+    }
+    
     /**
      * check if a data diretory is healthy
      * @throws DiskErrorException
@@ -281,7 +313,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     private FSDir dataDir;      // directory store Finalized replica
     private File rbwDir;        // directory store RBW replica
     private File tmpDir;        // directory store Temporary replica
-    private File detachDir; // copy on write for blocks in snapshot
     private DF usage;
     private DU dfsUsage;
     private long reserved;
@@ -292,11 +323,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       File parent = currentDir.getParentFile();
       final File finalizedDir = new File(
           currentDir, DataStorage.STORAGE_DIR_FINALIZED);
-
-      this.detachDir = new File(parent, "detach");
-      if (detachDir.exists()) {
-        recoverDetachedBlocks(finalizedDir, detachDir);
-      }
 
       // Files that were being written when the datanode was last shutdown
       // are now moved back to the data directory. It is possible that
@@ -320,11 +346,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       if (!tmpDir.mkdirs()) {
         if (!tmpDir.isDirectory()) {
           throw new IOException("Mkdirs failed to create " + tmpDir.toString());
-        }
-      }
-      if (!detachDir.mkdirs()) {
-        if (!detachDir.isDirectory()) {
-          throw new IOException("Mkdirs failed to create " + detachDir.toString());
         }
       }
       this.usage = new DF(parent, conf);
@@ -371,7 +392,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      */
     File createTmpFile(Block b) throws IOException {
       File f = new File(tmpDir, b.getBlockName());
-      return createTmpFile(b, f);
+      return FSDataset.createTmpFile(b, f);
     }
 
     /**
@@ -380,38 +401,9 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      */
     File createRbwFile(Block b) throws IOException {
       File f = new File(rbwDir, b.getBlockName());
-      return createTmpFile(b, f);
+      return FSDataset.createTmpFile(b, f);
     }
 
-    /**
-     * Files used for copy-on-write. They need recovery when datanode
-     * restarts.
-     */
-    File createDetachFile(Block b, String filename) throws IOException {
-      File f = new File(detachDir, filename);
-      return createTmpFile(b, f);
-    }
-
-    private File createTmpFile(Block b, File f) throws IOException {
-      if (f.exists()) {
-        throw new IOException("Unexpected problem in creating temporary file for "+
-                              b + ".  File " + f + " should not be present, but is.");
-      }
-      // Create the zero-length temp file
-      //
-      boolean fileCreated = false;
-      try {
-        fileCreated = f.createNewFile();
-      } catch (IOException ioe) {
-        throw (IOException)new IOException(DISK_ERROR +f).initCause(ioe);
-      }
-      if (!fileCreated) {
-        throw new IOException("Unexpected problem in creating temporary file for "+
-                              b + ".  File " + f + " should be creatable, but is already present.");
-      }
-      return f;
-    }
-      
     File addBlock(Block b, File f) throws IOException {
       File blockFile = dataDir.addBlock(b, f);
       File metaFile = getMetaFile( blockFile , b);
@@ -425,7 +417,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       DiskChecker.checkDir(rbwDir);
     }
       
-    void getVolumeMap(ReplicasMap volumeMap) {
+    void getVolumeMap(ReplicasMap volumeMap) throws IOException {
       // add finalized replicas
       dataDir.getVolumeMap(volumeMap, this);
       // add rbw replicas
@@ -542,42 +534,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     public String toString() {
       return getDir().getAbsolutePath();
     }
-
-    /**
-     * Recover detached files on datanode restart. If a detached block
-     * does not exist in the original directory, then it is moved to the
-     * original directory.
-     */
-    private void recoverDetachedBlocks(File dataDir, File dir) 
-                                           throws IOException {
-      File contents[] = dir.listFiles();
-      if (contents == null) {
-        return;
-      }
-      for (int i = 0; i < contents.length; i++) {
-        if (!contents[i].isFile()) {
-          throw new IOException ("Found " + contents[i] + " in " + dir +
-                                 " but it is not a file.");
-        }
-
-        //
-        // If the original block file still exists, then no recovery
-        // is needed.
-        //
-        File blk = new File(dataDir, contents[i].getName());
-        if (!blk.exists()) {
-          if (!contents[i].renameTo(blk)) {
-            throw new IOException("Unable to recover detached file " +
-                                  contents[i]);
-          }
-          continue;
-        }
-        if (!contents[i].delete()) {
-            throw new IOException("Unable to cleanup detached file " +
-                                  contents[i]);
-        }
-      }
-    }
   }
     
   static class FSVolumeSet {
@@ -640,7 +596,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return remaining;
     }
       
-    synchronized void getVolumeMap(ReplicasMap volumeMap) {
+    synchronized void getVolumeMap(ReplicasMap volumeMap) throws IOException {
       for (int idx = 0; idx < volumes.length; idx++) {
         volumes[idx].getVolumeMap(volumeMap);
       }
@@ -717,8 +673,23 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   //Find better place?
   public static final String METADATA_EXTENSION = ".meta";
   public static final short METADATA_VERSION = 1;
-    
+  static final String UNLINK_BLOCK_SUFFIX = ".unlinked";
 
+  private static boolean isUnlinkTmpFile(File f) {
+    String name = f.getName();
+    return name.endsWith(UNLINK_BLOCK_SUFFIX);
+  }
+  
+  static File getUnlinkTmpFile(File f) {
+    return new File(f.getParentFile(), f.getName()+UNLINK_BLOCK_SUFFIX);
+  }
+  
+  private static File getOrigFile(File unlinkTmpFile) {
+    String fileName = unlinkTmpFile.getName();
+    return new File(unlinkTmpFile.getParentFile(),
+        fileName.substring(0, fileName.length()-UNLINK_BLOCK_SUFFIX.length()));
+  }
+  
   static String getMetaFileName(String blockFileName, long genStamp) {
     return blockFileName + "_" + genStamp + METADATA_EXTENSION;
   }
@@ -818,6 +789,26 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                                     checksumFile.length());
   }
 
+  static File createTmpFile(Block b, File f) throws IOException {
+    if (f.exists()) {
+      throw new IOException("Unexpected problem in creating temporary file for "+
+                            b + ".  File " + f + " should not be present, but is.");
+    }
+    // Create the zero-length temp file
+    //
+    boolean fileCreated = false;
+    try {
+      fileCreated = f.createNewFile();
+    } catch (IOException ioe) {
+      throw (IOException)new IOException(DISK_ERROR +f).initCause(ioe);
+    }
+    if (!fileCreated) {
+      throw new IOException("Unexpected problem in creating temporary file for "+
+                            b + ".  File " + f + " should be creatable, but is already present.");
+    }
+    return f;
+  }
+    
   FSVolumeSet volumes;
   private int maxBlocksPerDir = 0;
   ReplicasMap volumeMap = new ReplicasMap();
@@ -953,18 +944,18 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * snapshot. This ensures that modifying this block does not modify
    * data in any existing snapshots.
    * @param block Block
-   * @param numLinks Detach if the number of links exceed this value
+   * @param numLinks Unlink if the number of links exceed this value
    * @throws IOException
-   * @return - true if the specified block was detached or the block
+   * @return - true if the specified block was unlinked or the block
    *           is not in any snapshot.
    */
-  public boolean detachBlock(Block block, int numLinks) throws IOException {
+  public boolean unlinkBlock(Block block, int numLinks) throws IOException {
     ReplicaInfo info = null;
 
     synchronized (this) {
       info = getReplicaInfo(block);
     }
-   return info.detachBlock(numLinks);
+   return info.unlinkBlock(numLinks);
   }
 
   /** {@inheritDoc} */
@@ -1139,7 +1130,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   private synchronized ReplicaBeingWritten append(FinalizedReplica replicaInfo, 
       long newGS, long estimateBlockLen) throws IOException {
     // unlink the finalized replica
-    replicaInfo.detachBlock(1);
+    replicaInfo.unlinkBlock(1);
     
     // construct a RBW replica with the new GS
     File blkfile = replicaInfo.getBlockFile();
@@ -2086,7 +2077,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           + ", rur=" + rur);
     }
     if (rur.getNumBytes() > newlength) {
-      rur.detachBlock(1);
+      rur.unlinkBlock(1);
       truncateBlock(replicafile, rur.getMetaFile(), rur.getNumBytes(), newlength);
       // update RUR with the new length
       rur.setNumBytes(newlength);

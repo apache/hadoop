@@ -129,30 +129,30 @@ abstract public class ReplicaInfo extends Block implements Replica {
   }
 
   /**
-   * check if this replica has already detached.
-   * @return true if the replica has already detached or no need to detach; 
-   *         false otherwise
+   * check if this replica has already been unlinked.
+   * @return true if the replica has already been unlinked 
+   *         or no need to be detached; false otherwise
    */
-  boolean isDetached() {
-    return true;                // no need to be detached
+  boolean isUnlinked() {
+    return true;                // no need to be unlinked
   }
 
   /**
-   * set that this replica is detached
+   * set that this replica is unlinked
    */
-  void setDetached() {
-    // no need to be detached
+  void setUnlinked() {
+    // no need to be unlinked
   }
   
    /**
    * Copy specified file into a temporary file. Then rename the
    * temporary file to the original name. This will cause any
    * hardlinks to the original file to be removed. The temporary
-   * files are created in the detachDir. The temporary files will
+   * files are created in the same directory. The temporary files will
    * be recovered (especially on Windows) on datanode restart.
    */
-  private void detachFile(File file, Block b) throws IOException {
-    File tmpFile = getVolume().createDetachFile(b, file.getName());
+  private void unlinkFile(File file, Block b) throws IOException {
+    File tmpFile = FSDataset.createTmpFile(b, FSDataset.getUnlinkTmpFile(file));
     try {
       FileInputStream in = new FileInputStream(file);
       try {
@@ -189,8 +189,8 @@ abstract public class ReplicaInfo extends Block implements Replica {
    *         false if it is already detached or no need to be detached
    * @throws IOException if there is any copy error
    */
-  boolean detachBlock(int numLinks) throws IOException {
-    if (isDetached()) {
+  boolean unlinkBlock(int numLinks) throws IOException {
+    if (isUnlinked()) {
       return false;
     }
     File file = getBlockFile();
@@ -204,12 +204,12 @@ abstract public class ReplicaInfo extends Block implements Replica {
 
     if (HardLink.getLinkCount(file) > numLinks) {
       DataNode.LOG.info("CopyOnWrite for block " + this);
-      detachFile(file, this);
+      unlinkFile(file, this);
     }
     if (HardLink.getLinkCount(meta) > numLinks) {
-      detachFile(meta, this);
+      unlinkFile(meta, this);
     }
-    setDetached();
+    setUnlinked();
     return true;
   }
 

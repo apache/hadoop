@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
  * This class describes a replica that has been finalized.
  */
 class FinalizedReplica extends ReplicaInfo {
-  private boolean detached;      // copy-on-write done for block
+  private boolean unlinked;      // copy-on-write done for block
 
   /**
    * Constructor
@@ -58,13 +58,13 @@ class FinalizedReplica extends ReplicaInfo {
   }
   
   @Override // ReplicaInfo
-  boolean isDetached() {
-    return detached;
+  boolean isUnlinked() {
+    return unlinked;
   }
 
   @Override  // ReplicaInfo
-  void setDetached() {
-    detached = true;
+  void setUnlinked() {
+    unlinked = true;
   }
   
   @Override
@@ -90,6 +90,6 @@ class FinalizedReplica extends ReplicaInfo {
   @Override
   public String toString() {
     return super.toString()
-        + "\n  detached=" + detached;
+        + "\n  unlinked=" + unlinked;
   }
 }

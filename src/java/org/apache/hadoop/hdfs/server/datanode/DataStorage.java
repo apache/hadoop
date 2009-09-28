@@ -55,6 +55,7 @@ public class DataStorage extends Storage {
   final static String COPY_FILE_PREFIX = "dncp_";
   final static String STORAGE_DIR_RBW = "rbw";
   final static String STORAGE_DIR_FINALIZED = "finalized";
+  final static String STORAGE_DIR_DETACHED = "detach";
   
   private String storageID;
 
@@ -272,6 +273,8 @@ public class DataStorage extends Storage {
     File curDir = sd.getCurrentDir();
     File prevDir = sd.getPreviousDir();
     assert curDir.exists() : "Current directory must exist.";
+    // Cleanup directory "detach"
+    cleanupDetachDir(new File(curDir, STORAGE_DIR_DETACHED));
     // delete previous dir before upgrading
     if (prevDir.exists())
       deleteDir(prevDir);
@@ -292,6 +295,30 @@ public class DataStorage extends Storage {
     LOG.info("Upgrade of " + sd.getRoot()+ " is complete.");
   }
 
+  /**
+   * Cleanup the detachDir. 
+   * 
+   * If the directory is not empty report an error; 
+   * Otherwise remove the directory.
+   * 
+   * @param detachDir detach directory
+   * @throws IOException if the directory is not empty or it can not be removed
+   */
+  private void cleanupDetachDir(File detachDir) throws IOException {
+    if (layoutVersion >= PRE_RBW_LAYOUT_VERSION &&
+        detachDir.exists() && detachDir.isDirectory() ) {
+      
+        if (detachDir.list().length != 0 ) {
+          throw new IOException("Detached directory " + detachDir +
+              " is not empty. Please manually move each file under this " +
+              "directory to the finalized directory if the finalized " +
+              "directory tree does not have the file.");
+        } else if (!detachDir.delete()) {
+          throw new IOException("Cannot remove directory " + detachDir);
+        }
+    }
+  }
+  
   void doRollback( StorageDirectory sd,
                    NamespaceInfo nsInfo
                    ) throws IOException {

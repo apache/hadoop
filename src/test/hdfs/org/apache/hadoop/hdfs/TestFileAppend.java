@@ -148,7 +148,7 @@ public class TestFileAppend extends TestCase {
         Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned true",
-            dataset.detachBlock(b, 1));
+            dataset.unlinkBlock(b, 1));
       }
 
       // Since the blocks were already detached earlier, these calls should
@@ -158,7 +158,7 @@ public class TestFileAppend extends TestCase {
         Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned false",
-            !dataset.detachBlock(b, 1));
+            !dataset.unlinkBlock(b, 1));
       }
 
     } finally {
