@@ -1072,6 +1072,9 @@ Trunk (unreleased changes)
     HADOOP-6281. Avoid null pointer exceptions when the jsps don't have 
     paramaters (omalley)
 
+    HADOOP-6285. Fix the result type of the getParameterMap method in the
+    HttpServer.QuotingInputFilter. (omalley)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
