@@ -49,6 +49,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
@@ -1959,14 +1961,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return volumeMap.get(blockId);
   }
 
-  /** Initialize a replica recovery. */
-  synchronized ReplicaUnderRecovery.Info initReplicaRecovery(
-      Block block, long recoveryId) throws IOException {
-    return initReplicaRecovery(volumeMap, block, recoveryId);
+  @Override // FSDatasetInterface
+  public synchronized ReplicaRecoveryInfo initReplicaRecovery(
+      RecoveringBlock rBlock) throws IOException {
+    return initReplicaRecovery(
+        volumeMap, rBlock.getBlock(), rBlock.getNewGenerationStamp());
   }
 
   /** static version of {@link #initReplicaRecovery(Block, long)}. */
-  static ReplicaUnderRecovery.Info initReplicaRecovery(
+  static ReplicaRecoveryInfo initReplicaRecovery(
       ReplicasMap map, Block block, long recoveryId) throws IOException {
     final ReplicaInfo replica = map.get(block.getBlockId());
     DataNode.LOG.info("initReplicaRecovery: block=" + block
@@ -1975,7 +1978,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
     //check replica
     if (replica == null) {
-      throw new ReplicaNotFoundException(block);
+      return null;
     }
 
     //stop writer if there is any
@@ -2046,17 +2049,22 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     checkReplicaFiles(replica);
 
     //update replica
-    final FinalizedReplica finalized = updateReplicaUnderRecovery(
-        (ReplicaUnderRecovery)replica, recoveryId, newlength);
+    final ReplicaInfo finalized = (ReplicaInfo)updateReplicaUnderRecovery(
+                                    replica, recoveryId, newlength);
 
     //check replica files after update
     checkReplicaFiles(finalized);
   }
 
-  /** Update a ReplicaUnderRecovery to a FinalizedReplica. */
-  FinalizedReplica updateReplicaUnderRecovery(
-      final ReplicaUnderRecovery rur, final long recoveryId,
-      final long newlength) throws IOException {
+  @Override // FSDatasetInterface
+  public synchronized FinalizedReplica updateReplicaUnderRecovery(
+                                          Block oldBlock,
+                                          long recoveryId,
+                                          long newlength) throws IOException {
+    Replica r = getReplica(oldBlock.getBlockId());
+    if(r.getState() != ReplicaState.RUR)
+      throw new IOException("Replica " + r + " must be under recovery.");
+    ReplicaUnderRecovery rur = (ReplicaUnderRecovery)r;
     DataNode.LOG.info("updateReplicaUnderRecovery: recoveryId=" + recoveryId
         + ", newlength=" + newlength
         + ", rur=" + rur);
@@ -2085,5 +2093,20 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
     // finalize the block
     return finalizeReplica(rur);
+  }
+
+  @Override // FSDatasetInterface
+  public synchronized long getReplicaVisibleLength(final Block block)
+  throws IOException {
+    final Replica replica = getReplica(block.getBlockId());
+    if (replica == null) {
+      throw new ReplicaNotFoundException(block);
+    }
+    if (replica.getGenerationStamp() < block.getGenerationStamp()) {
+      throw new IOException(
+          "replica.getGenerationStamp() < block.getGenerationStamp(), block="
+          + block + ", replica=" + replica);
+    }
+    return replica.getVisibleLength();
   }
 }

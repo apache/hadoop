@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery.Info;
-import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,15 +41,10 @@ import org.junit.Test;
  * This tests InterDataNodeProtocol for block handling. 
  */
 public class TestInterDatanodeProtocol extends junit.framework.TestCase {
-  public static void checkMetaInfo(Block b, InterDatanodeProtocol idp,
-      DataBlockScanner scanner) throws IOException {
-    BlockMetaDataInfo metainfo = idp.getBlockMetaDataInfo(b);
+  public static void checkMetaInfo(Block b, DataNode dn) throws IOException {
+    Block metainfo = dn.data.getStoredBlock(b.getBlockId());
     assertEquals(b.getBlockId(), metainfo.getBlockId());
     assertEquals(b.getNumBytes(), metainfo.getNumBytes());
-    if (scanner != null) {
-      assertEquals(scanner.getLastScanTime(b),
-          metainfo.getLastScanTime());
-    }
   }
 
   public static LocatedBlock getLastLocatedBlock(
@@ -101,13 +96,16 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       //verify BlockMetaDataInfo
       Block b = locatedblock.getBlock();
       InterDatanodeProtocol.LOG.info("b=" + b + ", " + b.getClass());
-      checkMetaInfo(b, idp, datanode.blockScanner);
+      checkMetaInfo(b, datanode);
+      long recoveryId = b.getGenerationStamp() + 1;
+      idp.initReplicaRecovery(
+          new RecoveringBlock(b, locatedblock.getLocations(), recoveryId));
 
       //verify updateBlock
       Block newblock = new Block(
           b.getBlockId(), b.getNumBytes()/2, b.getGenerationStamp()+1);
-      idp.updateBlock(b, newblock, false);
-      checkMetaInfo(newblock, idp, datanode.blockScanner);
+      idp.updateReplicaUnderRecovery(b, recoveryId, newblock.getNumBytes());
+      checkMetaInfo(newblock, datanode);
     }
     finally {
       if (cluster != null) {cluster.shutdown();}
@@ -119,7 +117,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
         null, null);
   }
 
-  private static void assertEquals(ReplicaInfo originalInfo, Info recoveryInfo) {
+  private static void assertEquals(ReplicaInfo originalInfo, ReplicaRecoveryInfo recoveryInfo) {
     Assert.assertEquals(originalInfo.getBlockId(), recoveryInfo.getBlockId());
     Assert.assertEquals(originalInfo.getGenerationStamp(), recoveryInfo.getGenerationStamp());
     Assert.assertEquals(originalInfo.getBytesOnDisk(), recoveryInfo.getNumBytes());
@@ -145,7 +143,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       final ReplicaInfo originalInfo = map.get(b);
 
       final long recoveryid = gs + 1;
-      final Info recoveryInfo = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid);
+      final ReplicaRecoveryInfo recoveryInfo = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid);
       assertEquals(originalInfo, recoveryInfo);
 
       final ReplicaUnderRecovery updatedInfo = (ReplicaUnderRecovery)map.get(b);
@@ -154,7 +152,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
 
       //recover one more time 
       final long recoveryid2 = gs + 2;
-      final Info recoveryInfo2 = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid2);
+      final ReplicaRecoveryInfo recoveryInfo2 = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid2);
       assertEquals(originalInfo, recoveryInfo2);
 
       final ReplicaUnderRecovery updatedInfo2 = (ReplicaUnderRecovery)map.get(b);
@@ -174,13 +172,8 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
     { //replica not found
       final long recoveryid = gs + 1;
       final Block b = new Block(firstblockid - 1, length, gs);
-      try {
-        FSDataset.initReplicaRecovery(map, b, recoveryid);
-        Assert.fail();
-      }
-      catch(ReplicaNotFoundException rnfe) {
-        System.out.println("GOOD: getting " + rnfe);
-      }
+      ReplicaRecoveryInfo r = FSDataset.initReplicaRecovery(map, b, recoveryid);
+      Assert.assertNull("Data-node should not have this replica.", r);
     }
     
     { //case "THIS IS NOT SUPPOSED TO HAPPEN"
@@ -240,8 +233,9 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       FSDataset.checkReplicaFiles(rur);
 
       //update
-      final FinalizedReplica finalized = fsdataset.updateReplicaUnderRecovery(
-          rur, recoveryid, newlength);
+      final ReplicaInfo finalized = 
+        (ReplicaInfo)fsdataset.updateReplicaUnderRecovery(
+            rur, recoveryid, newlength);
 
       //check meta data after update
       FSDataset.checkReplicaFiles(finalized);

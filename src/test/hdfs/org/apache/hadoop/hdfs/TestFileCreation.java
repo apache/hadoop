@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.log4j.Level;
 
 

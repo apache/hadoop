@@ -17,6 +17,8 @@ Append branch (unreleased changes)
 
    HDFS-657. Remove unused legacy data-node protocol methods. (shv)
 
+   HDFS-658. Block recovery for primary data-node. (shv)
+
   NEW FEATURES
 
     HDFS-536. Support hflush at DFSClient. (hairong)

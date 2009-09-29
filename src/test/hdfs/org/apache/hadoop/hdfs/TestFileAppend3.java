@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
-import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
 
 /** This class implements some of tests posted in HADOOP-2658. */
 public class TestFileAppend3 extends junit.framework.TestCase {
@@ -251,7 +250,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
       }
       for(DatanodeInfo datanodeinfo : lb.getLocations()) {
         final DataNode dn = cluster.getDataNode(datanodeinfo.getIpcPort());
-        final BlockMetaDataInfo metainfo = dn.getBlockMetaDataInfo(blk);
+        final Block metainfo = dn.data.getStoredBlock(blk.getBlockId());
         assertEquals(size, metainfo.getNumBytes());
       }
     }

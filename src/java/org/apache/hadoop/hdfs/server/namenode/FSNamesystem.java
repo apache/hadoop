@@ -3878,7 +3878,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (storedBlock == null || 
         storedBlock.getBlockUCState() != BlockUCState.UNDER_CONSTRUCTION) {
         throw new IOException(block + 
-            " does not exist or is not under Construction");
+            " does not exist or is not under Construction" + storedBlock);
     }
     
     // check file inode

@@ -366,7 +366,7 @@ public class BlockManager {
     final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
       FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for "
-          + blk + "blockMap has " + numCorruptNodes
+          + blk + " blockMap has " + numCorruptNodes
           + " but corrupt replicas map has " + numCorruptReplicas);
     }
 
@@ -530,6 +530,10 @@ public class BlockManager {
       addToInvalidates(storedBlock, node);
       return;
     } 
+
+    // Add replica to the data-node if it is not already there
+    node.addBlock(storedBlock);
+
     // Add this replica to corruptReplicas Map
     corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
     if (countNodes(storedBlock).liveReplicas() > inode.getReplication()) {

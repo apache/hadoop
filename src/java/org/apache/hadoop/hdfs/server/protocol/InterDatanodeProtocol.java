@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
 /** An inter-datanode protocol for updating generation stamp
@@ -31,17 +32,36 @@ public interface InterDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
 
   /**
-   * 3: added a finalize parameter to updateBlock
+   * 4: initReplicaRecovery(), updateReplicaUnderRecovery() added.
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
 
   /** @return the BlockMetaDataInfo of a block;
    *  null if the block is not found 
    */
+  @Deprecated
   BlockMetaDataInfo getBlockMetaDataInfo(Block block) throws IOException;
 
   /**
    * Update the block to the new generation stamp and length.  
    */
-  void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException;
+  @Deprecated
+  void updateBlock(Block oldblock, Block newblock, boolean finalize)
+  throws IOException;
+
+  /**
+   * Initialize a replica recovery.
+   * 
+   * @return actual state of the replica on this data-node or 
+   * null if data-node does not have the replica.
+   */
+  ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
+  throws IOException;
+
+  /**
+   * Update replica with the new generation stamp and length.  
+   */
+  Block updateReplicaUnderRecovery(Block oldBlock,
+                                   long recoveryId,
+                                   long newLength) throws IOException;
 }

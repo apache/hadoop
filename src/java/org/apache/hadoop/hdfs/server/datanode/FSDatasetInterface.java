@@ -28,6 +28,8 @@ import java.io.OutputStream;
 
 
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.io.IOUtils;
@@ -331,4 +333,25 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return true if more then minimum valid volumes left in the FSDataSet
    */
   public boolean hasEnoughResource();
+
+  /**
+   * Get visible length of the specified replica.
+   */
+  long getReplicaVisibleLength(final Block block) throws IOException;
+
+  /**
+   * Initialize a replica recovery.
+   * 
+   * @return actual state of the replica on this data-node or 
+   * null if data-node does not have the replica.
+   */
+  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
+  throws IOException;
+
+  /**
+   * Update replica's generation stamp and length and finalize it.
+   */
+  public FinalizedReplica updateReplicaUnderRecovery(Block oldBlock,
+                                          long recoveryId,
+                                          long newLength) throws IOException;
 }

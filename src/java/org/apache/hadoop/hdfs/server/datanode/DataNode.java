@@ -54,11 +54,13 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -75,6 +77,7 @@ import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.http.HttpServer;
@@ -1547,6 +1550,38 @@ public class DataNode extends Configured
     }
   }
 
+  @Override // InterDatanodeProtocol
+  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
+  throws IOException {
+    return data.initReplicaRecovery(rBlock);
+  }
+
+  /**
+   * Convenience method, which unwraps RemoteException.
+   * @throws IOException not a RemoteException.
+   */
+  private static ReplicaRecoveryInfo callInitReplicaRecovery(
+      InterDatanodeProtocol datanode,
+      RecoveringBlock rBlock) throws IOException {
+    try {
+      return datanode.initReplicaRecovery(rBlock);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  /**
+   * Update replica with the new generation stamp and length.  
+   */
+  @Override // InterDatanodeProtocol
+  public Block updateReplicaUnderRecovery(Block oldBlock,
+                                          long recoveryId,
+                                          long newLength) throws IOException {
+    ReplicaInfo r =
+      data.updateReplicaUnderRecovery(oldBlock, recoveryId, newLength);
+    return new Block(r);
+  }
+
   /** {@inheritDoc} */
   public long getProtocolVersion(String protocol, long clientVersion
       ) throws IOException {
@@ -1559,31 +1594,32 @@ public class DataNode extends Configured
         + ": " + protocol);
   }
 
-  /** A convenient class used in lease recovery */
+  /** A convenient class used in block recovery */
   private static class BlockRecord { 
     final DatanodeID id;
     final InterDatanodeProtocol datanode;
-    final Block block;
+    final ReplicaRecoveryInfo rInfo;
     
-    BlockRecord(DatanodeID id, InterDatanodeProtocol datanode, Block block) {
+    BlockRecord(DatanodeID id,
+                InterDatanodeProtocol datanode,
+                ReplicaRecoveryInfo rInfo) {
       this.id = id;
       this.datanode = datanode;
-      this.block = block;
+      this.rInfo = rInfo;
     }
 
     /** {@inheritDoc} */
     public String toString() {
-      return "block:" + block + " node:" + id;
+      return "block:" + rInfo + " node:" + id;
     }
   }
 
   /** Recover a block */
-  private LocatedBlock recoverBlock(RecoveringBlock rBlock) throws IOException {
+  private void recoverBlock(RecoveringBlock rBlock) throws IOException {
     Block block = rBlock.getBlock();
     DatanodeInfo[] targets = rBlock.getLocations();
     DatanodeID[] datanodeids = (DatanodeID[])targets;
-    List<BlockRecord> syncList = new ArrayList<BlockRecord>();
-    long minlength = Long.MAX_VALUE;
+    List<BlockRecord> syncList = new ArrayList<BlockRecord>(datanodeids.length);
     int errorCount = 0;
 
     //check generation stamps
@@ -1591,95 +1627,136 @@ public class DataNode extends Configured
       try {
         InterDatanodeProtocol datanode = dnRegistration.equals(id)?
             this: DataNode.createInterDataNodeProtocolProxy(id, getConf());
-        BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
-        if (info != null && info.getGenerationStamp() >= block.getGenerationStamp()) {
-          syncList.add(new BlockRecord(id, datanode, new Block(info)));
-          if (info.getNumBytes() < minlength) {
-            minlength = info.getNumBytes();
-          }
+        ReplicaRecoveryInfo info = callInitReplicaRecovery(datanode, rBlock);
+        if (info != null &&
+            info.getGenerationStamp() >= block.getGenerationStamp() &&
+            info.getNumBytes() > 0) {
+          syncList.add(new BlockRecord(id, datanode, info));
         }
+      } catch (RecoveryInProgressException ripE) {
+        InterDatanodeProtocol.LOG.warn(
+            "Recovery for replica " + block + " on data-node " + id
+            + " is already in progress. Recovery id = "
+            + rBlock.getNewGenerationStamp() + " is aborted.", ripE);
+        return;
       } catch (IOException e) {
         ++errorCount;
         InterDatanodeProtocol.LOG.warn(
-            "Failed to getBlockMetaDataInfo for block (=" + block 
+            "Failed to obtain replica info for block (=" + block 
             + ") from datanode (=" + id + ")", e);
       }
     }
 
-    if (syncList.isEmpty() && errorCount > 0) {
+    if (errorCount == datanodeids.length) {
       throw new IOException("All datanodes failed: block=" + block
           + ", datanodeids=" + Arrays.asList(datanodeids));
     }
-    block.setNumBytes(minlength);
-    return syncBlock(rBlock, syncList);
+
+    syncBlock(rBlock, syncList);
   }
 
   /** Block synchronization */
-  private LocatedBlock syncBlock(RecoveringBlock rBlock,
-                                 List<BlockRecord> syncList) throws IOException {
+  private void syncBlock(RecoveringBlock rBlock,
+                         List<BlockRecord> syncList) throws IOException {
     Block block = rBlock.getBlock();
-    long newGenerationStamp = rBlock.getNewGenerationStamp();
+    long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
       LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
           + "), syncList=" + syncList);
     }
 
-    //syncList.isEmpty() that all datanodes do not have the block
-    //so the block can be deleted.
+    // syncList.isEmpty() means that all data-nodes do not have the block
+    // or their replicas have 0 length.
+    // The block can be deleted.
     if (syncList.isEmpty()) {
-      namenode.commitBlockSynchronization(block, newGenerationStamp, 0,
+      namenode.commitBlockSynchronization(block, recoveryId, 0,
           true, true, DatanodeID.EMPTY_ARRAY);
-      //always return a new access token even if everything else stays the same
-      LocatedBlock b = new LocatedBlock(block, rBlock.getLocations());
-      if (isAccessTokenEnabled) {
-        b.setAccessToken(accessTokenHandler.generateToken(null, b.getBlock()
-            .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.WRITE)));
-      }
-      return b;
+      return;
     }
 
-    List<DatanodeID> successList = new ArrayList<DatanodeID>();
-
-    Block newblock =
-      new Block(block.getBlockId(), block.getNumBytes(), newGenerationStamp);
-
+    // Calculate the best available replica state.
+    ReplicaState bestState = ReplicaState.RWR;
+    long finalizedLength = -1;
     for(BlockRecord r : syncList) {
+      assert r.rInfo.getNumBytes() > 0 : "zero length replica";
+      ReplicaState rState = r.rInfo.getOriginalReplicaState(); 
+      if(rState.getValue() < bestState.getValue())
+        bestState = rState;
+      if(rState == ReplicaState.FINALIZED) {
+        if(finalizedLength > 0 && finalizedLength != r.rInfo.getNumBytes())
+          throw new IOException("Inconsistent size of finalized replicas. " +
+              "Replica " + r.rInfo + " expected size: " + finalizedLength);
+        finalizedLength = r.rInfo.getNumBytes();
+      }
+    }
+
+    // Calculate list of nodes that will participate in the recovery
+    // and the new block size
+    List<BlockRecord> participatingList = new ArrayList<BlockRecord>();
+    Block newBlock = new Block(block.getBlockId(), -1, recoveryId);
+    switch(bestState) {
+    case FINALIZED:
+      assert finalizedLength > 0 : "finalizedLength is not positive";
+      for(BlockRecord r : syncList) {
+        ReplicaState rState = r.rInfo.getOriginalReplicaState();
+        if(rState == ReplicaState.FINALIZED ||
+           rState == ReplicaState.RBW &&
+                      r.rInfo.getNumBytes() == finalizedLength)
+          participatingList.add(r);
+      }
+      newBlock.setNumBytes(finalizedLength);
+      break;
+    case RBW:
+    case RWR:
+      long minLength = Long.MAX_VALUE;
+      for(BlockRecord r : syncList) {
+        ReplicaState rState = r.rInfo.getOriginalReplicaState();
+        if(rState == bestState) {
+          minLength = Math.min(minLength, r.rInfo.getNumBytes());
+          participatingList.add(r);
+        }
+      }
+      newBlock.setNumBytes(minLength);
+      break;
+    case RUR:
+    case TEMPORARY:
+      assert false : "bad replica state: " + bestState;
+    }
+
+    List<DatanodeID> failedList = new ArrayList<DatanodeID>();
+    List<DatanodeID> successList = new ArrayList<DatanodeID>();
+    for(BlockRecord r : participatingList) {
       try {
-        r.datanode.updateBlock(r.block, newblock, true);
+        Block reply = r.datanode.updateReplicaUnderRecovery(
+            r.rInfo, recoveryId, newBlock.getNumBytes());
+        assert reply.equals(newBlock) &&
+               reply.getNumBytes() == newBlock.getNumBytes() :
+          "Updated replica must be the same as the new block.";
         successList.add(r.id);
       } catch (IOException e) {
         InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="
-            + newblock + ", datanode=" + r.id + ")", e);
+            + newBlock + ", datanode=" + r.id + ")", e);
+        failedList.add(r.id);
       }
     }
 
-    if (!successList.isEmpty()) {
-      DatanodeID[] nlist = successList.toArray(new DatanodeID[successList.size()]);
-
-      namenode.commitBlockSynchronization(block,
-          newblock.getGenerationStamp(), newblock.getNumBytes(), true, false,
-          nlist);
-      DatanodeInfo[] info = new DatanodeInfo[nlist.length];
-      for (int i = 0; i < nlist.length; i++) {
-        info[i] = new DatanodeInfo(nlist[i]);
+    // If any of the data-nodes failed, the recovery fails, because
+    // we never know the actual state of the replica on failed data-nodes.
+    // The recovery should be started over.
+    if(!failedList.isEmpty()) {
+      StringBuilder b = new StringBuilder();
+      for(DatanodeID id : failedList) {
+        b.append("\n  " + id);
       }
-      LocatedBlock b = new LocatedBlock(newblock, info); // success
-      // should have used client ID to generate access token, but since 
-      // owner ID is not checked, we simply pass null for now.
-      if (isAccessTokenEnabled) {
-        b.setAccessToken(accessTokenHandler.generateToken(null, b.getBlock()
-            .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.WRITE)));
-      }
-      return b;
+      throw new IOException("Cannot recover " + block + ", the following "
+          + failedList.size() + " data-nodes failed {" + b + "\n}");
     }
 
-    //failed
-    StringBuilder b = new StringBuilder();
-    for(BlockRecord r : syncList) {
-      b.append("\n  " + r.id);
-    }
-    throw new IOException("Cannot recover " + block + ", none of these "
-        + syncList.size() + " datanodes success {" + b + "\n}");
+    // Notify the name-node about successfully recovered replicas.
+    DatanodeID[] nlist = successList.toArray(new DatanodeID[successList.size()]);
+    namenode.commitBlockSynchronization(block,
+        newBlock.getGenerationStamp(), newBlock.getNumBytes(), true, false,
+        nlist);
   }
   
   private static void logRecoverBlock(String who,
@@ -1696,15 +1773,6 @@ public class DataNode extends Configured
   /** {@inheritDoc} */
   @Override // ClientDataNodeProtocol
   public long getReplicaVisibleLength(final Block block) throws IOException {
-    final Replica replica = data.getReplica(block.getBlockId());
-    if (replica == null) {
-      throw new ReplicaNotFoundException(block);
-    }
-    if (replica.getGenerationStamp() < block.getGenerationStamp()) {
-      throw new IOException(
-          "replica.getGenerationStamp() < block.getGenerationStamp(), block="
-          + block + ", replica=" + replica);
-    }
-    return replica.getVisibleLength();
+    return data.getReplicaVisibleLength(block);
   }
 }

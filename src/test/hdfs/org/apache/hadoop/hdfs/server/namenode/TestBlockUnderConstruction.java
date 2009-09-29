@@ -148,7 +148,7 @@ public class TestBlockUnderConstruction {
   @Test
   public void testGetBlockLocations() throws IOException {
     final NameNode namenode = cluster.getNameNode();
-    final Path p = new Path(BASE_DIR, "file1.dat");
+    final Path p = new Path(BASE_DIR, "file2.dat");
     final String src = p.toString();
     final FSDataOutputStream out = TestFileCreation.createFile(hdfs, p, 3);
 

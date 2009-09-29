@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -792,5 +794,24 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   
   public boolean hasEnoughResource() {
     return true;
+  }
+
+  @Override
+  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
+  throws IOException {
+    return new ReplicaRecoveryInfo(rBlock.getBlock(), ReplicaState.FINALIZED);
+  }
+
+  @Override
+  public FinalizedReplica updateReplicaUnderRecovery(Block oldBlock,
+                                          long recoveryId,
+                                          long newlength) throws IOException {
+    return new FinalizedReplica(
+        oldBlock.getBlockId(), newlength, recoveryId, null, null);
+  }
+
+  @Override
+  public long getReplicaVisibleLength(Block block) throws IOException {
+    return block.getNumBytes();
   }
 }
