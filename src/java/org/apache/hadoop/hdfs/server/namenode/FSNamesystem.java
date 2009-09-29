@@ -734,13 +734,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       }
 
       if (!last.isComplete()) {
-        final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)last;
-        final DatanodeDescriptor[] locations = uc.getExpectedLocations();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("locations = " + java.util.Arrays.asList(locations));
-        }
         return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
-            createLocatedBlock(uc, locations, n, false), false);
+            blockManager.getBlockLocation(last, n), false);
       }
       else {
         return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,

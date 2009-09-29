@@ -329,7 +329,7 @@ public class BlockManager {
     return machineSet;
   }
 
-  List<LocatedBlock> getBlockLocations(Block[] blocks, long offset,
+  List<LocatedBlock> getBlockLocations(BlockInfo[] blocks, long offset,
       long length, int nrBlocksToReturn) throws IOException {
     int curBlk = 0;
     long curPos = 0, blkSize = 0;
@@ -359,8 +359,14 @@ public class BlockManager {
   }
 
   /** @return a LocatedBlock for the given block */
-  LocatedBlock getBlockLocation(final Block blk, final long pos
+  LocatedBlock getBlockLocation(final BlockInfo blk, final long pos
       ) throws IOException {
+    if (!blk.isComplete()) {
+      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
+      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
+      return namesystem.createLocatedBlock(uc, locations, pos, false);
+    }
+
     // get block locations
     final int numCorruptNodes = countNodes(blk).corruptReplicas();
     final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);

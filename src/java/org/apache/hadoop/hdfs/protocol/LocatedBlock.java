@@ -156,6 +156,7 @@ public class LocatedBlock implements Writable {
   /** {@inheritDoc} */
   public String toString() {
     return getClass().getSimpleName() + "{" + b
+        + "; getBlockSize()=" + getBlockSize()
         + "; corrupt=" + corrupt
         + "; offset=" + offset
         + "; locs=" + java.util.Arrays.asList(locs)

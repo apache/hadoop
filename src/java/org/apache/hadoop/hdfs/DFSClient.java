@@ -1661,9 +1661,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
       }
       this.locatedBlocks = newInfo;
-      this.lastBlockBeingWrittenLength = 
-          locatedBlocks.isLastBlockComplete()? 0:
-              readBlockLength(locatedBlocks.getLastLocatedBlock()); 
+      this.lastBlockBeingWrittenLength = 0;
+      if (!locatedBlocks.isLastBlockComplete()) {
+        final LocatedBlock last = locatedBlocks.getLastLocatedBlock();
+        if (last != null) {
+          final long len = readBlockLength(last);
+          last.getBlock().setNumBytes(len);
+          this.lastBlockBeingWrittenLength = len; 
+        }
+      }
+
       this.currentNode = null;
     }
 

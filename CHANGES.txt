@@ -84,6 +84,9 @@ Append branch (unreleased changes)
     HDFS-550. DataNode restarts may introduce corrupt/duplicated/lost replicas
     when handling detached replicas. (hairong)
 
+    HDFS-659. If the the last block is not complete, update its length with
+    one of its replica's length stored in datanode.  (szetszwo)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
