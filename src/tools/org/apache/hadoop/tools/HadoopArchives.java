@@ -675,11 +675,16 @@ public class HadoopArchives implements Tool {
   public static void main(String[] args) {
     JobConf job = new JobConf(HadoopArchives.class);
     HadoopArchives harchives = new HadoopArchives(job);
-    try {
-      int res = harchives.run(args);
-      System.exit(res);
+    int ret = 0;
+
+    try{
+      ret = ToolRunner.run(harchives, args);
     } catch(Exception e) {
+      LOG.debug("Exception in archives  ", e);
+      System.err.println("Exception in archives");
       System.err.println(e.getLocalizedMessage());
+      System.exit(1);
     }
+    System.exit(ret);
   }
 }

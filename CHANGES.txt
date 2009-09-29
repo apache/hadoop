@@ -10,6 +10,9 @@ Release 0.20.2 - Unreleased
     HADOOP-6231.  Allow caching of filesystem instances to be disabled on a
     per-instance basis (Tom White and Ben Slusky via mahadev)
 
+    MAPREDUCE-826. harchive doesn't use ToolRunner / harchive returns 0 even
+    if the job fails with exception (koji via mahadev)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
