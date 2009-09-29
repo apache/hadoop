@@ -6,6 +6,10 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
+    hadoop-config.sh so that it allows setting java command options for
+    JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
