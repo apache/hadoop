@@ -47,20 +47,26 @@ class MetaScanner implements HConstants {
       
     // Scan over each meta region
     ScannerCallable callable = null;
+    int rows = configuration.getInt("hbase.meta.scanner.caching", 100); 
     do {
       Scan scan = new Scan(startRow).addFamily(CATALOG_FAMILY);
       callable = new ScannerCallable(connection, META_TABLE_NAME, scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
       try {
-        Result r = null;
-        do {
+        callable.setCaching(rows);
+        done: do {
+          //we have all the rows here 
           Result [] rrs = connection.getRegionServerWithRetries(callable);
           if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
-            break;
+            break done; //exit completely
           }
-          r = rrs[0];
-        } while(visitor.processRow(r));
+          for (int i = 0; i < rrs.length; i++) {
+            if (!visitor.processRow(rrs[i]))
+              break done; //exit completely
+          }
+          //here, we didn't break anywhere. Check if we have more rows
+        } while(true);
         // Advance the startRow to the end key of the current region
         startRow = callable.getHRegionInfo().getEndKey();
       } finally {

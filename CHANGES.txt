@@ -87,6 +87,9 @@ Release 0.21.0 - Unreleased
    HBASE-1855  HMaster web application doesn't show the region end key in the
                table detail page (Andrei Dragomir via Stack)
    HBASE-1870  Bytes.toFloat(byte[], int) is marked private
+   HBASE-1874  Client Scanner mechanism that is used for HbaseAdmin methods
+               (listTables, tableExists), is very slow if the client is far
+               away from the HBase cluster (Andrei Dragomir via Stack)
 
   OPTIMIZATIONS
 
