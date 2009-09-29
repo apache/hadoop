@@ -240,6 +240,18 @@ public interface FSDatasetInterface extends FSDatasetMBean {
       long newGS, long expectedBlockLen) throws IOException;
   
   /**
+   * Recover a failed pipeline close
+   * It bumps the replica's generation stamp and finalize it if RBW replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param expectedBlockLen the number of bytes the replica is expected to have
+   * @throws IOException
+   */
+  public void recoverClose(Block b,
+      long newGS, long expectedBlockLen) throws IOException;
+  
+  /**
    * Update the block to the new generation stamp and length.  
    */
   public void updateBlock(Block oldblock, Block newblock) throws IOException;

@@ -270,10 +270,6 @@ class BlockSender implements java.io.Closeable, FSConstants {
 
     int len = Math.min((int) (endOffset - offset),
                        bytesPerChecksum*maxChunks);
-    if (len == 0) {
-      return 0;
-    }
-
     int numChunks = (len + bytesPerChecksum - 1)/bytesPerChecksum;
     int packetLen = len + numChunks*checksumSize + 4;
     pkt.clear();
@@ -282,7 +278,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
     pkt.putInt(packetLen);
     pkt.putLong(offset);
     pkt.putLong(seqno);
-    pkt.put((byte)((offset + len >= endOffset) ? 1 : 0));
+    pkt.put((byte)((len == 0) ? 1 : 0));
                //why no ByteBuf.putBoolean()?
     pkt.putInt(len);
     
@@ -443,7 +439,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
         seqno++;
       }
       try {
-        out.writeInt(0); // mark the end of block        
+        // send an empty packet to mark the end of the block
+        sendChunks(pktBuf, maxChunksPerPacket, streamForSendChunks);        
         out.flush();
       } catch (IOException e) { //socket error
         throw ioeToSocketException(e);

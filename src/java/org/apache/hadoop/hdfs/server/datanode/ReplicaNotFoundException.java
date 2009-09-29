@@ -33,7 +33,7 @@ class ReplicaNotFoundException extends IOException {
   final static String UNFINALIZED_REPLICA = 
     "Cannot append to an unfinalized replica ";
   final static String UNFINALIZED_AND_NONRBW_REPLICA = 
-    "Cannot recover appending to a replica that's not FINALIZED and not RBW ";
+    "Cannot recover append/close to a replica that's not FINALIZED and not RBW ";
   final static String NON_EXISTENT_REPLICA =
     "Cannot append to a non-existent replica ";
   final static String UNEXPECTED_GS_REPLICA =

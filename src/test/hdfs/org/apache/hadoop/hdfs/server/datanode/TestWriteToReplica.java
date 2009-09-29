@@ -41,6 +41,25 @@ public class TestWriteToReplica {
   final private static int RUR = 4;
   final private static int NON_EXISTENT = 5;
   
+  // test close
+  @Test
+  public void testClose() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 1, true, null);
+    try {
+      cluster.waitActive();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FSDataset dataSet = (FSDataset)dn.data;
+
+      // set up replicasMap
+      setup(dataSet);
+
+      // test close
+      testClose(dataSet);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   // test append
   @Test
   public void testAppend() throws Exception {
@@ -79,7 +98,7 @@ public class TestWriteToReplica {
     }
   }
   
-  // test writeToRbw
+  // test writeToTemporary
   @Test
   public void testWriteToTempoary() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 1, true, null);
@@ -113,9 +132,8 @@ public class TestWriteToReplica {
         blocks[TEMPORARY].getGenerationStamp(), vol, 
         vol.createTmpFile(blocks[TEMPORARY]).getParentFile()));
     
-    replicaInfo = new ReplicaBeingWritten(blocks[RBW].getBlockId(),
-        blocks[RBW].getGenerationStamp(), vol, 
-        vol.createRbwFile(blocks[RBW]).getParentFile());
+    replicaInfo = new ReplicaBeingWritten(blocks[RBW], vol, 
+        vol.createRbwFile(blocks[RBW]).getParentFile(), null);
     replicasMap.add(replicaInfo);
     replicaInfo.getBlockFile().createNewFile();
     replicaInfo.getMetaFile().createNewFile();
@@ -127,8 +145,10 @@ public class TestWriteToReplica {
   }
   
   private void testAppend(FSDataset dataSet) throws IOException {
-    dataSet.append(blocks[FINALIZED], blocks[FINALIZED].getGenerationStamp()+1, 
+    long newGS = blocks[FINALIZED].getGenerationStamp()+1;
+    dataSet.append(blocks[FINALIZED], newGS, 
         blocks[FINALIZED].getNumBytes());  // successful
+    blocks[FINALIZED].setGenerationStamp(newGS);
     
     try {
       dataSet.append(blocks[TEMPORARY], blocks[TEMPORARY].getGenerationStamp()+1, 
@@ -177,8 +197,106 @@ public class TestWriteToReplica {
       Assert.assertEquals(ReplicaNotFoundException.NON_EXISTENT_REPLICA + 
           blocks[NON_EXISTENT], e.getMessage());
     }
+    
+    newGS = blocks[FINALIZED].getGenerationStamp()+1;
+    dataSet.recoverAppend(blocks[FINALIZED], newGS, 
+        blocks[FINALIZED].getNumBytes());  // successful
+    blocks[FINALIZED].setGenerationStamp(newGS);
+    
+    try {
+      dataSet.recoverAppend(blocks[TEMPORARY], blocks[TEMPORARY].getGenerationStamp()+1, 
+          blocks[TEMPORARY].getNumBytes());
+      Assert.fail("Should not have appended to a temporary replica " 
+          + blocks[TEMPORARY]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA));
+    }
+
+    newGS = blocks[RBW].getGenerationStamp()+1;
+    dataSet.recoverAppend(blocks[RBW], newGS, blocks[RBW].getNumBytes());
+    blocks[RBW].setGenerationStamp(newGS);
+
+    try {
+      dataSet.recoverAppend(blocks[RWR], blocks[RWR].getGenerationStamp()+1,
+          blocks[RBW].getNumBytes());
+      Assert.fail("Should not have appended to an RWR replica" + blocks[RWR]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA));
+    }
+
+    try {
+      dataSet.recoverAppend(blocks[RUR], blocks[RUR].getGenerationStamp()+1,
+          blocks[RUR].getNumBytes());
+      Assert.fail("Should not have appended to an RUR replica" + blocks[RUR]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA));
+    }
+
+    try {
+      dataSet.recoverAppend(blocks[NON_EXISTENT], 
+          blocks[NON_EXISTENT].getGenerationStamp(), 
+          blocks[NON_EXISTENT].getNumBytes());
+      Assert.fail("Should not have appended to a non-existent replica " + 
+          blocks[NON_EXISTENT]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.NON_EXISTENT_REPLICA));
+    }
   }
 
+  private void testClose(FSDataset dataSet) throws IOException {
+    long newGS = blocks[FINALIZED].getGenerationStamp()+1;
+    dataSet.recoverClose(blocks[FINALIZED], newGS, 
+        blocks[FINALIZED].getNumBytes());  // successful
+    blocks[FINALIZED].setGenerationStamp(newGS);
+    
+    try {
+      dataSet.recoverClose(blocks[TEMPORARY], blocks[TEMPORARY].getGenerationStamp()+1, 
+          blocks[TEMPORARY].getNumBytes());
+      Assert.fail("Should not have recovered close a temporary replica " 
+          + blocks[TEMPORARY]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA));
+    }
+
+    newGS = blocks[RBW].getGenerationStamp()+1;
+    dataSet.recoverClose(blocks[RBW], newGS, blocks[RBW].getNumBytes());
+    blocks[RBW].setGenerationStamp(newGS);
+
+    try {
+      dataSet.recoverClose(blocks[RWR], blocks[RWR].getGenerationStamp()+1,
+          blocks[RBW].getNumBytes());
+      Assert.fail("Should not have recovered close an RWR replica" + blocks[RWR]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA));
+    }
+
+    try {
+      dataSet.recoverClose(blocks[RUR], blocks[RUR].getGenerationStamp()+1,
+          blocks[RUR].getNumBytes());
+      Assert.fail("Should not have recovered close an RUR replica" + blocks[RUR]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA));
+    }
+
+    try {
+      dataSet.recoverClose(blocks[NON_EXISTENT], 
+          blocks[NON_EXISTENT].getGenerationStamp(), 
+          blocks[NON_EXISTENT].getNumBytes());
+      Assert.fail("Should not have recovered close a non-existent replica " + 
+          blocks[NON_EXISTENT]);
+    } catch (ReplicaNotFoundException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          ReplicaNotFoundException.NON_EXISTENT_REPLICA));
+    }
+  }
+  
   private void testWriteToRbw(FSDataset dataSet) throws IOException {
     try {
       dataSet.recoverRbw(blocks[FINALIZED],

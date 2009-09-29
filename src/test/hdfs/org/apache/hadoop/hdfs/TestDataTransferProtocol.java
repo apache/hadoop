@@ -46,7 +46,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -154,10 +153,7 @@ public class TestDataTransferProtocol extends TestCase {
 
     sendOut.writeInt(0);           // chunk length
     sendOut.writeInt(0);           // zero checksum
-    
-    // mark the end of block
-    sendOut.writeInt(0);
-    
+        
     //ok finally write a block with 0 len
     SUCCESS.write(recvOut);
     Text.writeString(recvOut, ""); // first bad node
@@ -177,6 +173,11 @@ public class TestDataTransferProtocol extends TestCase {
     if (eofExcepted) {
       ERROR.write(recvOut);
       sendRecvData(description, true);
+    } else if (stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
+      //ok finally write a block with 0 len
+      SUCCESS.write(recvOut);
+      Text.writeString(recvOut, ""); // first bad node
+      sendRecvData(description, false);
     } else {
       writeZeroLengthPacket(block, description);
     }
@@ -208,8 +209,7 @@ public class TestDataTransferProtocol extends TestCase {
       long newGS = firstBlock.getGenerationStamp() + 1;
       testWrite(firstBlock, 
           BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY, 
-          newGS, "Successful for now", false);
-      firstBlock.setGenerationStamp(newGS);
+          newGS, "Cannot recover data streaming to a finalized replica", true);
       // test PIPELINE_SETUP_APPEND on an existing block
       newGS = firstBlock.getGenerationStamp() + 1;
       testWrite(firstBlock, 
@@ -217,10 +217,21 @@ public class TestDataTransferProtocol extends TestCase {
           newGS, "Append to a finalized replica", false);
       firstBlock.setGenerationStamp(newGS);
       // test PIPELINE_SETUP_APPEND_RECOVERY on an existing block
+      file = new Path("dataprotocol1.dat");    
+      DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
+      firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
       newGS = firstBlock.getGenerationStamp() + 1;
       testWrite(firstBlock, 
           BlockConstructionStage.PIPELINE_SETUP_APPEND_RECOVERY, newGS,
           "Recover appending to a finalized replica", false);
+      // test PIPELINE_CLOSE_RECOVERY on an existing block
+      file = new Path("dataprotocol2.dat");    
+      DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
+      firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
+      newGS = firstBlock.getGenerationStamp() + 1;
+      testWrite(firstBlock, 
+          BlockConstructionStage.PIPELINE_CLOSE_RECOVERY, newGS,
+          "Recover failed close to a finalized replica", false);
       firstBlock.setGenerationStamp(newGS);
 
       /* Test writing to a new block */
@@ -276,11 +287,19 @@ public class TestDataTransferProtocol extends TestCase {
             newGS, "Recover append to a RBW replica", false);
         firstBlock.setGenerationStamp(newGS);
         // test PIPELINE_SETUP_STREAMING_RECOVERY on a RBW block
+        file = new Path("dataprotocol2.dat");    
+        DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
+        out = (DFSOutputStream)(fileSys.append(file).
+            getWrappedStream()); 
+        out.write(1);
+        out.hflush();
+        in = fileSys.open(file);
+        firstBlock = DFSTestUtil.getAllBlocks(in).get(0).getBlock();
+        firstBlock.setNumBytes(2L);
         newGS = firstBlock.getGenerationStamp() + 1;
         testWrite(firstBlock, 
             BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY,
             newGS, "Recover a RBW replica", false);
-        firstBlock.setGenerationStamp(newGS);
       } finally {
         IOUtils.closeStream(in);
         IOUtils.closeStream(out);

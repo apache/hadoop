@@ -1275,6 +1275,20 @@ public class DataNode extends Configured
       }
     }
   }
+  
+  /**
+   * After a block becomes finalized, a datanode increases metric counter,
+   * notifies namenode, and adds it to the block scanner
+   * @param block
+   * @param delHint
+   */
+  void closeBlock(Block block, String delHint) {
+    myMetrics.blocksWritten.inc();
+    notifyNamenodeReceivedBlock(block, delHint);
+    if (blockScanner != null) {
+      blockScanner.addBlock(block);
+    }
+  }
 
   /**
    * No matter what kind of exception we get, keep retrying to offerService().
