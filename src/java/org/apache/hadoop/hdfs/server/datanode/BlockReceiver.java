@@ -102,8 +102,14 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           replicaInfo = datanode.data.createRbw(block);
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
-          replicaInfo = datanode.data.recoverRbw(
-              block, newGs, minBytesRcvd, maxBytesRcvd);
+          if (datanode.data.isValidBlock(block)) {
+            // pipeline failed after the replica is finalized. This will be 
+            // handled differently when pipeline close/recovery is introduced
+            replicaInfo = datanode.data.append(block, newGs, maxBytesRcvd);
+          } else {
+            replicaInfo = datanode.data.recoverRbw(
+                block, newGs, minBytesRcvd, maxBytesRcvd);
+          }
           block.setGenerationStamp(newGs);
           break;
         case PIPELINE_SETUP_APPEND:
@@ -324,7 +330,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
    * It tries to read a full packet with single read call.
    * Consecutive packets are usually of the same length.
    */
-  private void readNextPacket() throws IOException {
+  private int readNextPacket() throws IOException {
     /* This dances around buf a little bit, mainly to read 
      * full packet with single read and to accept arbitarary size  
      * for next packet at the same time.
@@ -359,6 +365,12 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     buf.mark();
     int payloadLen = buf.getInt();
     buf.reset();
+    
+    if (payloadLen == 0) {
+      //end of stream!
+      buf.limit(buf.position() + SIZE_OF_INTEGER);
+      return 0;
+    }
     
     // check corrupt values for pktLen, 100MB upper limit should be ok?
     if (payloadLen < 0 || payloadLen > (100*1024*1024)) {
@@ -399,15 +411,21 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     if (pktSize > maxPacketReadLen) {
       maxPacketReadLen = pktSize;
     }
+    
+    return payloadLen;
   }
   
   /** 
    * Receives and processes a packet. It can contain many chunks.
-   * returns the number of data bytes that the packet has.
+   * returns size of the packet.
    */
   private int receivePacket() throws IOException {
-    // read the next packet
-    readNextPacket();
+    
+    int payloadLen = readNextPacket();
+    
+    if (payloadLen <= 0) {
+      return payloadLen;
+    }
     
     buf.mark();
     //read the header
@@ -433,7 +451,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     
     if (LOG.isDebugEnabled()){
       LOG.debug("Receiving one packet for block " + block +
-                " of length " + len +
+                " of length " + payloadLen +
                 " seqno " + seqno +
                 " offsetInBlock " + offsetInBlock +
                 " lastPacketInBlock " + lastPacketInBlock);
@@ -444,12 +462,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     if (replicaInfo.getNumBytes() < offsetInBlock) {
       replicaInfo.setNumBytes(offsetInBlock);
     }
-    
-    // put in queue for pending acks
-    if (responder != null) {
-      ((PacketResponder)responder.getRunnable()).enqueue(seqno,
-                                      lastPacketInBlock, offsetInBlock); 
-    }  
 
     //First write the packet to the mirror:
     if (mirrorOut != null) {
@@ -463,8 +475,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
     buf.position(endOfHeader);        
     
-    if (lastPacketInBlock || len == 0) {
-      LOG.debug("Receiving an empty packet or the end of the block " + block);
+    if (len == 0) {
+      LOG.debug("Receiving empty packet for block " + block);
     } else {
       int checksumLen = ((len + bytesPerChecksum - 1)/bytesPerChecksum)*
                                                             checksumSize;
@@ -527,11 +539,17 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     /// flush entire packet before sending ack
     flush();
 
-    if (throttler != null) { // throttle I/O
-      throttler.throttle(len);
+    // put in queue for pending acks
+    if (responder != null) {
+      ((PacketResponder)responder.getRunnable()).enqueue(seqno,
+                                      lastPacketInBlock, offsetInBlock); 
     }
     
-    return len;
+    if (throttler != null) { // throttle I/O
+      throttler.throttle(payloadLen);
+    }
+    
+    return payloadLen;
   }
 
   void writeChecksumHeader(DataOutputStream mirrorOut) throws IOException {
@@ -560,9 +578,19 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
 
       /* 
-       * Receive until packet has zero bytes of data.
+       * Receive until packet length is zero.
        */
       while (receivePacket() > 0) {}
+
+      // flush the mirror out
+      if (mirrorOut != null) {
+        try {
+          mirrorOut.writeInt(0); // mark the end of the block
+          mirrorOut.flush();
+        } catch (IOException e) {
+          handleMirrorOutError(e);
+        }
+      }
 
       // wait for all outstanding packet responses. And then
       // indicate responder to gracefully shutdown.
@@ -818,7 +846,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
               block.setNumBytes(replicaInfo.getNumBytes());
               datanode.data.finalizeBlock(block);
-              datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
+              datanode.myMetrics.blocksWritten.inc();
+              datanode.notifyNamenodeReceivedBlock(block, 
+                  DataNode.EMPTY_DEL_HINT);
               if (ClientTraceLog.isInfoEnabled() &&
                   receiver.clientName.length() > 0) {
                 long offset = 0;
@@ -957,7 +987,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
               block.setNumBytes(replicaInfo.getNumBytes());
               datanode.data.finalizeBlock(block);
-              datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
+              datanode.myMetrics.blocksWritten.inc();
+              datanode.notifyNamenodeReceivedBlock(block, 
+                  DataNode.EMPTY_DEL_HINT);
               if (ClientTraceLog.isInfoEnabled() &&
                   receiver.clientName.length() > 0) {
                 long offset = 0;

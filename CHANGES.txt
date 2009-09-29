@@ -50,8 +50,6 @@ Append branch (unreleased changes)
    HDFS-627. Support replica update in data-node.
    (Tsz Wo (Nicholas), SZE and Hairong Kuang via shv)
 
-    HDFS-642. Support pipeline close and close error recovery. (hairong)
-
   IMPROVEMENTS
 
     HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.

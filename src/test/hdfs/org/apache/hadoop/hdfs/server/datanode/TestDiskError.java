@@ -32,11 +32,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Sender;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessToken;
@@ -117,12 +114,17 @@ public class TestDiskError extends TestCase {
       DataOutputStream out = new DataOutputStream(
           s.getOutputStream());
 
-      Sender.opWriteBlock(out, block.getBlock().getBlockId(), 
-          block.getBlock().getGenerationStamp(), 1, 
-          BlockConstructionStage.PIPELINE_SETUP_CREATE, 
-          0L, 0L, 0L, "", null, new DatanodeInfo[0], 
-          AccessToken.DUMMY_TOKEN);
-
+      out.writeShort( DataTransferProtocol.DATA_TRANSFER_VERSION );
+      WRITE_BLOCK.write(out);
+      out.writeLong( block.getBlock().getBlockId());
+      out.writeLong( block.getBlock().getGenerationStamp() );
+      out.writeInt(1);
+      out.writeBoolean( false );       // recovery flag
+      Text.writeString( out, "" );
+      out.writeBoolean(false); // Not sending src node information
+      out.writeInt(0);
+      AccessToken.DUMMY_TOKEN.write(out);
+      
       // write check header
       out.writeByte( 1 );
       out.writeInt( 512 );

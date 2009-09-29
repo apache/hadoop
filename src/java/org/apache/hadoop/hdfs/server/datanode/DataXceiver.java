@@ -252,17 +252,12 @@ class DataXceiver extends DataTransferProtocol.Receiver
     String firstBadLink = "";           // first datanode that failed in connection setup
     DataTransferProtocol.Status mirrorInStatus = SUCCESS;
     try {
-      if (client.length() == 0 || 
-          stage != BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
-        // open a block receiver
-        blockReceiver = new BlockReceiver(block, in, 
-            s.getRemoteSocketAddress().toString(),
-            s.getLocalSocketAddress().toString(),
-            stage, newGs, minBytesRcvd, maxBytesRcvd,
-            client, srcDataNode, datanode);
-      } else {
-        datanode.data.recoverClose(block, newGs, minBytesRcvd);
-      }
+      // open a block receiver and check if the block does not exist
+      blockReceiver = new BlockReceiver(block, in, 
+          s.getRemoteSocketAddress().toString(),
+          s.getLocalSocketAddress().toString(),
+          stage, newGs, minBytesRcvd, maxBytesRcvd,
+          client, srcDataNode, datanode);
 
       //
       // Open network conn to backup machine, if 
@@ -294,9 +289,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
               pipelineSize, stage, newGs, minBytesRcvd, maxBytesRcvd, client, 
               srcDataNode, targets, accessToken);
 
-          if (blockReceiver != null) { // send checksum header
-            blockReceiver.writeChecksumHeader(mirrorOut);
-          }
+          blockReceiver.writeChecksumHeader(mirrorOut);
           mirrorOut.flush();
 
           // read connect ack (only for clients, not for replication req)
@@ -347,30 +340,24 @@ class DataXceiver extends DataTransferProtocol.Receiver
       }
 
       // receive the block and mirror to the next target
-      if (blockReceiver != null) {
-        String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
-        blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
-            mirrorAddr, null, targets.length);
-      }
+      String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
+      blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
+                                 mirrorAddr, null, targets.length);
 
-      // update its generation stamp
-      if (client.length() != 0 && 
-          stage != BlockConstructionStage.PIPELINE_SETUP_CREATE) {
-        block.setGenerationStamp(newGs);
-      }
-      
-      // if this write is for a replication request or recovering
-      // a failed close for client, then confirm block. For other client-writes,
+      // if this write is for a replication request (and not
+      // from a client), then confirm block. For client-writes,
       // the block is finalized in the PacketResponder.
-      if (client.length() == 0 || 
-          stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
-        datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
+      if (client.length() == 0) {
+        datanode.notifyNamenodeReceivedBlock(block, DataNode.EMPTY_DEL_HINT);
         LOG.info("Received block " + block + 
                  " src: " + remoteAddress +
                  " dest: " + localAddress +
                  " of size " + block.getNumBytes());
       }
 
+      if (datanode.blockScanner != null) {
+        datanode.blockScanner.addBlock(block);
+      }
       
     } catch (IOException ioe) {
       LOG.info("writeBlock " + block + " received exception " + ioe);

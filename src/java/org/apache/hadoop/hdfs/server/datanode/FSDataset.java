@@ -1175,21 +1175,17 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return newReplicaInfo;
   }
 
-  private ReplicaInfo recoverCheck(Block b, long newGS, 
-      long expectedBlockLen) throws IOException {
+  @Override  // FSDatasetInterface
+  public synchronized ReplicaInPipelineInterface recoverAppend(Block b,
+      long newGS, long expectedBlockLen) throws IOException {
+    DataNode.LOG.info("Recover failed append to " + b);
+
     ReplicaInfo replicaInfo = volumeMap.get(b.getBlockId());
     if (replicaInfo == null) {
       throw new ReplicaNotFoundException(
           ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
     }
     
-    // check state
-    if (replicaInfo.getState() != ReplicaState.FINALIZED &&
-        replicaInfo.getState() != ReplicaState.RBW) {
-      throw new ReplicaNotFoundException(
-          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA + replicaInfo);
-    }
-
     // check generation stamp
     long replicaGenerationStamp = replicaInfo.getGenerationStamp();
     if (replicaGenerationStamp < b.getGenerationStamp() ||
@@ -1223,39 +1219,20 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           " with a length of " + replicaLen + 
           " expected length is " + expectedBlockLen);
     }
-    
-    return replicaInfo;
-  }
-  @Override  // FSDatasetInterface
-  public synchronized ReplicaInPipelineInterface recoverAppend(Block b,
-      long newGS, long expectedBlockLen) throws IOException {
-    DataNode.LOG.info("Recover failed append to " + b);
-
-    ReplicaInfo replicaInfo = recoverCheck(b, newGS, expectedBlockLen);
 
     // change the replica's state/gs etc.
-    if (replicaInfo.getState() == ReplicaState.FINALIZED ) {
+    switch (replicaInfo.getState()) {
+    case FINALIZED:
       return append((FinalizedReplica)replicaInfo, newGS, b.getNumBytes());
-    } else { //RBW
+    case RBW:
       bumpReplicaGS(replicaInfo, newGS);
       return (ReplicaBeingWritten)replicaInfo;
+    default:
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.UNFINALIZED_AND_NONRBW_REPLICA + replicaInfo);
     }
   }
 
-  @Override
-  public void recoverClose(Block b, long newGS,
-      long expectedBlockLen) throws IOException {
-    DataNode.LOG.info("Recover failed close " + b);
-    // check replica's state
-    ReplicaInfo replicaInfo = recoverCheck(b, newGS, expectedBlockLen);
-    // bump the replica's GS
-    bumpReplicaGS(replicaInfo, newGS);
-    // finalize the replica if RBW
-    if (replicaInfo.getState() == ReplicaState.RBW) {
-      finalizeBlock(replicaInfo);
-    }
-  }
-  
   /**
    * Bump a replica's generation stamp to a new one.
    * Its on-disk meta file name is renamed to be the new one too.

@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 
 /** This class implements some of tests posted in HADOOP-2658. */
 public class TestFileAppend3 extends junit.framework.TestCase {
-  static final long BLOCK_SIZE = 64 * 1024;
+  static final long BLOCK_SIZE = 3 * 64 * 1024;
   static final short REPLICATION = 3;
   static final int DATANODE_NUM = 5;
 

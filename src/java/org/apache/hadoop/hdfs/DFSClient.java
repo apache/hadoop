@@ -1431,8 +1431,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         int dataLen = in.readInt();
       
         // Sanity check the lengths
-        if ( ( dataLen <= 0 && !lastPacketInBlock ) ||
-             ( dataLen != 0 && lastPacketInBlock) ||
+        if ( dataLen < 0 || 
+             ( (dataLen % bytesPerChecksum) != 0 && !lastPacketInBlock ) ||
              (seqno != (lastSeqNo + 1)) ) {
              throw new IOException("BlockReader: error in packet header" +
                                    "(chunkOffset : " + chunkOffset + 
@@ -2598,16 +2598,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         response.start();
         stage = BlockConstructionStage.DATA_STREAMING;
       }
-      
-      private void endBlock() {
-        LOG.debug("Closing old block " + block);
-        this.setName("DataStreamer for file " + src);
-        closeResponder();
-        closeStream();
-        nodes = null;
-        stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
-      }
-      
+
       /*
        * streamer thread is the only thread that opens streams to datanode, 
        * and closes them. Any error recovery is also done by this thread.
@@ -2651,6 +2642,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               one = dataQueue.getFirst();
             }
 
+            long offsetInBlock = one.offsetInBlock;
+
             // get new block from namenode.
             if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
               LOG.debug("Allocating new block");
@@ -2662,34 +2655,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               initDataStreaming();
             }
 
-            long lastByteOffsetInBlock = one.getLastByteOffsetBlock();
-            if (lastByteOffsetInBlock > blockSize) {
+            if (offsetInBlock >= blockSize) {
               throw new IOException("BlockSize " + blockSize +
                   " is smaller than data size. " +
                   " Offset of packet in block " + 
-                  lastByteOffsetInBlock +
+                  offsetInBlock +
                   " Aborting file " + src);
             }
 
-            if (one.lastPacketInBlock) {
-              // wait for all data packets have been successfully acked
-              synchronized (dataQueue) {
-                while (!streamerClosed && !hasError && 
-                    ackQueue.size() != 0 && clientRunning) {
-                  try {
-                    // wait for acks to arrive from datanodes
-                    dataQueue.wait(1000);
-                  } catch (InterruptedException  e) {
-                  }
-                }
-              }
-              if (streamerClosed || hasError || !clientRunning) {
-                continue;
-              }
-              stage = BlockConstructionStage.PIPELINE_CLOSE;
-            }
-            
-            // send the packet
             ByteBuffer buf = one.getBuffer();
 
             synchronized (dataQueue) {
@@ -2701,7 +2674,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
             if (LOG.isDebugEnabled()) {
               LOG.debug("DataStreamer block " + block +
-                  " sending packet " + one);
+                  " sending packet seqno:" + one.seqno +
+                  " size:" + buf.remaining() +
+                  " offsetInBlock:" + one.offsetInBlock + 
+                  " lastPacketInBlock:" + one.lastPacketInBlock +
+                  " lastByteOffsetInBlock" + one.getLastByteOffsetBlock());
             }
 
             // write out data to remote datanode
@@ -2713,31 +2690,22 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             if (bytesSent < tmpBytesSent) {
               bytesSent = tmpBytesSent;
             }
-
-            if (streamerClosed || hasError || !clientRunning) {
-              continue;
-            }
-
-            // Is this block full?
+            
             if (one.lastPacketInBlock) {
-              // wait for the close packet has been acked
               synchronized (dataQueue) {
-                while (!streamerClosed && !hasError && 
-                    ackQueue.size() != 0 && clientRunning) {
-                  dataQueue.wait(1000);// wait for acks to arrive from datanodes
+                while (!streamerClosed && !hasError && ackQueue.size() != 0 && clientRunning) {
+                  try {
+                    dataQueue.wait(1000);   // wait for acks to arrive from datanodes
+                  } catch (InterruptedException  e) {
+                  }
                 }
               }
-              if (streamerClosed || hasError || !clientRunning) {
-                continue;
+              
+              if (ackQueue.isEmpty()) { // done receiving all acks
+                // indicate end-of-block
+                blockStream.writeInt(0);
+                blockStream.flush();
               }
-
-              endBlock();
-            }
-            if (progress != null) { progress.progress(); }
-
-            // This is used by unit test to trigger race conditions.
-            if (artificialSlowdown != 0 && clientRunning) {
-              Thread.sleep(artificialSlowdown); 
             }
           } catch (Throwable e) {
             LOG.warn("DataStreamer Exception: " + 
@@ -2749,6 +2717,29 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             if (errorIndex == -1) { // not a datanode error
               streamerClosed = true;
             }
+          }
+
+
+          if (streamerClosed || hasError || !clientRunning) {
+            continue;
+          }
+
+          // Is this block full?
+          if (one.lastPacketInBlock) {
+            LOG.debug("Closing old block " + block);
+            this.setName("DataStreamer for file " + src);
+            closeResponder();
+            closeStream();
+            nodes = null;
+            stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
+          }
+          if (progress != null) { progress.progress(); }
+
+          // This is used by unit test to trigger race conditions.
+          if (artificialSlowdown != 0 && clientRunning) {
+            try { 
+              Thread.sleep(artificialSlowdown); 
+            } catch (InterruptedException e) {}
           }
         }
         closeInternal();
@@ -2937,15 +2928,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         boolean doSleep = setupPipelineForAppendOrRecovery();
         
         if (!streamerClosed && clientRunning) {
-          if (stage == BlockConstructionStage.PIPELINE_CLOSE) {
-            synchronized (dataQueue) {
-              dataQueue.remove();  // remove the end of block packet
-              dataQueue.notifyAll();
-            }
-            endBlock();
-          } else {
-            initDataStreaming();
-          }
+          initDataStreaming();
         }
         
         return doSleep;
@@ -3409,6 +3392,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               ", blockSize=" + blockSize +
               ", appendChunk=" + appendChunk);
         }
+        //
+        // if we allocated a new packet because we encountered a block
+        // boundary, reset bytesCurBlock.
+        //
+        if (bytesCurBlock == blockSize) {
+          currentPacket.lastPacketInBlock = true;
+          bytesCurBlock = 0;
+          lastFlushOffset = -1;
+        }
         waitAndQueuePacket(currentPacket);
         currentPacket = null;
 
@@ -3421,20 +3413,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
         int psize = Math.min((int)(blockSize-bytesCurBlock), writePacketSize);
         computePacketChunkSize(psize, bytesPerChecksum);
-        
-        //
-        // if encountering a block boundary, send an empty packet to 
-        // indicate the end of block and reset bytesCurBlock.
-        //
-        if (bytesCurBlock == blockSize) {
-          currentPacket = new Packet(DataNode.PKT_HEADER_LEN+4, 0, 
-              bytesCurBlock);
-          currentPacket.lastPacketInBlock = true;
-          waitAndQueuePacket(currentPacket);
-          currentPacket = null;
-          bytesCurBlock = 0;
-          lastFlushOffset = -1;
-        }
       }
     }
   
@@ -3578,22 +3556,21 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       try {
         flushBuffer();       // flush from all upper layers
 
-        if (currentPacket != null) { 
-          waitAndQueuePacket(currentPacket);
-        }
-
-        if (bytesCurBlock != 0) {
-          // send an empty packet to mark the end of the block
-          currentPacket = new Packet(DataNode.PKT_HEADER_LEN+4, 0, 
+        // Mark that this packet is the last packet in block.
+        // If there are no outstanding packets and the last packet
+        // was not the last one in the current block, then create a
+        // packet with empty payload.
+        if (currentPacket == null && bytesCurBlock != 0) {
+          currentPacket = new Packet(packetSize, chunksPerPacket,
               bytesCurBlock);
+        }
+        if (currentPacket != null) { 
           currentPacket.lastPacketInBlock = true;
         }
 
         flushInternal();             // flush all data to Datanodes
-        LOG.info("Done flushing");
         // get last block before destroying the streamer
         Block lastBlock = streamer.getBlock();
-        LOG.info("Closing the streams...");
         closeThreads(false);
         completeFile(lastBlock);
         leasechecker.remove(src);

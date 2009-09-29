@@ -484,35 +484,17 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public synchronized ReplicaInPipelineInterface recoverAppend(Block b,
       long newGS, long expectedBlockLen) throws IOException {
     BInfo binfo = blockMap.get(b);
-    if (binfo == null) {
+    if (binfo == null || !binfo.isFinalized()) {
       throw new ReplicaNotFoundException("Block " + b
           + " is not valid, and cannot be appended to.");
     }
     if (binfo.isFinalized()) {
       binfo.unfinalizeBlock();
     }
-    blockMap.remove(b);
     binfo.theBlock.setGenerationStamp(newGS);
-    blockMap.put(binfo.theBlock, binfo);
     return binfo;
   }
 
-  @Override
-  public void recoverClose(Block b, long newGS,
-      long expectedBlockLen) throws IOException {
-    BInfo binfo = blockMap.get(b);
-    if (binfo == null) {
-      throw new ReplicaNotFoundException("Block " + b
-          + " is not valid, and cannot be appended to.");
-    }
-    if (!binfo.isFinalized()) {
-      binfo.finalizeBlock(binfo.getNumBytes());
-    }
-    blockMap.remove(b);
-    binfo.theBlock.setGenerationStamp(newGS);
-    blockMap.put(binfo.theBlock, binfo);
-  }
-  
   @Override
   public synchronized ReplicaInPipelineInterface recoverRbw(Block b,
       long newGS, long minBytesRcvd, long maxBytesRcvd) throws IOException {
@@ -525,9 +507,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       throw new ReplicaAlreadyExistsException("Block " + b
           + " is valid, and cannot be written to.");
     }
-    blockMap.remove(b);
     binfo.theBlock.setGenerationStamp(newGS);
-    blockMap.put(binfo.theBlock, binfo);
     return binfo;
   }
 
