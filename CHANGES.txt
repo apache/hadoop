@@ -98,6 +98,9 @@ Append branch (unreleased changes)
     HDFS-661. DataNode upgrade fails on non-existant current directory.
     (hairong)
 
+    HDFS-597. Mofication introduced by HDFS-537 breakes an advice binding in
+    FSDatasetAspects.  (Konstantin Boudnik via szetszwo)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
