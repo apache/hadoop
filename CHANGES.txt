@@ -74,6 +74,8 @@ Append branch (unreleased changes)
     HDFS-648. Change some methods in AppendTestUtil to public.  (Konstantin
     Boudnik via szetszwo)
 
+    HDFS-662. Unnecessary info message from DFSClient. (hairong)
+
   BUG FIXES
 
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice

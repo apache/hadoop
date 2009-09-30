@@ -3597,10 +3597,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
 
         flushInternal();             // flush all data to Datanodes
-        LOG.info("Done flushing");
         // get last block before destroying the streamer
         Block lastBlock = streamer.getBlock();
-        LOG.info("Closing the streams...");
         closeThreads(false);
         completeFile(lastBlock);
         leasechecker.remove(src);
