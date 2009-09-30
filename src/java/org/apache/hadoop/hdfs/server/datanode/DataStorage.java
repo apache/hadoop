@@ -284,6 +284,9 @@ public class DataStorage extends Storage {
     rename(curDir, tmpDir);
     // hard link finalized & rbw blocks
     linkAllBlocks(tmpDir, curDir);
+    // create current directory if not exists
+    if (!curDir.exists() && !curDir.mkdirs())
+      throw new IOException("Cannot create directory " + curDir);
     // write version file
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     assert this.namespaceID == nsInfo.getNamespaceID() :

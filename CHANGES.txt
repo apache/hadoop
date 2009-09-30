@@ -95,6 +95,9 @@ Append branch (unreleased changes)
     HDFS-649. Check null pointers for DataTransferTest.  (Konstantin Boudnik
     via szetszwo)
 
+    HDFS-661. DataNode upgrade fails on non-existant current directory.
+    (hairong)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
