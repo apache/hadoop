@@ -355,7 +355,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
       // update its generation stamp
       if (client.length() != 0 && 
-          stage != BlockConstructionStage.PIPELINE_SETUP_CREATE) {
+          stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         block.setGenerationStamp(newGs);
         block.setNumBytes(minBytesRcvd);
       }

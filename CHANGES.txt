@@ -101,6 +101,8 @@ Append branch (unreleased changes)
     HDFS-597. Mofication introduced by HDFS-537 breakes an advice binding in
     FSDatasetAspects.  (Konstantin Boudnik via szetszwo)
 
+    HDFS-665. TestFileAppend2 sometimes hangs. (hairong)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
