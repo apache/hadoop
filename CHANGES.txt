@@ -92,6 +92,9 @@ Append branch (unreleased changes)
     HDFS-659. If the the last block is not complete, update its length with
     one of its replica's length stored in datanode.  (szetszwo)
 
+    HDFS-649. Check null pointers for DataTransferTest.  (Konstantin Boudnik
+    via szetszwo)
+
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES

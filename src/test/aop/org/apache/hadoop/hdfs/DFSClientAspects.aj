@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream.DataStreamer;
 
 import org.junit.Assert;
@@ -48,8 +49,9 @@ public aspect DFSClientAspects {
         + datastreamer.hasError + " errorIndex=" + datastreamer.errorIndex);
     try {
       if (datastreamer.hasError) {
-        DataTransferTestUtil.getDataTransferTest().fiPipelineInitErrorNonAppend
-            .run(datastreamer.errorIndex);
+        DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+        if (dtTest != null )
+          dtTest.fiPipelineInitErrorNonAppend.run(datastreamer.errorIndex);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -75,8 +77,9 @@ public aspect DFSClientAspects {
     LOG.info("FI: before pipelineErrorAfterInit: errorIndex="
         + datastreamer.errorIndex);
     try {
-      DataTransferTestUtil.getDataTransferTest().fiPipelineErrorAfterInit
-          .run(datastreamer.errorIndex);
+      DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+      if (dtTest != null )
+        dtTest.fiPipelineErrorAfterInit.run(datastreamer.errorIndex);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
