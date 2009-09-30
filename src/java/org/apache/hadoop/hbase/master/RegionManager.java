@@ -196,8 +196,8 @@ class RegionManager implements HConstants {
 
     // figure out what regions need to be assigned and aren't currently being
     // worked on elsewhere.
-    Set<RegionState> regionsToAssign = regionsAwaitingAssignment(info.getServerAddress(),
-        isSingleServer);
+    Set<RegionState> regionsToAssign =
+      regionsAwaitingAssignment(info.getServerAddress(), isSingleServer);
     if (regionsToAssign.size() == 0) {
       // There are no regions waiting to be assigned.
       if (!inSafeMode()) {
@@ -224,69 +224,88 @@ class RegionManager implements HConstants {
    * Note that no synchronization is needed while we iterate over
    * regionsInTransition because this method is only called by assignRegions
    * whose caller owns the monitor for RegionManager
-   */ 
+   * 
+   * TODO: This code is unintelligible.  REWRITE. Add TESTS! St.Ack 09/30/2009
+   * @param thisServersLoad
+   * @param regionsToAssign
+   * @param info
+   * @param returnMsgs
+   */
   private void assignRegionsToMultipleServers(final HServerLoad thisServersLoad,
     final Set<RegionState> regionsToAssign, final HServerInfo info, 
     final ArrayList<HMsg> returnMsgs) {
-
     boolean isMetaAssign = false;
     for (RegionState s : regionsToAssign) {
       if (s.getRegionInfo().isMetaRegion())
         isMetaAssign = true;
     }
-
     int nRegionsToAssign = regionsToAssign.size();
+    // Now many regions to assign this server.
     int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
     LOG.debug("Assigning for " + info + ": total nregions to assign=" +
       nRegionsToAssign + ", nregions to reach balance=" + nregions +
       ", isMetaAssign=" + isMetaAssign);
-    nRegionsToAssign -= nregions;
-    if (nRegionsToAssign > 0 || isMetaAssign) {
-      // We still have more regions to assign. See how many we can assign
-      // before this server becomes more heavily loaded than the next
-      // most heavily loaded server.
-      HServerLoad heavierLoad = new HServerLoad();
-      int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
-
-      nregions = 0;
-      
-      // Advance past any less-loaded servers
-      for (HServerLoad load = new HServerLoad(thisServersLoad);
+    if (nRegionsToAssign <= nregions) {
+      // I do not know whats supposed to happen in this case.  Assign one.
+      LOG.debug("Assigning one region only (playing it safe..)");
+      assignRegions(regionsToAssign, 1, info, returnMsgs);
+    } else {
+      nRegionsToAssign -= nregions;
+      if (nRegionsToAssign > 0 || isMetaAssign) {
+        // We still have more regions to assign. See how many we can assign
+        // before this server becomes more heavily loaded than the next
+        // most heavily loaded server.
+        HServerLoad heavierLoad = new HServerLoad();
+        int nservers = computeNextHeaviestLoad(thisServersLoad, heavierLoad);
+        nregions = 0;
+        // Advance past any less-loaded servers
+        for (HServerLoad load = new HServerLoad(thisServersLoad);
         load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
         load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
-        // continue;
-      }
-
-      LOG.debug("Doing for " + info + " nregions: " + nregions +
-      " and nRegionsToAssign: " + nRegionsToAssign);
-      if (nregions < nRegionsToAssign) {
-        // There are some more heavily loaded servers
-        // but we can't assign all the regions to this server.
-        if (nservers > 0) {
-          // There are other servers that can share the load.
-          // Split regions that need assignment across the servers.
-          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
-              / (1.0 * nservers));
+          // continue;
+        }
+        LOG.debug("Doing for " + info + " nregions: " + nregions +
+            " and nRegionsToAssign: " + nRegionsToAssign);
+        if (nregions < nRegionsToAssign) {
+          // There are some more heavily loaded servers
+          // but we can't assign all the regions to this server.
+          if (nservers > 0) {
+            // There are other servers that can share the load.
+            // Split regions that need assignment across the servers.
+            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/(1.0 * nservers));
+          } else {
+            // No other servers with same load.
+            // Split regions over all available servers
+            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
+                (1.0 * master.serverManager.numServers()));
+          }
         } else {
-          // No other servers with same load.
-          // Split regions over all available servers
-          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
-              / (1.0 * master.serverManager.numServers()));
+          // Assign all regions to this server
+          nregions = nRegionsToAssign;
         }
-      } else {
-        // Assign all regions to this server
-        nregions = nRegionsToAssign;
+        assignRegions(regionsToAssign, nregions, info, returnMsgs);
       }
+    }
+  }
 
-      if (nregions > this.maxAssignInOneGo) {
-        nregions = this.maxAssignInOneGo;
-      }
-      
-      for (RegionState s: regionsToAssign) {
-        doRegionAssignment(s, info, returnMsgs);
-        if (--nregions <= 0) {
-          break;
-        }
+  /*
+   * Assign <code>nregions</code> regions.
+   * @param regionsToAssign
+   * @param nregions
+   * @param info
+   * @param returnMsgs
+   */
+  private void assignRegions(final Set<RegionState> regionsToAssign,
+      final int nregions, final HServerInfo info,
+      final ArrayList<HMsg> returnMsgs) {
+    int count = nregions;
+    if (count > this.maxAssignInOneGo) {
+      count = this.maxAssignInOneGo;
+    }
+    for (RegionState s: regionsToAssign) {
+      doRegionAssignment(s, info, returnMsgs);
+      if (--count <= 0) {
+        break;
       }
     }
   }
@@ -332,7 +351,6 @@ class RegionManager implements HConstants {
    */
   private int regionsPerServer(final int numUnassignedRegions,
     final HServerLoad thisServersLoad) {
-    
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
 
@@ -346,14 +364,13 @@ class RegionManager implements HConstants {
     // until they reach load equal with ours. Then, see how many regions are left
     // unassigned. That is how many regions we should assign to this server.
     int nRegions = 0;
-    for (Map.Entry<HServerLoad, Set<String>> e : lightServers.entrySet()) {
+    for (Map.Entry<HServerLoad, Set<String>> e: lightServers.entrySet()) {
       HServerLoad lightLoad = new HServerLoad(e.getKey());
       do {
         lightLoad.setNumberOfRegions(lightLoad.getNumberOfRegions() + 1);
         nRegions += 1;
       } while (lightLoad.compareTo(thisServersLoad) <= 0
           && nRegions < numUnassignedRegions);
-
       nRegions *= e.getValue().size();
       if (nRegions >= numUnassignedRegions) {
         break;
@@ -361,7 +378,7 @@ class RegionManager implements HConstants {
     }
     return nRegions;
   }
-  
+
   /*
    * Get the set of regions that should be assignable in this pass.
    * 
