@@ -76,6 +76,9 @@ Append branch (unreleased changes)
 
     HDFS-662. Unnecessary info message from DFSClient. (hairong)
 
+    HDFS-518. Create new tests for Append's hflush. (Konstantin Boudnik
+    via szetszwo)
+
   BUG FIXES
 
     HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
