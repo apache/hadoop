@@ -15,24 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.IOException;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 
-/**
- * Exception indicating that the target block already exists 
- * and is not set to be recovered/overwritten.  
+/** 
+ * This represents block replicas which stored in DataNode.
  */
-class BlockAlreadyExistsException extends IOException {
-  private static final long serialVersionUID = 1L;
+public interface Replica {
+  /** get block ID  */
+  public long getBlockId();
 
-  public BlockAlreadyExistsException() {
-    super();
-  }
+  /** get generation stamp */
+  public long getGenerationStamp();
 
-  public BlockAlreadyExistsException(String msg) {
-    super(msg);
-  }
+  /**
+   * Get the replica state
+   * @return the replica state
+   */
+  public ReplicaState getState();
+
+  /**
+   * Get the number of bytes received
+   * @return the number of bytes that have been received
+   */
+  public long getNumBytes();
+  
+  /**
+   * Get the number of bytes that have written to disk
+   * @return the number of bytes that have written to disk
+   */
+  public long getBytesOnDisk();
+
+  /**
+   * Get the number of bytes that are visible to readers
+   * @return the number of bytes that are visible to readers
+   */
+  public long getVisibleLength();
 }

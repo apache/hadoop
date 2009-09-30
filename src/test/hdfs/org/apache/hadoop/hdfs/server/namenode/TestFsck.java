@@ -182,7 +182,8 @@ public class TestFsck extends TestCase {
       File baseDir = new File(System.getProperty("test.build.data",
                                                  "build/test/data"),"dfs/data");
       for (int i=0; i<8; i++) {
-        File blockFile = new File(baseDir, "data" +(i+1)+ "/current/" + block);
+        File blockFile = new File(baseDir, "data" +(i+1) + 
+            MiniDFSCluster.FINALIZED_DIR_NAME + block);
         if(blockFile.exists()) {
           assertTrue(blockFile.delete());
         }
@@ -294,8 +295,8 @@ public class TestFsck extends TestCase {
     File baseDir = new File(System.getProperty("test.build.data",
                                                "build/test/data"),"dfs/data");
     for (int i=0; i < 6; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1) + "/current/" +
-                                block);
+      File blockFile = new File(baseDir, "data" + (i+1) + 
+          MiniDFSCluster.FINALIZED_DIR_NAME + block);
       if (blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
         FileChannel channel = raFile.getChannel();

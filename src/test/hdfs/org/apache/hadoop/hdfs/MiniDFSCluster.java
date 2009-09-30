@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -77,6 +78,8 @@ public class MiniDFSCluster {
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
   private File data_dir;
+  
+  public final static String FINALIZED_DIR_NAME = "/current/finalized/";
   
   
   /**
@@ -635,7 +638,7 @@ public class MiniDFSCluster {
     if (i < 0 || i >= dataNodes.size())
       return false;
     for (int dn = i*2; dn < i*2+2; dn++) {
-      File blockFile = new File(dataDir, "data" + (dn+1) + "/current/" +
+      File blockFile = new File(dataDir, "data" + (dn+1) + FINALIZED_DIR_NAME +
                                 blockName);
       System.out.println("Corrupting for: " + blockFile);
       if (blockFile.exists()) {
@@ -853,7 +856,7 @@ public class MiniDFSCluster {
    * @param dataNodeIndex - data node whose block report is desired - the index is same as for getDataNodes()
    * @return the block report for the specified data node
    */
-  public Block[] getBlockReport(int dataNodeIndex) {
+  public Iterable<Block> getBlockReport(int dataNodeIndex) {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
@@ -864,11 +867,11 @@ public class MiniDFSCluster {
   /**
    * 
    * @return block reports from all data nodes
-   *    Block[] is indexed in the same order as the list of datanodes returned by getDataNodes()
+   *    BlockListAsLongs is indexed in the same order as the list of datanodes returned by getDataNodes()
    */
-  public Block[][] getAllBlockReports() {
+  public Iterable<Block>[] getAllBlockReports() {
     int numDataNodes = dataNodes.size();
-    Block[][] result = new Block[numDataNodes][];
+    Iterable<Block>[] result = new BlockListAsLongs[numDataNodes];
     for (int i = 0; i < numDataNodes; ++i) {
      result[i] = getBlockReport(i);
     }
@@ -885,7 +888,7 @@ public class MiniDFSCluster {
    *             if any of blocks already exist in the data node
    *   
    */
-  public void injectBlocks(int dataNodeIndex, Block[] blocksToInject) throws IOException {
+  public void injectBlocks(int dataNodeIndex, Iterable<Block> blocksToInject) throws IOException {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
@@ -907,7 +910,7 @@ public class MiniDFSCluster {
    *             if any of blocks already exist in the data nodes
    *             Note the rest of the blocks are not injected.
    */
-  public void injectBlocks(Block[][] blocksToInject) throws IOException {
+  public void injectBlocks(Iterable<Block>[] blocksToInject) throws IOException {
     if (blocksToInject.length >  dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }

@@ -519,7 +519,8 @@ public class NNThroughputBenchmark {
               .of(CreateFlag.OVERWRITE)), true, replication, BLOCK_SIZE);
       long end = System.currentTimeMillis();
       for(boolean written = !closeUponCreate; !written; 
-        written = nameNode.complete(fileNames[daemonId][inputIdx], clientName));
+        written = nameNode.complete(fileNames[daemonId][inputIdx],
+                                    clientName, null));
       return end-start;
     }
 
@@ -685,8 +686,9 @@ public class NNThroughputBenchmark {
     
     NamespaceInfo nsInfo;
     DatanodeRegistration dnRegistration;
-    Block[] blocks;
+    ArrayList<Block> blocks;
     int nrBlocks; // actual number of blocks
+    long[] blockReportList;
 
     /**
      * Get data-node in the form 
@@ -705,7 +707,7 @@ public class NNThroughputBenchmark {
 
     TinyDatanode(int dnIdx, int blockCapacity) throws IOException {
       dnRegistration = new DatanodeRegistration(getNodeName(dnIdx));
-      this.blocks = new Block[blockCapacity];
+      this.blocks = new ArrayList<Block>(blockCapacity);
       this.nrBlocks = 0;
     }
 
@@ -738,19 +740,24 @@ public class NNThroughputBenchmark {
     }
 
     boolean addBlock(Block blk) {
-      if(nrBlocks == blocks.length) {
-        LOG.debug("Cannot add block: datanode capacity = " + blocks.length);
+      if(nrBlocks == blocks.size()) {
+        LOG.debug("Cannot add block: datanode capacity = " + blocks.size());
         return false;
       }
-      blocks[nrBlocks] = blk;
+      blocks.set(nrBlocks, blk);
       nrBlocks++;
       return true;
     }
 
     void formBlockReport() {
       // fill remaining slots with blocks that do not exist
-      for(int idx = blocks.length-1; idx >= nrBlocks; idx--)
-        blocks[idx] = new Block(blocks.length - idx, 0, 0);
+      for(int idx = blocks.size()-1; idx >= nrBlocks; idx--)
+        blocks.set(idx, new Block(blocks.size() - idx, 0, 0));
+      blockReportList = new BlockListAsLongs(blocks,null).getBlockListAsLongs();
+    }
+
+    long[] getBlockReportList() {
+      return blockReportList;
     }
 
     public int compareTo(String name) {
@@ -760,6 +767,7 @@ public class NNThroughputBenchmark {
     /**
      * Send a heartbeat to the name-node and replicate blocks if requested.
      */
+    @SuppressWarnings("unused") // keep it for future blockReceived benchmark
     int replicateBlocks() throws IOException {
       // register datanode
       DatanodeCommand[] cmds = nameNode.sendHeartbeat(
@@ -889,8 +897,8 @@ public class NNThroughputBenchmark {
         nameNode.create(fileName, FsPermission.getDefault(), clientName,
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.OVERWRITE)), true, replication,
             BLOCK_SIZE);
-        addBlocks(fileName, clientName);
-        nameNode.complete(fileName, clientName);
+        Block lastBlock = addBlocks(fileName, clientName);
+        nameNode.complete(fileName, clientName, lastBlock);
       }
       // prepare block reports
       for(int idx=0; idx < nrDatanodes; idx++) {
@@ -898,9 +906,12 @@ public class NNThroughputBenchmark {
       }
     }
 
-    private void addBlocks(String fileName, String clientName) throws IOException {
+    private Block addBlocks(String fileName, String clientName)
+    throws IOException {
+      Block prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
-        LocatedBlock loc = nameNode.addBlock(fileName, clientName);
+        LocatedBlock loc = nameNode.addBlock(fileName, clientName, prevBlock);
+        prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           datanodes[dnIdx].addBlock(loc.getBlock());
@@ -910,6 +921,7 @@ public class NNThroughputBenchmark {
               new String[] {""});
         }
       }
+      return prevBlock;
     }
 
     /**
@@ -923,8 +935,7 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
-      nameNode.blockReport(dn.dnRegistration,
-          BlockListAsLongs.convertToArrayLongs(dn.blocks));
+      nameNode.blockReport(dn.dnRegistration, dn.getBlockReportList());
       long end = System.currentTimeMillis();
       return end-start;
     }

@@ -74,6 +74,9 @@ public abstract class Storage extends StorageInfo {
    * any upgrade code that uses this constant should also be removed. */
   public static final int PRE_GENERATIONSTAMP_LAYOUT_VERSION = -13;
   
+  // last layout version that did not support persistent rbw replicas
+  public static final int PRE_RBW_LAYOUT_VERSION = -19;
+  
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";
   public static final String STORAGE_DIR_CURRENT   = "current";

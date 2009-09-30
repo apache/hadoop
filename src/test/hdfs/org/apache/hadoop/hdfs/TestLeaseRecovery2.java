@@ -56,6 +56,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
   //  conf.setInt("io.bytes.per.checksum", 16);
 
     MiniDFSCluster cluster = null;
+    DistributedFileSystem dfs = null;
     byte[] actual = new byte[FILE_SIZE];
 
     try {
@@ -63,7 +64,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       cluster.waitActive();
 
       //create a file
-      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
       // create a random file name
       String filestr = "/foo" + AppendTestUtil.nextInt();
       System.out.println("filestr=" + filestr);
@@ -129,10 +130,9 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
           + "Validating its contents now...");
 
       // verify that file-size matches
+      long fileSize = dfs.getFileStatus(filepath).getLen();
       assertTrue("File should be " + size + " bytes, but is actually " +
-                 " found to be " + dfs.getFileStatus(filepath).getLen() +
-                 " bytes",
-                 dfs.getFileStatus(filepath).getLen() == size);
+                 " found to be " + fileSize + " bytes", fileSize == size);
 
       // verify that there is enough data to read.
       System.out.println("File size is good. Now validating sizes from datanodes...");
@@ -142,6 +142,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
     }
     finally {
       try {
+        if(dfs != null) dfs.close();
         if (cluster != null) {cluster.shutdown();}
       } catch (Exception e) {
         // ignore

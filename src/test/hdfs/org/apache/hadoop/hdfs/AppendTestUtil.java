@@ -33,7 +33,7 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** Utilities for append-related tests */ 
-class AppendTestUtil {
+public class AppendTestUtil {
   /** For specifying the random number generator seed,
    *  change the following value:
    */
@@ -84,8 +84,15 @@ class AppendTestUtil {
       LOG.info("ms=" + ms, e);
     }
   }
-
-  static FileSystem createHdfsWithDifferentUsername(Configuration conf
+  
+  /**
+   * Returns the reference to a new instance of FileSystem created 
+   * with different user name
+   * @param conf current Configuration
+   * @return FileSystem instance
+   * @throws IOException
+   */
+  public static FileSystem createHdfsWithDifferentUsername(Configuration conf
       ) throws IOException {
     Configuration conf2 = new Configuration(conf);
     String username = UserGroupInformation.getCurrentUGI().getUserName()+"_XXX";
@@ -134,7 +141,7 @@ class AppendTestUtil {
    *  Make sure to call close() on the returned stream
    *  @throws IOException an exception might be thrown
    */
-  static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
+  public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
       throws IOException {
     return fileSys.create(name, true,
         fileSys.getConf().getInt("io.file.buffer.size", 4096),
@@ -146,7 +153,7 @@ class AppendTestUtil {
    *  the specified byte[] buffer's content
    *  @throws IOException an exception might be thrown
    */
-  static void checkFullFile(FileSystem fs, Path name, int len,
+  public static void checkFullFile(FileSystem fs, Path name, int len,
                             final byte[] compareContent, String message) throws IOException {
     FSDataInputStream stm = fs.open(name);
     byte[] actual = new byte[len];

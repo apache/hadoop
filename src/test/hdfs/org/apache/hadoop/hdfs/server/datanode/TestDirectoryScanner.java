@@ -22,7 +22,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Random;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -67,17 +66,16 @@ public class TestDirectoryScanner extends TestCase {
   /** Truncate a block file */
   private long truncateBlockFile() throws IOException {
     synchronized (fds) {
-      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
-        Block b = entry.getKey();
-        File f = entry.getValue().getFile();
-        File mf = FSDataset.getMetaFile(f, b);
+      for (ReplicaInfo b : fds.volumeMap.replicas()) {
+        File f = b.getBlockFile();
+        File mf = b.getMetaFile();
         // Truncate a block file that has a corresponding metadata file
         if (f.exists() && f.length() != 0 && mf.exists()) {
           FileOutputStream s = new FileOutputStream(f);
           FileChannel channel = s.getChannel();
           channel.truncate(0);
           LOG.info("Truncated block file " + f.getAbsolutePath());
-          return entry.getKey().getBlockId();
+          return b.getBlockId();
         }
       }
     }
@@ -87,14 +85,13 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete a block file */
   private long deleteBlockFile() {
     synchronized(fds) {
-      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
-        Block b = entry.getKey();
-        File f = entry.getValue().getFile();
-        File mf = FSDataset.getMetaFile(f, b);
+      for (ReplicaInfo b : fds.volumeMap.replicas()) {
+        File f = b.getBlockFile();
+        File mf = b.getMetaFile();
         // Delete a block file that has corresponding metadata file
         if (f.exists() && mf.exists() && f.delete()) {
           LOG.info("Deleting block file " + f.getAbsolutePath());
-          return entry.getKey().getBlockId();
+          return b.getBlockId();
         }
       }
     }
@@ -104,16 +101,12 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete block meta file */
   private long deleteMetaFile() {
     synchronized(fds) {
-      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
-        Block b = entry.getKey();
-        String blkfile = entry.getValue().getFile().getAbsolutePath();
-        long genStamp = b.getGenerationStamp();
-        String metafile = FSDataset.getMetaFileName(blkfile, genStamp);
-        File file = new File(metafile);
+      for (ReplicaInfo b : fds.volumeMap.replicas()) {
+        File file = b.getMetaFile();
         // Delete a metadata file
         if (file.exists() && file.delete()) {
           LOG.info("Deleting metadata file " + file.getAbsolutePath());
-          return entry.getKey().getBlockId();
+          return b.getBlockId();
         }
       }
     }
@@ -324,23 +317,21 @@ public class TestDirectoryScanner extends TestCase {
   }
 
   private void verifyAddition(long blockId, long genStamp, long size) {
-    Block memBlock = fds.getBlockKey(blockId);
-    assertNotNull(memBlock);
-    ReplicaInfo blockInfo;
+    final ReplicaInfo replicainfo;
     synchronized(fds) {
-      blockInfo = fds.volumeMap.get(memBlock);
+      replicainfo = fds.getReplica(blockId);
     }
-    assertNotNull(blockInfo);
+    assertNotNull(replicainfo);
 
     // Added block has the same file as the one created by the test
     File file = new File(getBlockFile(blockId));
-    assertEquals(file.getName(), blockInfo.getFile().getName());
+    assertEquals(file.getName(), replicainfo.getBlockFile().getName());
 
     // Generation stamp is same as that of created file
-    assertEquals(genStamp, memBlock.getGenerationStamp());
+    assertEquals(genStamp, replicainfo.getGenerationStamp());
 
     // File size matches
-    assertEquals(size, memBlock.getNumBytes());
+    assertEquals(size, replicainfo.getNumBytes());
   }
 
   private void verifyDeletion(long blockId) {
@@ -351,9 +342,9 @@ public class TestDirectoryScanner extends TestCase {
   }
 
   private void verifyGenStamp(long blockId, long genStamp) {
-    Block memBlock;
+    final Replica memBlock;
     synchronized(fds) {
-      memBlock = fds.getBlockKey(blockId);
+      memBlock = fds.getReplica(blockId);
     }
     assertNotNull(memBlock);
     assertEquals(genStamp, memBlock.getGenerationStamp());

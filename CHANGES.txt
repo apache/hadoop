@@ -26,6 +26,21 @@ Release 0.21.0 - Unreleased
     HDFS-602. DistributedFileSystem mkdirs throws FileAlreadyExistsException
     instead of FileNotFoundException. (Boris Shkolnik via suresh)
 
+    HDFS-544. Add a "rbw" subdir to DataNode data directory. (hairong)
+
+    HDFS-576. Block report includes under-construction replicas. (shv)
+
+    HDFS-636. SafeMode counts complete blocks only. (shv)
+
+    HDFS-644. Lease recovery, concurrency support. (shv)
+
+    HDFS-570. Get last block length from a data-node when opening a file
+    being written to. (Tsz Wo (Nicholas), SZE via shv)
+
+    HDFS-657. Remove unused legacy data-node protocol methods. (shv)
+
+    HDFS-658. Block recovery for primary data-node. (shv)
+
   NEW FEATURES
 
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
@@ -63,6 +78,37 @@ Release 0.21.0 - Unreleased
     (Bill Zeller, Jithendra Pandey via suresh).
 
     HDFS-610. Support o.a.h.fs.FileContext.  (Sanjay Radia via szetszwo)
+
+    HDFS-536. Support hflush at DFSClient. (hairong)
+
+    HDFS-517. Introduce BlockInfoUnderConstruction to reflect block replica
+    states while writing. (shv)
+
+    HDFS-565. Introduce block committing logic during new block allocation
+    and file close. (shv)
+
+    HDFS-537. DataNode exposes a replica's meta info to BlockReceiver for the
+    support of dfs writes/hflush. It also updates a replica's bytes received,
+    bytes on disk, and bytes acked after receiving a packet. (hairong)
+
+    HDFS-585. Datanode should serve up to visible length of a replica for read
+    requests.  (szetszwo)
+
+    HDFS-604. Block report processing for append. (shv)
+
+    HDFS-619. Support replica recovery initialization in datanode for the new
+    append design.  (szetszwo)
+
+    HDFS-592. Allow clients to fetch a new generation stamp from NameNode for
+    pipeline recovery. (hairong)
+
+    HDFS-624. Support a new algorithm for pipeline recovery and pipeline setup
+    for append. (hairong)
+
+    HDFS-627. Support replica update in data-node.
+    (Tsz Wo (Nicholas), SZE and Hairong Kuang via shv)
+
+    HDFS-642. Support pipeline close and close error recovery. (hairong)
 
   IMPROVEMENTS
 
@@ -191,6 +237,31 @@ Release 0.21.0 - Unreleased
     HDFS-641. Move all of the components that depend on map/reduce to 
     map/reduce. (omalley)
 
+    HDFS-509. Redesign DataNode volumeMap to include all types of Replicas.
+    (hairong)
+
+    HDFS-562. Add a test for NameNode.getBlockLocations(..) to check read from
+    un-closed file.  (szetszwo)
+
+    HDFS-543. Break FSDatasetInterface#writToBlock() into writeToRemporary,
+    writeToRBW, ad append. (hairong)
+
+    HDFS-603. Add a new interface, Replica, which is going to replace the use
+    of Block in datanode.  (szetszwo)
+
+    HDFS-589. Change block write protocol to support pipeline recovery.
+    (hairong)
+
+    HDFS-652. Replace BlockInfo.isUnderConstruction() with isComplete() (shv)
+
+    HDFS-648. Change some methods in AppendTestUtil to public.  (Konstantin
+    Boudnik via szetszwo)
+
+    HDFS-662. Unnecessary info message from DFSClient. (hairong)
+
+    HDFS-518. Create new tests for Append's hflush. (Konstantin Boudnik
+    via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
@@ -287,6 +358,28 @@ Release 0.21.0 - Unreleased
     HDFS-637. DataNode sends a Success ack when block write fails. (hairong)
 
     HDFS-640. Fixed TestHDFSFileContextMainOperations.java build failure. (suresh)
+
+    HDFS-547. TestHDFSFileSystemContract#testOutputStreamClosedTwice
+    sometimes fails with CloseByInterruptException. (hairong)
+
+    HDFS-588. Fix TestFiDataTransferProtocol and TestAppend2 failures. (shv)
+
+    HDFS-550. DataNode restarts may introduce corrupt/duplicated/lost replicas
+    when handling detached replicas. (hairong)
+
+    HDFS-659. If the the last block is not complete, update its length with
+    one of its replica's length stored in datanode.  (szetszwo)
+
+    HDFS-649. Check null pointers for DataTransferTest.  (Konstantin Boudnik
+    via szetszwo)
+
+    HDFS-661. DataNode upgrade fails on non-existant current directory.
+    (hairong)
+
+    HDFS-597. Mofication introduced by HDFS-537 breakes an advice binding in
+    FSDatasetAspects.  (Konstantin Boudnik via szetszwo)
+
+    HDFS-665. TestFileAppend2 sometimes hangs. (hairong)
 
 Release 0.20.1 - 2009-09-01
 

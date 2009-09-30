@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -31,8 +32,12 @@ import javax.management.StandardMBean;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -77,11 +82,14 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       nullCrcFileData[i+2] = nullCrcHeader[i];
     }
   }
-  
-  private class BInfo { // information about a single block
+
+  // information about a single block
+  private class BInfo implements ReplicaInPipelineInterface {
     Block theBlock;
     private boolean finalized = false; // if not finalized => ongoing creation
     SimulatedOutputStream oStream = null;
+    private long bytesAcked;
+    private long bytesRcvd;
     BInfo(Block b, boolean forWriting) throws IOException {
       theBlock = new Block(b);
       if (theBlock.getNumBytes() < 0) {
@@ -102,26 +110,27 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       }
     }
 
-    synchronized long getGenerationStamp() {
+    synchronized public long getGenerationStamp() {
       return theBlock.getGenerationStamp();
     }
 
     synchronized void updateBlock(Block b) {
       theBlock.setGenerationStamp(b.getGenerationStamp());
-      setlength(b.getNumBytes());
+      setNumBytes(b.getNumBytes());
+      setBytesOnDisk(b.getNumBytes());
     }
     
-    synchronized long getlength() {
+    synchronized public long getNumBytes() {
       if (!finalized) {
-         return oStream.getLength();
+         return bytesRcvd;
       } else {
         return theBlock.getNumBytes();
       }
     }
 
-    synchronized void setlength(long length) {
+    synchronized public void setNumBytes(long length) {
       if (!finalized) {
-         oStream.setLength(length);
+         bytesRcvd = length;
       } else {
         theBlock.setNumBytes(length);
       }
@@ -170,13 +179,84 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       oStream = null;
       return;
     }
-    
+
+    synchronized void unfinalizeBlock() throws IOException {
+      if (!finalized) {
+        throw new IOException("Unfinalized a block that's not finalized "
+            + theBlock);
+      }
+      finalized = false;
+      oStream = new SimulatedOutputStream();
+      long blockLen = theBlock.getNumBytes();
+      oStream.setLength(blockLen);
+      bytesRcvd = blockLen;
+      bytesAcked = blockLen;
+    }
+
     SimulatedInputStream getMetaIStream() {
       return new SimulatedInputStream(nullCrcFileData);  
     }
 
     synchronized boolean isFinalized() {
       return finalized;
+    }
+
+    @Override
+    synchronized public BlockWriteStreams createStreams() throws IOException {
+      if (finalized) {
+        throw new IOException("Trying to write to a finalized replica "
+            + theBlock);
+      } else {
+        SimulatedOutputStream crcStream = new SimulatedOutputStream();
+        return new BlockWriteStreams(oStream, crcStream);
+      }
+    }
+
+    @Override
+    synchronized public long getBlockId() {
+      return theBlock.getBlockId();
+    }
+
+    @Override
+    synchronized public long getVisibleLength() {
+      return getBytesAcked();
+    }
+
+    @Override
+    public ReplicaState getState() {
+      return null;
+    }
+
+    @Override
+    synchronized public long getBytesAcked() {
+      if (finalized) {
+        return theBlock.getNumBytes();
+      } else {
+        return bytesAcked;
+      }
+    }
+
+    @Override
+    synchronized public void setBytesAcked(long bytesAcked) {
+      if (!finalized) {
+        this.bytesAcked = bytesAcked;
+      }
+    }
+
+    @Override
+    synchronized public long getBytesOnDisk() {
+      if (finalized) {
+        return theBlock.getNumBytes();
+      } else {
+        return oStream.getLength();
+      }
+    }
+
+    @Override
+    synchronized public void setBytesOnDisk(long bytesOnDisk) {
+      if (!finalized) {
+        oStream.setLength(bytesOnDisk);
+      }
     }
   }
   
@@ -243,10 +323,12 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     blockMap = new HashMap<Block,BInfo>(); 
   }
 
-  public synchronized void injectBlocks(Block[] injectBlocks)
+  public synchronized void injectBlocks(Iterable<Block> injectBlocks)
                                             throws IOException {
     if (injectBlocks != null) {
+      int numInjectedBlocks = 0;
       for (Block b: injectBlocks) { // if any blocks in list is bad, reject list
+        numInjectedBlocks++;
         if (b == null) {
           throw new NullPointerException("Null blocks in block list");
         }
@@ -255,12 +337,12 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         }
       }
       HashMap<Block, BInfo> oldBlockMap = blockMap;
-      blockMap = 
-          new HashMap<Block,BInfo>(injectBlocks.length + oldBlockMap.size());
+      blockMap = new HashMap<Block,BInfo>(
+          numInjectedBlocks + oldBlockMap.size());
       blockMap.putAll(oldBlockMap);
       for (Block b: injectBlocks) {
           BInfo binfo = new BInfo(b, false);
-          blockMap.put(b, binfo);
+          blockMap.put(binfo.theBlock, binfo);
       }
     }
   }
@@ -280,7 +362,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
   }
 
-  public synchronized Block[] getBlockReport() {
+  public synchronized BlockListAsLongs getBlockReport() {
     Block[] blockTable = new Block[blockMap.size()];
     int count = 0;
     for (BInfo b : blockMap.values()) {
@@ -291,7 +373,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (count != blockTable.length) {
       blockTable = Arrays.copyOf(blockTable, count);
     }
-    return blockTable;
+    return new BlockListAsLongs(
+        new ArrayList<Block>(Arrays.asList(blockTable)), null);
   }
 
   public long getCapacity() throws IOException {
@@ -311,7 +394,12 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
     }
-    return binfo.getlength();
+    return binfo.getNumBytes();
+  }
+
+  @Override
+  public Replica getReplica(long blockId) {
+    return blockMap.get(new Block(blockId));
   }
 
   /** {@inheritDoc} */
@@ -322,7 +410,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       return null;
     }
     b.setGenerationStamp(binfo.getGenerationStamp());
-    b.setNumBytes(binfo.getlength());
+    b.setNumBytes(binfo.getNumBytes());
     return b;
   }
 
@@ -350,7 +438,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         DataNode.LOG.warn("Invalidate: Missing block");
         continue;
       }
-      storage.free(binfo.getlength());
+      storage.free(binfo.getNumBytes());
       blockMap.remove(b);
     }
       if (error) {
@@ -380,21 +468,89 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return getStorageInfo();
   }
 
-  public synchronized BlockWriteStreams writeToBlock(Block b, 
-                                            boolean isRecovery)
-                                            throws IOException {
+  @Override
+  public synchronized ReplicaInPipelineInterface append(Block b,
+      long newGS, long expectedBlockLen) throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null || !binfo.isFinalized()) {
+      throw new ReplicaNotFoundException("Block " + b
+          + " is not valid, and cannot be appended to.");
+    }
+    binfo.unfinalizeBlock();
+    return binfo;
+  }
+
+  @Override
+  public synchronized ReplicaInPipelineInterface recoverAppend(Block b,
+      long newGS, long expectedBlockLen) throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      throw new ReplicaNotFoundException("Block " + b
+          + " is not valid, and cannot be appended to.");
+    }
+    if (binfo.isFinalized()) {
+      binfo.unfinalizeBlock();
+    }
+    blockMap.remove(b);
+    binfo.theBlock.setGenerationStamp(newGS);
+    blockMap.put(binfo.theBlock, binfo);
+    return binfo;
+  }
+
+  @Override
+  public void recoverClose(Block b, long newGS,
+      long expectedBlockLen) throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      throw new ReplicaNotFoundException("Block " + b
+          + " is not valid, and cannot be appended to.");
+    }
+    if (!binfo.isFinalized()) {
+      binfo.finalizeBlock(binfo.getNumBytes());
+    }
+    blockMap.remove(b);
+    binfo.theBlock.setGenerationStamp(newGS);
+    blockMap.put(binfo.theBlock, binfo);
+  }
+  
+  @Override
+  public synchronized ReplicaInPipelineInterface recoverRbw(Block b,
+      long newGS, long minBytesRcvd, long maxBytesRcvd) throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if ( binfo == null) {
+      throw new ReplicaNotFoundException("Block " + b
+          + " does not exist, and cannot be appended to.");
+    }
+    if (binfo.isFinalized()) {
+      throw new ReplicaAlreadyExistsException("Block " + b
+          + " is valid, and cannot be written to.");
+    }
+    blockMap.remove(b);
+    binfo.theBlock.setGenerationStamp(newGS);
+    blockMap.put(binfo.theBlock, binfo);
+    return binfo;
+  }
+
+  @Override
+  public synchronized ReplicaInPipelineInterface createRbw(Block b) 
+  throws IOException {
+    return createTemporary(b);
+  }
+
+  @Override
+  public synchronized ReplicaInPipelineInterface createTemporary(Block b)
+      throws IOException {
     if (isValidBlock(b)) {
-          throw new BlockAlreadyExistsException("Block " + b + 
+          throw new ReplicaAlreadyExistsException("Block " + b + 
               " is valid, and cannot be written to.");
       }
     if (isBeingWritten(b)) {
-        throw new BlockAlreadyExistsException("Block " + b + 
+        throw new ReplicaAlreadyExistsException("Block " + b + 
             " is being written, and cannot be written to.");
     }
-      BInfo binfo = new BInfo(b, true);
-      blockMap.put(b, binfo);
-      SimulatedOutputStream crcStream = new SimulatedOutputStream();
-      return new BlockWriteStreams(binfo.oStream, crcStream);
+    BInfo binfo = new BInfo(b, true);
+    blockMap.put(binfo.theBlock, binfo);
+    return binfo;
   }
 
   public synchronized InputStream getBlockInputStream(Block b)
@@ -483,7 +639,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo == null) {
       throw new IOException("No such Block " + b );
     }
-    return binfo.getlength();
+    return binfo.getNumBytes();
   }
 
   public synchronized void setChannelPosition(Block b, BlockWriteStreams stream, 
@@ -493,7 +649,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo == null) {
       throw new IOException("No such Block " + b );
     }
-    binfo.setlength(dataOffset);
+    binfo.setBytesOnDisk(dataOffset);
   }
 
   /** 
@@ -658,5 +814,24 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   
   public boolean hasEnoughResource() {
     return true;
+  }
+
+  @Override
+  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
+  throws IOException {
+    return new ReplicaRecoveryInfo(rBlock.getBlock(), ReplicaState.FINALIZED);
+  }
+
+  @Override
+  public FinalizedReplica updateReplicaUnderRecovery(Block oldBlock,
+                                          long recoveryId,
+                                          long newlength) throws IOException {
+    return new FinalizedReplica(
+        oldBlock.getBlockId(), newlength, recoveryId, null, null);
+  }
+
+  @Override
+  public long getReplicaVisibleLength(Block block) throws IOException {
+    return block.getNumBytes();
   }
 }

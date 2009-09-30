@@ -28,7 +28,10 @@ import java.io.OutputStream;
 
 
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
@@ -94,6 +97,14 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public long getLength(Block b) throws IOException;
 
   /**
+   * Get reference to the replica meta info in the replicasMap. 
+   * To be called from methods that are synchronized on {@link FSDataset}
+   * @param blockId
+   * @return replica from the replicas map
+   */
+  public Replica getReplica(long blockId);
+
+  /**
    * @return the generation stamp stored with the block.
    */
   public Block getStoredBlock(long blkid) throws IOException;
@@ -144,6 +155,10 @@ public interface FSDatasetInterface extends FSDatasetMBean {
         checksumOut = cOut;
       }
       
+      void close() throws IOException {
+        IOUtils.closeStream(dataOut);
+        IOUtils.closeStream(checksumOut);
+      }
     }
 
   /**
@@ -167,15 +182,75 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   }
     
   /**
-   * Creates the block and returns output streams to write data and CRC
-   * @param b
-   * @param isRecovery True if this is part of erro recovery, otherwise false
-   * @return a BlockWriteStreams object to allow writing the block data
-   *  and CRC
+   * Creates a temporary replica and returns the meta information of the replica
+   * 
+   * @param b block
+   * @return the meta info of the replica which is being written to
+   * @throws IOException if an error occurs
+   */
+  public ReplicaInPipelineInterface createTemporary(Block b)
+  throws IOException;
+
+  /**
+   * Creates a RBW replica and returns the meta info of the replica
+   * 
+   * @param b block
+   * @return the meta info of the replica which is being written to
+   * @throws IOException if an error occurs
+   */
+  public ReplicaInPipelineInterface createRbw(Block b) throws IOException;
+
+  /**
+   * Recovers a RBW replica and returns the meta info of the replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param minBytesRcvd the minimum number of bytes that the replica could have
+   * @param maxBytesRcvd the maximum number of bytes that the replica could have
+   * @return the meta info of the replica which is being written to
+   * @throws IOException if an error occurs
+   */
+  public ReplicaInPipelineInterface recoverRbw(Block b, 
+      long newGS, long minBytesRcvd, long maxBytesRcvd)
+  throws IOException;
+
+  /**
+   * Append to a finalized replica and returns the meta info of the replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param expectedBlockLen the number of bytes the replica is expected to have
+   * @return the meata info of the replica which is being written to
    * @throws IOException
    */
-  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException;
+  public ReplicaInPipelineInterface append(Block b, 
+      long newGS, long expectedBlockLen) throws IOException;
 
+  /**
+   * Recover a failed append to a finalized replica
+   * and returns the meta info of the replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param expectedBlockLen the number of bytes the replica is expected to have
+   * @return the meta info of the replica which is being written to
+   * @throws IOException
+   */
+  public ReplicaInPipelineInterface recoverAppend(Block b,
+      long newGS, long expectedBlockLen) throws IOException;
+  
+  /**
+   * Recover a failed pipeline close
+   * It bumps the replica's generation stamp and finalize it if RBW replica
+   * 
+   * @param b block
+   * @param newGS the new generation stamp for the replica
+   * @param expectedBlockLen the number of bytes the replica is expected to have
+   * @throws IOException
+   */
+  public void recoverClose(Block b,
+      long newGS, long expectedBlockLen) throws IOException;
+  
   /**
    * Update the block to the new generation stamp and length.  
    */
@@ -202,7 +277,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * Returns the block report - the full list of blocks stored
    * @return - the block report - the full list of blocks stored
    */
-  public Block[] getBlockReport();
+  public BlockListAsLongs getBlockReport();
 
   /**
    * Is the block valid?
@@ -270,4 +345,25 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return true if more then minimum valid volumes left in the FSDataSet
    */
   public boolean hasEnoughResource();
+
+  /**
+   * Get visible length of the specified replica.
+   */
+  long getReplicaVisibleLength(final Block block) throws IOException;
+
+  /**
+   * Initialize a replica recovery.
+   * 
+   * @return actual state of the replica on this data-node or 
+   * null if data-node does not have the replica.
+   */
+  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
+  throws IOException;
+
+  /**
+   * Update replica's generation stamp and length and finalize it.
+   */
+  public FinalizedReplica updateReplicaUnderRecovery(Block oldBlock,
+                                          long recoveryId,
+                                          long newLength) throws IOException;
 }

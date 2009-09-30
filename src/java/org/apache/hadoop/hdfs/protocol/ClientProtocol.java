@@ -44,9 +44,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 48: modified mkdirs() to take an additional boolean parameter
+   * 50: change LocatedBlocks to include last block information.
    */
-  public static final long versionID = 48L;
+  public static final long versionID = 50L;
   
   ///////////////////////////////////////
   // File contents
@@ -93,8 +93,8 @@ public interface ClientProtocol extends VersionedProtocol {
    * {@link #rename(String, String)} it until the file is completed
    * or explicitly as a result of lease expiration.
    * <p>
-   * Blocks have a maximum size.  Clients that intend to
-   * create multi-block files must also use {@link #addBlock(String, String)}.
+   * Blocks have a maximum size.  Clients that intend to create
+   * multi-block files must also use {@link #addBlock(String, String, Block)}.
    *
    * @param src path of the file being created.
    * @param masked masked permission.
@@ -187,9 +187,14 @@ public interface ClientProtocol extends VersionedProtocol {
    * addBlock() allocates a new block and datanodes the block data
    * should be replicated to.
    * 
+   * addBlock() also commits the previous block by reporting
+   * to the name-node the actual generation stamp and the length
+   * of the block that the client has transmitted to data-nodes.
+   * 
    * @return LocatedBlock allocated block information.
    */
-  public LocatedBlock addBlock(String src, String clientName) throws IOException;
+  public LocatedBlock addBlock(String src, String clientName,
+                               Block previous) throws IOException;
 
   /**
    * The client is done writing data to the given filename, and would 
@@ -197,13 +202,18 @@ public interface ClientProtocol extends VersionedProtocol {
    *
    * The function returns whether the file has been closed successfully.
    * If the function returns false, the caller should try again.
+   * 
+   * close() also commits the last block of the file by reporting
+   * to the name-node the actual generation stamp and the length
+   * of the block that the client has transmitted to data-nodes.
    *
    * A call to complete() will not return true until all the file's
    * blocks have been replicated the minimum number of times.  Thus,
    * DataNode failures may cause a client to call complete() several
    * times before succeeding.
    */
-  public boolean complete(String src, String clientName) throws IOException;
+  public boolean complete(String src, String clientName,
+                          Block last) throws IOException;
 
   /**
    * The client wants to report corrupted blocks (blocks with specified
@@ -500,4 +510,32 @@ public interface ClientProtocol extends VersionedProtocol {
    *              by this call.
    */
   public void setTimes(String src, long mtime, long atime) throws IOException;
+  
+  /**
+   * Get a new generation stamp together with an access token for 
+   * a block under construction
+   * 
+   * This method is called only when a client needs to recover a failed
+   * pipeline or set up a pipeline for appending to a block.
+   * 
+   * @param block a block
+   * @param clientName the name of the client
+   * @return a located block with a new generation stamp and an access token
+   * @throws IOException if any error occurs
+   */
+  public LocatedBlock updateBlockForPipeline(Block block, String clientName) 
+  throws IOException;
+
+  /**
+   * Update a pipeline for a block under construction
+   * 
+   * @param clientName the name of the client
+   * @param oldBlock the old block
+   * @param newBlock the new block containing new generation stamp and length
+   * @param newNodes datanodes in the pipeline
+   * @throws IOException if any error occurs
+   */
+  public void updatePipeline(String clientName, Block oldBlock, 
+      Block newBlock, DatanodeID[] newNodes)
+  throws IOException;
 }

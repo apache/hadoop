@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.io.IOUtils;
@@ -208,7 +209,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
    */
   @Override
   protected void opWriteBlock(DataInputStream in, long blockId, long blockGs,
-      int pipelineSize, boolean isRecovery,
+      int pipelineSize, BlockConstructionStage stage,
+      long newGs, long minBytesRcvd, long maxBytesRcvd,
       String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
       AccessToken accessToken) throws IOException {
 
@@ -250,11 +252,17 @@ class DataXceiver extends DataTransferProtocol.Receiver
     String firstBadLink = "";           // first datanode that failed in connection setup
     DataTransferProtocol.Status mirrorInStatus = SUCCESS;
     try {
-      // open a block receiver and check if the block does not exist
-      blockReceiver = new BlockReceiver(block, in, 
-          s.getRemoteSocketAddress().toString(),
-          s.getLocalSocketAddress().toString(),
-          isRecovery, client, srcDataNode, datanode);
+      if (client.length() == 0 || 
+          stage != BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
+        // open a block receiver
+        blockReceiver = new BlockReceiver(block, in, 
+            s.getRemoteSocketAddress().toString(),
+            s.getLocalSocketAddress().toString(),
+            stage, newGs, minBytesRcvd, maxBytesRcvd,
+            client, srcDataNode, datanode);
+      } else {
+        datanode.data.recoverClose(block, newGs, minBytesRcvd);
+      }
 
       //
       // Open network conn to backup machine, if 
@@ -282,10 +290,13 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
           // Write header: Copied from DFSClient.java!
           DataTransferProtocol.Sender.opWriteBlock(mirrorOut,
-              block.getBlockId(), block.getGenerationStamp(), pipelineSize,
-              isRecovery, client, srcDataNode, targets, accessToken);
+              blockId, blockGs, 
+              pipelineSize, stage, newGs, minBytesRcvd, maxBytesRcvd, client, 
+              srcDataNode, targets, accessToken);
 
-          blockReceiver.writeChecksumHeader(mirrorOut);
+          if (blockReceiver != null) { // send checksum header
+            blockReceiver.writeChecksumHeader(mirrorOut);
+          }
           mirrorOut.flush();
 
           // read connect ack (only for clients, not for replication req)
@@ -336,24 +347,31 @@ class DataXceiver extends DataTransferProtocol.Receiver
       }
 
       // receive the block and mirror to the next target
-      String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
-      blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
-                                 mirrorAddr, null, targets.length);
+      if (blockReceiver != null) {
+        String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
+        blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
+            mirrorAddr, null, targets.length);
+      }
 
-      // if this write is for a replication request (and not
-      // from a client), then confirm block. For client-writes,
+      // update its generation stamp
+      if (client.length() != 0 && 
+          stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
+        block.setGenerationStamp(newGs);
+        block.setNumBytes(minBytesRcvd);
+      }
+      
+      // if this write is for a replication request or recovering
+      // a failed close for client, then confirm block. For other client-writes,
       // the block is finalized in the PacketResponder.
-      if (client.length() == 0) {
-        datanode.notifyNamenodeReceivedBlock(block, DataNode.EMPTY_DEL_HINT);
+      if (client.length() == 0 || 
+          stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
+        datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
         LOG.info("Received block " + block + 
                  " src: " + remoteAddress +
                  " dest: " + localAddress +
                  " of size " + block.getNumBytes());
       }
 
-      if (datanode.blockScanner != null) {
-        datanode.blockScanner.addBlock(block);
-      }
       
     } catch (IOException ioe) {
       LOG.info("writeBlock " + block + " received exception " + ioe);
@@ -569,7 +587,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       blockReceiver = new BlockReceiver(
           block, proxyReply, proxySock.getRemoteSocketAddress().toString(),
           proxySock.getLocalSocketAddress().toString(),
-          false, "", null, datanode);
+          null, 0, 0, 0, "", null, datanode);
 
       // receive a block
       blockReceiver.receiveBlock(null, null, null, null, 

@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.log4j.Level;
 
 
@@ -77,7 +76,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   // the datanodes.
 
   // creates a file but does not close it
-  static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
+  public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     System.out.println("createFile: Created " + name + " with " + repl + " replica.");
     FSDataOutputStream stm = fileSys.create(name, true,
@@ -96,7 +95,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   //
   // writes specified bytes to file.
   //
-  static void writeFile(FSDataOutputStream stm, int size) throws IOException {
+  public static void writeFile(FSDataOutputStream stm, int size) throws IOException {
     byte[] buffer = AppendTestUtil.randomBytes(seed, size);
     stm.write(buffer, 0, size);
   }
@@ -447,9 +446,9 @@ public class TestFileCreation extends junit.framework.TestCase {
       System.out.println("testFileCreationError2: "
           + "The file has " + locations.locatedBlockCount() + " blocks.");
 
-      // add another block to the file
+      // add one block to the file
       LocatedBlock location = client.getNamenode().addBlock(file1.toString(), 
-          client.clientName);
+          client.clientName, null);
       System.out.println("testFileCreationError2: "
           + "Added block " + location.getBlock());
 

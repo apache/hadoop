@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -169,7 +170,8 @@ public class TestBalancer extends TestCase {
     cluster.waitActive();
     client = DFSClient.createNamenode(conf);
 
-    cluster.injectBlocks(blocksDN);
+    for(int i = 0; i < blocksDN.length; i++)
+      cluster.injectBlocks(i, Arrays.asList(blocksDN[i]));
 
     long totalCapacity = 0L;
     for(long capacity:capacities) {

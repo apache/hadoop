@@ -136,7 +136,7 @@ public class TestDFSClientRetries extends TestCase {
       return versionID;
     }
 
-    public LocatedBlock addBlock(String src, String clientName)
+    public LocatedBlock addBlock(String src, String clientName, Block previous)
     throws IOException
     {
       num_calls++;
@@ -169,7 +169,7 @@ public class TestDFSClientRetries extends TestCase {
 
     public void abandonBlock(Block b, String src, String holder) throws IOException {}
 
-    public boolean complete(String src, String clientName) throws IOException { return false; }
+    public boolean complete(String src, String clientName, Block last) throws IOException { return false; }
 
     public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {}
 
@@ -215,6 +215,12 @@ public class TestDFSClientRetries extends TestCase {
 
     public void setTimes(String src, long mtime, long atime) throws IOException {}
 
+    @Override public LocatedBlock updateBlockForPipeline(Block block, 
+        String clientName) throws IOException { return null; }
+
+    @Override public void updatePipeline(String clientName, Block oldblock,
+        Block newBlock, DatanodeID[] newNodes)
+        throws IOException {}
   }
   
   public void testNotYetReplicatedErrors() throws IOException

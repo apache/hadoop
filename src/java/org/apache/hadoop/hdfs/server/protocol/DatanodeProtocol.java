@@ -35,10 +35,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 20: SendHeartbeat may return KeyUpdateCommand
-   *     Register returns access keys inside DatanodeRegistration object
+   * 23: nextGenerationStamp() removed.
    */
-  public static final long versionID = 20L;
+  public static final long versionID = 23L;
   
   // error code
   final static int NOTIFY = 0;
@@ -142,12 +141,6 @@ public interface DatanodeProtocol extends VersionedProtocol {
    */
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
   
-  /**
-   * @return the next GenerationStamp to be associated with the specified
-   * block. 
-   */
-  public long nextGenerationStamp(Block block) throws IOException;
-
   /**
    * Commit block synchronization in lease recovery
    */
