@@ -47,12 +47,12 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1 /user/dir3
    */
   public void testWhileOpenRenameParent() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
     conf.setBoolean("dfs.support.append", true);
 
     // create cluster
@@ -131,12 +131,12 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1 /user/dir3
    */
   public void testWhileOpenRenameParentToNonexistentDir() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
     conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 2************************************");
 
@@ -204,12 +204,12 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1/file1 /user/dir2/
    */
   public void testWhileOpenRenameToExistentDirectory() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
     conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 3************************************");
 
@@ -267,12 +267,12 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * move /user/dir1/file1 /user/dir2/
    */
   public void testWhileOpenRenameToNonExistentDirectory() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setInt("dfs.safemode.threshold.pct", 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
     conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 4************************************");
 

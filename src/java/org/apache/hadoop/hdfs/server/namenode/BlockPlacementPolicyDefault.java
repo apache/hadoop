@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import java.util.*;
 
 /** The class is responsible for choosing the desired number of targets
@@ -52,7 +53,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   /** {@inheritDoc} */
   public void initialize(Configuration conf,  FSClusterStats stats,
                          NetworkTopology clusterMap) {
-    this.considerLoad = conf.getBoolean("dfs.replication.considerLoad", true);
+    this.considerLoad = conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, true);
     this.stats = stats;
     this.clusterMap = clusterMap;
   }

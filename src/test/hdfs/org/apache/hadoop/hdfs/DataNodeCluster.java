@@ -98,7 +98,7 @@ public class DataNodeCluster {
     int numBlocksPerDNtoInject = 0;
     int replication = 1;
     
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
 
     for (int i = 0; i < args.length; i++) { // parse command line
       if (args[i].equals("-n")) {

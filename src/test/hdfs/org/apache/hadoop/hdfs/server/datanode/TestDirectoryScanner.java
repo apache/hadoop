@@ -29,8 +29,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 
 import junit.framework.TestCase;
@@ -41,7 +43,7 @@ import junit.framework.TestCase;
  */
 public class TestDirectoryScanner extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestDirectoryScanner.class);
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   private static final int DEFAULT_GEN_STAMP = 9999;
 
   private MiniDFSCluster cluster;
@@ -51,8 +53,8 @@ public class TestDirectoryScanner extends TestCase {
   private Random r = new Random();
 
   static {
-    CONF.setLong("dfs.block.size", 100);
-    CONF.setInt("io.bytes.per.checksum", 1);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
+    CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
     CONF.setLong("dfs.heartbeat.interval", 1L);
   }
 

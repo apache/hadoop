@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,7 +66,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
    * Then, it updates the block with new information and verifies again. 
    */
   public void testBlockMetaDataInfo() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     try {
@@ -193,7 +194,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
   /** Test {@link FSDataset#updateReplicaUnderRecovery(ReplicaUnderRecovery, long, long)} */
   @Test
   public void testUpdateReplicaUnderRecovery() throws IOException {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     try {

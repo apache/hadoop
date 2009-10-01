@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfsproxy;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /** Unit tests for ProxyUtil */
 public class TestProxyUtil extends TestCase {
@@ -30,7 +31,7 @@ public class TestProxyUtil extends TestCase {
 
   public void testSendCommand() throws Exception {
       
-    Configuration conf = new Configuration(false);  
+    Configuration conf = new HdfsConfiguration(false);  
     conf.addResource("ssl-client.xml");
     conf.addResource("hdfsproxy-default.xml");
     String address = "localhost:" + TEST_PROXY_HTTPS_PORT;

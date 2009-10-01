@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -185,7 +186,7 @@ public class TestDataTransferProtocol extends TestCase {
   
   @Test public void testOpWrite() throws IOException {
     int numDataNodes = 1;
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
     try {
@@ -316,7 +317,7 @@ public class TestDataTransferProtocol extends TestCase {
     Path file = new Path("dataprotocol.dat");
     int numDataNodes = 1;
     
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setInt("dfs.replication", numDataNodes); 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
     try {
@@ -328,7 +329,7 @@ public class TestDataTransferProtocol extends TestCase {
     dnAddr = NetUtils.createSocketAddr(datanode.getName());
     FileSystem fileSys = cluster.getFileSystem();
     
-    int fileLen = Math.min(conf.getInt("dfs.block.size", 4096), 4096);
+    int fileLen = Math.min(conf.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096), 4096);
     
     createFile(fileSys, file, fileLen);
 

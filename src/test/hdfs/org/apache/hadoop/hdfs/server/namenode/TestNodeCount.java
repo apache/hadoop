@@ -7,6 +7,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -21,7 +22,7 @@ import junit.framework.TestCase;
 public class TestNodeCount extends TestCase {
   public void testNodeCount() throws Exception {
     // start a mini dfs cluster of 2 nodes
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = (short)2;
     final MiniDFSCluster cluster = 
       new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);

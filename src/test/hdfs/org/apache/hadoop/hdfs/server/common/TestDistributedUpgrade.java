@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.hdfs.protocol.FSConstants.LAYOUT_VERSION;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSUpgradeFromImage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -100,7 +101,7 @@ public class TestDistributedUpgrade extends TestCase {
     UpgradeObjectCollection.registerUpgrade(new UO_Datanode3());
     UpgradeObjectCollection.registerUpgrade(new UO_Namenode3());
 
-    conf = new Configuration();
+    conf = new HdfsConfiguration();
     if (System.getProperty("test.build.data") == null) { // to test to be run outside of ant
       System.setProperty("test.build.data", "build/test/data");
     }

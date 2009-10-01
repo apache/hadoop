@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
  * This test ensures the all types of data node report work correctly.
  */
 public class TestDatanodeReport extends TestCase {
-  final static private Configuration conf = new Configuration();
+  final static private Configuration conf = new HdfsConfiguration();
   final static private int NUM_OF_DATANODES = 4;
     
   /**
@@ -40,7 +40,7 @@ public class TestDatanodeReport extends TestCase {
    */
   public void testDatanodeReport() throws Exception {
     conf.setInt(
-        "heartbeat.recheck.interval", 500); // 0.5s
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500); // 0.5s
     conf.setLong("dfs.heartbeat.interval", 1L);
     MiniDFSCluster cluster = 
       new MiniDFSCluster(conf, NUM_OF_DATANODES, true, null);

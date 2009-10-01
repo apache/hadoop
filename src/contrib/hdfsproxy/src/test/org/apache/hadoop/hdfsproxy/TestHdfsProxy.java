@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -121,7 +122,7 @@ public class TestHdfsProxy extends TestCase {
 
   private static MyFile[] createFiles(URI fsname, String topdir)
       throws IOException {
-    return createFiles(FileSystem.get(fsname, new Configuration()), topdir);
+    return createFiles(FileSystem.get(fsname, new HdfsConfiguration()), topdir);
   }
 
   /**
@@ -203,13 +204,13 @@ public class TestHdfsProxy extends TestCase {
     HdfsProxy proxy = null;
     try {
 
-      final Configuration dfsConf = new Configuration();
+      final Configuration dfsConf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(dfsConf, 2, true, null);
       cluster.waitActive();
 
       final FileSystem localfs = FileSystem.get(LOCAL_FS, dfsConf);
       final FileSystem hdfs = cluster.getFileSystem();
-      final Configuration proxyConf = new Configuration(false);
+      final Configuration proxyConf = new HdfsConfiguration(false);
       proxyConf.set("hdfsproxy.dfs.namenode.address", hdfs.getUri().getHost() + ":"
           + hdfs.getUri().getPort());
       proxyConf.set("hdfsproxy.https.address", "localhost:0");

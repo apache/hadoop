@@ -44,7 +44,7 @@ public class TestFileCorruption extends TestCase {
     MiniDFSCluster cluster = null;
     DFSTestUtil util = new DFSTestUtil("TestFileCorruption", 20, 3, 8*1024);
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, 3, true, null);
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
@@ -71,7 +71,7 @@ public class TestFileCorruption extends TestCase {
 
   /** check if local FS can handle corrupted blocks properly */
   public void testLocalFileCorruption() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     Path file = new Path(System.getProperty("test.build.data"), "corruptFile");
     FileSystem fs = FileSystem.getLocal(conf);
     DataOutputStream dos = fs.create(file);
@@ -99,7 +99,7 @@ public class TestFileCorruption extends TestCase {
   public void testArrayOutOfBoundsException() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, 2, true, null);
       cluster.waitActive();
       

@@ -366,7 +366,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * percentage called threshold of blocks, which satisfy the minimal 
    * replication condition.
    * The minimal replication condition is that each block must have at least
-   * <tt>dfs.replication.min</tt> replicas.
+   * <tt>dfs.namenode.replication.min</tt> replicas.
    * When the threshold is reached the name node extends safe mode
    * for a configurable amount of time
    * to let the remaining data nodes to check in before it
@@ -382,7 +382,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * <h4>Configuration parameters:</h4>
    * <tt>dfs.safemode.threshold.pct</tt> is the threshold parameter.<br>
    * <tt>dfs.safemode.extension</tt> is the safe mode extension parameter.<br>
-   * <tt>dfs.replication.min</tt> is the minimal replication parameter.
+   * <tt>dfs.namenode.replication.min</tt> is the minimal replication parameter.
    * 
    * <h4>Special cases:</h4>
    * The name node does not enter safe mode at startup if the threshold is 

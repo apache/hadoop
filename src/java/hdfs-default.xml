@@ -8,6 +8,12 @@
 <configuration>
 
 <property>
+  <name>hadoop.hdfs.configuration.version</name>
+  <value>1</value>
+  <description>version of this configuration file</description>
+</property>
+
+<property>
   <name>dfs.namenode.logging.level</name>
   <value>info</value>
   <description>The logging level for dfs namenode. Other values are "dir"(trac
@@ -16,7 +22,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.secondary.http.address</name>
+  <name>dfs.namenode.secondary.http-address</name>
   <value>0.0.0.0:50090</value>
   <description>
     The secondary namenode http server address and port.
@@ -58,7 +64,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.http.address</name>
+  <name>dfs.namenode.http-address</name>
   <value>0.0.0.0:50070</value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
@@ -74,7 +80,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.https.need.client.auth</name>
+  <name>dfs.client.https.need-auth</name>
   <value>false</value>
   <description>Whether SSL client certificate authentication is required
   </description>
@@ -89,7 +95,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.https.client.keystore.resource</name>
+  <name>dfs.client.https.keystore.resource</name>
   <value>ssl-client.xml</value>
   <description>Resource file from which ssl client keystore
   information will be extracted
@@ -102,7 +108,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.https.address</name>
+  <name>dfs.namenode.https-address</name>
   <value>0.0.0.0:50470</value>
 </property>
 
@@ -124,7 +130,7 @@ creations/deletions), or "all".</description>
  </property>
  
  <property>
-  <name>dfs.backup.address</name>
+  <name>dfs.namenode.backup.address</name>
   <value>0.0.0.0:50100</value>
   <description>
     The backup node server address and port.
@@ -133,7 +139,7 @@ creations/deletions), or "all".</description>
 </property>
  
  <property>
-  <name>dfs.backup.http.address</name>
+  <name>dfs.namenode.backup.http-address</name>
   <value>0.0.0.0:50105</value>
   <description>
     The backup node http server address and port.
@@ -142,7 +148,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.replication.considerLoad</name>
+  <name>dfs.namenode.replication.considerLoad</name>
   <value>true</value>
   <description>Decide if chooseTarget considers the target's load or not
   </description>
@@ -162,7 +168,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.name.dir</name>
+  <name>dfs.namenode.name.dir</name>
   <value>${hadoop.tmp.dir}/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node
       should store the name table(fsimage).  If this is a comma-delimited list
@@ -171,8 +177,8 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.name.edits.dir</name>
-  <value>${dfs.name.dir}</value>
+  <name>dfs.namenode.edits.dir</name>
+  <value>${dfs.namenode.name.dir}</value>
   <description>Determines where on the local filesystem the DFS name node
       should store the transaction (edits) file. If this is a comma-delimited list
       of directories then the transaction file is replicated in all of the 
@@ -188,7 +194,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.permissions</name>
+  <name>dfs.permissions.enabled</name>
   <value>true</value>
   <description>
     If "true", enable permission checking in HDFS.
@@ -200,36 +206,13 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.permissions.supergroup</name>
+  <name>dfs.permissions.superusergroup</name>
   <value>supergroup</value>
   <description>The name of the group of super-users.</description>
 </property>
 
 <property>
-  <name>dfs.access.token.enable</name>
-  <value>false</value>
-  <description>
-    If "true", access tokens are used as capabilities for accessing datanodes.
-    If "false", no access tokens are checked on accessing datanodes.
-  </description>
-</property>
-
-<property>
-  <name>dfs.access.key.update.interval</name>
-  <value>600</value>
-  <description>
-    Interval in minutes at which namenode updates its access keys.
-  </description>
-</property>
-
-<property>
-  <name>dfs.access.token.lifetime</name>
-  <value>600</value>
-  <description>The lifetime of access tokens in minutes.</description>
-</property>
-
-<property>
-  <name>dfs.data.dir</name>
+  <name>dfs.datanode.data.dir</name>
   <value>${hadoop.tmp.dir}/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
   should store its blocks.  If this is a comma-delimited
@@ -256,22 +239,16 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.replication.min</name>
+  <name>dfs.namenode.replication.min</name>
   <value>1</value>
   <description>Minimal block replication. 
   </description>
 </property>
 
 <property>
-  <name>dfs.block.size</name>
+  <name>dfs.blocksize</name>
   <value>67108864</value>
   <description>The default block size for new files.</description>
-</property>
-
-<property>
-  <name>dfs.df.interval</name>
-  <value>60000</value>
-  <description>Disk usage statistics refresh interval in msec.</description>
 </property>
 
 <property>
@@ -314,18 +291,18 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.safemode.threshold.pct</name>
+  <name>dfs.namenode.safemode.threshold-pct</name>
   <value>0.999f</value>
   <description>
     Specifies the percentage of blocks that should satisfy 
-    the minimal replication requirement defined by dfs.replication.min.
+    the minimal replication requirement defined by dfs.namenode.replication.min.
     Values less than or equal to 0 mean not to start in safe mode.
     Values greater than 1 will make safe mode permanent.
   </description>
 </property>
 
 <property>
-  <name>dfs.safemode.extension</name>
+  <name>dfs.namenode.safemode.extension</name>
   <value>30000</value>
   <description>
     Determines extension of safe mode in milliseconds 
@@ -334,7 +311,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.balance.bandwidthPerSec</name>
+  <name>dfs.datanode.balance.bandwidthPerSec</name>
   <value>1048576</value>
   <description>
         Specifies the maximum amount of bandwidth that each datanode
@@ -362,7 +339,7 @@ creations/deletions), or "all".</description>
 </property> 
 
 <property>
-  <name>dfs.max.objects</name>
+  <name>dfs.namenode.max.objects</name>
   <value>0</value>
   <description>The maximum number of files, directories and blocks
   dfs supports. A value of zero indicates no limit to the number
@@ -385,14 +362,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.replication.interval</name>
+  <name>dfs.namenode.replication.interval</name>
   <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
   repliaction work for datanodes. </description>
 </property>
 
 <property>
-  <name>dfs.access.time.precision</name>
+  <name>dfs.namenode.accesstime.precision</name>
   <value>3600000</value>
   <description>The access time for HDFS file is precise upto this value. 
                The default value is 1 hour. Setting a value of 0 disables
@@ -420,6 +397,64 @@ creations/deletions), or "all".</description>
   <name>dfs.namenode.plugins</name>
   <value></value>
   <description>Comma-separated list of namenode plug-ins to be activated.
+  </description>
+</property>
+
+<property>
+  <name>dfs.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>dfs.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  dfs.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>dfs.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary images to merge.
+      If this is a comma-delimited list of directories then the image is
+      replicated in all of the directories for redundancy.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.edits.dir</name>
+  <value>${dfs.namenode.checkpoint.dir}</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary edits to merge.
+      If this is a comma-delimited list of directoires then teh edits is
+      replicated in all of the directoires for redundancy.
+      Default value is same as fs.checkpoint.dir
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.period</name>
+  <value>3600</value>
+  <description>The number of seconds between two periodic checkpoints.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.size</name>
+  <value>67108864</value>
+  <description>The size of the current edit log (in bytes) that triggers
+       a periodic checkpoint even if the fs.checkpoint.period hasn't expired.
   </description>
 </property>
 

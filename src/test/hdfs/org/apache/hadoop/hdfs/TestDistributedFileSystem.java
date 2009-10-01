@@ -36,14 +36,14 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
   private static final Random RAN = new Random();
 
   public void testFileSystemCloseAll() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 0, true, null);
     URI address = FileSystem.getDefaultUri(conf);
 
     try {
       FileSystem.closeAll();
 
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
       FileSystem.setDefaultUri(conf, address);
       FileSystem.get(conf);
       FileSystem.get(conf);
@@ -59,7 +59,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
    * multiple files are open.
    */
   public void testDFSClose() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fileSys = cluster.getFileSystem();
 
@@ -76,7 +76,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
   }
 
   public void testDFSClient() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     try {
@@ -165,19 +165,19 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     System.out.println("seed=" + seed);
     RAN.setSeed(seed);
 
-    final Configuration conf = new Configuration();
-    conf.set("slave.host.name", "localhost");
+    final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
 
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem hdfs = cluster.getFileSystem();
-    final String hftpuri = "hftp://" + conf.get("dfs.http.address");
+    final String hftpuri = "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     System.out.println("hftpuri=" + hftpuri);
     final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);
 
     final String dir = "/filechecksum";
     final int block_size = 1024;
     final int buffer_size = conf.getInt("io.file.buffer.size", 4096);
-    conf.setInt("io.bytes.per.checksum", 512);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
 
     //try different number of blocks
     for(int n = 0; n < 5; n++) {

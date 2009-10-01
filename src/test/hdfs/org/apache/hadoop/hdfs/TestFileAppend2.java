@@ -80,7 +80,7 @@ public class TestFileAppend2 extends TestCase {
    * @throws IOException an exception might be thrown
    */ 
   public void testSimpleAppend() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -331,11 +331,11 @@ public class TestFileAppend2 extends TestCase {
    */
   public void testComplexAppend() throws IOException {
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
-    Configuration conf = new Configuration();
-    conf.setInt("heartbeat.recheck.interval", 2000);
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt("dfs.heartbeat.interval", 2);
-    conf.setInt("dfs.replication.pending.timeout.sec", 2);
-    conf.setInt("dfs.socket.timeout", 30000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 2);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 30000);
     conf.setInt("dfs.datanode.socket.write.timeout", 30000);
     conf.setInt("dfs.datanode.handler.count", 50);
     conf.setBoolean("dfs.support.append", true);

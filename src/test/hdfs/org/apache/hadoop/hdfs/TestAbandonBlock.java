@@ -31,7 +31,7 @@ import org.apache.hadoop.util.StringUtils;
 public class TestAbandonBlock extends junit.framework.TestCase {
   public static final Log LOG = LogFactory.getLog(TestAbandonBlock.class);
   
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   static final String FILE_NAME_PREFIX
       = "/" + TestAbandonBlock.class.getSimpleName() + "_"; 
 

@@ -27,7 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -160,8 +162,8 @@ public class TestStickyBit extends TestCase {
   public void testGeneralSBBehavior() throws IOException {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean("dfs.permissions", true);
+      Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
       conf.setBoolean("dfs.support.append", true);
       cluster = new MiniDFSCluster(conf, 4, true, null);
 
@@ -200,8 +202,8 @@ public class TestStickyBit extends TestCase {
 
     try {
       // Set up cluster for testing
-      Configuration conf = new Configuration();
-      conf.setBoolean("dfs.permissions", true);
+      Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem hdfs = cluster.getFileSystem();
 
@@ -246,8 +248,8 @@ public class TestStickyBit extends TestCase {
   public void testStickyBitPersistence() throws IOException {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean("dfs.permissions", true);
+      Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem hdfs = cluster.getFileSystem();
 
@@ -293,7 +295,7 @@ public class TestStickyBit extends TestCase {
    */
   static private FileSystem logonAs(UnixUserGroupInformation user,
       Configuration conf, FileSystem hdfs) throws IOException {
-    Configuration conf2 = new Configuration(conf);
+    Configuration conf2 = new HdfsConfiguration(conf);
     UnixUserGroupInformation.saveToConf(conf2,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, user);
 

@@ -63,6 +63,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.ipc.RPC;
@@ -244,11 +246,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
-        conf.get("dfs.http.address", "0.0.0.0:50070"));
+        conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50070"));
   }
 
   protected void setHttpServerAddress(Configuration conf){
-    conf.set("dfs.http.address", getHostPortString(httpAddress));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, getHostPortString(httpAddress));
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -337,10 +339,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     this.httpServer = new HttpServer("hdfs", infoHost, infoPort, 
         infoPort == 0, conf);
     if (conf.getBoolean("dfs.https.enable", false)) {
-      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
+      boolean needClientAuth = conf.getBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+                                               DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
       InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
-          "dfs.https.address", infoHost + ":" + 0));
-      Configuration sslConf = new Configuration(false);
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 0));
+      Configuration sslConf = new HdfsConfiguration(false);
       sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
           "ssl-server.xml"));
       this.httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
@@ -828,11 +831,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   /**
    * Refresh the list of datanodes that the namenode should allow to  
-   * connect.  Re-reads conf by creating new Configuration object and 
+   * connect.  Re-reads conf by creating new HdfsConfiguration object and 
    * uses the files list in the configuration to update the list. 
    */
   public void refreshNodes() throws IOException {
-    namesystem.refreshNodes(new Configuration());
+    namesystem.refreshNodes(new HdfsConfiguration());
   }
 
   /**
@@ -1163,7 +1166,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public static NameNode createNameNode(String argv[], 
                                  Configuration conf) throws IOException {
     if (conf == null)
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
       printUsage();

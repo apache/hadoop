@@ -43,7 +43,7 @@ public class TestDFSMkdirs extends TestCase {
    * not create a subdirectory off a file.
    */
   public void testDFSMkdirs() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
@@ -80,7 +80,7 @@ public class TestDFSMkdirs extends TestCase {
    * Tests mkdir will not create directory when parent is missing.
    */
   public void testMkdir() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
     try {

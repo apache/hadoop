@@ -38,6 +38,8 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -117,7 +119,7 @@ public class SecondaryNameNode implements Runnable {
    */
   private void initialize(Configuration conf) throws IOException {
     // initiate Java VM metrics
-    JvmMetrics.init("SecondaryNameNode", conf.get("session.id"));
+    JvmMetrics.init("SecondaryNameNode", conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY));
     
     // Create connection to the namenode.
     shouldRun = true;
@@ -138,12 +140,15 @@ public class SecondaryNameNode implements Runnable {
     checkpointImage.recoverCreate(checkpointDirs, checkpointEditsDirs);
 
     // Initialize other scheduling parameters from the configuration
-    checkpointPeriod = conf.getLong("fs.checkpoint.period", 3600);
-    checkpointSize = conf.getLong("fs.checkpoint.size", 4194304);
+    checkpointPeriod = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
+                                    DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
+    checkpointSize = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_KEY, 
+                                  DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_DEFAULT);
 
     // initialize the webserver for uploading files.
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(
-        conf.get("dfs.secondary.http.address", "0.0.0.0:50090"));
+        conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+                 DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
     infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
@@ -156,7 +161,7 @@ public class SecondaryNameNode implements Runnable {
 
     // The web-server port can be ephemeral... ensure we have the correct info
     infoPort = infoServer.getPort();
-    conf.set("dfs.secondary.http.address", infoBindAddress + ":" +infoPort); 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" +infoPort); 
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
     LOG.warn("Checkpoint Period   :" + checkpointPeriod + " secs " +
              "(" + checkpointPeriod/60 + " min)");
@@ -280,7 +285,8 @@ public class SecondaryNameNode implements Runnable {
     if (!FSConstants.HDFS_URI_SCHEME.equalsIgnoreCase(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
-    String configuredAddress = conf.get("dfs.http.address", "0.0.0.0:50070");
+    String configuredAddress = conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+                                        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT);
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
     if (sockAddr.getAddress().isAnyLocalAddress()) {
       return fsName.getHost() + ":" + sockAddr.getPort();
@@ -455,7 +461,7 @@ public class SecondaryNameNode implements Runnable {
    */
   public static void main(String[] argv) throws Exception {
     StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
-    Configuration tconf = new Configuration();
+    Configuration tconf = new HdfsConfiguration();
     if (argv.length >= 1) {
       SecondaryNameNode secondary = new SecondaryNameNode(tconf);
       int ret = secondary.processArgs(argv);

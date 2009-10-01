@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -31,6 +32,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Level;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import junit.framework.TestCase;
 
@@ -46,10 +48,10 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
   //Adds additional datanode on a different rack
   //The block should be replicated to the new rack
   public void testSufficientlyReplicatedBlocksWithNotEnoughRacks() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.heartbeat.interval", 1L);
-    conf.setInt("dfs.replication.interval", 1);
-    conf.set("topology.script.file.name", "xyz");
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY, "xyz");
     final short REPLICATION_FACTOR = 3;
     final String FILE_NAME = "/testFile";
     final Path FILE_PATH = new Path(FILE_NAME);
@@ -99,11 +101,11 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
   }
 
   public void testUnderReplicatedNotEnoughRacks() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.heartbeat.interval", 1L);
-    conf.setInt("dfs.replication.interval", 1);
-    conf.setInt("dfs.replication.pending.timeout.sec", 1);
-    conf.set("topology.script.file.name", "xyz");
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
+    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY, "xyz");
     short REPLICATION_FACTOR = 3;
     final String FILE_NAME = "/testFile";
     final Path FILE_PATH = new Path(FILE_NAME);

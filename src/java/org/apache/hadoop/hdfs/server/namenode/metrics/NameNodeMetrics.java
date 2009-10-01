@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.metrics.*;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsBase;
@@ -86,7 +87,7 @@ public class NameNodeMetrics implements Updater {
 
       
     public NameNodeMetrics(Configuration conf, NamenodeRole nameNodeRole) {
-      String sessionId = conf.get("session.id");
+      String sessionId = conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY);
       // Initiate Java VM metrics
       String processName = nameNodeRole.toString();
       JvmMetrics.init(processName, sessionId);

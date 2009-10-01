@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import org.junit.Test;
 import org.junit.Assert;
@@ -45,9 +47,9 @@ public class TestDatanodeRestart {
   // test finalized replicas persist across DataNode restarts
   @Test public void testFinalizedReplicas() throws Exception {
     // bring up a cluster of 3
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", 1024L);
-    conf.setInt("dfs.write.packet.size", 512);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -68,9 +70,9 @@ public class TestDatanodeRestart {
   
   // test rbw replicas persist across DataNode restarts
   public void testRbwReplicas() throws IOException {
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", 1024L);
-    conf.setInt("dfs.write.packet.size", 512);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
     conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     cluster.waitActive();
@@ -131,9 +133,9 @@ public class TestDatanodeRestart {
 
   // test recovering unlinked tmp replicas
   @Test public void testRecoverReplicas() throws IOException {
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", 1024L);
-    conf.setInt("dfs.write.packet.size", 512);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
     conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     cluster.waitActive();

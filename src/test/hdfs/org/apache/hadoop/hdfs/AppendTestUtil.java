@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /** Utilities for append-related tests */ 
 public class AppendTestUtil {
@@ -94,7 +95,7 @@ public class AppendTestUtil {
    */
   public static FileSystem createHdfsWithDifferentUsername(Configuration conf
       ) throws IOException {
-    Configuration conf2 = new Configuration(conf);
+    Configuration conf2 = new HdfsConfiguration(conf);
     String username = UserGroupInformation.getCurrentUGI().getUserName()+"_XXX";
     UnixUserGroupInformation.saveToConf(conf2,
         UnixUserGroupInformation.UGI_PROPERTY_NAME,

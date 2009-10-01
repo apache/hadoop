@@ -63,8 +63,8 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
    */
   public void testBlockSynchronization() throws Exception {
     final int ORG_FILE_SIZE = 3000; 
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", BLOCK_SIZE);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = null;
 

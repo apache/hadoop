@@ -39,7 +39,7 @@ public class TestDFSRename extends junit.framework.TestCase {
   }
 
   public void testRename() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     try {
       FileSystem fs = cluster.getFileSystem();

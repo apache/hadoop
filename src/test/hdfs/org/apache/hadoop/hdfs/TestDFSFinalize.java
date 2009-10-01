@@ -88,11 +88,11 @@ public class TestDFSFinalize extends TestCase {
        * For now disabling block verification so that the contents are 
        * not changed.
        */
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
       conf.setInt("dfs.datanode.scan.period.hours", -1);
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
-      String[] nameNodeDirs = conf.getStrings("dfs.name.dir");
-      String[] dataNodeDirs = conf.getStrings("dfs.data.dir");
+      String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+      String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
       
       log("Finalize with existing previous dir", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");

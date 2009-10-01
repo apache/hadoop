@@ -51,6 +51,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+
 /**
  * Proxy Utility .
  */
@@ -312,7 +314,7 @@ public class ProxyUtil {
           + UtilityOption.CHECKCERTS.getName() + " <hostname> <#port> ]");
       System.exit(0);
     }
-    Configuration conf = new Configuration(false);
+    Configuration conf = new HdfsConfiguration(false);
     conf.addResource("ssl-client.xml");
     conf.addResource("hdfsproxy-default.xml");
 

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fi.FiHFlushTestUtil;
 import org.apache.hadoop.fi.FiTestUtil;
 import org.apache.hadoop.fi.FiHFlushTestUtil.DerrAction;
@@ -62,7 +64,7 @@ public class TestFiHFlush {
   @Test
   public void hFlushFi01_a() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    runDiskErrorTest(new Configuration(), methodName, 
+    runDiskErrorTest(new HdfsConfiguration(), methodName, 
         AppendTestUtil.BLOCK_SIZE, new DerrAction(methodName, 0));
   }
 
@@ -75,11 +77,11 @@ public class TestFiHFlush {
   @Test(expected = IOException.class)
   public void hFlushFi01_b() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
     runDiskErrorTest(conf, methodName, 
         customBlockSize, new DerrAction(methodName, 0));
   }
@@ -90,11 +92,11 @@ public class TestFiHFlush {
   @Test(expected = IOException.class)
   public void hFlushFi01_c() throws IOException { 
     final String methodName = FiTestUtil.getMethodName();
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 400;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
     runDiskErrorTest(conf, methodName, 
         customBlockSize, new DerrAction(methodName, 0));
   }
@@ -104,7 +106,7 @@ public class TestFiHFlush {
   @Test
   public void hFlushFi02_a() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    runDiskErrorTest(new Configuration(), methodName,
+    runDiskErrorTest(new HdfsConfiguration(), methodName,
         AppendTestUtil.BLOCK_SIZE, new DerrAction(methodName, 1));
   }
 
@@ -113,11 +115,11 @@ public class TestFiHFlush {
 @Test(expected = IOException.class)
   public void hFlushFi02_b() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
     runDiskErrorTest(conf, methodName,
         customBlockSize, new DerrAction(methodName, 1));
   }
@@ -127,11 +129,11 @@ public class TestFiHFlush {
   @Test(expected = IOException.class)
   public void hFlushFi02_c() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 400;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
     runDiskErrorTest(conf, methodName,
         customBlockSize, new DerrAction(methodName, 1));
   }
@@ -141,7 +143,7 @@ public class TestFiHFlush {
   @Test
   public void hFlushFi03_a() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    runDiskErrorTest(new Configuration(), methodName,
+    runDiskErrorTest(new HdfsConfiguration(), methodName,
         AppendTestUtil.BLOCK_SIZE, new DerrAction(methodName, 2));
   }
   
@@ -150,11 +152,11 @@ public class TestFiHFlush {
   @Test(expected = IOException.class)
   public void hFlushFi03_b() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
     runDiskErrorTest(conf, methodName,
         customBlockSize, new DerrAction(methodName, 2));
   }
@@ -164,11 +166,11 @@ public class TestFiHFlush {
   @Test(expected = IOException.class)
   public void hFlushFi03_c() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 400;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
     runDiskErrorTest(conf, methodName,
         customBlockSize, new DerrAction(methodName, 2));
   }

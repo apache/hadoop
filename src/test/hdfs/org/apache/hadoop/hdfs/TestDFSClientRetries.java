@@ -61,14 +61,14 @@ public class TestDFSClientRetries extends TestCase {
    */
   public void testWriteTimeoutAtDataNode() throws IOException,
                                                   InterruptedException { 
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     
     final int writeTimeout = 100; //milliseconds.
     // set a very short write timeout for datanode, so that tests runs fast.
     conf.setInt("dfs.datanode.socket.write.timeout", writeTimeout); 
     // set a smaller block size
     final int blockSize = 10*1024*1024;
-    conf.setInt("dfs.block.size", blockSize);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt("dfs.client.max.block.acquire.failures", 1);
     // set a small buffer size
     final int bufferSize = 4096;
@@ -225,7 +225,7 @@ public class TestDFSClientRetries extends TestCase {
   
   public void testNotYetReplicatedErrors() throws IOException
   {   
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     
     // allow 1 retry (2 total calls)
     conf.setInt("dfs.client.block.write.locateFollowingBlock.retries", 1);

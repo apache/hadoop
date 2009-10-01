@@ -26,9 +26,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.CheckpointStates;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import junit.framework.TestCase;
 
@@ -80,10 +82,10 @@ public class TestBackupNode extends TestCase {
 
   BackupNode startBackupNode(Configuration conf,
                              StartupOption t, int i) throws IOException {
-    Configuration c = new Configuration(conf);
+    Configuration c = new HdfsConfiguration(conf);
     String dirs = getBackupNodeDir(t, i);
-    c.set("dfs.name.dir", dirs);
-    c.set("dfs.name.edits.dir", "${dfs.name.dir}");
+    c.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, dirs);
+    c.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, "${dfs.name.dir}");
     return (BackupNode)NameNode.createNameNode(new String[]{t.getName()}, c);
   }
 
@@ -105,7 +107,7 @@ public class TestBackupNode extends TestCase {
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
 
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     short replication = (short)conf.getInt("dfs.replication", 3);
     conf.set("dfs.blockreport.initialDelay", "0");
     conf.setInt("dfs.datanode.scan.period.hours", -1); // disable block scanner
@@ -205,7 +207,7 @@ public class TestBackupNode extends TestCase {
    * @throws IOException
    */
   public void testBackupRegistration() throws IOException {
-    Configuration conf1 = new Configuration();
+    Configuration conf1 = new HdfsConfiguration();
     Configuration conf2 = null;
     MiniDFSCluster cluster = null;
     BackupNode backup1 = null;
@@ -213,13 +215,13 @@ public class TestBackupNode extends TestCase {
     try {
       // start name-node and backup node 1
       cluster = new MiniDFSCluster(conf1, 0, true, null);
-      conf1.set("dfs.backup.address", "0.0.0.0:7770");
-      conf1.set("dfs.backup.http.address", "0.0.0.0:7775");
+      conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7770");
+      conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "0.0.0.0:7775");
       backup1 = startBackupNode(conf1, StartupOption.BACKUP, 1);
       // try to start backup node 2
-      conf2 = new Configuration(conf1);
-      conf2.set("dfs.backup.address", "0.0.0.0:7771");
-      conf2.set("dfs.backup.http.address", "0.0.0.0:7776");
+      conf2 = new HdfsConfiguration(conf1);
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7771");
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "0.0.0.0:7776");
       try {
         backup2 = startBackupNode(conf2, StartupOption.BACKUP, 2);
         backup2.stop();

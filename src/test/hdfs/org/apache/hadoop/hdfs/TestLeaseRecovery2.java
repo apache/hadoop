@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
@@ -49,11 +50,11 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
     final long softLease = 1000;
     final long hardLease = 60 * 60 *1000;
     final short repl = 3;
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     final int bufferSize = conf.getInt("io.file.buffer.size", 4096);
-    conf.setLong("dfs.block.size", BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("dfs.heartbeat.interval", 1);
-  //  conf.setInt("io.bytes.per.checksum", 16);
+  //  conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 16);
 
     MiniDFSCluster cluster = null;
     DistributedFileSystem dfs = null;
@@ -91,7 +92,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       // try to re-open the file before closing the previous handle. This
       // should fail but will trigger lease recovery.
       {
-        Configuration conf2 = new Configuration(conf);
+        Configuration conf2 = new HdfsConfiguration(conf);
         String username = UserGroupInformation.getCurrentUGI().getUserName()+"_1";
         UnixUserGroupInformation.saveToConf(conf2,
             UnixUserGroupInformation.UGI_PROPERTY_NAME,

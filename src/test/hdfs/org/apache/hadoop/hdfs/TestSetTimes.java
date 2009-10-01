@@ -77,10 +77,10 @@ public class TestSetTimes extends TestCase {
    * Tests mod & access time in DFS.
    */
   public void testTimes() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
 
 
@@ -187,13 +187,13 @@ public class TestSetTimes extends TestCase {
    * Tests mod time change at close in DFS.
    */
   public void testTimesAtClose() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     int replicas = 1;
 
     // parameter initialization
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.datanode.handler.count", 50);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);

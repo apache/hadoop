@@ -146,7 +146,7 @@ public class TestReplication extends TestCase {
    * Test if Datanode reports bad blocks during replication request
    */
   public void testBadBlockReportOnTransfer() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     FileSystem fs = null;
     DFSClient dfsClient = null;
     LocatedBlocks blocks = null;
@@ -191,8 +191,8 @@ public class TestReplication extends TestCase {
    * Tests replication in DFS.
    */
   public void runReplication(boolean simulated) throws IOException {
-    Configuration conf = new Configuration();
-    conf.setBoolean("dfs.replication.considerLoad", false);
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
     if (simulated) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -307,7 +307,7 @@ public class TestReplication extends TestCase {
     }
     
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       conf.set("dfs.replication", Integer.toString(numDataNodes));
       //first time format
       cluster = new MiniDFSCluster(0, conf, numDataNodes, true,
@@ -373,11 +373,11 @@ public class TestReplication extends TestCase {
        */
       
       LOG.info("Restarting minicluster after deleting a replica and corrupting 2 crcs");
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
       conf.set("dfs.replication", Integer.toString(numDataNodes));
-      conf.set("dfs.replication.pending.timeout.sec", Integer.toString(2));
+      conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
       conf.set("dfs.datanode.block.write.timeout.sec", Integer.toString(5));
-      conf.set("dfs.safemode.threshold.pct", "0.75f"); // only 3 copies exist
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.75f"); // only 3 copies exist
       
       cluster = new MiniDFSCluster(0, conf, numDataNodes*2, false,
                                    true, null, null);
@@ -401,7 +401,7 @@ public class TestReplication extends TestCase {
    * @throws Exception
    */
   public void testReplicateLenMismatchedBlock() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster(new HdfsConfiguration(), 2, true, null);
     try {
       cluster.waitActive();
       // test truncated block
@@ -418,7 +418,7 @@ public class TestReplication extends TestCase {
     final Path fileName = new Path("/file1");
     final short REPLICATION_FACTOR = (short)1;
     final FileSystem fs = cluster.getFileSystem();
-    final int fileLen = fs.getConf().getInt("io.bytes.per.checksum", 512);
+    final int fileLen = fs.getConf().getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
     DFSTestUtil.createFile(fs, fileName, fileLen, REPLICATION_FACTOR, 0);
     DFSTestUtil.waitReplication(fs, fileName, REPLICATION_FACTOR);
 

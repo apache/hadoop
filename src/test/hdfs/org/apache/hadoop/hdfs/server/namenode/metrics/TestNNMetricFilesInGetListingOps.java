@@ -28,17 +28,19 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /**
  * Test case for FilesInGetListingOps metric in Namenode
  */
 public class TestNNMetricFilesInGetListingOps extends TestCase {
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   static {
-    CONF.setLong("dfs.block.size", 100);
-    CONF.setInt("io.bytes.per.checksum", 1);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
+    CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
     CONF.setLong("dfs.heartbeat.interval", 1L);
-    CONF.setInt("dfs.replication.interval", 1);
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
   }
      
   private MiniDFSCluster cluster;

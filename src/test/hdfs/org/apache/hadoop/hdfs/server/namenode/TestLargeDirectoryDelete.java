@@ -26,7 +26,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,15 +39,15 @@ import org.junit.Test;
  */
 public class TestLargeDirectoryDelete {
   private static final Log LOG = LogFactory.getLog(TestLargeDirectoryDelete.class);
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   private static final int TOTAL_BLOCKS = 10000;
   private MiniDFSCluster mc = null;
   private int createOps = 0;
   private int lockOps = 0;
   
   static {
-    CONF.setLong("dfs.block.size", 1);
-    CONF.setInt("io.bytes.per.checksum", 1);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1);
+    CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
   }
   
   /** create a file with a length of <code>filelen</code> */

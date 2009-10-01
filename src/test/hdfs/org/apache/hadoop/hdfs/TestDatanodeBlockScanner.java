@@ -91,7 +91,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     
     long startTime = System.currentTimeMillis();
     
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     cluster.waitActive();
     
@@ -152,7 +152,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   }
 
   public void testBlockCorruptionPolicy() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.blockreport.intervalMsec", 1000L);
     Random random = new Random();
     FileSystem fs = null;
@@ -262,11 +262,11 @@ public class TestDatanodeBlockScanner extends TestCase {
                                              short numReplicas,
                                              int numCorruptReplicas) 
                                              throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.blockreport.intervalMsec", 30L);
-    conf.setLong("dfs.replication.interval", 30);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 30);
     conf.setLong("dfs.heartbeat.interval", 30L);
-    conf.setBoolean("dfs.replication.considerLoad", false);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
     FileSystem fs = null;
     DFSClient dfsClient = null;
     LocatedBlocks blocks = null;
@@ -371,7 +371,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   
   /** Test if NameNode handles truncated blocks in block report */
   public void testTruncatedBlockReport() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = (short)2;
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);

@@ -22,6 +22,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataInputStream;
 import static org.junit.Assert.assertEquals;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -36,7 +38,7 @@ public class TestHFlush {
    */
   @Test
   public void hFlush_01() throws IOException {
-    doTheJob(new Configuration(), fName, AppendTestUtil.BLOCK_SIZE, (short)2);
+    doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE, (short)2);
   }
 
   /** The test uses {@link #doTheJob(Configuration, String, long, short)
@@ -45,12 +47,12 @@ public class TestHFlush {
    */
   @Test
   public void hFlush_02() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
 
     doTheJob(conf, fName, customBlockSize, (short)2);
   }
@@ -61,12 +63,12 @@ public class TestHFlush {
    */
  @Test
   public void hFlush_03() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 400;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
 
     doTheJob(conf, fName, customBlockSize, (short)2);
   }

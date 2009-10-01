@@ -90,11 +90,11 @@ public class TestSmallBlock extends TestCase {
    * Tests small block size in in DFS.
    */
   public void testSmallBlock() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean("dfs.datanode.simulateddatastorage", true);
     }
-    conf.set("io.bytes.per.checksum", "1");
+    conf.set(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, "1");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {

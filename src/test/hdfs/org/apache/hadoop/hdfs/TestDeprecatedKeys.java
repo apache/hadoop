@@ -18,33 +18,24 @@
 
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.log4j.Level;
 
-public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
-  
-  private MiniDFSCluster cluster;
-  private String defaultWorkingDirectory;
+import junit.framework.TestCase;
 
-  @Override
-  protected void setUp() throws Exception {
+public class TestDeprecatedKeys extends TestCase {
+ 
+  //Tests a deprecated key
+  public void testDeprecatedKeys() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster(conf, 2, true, null);
-    fs = cluster.getFileSystem();
-    defaultWorkingDirectory = "/user/" + 
-           UnixUserGroupInformation.login().getUserName();
+    conf.set("topology.script.file.name", "xyz");
+    String scriptFile = conf.get(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
+    assertTrue(scriptFile.equals("xyz")) ;
+    conf.setInt("dfs.replication.interval", 1);
+    String alpha = DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY;
+    int repInterval = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 3) ;
+    assertTrue(repInterval == 1) ;
   }
-  
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
-    cluster.shutdown();
-  }
-
-  @Override
-  protected String getDefaultWorkingDirectory() {
-    return defaultWorkingDirectory;
-  }
-  
 }

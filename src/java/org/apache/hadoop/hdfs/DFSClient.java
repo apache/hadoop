@@ -248,13 +248,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     throws IOException {
     this.conf = conf;
     this.stats = stats;
-    this.socketTimeout = conf.getInt("dfs.socket.timeout", 
+    this.socketTimeout = conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 
                                      HdfsConstants.READ_TIMEOUT);
     this.datanodeWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
                                             HdfsConstants.WRITE_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
-    this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
+    this.writePacketSize = conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
+		                       DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
     this.maxBlockAcquireFailures = 
                           conf.getInt("dfs.client.max.block.acquire.failures",
                                       MAX_BLOCK_ACQUIRE_FAILURES);
@@ -273,7 +274,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     } else {
       this.clientName = "DFSClient_" + r.nextInt();
     }
-    defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    defaultBlockSize = conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
 
     if (nameNodeAddr != null && rpcNamenode == null) {
@@ -569,7 +570,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     LOG.debug(src + ": masked=" + masked);
     OutputStream result = new DFSOutputStream(src, masked,
         flag, createParent, replication, blockSize, progress, buffersize,
-        conf.getInt("io.bytes.per.checksum", 512));
+        conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 
+                    DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT));
     leasechecker.put(src, result);
     return result;
   }
@@ -628,7 +630,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      DSQuotaExceededException.class);
     }
     OutputStream result = new DFSOutputStream(src, buffersize, progress,
-        lastBlock, stat, conf.getInt("io.bytes.per.checksum", 512));
+        lastBlock, stat, conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 
+                                     DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT));
     leasechecker.put(src, result);
     return result;
   }
@@ -1635,7 +1638,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       this.verifyChecksum = verifyChecksum;
       this.buffersize = buffersize;
       this.src = src;
-      prefetchSize = conf.getLong("dfs.read.prefetch.size", prefetchSize);
+      prefetchSize = conf.getLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, prefetchSize);
       openInfo();
     }
 

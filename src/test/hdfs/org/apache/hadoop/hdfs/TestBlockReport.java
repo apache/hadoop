@@ -65,11 +65,11 @@ public class TestBlockReport {
   private static Configuration conf;
 
   static {
-    conf = new Configuration();
+    conf = new HdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
-    conf.setInt("io.bytes.per.checksum", customPerChecksumSize);
-    conf.setLong("dfs.block.size", customBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
     conf.setLong("dfs.datanode.directoryscan.interval", DN_RESCAN_INTERVAL);
   }
 

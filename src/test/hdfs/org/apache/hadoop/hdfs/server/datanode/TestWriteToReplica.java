@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
@@ -44,7 +45,7 @@ public class TestWriteToReplica {
   // test close
   @Test
   public void testClose() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster(new HdfsConfiguration(), 1, true, null);
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -63,7 +64,7 @@ public class TestWriteToReplica {
   // test append
   @Test
   public void testAppend() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster(new HdfsConfiguration(), 1, true, null);
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -82,7 +83,7 @@ public class TestWriteToReplica {
   // test writeToRbw
   @Test
   public void testWriteToRbw() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster(new HdfsConfiguration(), 1, true, null);
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -101,7 +102,7 @@ public class TestWriteToReplica {
   // test writeToTemporary
   @Test
   public void testWriteToTempoary() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster(new HdfsConfiguration(), 1, true, null);
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);

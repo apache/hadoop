@@ -55,9 +55,9 @@ public class TestSafeMode extends TestCase {
     MiniDFSCluster cluster = null;
     DistributedFileSystem fs = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       // disable safemode extension to make the test run faster.
-      conf.set("dfs.safemode.extension", "1");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, "1");
       cluster = new MiniDFSCluster(conf, 1, true, null);
       cluster.waitActive();
       

@@ -53,7 +53,7 @@ public class TestBlockMissingException extends TestCase {
     LOG.info("Test testBlockMissingException started.");
     long blockSize = 1024L;
     int numBlocks = 4;
-    conf = new Configuration();
+    conf = new HdfsConfiguration();
     try {
       dfs = new MiniDFSCluster(conf, NUM_DATANODES, true, null);
       dfs.waitActive();

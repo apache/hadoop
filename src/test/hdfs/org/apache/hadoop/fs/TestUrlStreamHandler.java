@@ -28,6 +28,7 @@ import java.net.URL;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsUrlStreamHandlerFactory;
@@ -48,7 +49,7 @@ public class TestUrlStreamHandler extends TestCase {
    */
   public void testDfsUrls() throws IOException {
 
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
 
@@ -106,7 +107,7 @@ public class TestUrlStreamHandler extends TestCase {
    */
   public void testFileUrls() throws IOException, URISyntaxException {
     // URLStreamHandler is already set in JVM by testDfsUrls() 
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
 
     // Locate the test temporary directory.
     File tmpDir = new File(conf.get("hadoop.tmp.dir"));

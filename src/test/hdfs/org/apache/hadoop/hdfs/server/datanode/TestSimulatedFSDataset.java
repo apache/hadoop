@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
@@ -47,7 +48,7 @@ public class TestSimulatedFSDataset extends TestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
  
   }

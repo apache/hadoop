@@ -50,8 +50,8 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
     final long leasePeriod = 1000;
     final int DATANODE_NUM = 3;
 
-    final Configuration conf = new Configuration();
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
 
     // create cluster

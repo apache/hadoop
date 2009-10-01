@@ -26,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+
 /**
  * ThriftHadoopFileSystem
  * A thrift wrapper around the Hadoop File System
@@ -122,7 +124,7 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
      * @param name - the name of this handler
      */
     public HadoopThriftHandler(String name) {
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
       now = now();
       try {
         inactivityThread = new Daemon(new InactivityMonitor());

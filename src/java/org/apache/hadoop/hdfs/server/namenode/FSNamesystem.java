@@ -53,6 +53,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -291,7 +293,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     dnthread.start();
 
     this.dnsToSwitchMapping = ReflectionUtils.newInstance(
-        conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
+        conf.getClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+                      ScriptBasedMapping.class,
             DNSToSwitchMapping.class), conf);
     
     /* If the dns to swith mapping supports cache, resolve network 
@@ -305,7 +308,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   public static Collection<URI> getNamespaceDirs(Configuration conf) {
-    return getStorageDirs(conf, "dfs.name.dir");
+    return getStorageDirs(conf, DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
   }
 
   public static Collection<URI> getStorageDirs(Configuration conf,
@@ -317,7 +320,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       // but will retain directories specified in hdfs-site.xml
       // When importing image from a checkpoint, the name-node can
       // start with empty set of storage directories.
-      Configuration cE = new Configuration(false);
+      Configuration cE = new HdfsConfiguration(false);
       cE.addResource("core-default.xml");
       cE.addResource("core-site.xml");
       cE.addResource("hdfs-default.xml");
@@ -356,7 +359,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   public static Collection<URI> getNamespaceEditsDirs(Configuration conf) {
-    return getStorageDirs(conf, "dfs.name.edits.dir");
+    return getStorageDirs(conf, DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY);
   }
 
   /**
@@ -400,31 +403,37 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
     LOG.info("fsOwner=" + fsOwner);
 
-    this.supergroup = conf.get("dfs.permissions.supergroup", "supergroup");
-    this.isPermissionEnabled = conf.getBoolean("dfs.permissions", true);
+    this.supergroup = conf.get(DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY, 
+                               DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+    this.isPermissionEnabled = conf.getBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
+                                               DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
     LOG.info("supergroup=" + supergroup);
     LOG.info("isPermissionEnabled=" + isPermissionEnabled);
-    short filePermission = (short)conf.getInt("dfs.upgrade.permission", 00777);
+    short filePermission = (short)conf.getInt(DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_KEY,
+                                              DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT);
     this.defaultPermission = PermissionStatus.createImmutable(
         fsOwner.getUserName(), supergroup, new FsPermission(filePermission));
 
     long heartbeatInterval = conf.getLong("dfs.heartbeat.interval", 3) * 1000;
     this.heartbeatRecheckInterval = conf.getInt(
-        "heartbeat.recheck.interval", 5 * 60 * 1000); // 5 minutes
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
       10 * heartbeatInterval;
     this.replicationRecheckInterval = 
-      conf.getInt("dfs.replication.interval", 3) * 1000L;
+      conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
+                  DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000L;
     this.serverDefaults = new FsServerDefaults(
-        conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE),
-        conf.getInt("io.bytes.per.checksum", DEFAULT_BYTES_PER_CHECKSUM),
-        conf.getInt("dfs.write.packet.size", DEFAULT_WRITE_PACKET_SIZE),
+        conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE),
+        conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BYTES_PER_CHECKSUM),
+        conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, DEFAULT_WRITE_PACKET_SIZE),
         (short) conf.getInt("dfs.replication", DEFAULT_REPLICATION_FACTOR),
         conf.getInt("io.file.buffer.size", DEFAULT_FILE_BUFFER_SIZE));
-    this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
+    this.maxFsObjects = conf.getLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, 
+                                     DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
     this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
                                          20*(int)(heartbeatInterval/1000));
-    this.accessTimePrecision = conf.getLong("dfs.access.time.precision", 0);
+    this.accessTimePrecision = conf.getLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
     this.supportAppends = conf.getBoolean("dfs.support.append", false);
     this.isAccessTokenEnabled = conf.getBoolean(
         AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false);
@@ -3007,7 +3016,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     // Reread the config to get dfs.hosts and dfs.hosts.exclude filenames.
     // Update the file names and refresh internal includes and excludes list
     if (conf == null)
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
     hostsReader.updateFileNames(conf.get("dfs.hosts",""), 
                                 conf.get("dfs.hosts.exclude", ""));
     hostsReader.refresh();
@@ -3160,9 +3169,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
      * @param conf configuration
      */
     SafeModeInfo(Configuration conf) {
-      this.threshold = conf.getFloat("dfs.safemode.threshold.pct", 0.95f);
-      this.extension = conf.getInt("dfs.safemode.extension", 0);
-      this.safeReplication = conf.getInt("dfs.replication.min", 1);
+      this.threshold = conf.getFloat(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 0.95f);
+      this.extension = conf.getInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+      this.safeReplication = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 
+                                         DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
       this.blockTotal = 0; 
       this.blockSafe = 0;
     }

@@ -177,7 +177,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
   public void testUpgradeFromImage() throws IOException {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       if (System.getProperty("test.build.data") == null) { // to allow test to be run outside of Ant
         System.setProperty("test.build.data", "build/test/data");
       }

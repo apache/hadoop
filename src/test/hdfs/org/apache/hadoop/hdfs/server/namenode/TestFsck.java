@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSck;
@@ -70,7 +71,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
@@ -106,7 +107,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
@@ -125,7 +126,7 @@ public class TestFsck extends TestCase {
   /** Test fsck with permission set on inodes */
   public void testFsckPermission() throws Exception {
     final DFSTestUtil util = new DFSTestUtil(getClass().getSimpleName(), 20, 3, 8*1024);
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.blockreport.intervalMsec", 10000L);
 
     MiniDFSCluster cluster = null;
@@ -160,7 +161,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       conf.setInt("dfs.datanode.directoryscan.interval", 1);
       cluster = new MiniDFSCluster(conf, 4, true, null);
@@ -220,7 +221,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       String topDir = "/srcdat";
@@ -266,7 +267,7 @@ public class TestFsck extends TestCase {
   }
 
   public void testCorruptBlock() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.blockreport.intervalMsec", 1000);
     FileSystem fs = null;
     DFSClient dfsClient = null;
@@ -349,7 +350,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       // bring up a one-node cluster
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, 1, true, null);
       String fileName = "/test.txt";
       Path filePath = new Path(fileName);

@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /**
  * A HTTPS/SSL proxy to HDFS, implementing certificate based access control.
@@ -57,7 +58,7 @@ public class HdfsProxy {
     InetSocketAddress nnAddr = NetUtils.createSocketAddr(nn);
     LOG.info("HDFS NameNode is at: " + nnAddr.getHostName() + ":" + nnAddr.getPort());
 
-    Configuration sslConf = new Configuration(false);
+    Configuration sslConf = new HdfsConfiguration(false);
     sslConf.addResource(conf.get("hdfsproxy.https.server.keystore.resource",
         "ssl-server.xml"));
     // unit testing
@@ -67,7 +68,7 @@ public class HdfsProxy {
     this.server = new ProxyHttpServer(sslAddr, sslConf);
     this.server.setAttribute("proxy.https.port", server.getPort());
     this.server.setAttribute("name.node.address", nnAddr);
-    this.server.setAttribute("name.conf", new Configuration());
+    this.server.setAttribute("name.conf", new HdfsConfiguration());
     this.server.addGlobalFilter("ProxyFilter", ProxyFilter.class.getName(), null);
     this.server.addServlet("listPaths", "/listPaths/*", ProxyListPathsServlet.class);
     this.server.addServlet("data", "/data/*", ProxyFileDataServlet.class);
@@ -129,7 +130,7 @@ public class HdfsProxy {
       return null;
     }
     if (conf == null) {
-      conf = new Configuration(false);
+      conf = new HdfsConfiguration(false);
       conf.addResource("hdfsproxy-default.xml");
     }
    

@@ -44,13 +44,13 @@ import junit.framework.TestCase;
 public class TestGetBlocks extends TestCase {
   /** test getBlocks */
   public void testGetBlocks() throws Exception {
-    final Configuration CONF = new Configuration();
+    final Configuration CONF = new HdfsConfiguration();
 
     final short REPLICATION_FACTOR = (short)2;
     final int DEFAULT_BLOCK_SIZE = 1024;
     final Random r = new Random();
     
-    CONF.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster(
           CONF, REPLICATION_FACTOR, true, null );
     try {

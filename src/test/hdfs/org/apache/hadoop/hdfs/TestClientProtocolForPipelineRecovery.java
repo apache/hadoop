@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 
 import org.junit.Test;
@@ -39,7 +40,7 @@ public class TestClientProtocolForPipelineRecovery {
   
   @Test public void testGetNewStamp() throws IOException {
     int numDataNodes = 1;
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
     try {

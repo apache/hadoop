@@ -31,7 +31,7 @@ public class TestLease extends junit.framework.TestCase {
   final Path dir = new Path("/test/lease/");
 
   public void testLease() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     try {
       FileSystem fs = cluster.getFileSystem();

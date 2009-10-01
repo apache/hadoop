@@ -37,7 +37,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     String namenode = null;
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, 1, true, null);
       namenode = FileSystem.getDefaultUri(conf).toString();
       String [] args = new String[4];
@@ -70,7 +70,7 @@ public class TestDFSShellGenericOptions extends TestCase {
                "<?xml-stylesheet type=\"text/xsl\" href=\"configuration.xsl\"?>\n"+
                "<configuration>\n"+
                " <property>\n"+
-               "   <name>fs.default.name</name>\n"+
+               "   <name>fs.defaultFS</name>\n"+
                "   <value>"+namenode+"</value>\n"+
                " </property>\n"+
                "</configuration>\n");
@@ -91,7 +91,7 @@ public class TestDFSShellGenericOptions extends TestCase {
   private void testPropertyOption(String[] args, String namenode) {
     // prepare arguments to create a directory /data
     args[0] = "-D";
-    args[1] = "fs.default.name="+namenode;
+    args[1] = "fs.defaultFS="+namenode;
     execute(args, namenode);        
   }
     

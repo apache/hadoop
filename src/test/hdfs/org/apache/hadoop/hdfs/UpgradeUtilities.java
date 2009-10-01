@@ -86,9 +86,9 @@ public class UpgradeUtilities {
    */
   public static void initialize() throws Exception {
     createEmptyDirs(new String[] {TEST_ROOT_DIR.toString()});
-    Configuration config = new Configuration();
-    config.set("dfs.name.dir", namenodeStorage.toString());
-    config.set("dfs.data.dir", datanodeStorage.toString());
+    Configuration config = new HdfsConfiguration();
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
+    config.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, datanodeStorage.toString());
     MiniDFSCluster cluster = null;
     try {
       // format data-node
@@ -157,10 +157,10 @@ public class UpgradeUtilities {
       dataNodeDirs.append("," + new File(TEST_ROOT_DIR, "data"+i));
     }
     if (conf == null) {
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
     }
-    conf.set("dfs.name.dir", nameNodeDirs.toString());
-    conf.set("dfs.data.dir", dataNodeDirs.toString());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameNodeDirs.toString());
+    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataNodeDirs.toString());
     conf.setInt("dfs.blockreport.intervalMsec", 10000);
     return conf;
   }
@@ -263,7 +263,7 @@ public class UpgradeUtilities {
     for (int i = 0; i < parents.length; i++) {
       File newDir = new File(parents[i], dirName);
       createEmptyDirs(new String[] {newDir.toString()});
-      LocalFileSystem localFS = FileSystem.getLocal(new Configuration());
+      LocalFileSystem localFS = FileSystem.getLocal(new HdfsConfiguration());
       switch (nodeType) {
       case NAME_NODE:
         localFS.copyToLocalFile(new Path(namenodeStorage.toString(), "current"),

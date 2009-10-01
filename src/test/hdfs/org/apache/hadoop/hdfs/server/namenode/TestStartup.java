@@ -16,7 +16,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
@@ -54,7 +56,7 @@ public class TestStartup extends TestCase {
 
 
   protected void setUp() throws Exception {
-    config = new Configuration();
+    config = new HdfsConfiguration();
     String baseDir = System.getProperty("test.build.data", "/tmp");
 
     hdfsDir = new File(baseDir, "dfs");
@@ -62,10 +64,10 @@ public class TestStartup extends TestCase {
       throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
     }
     LOG.info("--hdfsdir is " + hdfsDir.getAbsolutePath());
-    config.set("dfs.name.dir", new File(hdfsDir, "name").getPath());
-    config.set("dfs.data.dir", new File(hdfsDir, "data").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name").getPath());
+    config.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, new File(hdfsDir, "data").getPath());
 
-    config.set("fs.checkpoint.dir",new File(hdfsDir, "secondary").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,new File(hdfsDir, "secondary").getPath());
     //config.set("fs.default.name", "hdfs://"+ NAME_NODE_HOST + "0");
     
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
@@ -212,11 +214,11 @@ public class TestStartup extends TestCase {
   public void testChkpointStartup2() throws IOException{
     LOG.info("--starting checkpointStartup2 - same directory for checkpoint");
     // different name dirs
-    config.set("dfs.name.dir", new File(hdfsDir, "name").getPath());
-    config.set("dfs.name.edits.dir", new File(hdfsDir, "edits").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, new File(hdfsDir, "edits").getPath());
     // same checkpoint dirs
-    config.set("fs.checkpoint.edits.dir", new File(hdfsDir, "chkpt").getPath());
-    config.set("fs.checkpoint.dir", new File(hdfsDir, "chkpt").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, new File(hdfsDir, "chkpt").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, new File(hdfsDir, "chkpt").getPath());
 
     createCheckPoint();
 
@@ -234,11 +236,11 @@ public class TestStartup extends TestCase {
     //setUpConfig();
     LOG.info("--starting testStartup Recovery");
     // different name dirs
-    config.set("dfs.name.dir", new File(hdfsDir, "name").getPath());
-    config.set("dfs.name.edits.dir", new File(hdfsDir, "edits").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, new File(hdfsDir, "edits").getPath());
     // same checkpoint dirs
-    config.set("fs.checkpoint.edits.dir", new File(hdfsDir, "chkpt_edits").getPath());
-    config.set("fs.checkpoint.dir", new File(hdfsDir, "chkpt").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, new File(hdfsDir, "chkpt_edits").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, new File(hdfsDir, "chkpt").getPath());
 
     createCheckPoint();
     corruptNameNodeFiles();
@@ -255,11 +257,11 @@ public class TestStartup extends TestCase {
     //setUpConfig();
     LOG.info("--starting SecondNN startup test");
     // different name dirs
-    config.set("dfs.name.dir", new File(hdfsDir, "name").getPath());
-    config.set("dfs.name.edits.dir", new File(hdfsDir, "name").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, new File(hdfsDir, "name").getPath());
     // same checkpoint dirs
-    config.set("fs.checkpoint.edits.dir", new File(hdfsDir, "chkpt_edits").getPath());
-    config.set("fs.checkpoint.dir", new File(hdfsDir, "chkpt").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, new File(hdfsDir, "chkpt_edits").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, new File(hdfsDir, "chkpt").getPath());
 
     LOG.info("--starting NN ");
     MiniDFSCluster cluster = null;

@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
@@ -48,7 +49,7 @@ public class TestReadWhileWriting {
   /** Test reading while writing. */
   @Test
   public void testReadWhileWriting() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     //enable append
     conf.setBoolean("dfs.support.append", true);
 
@@ -106,7 +107,7 @@ public class TestReadWhileWriting {
   static void checkFile(Path p, int expectedsize, Configuration conf
       ) throws IOException {
     //open the file with another user account
-    final Configuration conf2 = new Configuration(conf);
+    final Configuration conf2 = new HdfsConfiguration(conf);
     final String username = UserGroupInformation.getCurrentUGI().getUserName()
         + "_" + ++userCount;
     UnixUserGroupInformation.saveToConf(conf2,

@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /**
  * Test function of OfflineImageViewer by:
@@ -101,7 +102,7 @@ public class TestOfflineImageViewer extends TestCase {
     MiniDFSCluster cluster = null;
     File orig = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem hdfs = cluster.getFileSystem();
       

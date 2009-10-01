@@ -32,6 +32,7 @@ import javax.management.StandardMBean;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
@@ -312,7 +313,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   public void setConf(Configuration iconf)  {
     conf = iconf;
-    storageId = conf.get("StorageId", "unknownStorageId" +
+    storageId = conf.get(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY, "unknownStorageId" +
                                         new Random().nextInt());
     registerMBean(storageId);
     storage = new SimulatedStorage(

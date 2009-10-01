@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,11 +45,11 @@ public class TestFiDataTransferProtocol {
   static final short REPLICATION = 3;
   static final long BLOCKSIZE = 1L * (1L << 20);
 
-  static final Configuration conf = new Configuration();
+  static final Configuration conf = new HdfsConfiguration();
   static {
     conf.setInt("dfs.datanode.handler.count", 1);
     conf.setInt("dfs.replication", REPLICATION);
-    conf.setInt("dfs.socket.timeout", 5000);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
   }
 
   static private FSDataOutputStream createFile(FileSystem fs, Path p

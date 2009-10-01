@@ -28,6 +28,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 
 /**
@@ -91,7 +92,7 @@ public class DataNodeMetrics implements Updater {
 
     
   public DataNodeMetrics(Configuration conf, String datanodeName) {
-    String sessionId = conf.get("session.id"); 
+    String sessionId = conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY); 
     // Initiate reporting of Java VM metrics
     JvmMetrics.init("DataNode", sessionId);
     

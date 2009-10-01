@@ -61,7 +61,7 @@ public class TestFileStatus extends TestCase {
    * Tests various options of DFSShell.
    */
   public void testFileStatus() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
     final DFSClient dfsClient = new DFSClient(NameNode.getAddress(conf), conf);

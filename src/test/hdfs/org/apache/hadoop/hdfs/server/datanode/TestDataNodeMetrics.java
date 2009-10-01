@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.conf.Configuration;
@@ -30,7 +31,7 @@ import junit.framework.TestCase;
 public class TestDataNodeMetrics extends TestCase {
   
   public void testDataNodeMetrics() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     try {

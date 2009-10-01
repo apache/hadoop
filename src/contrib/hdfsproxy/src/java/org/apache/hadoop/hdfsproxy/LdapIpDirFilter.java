@@ -48,6 +48,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+
 public class LdapIpDirFilter implements Filter {
   public static final Log LOG = LogFactory.getLog(LdapIpDirFilter.class);
 
@@ -89,7 +91,7 @@ public class LdapIpDirFilter implements Filter {
   /** {@inheritDoc} */
   public void init(FilterConfig filterConfig) throws ServletException {
     ServletContext context = filterConfig.getServletContext();
-    Configuration conf = new Configuration(false);
+    Configuration conf = new HdfsConfiguration(false);
     conf.addResource("hdfsproxy-default.xml");
     conf.addResource("hdfsproxy-site.xml");
     // extract namenode from source conf.

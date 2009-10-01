@@ -102,7 +102,7 @@ public class TestFileAppend extends TestCase {
    * @throws IOException an exception might be thrown
    */
   public void testCopyOnWrite() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -172,7 +172,7 @@ public class TestFileAppend extends TestCase {
    * @throws IOException an exception might be thrown
    */
   public void testSimpleFlush() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -227,7 +227,7 @@ public class TestFileAppend extends TestCase {
    * @throws IOException an exception might be thrown
    */
   public void testComplexFlush() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }

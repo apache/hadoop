@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.metrics.*;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
@@ -67,7 +68,7 @@ public class FSNamesystemMetrics implements Updater {
 
   public FSNamesystemMetrics(FSNamesystem fsNameSystem, Configuration conf) {
     this.fsNameSystem = fsNameSystem;
-    String sessionId = conf.get("session.id");
+    String sessionId = conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY);
      
     // Create a record for FSNamesystem metrics
     MetricsContext metricsContext = MetricsUtil.getContext("dfs");

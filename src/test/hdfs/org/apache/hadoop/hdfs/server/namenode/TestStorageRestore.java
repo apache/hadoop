@@ -40,11 +40,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 
 /**
@@ -78,7 +80,7 @@ public class TestStorageRestore extends TestCase {
   
  
   protected void setUp() throws Exception {
-    config = new Configuration();
+    config = new HdfsConfiguration();
     String baseDir = System.getProperty("test.build.data",  "build/test/data");
     
     hdfsDir = new File(baseDir, "dfs");
@@ -100,17 +102,17 @@ public class TestStorageRestore extends TestCase {
     System.out.println("configuring hdfsdir is " + hdfsDir.getAbsolutePath() + 
         "; dfs_name_dir = "+ dfs_name_dir + ";dfs_name_edits_dir(only)=" + path3.getPath());
     
-    config.set("dfs.name.dir", dfs_name_dir);
-    config.set("dfs.name.edits.dir", dfs_name_dir + "," + path3.getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, dfs_name_dir);
+    config.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, dfs_name_dir + "," + path3.getPath());
 
-    config.set("fs.checkpoint.dir",new File(hdfsDir, "secondary").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,new File(hdfsDir, "secondary").getPath());
  
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
     
-    config.set("dfs.secondary.http.address", "0.0.0.0:0");
+    config.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     
     // set the restore feature on
-    config.setBoolean("dfs.name.dir.restore", true);
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY, true);
   }
 
   /**
@@ -348,7 +350,7 @@ public class TestStorageRestore extends TestCase {
       // now run DFSAdmnin command
 
       String cmd = "-fs NAMENODE -restoreFailedStorage false";
-      String namenode = config.get("fs.default.name", "file:///");
+      String namenode = config.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
       CommandExecutor executor = new TestHDFSCLI.DFSAdminCmdExecutor(namenode);
       executor.executeCommand(cmd);
       restore = fsi.getRestoreFailedStorage();

@@ -23,6 +23,7 @@ import java.io.IOException;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.junit.After;
@@ -40,7 +41,7 @@ public class TestHDFSFileContextMainOperations extends
   @BeforeClass
   public static void clusterSetupAtBegining()
                                     throws IOException, LoginException  {
-    cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
+    cluster = new MiniDFSCluster(new HdfsConfiguration(), 2, true, null);
     fc = FileContext.getFileContext(cluster.getFileSystem());
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UnixUserGroupInformation.login().getUserName()));

@@ -29,13 +29,15 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import junit.framework.TestCase;
 
 public class TestReplicationPolicy extends TestCase {
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 6;
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   private static final NetworkTopology cluster;
   private static final NameNode namenode;
   private static final BlockPlacementPolicy replicator;
@@ -56,7 +58,7 @@ public class TestReplicationPolicy extends TestCase {
   static {
     try {
       FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
-      CONF.set("dfs.http.address", "0.0.0.0:0");
+      CONF.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
       NameNode.format(CONF);
       namenode = new NameNode(CONF);
     } catch (IOException e) {

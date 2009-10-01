@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessToken;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -155,7 +156,7 @@ public class DFSTestUtil {
   /** check if the files have been copied correctly. */
   public boolean checkFiles(FileSystem fs, String topdir) throws IOException {
     
-    //Configuration conf = new Configuration();
+    //Configuration conf = new HdfsConfiguration();
     Path root = new Path(topdir);
     
     for (int idx = 0; idx < nFiles; idx++) {
@@ -284,7 +285,7 @@ public class DFSTestUtil {
 
   static public Configuration getConfigurationWithDifferentUsername(Configuration conf
       ) throws IOException {
-    final Configuration c = new Configuration(conf);
+    final Configuration c = new HdfsConfiguration(conf);
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
     final String username = ugi.getUserName()+"_XXX";
     final String[] groups = {ugi.getGroupNames()[0] + "_XXX"};

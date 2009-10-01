@@ -75,7 +75,7 @@ Release 0.21.0 - Unreleased
 
     HDFS-567. Add block forensics contrib tool to print history of corrupt and
     missing blocks from the HDFS logs.
-    (Bill Zeller, Jithendra Pandey via suresh).
+    (Bill Zeller, Jitendra Nath Pandey via suresh).
 
     HDFS-610. Support o.a.h.fs.FileContext.  (Sanjay Radia via szetszwo)
 
@@ -109,6 +109,9 @@ Release 0.21.0 - Unreleased
     (Tsz Wo (Nicholas), SZE and Hairong Kuang via shv)
 
     HDFS-642. Support pipeline close and close error recovery. (hairong)
+
+    HDFS-631. Rename configuration keys towards API standardization and
+    backward compatibility. (Jitendra Nath Pandey via suresh)
 
   IMPROVEMENTS
 

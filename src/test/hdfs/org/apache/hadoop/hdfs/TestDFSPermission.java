@@ -38,7 +38,7 @@ import junit.framework.TestCase;
 /** Unit tests for permission */
 public class TestDFSPermission extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestDFSPermission.class);
-  final private static Configuration conf = new Configuration();
+  final private static Configuration conf = new HdfsConfiguration();
   
   final private static String GROUP1_NAME = "group1";
   final private static String GROUP2_NAME = "group2";
@@ -79,7 +79,7 @@ public class TestDFSPermission extends TestCase {
       LOG.info("NUM_TEST_PERMISSIONS=" + NUM_TEST_PERMISSIONS);
       
       // explicitly turn on permission checking
-      conf.setBoolean("dfs.permissions", true);
+      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
       
       // Initiate all four users
       SUPERUSER = UnixUserGroupInformation.login(conf);

@@ -30,6 +30,8 @@ import javax.security.auth.login.LoginException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
@@ -106,7 +108,8 @@ public class DFSck extends Configured implements Tool {
     }
 
     final StringBuffer url = new StringBuffer("http://");
-    url.append(getConf().get("dfs.http.address", "0.0.0.0:50070"));
+    url.append(getConf().get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, 
+                             DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
     url.append("/fsck?ugi=").append(ugi).append("&path=");
 
     String dir = "/";
@@ -162,7 +165,7 @@ public class DFSck extends Configured implements Tool {
     if ((args.length == 0 ) || ("-files".equals(args[0]))) 
       printUsage();
     else
-      res = ToolRunner.run(new DFSck(new Configuration()), args);
+      res = ToolRunner.run(new DFSck(new HdfsConfiguration()), args);
     System.exit(res);
   }
 }

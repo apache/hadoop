@@ -201,9 +201,9 @@ public class TestPread extends TestCase {
   }
   
   private void dfsPreadTest(boolean disableTransferTo) throws IOException {
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", 4096);
-    conf.setLong("dfs.read.prefetch.size", 4096);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
+    conf.setLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 4096);
     if (simulatedStorage) {
       conf.setBoolean("dfs.datanode.simulateddatastorage", true);
     }
@@ -234,7 +234,7 @@ public class TestPread extends TestCase {
    * Tests positional read in LocalFS.
    */
   public void testPreadLocalFS() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path("build/test/data", "preadtest.dat");

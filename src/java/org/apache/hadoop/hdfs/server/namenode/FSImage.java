@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -373,12 +374,12 @@ public class FSImage extends Storage {
     if(startOpt == StartupOption.IMPORT 
         && (checkpointDirs == null || checkpointDirs.isEmpty()))
       throw new IOException("Cannot import image from a checkpoint. "
-                          + "\"fs.checkpoint.dir\" is not set." );
+                          + "\"dfs.namenode.checkpoint.dir\" is not set." );
 
     if(startOpt == StartupOption.IMPORT 
         && (checkpointEditsDirs == null || checkpointEditsDirs.isEmpty()))
       throw new IOException("Cannot import image from a checkpoint. "
-                          + "\"fs.checkpoint.edits.dir\" is not set." );
+                          + "\"dfs.namenode.checkpoint.dir\" is not set." );
     
     setStorageDirectories(dataDirs, editsDirs);
     // 1. For each data directory calculate its state and 
@@ -1901,7 +1902,7 @@ public class FSImage extends Storage {
    */
   static Collection<URI> getCheckpointDirs(Configuration conf,
       String defaultValue) {
-    Collection<String> dirNames = conf.getStringCollection("fs.checkpoint.dir");
+    Collection<String> dirNames = conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
     if (dirNames.size() == 0 && defaultValue != null) {
       dirNames.add(defaultValue);
     }
@@ -1927,7 +1928,7 @@ public class FSImage extends Storage {
   static Collection<URI> getCheckpointEditsDirs(Configuration conf,
       String defaultName) {
     Collection<String> dirNames = 
-      conf.getStringCollection("fs.checkpoint.edits.dir");
+      conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
     if (dirNames.size() == 0 && defaultName != null) {
       dirNames.add(defaultName);
     }

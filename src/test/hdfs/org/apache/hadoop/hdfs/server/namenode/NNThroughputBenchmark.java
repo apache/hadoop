@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
@@ -1195,7 +1196,7 @@ public class NNThroughputBenchmark {
   }
 
   public static void main(String[] args) throws Exception {
-    runBenchmark(new Configuration(), 
+    runBenchmark(new HdfsConfiguration(), 
                   new ArrayList<String>(Arrays.asList(args)));
   }
 }

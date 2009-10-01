@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -48,7 +49,7 @@ public class TestBlockUnderConstruction {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
     hdfs = (DistributedFileSystem)cluster.getFileSystem();

@@ -49,8 +49,8 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     return new TestSetup(new TestSuite(TestFileAppend3.class)) {
       protected void setUp() throws java.lang.Exception {
         AppendTestUtil.LOG.info("setUp()");
-        conf = new Configuration();
-        conf.setInt("io.bytes.per.checksum", 512);
+        conf = new HdfsConfiguration();
+        conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
         conf.setBoolean("dfs.support.append", true);
         buffersize = conf.getInt("io.file.buffer.size", 4096);
         cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);

@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -128,8 +129,8 @@ public class BlockManager {
       throws IOException {
     namesystem = fsn;
     pendingReplications = new PendingReplicationBlocks(
-        conf.getInt("dfs.replication.pending.timeout.sec",
-                    -1) * 1000L);
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
     setConfigurationParameters(conf);
     blocksMap = new BlocksMap(capacity, DEFAULT_MAP_LOAD_FACTOR);
   }
@@ -142,10 +143,11 @@ public class BlockManager {
 
     this.defaultReplication = conf.getInt("dfs.replication", 3);
     this.maxReplication = conf.getInt("dfs.replication.max", 512);
-    this.minReplication = conf.getInt("dfs.replication.min", 1);
+    this.minReplication = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY,
+                                      DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
     if (minReplication <= 0)
       throw new IOException(
-                            "Unexpected configuration parameters: dfs.replication.min = "
+                            "Unexpected configuration parameters: dfs.namenode.replication.min = "
                             + minReplication
                             + " must be greater than 0");
     if (maxReplication >= (int)Short.MAX_VALUE)
@@ -154,12 +156,13 @@ public class BlockManager {
                             + maxReplication + " must be less than " + (Short.MAX_VALUE));
     if (maxReplication < minReplication)
       throw new IOException(
-                            "Unexpected configuration parameters: dfs.replication.min = "
+                            "Unexpected configuration parameters: dfs.namenode.replication.min = "
                             + minReplication
                             + " must be less than dfs.replication.max = "
                             + maxReplication);
-    this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
-    this.shouldCheckForEnoughRacks = conf.get("topology.script.file.name") == null ? false
+    this.maxReplicationStreams = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY,
+                                             DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT);
+    this.shouldCheckForEnoughRacks = conf.get(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY) == null ? false
                                                                              : true;
     FSNamesystem.LOG.info("defaultReplication = " + defaultReplication);
     FSNamesystem.LOG.info("maxReplication = " + maxReplication);
