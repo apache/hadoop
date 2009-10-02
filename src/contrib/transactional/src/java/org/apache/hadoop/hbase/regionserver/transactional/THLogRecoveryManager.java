@@ -140,23 +140,11 @@ class THLogRecoveryManager {
         List<KeyValue> updates = pendingTransactionsById.get(transactionId);
         switch (key.getTrxOp()) {
 
-        case START:
-          if (updates != null || abortedTransactions.contains(transactionId)
-              || commitedTransactions.contains(transactionId)) {
-            LOG.error("Processing start for transaction: " + transactionId
-                + ", but have already seen start message");
-            throw new IOException("Corrupted transaction log");
-          }
-          updates = new ArrayList<KeyValue>();
-          pendingTransactionsById.put(transactionId, updates);
-          startCount++;
-          break;
-
         case OP:
           if (updates == null) {
-            LOG.error("Processing edit for transaction: " + transactionId
-                + ", but have not seen start message");
-            throw new IOException("Corrupted transaction log");
+              updates = new ArrayList<KeyValue>();
+              pendingTransactionsById.put(transactionId, updates);
+              startCount++;
           }
 
           updates.add(val);

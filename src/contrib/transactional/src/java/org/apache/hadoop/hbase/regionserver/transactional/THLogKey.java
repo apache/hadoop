@@ -31,8 +31,6 @@ public class THLogKey extends HLogKey {
    *  
    */
   public enum TrxOp {
-    /** Start a transaction. */
-    START((byte)1), 
     /** A standard operation that is transactional. KV holds the op. */
     OP((byte)2), 
     /** A transaction was committed. */

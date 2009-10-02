@@ -58,11 +58,6 @@ class THLog extends HLog {
     return new THLogKey(regionName, tableName, seqNum, now);
   }
 
-  public void writeStartToLog(HRegionInfo regionInfo, final long transactionId) throws IOException {
-    this.append(regionInfo, System.currentTimeMillis(),
-        THLogKey.TrxOp.START, transactionId);
-  }
-
   public void writeUpdateToLog(HRegionInfo regionInfo, final long transactionId, final Put update)
       throws IOException {
     this.append(regionInfo, update, transactionId);

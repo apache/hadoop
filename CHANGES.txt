@@ -90,6 +90,7 @@ Release 0.21.0 - Unreleased
    HBASE-1874  Client Scanner mechanism that is used for HbaseAdmin methods
                (listTables, tableExists), is very slow if the client is far
                away from the HBase cluster (Andrei Dragomir via Stack)
+   HBASE-1879  ReadOnly transactions generate WAL activity (Clint Morgan via Stack)
 
   OPTIMIZATIONS
 

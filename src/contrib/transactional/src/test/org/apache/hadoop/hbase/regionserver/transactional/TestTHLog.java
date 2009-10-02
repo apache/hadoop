@@ -86,8 +86,6 @@ public class TestTHLog extends HBaseTestCase implements
     // Write columns named 1, 2, 3, etc. and then values of single byte
     // 1, 2, 3...
     long transactionId = 1;
-    log.writeStartToLog(regionInfo, transactionId);
-
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row1).add(family,
         column, val1));
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row2).add(family,
@@ -119,8 +117,6 @@ public class TestTHLog extends HBaseTestCase implements
         regionInfo, conf);
 
     long transactionId = 1;
-    log.writeStartToLog(regionInfo, transactionId);
-
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row1).add(family,
         column, val1));
     log.writeUpdateToLog(regionInfo, transactionId, new Put(row2).add(family,
@@ -152,11 +148,9 @@ public class TestTHLog extends HBaseTestCase implements
     long transaction1Id = 1;
     long transaction2Id = 2;
 
-    log.writeStartToLog(regionInfo, transaction1Id);
     log.writeUpdateToLog(regionInfo, transaction1Id, new Put(row1).add(family,
         column, val1));
 
-    log.writeStartToLog(regionInfo, transaction2Id);
     log.writeUpdateToLog(regionInfo, transaction2Id, new Put(row2).add(family,
         column, val2));
 
@@ -189,11 +183,9 @@ public class TestTHLog extends HBaseTestCase implements
     long transaction1Id = 1;
     long transaction2Id = 2;
 
-    log.writeStartToLog(regionInfo, transaction1Id);
     log.writeUpdateToLog(regionInfo, transaction1Id, new Put(row1).add(family,
         column, val1));
 
-    log.writeStartToLog(regionInfo, transaction2Id);
     log.writeUpdateToLog(regionInfo, transaction2Id, new Put(row2).add(family,
         column, val2));
     log.writeAbortToLog(regionInfo, transaction2Id);
@@ -226,11 +218,9 @@ public class TestTHLog extends HBaseTestCase implements
     long transaction1Id = 1;
     long transaction2Id = 2;
 
-    log.writeStartToLog(regionInfo, transaction1Id);
     log.writeUpdateToLog(regionInfo, transaction1Id, new Put(row1).add(family,
         column, val1));
 
-    log.writeStartToLog(regionInfo, transaction2Id);
     log.writeUpdateToLog(regionInfo, transaction2Id, new Put(row2).add(family,
         column, val2));
     log.writeCommitToLog(regionInfo, transaction2Id);
