@@ -129,6 +129,9 @@ public class Store implements HConstants, HeapSize {
   // reflected in the TreeMaps).
   private volatile long maxSeqId = -1;
 
+  // The most-recent log-seq-id before we recovered from the LOG.
+  private long maxSeqIdBeforeLogRecovery = -1;
+
   private final Path regionCompactionDir;
   private final Object compactLock = new Object();
   private final int compactionThreshold;
@@ -216,19 +219,25 @@ public class Store implements HConstants, HeapSize {
     // loadStoreFiles calculates this.maxSeqId. as side-effect.
     this.storefiles.putAll(loadStoreFiles());
 
+    this.maxSeqIdBeforeLogRecovery = this.maxSeqId;
+
     // Do reconstruction log.
     long newId = runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
     if (newId != -1) {
       this.maxSeqId = newId; // start with the log id we just recovered.
     }
   }
-
+    
   HColumnDescriptor getFamily() {
     return this.family;
   }
 
   long getMaxSequenceId() {
     return this.maxSeqId;
+  }
+  
+  long getMaxSeqIdBeforeLogRecovery() {
+    return maxSeqIdBeforeLogRecovery;
   }
 
   /**
@@ -276,8 +285,7 @@ public class Store implements HConstants, HeapSize {
   }
 
   /*
-   * Read the reconstructionLog to see whether we need to build a brand-new 
-   * file out of non-flushed log entries.  
+   * Read the reconstructionLog and put into memstore. 
    *
    * We can ignore any log message that has a sequence ID that's equal to or 
    * lower than maxSeqID.  (Because we know such log messages are already 
@@ -303,9 +311,6 @@ public class Store implements HConstants, HeapSize {
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
     long firstSeqIdInLog = -1;
-    // TODO: Move this memstoring over into MemStore.
-    KeyValueSkipListSet reconstructedCache =
-      new KeyValueSkipListSet(this.comparator);
     SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
       reconstructionLog, this.conf);
     try {
@@ -332,8 +337,12 @@ public class Store implements HConstants, HeapSize {
           !val.matchingFamily(family.getName())) {
           continue;
         }
-        // Add anything as value as long as we use same instance each time.
-        reconstructedCache.add(val);
+
+        if (val.isDelete()) {
+          this.memstore.delete(val);
+        } else {
+          this.memstore.add(val);
+        }
         editsCount++;
         // Every 2k edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.
@@ -353,26 +362,15 @@ public class Store implements HConstants, HeapSize {
       logReader.close();
     }
     
-    if (reconstructedCache.size() > 0) {
-      // We create a "virtual flush" at maxSeqIdInLog+1.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("flushing reconstructionCache");
+    if (maxSeqIdInLog > -1) {
+      // We read some edits, so we should flush the memstore
+      this.snapshot();
+      boolean needCompaction = this.flushCache(maxSeqIdInLog);
+      if (needCompaction) {
+        this.compact(false);
       }
-
-      long newFileSeqNo = maxSeqIdInLog + 1;
-      StoreFile sf = internalFlushCache(reconstructedCache, newFileSeqNo);
-      // add it to the list of store files with maxSeqIdInLog+1
-      if (sf == null) {
-        throw new IOException("Flush failed with a null store file");
-      }
-      // Add new file to store files.  Clear snapshot too while we have the
-      // Store write lock.
-      this.storefiles.put(newFileSeqNo, sf);
-      notifyChangedReadersObservers();
-
-      return newFileSeqNo;
     }
-    return -1; // the reconstructed cache was 0 sized
+    return maxSeqIdInLog;
   }
 
   /*

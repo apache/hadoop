@@ -54,6 +54,8 @@ Release 0.21.0 - Unreleased
                Andrew Purtell)
    HBASE-1871  Wrong type used in TableMapReduceUtil.initTableReduceJob()
                (Lars George via Stack)
+   HBASE-1883  HRegion passes the wrong minSequenceNumber to
+               doReconstructionLog (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

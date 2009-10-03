@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -298,7 +299,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
     // Load in all the HStores.
     long maxSeqId = -1;
-    long minSeqId = Integer.MAX_VALUE;
+    long minSeqIdToRecover = Integer.MAX_VALUE;
+    
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
       Store store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
       this.stores.put(c.getName(), store);
@@ -306,13 +308,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
-      if (storeSeqId < minSeqId) {
-        minSeqId = storeSeqId;
+      
+      long storeSeqIdBeforeRecovery = store.getMaxSeqIdBeforeLogRecovery();
+      if (storeSeqIdBeforeRecovery < minSeqIdToRecover) {
+        minSeqIdToRecover = storeSeqIdBeforeRecovery;
       }
     }
 
     // Play log if one.  Delete when done.
-    doReconstructionLog(oldLogFile, minSeqId, maxSeqId, reporter);
+    doReconstructionLog(oldLogFile, minSeqIdToRecover, maxSeqId, reporter);
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -1133,14 +1137,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.updatesLock.readLock().lock();
 
     try {
-      if (writeToWAL) {
-        this.log.append(regionInfo.getRegionName(),
-          regionInfo.getTableDesc().getName(), kvs,
-          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
-      }
       long size = 0;
       Store store = getStore(family);
-      for (KeyValue kv: kvs) {
+      Iterator<KeyValue> kvIterator = kvs.iterator();
+      while(kvIterator.hasNext()) {
+        KeyValue kv = kvIterator.next();
         // Check if time is LATEST, change to time of most recent addition if so
         // This is expensive.
         if (kv.isLatestTimestamp() && kv.isDeleteType()) {
@@ -1154,6 +1155,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           get(store, g, qualifiers, result);
           if (result.isEmpty()) {
             // Nothing to delete
+            kvIterator.remove();
             continue;
           }
           if (result.size() > 1) {
@@ -1165,9 +1167,20 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         } else {
           kv.updateLatestStamp(byteNow);
         }
-
-        size = this.memstoreSize.addAndGet(store.delete(kv));
+        
+        // We must do this in this loop because it could affect 
+        // the above get to find the next timestamp to remove. 
+        // This is the case when there are multiple deletes for the same column.
+        size = this.memstoreSize.addAndGet(store.delete(kv));  
       }
+      
+      if (writeToWAL) {
+        this.log.append(regionInfo.getRegionName(),
+          regionInfo.getTableDesc().getName(), kvs,
+          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
+      }
+
+      
       flush = isFlushSize(size);
     } finally {
       this.updatesLock.readLock().unlock();
