@@ -366,7 +366,6 @@ public class TransactionalRegion extends HRegion {
       }
       // Otherwise we were read-only and commitable, so we can forget it.
       state.setStatus(Status.COMMITED);
-      this.hlog.writeCommitToLog(super.getRegionInfo(), state.getTransactionId());
       retireTransaction(state);
       return TransactionalRegionInterface.COMMIT_OK_READ_ONLY;
     }
