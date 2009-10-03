@@ -1498,7 +1498,7 @@ public class Store implements HConstants, HeapSize {
   
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
-      (5 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
+      (6 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
       ClassSize.align(ClassSize.ARRAY));
   
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
