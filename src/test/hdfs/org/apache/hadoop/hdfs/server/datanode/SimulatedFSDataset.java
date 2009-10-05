@@ -115,12 +115,6 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       return theBlock.getGenerationStamp();
     }
 
-    synchronized void updateBlock(Block b) {
-      theBlock.setGenerationStamp(b.getGenerationStamp());
-      setNumBytes(b.getNumBytes());
-      setBytesOnDisk(b.getNumBytes());
-    }
-    
     synchronized public long getNumBytes() {
       if (!finalized) {
          return bytesRcvd;
@@ -415,15 +409,6 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return b;
   }
 
-  /** {@inheritDoc} */
-  public void updateBlock(Block oldblock, Block newblock) throws IOException {
-    BInfo binfo = blockMap.get(newblock);
-    if (binfo == null) {
-      throw new IOException("BInfo not found, b=" + newblock);
-    }
-    binfo.updateBlock(newblock);
-  }
-
   public synchronized void invalidate(Block[] invalidBlks) throws IOException {
     boolean error = false;
     if (invalidBlks == null) {
@@ -576,10 +561,6 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public BlockInputStreams getTmpInputStreams(Block b, long blkoff, long ckoff
       ) throws IOException {
     throw new IOException("Not supported");
-  }
-
-  /** No-op */
-  public void validateBlockMetadata(Block b) {
   }
 
   /**

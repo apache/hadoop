@@ -960,66 +960,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    return info.unlinkBlock(numLinks);
   }
 
-  /** {@inheritDoc} */
-  public void updateBlock(Block oldblock, Block newblock) throws IOException {
-    if (oldblock.getBlockId() != newblock.getBlockId()) {
-      throw new IOException("Cannot update oldblock (=" + oldblock
-          + ") to newblock (=" + newblock + ").");
-    }
-    
-    final ReplicaInfo replicaInfo = volumeMap.get(oldblock.getBlockId());
-    File blockFile = replicaInfo==null?null:replicaInfo.getBlockFile();
-    if (blockFile == null) {
-      throw new IOException("Block " + oldblock + " does not exist.");
-    }
-
-    //check write threads
-    if (replicaInfo instanceof ReplicaInPipeline) {
-      ((ReplicaInPipeline)replicaInfo).stopWriter();
-    }
-
-    //No ongoing create threads is alive.  Update block.
-    File oldMetaFile = replicaInfo.getMetaFile();
-    long oldgs = replicaInfo.getGenerationStamp();
-    
-    //rename meta file to a tmp file
-    File tmpMetaFile = new File(oldMetaFile.getParent(),
-        oldMetaFile.getName()+"_tmp" + newblock.getGenerationStamp());
-    if (!oldMetaFile.renameTo(tmpMetaFile)){
-      throw new IOException("Cannot rename block meta file to " + tmpMetaFile);
-    }
-
-    //update generation stamp
-    if (oldgs >= newblock.getGenerationStamp()) {
-      throw new IOException("Cannot update block (id=" + newblock.getBlockId()
-          + ") generation stamp from " + oldgs
-          + " to " + newblock.getGenerationStamp());
-    }
-    
-    //update length
-    if (newblock.getNumBytes() > oldblock.getNumBytes()) {
-      throw new IOException("Cannot update block file (=" + blockFile
-          + ") length from " + oldblock.getNumBytes() + " to " + newblock.getNumBytes());
-    }
-    if (newblock.getNumBytes() < oldblock.getNumBytes()) {
-      truncateBlock(blockFile, tmpMetaFile, oldblock.getNumBytes(), newblock.getNumBytes());
-    }
-
-    // update replicaInfo
-    replicaInfo.setGenerationStamp(newblock.getGenerationStamp());
-    replicaInfo.setNumBytes(newblock.getNumBytes());
-    
-    //rename the tmp file to the new meta file (with new generation stamp)
-    File newMetaFile = replicaInfo.getMetaFile();
-    if (!tmpMetaFile.renameTo(newMetaFile)) {
-      throw new IOException("Cannot rename tmp meta file to " + newMetaFile);
-    }
-
-    // paranoia! verify that the contents of the stored block 
-    // matches the block file on disk.
-    validateBlockMetadata(newblock);
-  }
-
   static private void truncateBlock(File blockFile, File metaFile,
       long oldlen, long newlen) throws IOException {
     DataNode.LOG.info("truncateBlock: blockFile=" + blockFile
@@ -1595,11 +1535,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       InterDatanodeProtocol.LOG.debug("b=" + b + ", f=" + f);
     }
     return null;
-  }
-
-  /** {@inheritDoc} */
-  public void validateBlockMetadata(Block b) throws IOException {
-    checkReplicaFiles(getReplicaInfo(b));
   }
 
   /** Check the files of a replica. */

@@ -93,7 +93,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
         assertTrue(datanodes[i] != null);
       }
       
-      //verify BlockMetaDataInfo
+      //verify Block Info
       Block lastblock = locatedblock.getBlock();
       DataNode.LOG.info("newblocks=" + lastblock);
       for(int i = 0; i < REPLICATION_NUM; i++) {

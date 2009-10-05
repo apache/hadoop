@@ -68,7 +68,6 @@ import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -1508,32 +1507,6 @@ public class DataNode extends Configured
     }
   }
 
-  // InterDataNodeProtocol implementation
-  /** {@inheritDoc} */
-  public BlockMetaDataInfo getBlockMetaDataInfo(Block block
-      ) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("block=" + block);
-    }
-    Block stored = data.getStoredBlock(block.getBlockId());
-
-    if (stored == null) {
-      return null;
-    }
-    BlockMetaDataInfo info = new BlockMetaDataInfo(stored,
-                                 blockScanner.getLastScanTime(stored));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("getBlockMetaDataInfo successful block=" + stored +
-                " length " + stored.getNumBytes() +
-                " genstamp " + stored.getGenerationStamp());
-    }
-
-    // paranoia! verify that the contents of the stored block
-    // matches the block file on disk.
-    data.validateBlockMetadata(stored);
-    return info;
-  }
-
   public Daemon recoverBlocks(final Collection<RecoveringBlock> blocks) {
     Daemon d = new Daemon(threadGroup, new Runnable() {
       /** Recover a list of blocks. It is run by the primary datanode. */
@@ -1552,22 +1525,7 @@ public class DataNode extends Configured
     return d;
   }
 
-  /** {@inheritDoc} */
-  public void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException {
-    LOG.info("oldblock=" + oldblock + "(length=" + oldblock.getNumBytes()
-        + "), newblock=" + newblock + "(length=" + newblock.getNumBytes()
-        + "), datanode=" + dnRegistration.getName());
-    data.updateBlock(oldblock, newblock);
-    if (finalize) {
-      data.finalizeBlock(newblock);
-      myMetrics.blocksWritten.inc(); 
-      notifyNamenodeReceivedBlock(newblock, EMPTY_DEL_HINT);
-      LOG.info("Received block " + newblock +
-                " of size " + newblock.getNumBytes() +
-                " as part of lease recovery.");
-    }
-  }
-
+  // InterDataNodeProtocol implementation
   @Override // InterDatanodeProtocol
   public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
   throws IOException {

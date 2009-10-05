@@ -41,6 +41,8 @@ Release 0.21.0 - Unreleased
 
     HDFS-658. Block recovery for primary data-node. (shv)
 
+    HDFS-660. Remove deprecated methods from InterDatanodeProtocol. (shv)
+
   NEW FEATURES
 
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.

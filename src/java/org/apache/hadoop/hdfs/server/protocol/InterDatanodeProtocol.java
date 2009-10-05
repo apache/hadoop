@@ -32,22 +32,9 @@ public interface InterDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
 
   /**
-   * 4: initReplicaRecovery(), updateReplicaUnderRecovery() added.
+   * 5: getBlockMetaDataInfo(), updateBlock() removed.
    */
-  public static final long versionID = 4L;
-
-  /** @return the BlockMetaDataInfo of a block;
-   *  null if the block is not found 
-   */
-  @Deprecated
-  BlockMetaDataInfo getBlockMetaDataInfo(Block block) throws IOException;
-
-  /**
-   * Update the block to the new generation stamp and length.  
-   */
-  @Deprecated
-  void updateBlock(Block oldblock, Block newblock, boolean finalize)
-  throws IOException;
+  public static final long versionID = 5L;
 
   /**
    * Initialize a replica recovery.
