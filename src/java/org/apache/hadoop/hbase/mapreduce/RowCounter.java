@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
@@ -96,6 +97,7 @@ public class RowCounter {
       sb.append(args[i]);
     }
     Scan scan = new Scan();
+    scan.setFilter(new FirstKeyOnlyFilter());
     if (sb.length() > 0) {
       for (String columnName :sb.toString().split(" ")) {
         String [] fields = columnName.split(":");

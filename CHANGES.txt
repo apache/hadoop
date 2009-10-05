@@ -97,6 +97,7 @@ Release 0.21.0 - Unreleased
    HBASE-1879  ReadOnly transactions generate WAL activity (Clint Morgan via Stack)
    HBASE-1875  Compression test utility
    HBASE-1832  Faster enable/disable/delete
+   HBASE-1481  Add fast row key only scanning
 
   OPTIMIZATIONS
 

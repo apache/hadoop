@@ -18,6 +18,7 @@ import org.apache.hadoop.hbase.client.Get
 import org.apache.hadoop.hbase.client.Put
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.client.Delete
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.io.hfile.Compression
 import org.apache.hadoop.hbase.HBaseConfiguration
@@ -544,6 +545,7 @@ module HBase
       now = Time.now
       scan = Scan.new()
       scan.setCacheBlocks(false)
+      scan.setFilter(FirstKeyOnlyFilter.new())
       s = @table.getScanner(scan)
       count = 0
       i = s.iterator()
