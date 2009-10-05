@@ -34,8 +34,8 @@ public class CompressionTest {
   protected static Path path = new Path(".hfile-comp-test");
 
   public static void usage() {
-    System.out.println("Usage: CompressionTest HDFS_PATH none|gz|lzo");
-    System.exit(0);
+    System.err.println("Usage: CompressionTest HDFS_PATH none|gz|lzo");
+    System.exit(1);
   }
 
   protected static DistributedFileSystem openConnection(String urlString)
