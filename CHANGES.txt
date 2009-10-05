@@ -94,6 +94,7 @@ Release 0.21.0 - Unreleased
                away from the HBase cluster (Andrei Dragomir via Stack)
    HBASE-1879  ReadOnly transactions generate WAL activity (Clint Morgan via Stack)
    HBASE-1875  Compression test utility
+   HBASE-1832  Faster enable/disable/delete
 
   OPTIMIZATIONS
 

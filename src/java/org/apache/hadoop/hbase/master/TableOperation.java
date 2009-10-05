@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,7 +44,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 abstract class TableOperation implements HConstants {
   private final Set<MetaRegion> metaRegions;
   protected final byte [] tableName;
-  protected final Set<HRegionInfo> unservedRegions = new HashSet<HRegionInfo>();
+  // Do regions in order.
+  protected final Set<HRegionInfo> unservedRegions = new TreeSet<HRegionInfo>();
   protected HMaster master;
 
   protected TableOperation(final HMaster master, final byte [] tableName)
@@ -79,15 +80,17 @@ abstract class TableOperation implements HConstants {
 
       // Open a scanner on the meta region
       byte [] tableNameMetaStart =
-          Bytes.toBytes(Bytes.toString(tableName) + ",,");
+        Bytes.toBytes(Bytes.toString(tableName) + ",,");
       Scan scan = new Scan(tableNameMetaStart).addFamily(CATALOG_FAMILY);
-      long scannerId = server.openScanner(m.getRegionName(), scan);
-
+      long scannerId = this.server.openScanner(m.getRegionName(), scan);
+      int rows = this.master.getConfiguration().
+        getInt("hbase.meta.scanner.caching", 100);
+      scan.setCaching(rows);
       List<byte []> emptyRows = new ArrayList<byte []>();
       try {
         while (true) {
-          Result values = server.next(scannerId);
-          if(values == null || values.isEmpty()) {
+          Result values = this.server.next(scannerId);
+          if (values == null || values.isEmpty()) {
             break;
           }
           HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
@@ -119,7 +122,7 @@ abstract class TableOperation implements HConstants {
       } finally {
         if (scannerId != -1L) {
           try {
-            server.close(scannerId);
+            this.server.close(scannerId);
           } catch (IOException e) {
             e = RemoteExceptionHandler.checkIOException(e);
             LOG.error("closing scanner", e);
@@ -143,7 +146,6 @@ abstract class TableOperation implements HConstants {
 
       postProcessMeta(m, server);
       unservedRegions.clear();
-
       return Boolean.TRUE;
     }
   }

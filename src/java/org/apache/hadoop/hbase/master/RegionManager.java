@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -511,25 +512,30 @@ class RegionManager implements HConstants {
     LOG.info("Skipped " + skipped + " region(s) that are in transition states");
   }
 
+  /*
+   * PathFilter that accepts hbase tables only.
+   */
   static class TableDirFilter implements PathFilter {
-
     public boolean accept(Path path) {
       // skip the region servers' log dirs && version file
-      // HBASE-1112 want to sperate the log dirs from table's data dirs by a special character.
+      // HBASE-1112 want to separate the log dirs from table's data dirs by a
+      // special character.
       String pathname = path.getName();
-      return !pathname.startsWith("log_") && !pathname.equals(VERSION_FILE_NAME);
+      return !pathname.equals(HLog.HREGION_LOGDIR_NAME) &&
+        !pathname.equals(VERSION_FILE_NAME);
     }
     
   }
-  
-  static class RegionDirFilter implements PathFilter {
 
+  /*
+   * PathFilter that accepts all but compaction.dir names.
+   */
+  static class RegionDirFilter implements PathFilter {
     public boolean accept(Path path) { 
       return !path.getName().equals(HREGION_COMPACTIONDIR_NAME);
     }
-    
   }
-  
+
   /**
    * @return the rough number of the regions on fs
    * Note: this method simply counts the regions on fs by accumulating all the dirs 
@@ -538,10 +544,8 @@ class RegionManager implements HConstants {
    */
   public int countRegionsOnFS() throws IOException {
     int regions = 0;
-    
-    FileStatus[] tableDirs = 
+    FileStatus[] tableDirs =
       master.fs.listStatus(master.rootdir, new TableDirFilter());
-    
     FileStatus[] regionDirs;
     RegionDirFilter rdf = new RegionDirFilter();
     for(FileStatus tabledir : tableDirs) {
@@ -550,7 +554,6 @@ class RegionManager implements HConstants {
         regions += regionDirs.length;
       }
     }
-    
     return regions;
   }
   

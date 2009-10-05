@@ -94,20 +94,20 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   }
   
   private void close() {
-	if (this.scannerId == -1L) {
-	  return;
-	}
-	try {
-		this.server.close(this.scannerId);
-	} catch (IOException e) {
-		Log.warn("Ignore, probably already closed", e);
-	}
-	this.scannerId = -1L;
+    if (this.scannerId == -1L) {
+      return;
+    }
+    try {
+      this.server.close(this.scannerId);
+    } catch (IOException e) {
+      Log.warn("Ignore, probably already closed", e);
+    }
+    this.scannerId = -1L;
   }
 
   protected long openScanner() throws IOException {
-    return server.openScanner(
-        this.location.getRegionInfo().getRegionName(), scan);
+    return this.server.openScanner(this.location.getRegionInfo().getRegionName(),
+      this.scan);
   }
   
   protected Scan getScan() {
@@ -118,7 +118,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * Call this when the next invocation of call should close the scanner
    */
   public void setClose() {
-    closed = true;
+    this.closed = true;
   }
   
   /**

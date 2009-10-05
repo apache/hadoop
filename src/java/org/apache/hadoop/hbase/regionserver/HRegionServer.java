@@ -1888,9 +1888,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
-      InternalScanner s = r.getScanner(scan);
-      long scannerId = addScanner(s);
-      return scannerId;
+      return addScanner(r.getScanner(scan));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));
     }

@@ -450,8 +450,8 @@ public class HConnectionManager implements HConstants {
      *   Returns true if all regions are offline
      *   Returns false in any other case
      */
-    private boolean testTableOnlineState(byte[] tableName, 
-        boolean online) throws IOException {
+    private boolean testTableOnlineState(byte[] tableName, boolean online)
+    throws IOException {
       if (!tableExists(tableName)) {
         throw new TableNotFoundException(Bytes.toString(tableName));
       }
@@ -459,7 +459,6 @@ public class HConnectionManager implements HConstants {
         // The root region is always enabled
         return true;
       }
-      
       int rowsScanned = 0;
       int rowsOffline = 0;
       byte[] startKey =
@@ -468,6 +467,8 @@ public class HConnectionManager implements HConstants {
       HRegionInfo currentRegion = null;
       Scan scan = new Scan(startKey);
       scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+      int rows = this.conf.getInt("hbase.meta.scanner.caching", 100);
+      scan.setCaching(rows);
       ScannerCallable s = new ScannerCallable(this, 
           (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
               HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME), scan);
@@ -482,10 +483,14 @@ public class HConnectionManager implements HConstants {
           currentRegion = s.getHRegionInfo();
           Result r = null;
           Result [] rrs = null;
-          while ((rrs = getRegionServerWithRetries(s)) != null) {
+          do {
+            rrs = getRegionServerWithRetries(s);
+            if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
+              break; //exit completely
+            }
             r = rrs[0];
-            byte [] value = r.getValue(HConstants.CATALOG_FAMILY, 
-                HConstants.REGIONINFO_QUALIFIER);
+            byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER);
             if (value != null) {
               HRegionInfo info = Writables.getHRegionInfoOrNull(value);
               if (info != null) {
@@ -495,20 +500,21 @@ public class HConnectionManager implements HConstants {
                 }
               }
             }
-          }
+          } while(true);
           endKey = currentRegion.getEndKey();
-        } while (!(endKey == null || 
+        } while (!(endKey == null ||
             Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)));
-      }
-      finally {
+      } finally {
         s.setClose();
+        // Doing below will call 'next' again and this will close the scanner
+        // Without it we leave scanners open.
+        getRegionServerWithRetries(s);
       }
-      boolean onlineOffline = 
-        online ? rowsOffline == 0 : rowsOffline == rowsScanned;
-      return rowsScanned > 0 && onlineOffline;
-      
+      LOG.debug("Rowscanned=" + rowsScanned + ", rowsOffline=" + rowsOffline);
+      boolean onOffLine = online? rowsOffline == 0: rowsOffline == rowsScanned;
+      return rowsScanned > 0 && onOffLine;
     }
-    
+
     private static class HTableDescriptorFinder 
     implements MetaScanner.MetaScannerVisitor {
         byte[] tableName;

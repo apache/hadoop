@@ -330,16 +330,17 @@ public class HBaseAdmin {
     }
 
     // Wait until all regions are enabled
-    
-    for (int tries = 0;
-        (tries < numRetries) && (!isTableEnabled(tableName));
-        tries++) {
+    boolean enabled = false;
+    for (int tries = 0; tries < this.numRetries; tries++) {
+      enabled = isTableEnabled(tableName);
+      if (enabled) break;
+      long sleep = getPauseTime(tries);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleep. Waiting for all regions to be enabled from " +
-          Bytes.toString(tableName));
+        LOG.debug("Sleeping= " + sleep + "ms, waiting for all regions to be " +
+          "enabled in " + Bytes.toString(tableName));
       }
       try {
-        Thread.sleep(getPauseTime(tries));
+        Thread.sleep(sleep);
       } catch (InterruptedException e) {
         // continue
       }
@@ -348,8 +349,8 @@ public class HBaseAdmin {
           Bytes.toString(tableName));
       }
     }
-    if (!isTableEnabled(tableName))
-      throw new IOException("unable to enable table " +
+    if (!enabled)
+      throw new IOException("Unable to enable table " +
         Bytes.toString(tableName));
     LOG.info("Enabled table " + Bytes.toString(tableName));
   }
@@ -385,9 +386,10 @@ public class HBaseAdmin {
     }
 
     // Wait until all regions are disabled
-    for (int tries = 0;
-        (tries < numRetries) && (!isTableDisabled(tableName));
-        tries++) {
+    boolean disabled = false;
+    for (int tries = 0; tries < this.numRetries; tries++) {
+      disabled = isTableDisabled(tableName);
+      if (disabled) break;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for all regions to be disabled from " +
           Bytes.toString(tableName));
@@ -402,7 +404,7 @@ public class HBaseAdmin {
           Bytes.toString(tableName));
       }
     }
-    if (!isTableDisabled(tableName)) {
+    if (!disabled) {
       throw new RegionException("Retries exhausted, it took too long to wait"+
         " for the table " + Bytes.toString(tableName) + " to be disabled.");
     }

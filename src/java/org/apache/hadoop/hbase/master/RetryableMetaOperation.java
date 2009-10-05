@@ -56,12 +56,13 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
   protected T doWithRetries()
   throws IOException, RuntimeException {
     List<IOException> exceptions = new ArrayList<IOException>();
-    for(int tries = 0; tries < master.numRetries; tries++) {
-      if (master.closed.get()) {
+    for (int tries = 0; tries < this.master.numRetries; tries++) {
+      if (this.master.closed.get()) {
         return null;
       }
       try {
-        this.server = master.connection.getHRegionConnection(m.getServer());
+        this.server =
+          this.master.connection.getHRegionConnection(m.getServer());
         return this.call();
       } catch (IOException e) {
         if (e instanceof TableNotFoundException ||
@@ -94,7 +95,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
         LOG.debug("Exception in RetryableMetaOperation: ", e);
         throw new RuntimeException(e);
       }
-      sleeper.sleep();
+      this.sleeper.sleep();
     }
     return null;    
   }

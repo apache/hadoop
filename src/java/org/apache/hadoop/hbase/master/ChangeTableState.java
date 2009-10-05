@@ -20,9 +20,9 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,14 +32,15 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Writables;
 
-/** Instantiated to enable or disable a table */
+/**
+ * Instantiated to enable or disable a table
+ */
 class ChangeTableState extends TableOperation {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private boolean online;
-
+  // Do in order.
   protected final Map<String, HashSet<HRegionInfo>> servedRegions =
-    new HashMap<String, HashSet<HRegionInfo>>();
-  
+    new TreeMap<String, HashSet<HRegionInfo>>();
   protected long lockid;
 
   ChangeTableState(final HMaster master, final byte [] tableName, 
@@ -51,14 +52,13 @@ class ChangeTableState extends TableOperation {
 
   @Override
   protected void processScanItem(String serverName, HRegionInfo info) {
-      
     if (isBeingServed(serverName)) {
-      HashSet<HRegionInfo> regions = servedRegions.get(serverName);
+      HashSet<HRegionInfo> regions = this.servedRegions.get(serverName);
       if (regions == null) {
         regions = new HashSet<HRegionInfo>();
       }
       regions.add(info);
-      servedRegions.put(serverName, regions);
+      this.servedRegions.put(serverName, regions);
     }
   }
 
@@ -67,13 +67,13 @@ class ChangeTableState extends TableOperation {
   throws IOException {
     // Process regions not being served
     if (LOG.isDebugEnabled()) {
-      LOG.debug("processing unserved regions");
+      LOG.debug("Processing unserved regions");
     }
-    for (HRegionInfo i: unservedRegions) {
+    for (HRegionInfo i: this.unservedRegions) {
       if (i.isOffline() && i.isSplit()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skipping region " + i.toString() +
-              " because it is offline because it has been split");
+            " because it is offline and split");
         }
         continue;
       }
@@ -81,36 +81,36 @@ class ChangeTableState extends TableOperation {
       // Update meta table
       Put put = updateRegionInfo(i);
       server.put(m.getRegionName(), put);
-      
       Delete delete = new Delete(i.getRegionName());
       delete.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
       delete.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
       server.delete(m.getRegionName(), delete);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Updated columns in row: " + i.getRegionNameAsString());
+        LOG.debug("Removed server and startcode from row and set online=" +
+          this.online + ": " + i.getRegionNameAsString());
       }
-
       synchronized (master.regionManager) {
-        if (online) {
+        if (this.online) {
           // Bring offline regions on-line
-          if (!master.regionManager.regionIsOpening(i.getRegionNameAsString())) {
-            master.regionManager.setUnassigned(i, false);
+          if (!this.master.regionManager.regionIsOpening(i.getRegionNameAsString())) {
+            this.master.regionManager.setUnassigned(i, false);
           }
         } else {
           // Prevent region from getting assigned.
-          master.regionManager.removeRegion(i);
+          this.master.regionManager.removeRegion(i);
         }
       }
     }
 
     // Process regions currently being served
     if (LOG.isDebugEnabled()) {
-      LOG.debug("processing regions currently being served");
+      LOG.debug("Processing regions currently being served");
     }
-    synchronized (master.regionManager) {
-      for (Map.Entry<String, HashSet<HRegionInfo>> e: servedRegions.entrySet()) {
+    synchronized (this.master.regionManager) {
+      for (Map.Entry<String, HashSet<HRegionInfo>> e:
+          this.servedRegions.entrySet()) {
         String serverName = e.getKey();
-        if (online) {
+        if (this.online) {
           LOG.debug("Already online");
           continue;                             // Already being served
         }
@@ -118,14 +118,15 @@ class ChangeTableState extends TableOperation {
         // Cause regions being served to be taken off-line and disabled
         for (HRegionInfo i: e.getValue()) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("adding region " + i.getRegionNameAsString() + " to kill list");
+            LOG.debug("Adding region " + i.getRegionNameAsString() +
+              " to setClosing list");
           }
           // this marks the regions to be closed
-          master.regionManager.setClosing(serverName, i, true);
+          this.master.regionManager.setClosing(serverName, i, true);
         }
       }
     }
-    servedRegions.clear();
+    this.servedRegions.clear();
   }
 
   protected Put updateRegionInfo(final HRegionInfo i)

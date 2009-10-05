@@ -844,8 +844,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       Scan scan = new Scan(firstRowInTable);
       scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       scan.addColumn(CATALOG_FAMILY, SERVER_QUALIFIER);
-      long scannerid = 
-        srvr.openScanner(metaRegionName, scan);
+      long scannerid = srvr.openScanner(metaRegionName, scan);
       try {
         while (true) {
           Result data = srvr.next(scannerid);
@@ -882,8 +881,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       Scan scan = new Scan(firstRowInTable);
       scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       scan.addColumn(CATALOG_FAMILY, SERVER_QUALIFIER);
-      long scannerid = 
-        srvr.openScanner(metaRegionName, scan);
+      long scannerid = srvr.openScanner(metaRegionName, scan);
       try {
         while (true) {
           Result data = srvr.next(scannerid);
