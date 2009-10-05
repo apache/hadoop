@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * This filter is used to filter cells based on value. It takes a {@link #Filter.CompareOp} 
+ * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp} 
  * operator (equal, greater, not equal, etc), and either a byte [] value or 
- * a {@link #WritableByteArrayComparable}.
+ * a WritableByteArrayComparable.
  * <p>
  * If we have a byte [] value then we just do a lexicographic compare. For 
  * example, if passed value is 'b' and cell has 'a' and the compare operator 

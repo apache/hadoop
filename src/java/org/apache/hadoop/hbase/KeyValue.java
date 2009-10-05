@@ -1019,7 +1019,6 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * @param column Column minus its delimiter
    * @return True if column matches.
-   * @see #matchingColumn(byte[])
    */
   public boolean matchingColumnNoDelimiter(final byte [] column) {
     int rl = getRowLength();
@@ -1517,7 +1516,7 @@ public class KeyValue implements Writable, HeapSize {
   }
   
   /**
-   * @param b
+   * @param bb
    * @return A KeyValue made of a byte buffer that holds the key-only part.
    * Needed to convert hfile index members to KeyValues.
    */

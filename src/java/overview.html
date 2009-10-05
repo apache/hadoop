@@ -69,12 +69,18 @@
       in your hbase-site.xml.</li>
       <li>This is a list of patches we recommend you apply to your running Hadoop cluster:
       <ul>
-      <li><a hef="https://issues.apache.org/jira/browse/HADOOP-4681">HADOOP-4681 <i>"DFSClient block read failures cause open DFSInputStream to become unusable"</i></a>. This patch will help with the ever-popular, "No live nodes contain current block".
+      <li><a hef="https://issues.apache.org/jira/browse/HADOOP-4681">HADOOP-4681/HDFS-127 <i>"DFSClient block read failures cause open DFSInputStream to become unusable"</i></a>. This patch will help with the ever-popular, "No live nodes contain current block".
       The hadoop version bundled with hbase has this patch applied.  Its an HDFS client
       fix so this should do for usual usage but if your cluster is missing the patch,
       and in particular if calling hbase from a mapreduce job, you may run into this
       issue.
       </li>
+      <li><a hef="https://issues.apache.org/jira/browse/HDFS-630">HDFS-630 <i> "In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block"</i></a>. Dead datanodes take ten minutes to timeout at namenode.
+      Meantime the namenode can still send DFSClients to the dead datanode as host for
+      a replicated block.  DFSClient can get stuck on trying to get block from a
+      dead node. This patch allows DFSClients pass namenode lists of known
+      dead datanodes. 
+</li>
       </ul>
       </li>
 </ul>

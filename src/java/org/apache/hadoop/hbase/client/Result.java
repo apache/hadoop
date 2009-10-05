@@ -97,7 +97,6 @@ public class Result implements Writable {
   /**
    * Instantiate a Result from the specified raw binary format.
    * @param bytes raw binary format of Result
-   * @param numKeys number of KeyValues in Result
    */
   public Result(ImmutableBytesWritable bytes) {
     this.bytes = bytes;

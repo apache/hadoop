@@ -74,8 +74,8 @@ public abstract class CompareFilter implements Filter {
 
   /**
    * Constructor.
-   * @param rowCompareOp the compare op for row matching
-   * @param rowComparator the comparator for row matching
+   * @param compareOp the compare op for row matching
+   * @param comparator the comparator for row matching
    */
   public CompareFilter(final CompareOp compareOp, 
       final WritableByteArrayComparable comparator) {
