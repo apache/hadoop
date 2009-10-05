@@ -98,6 +98,7 @@ Release 0.21.0 - Unreleased
    HBASE-1875  Compression test utility
    HBASE-1832  Faster enable/disable/delete
    HBASE-1481  Add fast row key only scanning
+   HBASE-1506  [performance] Make splits faster
 
   OPTIMIZATIONS
 

@@ -454,11 +454,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
           LOG.warn("unable to report to master for " + (now - lastMsg) +
             " milliseconds - retrying");
         }
-        if ((now - lastMsg) >= msgInterval) {
+        // Send messages to the master IF this.msgInterval has elapsed OR if
+        // we have something to tell (and we didn't just fail sending master).
+        if ((now - lastMsg) >= msgInterval ||
+            (outboundArray.length == 0 && !this.outboundMsgs.isEmpty())) {
           try {
             doMetrics();
             MemoryUsage memory =
-                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+              ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
             HServerLoad hsl = new HServerLoad(requestCount.get(),
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
@@ -1449,7 +1452,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   /*
    * Data structure to hold a HMsg and retries count.
    */
-  private static final class ToDoEntry {
+  static final class ToDoEntry {
     protected final AtomicInteger tries = new AtomicInteger(0);
     protected final HMsg msg;
 

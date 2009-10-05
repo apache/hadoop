@@ -454,7 +454,8 @@ class ServerManager implements HConstants {
           break;
 
         case MSG_REPORT_SPLIT:
-          processSplitRegion(region, incomingMsgs[++i], incomingMsgs[++i]);
+          processSplitRegion(serverInfo, region, incomingMsgs[++i],
+            incomingMsgs[++i]);
           break;
 
         default:
@@ -496,18 +497,26 @@ class ServerManager implements HConstants {
    * @param splitB
    * @param returnMsgs
    */
-  private void processSplitRegion(HRegionInfo region, HMsg splitA, HMsg splitB) {
+  private void processSplitRegion(final HServerInfo si, final HRegionInfo region,
+      final HMsg splitA, final HMsg splitB) {
     synchronized (master.regionManager) {
       // Cancel any actions pending for the affected region.
       // This prevents the master from sending a SPLIT message if the table
       // has already split by the region server. 
-      master.regionManager.endActions(region.getRegionName());
-      assignSplitDaughter(splitA.getRegionInfo());
+      this.master.regionManager.endActions(region.getRegionName());
+      // Region A is now opened immediately on the splitting server.  The message
+      // that its been successfully opened is probably just behind this split
+      // message.  Set up the master state so that its properly primed for the
+      // coming open message.
+      HRegionInfo a = splitA.getRegionInfo();
+      assignSplitDaughter(a);
+      this.master.regionManager.doRegionAssignment(a.getRegionNameAsString(), si);
+      // Region B will be assigned old-school style by the master.
       assignSplitDaughter(splitB.getRegionInfo());
       if (region.isMetaTable()) {
         // A meta region has split.
-        master.regionManager.offlineMetaRegion(region.getStartKey());
-        master.regionManager.incrementNumMetaRegions();
+        this.master.regionManager.offlineMetaRegion(region.getStartKey());
+        this.master.regionManager.incrementNumMetaRegions();
       }
     }
   }
@@ -578,7 +587,7 @@ class ServerManager implements HConstants {
       if (duplicateAssignment) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("region server " + serverInfo.getServerAddress().toString()
-              + " should not have opened region " + Bytes.toString(region.getRegionName()));
+            + " should not have opened region " + Bytes.toString(region.getRegionName()));
         }
 
         // This Region should not have been opened.
