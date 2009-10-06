@@ -483,11 +483,7 @@ public class HConnectionManager implements HConstants {
           currentRegion = s.getHRegionInfo();
           Result r = null;
           Result [] rrs = null;
-          do {
-            rrs = getRegionServerWithRetries(s);
-            if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
-              break; //exit completely
-            }
+          while ((rrs = getRegionServerWithRetries(s)) != null && rrs.length > 0) {
             r = rrs[0];
             byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER);
@@ -500,7 +496,7 @@ public class HConnectionManager implements HConstants {
                 }
               }
             }
-          } while(true);
+          }
           endKey = currentRegion.getEndKey();
         } while (!(endKey == null ||
             Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)));

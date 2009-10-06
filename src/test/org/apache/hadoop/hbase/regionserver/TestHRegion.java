@@ -65,8 +65,6 @@ public class TestHRegion extends HBaseTestCase {
   private final byte[] value1 = Bytes.toBytes("value1");
   private final byte[] value2 = Bytes.toBytes("value2");
   private final byte [] row = Bytes.toBytes("rowA");
-  private final byte [] row2 = Bytes.toBytes("rowB");
-  private final byte [] row3 = Bytes.toBytes("rowC");
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
@@ -208,11 +206,11 @@ public class TestHRegion extends HBaseTestCase {
     
     //checkAndPut with wrong value
     Store store = region.getStore(fam1);
-    int size = store.memstore.kvset.size();
+    store.memstore.kvset.size();
     
     boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
-    size = store.memstore.kvset.size();
+    store.memstore.kvset.size();
     
     Get get = new Get(row1);
     get.addColumn(fam2, qf1);
@@ -811,7 +809,7 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam1);
     scan.addFamily(fam2);
     try {
-      InternalScanner is = region.getScanner(scan);
+      region.getScanner(scan);
     } catch (Exception e) {
       assertTrue("Families could not be found in Region", false);
     }
@@ -832,7 +830,7 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam2);
     boolean ok = false;
     try {
-      InternalScanner is = region.getScanner(scan);
+      region.getScanner(scan);
     } catch (Exception e) {
       ok = true;
     }
@@ -1775,21 +1773,10 @@ public class TestHRegion extends HBaseTestCase {
     conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
     return conf;
   }  
-  
-  //////////////////////////////////////////////////////////////////////////////
-  // Helpers
-  //////////////////////////////////////////////////////////////////////////////
-  private HBaseConfiguration initHRegion() {
-    HBaseConfiguration conf = new HBaseConfiguration();
-    
-    conf.set("hbase.hstore.compactionThreshold", "2");
-    conf.setLong("hbase.hregion.max.filesize", 65536);
-    
-    return conf;
-  }
-  
+
   private void initHRegion (byte [] tableName, String callingMethod,
-      byte[] ... families) throws IOException{
+    byte[] ... families)
+  throws IOException {
     initHRegion(tableName, callingMethod, new HBaseConfiguration(), families);
   }
   
@@ -1797,10 +1784,8 @@ public class TestHRegion extends HBaseTestCase {
       HBaseConfiguration conf, byte [] ... families) throws IOException{
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(new HColumnDescriptor(family));
     }
-    
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod); 
     region = HRegion.createHRegion(info, path, conf);

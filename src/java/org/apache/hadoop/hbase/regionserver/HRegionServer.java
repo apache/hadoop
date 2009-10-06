@@ -1946,7 +1946,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
           break;
         }
       }
-      return results.toArray(new Result[0]);
+      // Below is an ugly hack where we cast the InternalScanner to be a
+      // HRegion.RegionScanner.  The alternative is to change InternalScanner
+      // interface but its used everywhere whereas we just need a bit of info
+      // from HRegion.RegionScanner, IF its filter if any is done with the scan
+      // and wants to tell the client to stop the scan.  This is done by passing
+      // a null result.
+      return ((HRegion.RegionScanner)s).isFilterDone() && results.isEmpty()?
+        null: results.toArray(new Result[0]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
         this.scanners.remove(scannerId);
@@ -2527,8 +2534,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public static void main(String [] args) {
     Configuration conf = new HBaseConfiguration();
     @SuppressWarnings("unchecked")
-    Class<? extends HRegionServer> regionServerClass = (Class<? extends HRegionServer>) conf
-        .getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
+    Class<? extends HRegionServer> regionServerClass =
+      (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL,
+        HRegionServer.class);
     doMain(args, regionServerClass);
   }
 

@@ -77,7 +77,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       try {
         rrs = server.next(scannerId, caching);
       } catch (IOException e) {
-    	IOException ioe = null;
+        IOException ioe = null;
         if (e instanceof RemoteException) {
           ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
         }
@@ -88,7 +88,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           throw new DoNotRetryIOException("Reset scanner", ioe);
         }
       }
-      return rrs == null || rrs.length == 0? null: rrs;
+      return rrs;
     }
     return null;
   }

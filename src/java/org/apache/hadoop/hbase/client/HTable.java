@@ -736,7 +736,7 @@ public class HTable implements HTableInterface {
     }
 
     public void initialize() throws IOException {
-      nextScanner(this.caching);
+      nextScanner(this.caching, false);
     }
 
     protected Scan getScan() {
@@ -747,13 +747,36 @@ public class HTable implements HTableInterface {
       return lastNext;
     }
 
+   /**
+     * @param endKey
+     * @return Returns true if the passed region endkey.
+     */
+    private boolean checkScanStopRow(final byte [] endKey) {
+      if (this.scan.getStopRow().length > 0) {
+        // there is a stop row, check to see if we are past it.
+        byte [] stopRow = scan.getStopRow();
+        int cmp = Bytes.compareTo(stopRow, 0, stopRow.length,
+          endKey, 0, endKey.length);
+        if (cmp <= 0) {
+          // stopRow <= endKey (endKey is equals to or larger than stopRow)
+          // This is a stop.
+          return true;
+        }
+      }
+      return false; //unlikely.
+    }
+
     /*
      * Gets a scanner for the next region.  If this.currentRegion != null, then
      * we will move to the endrow of this.currentRegion.  Else we will get
-     * scanner at the scan.getStartRow().
+     * scanner at the scan.getStartRow().  We will go no further, just tidy
+     * up outstanding scanners, if <code>currentRegion != null</code> and
+     * <code>done</code> is true.
      * @param nbRows
+     * @param done Server-side says we're done scanning.
      */
-    private boolean nextScanner(int nbRows) throws IOException {
+    private boolean nextScanner(int nbRows, final boolean done)
+    throws IOException {
       // Close the previous scanner if it's open
       if (this.callable != null) {
         this.callable.setClose();
@@ -764,20 +787,23 @@ public class HTable implements HTableInterface {
       // Where to start the next scanner
       byte [] localStartKey = null;
 
-      // if we're at the end of the table, then close and return false
-      // to stop iterating
+      // if we're at end of table, close and return false to stop iterating
       if (this.currentRegion != null) {
-        if (CLIENT_LOG.isDebugEnabled()) {
-          CLIENT_LOG.debug("Finished with region " + this.currentRegion);
-        }
         byte [] endKey = this.currentRegion.getEndKey();
         if (endKey == null ||
             Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY) ||
-            filterSaysStop(endKey)) {
+            checkScanStopRow(endKey) ||
+            done) {
           close();
+          if (CLIENT_LOG.isDebugEnabled()) {
+            CLIENT_LOG.debug("Finished with scanning at " + this.currentRegion);
+          }
           return false;
         }
         localStartKey = endKey;
+        if (CLIENT_LOG.isDebugEnabled()) {
+          CLIENT_LOG.debug("Finished with region " + this.currentRegion);
+        }
       } else {
         localStartKey = this.scan.getStartRow();
       }
@@ -855,6 +881,9 @@ public class HTable implements HTableInterface {
         boolean skipFirst = false;
         do {
           try {
+            // Server returns a null values if scanning is to stop.  Else,
+            // returns an empty array if scanning is to go on and we've just
+            // exhausted current region.
             values = getConnection().getRegionServerWithRetries(callable);
             if (skipFirst) {
               skipFirst = false;
@@ -892,7 +921,8 @@ public class HTable implements HTableInterface {
               this.lastResult = rs;
             }
           }
-        } while (countdown > 0 && nextScanner(countdown));
+          // Values == null means server-side filter has determined we must STOP
+        } while (countdown > 0 && nextScanner(countdown, values == null));
       }
 
       if (cache.size() > 0) {

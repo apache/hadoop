@@ -238,7 +238,7 @@ public class HBaseAdmin {
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
-
+    final int batchCount = this.conf.getInt("hbase.admin.scanner.caching", 10);
     // Wait until first region is deleted
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getServerAddress());
@@ -247,31 +247,34 @@ public class HBaseAdmin {
       long scannerId = -1L;
       try {
         Scan scan = new Scan().addColumn(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-        
+          HConstants.REGIONINFO_QUALIFIER);
         scannerId = server.openScanner(
-            firstMetaServer.getRegionInfo().getRegionName(), 
-            scan);
-        Result values = server.next(scannerId);
-        if (values == null || values.size() == 0) {
+          firstMetaServer.getRegionInfo().getRegionName(), scan);
+        // Get a batch at a time.
+        Result [] values = server.next(scannerId, batchCount);
+        if (values == null || values.length == 0) {
           break;
         }
         boolean found = false;
-        NavigableMap<byte[], byte[]> infoValues = values.getFamilyMap(HConstants.CATALOG_FAMILY);
-        for (Map.Entry<byte [], byte []> e: infoValues.entrySet()) {
-          if (Bytes.equals(e.getKey(), HConstants.REGIONINFO_QUALIFIER)) {
-            info = (HRegionInfo) Writables.getWritable(
-              e.getValue(), info);
-            
-            if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
-              found = true;
+        for (int i = 0; i < values.length; i++) {
+          Result r = values[i];
+          NavigableMap<byte[], byte[]> infoValues =
+            r.getFamilyMap(HConstants.CATALOG_FAMILY);
+          for (Map.Entry<byte[], byte[]> e : infoValues.entrySet()) {
+            if (Bytes.equals(e.getKey(), HConstants.REGIONINFO_QUALIFIER)) {
+              info = (HRegionInfo) Writables.getWritable(e.getValue(), info);
+              if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+                found = true;
+              } else {
+                found = false;
+                break;
+              }
             }
           }
         }
         if (!found) {
           break;
         }
-
       } catch (IOException ex) {
         if(tries == numRetries - 1) {           // no more tries left
           if (ex instanceof RemoteException) {
@@ -279,7 +282,6 @@ public class HBaseAdmin {
           }
           throw ex;
         }
-
       } finally {
         if (scannerId != -1L) {
           try {
@@ -289,7 +291,6 @@ public class HBaseAdmin {
           }
         }
       }
-
       try {
         Thread.sleep(getPauseTime(tries));
       } catch (InterruptedException e) {
@@ -300,6 +301,8 @@ public class HBaseAdmin {
     HConnectionManager.deleteConnectionInfo(conf, false);
     LOG.info("Deleted " + Bytes.toString(tableName));
   }
+
+  
 
   /**
    * Brings a table on-line (enables it).

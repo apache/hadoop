@@ -1713,13 +1713,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
     }
 
-    /**
-     * Get the next row of results from this region.
-     * @param results list to append results to
-     * @return true if there are more rows, false if scanner is done
-     * @throws NotServerRegionException If this region is closing or closed
-     */
-    @Override
     public boolean next(List<KeyValue> outResults) throws IOException {
       if (closing.get() || closed.get()) {
         close();
@@ -1733,12 +1726,23 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       outResults.addAll(results);
       resetFilters();
-      if(filter != null && filter.filterAllRemaining()) {
+      if (isFilterDone()) {
         return false;
       }
       return returnResult;
     }
 
+    /*
+     * @return True if a filter rules the scanner is over, done.
+     */
+    boolean isFilterDone() {
+      return this.filter != null && this.filter.filterAllRemaining();
+    }
+
+    /*
+     * @return true if there are more rows, false if scanner is done
+     * @throws IOException
+     */
     private boolean nextInternal() throws IOException {
       // This method should probably be reorganized a bit... has gotten messy
       KeyValue kv;

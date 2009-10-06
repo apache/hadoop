@@ -58,6 +58,8 @@ Release 0.21.0 - Unreleased
                doReconstructionLog (Clint Morgan via Stack)
    HBASE-1878  BaseScanner results can't be trusted at all (Related to
                hbase-1784)
+   HBASE-1831  Scanning API must be reworked to allow for fully functional
+               Filters client-side
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
