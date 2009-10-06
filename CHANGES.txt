@@ -6,6 +6,10 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+  HDFS-503. This patch implements an optional layer over HDFS that 
+  implements offline erasure-coding.  It can be used to reduce the 
+  total storage requirements of HDFS.  (dhruba)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
