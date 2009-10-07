@@ -252,7 +252,7 @@ public class LocalHBaseCluster implements HConstants {
    */
   public void shutdown() throws IOException {
     LOG.debug("Shutting down HBase Cluster");
-    // Be careful about how we shutdown hdfs.
+    // Be careful about how we shutdown hdfs.  Its done elsewhere.
     synchronized (this.regionThreads) {
       for (RegionServerThread t: this.regionThreads) {
         t.getRegionServer().setShutdownHDFS(false);
@@ -286,7 +286,6 @@ public class LocalHBaseCluster implements HConstants {
         }
       }
     }
-    FileSystem.closeAll();
     LOG.info("Shutdown " +
       ((this.regionThreads != null)? this.master.getName(): "0 masters") +
       " " + this.regionThreads.size() + " region server(s)");

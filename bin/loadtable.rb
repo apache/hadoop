@@ -60,7 +60,7 @@ LOG = LogFactory.getLog(NAME)
 # Set hadoop filesystem configuration using the hbase.rootdir.
 # Otherwise, we'll always use localhost though the hbase.rootdir
 # might be pointing at hdfs location.
-c.set("fs.default.name", c.get(HConstants::HBASE_DIR))
+c.set("fs.defaultFS", c.get(HConstants::HBASE_DIR))
 fs = FileSystem.get(c)
 
 # If hfiles directory does not exist, exit.

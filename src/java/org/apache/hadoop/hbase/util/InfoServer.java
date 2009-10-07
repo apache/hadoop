@@ -78,7 +78,9 @@ public class InfoServer extends HttpServer {
         break;
       }
     }
-    defaultContexts.put(oldLogsContext, Boolean.FALSE);
+    if (oldLogsContext != null) {
+      this.defaultContexts.put(oldLogsContext, Boolean.FALSE);
+    }
     // Now do my logs.
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hbase.log.dir");

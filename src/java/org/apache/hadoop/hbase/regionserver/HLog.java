@@ -64,6 +64,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.SequenceFile.Reader;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
 /**
@@ -348,13 +349,13 @@ public class HLog implements HConstants, Syncable {
   }
   
   protected SequenceFile.Writer createWriter(Path path,
-      Class<? extends HLogKey> keyClass, Class<? extends KeyValue> valueClass)
-      throws IOException {
+    Class<? extends HLogKey> keyClass, Class<? extends KeyValue> valueClass)
+  throws IOException {
     return SequenceFile.createWriter(this.fs, this.conf, path, keyClass,
-        valueClass, fs.getConf().getInt("io.file.buffer.size", 4096), fs
-            .getDefaultReplication(), this.blocksize,
-        SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
-        new Metadata());
+      valueClass, fs.getConf().getInt("io.file.buffer.size", 4096),
+      fs.getDefaultReplication(), this.blocksize,
+      SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
+      new Metadata());
   }
   
   /*
@@ -1228,4 +1229,15 @@ public class HLog implements HConstants, Syncable {
       ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
       ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
   
+  static class HLogWriter extends SequenceFile.Writer {
+    public HLogWriter(FileSystem arg0, Configuration arg1, Path arg2,
+        Class arg3, Class arg4, int arg5, short arg6, long arg7,
+        Progressable arg8, Metadata arg9) throws IOException {
+      super(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+    
+    void flush() {
+      
+    }
+  }
 }

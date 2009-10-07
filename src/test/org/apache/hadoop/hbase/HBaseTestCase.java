@@ -109,7 +109,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected void setUp() throws Exception {
     super.setUp();
     localfs =
-      (conf.get("fs.default.name", "file:///").compareTo("file:///") == 0);
+      (conf.get("fs.defaultFS", "file:///").compareTo("file:///") == 0);
 
     if (fs == null) {
       this.fs = FileSystem.get(conf);
@@ -621,16 +621,6 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public static void shutdownDfs(MiniDFSCluster cluster) {
     if (cluster != null) {
-      try {
-        FileSystem fs = cluster.getFileSystem();
-        if (fs != null) {
-          LOG.info("Shutting down FileSystem");
-          fs.close();
-        }
-      } catch (IOException e) {
-        LOG.error("error closing file system", e);
-      }
-
       LOG.info("Shutting down Mini DFS ");
       try {
         cluster.shutdown();
@@ -638,6 +628,16 @@ public abstract class HBaseTestCase extends TestCase {
         /// Can get a java.lang.reflect.UndeclaredThrowableException thrown
         // here because of an InterruptedException. Don't let exceptions in
         // here be cause of test failure.
+      }
+      try {
+        FileSystem fs = cluster.getFileSystem();
+        if (fs != null) {
+          LOG.info("Shutting down FileSystem");
+          fs.close();
+        }
+        FileSystem.closeAll();
+      } catch (IOException e) {
+        LOG.error("error closing file system", e);
       }
     }
   }

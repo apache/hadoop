@@ -55,8 +55,8 @@ import org.apache.lucene.search.TermQuery;
 /**
  * Test Map/Reduce job to build index over HBase table
  */
-public class TestTableIndex extends MultiRegionTable {
-  private static final Log LOG = LogFactory.getLog(TestTableIndex.class);
+public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends MultiRegionTable {
+  private static final Log LOG = LogFactory.getLog(DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex.class);
 
   static final byte[] TABLE_NAME = Bytes.toBytes("moretest");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
@@ -65,7 +65,7 @@ public class TestTableIndex extends MultiRegionTable {
   static final String INDEX_DIR = "testindex";
 
   /** default constructor */
-  public TestTableIndex() {
+  public DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex() {
     super(Bytes.toString(INPUT_FAMILY));
     desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_FAMILY));
@@ -251,6 +251,6 @@ public class TestTableIndex extends MultiRegionTable {
    * @param args unused
    */
   public static void main(String[] args) {
-    TestRunner.run(new TestSuite(TestTableIndex.class));
+    TestRunner.run(new TestSuite(DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex.class));
   }
 }

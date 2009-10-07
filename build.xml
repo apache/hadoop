@@ -494,7 +494,7 @@
       <sysproperty key="contrib.name" value="${name}"/>
       
       <sysproperty key="user.dir" value="${build.test}/data"/>
-      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
+      <sysproperty key="fs.defaultFS" value="${fs.default.name}"/>
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
       <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/> 
       <classpath refid="test.classpath"/>
