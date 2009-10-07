@@ -869,7 +869,11 @@ public final class FileContext {
       }
       ArrayList<FileStatus> results = new ArrayList<FileStatus>(paths.length);
       for (int i = 0; i < paths.length; i++) {
-        results.add(FileContext.this.getFileStatus(paths[i]));
+        try {
+          results.add(FileContext.this.getFileStatus(paths[i]));
+        } catch (FileNotFoundException fnfe) {
+          // ignoring 
+        }
       }
       return results.toArray(new FileStatus[results.size()]);
     }
@@ -1016,17 +1020,25 @@ public final class FileContext {
      * @return an array of FileStatus objects
      * @throws IOException if any I/O error occurs when fetching file status
      */
-    public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+    public FileStatus[] globStatus(final Path pathPattern, final PathFilter filter)
       throws IOException {
+      
       String filename = pathPattern.toUri().getPath();
+      
       List<String> filePatterns = GlobExpander.expand(filename);
       if (filePatterns.size() == 1) {
-        return globStatusInternal(pathPattern, filter);
+        Path p = fixRelativePart(pathPattern);
+        FileSystem fs = getFSofPath(p);
+        URI uri = fs.getUri();
+        return globStatusInternal(uri, p, filter);
       } else {
         List<FileStatus> results = new ArrayList<FileStatus>();
         for (String filePattern : filePatterns) {
-          FileStatus[] files = 
-                      globStatusInternal(new Path(filePattern), filter);
+          Path p = new Path(filePattern);
+          p = fixRelativePart(p);
+          FileSystem fs = getFSofPath(p);
+          URI uri = fs.getUri();
+          FileStatus[] files = globStatusInternal(uri, p, filter);
           for (FileStatus file : files) {
             results.add(file);
           }
@@ -1035,15 +1047,21 @@ public final class FileContext {
       }
     }
 
-    private FileStatus[] globStatusInternal(Path pathPattern, PathFilter filter)
+    private FileStatus[] globStatusInternal(
+        final URI uri, final Path inPathPattern, final PathFilter filter)
       throws IOException {
       Path[] parents = new Path[1];
       int level = 0;
+      
+      // comes in as full path, but just in case
+      final Path pathPattern = fixRelativePart(inPathPattern);
+      
       String filename = pathPattern.toUri().getPath();
       
       // path has only zero component
       if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
-        return getFileStatus(new Path[]{pathPattern});
+        Path p = pathPattern.makeQualified(uri, null);
+        return getFileStatus(new Path[]{p});
       }
 
       // path has at least one component
@@ -1058,11 +1076,18 @@ public final class FileContext {
 
       // glob the paths that match the parent path, ie. [0, components.length-1]
       boolean[] hasGlob = new boolean[]{false};
-      Path[] parentPaths = globPathsLevel(parents, components, level, hasGlob);
+      Path[] relParentPaths = globPathsLevel(parents, components, level, hasGlob);
       FileStatus[] results;
-      if (parentPaths == null || parentPaths.length == 0) {
+      
+      if (relParentPaths == null || relParentPaths.length == 0) {
         results = null;
       } else {
+        // fix the pathes to be abs
+        Path[] parentPaths = new Path [relParentPaths.length]; 
+        for(int i=0; i<relParentPaths.length; i++) {
+          parentPaths[i] = relParentPaths[i].makeQualified(uri, null);
+        }
+        
         // Now work on the last component of the path
         GlobFilter fp = 
                     new GlobFilter(components[components.length - 1], filter);
@@ -1374,7 +1399,7 @@ public final class FileContext {
     return (srcUri.getAuthority().equals(dstUri.getAuthority()) && srcUri
         .getAuthority().equals(dstUri.getAuthority()));
   }
-  
+
   /**
    * Deletes all the paths in deleteOnExit on JVM shutdown
    */
