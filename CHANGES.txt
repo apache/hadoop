@@ -1075,6 +1075,9 @@ Trunk (unreleased changes)
     HADOOP-6285. Fix the result type of the getParameterMap method in the
     HttpServer.QuotingInputFilter. (omalley)
 
+    HADOOP-6286. Fix bugs in related to URI handling in glob methods in 
+    FileContext. (Boris Shkolnik via suresh)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
