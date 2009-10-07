@@ -1663,7 +1663,7 @@ public class HFile {
       boolean checkFamily = cmd.hasOption("a");
       // get configuration, file system and get list of files
       HBaseConfiguration conf = new HBaseConfiguration();
-      conf.set("fs.default.name",
+      conf.set("fs.defaultFS",
         conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
       FileSystem fs = FileSystem.get(conf);
       ArrayList<Path> files = new ArrayList<Path>();

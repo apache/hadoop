@@ -162,11 +162,15 @@ public class Store implements HConstants, HeapSize {
     final Progressable reporter)
   throws IOException {
     HRegionInfo info = region.regionInfo;
+    this.fs = fs;
     this.homedir = getStoreHomedir(basedir, info.getEncodedName(),
       family.getName());
+    if (!this.fs.exists(this.homedir)) {
+      if (!this.fs.mkdirs(this.homedir))
+        throw new IOException("Failed create of: " + this.homedir.toString());
+    }
     this.region = region;
     this.family = family;
-    this.fs = fs;
     this.conf = conf;
     this.blockcache = family.isBlockCacheEnabled();
     this.blocksize = family.getBlocksize();

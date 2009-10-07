@@ -112,7 +112,7 @@ public class TestMergeTool extends HBaseTestCase {
     // Start up dfs
     this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     this.fs = this.dfsCluster.getFileSystem();
-    conf.set("fs.default.name", fs.getUri().toString());
+    conf.set("fs.defaultFS", fs.getUri().toString());
     Path parentdir = fs.getHomeDirectory();
     conf.set(HConstants.HBASE_DIR, parentdir.toString());
     fs.mkdirs(parentdir);

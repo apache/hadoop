@@ -267,7 +267,7 @@
       -->
       <sysproperty key="user.dir" value="${build.test}/data"/>
       
-      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
+      <sysproperty key="fs.defaultFS" value="${fs.default.name}"/>
       <sysproperty key="hbase.test.localoutputfile" value="${hbase.test.localoutputfile}"/>
       <sysproperty key="hbase.log.dir" value="${hbase.log.dir}"/> 
       <classpath refid="test.classpath"/>

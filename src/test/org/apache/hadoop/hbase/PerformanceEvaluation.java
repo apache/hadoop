@@ -862,7 +862,7 @@ public class PerformanceEvaluation implements HConstants {
       // mangle the conf so that the fs parameter points to the minidfs we
       // just started up
       FileSystem fs = dfsCluster.getFileSystem();
-      conf.set("fs.default.name", fs.getUri().toString());      
+      conf.set("fs.defaultFS", fs.getUri().toString());      
       Path parentdir = fs.getHomeDirectory();
       conf.set(HConstants.HBASE_DIR, parentdir.toString());
       fs.mkdirs(parentdir);

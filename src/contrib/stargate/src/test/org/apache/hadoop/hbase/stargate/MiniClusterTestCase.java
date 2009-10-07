@@ -86,7 +86,7 @@ public class MiniClusterTestCase extends TestCase {
     testDir = new File(path.toString());
     dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     FileSystem filesystem = dfsCluster.getFileSystem();
-    conf.set("fs.default.name", filesystem.getUri().toString());      
+    conf.set("fs.defaultFS", filesystem.getUri().toString());      
     Path parentdir = filesystem.getHomeDirectory();
     conf.set(HConstants.HBASE_DIR, parentdir.toString());
     filesystem.mkdirs(parentdir);

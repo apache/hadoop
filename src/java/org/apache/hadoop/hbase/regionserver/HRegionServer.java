@@ -25,7 +25,6 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -759,18 +758,18 @@ public class HRegionServer implements HConstants, HRegionInterface,
         this.serverInfo.setServerAddress(hsa);
       }
       // Master sent us hbase.rootdir to use. Should be fully qualified
-      // path with file system specification included.  Set 'fs.default.name'
+      // path with file system specification included.  Set 'fs.defaultFS'
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
       // accessors will be going against wrong filesystem (unless all is set
       // to defaults).
-      this.conf.set("fs.default.name", this.conf.get("hbase.rootdir"));
+      this.conf.set("fs.defaultFS", this.conf.get("hbase.rootdir"));
       this.fs = FileSystem.get(this.conf);
 
       // Register shutdown hook for HRegionServer, runs an orderly shutdown
       // when a kill signal is recieved
       Runtime.getRuntime().addShutdownHook(new ShutdownThread(this,
           Thread.currentThread()));
-      this.hdfsShutdownThread = suppressHdfsShutdownHook();
+      this.conf.setBoolean("fs.automatic.close", false);
 
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.hlog = setupHLog();
@@ -983,16 +982,21 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     @Override
     public void run() {
-      LOG.info("Starting shutdown thread.");
+      LOG.info("Starting shutdown thread");
       
       // tell the region server to stop
-      instance.stop();
+      this.instance.stop();
 
       // Wait for main thread to exit.
-      Threads.shutdown(mainThread);
+      Threads.shutdown(this.mainThread);
+      try {
+        FileSystem.closeAll();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
 
       LOG.info("Shutdown thread complete");
-    }    
+    }
   }
 
   // We need to call HDFS shutdown when we are done shutting down
@@ -1027,43 +1031,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
           LOG.warn("Failed major compaction check on " + r, e);
         }
       }
-    }
-  }
-  
-  /**
-   * So, HDFS caches FileSystems so when you call FileSystem.get it's fast. In
-   * order to make sure things are cleaned up, it also creates a shutdown hook
-   * so that all filesystems can be closed when the process is terminated. This
-   * conveniently runs concurrently with our own shutdown handler, and
-   * therefore causes all the filesystems to be closed before the server can do
-   * all its necessary cleanup.
-   *
-   * The crazy dirty reflection in this method sneaks into the FileSystem cache
-   * and grabs the shutdown hook, removes it from the list of active shutdown
-   * hooks, and hangs onto it until later. Then, after we're properly done with
-   * our graceful shutdown, we can execute the hdfs hook manually to make sure
-   * loose ends are tied up.
-   *
-   * This seems quite fragile and susceptible to breaking if Hadoop changes
-   * anything about the way this cleanup is managed. Keep an eye on things.
-   */
-  private Thread suppressHdfsShutdownHook() {
-    try {
-      Field field = FileSystem.class.getDeclaredField ("clientFinalizer");
-      field.setAccessible(true);
-      Thread hdfsClientFinalizer = (Thread)field.get(null);
-      if (hdfsClientFinalizer == null) {
-        throw new RuntimeException("client finalizer is null, can't suppress!");
-      }
-      Runtime.getRuntime().removeShutdownHook(hdfsClientFinalizer);
-      return hdfsClientFinalizer;
-      
-    } catch (NoSuchFieldException nsfe) {
-      LOG.fatal("Couldn't find field 'clientFinalizer' in FileSystem!", nsfe);
-      throw new RuntimeException("Failed to suppress HDFS shutdown hook");
-    } catch (IllegalAccessException iae) {
-      LOG.fatal("Couldn't access field 'clientFinalizer' in FileSystem!", iae);
-      throw new RuntimeException("Failed to suppress HDFS shutdown hook");
     }
   }
 
