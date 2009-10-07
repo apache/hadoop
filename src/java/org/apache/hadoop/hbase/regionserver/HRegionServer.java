@@ -1396,7 +1396,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   /*
    * Data structure to hold a HMsg and retries count.
    */
-  static final class ToDoEntry {
+  private static final class ToDoEntry {
     protected final AtomicInteger tries = new AtomicInteger(0);
     protected final HMsg msg;
 

@@ -60,6 +60,7 @@ Release 0.21.0 - Unreleased
                hbase-1784)
    HBASE-1831  Scanning API must be reworked to allow for fully functional
                Filters client-side
+   HBASE-1890  hbase-1506 where assignment is done at regionserver doesn't work
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -341,17 +341,8 @@ class RegionManager implements HConstants {
     LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
     rs.setPendingOpen(sinfo.getServerName());
     this.regionsInTransition.put(regionName, rs);
-    if (returnMsgs != null) {
-      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
-    }
-  }
 
-  /**
-   * @param regionName
-   * @param sinfo
-   */
-  void doRegionAssignment(final String regionName, final HServerInfo sinfo) {
-    doRegionAssignment(this.regionsInTransition.get(regionName), sinfo, null);
+    returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
   }
 
   /*
