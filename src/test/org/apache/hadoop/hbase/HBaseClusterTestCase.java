@@ -115,32 +115,13 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     // continue
   } 
 
-  /*
-   * Create dir and set its value into configuration.
-   * @param key Create dir under test for this key.  Set its fully-qualified
-   * value into the conf.
-   * @throws IOException
-   */
-  private void setupDFSConfig(final String key) throws IOException {
-    Path basedir =
-      new Path(this.conf.get(TEST_DIRECTORY_KEY, "test/build/data"));
-    FileSystem fs = FileSystem.get(this.conf);
-    Path dir = fs.makeQualified(new Path(basedir, key));
-    // Delete if exists.  May contain data from old tests.
-    if (fs.exists(dir)) if (!fs.delete(dir, true)) throw new IOException("Delete: " + dir);
-    if (!fs.mkdirs(dir)) throw new IOException("Create: " + dir);
-    this.conf.set(key, dir.toString());
-  }
-
   @Override
   protected void setUp() throws Exception {
     try {
       if (this.startDfs) {
-        /*
-        setupDFSConfig("dfs.namenode.name.dir");
-        setupDFSConfig("dfs.datanode.data.dir");
-        */
-        this.dfsCluster = new MiniDFSCluster(this.conf, 2, true, null);
+        // This spews a bunch of warnings about missing scheme. TODO: fix.
+        this.dfsCluster = new MiniDFSCluster(0, this.conf, 2, true, true, true,
+          null, null, null, null);
 
         // mangle the conf so that the fs parameter points to the minidfs we
         // just started up

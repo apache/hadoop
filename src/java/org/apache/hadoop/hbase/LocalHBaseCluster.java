@@ -28,13 +28,12 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -249,18 +248,14 @@ public class LocalHBaseCluster implements HConstants {
 
   /**
    * Shut down the mini HBase cluster
+   * @throws IOException 
    */
-  public void shutdown() {
+  public void shutdown() throws IOException {
     LOG.debug("Shutting down HBase Cluster");
-    // Be careful how the hdfs shutdown thread runs in context where more than
-    // one regionserver in the mix.
-    Thread shutdownThread = null;
+    // Be careful about how we shutdown hdfs.
     synchronized (this.regionThreads) {
       for (RegionServerThread t: this.regionThreads) {
-        Thread tt = t.getRegionServer().setHDFSShutdownThreadOnExit(null);
-        if (shutdownThread == null && tt != null) {
-          shutdownThread = tt;
-        }
+        t.getRegionServer().setShutdownHDFS(false);
       }
     }
     if(this.master != null) {
@@ -291,7 +286,7 @@ public class LocalHBaseCluster implements HConstants {
         }
       }
     }
-    Threads.shutdown(shutdownThread);
+    FileSystem.closeAll();
     LOG.info("Shutdown " +
       ((this.regionThreads != null)? this.master.getName(): "0 masters") +
       " " + this.regionThreads.size() + " region server(s)");

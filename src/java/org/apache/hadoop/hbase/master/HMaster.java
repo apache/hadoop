@@ -595,7 +595,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     Path logsDirPath =
       new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
     if (!this.fs.exists(logsDirPath)) {
-      if (this.fs.mkdirs(logsDirPath))
+      if (!this.fs.mkdirs(logsDirPath))
         throw new IOException("Failed create of " + logsDirPath);
     }
     FileStatus [] logFolders = this.fs.listStatus(logsDirPath);

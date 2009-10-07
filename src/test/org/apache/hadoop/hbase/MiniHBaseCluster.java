@@ -147,7 +147,7 @@ public class MiniHBaseCluster implements HConstants {
     LOG.info("Stopping " + server.toString());
     if (!shutdownFS) {
       // Stop the running of the hdfs shutdown thread in tests.
-      server.getRegionServer().setHDFSShutdownThreadOnExit(null);
+      server.getRegionServer().setShutdownHDFS(false);
     }
     server.getRegionServer().stop();
     return server;
@@ -172,8 +172,9 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Shut down the mini HBase cluster
+   * @throws IOException 
    */
-  public void shutdown() {
+  public void shutdown() throws IOException {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
