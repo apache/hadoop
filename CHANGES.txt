@@ -107,6 +107,9 @@ Release 0.21.0 - Unreleased
     and suggests using -skpTrash, when moving to trash fails.
     (Boris Shkolnik via suresh)
 
+    HADOOP-6303. Eclipse .classpath template has outdated jar files and is
+    missing some new ones.  (cos)
+
   NEW FEATURES
 
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
