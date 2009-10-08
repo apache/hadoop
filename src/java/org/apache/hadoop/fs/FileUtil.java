@@ -628,14 +628,18 @@ public class FileUtil {
      * Retrieves the number of links to the specified file.
      */
     public static int getLinkCount(File fileName) throws IOException {
+      if (!fileName.exists()) {
+        throw new FileNotFoundException(fileName + " not found.");
+      }
+
       int len = getLinkCountCommand.length;
       String[] cmd = new String[len + 1];
       for (int i = 0; i < len; i++) {
         cmd[i] = getLinkCountCommand[i];
       }
       cmd[len] = fileName.toString();
-      String inpMsg = "";
-      String errMsg = "";
+      String inpMsg = null;
+      String errMsg = null;
       int exitValue = -1;
       BufferedReader in = null;
       BufferedReader err = null;
@@ -647,14 +651,11 @@ public class FileUtil {
         in = new BufferedReader(new InputStreamReader(
                                     process.getInputStream()));
         inpMsg = in.readLine();
-        if (inpMsg == null)  inpMsg = "";
-        
         err = new BufferedReader(new InputStreamReader(
                                      process.getErrorStream()));
         errMsg = err.readLine();
-        if (errMsg == null)  errMsg = "";
-        if (exitValue != 0) {
-          throw new IOException(inpMsg + errMsg);
+        if (inpMsg == null || exitValue != 0) {
+          throw createIOException(fileName, inpMsg, errMsg, exitValue, null);
         }
         if (getOSType() == OSType.OS_TYPE_SOLARIS) {
           String[] result = inpMsg.split("\\s+");
@@ -663,19 +664,25 @@ public class FileUtil {
           return Integer.parseInt(inpMsg);
         }
       } catch (NumberFormatException e) {
-        throw new IOException(StringUtils.stringifyException(e) + 
-                              inpMsg + errMsg +
-                              " on file:" + fileName);
+        throw createIOException(fileName, inpMsg, errMsg, exitValue, e);
       } catch (InterruptedException e) {
-        throw new IOException(StringUtils.stringifyException(e) + 
-                              inpMsg + errMsg +
-                              " on file:" + fileName);
+        throw createIOException(fileName, inpMsg, errMsg, exitValue, e);
       } finally {
         process.destroy();
         if (in != null) in.close();
         if (err != null) err.close();
       }
     }
+  }
+
+  /** Create an IOException for failing to get link count. */
+  static private IOException createIOException(File f, String message,
+      String error, int exitvalue, Exception cause) {
+    final String s = "Failed to get link count on file " + f
+        + ": message=" + message
+        + "; error=" + error
+        + "; exit value=" + exitvalue;
+    return cause == null? new IOException(s): new IOException(s, cause);
   }
 
   /**

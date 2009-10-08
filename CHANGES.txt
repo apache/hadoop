@@ -12,6 +12,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-6283. Improve the exception messages thrown by
+    FileUtil$HardLink.getLinkCount(..).  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
