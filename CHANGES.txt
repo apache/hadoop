@@ -15,6 +15,9 @@ Trunk (unreleased changes)
     HADOOP-6283. Improve the exception messages thrown by
     FileUtil$HardLink.getLinkCount(..).  (szetszwo)
 
+    HADOOP-6279. Add Runtime::maxMemory to JVM metrics. (Todd Lipcon via
+    cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
