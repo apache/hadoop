@@ -1982,19 +1982,21 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return rur.createInfo();
   }
 
-  /** Update a replica of a block. */
-  synchronized void updateReplica(final Block block, final long recoveryId,
-      final long newlength) throws IOException {
+  @Override // FSDatasetInterface
+  public synchronized ReplicaInfo updateReplicaUnderRecovery(
+                                    final Block oldBlock,
+                                    final long recoveryId,
+                                    final long newlength) throws IOException {
     //get replica
-    final ReplicaInfo replica = volumeMap.get(block.getBlockId());
-    DataNode.LOG.info("updateReplica: block=" + block
+    final ReplicaInfo replica = volumeMap.get(oldBlock.getBlockId());
+    DataNode.LOG.info("updateReplica: block=" + oldBlock
         + ", recoveryId=" + recoveryId
         + ", length=" + newlength
         + ", replica=" + replica);
 
     //check replica
     if (replica == null) {
-      throw new ReplicaNotFoundException(block);
+      throw new ReplicaNotFoundException(oldBlock);
     }
 
     //check replica state
@@ -2007,26 +2009,18 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     checkReplicaFiles(replica);
 
     //update replica
-    final ReplicaInfo finalized = (ReplicaInfo)updateReplicaUnderRecovery(
-                                    replica, recoveryId, newlength);
+    final FinalizedReplica finalized = updateReplicaUnderRecovery(
+        (ReplicaUnderRecovery)replica, recoveryId, newlength);
 
     //check replica files after update
     checkReplicaFiles(finalized);
+    return finalized;
   }
 
-  @Override // FSDatasetInterface
-  public synchronized FinalizedReplica updateReplicaUnderRecovery(
-                                          Block oldBlock,
+  private FinalizedReplica updateReplicaUnderRecovery(
+                                          ReplicaUnderRecovery rur,
                                           long recoveryId,
                                           long newlength) throws IOException {
-    Replica r = getReplica(oldBlock.getBlockId());
-    if(r.getState() != ReplicaState.RUR)
-      throw new IOException("Replica " + r + " must be under recovery.");
-    ReplicaUnderRecovery rur = (ReplicaUnderRecovery)r;
-    DataNode.LOG.info("updateReplicaUnderRecovery: recoveryId=" + recoveryId
-        + ", newlength=" + newlength
-        + ", rur=" + rur);
-
     //check recovery id
     if (rur.getRecoveryID() != recoveryId) {
       throw new IOException("rur.getRecoveryID() != recoveryId = " + recoveryId

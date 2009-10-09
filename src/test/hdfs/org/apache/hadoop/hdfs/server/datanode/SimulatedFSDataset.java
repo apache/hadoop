@@ -804,10 +804,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return new ReplicaRecoveryInfo(rBlock.getBlock(), ReplicaState.FINALIZED);
   }
 
-  @Override
+  @Override // FSDatasetInterface
   public FinalizedReplica updateReplicaUnderRecovery(Block oldBlock,
-                                          long recoveryId,
-                                          long newlength) throws IOException {
+                                        long recoveryId,
+                                        long newlength) throws IOException {
     return new FinalizedReplica(
         oldBlock.getBlockId(), newlength, recoveryId, null, null);
   }

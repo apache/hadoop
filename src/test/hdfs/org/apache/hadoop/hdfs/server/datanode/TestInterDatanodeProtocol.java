@@ -234,9 +234,8 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       FSDataset.checkReplicaFiles(rur);
 
       //update
-      final ReplicaInfo finalized = 
-        (ReplicaInfo)fsdataset.updateReplicaUnderRecovery(
-            rur, recoveryid, newlength);
+      final ReplicaInfo finalized = fsdataset.updateReplicaUnderRecovery(
+                                                rur, recoveryid, newlength);
 
       //check meta data after update
       FSDataset.checkReplicaFiles(finalized);

@@ -350,7 +350,8 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   /**
    * Update replica's generation stamp and length and finalize it.
    */
-  public FinalizedReplica updateReplicaUnderRecovery(Block oldBlock,
+  public ReplicaInfo updateReplicaUnderRecovery(
+                                          Block oldBlock,
                                           long recoveryId,
                                           long newLength) throws IOException;
 }
