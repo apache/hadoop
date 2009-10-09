@@ -545,6 +545,8 @@ module HBase
       now = Time.now
       scan = Scan.new()
       scan.setCacheBlocks(false)
+      # We can safely set scanner caching with the first key only filter
+      scan.setCaching(10)
       scan.setFilter(FirstKeyOnlyFilter.new())
       s = @table.getScanner(scan)
       count = 0

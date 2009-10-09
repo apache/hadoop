@@ -104,6 +104,7 @@ Release 0.21.0 - Unreleased
    HBASE-1506  [performance] Make splits faster
    HBASE-1722  Add support for exporting HBase metrics via JMX
                (Gary Helming via Stack)
+   HBASE-1899  Use scanner caching in shell count
 
   OPTIMIZATIONS
 
