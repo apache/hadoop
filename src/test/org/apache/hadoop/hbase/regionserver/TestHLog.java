@@ -151,6 +151,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
           timestamp, new byte[] { (byte)(i + '0') }));
       }
       log.append(regionName, tableName, cols, false, System.currentTimeMillis());
+      log.sync();
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId);
       log.close();
@@ -187,5 +188,4 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       }
     }
   }
-
 }

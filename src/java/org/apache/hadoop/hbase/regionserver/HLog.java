@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -123,6 +124,9 @@ public class HLog implements HConstants, Syncable {
    * Current log file.
    */
   SequenceFile.Writer writer;
+  // This is the above writer's output stream. Its private but we use reflection
+  // to expose it so we can call sync on it.
+  FSDataOutputStream writer_out;
 
   /*
    * Map of all log files but the current one. 
@@ -351,11 +355,29 @@ public class HLog implements HConstants, Syncable {
   protected SequenceFile.Writer createWriter(Path path,
     Class<? extends HLogKey> keyClass, Class<? extends KeyValue> valueClass)
   throws IOException {
-    return SequenceFile.createWriter(this.fs, this.conf, path, keyClass,
+    SequenceFile.Writer writer =
+      SequenceFile.createWriter(this.fs, this.conf, path, keyClass,
       valueClass, fs.getConf().getInt("io.file.buffer.size", 4096),
       fs.getDefaultReplication(), this.blocksize,
       SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
       new Metadata());
+    // Get at the private FSDataOutputStream inside in SequenceFile so we can
+    // call sync on it.  Make it accessible.  Stash it aside for call up in
+    // the sync method above.
+    final Field fields[] = writer.getClass().getDeclaredFields();
+    final String fieldName = "out";
+    for (int i = 0; i < fields.length; ++i) {
+      if (fieldName.equals(fields[i].getName())) {
+        try {
+          fields[i].setAccessible(true);
+          this.writer_out = (FSDataOutputStream)fields[i].get(writer);
+          break;
+        } catch (IllegalAccessException ex) {
+          throw new IOException("Accessing " + fieldName, ex);
+        }
+      }
+    }
+    return writer;
   }
   
   /*
@@ -614,6 +636,7 @@ public class HLog implements HConstants, Syncable {
       }
     } else {
       this.writer.sync();
+      if (this.writer_out != null) this.writer_out.sync();
     }
     this.unflushedEntries.set(0);
   }
