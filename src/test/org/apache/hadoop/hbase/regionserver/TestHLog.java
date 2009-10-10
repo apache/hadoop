@@ -105,6 +105,22 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     reader.close();
     // Add test that checks to see that an open of a Reader works on a file
     // that has had a sync done on it.
+    for (int i = 0; i < total; i++) {
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
+      wal.append(bytes, bytes, kvs, false, System.currentTimeMillis());
+    }
+    reader = HLog.getReader(this.fs, walPath, this.conf);
+    count = 0;
+    while(reader.next(key)) count++;
+    assertTrue(count >= total);
+    reader.close();
+    // If I sync, should see double the edits.
+    wal.sync();
+    reader = HLog.getReader(this.fs, walPath, this.conf);
+    count = 0;
+    while(reader.next(key)) count++;
+    assertEquals(total * 2, count);
   }
  
   /**
