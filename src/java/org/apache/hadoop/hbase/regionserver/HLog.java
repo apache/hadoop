@@ -370,16 +370,20 @@ public class HLog implements HConstants, Syncable {
    *         this.end = in.getPos() + length;
    */
   private static class WALReader extends SequenceFile.Reader {
+    private long length;
+    
     WALReader(final FileSystem fs, final Path p, final Configuration c)
     throws IOException {
       super(fs, p, c);
+      
     }
 
     @Override
     protected FSDataInputStream openFile(FileSystem fs, Path file,
       int bufferSize, long length)
     throws IOException {
-      return new WALReaderFSDataInputStream(super.openFile(fs, file, bufferSize, length));
+      return new WALReaderFSDataInputStream(super.openFile(fs, file, bufferSize,
+        length), length);
     }
 
     /**
@@ -387,10 +391,12 @@ public class HLog implements HConstants, Syncable {
      */
     static class WALReaderFSDataInputStream extends FSDataInputStream {
       private boolean firstGetPosInvocation = true;
+      private long length;
 
-      WALReaderFSDataInputStream(final FSDataInputStream is)
+      WALReaderFSDataInputStream(final FSDataInputStream is, final long l)
       throws IOException {
         super(is);
+        this.length = l;
       }
 
       @Override
@@ -401,7 +407,12 @@ public class HLog implements HConstants, Syncable {
           // SequenceFile.Reader constructor comes out with the correct length
           // on the file:
           //         this.end = in.getPos() + length;
-          return this.in.available();
+          // 
+          long available = this.in.available();
+          // Length gets added up in the SF.Reader constructor so subtract the
+          // difference.  If available < this.length, then return this.length.
+          // I ain't sure what else to do.
+          return available >= this.length? available - this.length: this.length;
         }
         return super.getPos();
       }
@@ -988,7 +999,8 @@ public class HLog implements HConstants, Syncable {
           SequenceFile.Reader in = null;
           int count = 0;
           try {
-            in = new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
+            long len = fs.getFileStatus(logfiles[i].getPath()).getLen();
+            in = HLog.getReader(fs, logfiles[i].getPath(), conf);
             try {
               HLogKey key = newKey(conf);
               KeyValue val = new KeyValue();

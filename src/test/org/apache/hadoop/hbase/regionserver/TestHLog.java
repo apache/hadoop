@@ -65,6 +65,45 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   }
 
   /**
+   * Just write multiple logs then split.  Before fix for HADOOP-2283, this
+   * would fail.
+   * @throws IOException
+   */
+  public void testSplit() throws IOException {
+    final byte [] tableName = Bytes.toBytes(getName());
+    final byte [] rowName = tableName;
+    HLog log = new HLog(this.fs, this.dir, this.conf, null);
+    final int howmany = 3;
+    // Add edits for three regions.
+    try {
+      for (int ii = 0; ii < howmany; ii++) {
+        for (int i = 0; i < howmany; i++) {
+          for (int j = 0; j < howmany; j++) {
+            List<KeyValue> edit = new ArrayList<KeyValue>();
+            byte [] family = Bytes.toBytes("column");
+            byte [] qualifier = Bytes.toBytes(Integer.toString(j));
+            byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
+            edit.add(new KeyValue(rowName, family, qualifier, 
+                System.currentTimeMillis(), column));
+            System.out.println("Region " + i + ": " + edit);
+            log.append(Bytes.toBytes("" + i), tableName, edit,
+              false, System.currentTimeMillis());
+          }
+        }
+        log.rollWriter();
+      }
+      List<Path> splits =
+        HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
+      verifySplits(splits, howmany);
+      log = null;
+    } finally {
+      if (log != null) {
+        log.closeAndDelete();
+      }
+    }
+  }
+
+  /**
    * Test new HDFS-265 sync.
    * @throws Exception
    */
@@ -123,45 +162,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     assertEquals(total * 2, count);
   }
  
-  /**
-   * Just write multiple logs then split.  Before fix for HADOOP-2283, this
-   * would fail.
-   * @throws IOException
-   */
-  public void testSplit() throws IOException {
-    final byte [] tableName = Bytes.toBytes(getName());
-    final byte [] rowName = tableName;
-    HLog log = new HLog(this.fs, this.dir, this.conf, null);
-    final int howmany = 3;
-    // Add edits for three regions.
-    try {
-      for (int ii = 0; ii < howmany; ii++) {
-        for (int i = 0; i < howmany; i++) {
-          for (int j = 0; j < howmany; j++) {
-            List<KeyValue> edit = new ArrayList<KeyValue>();
-            byte [] family = Bytes.toBytes("column");
-            byte [] qualifier = Bytes.toBytes(Integer.toString(j));
-            byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
-            edit.add(new KeyValue(rowName, family, qualifier, 
-                System.currentTimeMillis(), column));
-            System.out.println("Region " + i + ": " + edit);
-            log.append(Bytes.toBytes("" + i), tableName, edit,
-              false, System.currentTimeMillis());
-          }
-        }
-        log.rollWriter();
-      }
-      List<Path> splits =
-        HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
-      verifySplits(splits, howmany);
-      log = null;
-    } finally {
-      if (log != null) {
-        log.closeAndDelete();
-      }
-    }
-  }
-
   private void verifySplits(List<Path> splits, final int howmany)
   throws IOException {
     assertEquals(howmany, splits.size());
