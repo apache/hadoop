@@ -25,9 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -35,8 +33,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Reader;
-import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
 
 
 /** JUnit test case for HLog */
@@ -96,31 +92,12 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
       wal.append(bytes, bytes, kvs, false, System.currentTimeMillis());
     }
-    // Assert I cannot read back my edits because a flush has not been called
-    // -- it happens automatically at 100 edits ... see top of this method for 
-    // where we set it.
-    Path walPath = wal.computeFilename(wal.getFilenum());
-    /**SequenceFile.Reader reader =
-      new SequenceFile.Reader(this.fs, walPath, this.conf);
-    int count = 0;
-    HLogKey key = new HLogKey();
-    while(reader.next(key)) count++;
-    assertFalse(count < total);
-    reader.close();
-    */
-    // Now call sync and retry read.
+    // Now call sync and try reading.  Opening a Reader before you sync just
+    // gives you EOFE.
     wal.sync();
-    Thread.sleep(70*1000);
-    // Open as another user
-    final HBaseConfiguration conf2 = new HBaseConfiguration(conf);
-    final String username = UserGroupInformation.getCurrentUGI().getUserName() +
-      "_" + 1;
-    UnixUserGroupInformation.saveToConf(conf2,
-      UnixUserGroupInformation.UGI_PROPERTY_NAME,
-      new UnixUserGroupInformation(username, new String[]{"supergroup"}));
-    final FileSystem fs2 = FileSystem.get(conf2);
-    SequenceFile.Reader reader =
-      new SequenceFile.Reader(fs2, walPath, conf2);
+    // Open a Reader.
+    Path walPath = wal.computeFilename(wal.getFilenum());
+    SequenceFile.Reader reader = HLog.getReader(this.fs, walPath, this.conf);
     int count = 0;
     HLogKey key = new HLogKey();
     while(reader.next(key)) count++;
@@ -173,8 +150,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   throws IOException {
     assertEquals(howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
-      SequenceFile.Reader r =
-        new SequenceFile.Reader(this.fs, splits.get(i), this.conf);
+      SequenceFile.Reader r = HLog.getReader(this.fs, splits.get(i), this.conf);
       try {
         HLogKey key = new HLogKey();
         KeyValue kv = new KeyValue();
@@ -228,7 +204,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       Path filename = log.computeFilename(log.getFilenum());
       log = null;
       // Now open a reader on the log and assert append worked.
-      reader = new SequenceFile.Reader(fs, filename, conf);
+      reader = HLog.getReader(fs, filename, conf);
       HLogKey key = new HLogKey();
       KeyValue val = new KeyValue();
       for (int i = 0; i < COL_COUNT; i++) {

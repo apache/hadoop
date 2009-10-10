@@ -315,8 +315,8 @@ public class Store implements HConstants, HeapSize {
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
     long firstSeqIdInLog = -1;
-    SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
-      reconstructionLog, this.conf);
+    SequenceFile.Reader logReader = HLog.getReader(this.fs, reconstructionLog,
+      this.conf);
     try {
       HLogKey key = HLog.newKey(conf);
       KeyValue val = new KeyValue();

@@ -46,6 +46,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,27 +57,29 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.SequenceFile.Reader;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.fs.FSDataOutputStream;
 
 /**
- * HLog stores all the edits to the HStore.
+ * HLog stores all the edits to the HStore.  Its the hbase write-ahead-log
+ * implementation.
  *
  * It performs logfile-rolling, so external callers are not aware that the
  * underlying file is being rolled.
  *
  * <p>
- * A single HLog is used by several HRegions simultaneously.
+ * There is one HLog per RegionServer.  All edits for all Regions carried by
+ * a particular RegionServer are entered first in the HLog.
  *
  * <p>
  * Each HRegion is identified by a unique long <code>int</code>. HRegions do
@@ -100,6 +104,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
  * start of a cache flush and the completion point, appends are allowed but log
  * rolling is not. To prevent log rolling taking place during this period, a
  * separate reentrant lock is used.
+ * 
+ * <p>To read an HLog, call {@link #getReader(Path)}.
  *
  */
 public class HLog implements HConstants, Syncable {
@@ -352,6 +358,73 @@ public class HLog implements HConstants, Syncable {
     return createWriter(path, HLogKey.class, KeyValue.class);
   }
   
+  /**
+   * Hack just to set the correct file length up in SequenceFile.Reader.
+   * See HADOOP-6307.  The below is all about setting the right length on the
+   * file we are reading.  fs.getFileStatus(file).getLen() is passed down to
+   * a private SequenceFile.Reader constructor.  This won't work.  Need to do
+   * the available on the stream.  The below is ugly.  It makes getPos, the
+   * first time its called, return length of the file -- i.e. tell a lie -- just
+   * so this line up in SF.Reader's constructor ends up with right answer:
+   * 
+   *         this.end = in.getPos() + length;
+   */
+  private static class WALReader extends SequenceFile.Reader {
+    WALReader(final FileSystem fs, final Path p, final Configuration c)
+    throws IOException {
+      super(fs, p, c);
+    }
+
+    @Override
+    protected FSDataInputStream openFile(FileSystem fs, Path file,
+      int bufferSize, long length)
+    throws IOException {
+      return new WALReaderFSDataInputStream(super.openFile(fs, file, bufferSize, length));
+    }
+
+    /**
+     * Override just so can intercept first call to getPos.
+     */
+    static class WALReaderFSDataInputStream extends FSDataInputStream {
+      private boolean firstGetPosInvocation = true;
+
+      WALReaderFSDataInputStream(final FSDataInputStream is)
+      throws IOException {
+        super(is);
+      }
+
+      @Override
+      public long getPos() throws IOException {
+        if (this.firstGetPosInvocation) {
+          this.firstGetPosInvocation = false;
+          // Tell a lie.  We're doing this just so that this line up in
+          // SequenceFile.Reader constructor comes out with the correct length
+          // on the file:
+          //         this.end = in.getPos() + length;
+          return this.in.available();
+        }
+        return super.getPos();
+      }
+    }
+  }
+
+  /**
+   * Get a Reader for WAL.
+   * Reader is a subclass of SequenceFile.Reader.  The subclass has amendments
+   * to make it so we see edits up to the last sync (HDFS-265).  Of note, we
+   * can only see up to the sync that happened before this file was opened.
+   * Will require us doing up our own WAL Reader if we want to keep up with
+   * a syncing Writer.
+   * @param path
+   * @return A WAL Reader.  Close when done with it.
+   * @throws IOException
+   */
+  public static SequenceFile.Reader getReader(final FileSystem fs,
+    final Path p, final Configuration c)
+  throws IOException {
+    return new WALReader(fs, p, c);
+  }
+
   protected SequenceFile.Writer createWriter(Path path,
     Class<? extends HLogKey> keyClass, Class<? extends KeyValue> valueClass)
   throws IOException {
@@ -636,6 +709,8 @@ public class HLog implements HConstants, Syncable {
       }
     } else {
       this.writer.sync();
+      // Above is sequencefile.writer sync.  It doesn't actually synce the
+      // backing stream.  Need to do the below to do that.
       if (this.writer_out != null) this.writer_out.sync();
     }
     this.unflushedEntries.set(0);

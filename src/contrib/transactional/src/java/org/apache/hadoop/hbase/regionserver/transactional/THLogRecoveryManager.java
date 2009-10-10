@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.client.transactional.HBaseBackedTransactionLogger;
 import org.apache.hadoop.hbase.client.transactional.TransactionLogger;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -106,7 +107,7 @@ class THLogRecoveryManager {
     Set<Long> commitedTransactions = new HashSet<Long>();
     Set<Long> abortedTransactions = new HashSet<Long>();
 
-    SequenceFile.Reader logReader = new SequenceFile.Reader(fileSystem,
+    SequenceFile.Reader logReader = HLog.getReader(fileSystem,
         reconstructionLog, conf);
     
       try {
