@@ -44,6 +44,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   public void setUp() throws Exception {
     // Enable append for these tests.
     this.conf.setBoolean("dfs.support.append", true);
+    // Make block sizes small.
+    this.conf.setInt("dfs.blocksize", 1024 * 1024);
     cluster = new MiniDFSCluster(conf, 3, true, (String[])null);
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
@@ -160,6 +162,28 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     count = 0;
     while(reader.next(key)) count++;
     assertEquals(total * 2, count);
+    // Now do a test that ensures stuff works when we go over block boundary,
+    // especially that we return good length on file.
+    final byte [] value = new byte[1025 * 1024];  // Make a 1M value.
+    for (int i = 0; i < total; i++) {
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      kvs.add(new KeyValue(Bytes.toBytes(i), bytes, value));
+      wal.append(bytes, bytes, kvs, false, System.currentTimeMillis());
+    }
+    // Now I should have written out lots of blocks.  Sync then read.
+    wal.sync();
+    reader = HLog.getReader(this.fs, walPath, this.conf);
+    count = 0;
+    while(reader.next(key)) count++;
+    assertEquals(total * 3, count);
+    reader.close();
+    // Close it and ensure that closed, Reader gets right length also.
+    wal.close();
+    reader = HLog.getReader(this.fs, walPath, this.conf);
+    count = 0;
+    while(reader.next(key)) count++;
+    assertEquals(total * 3, count);
+    reader.close();
   }
  
   private void verifySplits(List<Path> splits, final int howmany)
