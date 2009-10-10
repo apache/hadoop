@@ -33,7 +33,7 @@
   <property name="year" value="2009"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
-  <property name="core.src.dir" value="${src.dir}/java"/>
+  <property name="java.src.dir" value="${src.dir}/java"/>
   <property name="native.src.dir" value="${basedir}/src/native"/>
 
   <property name="lib.dir" value="${basedir}/lib"/>
@@ -171,7 +171,7 @@
     <path refid="ivy-common.classpath"/>
   </path>
 
-  <path id="test.core.classpath">
+  <path id="test.classpath">
     <pathelement location="${test.build.extraconf}"/>
     <pathelement location="${test.core.build.classes}" />
     <pathelement location="${test.src.dir}"/>
@@ -185,7 +185,7 @@
 <!--
   <path id="test.hdfs.classpath">
     <pathelement location="${test.hdfs.build.classes}" />
-    <path refid="test.core.classpath"/>
+    <path refid="test.classpath"/>
   </path>
 
   <path id="test.mapred.classpath">
@@ -265,15 +265,15 @@
   <!-- ====================================================== -->
   <target name="record-parser" depends="init" if="javacc.home">
       <javacc
-          target="${core.src.dir}/org/apache/hadoop/record/compiler/generated/rcc.jj"
-          outputdirectory="${core.src.dir}/org/apache/hadoop/record/compiler/generated"
+          target="${java.src.dir}/org/apache/hadoop/record/compiler/generated/rcc.jj"
+          outputdirectory="${java.src.dir}/org/apache/hadoop/record/compiler/generated"
           javacchome="${javacc.home}" />
   </target>
   
   <target name="compile-rcc-compiler" depends="init, record-parser">
     <javac 
         encoding="${build.encoding}" 
-        srcdir="${core.src.dir}"
+        srcdir="${java.src.dir}"
         includes="org/apache/hadoop/record/compiler/**/*.java"
         destdir="${build.classes}"
         debug="${javac.debug}"
@@ -294,7 +294,7 @@
     <!-- Compile Java files (excluding JSPs) checking warnings -->
     <javac 
      encoding="${build.encoding}" 
-     srcdir="${core.src.dir};${build.src}"	
+     srcdir="${java.src.dir};${build.src}"	
      includes="org/apache/hadoop/**/*.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
@@ -307,8 +307,8 @@
     </javac>
 
     <copy todir="${build.classes}">
-      <fileset dir="${core.src.dir}" includes="**/*.properties"/>
-      <fileset dir="${core.src.dir}" includes="core-default.xml"/>
+      <fileset dir="${java.src.dir}" includes="**/*.properties"/>
+      <fileset dir="${java.src.dir}" includes="core-default.xml"/>
     </copy>
      
   </target>
@@ -419,7 +419,7 @@
 
   <target name="generate-avro-records" depends="init, ivy-retrieve-test">
     <taskdef name="schema" classname="org.apache.avro.specific.SchemaTask">
-      <classpath refid="test.core.classpath"/>
+      <classpath refid="test.classpath"/>
     </taskdef>
     <schema destdir="${test.generated.dir}">
       <fileset dir="${test.src.dir}">
@@ -444,7 +444,7 @@
      source="${javac.version}"
      deprecation="${javac.deprecation}">
       <compilerarg line="${javac.args}"/>
-      <classpath refid="test.core.classpath"/>
+      <classpath refid="test.classpath"/>
     </javac>
     <javac 
      encoding="${build.encoding}" 
@@ -457,7 +457,7 @@
      source="${javac.version}"
      deprecation="${javac.deprecation}">
       <compilerarg line="${javac.args} ${javac.args.warnings}" />
-      <classpath refid="test.core.classpath"/>
+      <classpath refid="test.classpath"/>
      </javac>
 
     <taskdef
@@ -534,7 +534,7 @@
       <syspropertyset dynamic="no">
          <propertyref name="compile.c++"/>
       </syspropertyset>
-      <classpath refid="test.core.classpath"/>
+      <classpath refid="test.classpath"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.src.dir}/core"
@@ -598,7 +598,7 @@
   	
   	<checkstyle config="${test.src.dir}/checkstyle.xml"
   		failOnViolation="false">
-      <fileset dir="${core.src.dir}" includes="**/*.java" excludes="**/generated/**"/>
+      <fileset dir="${java.src.dir}" includes="**/*.java" excludes="**/generated/**"/>
       <formatter type="xml" toFile="${test.build.dir}/checkstyle-errors.xml"/>
   	</checkstyle>
   	
@@ -638,7 +638,7 @@
           <include name="**/*.jar"/>
         </fileset>
       </auxClasspath>
-      <sourcePath path="${core.src.dir}"/>
+      <sourcePath path="${java.src.dir}"/>
       <class location="${basedir}/build/${final.name}.jar" />
     </findbugs>
 
@@ -666,7 +666,7 @@
       <fileset dir="${docs.src}/build/site/" />
     </copy>
     <copy file="${docs.src}/releasenotes.html" todir="${build.docs}"/>
-    <style basedir="${core.src.dir}" destdir="${build.docs}"
+    <style basedir="${java.src.dir}" destdir="${build.docs}"
            includes="core-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
     <antcall target="cn-docs"/>
@@ -682,7 +682,7 @@
     <copy todir="${build.docs.cn}">
       <fileset dir="${src.docs.cn}/build/site/" />
     </copy>
-    <style basedir="${core.src.dir}" destdir="${build.docs.cn}"
+    <style basedir="${java.src.dir}" destdir="${build.docs.cn}"
            includes="core-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
   </target>
@@ -698,7 +698,7 @@
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
-      overview="${core.src.dir}/overview.html"
+      overview="${java.src.dir}/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc.dev}"
       author="true"
@@ -709,7 +709,7 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}"
       >
-        <packageset dir="${core.src.dir}"/>
+        <packageset dir="${java.src.dir}"/>
 	<packageset dir="src/contrib/failmon/src/java/"/> 
 
         <link href="${javadoc.link.java}"/>
@@ -744,7 +744,7 @@
        unless="javadoc.is.uptodate">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
-      overview="${core.src.dir}/overview.html"
+      overview="${java.src.dir}/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc}"
       author="true"
@@ -755,7 +755,7 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}"
       >
-        <packageset dir="${core.src.dir}"/>
+        <packageset dir="${java.src.dir}"/>
 	<packageset dir="src/contrib/failmon/src/java/"/> 
 	
         <link href="${javadoc.link.java}"/>

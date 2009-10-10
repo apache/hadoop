@@ -18,6 +18,9 @@ Trunk (unreleased changes)
     HADOOP-6279. Add Runtime::maxMemory to JVM metrics. (Todd Lipcon via
     cdouglas)
 
+    HADOOP-6305. Unify build property names to facilitate cross-projects
+    modifications (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
