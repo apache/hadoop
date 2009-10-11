@@ -63,6 +63,7 @@ Release 0.21.0 - Unreleased
                Filters client-side
    HBASE-1890  hbase-1506 where assignment is done at regionserver doesn't
                 work
+   HBASE-1889  ClassNotFoundException on trunk for REST
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

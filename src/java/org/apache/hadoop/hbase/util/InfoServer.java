@@ -50,19 +50,7 @@ public class InfoServer extends HttpServer {
   public InfoServer(String name, String bindAddress, int port, boolean findPort)
   throws IOException {
     super(name, bindAddress, port, findPort);
-
-    HandlerCollection handlers =
-        new ContextHandlerCollection();
-
-    if (name.equals("master")) {
-      // Put up the rest webapp.
-      WebAppContext wac = new WebAppContext();
-      wac.setContextPath("/api");
-      wac.setWar(getWebAppDir("rest"));
-
-      handlers.addHandler(wac);
-    }
-    webServer.addHandler(handlers);
+    webServer.addHandler(new ContextHandlerCollection());
   }
 
   protected void addDefaultApps(ContextHandlerCollection parent, String appDir)

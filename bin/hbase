@@ -58,7 +58,6 @@ if [ $# = 0 ]; then
   echo "  shell            run the HBase shell"
   echo "  master           run an HBase HMaster node" 
   echo "  regionserver     run an HBase HRegionServer node" 
-  echo "  rest             run an HBase REST server" 
   echo "  thrift           run an HBase Thrift server" 
   echo "  zookeeper        run a Zookeeper server"
   echo "  migrate          upgrade an hbase.rootdir"
@@ -192,8 +191,6 @@ elif [ "$COMMAND" = "master" ] ; then
 elif [ "$COMMAND" = "regionserver" ] ; then
   CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
   HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
-elif [ "$COMMAND" = "rest" ] ; then
-  CLASS='org.apache.hadoop.hbase.rest.Dispatcher'
 elif [ "$COMMAND" = "thrift" ] ; then
   CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
   HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
