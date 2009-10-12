@@ -97,8 +97,7 @@ public class PerformanceEvaluation implements HConstants {
   public static final byte [] FAMILY_NAME = Bytes.toBytes("info");
   public static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
   
-  protected static final HTableDescriptor TABLE_DESCRIPTOR;
-  static {
+  protected HTableDescriptor TABLE_DESCRIPTOR; {
     TABLE_DESCRIPTOR = new HTableDescriptor("TestTable");
     TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
@@ -151,6 +150,7 @@ public class PerformanceEvaluation implements HConstants {
    */
   public PerformanceEvaluation(final HBaseConfiguration c) {
     this.conf = c;
+    setTableDesc();
   }
   
   /**
@@ -163,6 +163,16 @@ public class PerformanceEvaluation implements HConstants {
      * @throws IOException
      */
     void setStatus(final String msg) throws IOException;
+  }
+  
+  /**
+   * Implementations can have their status set.
+   */
+  protected void setTableDesc() {
+    TABLE_DESCRIPTOR = new HTableDescriptor(conf.get("hbase.pe.tablename", "TestTable"));
+    TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(FAMILY_NAME, 
+        3, conf.get("hbase.pe.compress", HColumnDescriptor.DEFAULT_COMPRESSION), 
+        false, true, HColumnDescriptor.DEFAULT_TTL, false));
   }
   
   /**
@@ -530,7 +540,7 @@ public class PerformanceEvaluation implements HConstants {
    * A test.
    * Subclass to particularize what happens per row.
    */
-  static abstract class Test {
+  abstract class Test {
     protected final Random rand = new Random(System.currentTimeMillis());
     protected final int startRow;
     protected final int perClientRunRows;
@@ -779,12 +789,32 @@ public class PerformanceEvaluation implements HConstants {
    * example, doing the mapfile test, generation of the key and value
    * consumes about 30% of CPU time.
    * @return Generated random value to insert into a table cell.
-   */
-  public static byte[] generateValue(final Random r) {
-    byte [] b = new byte [ROW_LENGTH];
-    r.nextBytes(b);
+   */  
+  public static byte[] generateValue(final Random r) {    
+    byte [] b = new byte [ROW_LENGTH];    
+
+    int i = 0;    
+    for(i = 0; i < (ROW_LENGTH-8); i += 8) {
+      b[i] = (byte) (65 + r.nextInt(26));
+      b[i+1] = b[i];
+      b[i+2] = b[i];
+      b[i+3] = b[i];
+      b[i+4] = b[i];
+      b[i+5] = b[i];
+      b[i+6] = b[i];
+      b[i+7] = b[i];
+    }
+    
+    byte a = (byte) (65 + r.nextInt(26));
+    for(; i < ROW_LENGTH; i++) {
+      b[i] = a;
+    }
+    
     return b;
   }
+  
+  
+
   
   static byte [] getRandomRow(final Random random, final int totalRows) {
     return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
@@ -897,7 +927,8 @@ public class PerformanceEvaluation implements HConstants {
     }
     System.err.println("Usage: java " + this.getClass().getName() +
         " [--master=HOST:PORT] \\");
-    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] <command> <nclients>");
+    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] [--compress=TYPE] \\"
+    System.err.println("  <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" master          Specify host and port of HBase " +
@@ -907,6 +938,8 @@ public class PerformanceEvaluation implements HConstants {
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
+    System.err.println(" table           Alternate table name. Default: 'TestTable'");
+    System.err.println(" compress        Compression type to use. Default: 'NONE'");
     System.err.println();
     System.err.println("Command:");
     System.err.println(" randomRead      Run random read test");
@@ -977,8 +1010,21 @@ public class PerformanceEvaluation implements HConstants {
           this.R = Integer.parseInt(cmd.substring(rows.length()));
           continue;
         }
-       
+        
+        final String table = "--table=";
+        if (cmd.startsWith(table)) {
+          conf.set("hbase.pe.tablename", cmd.substring(table.length()));
+          continue;
+        }
+        
+        final String compress = "--compress=";
+        if (cmd.startsWith(compress)) {
+          conf.set("hbase.pe.compress", cmd.substring(compress.length()));
+          continue;
+        }
+               
         if (COMMANDS.contains(cmd)) {
+          setTableDesc(); // update table desc
           getArgs(i + 1, args);
           runTest(cmd);
           errCode = 0;
@@ -991,7 +1037,7 @@ public class PerformanceEvaluation implements HConstants {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    
+            
     return errCode;
   }
   

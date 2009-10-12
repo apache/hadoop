@@ -111,6 +111,8 @@ Release 0.21.0 - Unreleased
    HBASE-1899  Use scanner caching in shell count
    HBASE-1887  Update hbase trunk to latests on hadoop 0.21 branch so we can
                all test sync/append
+   HBASE-1902  Let PerformanceEvaluation support setting tableName and compress
+               algorithm (Schubert Zhang via Stack)
 
   OPTIMIZATIONS
 
