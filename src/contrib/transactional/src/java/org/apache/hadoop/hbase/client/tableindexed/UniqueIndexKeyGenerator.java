@@ -26,28 +26,31 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
-/**Creates indexed keys for a single column. Index key consists of the column
- * value followed by the row key of the indexed table to disambiguate.
+/**
+ * Creates index row keys which exactly match the indexed column. This allows a
+ * direct get() lookup on the index table, but at the cost that the column
+ * values must be unique.
  * 
- * If the column values are guaranteed to be unique, consider
- * {@link UniqueIndexKeyGenerator}.
- * 
+ * If you are indexing a column which can have duplicated values, consider
+ * {@link SimpleIndexKeyGenerator}.
  */
-public class SimpleIndexKeyGenerator implements IndexKeyGenerator {
+public class UniqueIndexKeyGenerator implements IndexKeyGenerator {
+  private byte[] column;
 
-  private byte [] column;
-  
-  public SimpleIndexKeyGenerator(byte [] column) {
+  /**
+   * @param column the column to index
+   */
+  public UniqueIndexKeyGenerator(byte[] column) {
     this.column = column;
   }
-  
-  public SimpleIndexKeyGenerator() {
+
+  public UniqueIndexKeyGenerator() {
     // For Writable
   }
-  
+
   /** {@inheritDoc} */
   public byte[] createIndexKey(byte[] rowKey, Map<byte[], byte[]> columns) {
-    return Bytes.add(columns.get(column), rowKey);
+    return columns.get(column).clone();
   }
 
   /** {@inheritDoc} */

@@ -56,6 +56,16 @@ public class IndexSpecification implements Writable {
         new SimpleIndexKeyGenerator(indexedColumn));
   }
 
+  /**Construct an index spec for a single column that has only unique values.
+   * @param indexId the name of the index
+   * @param indexedColumn the column to index
+   * @return the IndexSpecification
+   */
+  public static IndexSpecification forUniqueIndex(String indexId, byte[] indexedColumn) {
+    return new IndexSpecification(indexId, new byte[][] { indexedColumn },
+        null, new UniqueIndexKeyGenerator(indexedColumn));
+  }
+
   /**
    * Construct an index spec by specifying everything.
    * 

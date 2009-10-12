@@ -23,4 +23,19 @@ to call at top-level: ant deploy-contrib compile-core-test
 -->
 <project name="transactional" default="jar">
   <import file="../build-contrib.xml"/>
+  <!-- ====================================================== -->
+  <!-- Override standard contrib package target to include
+       IndexedTable.rb in the same directory as the jar       -->
+  <!-- ====================================================== -->
+  <target name="package" depends="jar, jar-examples" unless="skip.contrib"> 
+    <mkdir dir="${dist.dir}/contrib/${name}"/>
+    <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hbase-${version}-${name}.jar" />
+      </fileset>
+      <fileset dir="${root}/bin">
+      	<include name="TableIndexed.rb" />
+      </fileset>
+    </copy>
+  </target>
 </project>

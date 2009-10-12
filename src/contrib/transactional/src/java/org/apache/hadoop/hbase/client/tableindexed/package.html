@@ -33,7 +33,8 @@ The IndexSpecification class provides the metadata for the index. This includes:
 
 IndexesSpecifications can be added to a table's metadata (HTableDescriptor) before the table is constructed. 
 Afterwards, updates and deletes to the original table will trigger the updates in the index, and 
-the indexes can be scanned using the API on IndexedTable.
+the indexes can be scanned using the API on IndexedTable. If you prefer not to use the Java API, you can
+load IndexedTable.rb to create indexes from within the HBase shell.
 
 For a simple example, look at the unit test in org.apache.hadoop.hbase.client.tableIndexed.
 
