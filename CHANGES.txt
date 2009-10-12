@@ -13,6 +13,10 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-826. harchive doesn't use ToolRunner / harchive returns 0 even
     if the job fails with exception (koji via mahadev)
 
+    MAPREDUCE-979. Fixed JobConf APIs related to memory parameters to return
+    values of new configuration variables when deprecated variables are
+    disabled. (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
