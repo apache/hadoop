@@ -927,7 +927,7 @@ public class PerformanceEvaluation implements HConstants {
     }
     System.err.println("Usage: java " + this.getClass().getName() +
         " [--master=HOST:PORT] \\");
-    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] [--compress=TYPE] \\"
+    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] [--compress=TYPE] \\");
     System.err.println("  <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
