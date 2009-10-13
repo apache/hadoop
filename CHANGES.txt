@@ -271,6 +271,8 @@ Release 0.21.0 - Unreleased
     HDFS-518. Create new tests for Append's hflush. (Konstantin Boudnik
     via szetszwo)
 
+    HDFS-688. Add configuration resources to DFSAdmin. (shv)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
