@@ -700,10 +700,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (length < 0) {
       throw new IOException("Negative length is not supported. File: " + src );
     }
-    INodeFile inode = dir.getFileINode(src);
-    if (inode == null)
-      throw new FileNotFoundException();
-    final LocatedBlocks ret = getBlockLocationsInternal(src, inode,
+    final LocatedBlocks ret = getBlockLocationsInternal(src,
         offset, length, doAccessTime);  
     if (auditLog.isInfoEnabled()) {
       logAuditEvent(UserGroupInformation.getCurrentUGI(),
@@ -714,11 +711,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   private synchronized LocatedBlocks getBlockLocationsInternal(String src,
-                                                       INodeFile inode,
                                                        long offset, 
                                                        long length,
                                                        boolean doAccessTime
                                                        ) throws IOException {
+    INodeFile inode = dir.getFileINode(src);
+    if (inode == null)
+      throw new FileNotFoundException();
     if (doAccessTime && isAccessTimeSupported()) {
       dir.setTimes(src, inode, -1, now(), false);
     }
