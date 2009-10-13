@@ -24,6 +24,9 @@ Trunk (unreleased changes)
     HADOOP-6305. Unify build property names to facilitate cross-projects
     modifications (cos)
 
+    HADOOP-6204. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
