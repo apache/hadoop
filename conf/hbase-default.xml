@@ -385,15 +385,6 @@
       </description>
   </property>
   <property>
-    <name>hbase.hstore.blockCache.blockSize</name>
-    <value>16384</value>
-    <description>The size of each block in the block cache.
-    Enable blockcaching on a per column family basis; see the BLOCKCACHE setting
-    in HColumnDescriptor.  Blocks are kept in a java Soft Reference cache so are
-    let go when high pressure on memory.  Block caching is not enabled by default.
-    </description>
-  </property>
-  <property>
     <name>hbase.hash.type</name>
     <value>murmur</value>
     <description>The hashing algorithm for use in HashFunction. Two values are
