@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/java"/>
+	<classpathentry kind="src" path="src/test/aop"/>
 	<classpathentry kind="src" path="src/test/core"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="var" path="ANT_HOME/lib/ant.jar"/>

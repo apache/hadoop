@@ -206,6 +206,9 @@ Trunk (unreleased changes)
     HADOOP-6240. Add new FileContext rename operation that posix compliant
     that allows overwriting existing destination. (suresh)
 
+    HADOOP-6205. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
