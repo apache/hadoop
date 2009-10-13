@@ -516,6 +516,7 @@
       maxmemory="${test.junit.maxmemory}"
       dir="${basedir}" timeout="${test.timeout}"
       errorProperty="tests.failed" failureProperty="tests.failed">
+      <jvmarg value="-ea" />
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
       <sysproperty key="test.debug.data" value="${test.debug.data}"/>
