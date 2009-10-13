@@ -17,6 +17,9 @@ Release 0.20.2 - Unreleased
     values of new configuration variables when deprecated variables are
     disabled. (Sreekanth Ramakrishnan via yhemanth)
 
+    HDFS-686. NullPointerException is thrown while merging edit log and image.
+    (hairong)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
