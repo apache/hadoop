@@ -517,15 +517,14 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           }
           replicaInfo.setBytesOnDisk(offsetInBlock);
           datanode.myMetrics.bytesWritten.inc(len);
+          /// flush entire packet
+          flush();
         }
       } catch (IOException iex) {
         datanode.checkDiskError(iex);
         throw iex;
       }
     }
-
-    /// flush entire packet before sending ack
-    flush();
 
     if (throttler != null) { // throttle I/O
       throttler.throttle(len);
@@ -804,7 +803,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             if (!running || !datanode.shouldRun) {
               break;
             }
-            Packet pkt = ackQueue.removeFirst();
+            Packet pkt = ackQueue.getFirst();
             long expected = pkt.seqno;
             notifyAll();
             LOG.debug("PacketResponder " + numTargets +
@@ -837,6 +836,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             replyOut.writeLong(expected);
             SUCCESS.write(replyOut);
             replyOut.flush();
+            ackQueue.removeFirst();
             if (pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
               replicaInfo.setBytesAcked(pkt.lastByteInBlock);
             }
@@ -872,7 +872,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
 
       boolean lastPacketInBlock = false;
-      Packet pkt = null;
       final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
@@ -880,6 +879,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         try {
             DataTransferProtocol.Status op = SUCCESS;
             boolean didRead = false;
+            Packet pkt = null;
             long expected = -2;
             try { 
               // read seqno from downstream datanode
@@ -910,7 +910,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                       throw e;
                     }
                   }
-                  pkt = ackQueue.removeFirst();
+                  pkt = ackQueue.getFirst();
                   expected = pkt.seqno;
                   notifyAll();
                   LOG.debug("PacketResponder " + numTargets + " seqno = " + seqno);
@@ -1001,12 +1001,17 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               op.write(replyOut);
             }
             replyOut.flush();
+            
             LOG.debug("PacketResponder " + block + " " + numTargets + 
                       " responded other status " + " for seqno " + expected);
 
-            if (pkt != null && success && 
-                pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
-              replicaInfo.setBytesAcked(pkt.lastByteInBlock);
+            if (pkt != null) {
+              // remove the packet from the queue
+              ackQueue.removeFirst();
+              // update bytes acked
+              if (success && pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
+                replicaInfo.setBytesAcked(pkt.lastByteInBlock);
+              }
             }
             // If we were unable to read the seqno from downstream, then stop.
             if (expected == -2) {
