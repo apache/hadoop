@@ -180,7 +180,6 @@ public class TestScanner extends HBaseTestCase {
       Filter newFilter = new PrefixFilter(prefix);
       Scan scan = new Scan();
       scan.setFilter(newFilter);
-      scan.setStartRow(prefix);
       rowPrefixFilter(scan);
       
       byte[] stopRow = Bytes.toBytes("bbc");

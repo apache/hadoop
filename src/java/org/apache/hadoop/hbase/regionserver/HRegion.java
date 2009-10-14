@@ -1751,8 +1751,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         boolean samerow = Bytes.equals(currentRow, row);
         if (samerow && filterCurrentRow) {
           // Filter all columns until row changes
-          this.storeHeap.next(this.results);
-          this.results.clear();
+          readAndDumpCurrentResult();
           continue;
         }
         if (!samerow) {
@@ -1769,12 +1768,19 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         }
         // See if current row should be filtered based on row key
         if (this.filter != null && this.filter.filterRowKey(row, 0, row.length)) {
+          readAndDumpCurrentResult();
           resetFilters();
           filterCurrentRow = true;
           currentRow = row;
+          continue;
         }
         this.storeHeap.next(results);
       }
+    }
+
+    private void readAndDumpCurrentResult() throws IOException {
+      this.storeHeap.next(this.results);
+      this.results.clear();
     }
 
     /*
@@ -1787,7 +1793,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (this.results.isEmpty() ||
           this.filter != null && this.filter.filterRow()) {
         // Make sure results is empty, reset filters
-        results.clear();
+        this.results.clear();
         resetFilters();
         return false;
       }

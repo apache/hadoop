@@ -1883,10 +1883,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
         // Collect values to be returned here
         List<KeyValue> values = new ArrayList<KeyValue>();
         boolean moreRows = s.next(values);
-        if(!values.isEmpty()) {
+        if (!values.isEmpty()) {
           results.add(new Result(values));
         }
-        if(!moreRows) {
+        if (!moreRows) {
           break;
         }
       }

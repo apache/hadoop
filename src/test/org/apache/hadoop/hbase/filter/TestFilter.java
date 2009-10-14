@@ -145,7 +145,6 @@ public class TestFilter extends HBaseTestCase {
   }
 
   public void testNoFilter() throws Exception {
-    
     // No filter
     long expectedRows = this.numRows;
     long expectedKeys = this.colsPerRow;
@@ -161,17 +160,12 @@ public class TestFilter extends HBaseTestCase {
   }
   
   public void testPrefixFilter() throws Exception {
-    
     // Grab rows from group one (half of total)
-    
     long expectedRows = this.numRows / 2;
     long expectedKeys = this.colsPerRow;
-    
     Scan s = new Scan();
     s.setFilter(new PrefixFilter(Bytes.toBytes("testRowOne")));
-
     verifyScan(s, expectedRows, expectedKeys);
-    
   }
   
   public void testPageFilter() throws Exception {
@@ -931,6 +925,7 @@ public class TestFilter extends HBaseTestCase {
       Arrays.sort(results.toArray(new KeyValue[results.size()]),
           KeyValue.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
+      if (results.isEmpty()) break;
       assertTrue("Scanned too many rows! Only expected " + expectedRows + 
           " total but already scanned " + (i+1), expectedRows > i);
       assertEquals("Expected " + expectedKeys + " keys per row but " +
