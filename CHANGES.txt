@@ -402,6 +402,8 @@ Release 0.21.0 - Unreleased
     HDFS-673. BlockReceiver#PacketResponder should not remove a packet from
     the ack queue before its ack is sent. (hairong)
 
+    HDFS-682. Fix bugs in TestBlockUnderConstruction.  (szetszwo)
+
 Release 0.20.2 - Unreleased
 
   BUG FIXES

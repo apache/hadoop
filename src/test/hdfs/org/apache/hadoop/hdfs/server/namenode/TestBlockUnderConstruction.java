@@ -115,12 +115,13 @@ public class TestBlockUnderConstruction {
           ns.blockManager.getStoredBlock(curBlock) == curBlock);
     }
 
-    // the last block is under construction if the file is not closed
+    // The last block is complete if the file is closed.
+    // If the file is open, the last block may be complete or not. 
     curBlock = blocks[idx]; // last block
-    assertEquals("Block " + curBlock +
-        " isComplete = " + curBlock.isComplete() +
-        " expected to be " + isFileOpen,
-        isFileOpen, !curBlock.isComplete());
+    if (!isFileOpen) {
+      assertTrue("Block " + curBlock + ", isFileOpen = " + isFileOpen,
+          curBlock.isComplete());
+    }
     assertTrue("Block is not in BlocksMap: " + curBlock,
         ns.blockManager.getStoredBlock(curBlock) == curBlock);
   }
