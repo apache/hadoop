@@ -273,6 +273,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-688. Add configuration resources to DFSAdmin. (shv)
 
+    HDFS-29. Validate the consistency of the lengths of replica and its file 
+    in replica recovery.  (szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 

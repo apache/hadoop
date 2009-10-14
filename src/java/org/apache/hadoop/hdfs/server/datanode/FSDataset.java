@@ -1539,14 +1539,17 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
   /** Check the files of a replica. */
   static void checkReplicaFiles(final ReplicaInfo r) throws IOException {
+    //check replica's file
     final File f = r.getBlockFile();
     if (!f.exists()) {
       throw new FileNotFoundException("File " + f + " not found, r=" + r);
     }
-    if (r.getNumBytes() != f.length()) {
-      throw new IOException("File length mismatched."
-          + f + " length is " + f.length() + " but r=" + r);
+    if (r.getBytesOnDisk() != f.length()) {
+      throw new IOException("File length mismatched.  The length of "
+          + f + " is " + f.length() + " but r=" + r);
     }
+
+    //check replica's meta file
     final File metafile = getMetaFile(f, r);
     if (!metafile.exists()) {
       throw new IOException("Metafile " + metafile + " does not exist, r=" + r);
@@ -1941,7 +1944,17 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
     //stop writer if there is any
     if (replica instanceof ReplicaInPipeline) {
-      ((ReplicaInPipeline)replica).stopWriter();
+      final ReplicaInPipeline rip = (ReplicaInPipeline)replica;
+      rip.stopWriter();
+
+      //check replica bytes on disk.
+      if (rip.getBytesOnDisk() < rip.getVisibleLength()) {
+        throw new IOException("THIS IS NOT SUPPOSED TO HAPPEN:"
+            + " getBytesOnDisk() < getVisibleLength(), rip=" + rip);
+      }
+
+      //check the replica's files
+      checkReplicaFiles(rip);
     }
 
     //check generation stamp
@@ -2003,6 +2016,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     if (replica.getState() != ReplicaState.RUR) {
       throw new IOException("replica.getState() != " + ReplicaState.RUR
           + ", replica=" + replica);
+    }
+
+    //check replica's byte on disk
+    if (replica.getBytesOnDisk() != oldBlock.getNumBytes()) {
+      throw new IOException("THIS IS NOT SUPPOSED TO HAPPEN:"
+          + " replica.getBytesOnDisk() != block.getNumBytes(), block="
+          + oldBlock + ", replica=" + replica);
     }
 
     //check replica files before update

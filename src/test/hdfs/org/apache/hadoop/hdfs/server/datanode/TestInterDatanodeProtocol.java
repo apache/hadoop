@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -24,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -34,18 +37,17 @@ import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
 
 /**
  * This tests InterDataNodeProtocol for block handling. 
  */
-public class TestInterDatanodeProtocol extends junit.framework.TestCase {
+public class TestInterDatanodeProtocol {
   public static void checkMetaInfo(Block b, DataNode dn) throws IOException {
     Block metainfo = dn.data.getStoredBlock(b.getBlockId());
-    assertEquals(b.getBlockId(), metainfo.getBlockId());
-    assertEquals(b.getNumBytes(), metainfo.getNumBytes());
+    Assert.assertEquals(b.getBlockId(), metainfo.getBlockId());
+    Assert.assertEquals(b.getNumBytes(), metainfo.getNumBytes());
   }
 
   public static LocatedBlock getLastLocatedBlock(
@@ -65,6 +67,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
    * It verifies the block information from a datanode.
    * Then, it updates the block with new information and verifies again. 
    */
+  @Test
   public void testBlockMetaDataInfo() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -114,8 +117,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
   }
 
   private static ReplicaInfo createReplicaInfo(Block b) {
-    return new ReplicaBeingWritten(b.getBlockId(), b.getGenerationStamp(),
-        null, null);
+    return new FinalizedReplica(b, null, null);
   }
 
   private static void assertEquals(ReplicaInfo originalInfo, ReplicaRecoveryInfo recoveryInfo) {
@@ -177,7 +179,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       Assert.assertNull("Data-node should not have this replica.", r);
     }
     
-    { //case "THIS IS NOT SUPPOSED TO HAPPEN"
+    { //case "THIS IS NOT SUPPOSED TO HAPPEN" with recovery id < gs  
       final long recoveryid = gs - 1;
       final Block b = new Block(firstblockid + 1, length, gs);
       try {
@@ -223,19 +225,35 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       final Block b = locatedblock.getBlock();
       final long recoveryid = b.getGenerationStamp() + 1;
       final long newlength = b.getNumBytes() - 1;
-      FSDataset.initReplicaRecovery(fsdataset.volumeMap, b, recoveryid);
+      final ReplicaRecoveryInfo rri = FSDataset.initReplicaRecovery(
+          fsdataset.volumeMap, b, recoveryid);
 
       //check replica
-      final ReplicaInfo replica = fsdataset.getReplica(b.getBlockId());
+      final ReplicaInfo replica = fsdataset.volumeMap.get(b.getBlockId());
       Assert.assertTrue(replica instanceof ReplicaUnderRecovery);
       final ReplicaUnderRecovery rur = (ReplicaUnderRecovery)replica;
 
       //check meta data before update
       FSDataset.checkReplicaFiles(rur);
 
+      //case "THIS IS NOT SUPPOSED TO HAPPEN"
+      //with (block length) != (stored replica's on disk length). 
+      {
+        //create a block with same id and gs but different length.
+        final Block tmp = new Block(rri.getBlockId(), rri.getNumBytes() - 1,
+            rri.getGenerationStamp());
+        try {
+          //update should fail
+          fsdataset.updateReplicaUnderRecovery(tmp, recoveryid, newlength);
+          Assert.fail();
+        } catch(IOException ioe) {
+          System.out.println("GOOD: getting " + ioe);
+        }
+      }
+
       //update
       final ReplicaInfo finalized = fsdataset.updateReplicaUnderRecovery(
-                                                rur, recoveryid, newlength);
+          rri, recoveryid, newlength);
 
       //check meta data after update
       FSDataset.checkReplicaFiles(finalized);
