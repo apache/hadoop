@@ -25,10 +25,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.ObjectWritable;
 
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an 

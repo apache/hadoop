@@ -1179,8 +1179,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           regionInfo.getTableDesc().getName(), kvs,
           (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
       }
-
-      
       flush = isFlushSize(size);
     } finally {
       this.updatesLock.readLock().unlock();
@@ -1744,55 +1742,56 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
      * @throws IOException
      */
     private boolean nextInternal() throws IOException {
-      // This method should probably be reorganized a bit... has gotten messy
-      KeyValue kv;
-      byte[] currentRow = null;
+      byte [] currentRow = null;
       boolean filterCurrentRow = false;
       while (true) {
-        kv = this.storeHeap.peek();
-        if (kv == null) {
-          return false;
-        }
+        KeyValue kv = this.storeHeap.peek();
+        if (kv == null) return false;
         byte [] row = kv.getRow();
-        if (filterCurrentRow && Bytes.equals(currentRow, row)) {
-          // filter all columns until row changes
-          this.storeHeap.next(results);
-          results.clear();
+        boolean samerow = Bytes.equals(currentRow, row);
+        if (samerow && filterCurrentRow) {
+          // Filter all columns until row changes
+          this.storeHeap.next(this.results);
+          this.results.clear();
           continue;
         }
-        // see if current row should be filtered based on row key
-        if (filter != null && filter.filterRowKey(row, 0, row.length)) {
-          if(!results.isEmpty() && !Bytes.equals(currentRow, row)) {
-            return true;
-          }
-          this.storeHeap.next(results);
-          results.clear();
-          resetFilters();
-          filterCurrentRow = true;
-          currentRow = row;
-          continue;
-        }
-        if(!Bytes.equals(currentRow, row)) {
+        if (!samerow) {
           // Continue on the next row:
           currentRow = row;
           filterCurrentRow = false;
           // See if we passed stopRow
-          if(stopRow != null &&
-              comparator.compareRows(stopRow, 0, stopRow.length, 
-                  currentRow, 0, currentRow.length) <= 0) {
+          if (this.stopRow != null &&
+              comparator.compareRows(this.stopRow, 0, this.stopRow.length, 
+                currentRow, 0, currentRow.length) <= 0) {
             return false;
           }
-          // if there are _no_ results or current row should be filtered
-          if (results.isEmpty() || filter != null && filter.filterRow()) {
-            // make sure results is empty
-            results.clear();
-            resetFilters();
-            continue;
-          }
-          return true;
+          if (hasResults()) return true;
+        }
+        // See if current row should be filtered based on row key
+        if (this.filter != null && this.filter.filterRowKey(row, 0, row.length)) {
+          resetFilters();
+          filterCurrentRow = true;
+          currentRow = row;
         }
         this.storeHeap.next(results);
       }
+    }
+
+    /*
+     * Do we have results to return or should we continue.  Call when we get to
+     * the end of a row.  Does house cleaning -- clearing results and resetting
+     * filters -- if we are to continue.
+     * @return True if we should return else false if need to keep going.
+     */
+    private boolean hasResults() {
+      if (this.results.isEmpty() ||
+          this.filter != null && this.filter.filterRow()) {
+        // Make sure results is empty, reset filters
+        results.clear();
+        resetFilters();
+        return false;
+      }
+      return true;
     }
 
     public void close() {
@@ -2326,7 +2325,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       store.get(get, qualifiers, results);
 
       if (!results.isEmpty()) {
-        byte [] oldValue = results.get(0).getValue();
         KeyValue kv = results.get(0);
         byte [] buffer = kv.getBuffer();
         int valueOffset = kv.getValueOffset();

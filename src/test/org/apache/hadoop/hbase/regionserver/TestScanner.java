@@ -176,9 +176,11 @@ public class TestScanner extends HBaseTestCase {
     try {
       this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
       addContent(this.r, HConstants.CATALOG_FAMILY);
-      Filter newFilter = new PrefixFilter(Bytes.toBytes("ab"));
+      byte [] prefix = Bytes.toBytes("ab");
+      Filter newFilter = new PrefixFilter(prefix);
       Scan scan = new Scan();
       scan.setFilter(newFilter);
+      scan.setStartRow(prefix);
       rowPrefixFilter(scan);
       
       byte[] stopRow = Bytes.toBytes("bbc");

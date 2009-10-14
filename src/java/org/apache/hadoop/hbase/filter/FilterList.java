@@ -33,13 +33,14 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * Implementation of {@link Filter} that represents an ordered List of Filters
- * which will be evaluated with a specified boolean operator MUST_PASS_ALL 
- * (!AND) or MUST_PASS_ONE (!OR).  Since you can use Filter Lists as children
- * of Filter Lists, you can create a hierarchy of filters to be evaluated.
+ * which will be evaluated with a specified boolean operator {@link Operator#MUST_PASS_ALL} 
+ * (<code>!AND</code>) or {@link Operator#MUST_PASS_ONE} (<code>!OR</code>).
+ * Since you can use Filter Lists as children of Filter Lists, you can create a
+ * hierarchy of filters to be evaluated.
+ * Defaults to {@link Operator#MUST_PASS_ALL}.
  * <p>TODO: Fix creation of Configuration on serialization and deserialization. 
  */
 public class FilterList implements Filter {
-
   /** set operator */
   public static enum Operator {
     /** !AND */
@@ -67,6 +68,15 @@ public class FilterList implements Filter {
    */
   public FilterList(final List<Filter> rowFilters) {
     this.filters = rowFilters;
+  }
+
+  /**
+   * Constructor that takes an operator.
+   * 
+   * @param operator Operator to process filter set with.
+   */
+  public FilterList(final Operator operator) {
+    this.operator = operator;
   }
 
   /**
@@ -115,19 +125,19 @@ public class FilterList implements Filter {
 
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     for (Filter filter : filters) {
-      if (operator == Operator.MUST_PASS_ALL) {
-        if (filter.filterAllRemaining()
-            || filter.filterRowKey(rowKey, offset, length)) {
+      if (this.operator == Operator.MUST_PASS_ALL) {
+        if (filter.filterAllRemaining() ||
+            filter.filterRowKey(rowKey, offset, length)) {
           return true;
         }
-      } else if (operator == Operator.MUST_PASS_ONE) {
-        if (!filter.filterAllRemaining()
-            && !filter.filterRowKey(rowKey, offset, length)) {
+      } else if (this.operator == Operator.MUST_PASS_ONE) {
+        if (!filter.filterAllRemaining() &&
+            !filter.filterRowKey(rowKey, offset, length)) {
           return false;
         }
       }
     }
-    return  operator == Operator.MUST_PASS_ONE;
+    return this.operator == Operator.MUST_PASS_ONE;
   }
 
   public boolean filterAllRemaining() {
@@ -179,8 +189,7 @@ public class FilterList implements Filter {
   public boolean filterRow() {
     for (Filter filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {
-        if (filter.filterAllRemaining()
-            || filter.filterRow()) {
+        if (filter.filterAllRemaining() || filter.filterRow()) {
           return true;
         }
       } else if (operator == Operator.MUST_PASS_ONE) {

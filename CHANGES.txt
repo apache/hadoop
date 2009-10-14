@@ -65,6 +65,8 @@ Release 0.21.0 - Unreleased
                 work
    HBASE-1889  ClassNotFoundException on trunk for REST
    HBASE-1905  Remove unused config. hbase.hstore.blockCache.blockSize
+   HBASE-1906  FilterList of prefix and columnvalue not working properly with
+               deletes and multiple values
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

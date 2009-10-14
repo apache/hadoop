@@ -20,10 +20,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
@@ -35,13 +31,22 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Tests from client-side of a cluster.
@@ -60,6 +65,135 @@ public class TestClient extends HBaseClusterTestCase {
    */
   public TestClient() {
     super();
+  }
+
+  /**
+   * Test from client side of an involved filter against a multi family that
+   * involves deletes.
+   * 
+   * @throws Exception
+   */
+  public void testWeirdCacheBehaviour() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testWeirdCacheBehaviour");
+    byte[][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
+        Bytes.toBytes("trans-type"), Bytes.toBytes("trans-date"),
+        Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
+    HTable ht = createTable(TABLE, FAMILIES);
+    String value = "this is the value";
+    String value2 = "this is some other value";
+    String keyPrefix1 = UUID.randomUUID().toString();
+    String keyPrefix2 = UUID.randomUUID().toString();
+    String keyPrefix3 = UUID.randomUUID().toString();
+    putRows(ht, 3, value, keyPrefix1);
+    putRows(ht, 3, value, keyPrefix2);
+    putRows(ht, 3, value, keyPrefix3);
+    ht.flushCommits();
+    putRows(ht, 3, value2, keyPrefix1);
+    putRows(ht, 3, value2, keyPrefix2);
+    putRows(ht, 3, value2, keyPrefix3);
+    HTable table = new HTable(conf, Bytes.toBytes("testWeirdCacheBehaviour"));
+    System.out.println("Checking values for key: " + keyPrefix1);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+        getNumberOfRows(keyPrefix1, value2, table));
+    System.out.println("Checking values for key: " + keyPrefix2);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+        getNumberOfRows(keyPrefix2, value2, table));
+    System.out.println("Checking values for key: " + keyPrefix3);
+    assertEquals("Got back incorrect number of rows from scan", 3,
+        getNumberOfRows(keyPrefix3, value2, table));
+    deleteColumns(ht, value2, keyPrefix1);
+    deleteColumns(ht, value2, keyPrefix2);
+    deleteColumns(ht, value2, keyPrefix3);
+    System.out.println("Starting important checks.....");
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix1,
+      0, getNumberOfRows(keyPrefix1, value2, table));
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix2,
+      0, getNumberOfRows(keyPrefix2, value2, table));
+    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3,
+      0, getNumberOfRows(keyPrefix3, value2, table));
+    ht.setScannerCaching(0);
+    assertEquals("Got back incorrect number of rows from scan", 0,
+      getNumberOfRows(keyPrefix1, value2, table)); ht.setScannerCaching(100);
+    assertEquals("Got back incorrect number of rows from scan", 0,
+      getNumberOfRows(keyPrefix2, value2, table));
+  }
+
+  private void deleteColumns(HTable ht, String value, String keyPrefix)
+  throws IOException {
+    ResultScanner scanner = buildScanner(keyPrefix, value, ht);
+    Iterator<Result> it = scanner.iterator();
+    int count = 0;
+    while (it.hasNext()) {
+      Result result = it.next();
+      Delete delete = new Delete(result.getRow());
+      delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
+      ht.delete(delete);
+      count++;
+    }
+    assertEquals("Did not perform correct number of deletes", 3, count);
+  }
+
+  private int getNumberOfRows(String keyPrefix, String value, HTable ht)
+      throws Exception {
+    ResultScanner resultScanner = buildScanner(keyPrefix, value, ht);
+    Iterator<Result> scanner = resultScanner.iterator();
+    int numberOfResults = 0;
+    while (scanner.hasNext()) {
+      Result result = scanner.next();
+      System.out.println("Got back key: " + Bytes.toString(result.getRow()));
+      for (KeyValue kv : result.raw()) {
+        System.out.println("kv=" + kv.toString() + ", "
+            + Bytes.toString(kv.getValue()));
+      }
+      numberOfResults++;
+    }
+    return numberOfResults;
+  }
+
+  private ResultScanner buildScanner(String keyPrefix, String value, HTable ht)
+      throws IOException {
+    // OurFilterList allFilters = new OurFilterList();
+    FilterList allFilters = new FilterList(/* FilterList.Operator.MUST_PASS_ALL */);
+    allFilters.addFilter(new PrefixFilter(Bytes.toBytes(keyPrefix)));
+    SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes
+        .toBytes("trans-tags"), Bytes.toBytes("qual2"), CompareOp.EQUAL, Bytes
+        .toBytes(value));
+    filter.setFilterIfMissing(true);
+    allFilters.addFilter(filter);
+
+    // allFilters.addFilter(new
+    // RowExcludingSingleColumnValueFilter(Bytes.toBytes("trans-tags"),
+    // Bytes.toBytes("qual2"), CompareOp.EQUAL, Bytes.toBytes(value)));
+
+    Scan scan = new Scan();
+    scan.addFamily(Bytes.toBytes("trans-blob"));
+    scan.addFamily(Bytes.toBytes("trans-type"));
+    scan.addFamily(Bytes.toBytes("trans-date"));
+    scan.addFamily(Bytes.toBytes("trans-tags"));
+    scan.addFamily(Bytes.toBytes("trans-group"));
+    scan.setFilter(allFilters);
+
+    return ht.getScanner(scan);
+  }
+
+  private void putRows(HTable ht, int numRows, String value, String key)
+      throws IOException {
+    for (int i = 0; i < numRows; i++) {
+      String row = key + "_" + UUID.randomUUID().toString();
+      System.out.println(String.format("Saving row: %s, with value %s", row,
+          value));
+      Put put = new Put(Bytes.toBytes(row));
+      put.add(Bytes.toBytes("trans-blob"), null, Bytes
+          .toBytes("value for blob"));
+      put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
+      put.add(Bytes.toBytes("trans-date"), null, Bytes
+          .toBytes("20090921010101999"));
+      put.add(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes
+          .toBytes(value));
+      put.add(Bytes.toBytes("trans-group"), null, Bytes
+          .toBytes("adhocTransactionGroupId"));
+      ht.put(put);
+    }
   }
 
   /**
@@ -249,6 +383,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanner.close();
     System.out.println("Done.");
   }
+
   public void testFilters() throws Exception {
     byte [] TABLE = Bytes.toBytes("testFilters");
     HTable ht = createTable(TABLE, FAMILY);
@@ -2671,7 +2806,7 @@ public class TestClient extends HBaseClusterTestCase {
   }
   
   private byte [][] makeN(byte [] base, int n) {
-    if(n > 256) {
+    if (n > 256) {
       return makeNBig(base, n);
     }
     byte [][] ret = new byte[n][];

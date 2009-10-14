@@ -219,8 +219,7 @@ public abstract class HBaseTestCase extends TestCase {
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily),
-        null,
+    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily), null,
       startKeyBytes, endKey, -1);
   }
 
