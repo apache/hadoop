@@ -36,7 +36,7 @@
   <property name="year" value="2009"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
-  <property name="hdfs.src.dir" value="${src.dir}/java"/>
+  <property name="java.src.dir" value="${src.dir}/java"/>
   <property name="anttasks.dir" value="${basedir}/src/ant"/>
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
@@ -283,7 +283,7 @@
     <!-- Compile Java files (excluding JSPs) checking warnings -->
     <javac 
      encoding="${build.encoding}" 
-     srcdir="${hdfs.src.dir};${build.src}" 
+     srcdir="${java.src.dir};${build.src}" 
      includes="org/apache/hadoop/**/*.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
@@ -296,8 +296,8 @@
     </javac>   
 
     <copy todir="${build.classes}">
-     <fileset dir="${hdfs.src.dir}" includes="**/*.properties"/>
-     <fileset dir="${hdfs.src.dir}" includes="hdfs-default.xml"/>
+     <fileset dir="${java.src.dir}" includes="**/*.properties"/>
+     <fileset dir="${java.src.dir}" includes="hdfs-default.xml"/>
     </copy>
   </target>
 
@@ -318,7 +318,7 @@
     <echo message="Start weaving aspects in place"/>
     <iajc
       encoding="${build.encoding}" 
-      srcdir="${hdfs.src.dir};${build.src};${test.src.dir}/aop" 
+      srcdir="${java.src.dir};${build.src};${test.src.dir}/aop" 
       includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
       destDir="${build.classes}"
       debug="${javac.debug}"
@@ -647,7 +647,7 @@
   	
   	<checkstyle config="${test.src.dir}/checkstyle.xml"
   		failOnViolation="false">
-      <fileset dir="${hdfs.src.dir}" includes="**/*.java" excludes="**/generated/**"/>  		
+      <fileset dir="${java.src.dir}" includes="**/*.java" excludes="**/generated/**"/>  		
       <formatter type="xml" toFile="${test.build.dir}/checkstyle-errors.xml"/>
   	</checkstyle>
   	
@@ -684,7 +684,7 @@
           <include name="**/*.jar"/>
         </fileset>
       </auxClasspath>
-      <sourcePath path="${hdfs.src.dir}"/>
+      <sourcePath path="${java.src.dir}"/>
       <class location="${basedir}/build/${final.name}.jar" />
     </findbugs>
 
@@ -712,7 +712,7 @@
       <fileset dir="${docs.src}/build/site/" />
     </copy>
     <copy file="${docs.src}/releasenotes.html" todir="${build.docs}"/>
-    <style basedir="${hdfs.src.dir}" destdir="${build.docs}"
+    <style basedir="${java.src.dir}" destdir="${build.docs}"
            includes="hdfs-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
   </target>
@@ -728,7 +728,7 @@
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
-      overview="${hdfs.src.dir}/overview.html"
+      overview="${java.src.dir}/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc.dev}"
       author="true"
@@ -738,7 +738,7 @@
       doctitle="${Name} ${version} Developer API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}">
-        <packageset dir="${hdfs.src.dir}"/>        	
+        <packageset dir="${java.src.dir}"/>        	
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />
@@ -763,7 +763,7 @@
        unless="javadoc.is.uptodate">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
-      overview="${hdfs.src.dir}/overview.html"
+      overview="${java.src.dir}/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc}"
       author="true"
@@ -774,7 +774,7 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}">
 
-        <packageset dir="${hdfs.src.dir}"/>
+        <packageset dir="${java.src.dir}"/>
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />

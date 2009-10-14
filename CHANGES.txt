@@ -11,6 +11,9 @@ Trunk (unreleased changes)
   total storage requirements of HDFS.  (dhruba)
 
   IMPROVEMENTS
+    
+    HDFS-704. Unify build property names to facilitate cross-projects
+    modifications (cos)
 
   OPTIMIZATIONS
 
