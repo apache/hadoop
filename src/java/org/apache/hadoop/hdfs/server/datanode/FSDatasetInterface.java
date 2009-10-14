@@ -102,6 +102,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @param blockId
    * @return replica from the replicas map
    */
+  @Deprecated
   public Replica getReplica(long blockId);
 
   /**

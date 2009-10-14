@@ -775,6 +775,31 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         parseGenerationStamp(blockfile, metafile));
   }
 
+  /**
+   * Returns a clone of a replica stored in data-node memory.
+   * Should be primarily used for testing.
+   * @param blockId
+   * @return
+   */
+  synchronized ReplicaInfo fetchReplicaInfo(long blockId) {
+    ReplicaInfo r = volumeMap.get(blockId);
+    if(r == null)
+      return null;
+    switch(r.getState()) {
+    case FINALIZED:
+      return new FinalizedReplica((FinalizedReplica)r);
+    case RBW:
+      return new ReplicaBeingWritten((ReplicaBeingWritten)r);
+    case RWR:
+      return new ReplicaWaitingToBeRecovered((ReplicaWaitingToBeRecovered)r);
+    case RUR:
+      return new ReplicaUnderRecovery((ReplicaUnderRecovery)r);
+    case TEMPORARY:
+      return new ReplicaInPipeline((ReplicaInPipeline)r);
+    }
+    return null;
+  }
+
   public boolean metaFileExists(Block b) throws IOException {
     return getMetaFile(b).exists();
   }
@@ -1916,7 +1941,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
   }
 
+  /**
+   * @deprecated use {@link #fetchReplicaInfo(long)} instead.
+   */
   @Override
+  @Deprecated
   public ReplicaInfo getReplica(long blockId) {
     assert(Thread.holdsLock(this));
     return volumeMap.get(blockId);
@@ -2070,7 +2099,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized long getReplicaVisibleLength(final Block block)
   throws IOException {
-    final Replica replica = getReplica(block.getBlockId());
+    final Replica replica = volumeMap.get(block.getBlockId());
     if (replica == null) {
       throw new ReplicaNotFoundException(block);
     }

@@ -35,7 +35,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-    ReplicaBeingWritten(long blockId, long genStamp, 
+  ReplicaBeingWritten(long blockId, long genStamp, 
         FSVolume vol, File dir) {
     super( blockId, genStamp, vol, dir);
   }
@@ -65,7 +65,15 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
       FSVolume vol, File dir, Thread writer ) {
     super( blockId, len, genStamp, vol, dir, writer);
   }
-  
+
+  /**
+   * Copy constructor.
+   * @param from
+   */
+  ReplicaBeingWritten(ReplicaBeingWritten from) {
+    super(from);
+  }
+
   @Override
   public long getVisibleLength() {
     return getBytesAcked();       // all acked bytes are visible

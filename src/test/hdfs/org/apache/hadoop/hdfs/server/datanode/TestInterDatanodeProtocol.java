@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -225,16 +226,15 @@ public class TestInterDatanodeProtocol {
       final Block b = locatedblock.getBlock();
       final long recoveryid = b.getGenerationStamp() + 1;
       final long newlength = b.getNumBytes() - 1;
-      final ReplicaRecoveryInfo rri = FSDataset.initReplicaRecovery(
-          fsdataset.volumeMap, b, recoveryid);
+      final ReplicaRecoveryInfo rri = fsdataset.initReplicaRecovery(
+          new RecoveringBlock(b, null, recoveryid));
 
       //check replica
-      final ReplicaInfo replica = fsdataset.volumeMap.get(b.getBlockId());
-      Assert.assertTrue(replica instanceof ReplicaUnderRecovery);
-      final ReplicaUnderRecovery rur = (ReplicaUnderRecovery)replica;
+      final ReplicaInfo replica = fsdataset.fetchReplicaInfo(b.getBlockId());
+      Assert.assertEquals(ReplicaState.RUR, replica.getState());
 
       //check meta data before update
-      FSDataset.checkReplicaFiles(rur);
+      FSDataset.checkReplicaFiles(replica);
 
       //case "THIS IS NOT SUPPOSED TO HAPPEN"
       //with (block length) != (stored replica's on disk length). 

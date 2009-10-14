@@ -48,6 +48,16 @@ class ReplicaUnderRecovery extends ReplicaInfo {
     this.recoveryId = recoveryId;
   }
 
+  /**
+   * Copy constructor.
+   * @param from
+   */
+  ReplicaUnderRecovery(ReplicaUnderRecovery from) {
+    super(from);
+    this.original = from.getOriginalReplica();
+    this.recoveryId = from.getRecoveryID();
+  }
+
   /** 
    * Get the recovery id
    * @return the generation stamp that the replica will be bumped to 

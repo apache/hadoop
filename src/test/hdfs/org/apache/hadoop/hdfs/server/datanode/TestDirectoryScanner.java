@@ -120,12 +120,7 @@ public class TestDirectoryScanner extends TestCase {
     long id = rand.nextLong();
     while (true) {
       id = rand.nextLong();
-      Block b = new Block(id);
-      ReplicaInfo info = null;
-      synchronized(fds) {
-        info = fds.volumeMap.get(b);
-      }
-      if (info == null) {
+      if (fds.fetchReplicaInfo(id) == null) {
         break;
       }
     }
@@ -320,14 +315,12 @@ public class TestDirectoryScanner extends TestCase {
 
   private void verifyAddition(long blockId, long genStamp, long size) {
     final ReplicaInfo replicainfo;
-    synchronized(fds) {
-      replicainfo = fds.getReplica(blockId);
-    }
+    replicainfo = fds.fetchReplicaInfo(blockId);
     assertNotNull(replicainfo);
 
     // Added block has the same file as the one created by the test
     File file = new File(getBlockFile(blockId));
-    assertEquals(file.getName(), replicainfo.getBlockFile().getName());
+    assertEquals(file.getName(), fds.findBlockFile(blockId).getName());
 
     // Generation stamp is same as that of created file
     assertEquals(genStamp, replicainfo.getGenerationStamp());
@@ -338,16 +331,12 @@ public class TestDirectoryScanner extends TestCase {
 
   private void verifyDeletion(long blockId) {
     // Ensure block does not exist in memory
-    synchronized(fds) {
-      assertEquals(null, fds.volumeMap.get(new Block(blockId)));
-    }
+    assertNull(fds.fetchReplicaInfo(blockId));
   }
 
   private void verifyGenStamp(long blockId, long genStamp) {
-    final Replica memBlock;
-    synchronized(fds) {
-      memBlock = fds.getReplica(blockId);
-    }
+    final ReplicaInfo memBlock;
+    memBlock = fds.fetchReplicaInfo(blockId);
     assertNotNull(memBlock);
     assertEquals(genStamp, memBlock.getGenerationStamp());
   }

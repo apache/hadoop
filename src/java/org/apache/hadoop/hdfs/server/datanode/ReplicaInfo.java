@@ -74,6 +74,14 @@ abstract public class ReplicaInfo extends Block implements Replica {
   }
 
   /**
+   * Copy constructor.
+   * @param from
+   */
+  ReplicaInfo(ReplicaInfo from) {
+    this(from, from.getVolume(), from.getDir());
+  }
+
+  /**
    * Get this replica's meta file name
    * @return this replica's meta file name
    */

@@ -51,7 +51,16 @@ class FinalizedReplica extends ReplicaInfo {
   FinalizedReplica(Block block, FSVolume vol, File dir) {
     super(block, vol, dir);
   }
-  
+
+  /**
+   * Copy constructor.
+   * @param from
+   */
+  FinalizedReplica(FinalizedReplica from) {
+    super(from);
+    this.unlinked = from.isUnlinked();
+  }
+
   @Override  // ReplicaInfo
   public ReplicaState getState() {
     return ReplicaState.FINALIZED;

@@ -85,6 +85,17 @@ class ReplicaInPipeline extends ReplicaInfo
     this.writer = writer;
   }
 
+  /**
+   * Copy constructor.
+   * @param from
+   */
+  ReplicaInPipeline(ReplicaInPipeline from) {
+    super(from);
+    this.bytesAcked = from.getBytesAcked();
+    this.bytesOnDisk = from.getBytesOnDisk();
+    this.writer = from.writer;
+  }
+
   @Override
   public long getVisibleLength() {
     return -1;

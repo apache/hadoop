@@ -393,6 +393,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   @Override
+  @Deprecated
   public Replica getReplica(long blockId) {
     return blockMap.get(new Block(blockId));
   }

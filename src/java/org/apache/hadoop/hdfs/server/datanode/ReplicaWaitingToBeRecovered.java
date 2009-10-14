@@ -58,6 +58,15 @@ class ReplicaWaitingToBeRecovered extends ReplicaInfo {
     super(block, vol, dir);
   }
   
+  /**
+   * Copy constructor.
+   * @param from
+   */
+  ReplicaWaitingToBeRecovered(ReplicaWaitingToBeRecovered from) {
+    super(from);
+    this.unlinked = from.isUnlinked();
+  }
+
   @Override //ReplicaInfo
   public ReplicaState getState() {
     return ReplicaState.RWR;
