@@ -281,6 +281,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-680. Add new access method to a copy of a block's replica. (shv)
 
+    HDFS-705. Create an adapter to access some of package-private methods of
+    DataNode from tests (cos)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
