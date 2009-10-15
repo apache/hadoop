@@ -42,7 +42,7 @@ public class WhileMatchFilter implements Filter {
   }
 
   public void reset() {
-    // no state.
+    this.filter.reset();
   }
 
   private void changeFAR(boolean value) {
