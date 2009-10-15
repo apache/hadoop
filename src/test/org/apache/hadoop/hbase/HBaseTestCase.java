@@ -46,7 +46,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
- * Abstract base class for test cases. Performs all static initialization
+ * Abstract HBase test class.  Initializes a few things that can come in handly
+ * like an HBaseConfiguration and filesystem.
+ * @deprecated Write junit4 unit tests using {@link HBaseTestingUtility}
  */
 public abstract class HBaseTestCase extends TestCase {
   private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);

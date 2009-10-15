@@ -36,6 +36,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase
  * cluster in setup and tears it down again in tearDown.
+ * @deprecated Use junit4 and {@link HBaseTestingUtility}
  */
 public abstract class HBaseClusterTestCase extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(HBaseClusterTestCase.class);

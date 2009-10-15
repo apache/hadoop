@@ -32,12 +32,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
- * This class creates a single process HBase cluster. One thread is created for
- * each server.
+ * This class creates a single process HBase cluster. One thread is run for
+ * each server started.  Pass how many instances of a RegionServer you want
+ * running in your cluster-in-a-single-jvm.  Its modeled on MiniDFSCluster.
+ * Uses {@link LocalHBaseCluster}.  Will run on top of whatever the currently
+ * configured FileSystem.
  */
 public class MiniHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
-  
   private HBaseConfiguration conf;
   private LocalHBaseCluster hbaseCluster;
 
@@ -104,7 +106,7 @@ public class MiniHBaseCluster implements HConstants {
   public HMaster getMaster() {
     return this.hbaseCluster.getMaster();
   }
-  
+
   /**
    * Cause a region server to exit without cleaning up
    *
@@ -200,7 +202,7 @@ public class MiniHBaseCluster implements HConstants {
   public List<LocalHBaseCluster.RegionServerThread> getRegionThreads() {
     return this.hbaseCluster.getRegionServers();
   }
-  
+
   /**
    * Grab a numbered region server of your choice.
    * @param serverNumber

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2009 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -17,21 +17,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -40,31 +51,58 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
- * Tests from client-side of a cluster.
+ * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
+ * Sets up the HBase mini cluster once at start and runs through all client tests.
+ * Each creates a table named for the method and does its stuff against that.
  */
-public class TestClient extends HBaseClusterTestCase {
+public class TestFromClientSide {
   final Log LOG = LogFactory.getLog(getClass());
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
-  
-  private static byte [] EMPTY = new byte[0];
-  
+
   /**
-   * Constructor does nothing special, start cluster.
+   * @throws java.lang.Exception
    */
-  public TestClient() {
-    super();
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @Before
+  public void setUp() throws Exception {
+    // Nothing to do.
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @After
+  public void tearDown() throws Exception {
+    // Nothing to do.
   }
 
   /**
@@ -73,12 +111,13 @@ public class TestClient extends HBaseClusterTestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testWeirdCacheBehaviour() throws Exception {
-    byte[] TABLE = Bytes.toBytes("testWeirdCacheBehaviour");
-    byte[][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
+    byte [] TABLE = Bytes.toBytes("testWeirdCacheBehaviour");
+    byte [][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
         Bytes.toBytes("trans-type"), Bytes.toBytes("trans-date"),
         Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
-    HTable ht = createTable(TABLE, FAMILIES);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     String value = "this is the value";
     String value2 = "this is some other value";
     String keyPrefix1 = UUID.randomUUID().toString();
@@ -91,7 +130,8 @@ public class TestClient extends HBaseClusterTestCase {
     putRows(ht, 3, value2, keyPrefix1);
     putRows(ht, 3, value2, keyPrefix2);
     putRows(ht, 3, value2, keyPrefix3);
-    HTable table = new HTable(conf, Bytes.toBytes("testWeirdCacheBehaviour"));
+    HTable table = new HTable(TEST_UTIL.getConfiguration(),
+      Bytes.toBytes("testWeirdCacheBehaviour"));
     System.out.println("Checking values for key: " + keyPrefix1);
     assertEquals("Got back incorrect number of rows from scan", 3,
         getNumberOfRows(keyPrefix1, value2, table));
@@ -202,10 +242,11 @@ public class TestClient extends HBaseClusterTestCase {
    * Related to the TestFilterAcrossRegions over in the o.a.h.h.filter package.
    * @throws IOException
    */
+  @Test
   public void testFilterAcrossMutlipleRegions() throws IOException {
-    byte [] name = Bytes.toBytes(getName());
-    HTable t = createTable(name, FAMILY);
-    int rowCount = loadTable(t);
+    byte [] name = Bytes.toBytes("testFilterAcrossMutlipleRegions");
+    HTable t = TEST_UTIL.createTable(name, FAMILY);
+    int rowCount = TEST_UTIL.loadTable(t, FAMILY);
     assertRowCount(t, rowCount);
     // Split the table.  Should split on a reasonable key; 'lqj'
     Map<HRegionInfo, HServerAddress> regions  = splitTable(t);
@@ -251,32 +292,6 @@ public class TestClient extends HBaseClusterTestCase {
     countGreater = countRows(t, createScanWithRowFilter(endKey, endKey,
       CompareFilter.CompareOp.GREATER_OR_EQUAL));
     assertEquals(rowCount - endKeyCount, countGreater);
-  }
-  
-  /**
-   * Load table with rows from 'aaa' to 'zzz'.
-   * @param t
-   * @return Count of rows loaded.
-   * @throws IOException
-   */
-  private int loadTable(final HTable t) throws IOException {
-    // Add data to table.
-    byte[] k = new byte[3];
-    int rowCount = 0;
-    for (byte b1 = 'a'; b1 < 'z'; b1++) {
-      for (byte b2 = 'a'; b2 < 'z'; b2++) {
-        for (byte b3 = 'a'; b3 < 'z'; b3++) {
-          k[0] = b1;
-          k[1] = b2;
-          k[2] = b3;
-          Put put = new Put(k);
-          put.add(FAMILY, new byte[0], k);
-          t.put(put);
-          rowCount++;
-        }
-      }
-    }
-    return rowCount;
   }
 
   /*
@@ -339,7 +354,7 @@ public class TestClient extends HBaseClusterTestCase {
   private Map<HRegionInfo, HServerAddress> splitTable(final HTable t)
   throws IOException {
     // Split this table in two.
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.split(t.getTableName());
     Map<HRegionInfo, HServerAddress> regions = waitOnSplit(t);
     assertTrue(regions.size() > 1);
@@ -356,10 +371,10 @@ public class TestClient extends HBaseClusterTestCase {
   throws IOException {
     Map<HRegionInfo, HServerAddress> regions = t.getRegionsInfo();
     int originalCount = regions.size();
-    for (int i = 0; i < this.conf.getInt("hbase.test.retries", 30); i++) {
+    for (int i = 0; i < TEST_UTIL.getConfiguration().getInt("hbase.test.retries", 30); i++) {
       Thread.currentThread();
       try {
-        Thread.sleep(this.conf.getInt("hbase.server.thread.wakefrequency", 1000));
+        Thread.sleep(TEST_UTIL.getConfiguration().getInt("hbase.server.thread.wakefrequency", 1000));
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
@@ -369,9 +384,10 @@ public class TestClient extends HBaseClusterTestCase {
     return regions;
   }
 
+  @Test
   public void testSuperSimple() throws Exception {
-    byte [] TABLE = Bytes.toBytes(getName());
-    HTable ht = createTable(TABLE, FAMILY);
+    byte [] TABLE = Bytes.toBytes("testSuperSimple");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
@@ -384,9 +400,10 @@ public class TestClient extends HBaseClusterTestCase {
     System.out.println("Done.");
   }
 
+  @Test
   public void testFilters() throws Exception {
     byte [] TABLE = Bytes.toBytes("testFilters");
-    HTable ht = createTable(TABLE, FAMILY);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte [][] ROWS = makeN(ROW, 10);
     byte [][] QUALIFIERS = {
         Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"), 
@@ -403,7 +420,7 @@ public class TestClient extends HBaseClusterTestCase {
     Scan scan = new Scan();
     scan.addFamily(FAMILY);
     Filter filter = new QualifierFilter(CompareOp.EQUAL,
-        new RegexStringComparator("col[1-5]"));
+      new RegexStringComparator("col[1-5]"));
     scan.setFilter(filter);
     ResultScanner scanner = ht.getScanner(scan);
     int expectedIndex = 1;
@@ -421,16 +438,13 @@ public class TestClient extends HBaseClusterTestCase {
   /**
    * Test simple table and non-existent row cases.
    */
+  @Test
   public void testSimpleMissing() throws Exception {
-    
     byte [] TABLE = Bytes.toBytes("testSimpleMissing");
-    
-    HTable ht = createTable(TABLE, FAMILY);
-    
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte [][] ROWS = makeN(ROW, 4);
     
     // Try to get a row on an empty table
-    
     Get get = new Get(ROWS[0]);
     Result result = ht.get(get);
     assertEmptyResult(result);
@@ -535,16 +549,15 @@ public class TestClient extends HBaseClusterTestCase {
    * Test basic puts, gets, scans, and deletes for a single row
    * in a multiple family table.
    */
+  @Test
   public void testSingleRowMultipleFamily() throws Exception {
-    
     byte [] TABLE = Bytes.toBytes("testSingleRowMultipleFamily");
-
     byte [][] ROWS = makeN(ROW, 3);
     byte [][] FAMILIES = makeNAscii(FAMILY, 10);
     byte [][] QUALIFIERS = makeN(QUALIFIER, 10);
     byte [][] VALUES = makeN(VALUE, 10);
    
-    HTable ht = createTable(TABLE, FAMILIES);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     
     Get get;
     Scan scan;
@@ -576,10 +589,9 @@ public class TestClient extends HBaseClusterTestCase {
     // Flush memstore and run same tests from storefiles
     ////////////////////////////////////////////////////////////////////////////
     
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     
     // Redo get and scan tests from storefile
-    
     getVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
     scanVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
     getVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
@@ -590,7 +602,6 @@ public class TestClient extends HBaseClusterTestCase {
     ////////////////////////////////////////////////////////////////////////////
     
     // Insert multiple columns to two other families
-    
     put = new Put(ROWS[0]);
     put.add(FAMILIES[2], QUALIFIERS[2], VALUES[2]);
     put.add(FAMILIES[2], QUALIFIERS[4], VALUES[4]);
@@ -611,15 +622,13 @@ public class TestClient extends HBaseClusterTestCase {
     // Flush the table again
     ////////////////////////////////////////////////////////////////////////////
     
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     
     // Redo tests again
-    
     singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
     singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
     
     // Insert more data to memstore
-    
     put = new Put(ROWS[0]);
     put.add(FAMILIES[6], QUALIFIERS[5], VALUES[5]);
     put.add(FAMILIES[6], QUALIFIERS[8], VALUES[8]);
@@ -635,21 +644,18 @@ public class TestClient extends HBaseClusterTestCase {
     ht.delete(delete);
     
     // Try to get deleted column
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[7]);
     result = ht.get(get);
     assertEmptyResult(result);
     
     // Try to scan deleted column
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[7]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
     
     // Make sure we can still get a column before it and after it
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = ht.get(get);
@@ -661,7 +667,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
     
     // Make sure we can still scan a column before it and after it
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
@@ -680,21 +685,18 @@ public class TestClient extends HBaseClusterTestCase {
     ht.delete(delete);
     
     // Try to get deleted column
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[8]);
     result = ht.get(get);
     assertEmptyResult(result);
     
     // Try to scan deleted column
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[8]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
     
     // Make sure we can still get a column before it and after it
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = ht.get(get);
@@ -706,7 +708,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
     
     // Make sure we can still scan a column before it and after it
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
@@ -726,7 +727,6 @@ public class TestClient extends HBaseClusterTestCase {
     ht.delete(delete);
     
     // Try to get storefile column in deleted family
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = ht.get(get);
@@ -745,7 +745,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertEmptyResult(result);
     
     // Try to scan storefile column in deleted family
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = getSingleScanResult(ht, scan);
@@ -764,7 +763,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertNullResult(result);
     
     // Make sure we can still get another family
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
     result = ht.get(get);
@@ -776,7 +774,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
     
     // Make sure we can still scan another family
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
@@ -791,10 +788,9 @@ public class TestClient extends HBaseClusterTestCase {
     // Flush everything and rerun delete tests
     ////////////////////////////////////////////////////////////////////////////
     
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     
     // Try to get storefile column in deleted family
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = ht.get(get);
@@ -813,7 +809,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertEmptyResult(result);
     
     // Try to scan storefile column in deleted family
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = getSingleScanResult(ht, scan);
@@ -832,7 +827,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertNullResult(result);
     
     // Make sure we can still get another family
-    
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
     result = ht.get(get);
@@ -844,7 +838,6 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
     
     // Make sure we can still scan another family
-    
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
@@ -857,71 +850,59 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
 
-  @SuppressWarnings("unused")
+  @Test
   public void testNull() throws Exception {
-    
     byte [] TABLE = Bytes.toBytes("testNull");
     
     // Null table name (should NOT work)
     try {
-      HTable htFail = createTable(null, FAMILY);
-      assertTrue("Creating a table with null name passed, should have failed",
-          false);
+      TEST_UTIL.createTable(null, FAMILY);
+      throw new IOException("Creating a table with null name passed, should have failed");
     } catch(Exception e) {}
-    
+
     // Null family (should NOT work)
     try {
-      HTable htFail = createTable(TABLE, (byte[])null);
-      assertTrue("Creating a table with a null family passed, should fail",
-          false);
+      TEST_UTIL.createTable(TABLE, (byte[])null);
+      throw new IOException("Creating a table with a null family passed, should fail");
     } catch(Exception e) {}
     
-    HTable ht = createTable(TABLE, FAMILY);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     
     // Null row (should NOT work)
     try {
       Put put = new Put((byte[])null);
       put.add(FAMILY, QUALIFIER, VALUE);
       ht.put(put);
-      assertTrue("Inserting a null row worked, should throw exception",
-          false);
+      throw new IOException("Inserting a null row worked, should throw exception");
     } catch(Exception e) {}
     
     // Null qualifier (should work)
-    try {
-      
+    {
       Put put = new Put(ROW);
       put.add(FAMILY, null, VALUE);
       ht.put(put);
-      
+
       getTestNull(ht, ROW, FAMILY, VALUE);
-      
+
       scanTestNull(ht, ROW, FAMILY, VALUE);
-      
+
       Delete delete = new Delete(ROW);
       delete.deleteColumns(FAMILY, null);
       ht.delete(delete);
-      
+
       Get get = new Get(ROW);
       Result result = ht.get(get);
       assertEmptyResult(result);
-      
-    } catch(Exception e) {
-      e.printStackTrace();
-      assertTrue("Using a row with null qualifier threw exception, should "
-          + "pass", false);
     }
-    
+
     // Use a new table
-    
     byte [] TABLE2 = Bytes.toBytes("testNull2");
-    ht = createTable(TABLE2, FAMILY);
-    
+    ht = TEST_UTIL.createTable(TABLE2, FAMILY);
+
     // Empty qualifier, byte[0] instead of null (should work)
     try {
-      
       Put put = new Put(ROW);
-      put.add(FAMILY, EMPTY, VALUE);
+      put.add(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
       ht.put(put);
       
       getTestNull(ht, ROW, FAMILY, VALUE);
@@ -930,14 +911,14 @@ public class TestClient extends HBaseClusterTestCase {
       
       // Flush and try again
       
-      flushMemStore(TABLE2);
+      TEST_UTIL.flush();
       
       getTestNull(ht, ROW, FAMILY, VALUE);
       
       scanTestNull(ht, ROW, FAMILY, VALUE);
       
       Delete delete = new Delete(ROW);
-      delete.deleteColumns(FAMILY, EMPTY);
+      delete.deleteColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
       ht.delete(delete);
       
       Get get = new Get(ROW);
@@ -945,14 +926,11 @@ public class TestClient extends HBaseClusterTestCase {
       assertEmptyResult(result);
       
     } catch(Exception e) {
-      e.printStackTrace();
-      assertTrue("Using a row with null qualifier threw exception, should "
-          + "pass", false);
+      throw new IOException("Using a row with null qualifier threw exception, should ");
     }
     
     // Null value
     try {
-      
       Put put = new Put(ROW);
       put.add(FAMILY, QUALIFIER, null);
       ht.put(put);
@@ -976,21 +954,18 @@ public class TestClient extends HBaseClusterTestCase {
       assertEmptyResult(result);
     
     } catch(Exception e) {
-      e.printStackTrace();
-      assertTrue("Null values should be allowed, but threw exception", 
-          false);
+      throw new IOException("Null values should be allowed, but threw exception");
     }
-    
   }
-  
+
+  @Test
   public void testVersions() throws Exception {
-    
-    byte [] TABLE = Bytes.toBytes("testSimpleVersions");
+    byte [] TABLE = Bytes.toBytes("testVersions");
     
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
     
-    HTable ht = createTable(TABLE, FAMILY, 10);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     
     // Insert 4 versions of same column
     Put put = new Put(ROW);
@@ -1039,7 +1014,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Flush and redo
 
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -1142,7 +1117,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Ensure maxVersions of table is respected
 
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
@@ -1196,14 +1171,15 @@ public class TestClient extends HBaseClusterTestCase {
         0, 9);
     
   }
-  
+
+  @Test
   public void testVersionLimits() throws Exception {
     byte [] TABLE = Bytes.toBytes("testVersionLimits");
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
     int [] LIMITS = {1,3,5};
     long [] STAMPS = makeStamps(10);
     byte [][] VALUES = makeNAscii(VALUE, 10);
-    HTable ht = createTable(TABLE, FAMILIES, LIMITS); 
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, LIMITS); 
     
     // Insert limit + 1 on each family
     Put put = new Put(ROW);
@@ -1390,6 +1366,7 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
 
+  @Test
   public void testDeletes() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDeletes");
     
@@ -1398,7 +1375,7 @@ public class TestClient extends HBaseClusterTestCase {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
     
-    HTable ht = createTable(TABLE, FAMILIES);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
     
     Put put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
@@ -1426,7 +1403,7 @@ public class TestClient extends HBaseClusterTestCase {
         new long [] {ts[1]},
         new byte[][] {VALUES[1]},
         0, 0);
-	  
+    
     // Test delete latest version
     put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
@@ -1687,7 +1664,8 @@ public class TestClient extends HBaseClusterTestCase {
    * 
    * Tests one hundred families, one million columns, one million versions
    */
-  public void XtestMillions() throws Exception {
+  @Ignore @Test
+  public void testMillions() throws Exception {
     
     // 100 families
     
@@ -1697,7 +1675,8 @@ public class TestClient extends HBaseClusterTestCase {
     
   }
 
-  public void XtestMultipleRegionsAndBatchPuts() throws Exception {
+  @Ignore @Test
+  public void testMultipleRegionsAndBatchPuts() throws Exception {
     // Two family table
     
     // Insert lots of rows
@@ -1724,23 +1703,12 @@ public class TestClient extends HBaseClusterTestCase {
     
     
   }
-  
-  public void XtestMultipleRowMultipleFamily() throws Exception {
+
+  @Ignore @Test
+  public void testMultipleRowMultipleFamily() throws Exception {
     
   }
-  
-  /**
-   * Explicitly test JIRAs related to HBASE-880 / Client API
-   */
-  public void testJIRAs() throws Exception {
-    jiraTest867();
-    jiraTest861();
-    jiraTest33();
-    jiraTest1014();
-    jiraTest1182();
-    jiraTest52();
-  }
-  
+
   //
   // JIRA Testers
   //
@@ -1755,17 +1723,17 @@ public class TestClient extends HBaseClusterTestCase {
    *    To test at scale, up numColsPerRow to the millions
    *    (have not gotten that to work running as junit though)
    */
-  private void jiraTest867() throws Exception {
-    
+  @Test
+  public void testJiraTest867() throws Exception {
     int numRows = 10;
     int numColsPerRow = 2000;
     
-    byte [] TABLE = Bytes.toBytes("jiraTest867");
+    byte [] TABLE = Bytes.toBytes("testJiraTest867");
     
     byte [][] ROWS = makeN(ROW, numRows);
     byte [][] QUALIFIERS = makeN(QUALIFIER, numColsPerRow);
     
-    HTable ht = createTable(TABLE, FAMILY);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     
     // Insert rows
     
@@ -1806,7 +1774,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // flush and try again
     
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     
     // Get a row
     get = new Get(ROWS[numRows-1]);
@@ -1840,13 +1808,14 @@ public class TestClient extends HBaseClusterTestCase {
    *    get with timestamp will return a value if there is a version with an 
    *    earlier timestamp
    */
-  private void jiraTest861() throws Exception {
+  @Test
+  public void testJiraTest861() throws Exception {
     
-    byte [] TABLE = Bytes.toBytes("jiraTest861");
+    byte [] TABLE = Bytes.toBytes("testJiraTest861");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
     
-    HTable ht = createTable(TABLE, FAMILY, 10);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     
     // Insert three versions
     
@@ -1866,7 +1835,7 @@ public class TestClient extends HBaseClusterTestCase {
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
     
     // Try same from storefile
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
@@ -1887,7 +1856,7 @@ public class TestClient extends HBaseClusterTestCase {
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
     
     // Try same from two storefiles
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -1903,13 +1872,14 @@ public class TestClient extends HBaseClusterTestCase {
    *    Add a HTable get/obtainScanner method that retrieves all versions of a 
    *    particular column and row between two timestamps
    */
-  private void jiraTest33() throws Exception {
+  @Test
+  public void testJiraTest33() throws Exception {
 
-    byte [] TABLE = Bytes.toBytes("jiraTest33");
+    byte [] TABLE = Bytes.toBytes("testJiraTest33");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
     
-    HTable ht = createTable(TABLE, FAMILY, 10);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     
     // Insert lots versions
     
@@ -1933,7 +1903,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
 
     // Try same from storefile
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
 
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
@@ -1951,11 +1921,12 @@ public class TestClient extends HBaseClusterTestCase {
    * HBASE-1014
    *    commit(BatchUpdate) method should return timestamp
    */
-  private void jiraTest1014() throws Exception {
+  @Test
+  public void testJiraTest1014() throws Exception {
 
-    byte [] TABLE = Bytes.toBytes("jiraTest1014");
+    byte [] TABLE = Bytes.toBytes("testJiraTest1014");
     
-    HTable ht = createTable(TABLE, FAMILY, 10);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     
     long manualStamp = 12345;
     
@@ -1975,13 +1946,14 @@ public class TestClient extends HBaseClusterTestCase {
    * HBASE-1182
    *    Scan for columns > some timestamp 
    */
-  private void jiraTest1182() throws Exception {
+  @Test
+  public void testJiraTest1182() throws Exception {
 
-    byte [] TABLE = Bytes.toBytes("jiraTest1182");
+    byte [] TABLE = Bytes.toBytes("testJiraTest1182");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
     
-    HTable ht = createTable(TABLE, FAMILY, 10);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     
     // Insert lots versions
     
@@ -2003,7 +1975,7 @@ public class TestClient extends HBaseClusterTestCase {
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
     
     // Try same from storefile
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
 
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
@@ -2012,21 +1984,19 @@ public class TestClient extends HBaseClusterTestCase {
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    
-    
   }
   
   /**
    * HBASE-52
    *    Add a means of scanning over all versions
    */
-  private void jiraTest52() throws Exception {
-
-    byte [] TABLE = Bytes.toBytes("jiraTest52");
+  @Test
+  public void testJiraTest52() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testJiraTest52");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
     
-    HTable ht = createTable(TABLE, FAMILY, 10);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     
     // Insert lots versions
     
@@ -2044,13 +2014,11 @@ public class TestClient extends HBaseClusterTestCase {
     scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
 
     // Try same from storefile
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
 
     getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     
     scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-
-    
   }
 
   //
@@ -2177,18 +2145,18 @@ public class TestClient extends HBaseClusterTestCase {
     assertSingleResult(result, row, family, null, value);
     
     get = new Get(row);
-    get.addColumn(family, EMPTY);
+    get.addColumn(family, HConstants.EMPTY_BYTE_ARRAY);
     result = ht.get(get);
-    assertSingleResult(result, row, family, EMPTY, value);
+    assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
     
     get = new Get(row);
     get.addFamily(family);
     result = ht.get(get);
-    assertSingleResult(result, row, family, EMPTY, value);
+    assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
     
     get = new Get(row);
     result = ht.get(get);
-    assertSingleResult(result, row, family, EMPTY, value);
+    assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
     
   }
   
@@ -2199,21 +2167,21 @@ public class TestClient extends HBaseClusterTestCase {
     Scan scan = new Scan();
     scan.addColumn(family, null);
     Result result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, row, family, EMPTY, value);
+    assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
     
     scan = new Scan();
-    scan.addColumn(family, EMPTY);
+    scan.addColumn(family, HConstants.EMPTY_BYTE_ARRAY);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, row, family, EMPTY, value);
+    assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
     
     scan = new Scan();
     scan.addFamily(family);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, row, family, EMPTY, value);
+    assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
     
     scan = new Scan();
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, row, family, EMPTY, value);
+    assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
     
   }
   
@@ -2411,9 +2379,7 @@ public class TestClient extends HBaseClusterTestCase {
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
   }
-  
-  
-  
+
   /**
    * Verify a single column using gets.
    * Expects family and qualifier arrays to be valid for at least 
@@ -2567,7 +2533,7 @@ public class TestClient extends HBaseClusterTestCase {
     assertEmptyResult(result);
     
   }
-    
+
   private void scanVerifySingleEmpty(HTable ht, 
       byte [][] ROWS, int ROWIDX, 
       byte [][] FAMILIES, int FAMILYIDX, 
@@ -2593,11 +2559,11 @@ public class TestClient extends HBaseClusterTestCase {
     assertNullResult(result);
     
   }
-  
+
   //
   // Verifiers
   //
-  
+
   private void assertKey(KeyValue key, byte [] row, byte [] family,
       byte [] qualifier, byte [] value)
   throws Exception {
@@ -2620,7 +2586,6 @@ public class TestClient extends HBaseClusterTestCase {
         result.size() == n);
   }
 
-  
   private void assertNResult(Result result, byte [] row, 
       byte [][] families, byte [][] qualifiers, byte [][] values,
       int [][] idxs)
@@ -2650,7 +2615,7 @@ public class TestClient extends HBaseClusterTestCase {
           equals(value, key.getValue()));
     }
   }
-  
+
   private void assertNResult(Result result, byte [] row, 
       byte [] family, byte [] qualifier, long [] stamps, byte [][] values, 
       int start, int end)
@@ -2682,7 +2647,7 @@ public class TestClient extends HBaseClusterTestCase {
           equals(value, key.getValue()));
     }
   }
-  
+
   /**
    * Validate that result contains two specified keys, exactly.
    * It is assumed key A sorts before key B.
@@ -2718,10 +2683,7 @@ public class TestClient extends HBaseClusterTestCase {
         "Got value [" + Bytes.toString(kvB.getValue()) + "]",
         equals(valueB, kvB.getValue()));
   }
-  
-  /**
-   * 
-   */
+
   private void assertSingleResult(Result result, byte [] row, byte [] family, 
       byte [] qualifier, byte [] value)
   throws Exception {
@@ -2763,12 +2725,12 @@ public class TestClient extends HBaseClusterTestCase {
         "Got value [" + Bytes.toString(kv.getValue()) + "]",
         equals(value, kv.getValue()));
   }
-  
+
   private void assertEmptyResult(Result result) throws Exception {
     assertTrue("expected an empty result but result contains " + 
         result.size() + " keys", result.isEmpty());
   }
-  
+
   private void assertNullResult(Result result) throws Exception {
     assertTrue("expected null result but received a non-null result",
         result == null);
@@ -2777,15 +2739,7 @@ public class TestClient extends HBaseClusterTestCase {
   //
   // Helpers
   //
-  
-  private void flushMemStore(byte [] tableName) throws Exception {
-    System.out.println("\n\nFlushing table [" + Bytes.toString(tableName) + "]...\n");
-//    HBaseAdmin hba = new HBaseAdmin(conf);
-//    hba.flush(tableName);
-    cluster.flushcache();
-    System.out.println("\nTable flushed.\n\n");
-  }
-  
+
   private Result getSingleScanResult(HTable ht, Scan scan) throws IOException {
     ResultScanner scanner = ht.getScanner(scan);
     Result result = scanner.next();
@@ -2831,88 +2785,22 @@ public class TestClient extends HBaseClusterTestCase {
     for(int i=0;i<n;i++) stamps[i] = i+1;
     return stamps;
   }
-  
-  private HTable createTable(byte [] tableName, byte [] family) 
-  throws IOException{
-    return createTable(tableName, new byte[][]{family});
-  }
-  
-  private HTable createTable(byte [] tableName, byte [][] families) 
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for(byte [] family : families) {
-      desc.addFamily(new HColumnDescriptor(family));
-    }
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
-    return new HTable(conf, tableName);
-  }
-  
-  private HTable createTable(byte [] tableName, byte [] family, int numVersions)
-  throws IOException {
-    return createTable(tableName, new byte[][]{family}, numVersions);
-  }
-  
-  private HTable createTable(byte [] tableName, byte [][] families,
-      int numVersions)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family, numVersions,
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL, false);
-      desc.addFamily(hcd);
-    }
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
-    return new HTable(conf, tableName);
-  }
-  
-  private HTable createTable(byte [] tableName, byte [][] families,
-      int [] numVersions)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    int i = 0;
-    for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family, numVersions[i],
-          HColumnDescriptor.DEFAULT_COMPRESSION,
-          HColumnDescriptor.DEFAULT_IN_MEMORY,
-          HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL, false);
-      desc.addFamily(hcd);
-      i++;
-    }
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
-    return new HTable(conf, tableName);
-  }
-  
+
   private boolean equals(byte [] left, byte [] right) {
     if(left == null && right == null) return true;
     if(left == null && right.length == 0) return true;
     if(right == null && left.length == 0) return true;
     return Bytes.equals(left, right);
   }
-  
-  
-  
-  
-  
-  
-  
-  
 
-  
-  public void XtestDuplicateVersions() throws Exception {
-    
+  @Ignore @Test
+  public void testDuplicateVersions() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDuplicateVersions");
     
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
     
-    HTable ht = createTable(TABLE, FAMILY, 10);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     
     // Insert 4 versions of same column
     Put put = new Put(ROW);
@@ -2961,7 +2849,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Flush and redo
 
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
     
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -3065,7 +2953,7 @@ public class TestClient extends HBaseClusterTestCase {
     
     // Ensure maxVersions of table is respected
 
-    flushMemStore(TABLE);
+    TEST_UTIL.flush();
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
@@ -3117,9 +3005,474 @@ public class TestClient extends HBaseClusterTestCase {
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
         0, 7);
-    
   }
-  
-  
-  
+
+  @Test
+  public void testGet_EmptyTable() throws IOException {
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testGet_EmptyTable"), FAMILY);
+    Get get = new Get(ROW);
+    get.addFamily(FAMILY);
+    Result r = table.get(get);
+    assertTrue(r.isEmpty());
+  }
+
+  @Test
+  public void testGet_NonExistentRow() throws IOException {
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testGet_NonExistentRow"), FAMILY);
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+    LOG.info("Row put");
+    
+    Get get = new Get(ROW);
+    get.addFamily(FAMILY);
+    Result r = table.get(get);
+    assertFalse(r.isEmpty());
+    System.out.println("Row retrieved successfully");
+    
+    byte [] missingrow = Bytes.toBytes("missingrow");
+    get = new Get(missingrow);
+    get.addFamily(FAMILY);
+    r = table.get(get);
+    assertTrue(r.isEmpty());
+    LOG.info("Row missing as it should be");
+  }
+
+  @Test
+  public void testPut() throws IOException {
+    final byte [] CONTENTS_FAMILY = Bytes.toBytes("contents");
+    final byte [] SMALL_FAMILY = Bytes.toBytes("smallfam");
+    final byte [] row1 = Bytes.toBytes("row1");
+    final byte [] row2 = Bytes.toBytes("row2");
+    final byte [] value = Bytes.toBytes("abcd");
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testPut"),
+      new byte [][] {CONTENTS_FAMILY, SMALL_FAMILY});
+    Put put = new Put(row1);
+    put.add(CONTENTS_FAMILY, null, value);
+    table.put(put);
+
+    put = new Put(row2);
+    put.add(CONTENTS_FAMILY, null, value);
+    
+    assertEquals(put.size(), 1);
+    assertEquals(put.getFamilyMap().get(CONTENTS_FAMILY).size(), 1);
+    
+    KeyValue kv = put.getFamilyMap().get(CONTENTS_FAMILY).get(0);
+    
+    assertTrue(Bytes.equals(kv.getFamily(), CONTENTS_FAMILY));
+    // will it return null or an empty byte array?
+    assertTrue(Bytes.equals(kv.getQualifier(), new byte[0]));
+    
+    assertTrue(Bytes.equals(kv.getValue(), value));
+    
+    table.put(put);
+
+    Scan scan = new Scan();
+    scan.addColumn(CONTENTS_FAMILY, null);
+    ResultScanner scanner = table.getScanner(scan);
+    for (Result r : scanner) {
+      for(KeyValue key : r.sorted()) {
+        System.out.println(Bytes.toString(r.getRow()) + ": " + key.toString());
+      }
+    }
+  }
+
+  @Test
+  public void testRowsPut() throws IOException {
+    final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
+    final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
+    final int NB_BATCH_ROWS = 10;
+    final byte[] value = Bytes.toBytes("abcd");
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPut"),
+      new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
+    ArrayList<Put> rowsUpdate = new ArrayList<Put>();
+    for (int i = 0; i < NB_BATCH_ROWS; i++) {
+      byte[] row = Bytes.toBytes("row" + i);
+      Put put = new Put(row);
+      put.add(CONTENTS_FAMILY, null, value);
+      rowsUpdate.add(put);
+    }
+    table.put(rowsUpdate);
+    Scan scan = new Scan();
+    scan.addFamily(CONTENTS_FAMILY);
+    ResultScanner scanner = table.getScanner(scan);
+    int nbRows = 0;
+    for (@SuppressWarnings("unused")
+    Result row : scanner)
+      nbRows++;
+    assertEquals(NB_BATCH_ROWS, nbRows);
+  }
+
+  @Test
+  public void testRowsPutBufferedOneFlush() throws IOException {
+    final byte [] CONTENTS_FAMILY = Bytes.toBytes("contents");
+    final byte [] SMALL_FAMILY = Bytes.toBytes("smallfam");
+    final byte [] value = Bytes.toBytes("abcd");
+    final int NB_BATCH_ROWS = 10;
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedOneFlush"),
+      new byte [][] {CONTENTS_FAMILY, SMALL_FAMILY});
+    table.setAutoFlush(false);
+    ArrayList<Put> rowsUpdate = new ArrayList<Put>();
+    for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
+      byte[] row = Bytes.toBytes("row" + i);
+      Put put = new Put(row);
+      put.add(CONTENTS_FAMILY, null, value);
+      rowsUpdate.add(put);
+    }
+    table.put(rowsUpdate);
+
+    Scan scan = new Scan();
+    scan.addFamily(CONTENTS_FAMILY);
+    ResultScanner scanner = table.getScanner(scan);
+    int nbRows = 0;
+    for (@SuppressWarnings("unused")
+    Result row : scanner)
+      nbRows++;
+    assertEquals(0, nbRows);
+    scanner.close();
+
+    table.flushCommits();
+
+    scan = new Scan();
+    scan.addFamily(CONTENTS_FAMILY);
+    scanner = table.getScanner(scan);
+    nbRows = 0;
+    for (@SuppressWarnings("unused")
+    Result row : scanner)
+      nbRows++;
+    assertEquals(NB_BATCH_ROWS * 10, nbRows);
+  }
+
+  @Test
+  public void testRowsPutBufferedManyManyFlushes() throws IOException {
+    final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
+    final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
+    final byte[] value = Bytes.toBytes("abcd");
+    final int NB_BATCH_ROWS = 10;
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedManyManyFlushes"),
+      new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
+    table.setAutoFlush(false);
+    table.setWriteBufferSize(10);
+    ArrayList<Put> rowsUpdate = new ArrayList<Put>();
+    for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
+      byte[] row = Bytes.toBytes("row" + i);
+      Put put = new Put(row);
+      put.add(CONTENTS_FAMILY, null, value);
+      rowsUpdate.add(put);
+    }
+    table.put(rowsUpdate);
+
+    table.flushCommits();
+
+    Scan scan = new Scan();
+    scan.addFamily(CONTENTS_FAMILY);
+    ResultScanner scanner = table.getScanner(scan);
+    int nbRows = 0;
+    for (@SuppressWarnings("unused")
+    Result row : scanner)
+      nbRows++;
+    assertEquals(NB_BATCH_ROWS * 10, nbRows);
+  }
+
+  @Test
+  public void testAddKeyValue() throws IOException {
+    final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
+    final byte[] value = Bytes.toBytes("abcd");
+    final byte[] row1 = Bytes.toBytes("row1");
+    final byte[] row2 = Bytes.toBytes("row2");
+    byte[] qualifier = Bytes.toBytes("qf1");
+    Put put = new Put(row1);
+
+    // Adding KeyValue with the same row
+    KeyValue kv = new KeyValue(row1, CONTENTS_FAMILY, qualifier, value);
+    boolean ok = true;
+    try {
+      put.add(kv);
+    } catch (IOException e) {
+      ok = false;
+    }
+    assertEquals(true, ok);
+
+    // Adding KeyValue with the different row
+    kv = new KeyValue(row2, CONTENTS_FAMILY, qualifier, value);
+    ok = false;
+    try {
+      put.add(kv);
+    } catch (IOException e) {
+      ok = true;
+    }
+    assertEquals(true, ok);
+  }
+
+  /**
+   * test for HBASE-737
+   * @throws IOException
+   */
+  @Test
+  public void testHBase737 () throws IOException {
+    final byte [] FAM1 = Bytes.toBytes("fam1");
+    final byte [] FAM2 = Bytes.toBytes("fam2");
+    // Open table
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testHBase737"),
+      new byte [][] {FAM1, FAM2});
+    // Insert some values
+    Put put = new Put(ROW);
+    put.add(FAM1, Bytes.toBytes("letters"), Bytes.toBytes("abcdefg"));
+    table.put(put);
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException i) {
+      //ignore
+    }
+    
+    put = new Put(ROW);
+    put.add(FAM1, Bytes.toBytes("numbers"), Bytes.toBytes("123456"));
+    table.put(put);
+    
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException i) {
+      //ignore
+    }
+
+    put = new Put(ROW);
+    put.add(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
+    table.put(put);
+    
+    long times[] = new long[3];
+    
+    // First scan the memstore
+    
+    Scan scan = new Scan();
+    scan.addFamily(FAM1);
+    scan.addFamily(FAM2);
+    ResultScanner s = table.getScanner(scan);
+    try {
+      int index = 0;
+      Result r = null;
+      while ((r = s.next()) != null) {
+        for(KeyValue key : r.sorted()) {
+          times[index++] = key.getTimestamp();
+        }
+      }
+    } finally {
+      s.close();
+    }
+    for (int i = 0; i < times.length - 1; i++) {
+      for (int j = i + 1; j < times.length; j++) {
+        assertTrue(times[j] > times[i]);
+      }
+    }
+    
+    // Flush data to disk and try again
+    TEST_UTIL.flush();
+    
+    // Reset times
+    for(int i=0;i<times.length;i++) {
+      times[i] = 0;
+    }
+    
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException i) {
+      //ignore
+    }
+    scan = new Scan();
+    scan.addFamily(FAM1);
+    scan.addFamily(FAM2);
+    s = table.getScanner(scan);
+    try {
+      int index = 0;
+      Result r = null;
+      while ((r = s.next()) != null) {
+        for(KeyValue key : r.sorted()) {
+          times[index++] = key.getTimestamp();
+        }
+      }
+    } finally {
+      s.close();
+    }
+    for (int i = 0; i < times.length - 1; i++) {
+      for (int j = i + 1; j < times.length; j++) {
+        assertTrue(times[j] > times[i]);
+      }
+    }
+  }
+
+  @Test
+  public void testListTables() throws IOException {
+    byte [] t1 = Bytes.toBytes("testListTables1");
+    byte [] t2 = Bytes.toBytes("testListTables2");
+    byte [] t3 = Bytes.toBytes("testListTables3");
+    byte [][] tables = new byte[][] { t1, t2, t3 };
+    for (int i = 0; i < tables.length; i++) {
+      TEST_UTIL.createTable(tables[i], FAMILY);
+    }
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HTableDescriptor[] ts = admin.listTables();
+    HashSet<HTableDescriptor> result = new HashSet<HTableDescriptor>(ts.length);
+    for (int i = 0; i < ts.length; i++) {
+      result.add(ts[i]);
+    }
+    int size = result.size();
+    assertTrue(size >= tables.length);
+    for (int i = 0; i < tables.length && i < size; i++) {
+      boolean found = false;
+      for (int j = 0; j < ts.length; j++) {
+        if (Bytes.equals(ts[j].getName(), tables[i])) {
+          found = true;
+          break;
+        }
+      }
+      assertTrue("Not found: " + Bytes.toString(tables[i]), found);
+    }
+  }
+
+  @Test
+  public void testMiscHTableStuff() throws IOException {
+    final byte[] tableAname = Bytes.toBytes("testMiscHTableStuffA");
+    final byte[] tableBname = Bytes.toBytes("testMiscHTableStuffB");
+    final byte[] attrName = Bytes.toBytes("TESTATTR");
+    final byte[] attrValue = Bytes.toBytes("somevalue");
+    byte[] value = Bytes.toBytes("value");
+    
+    HTable a = TEST_UTIL.createTable(tableAname, HConstants.CATALOG_FAMILY);
+    HTable b = TEST_UTIL.createTable(tableBname, HConstants.CATALOG_FAMILY);
+    Put put = new Put(ROW);
+    put.add(HConstants.CATALOG_FAMILY, null, value);
+    a.put(put);
+
+    // open a new connection to A and a connection to b
+    HTable newA = new HTable(TEST_UTIL.getConfiguration(), tableAname);
+
+    // copy data from A to B
+    Scan scan = new Scan();
+    scan.addFamily(HConstants.CATALOG_FAMILY);
+    ResultScanner s = newA.getScanner(scan);
+    try {
+      for (Result r : s) {
+        put = new Put(r.getRow());
+        for (KeyValue kv : r.sorted()) {
+          put.add(kv);
+        }
+        b.put(put);
+      }
+    } finally {
+      s.close();
+    }
+
+    // Opening a new connection to A will cause the tables to be reloaded
+    HTable anotherA = new HTable(TEST_UTIL.getConfiguration(), tableAname);
+    Get get = new Get(ROW);
+    get.addFamily(HConstants.CATALOG_FAMILY);
+    anotherA.get(get);
+
+    // We can still access A through newA because it has the table information
+    // cached. And if it needs to recalibrate, that will cause the information
+    // to be reloaded.
+
+    // Test user metadata
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    // make a modifiable descriptor
+    HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
+    // offline the table
+    admin.disableTable(tableAname);
+    // add a user attribute to HTD
+    desc.setValue(attrName, attrValue);
+    // add a user attribute to HCD
+    for (HColumnDescriptor c : desc.getFamilies())
+      c.setValue(attrName, attrValue);
+    // update metadata for all regions of this table
+    admin.modifyTable(tableAname, HConstants.Modify.TABLE_SET_HTD, desc);
+    // enable the table
+    admin.enableTable(tableAname);
+
+    // Test that attribute changes were applied
+    desc = a.getTableDescriptor();
+    assertTrue("wrong table descriptor returned",
+      Bytes.compareTo(desc.getName(), tableAname) == 0);
+    // check HTD attribute
+    value = desc.getValue(attrName);
+    assertFalse("missing HTD attribute value", value == null);
+    assertFalse("HTD attribute value is incorrect",
+      Bytes.compareTo(value, attrValue) != 0);
+    // check HCD attribute
+    for (HColumnDescriptor c : desc.getFamilies()) {
+      value = c.getValue(attrName);
+      assertFalse("missing HCD attribute value", value == null);
+      assertFalse("HCD attribute value is incorrect",
+        Bytes.compareTo(value, attrValue) != 0);
+    }
+  }
+
+  /**
+   * For HADOOP-2579
+   * @throws IOException 
+   */
+  @Test (expected=TableNotFoundException.class)
+  public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
+    new HTable(TEST_UTIL.getConfiguration(),
+        "testTableNotFoundExceptionWithoutAnyTables");
+  }
+
+  @Test
+  public void testGetClosestRowBefore() throws IOException {
+    final byte [] tableAname = Bytes.toBytes("testGetClosestRowBefore");
+    final byte [] row = Bytes.toBytes("row");
+
+    
+    byte[] firstRow = Bytes.toBytes("ro");
+    byte[] beforeFirstRow = Bytes.toBytes("rn");
+    byte[] beforeSecondRow = Bytes.toBytes("rov");
+    
+    HTable table = TEST_UTIL.createTable(tableAname,
+      new byte [][] {HConstants.CATALOG_FAMILY, Bytes.toBytes("info2")});
+    Put put = new Put(firstRow);
+    Put put2 = new Put(row);
+    byte[] zero = new byte[]{0};
+    byte[] one = new byte[]{1};
+    
+    put.add(HConstants.CATALOG_FAMILY, null, zero);
+    put2.add(HConstants.CATALOG_FAMILY, null, one);
+    
+    table.put(put);
+    table.put(put2);
+    
+    Result result = null;
+    
+    // Test before first that null is returned
+    result = table.getRowOrBefore(beforeFirstRow, HConstants.CATALOG_FAMILY);
+    assertTrue(result == null);
+    
+    // Test at first that first is returned
+    result = table.getRowOrBefore(firstRow, HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), zero));
+    
+    // Test in between first and second that first is returned
+    result = table.getRowOrBefore(beforeSecondRow, HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), zero));
+    
+    // Test at second make sure second is returned
+    result = table.getRowOrBefore(row, HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
+    
+    // Test after second, make sure second is returned
+    result = table.getRowOrBefore(Bytes.add(row,one), HConstants.CATALOG_FAMILY);
+    assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
+    assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
+  }
+
+  /**
+   * For HADOOP-2579
+   * @throws IOException 
+   */
+  @Test (expected=TableExistsException.class)
+  public void testTableNotFoundExceptionWithATable() throws IOException {
+    final byte [] name = Bytes.toBytes("testTableNotFoundExceptionWithATable");
+    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+  }
 }
