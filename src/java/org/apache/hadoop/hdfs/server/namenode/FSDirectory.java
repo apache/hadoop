@@ -413,7 +413,9 @@ class FSDirectory implements Closeable {
       if (dst.equals(src)) {
         return true;
       }
-      if (dst.startsWith(src)) {
+      // dst cannot be directory or a file under src
+      if (dst.startsWith(src) && 
+          dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
             + "failed to rename " + src + " to " + dst
             + " because destination starts with src");

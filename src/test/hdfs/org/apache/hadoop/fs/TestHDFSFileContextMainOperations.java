@@ -92,15 +92,20 @@ public class TestHDFSFileContextMainOperations extends
     fs.setQuota(dst1.getParent(), FSConstants.QUOTA_DONT_SET,
         FSConstants.QUOTA_DONT_SET);
 
-    // Test1: src does not exceed quota and dst has quota to accommodate rename
+    // Test1: src does not exceed quota and dst has no quota check and hence 
+    // accommodates rename
     rename(src1, dst1, true, false);
 
     // Test2: src does not exceed quota and dst has *no* quota to accommodate
-    // rename
+    // rename. 
+
+    // testRenameWithQuota/dstDir now has quota = 1 and dst1 already uses it
     fs.setQuota(dst1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
     rename(src2, dst2, false, true);
 
     // Test3: src exceeds quota and dst has *no* quota to accommodate rename
+    
+    // src1 has no quota to accommodate new rename node
     fs.setQuota(src1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
     rename(dst1, src1, false, true);
   }
