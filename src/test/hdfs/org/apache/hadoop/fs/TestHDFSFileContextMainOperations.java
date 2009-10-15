@@ -22,19 +22,21 @@ import java.io.IOException;
 
 import javax.security.auth.login.LoginException;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestHDFSFileContextMainOperations extends
                                   FileContextMainOperationsBaseTest {
-  
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   
@@ -73,5 +75,45 @@ public class TestHDFSFileContextMainOperations extends
   @Test
   public void testRenameFileAsExistingFile() throws Exception {
     // ignore base class test till hadoop-6240 is fixed
+  }
+  
+  @Test
+  public void testRenameWithQuota() throws Exception {
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    Path src1 = getTestRootPath("testRenameWithQuota/srcdir/src1");
+    Path src2 = getTestRootPath("testRenameWithQuota/srcdir/src2");
+    Path dst1 = getTestRootPath("testRenameWithQuota/dstdir/dst1");
+    Path dst2 = getTestRootPath("testRenameWithQuota/dstdir/dst2");
+    createFile(src1);
+    createFile(src2);
+    fs.setQuota(src1.getParent(), FSConstants.QUOTA_DONT_SET,
+        FSConstants.QUOTA_DONT_SET);
+    fc.mkdir(dst1.getParent(), FileContext.DEFAULT_PERM, true);
+    fs.setQuota(dst1.getParent(), FSConstants.QUOTA_DONT_SET,
+        FSConstants.QUOTA_DONT_SET);
+
+    // Test1: src does not exceed quota and dst has quota to accommodate rename
+    rename(src1, dst1, true, false);
+
+    // Test2: src does not exceed quota and dst has *no* quota to accommodate
+    // rename
+    fs.setQuota(dst1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
+    rename(src2, dst2, false, true);
+
+    // Test3: src exceeds quota and dst has *no* quota to accommodate rename
+    fs.setQuota(src1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
+    rename(dst1, src1, false, true);
+  }
+  
+  private void rename(Path src, Path dst, boolean renameSucceeds,
+      boolean quotaException) throws Exception {
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    try {
+      Assert.assertEquals(renameSucceeds, fs.rename(src, dst));
+    } catch (QuotaExceededException ex) {
+      Assert.assertTrue(quotaException);
+    }
+    Assert.assertEquals(renameSucceeds, !fc.exists(src));
+    Assert.assertEquals(renameSucceeds, fc.exists(dst));
   }
 }

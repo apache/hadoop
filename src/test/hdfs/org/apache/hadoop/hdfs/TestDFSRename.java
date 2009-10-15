@@ -90,6 +90,14 @@ public class TestDFSRename extends junit.framework.TestCase {
         assertFalse(fs.rename(src, dst));
       }
       
+      { // test rename /a/b/c to /a/b/c
+        Path src = new Path("/a/b/c");
+        DataOutputStream a_out = fs.create(src);
+        a_out.writeBytes("something");
+        a_out.close();
+        assertTrue(fs.rename(src, src));
+      }
+      
       fs.delete(dir, true);
     } finally {
       if (cluster != null) {cluster.shutdown();}
