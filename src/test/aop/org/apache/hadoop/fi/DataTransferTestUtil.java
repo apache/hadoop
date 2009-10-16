@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.fi;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.fi.FiTestUtil.Action;
 import org.apache.hadoop.fi.FiTestUtil.ActionContainer;
+import org.apache.hadoop.fi.FiTestUtil.ConstraintSatisfactionAction;
+import org.apache.hadoop.fi.FiTestUtil.CountdownConstraint;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Utilities for DataTransferProtocol related tests,
@@ -127,8 +129,7 @@ public class DataTransferTestUtil {
       return currentTest + ", index=" + index;
     }
 
-    /** {@inheritDoc}
-     * @param datanodeID*/
+    /** return a String with this object and the datanodeID. */
     String toString(DatanodeID datanodeID) {
       return "FI: " + this + ", datanode="
           + datanodeID.getName();
@@ -178,16 +179,42 @@ public class DataTransferTestUtil {
    * or sleep forever so that datanode becomes not responding.
    */
   public static class SleepAction extends DataNodeAction {
-    /** In milliseconds, duration <= 0 means sleeping forever.*/
-    final long duration;
+    /** In milliseconds;
+     * must have (0 <= minDuration < maxDuration) or (maxDuration <= 0).
+     */
+    final long minDuration;
+    /** In milliseconds; maxDuration <= 0 means sleeping forever.*/
+    final long maxDuration;
 
     /**
      * Create an action for datanode i in the pipeline.
      * @param duration In milliseconds, duration <= 0 means sleeping forever.
      */
     public SleepAction(String currentTest, int i, long duration) {
+      this(currentTest, i, duration, duration <= 0? duration: duration+1);
+    }
+
+    /**
+     * Create an action for datanode i in the pipeline.
+     * @param minDuration minimum sleep time
+     * @param maxDuration maximum sleep time
+     */
+    public SleepAction(String currentTest, int i,
+        long minDuration, long maxDuration) {
       super(currentTest, i);
-      this.duration = duration;
+
+      if (maxDuration > 0) {
+        if (minDuration < 0) {
+          throw new IllegalArgumentException("minDuration = " + minDuration
+              + " < 0 but maxDuration = " + maxDuration + " > 0");
+        }
+        if (minDuration >= maxDuration) {
+          throw new IllegalArgumentException(
+              minDuration + " = minDuration >= maxDuration = " + maxDuration);
+        }
+      }
+      this.minDuration = minDuration;
+      this.maxDuration = maxDuration;
     }
 
     @Override
@@ -195,14 +222,20 @@ public class DataTransferTestUtil {
       final DataTransferTest test = getDataTransferTest();
       final Pipeline p = test.getPipeline(id);
       if (!test.isSuccess() && p.contains(index, id)) {
-        final String s = toString(id) + ", duration=" + duration;
-        FiTestUtil.LOG.info(s);
-        if (duration <= 0) {
+        FiTestUtil.LOG.info(toString(id));
+        if (maxDuration <= 0) {
           for(; true; FiTestUtil.sleep(1000)); //sleep forever
         } else {
-          FiTestUtil.sleep(duration);
+          FiTestUtil.sleep(minDuration, maxDuration);
         }
       }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String toString() {
+      return super.toString()
+          + ", duration = [" + minDuration + "," + maxDuration + ")";
     }
   }
 
@@ -236,5 +269,49 @@ public class DataTransferTestUtil {
         getDataTransferTest().markSuccess();
       }
     }
+  }
+
+  /**
+   *  Create a OomAction with a CountdownConstraint
+   *  so that it throws OutOfMemoryError if the count is zero.
+   */
+  public static ConstraintSatisfactionAction<DatanodeID> createCountdownOomAction(
+      String currentTest, int i, int count) {
+    return new ConstraintSatisfactionAction<DatanodeID>(
+        new OomAction(currentTest, i), new CountdownConstraint(count));
+  }
+
+  /**
+   *  Create a DoosAction with a CountdownConstraint
+   *  so that it throws DiskOutOfSpaceException if the count is zero.
+   */
+  public static ConstraintSatisfactionAction<DatanodeID> createCountdownDoosAction(
+      String currentTest, int i, int count) {
+    return new ConstraintSatisfactionAction<DatanodeID>(
+        new DoosAction(currentTest, i), new CountdownConstraint(count));
+  }
+
+  /**
+   * Create a SleepAction with a CountdownConstraint
+   * for datanode i in the pipeline.
+   * When the count is zero,
+   * sleep some period of time so that it slows down the datanode
+   * or sleep forever so the that datanode becomes not responding.
+   */
+  public static ConstraintSatisfactionAction<DatanodeID> createCountdownSleepAction(
+      String currentTest, int i, long minDuration, long maxDuration, int count) {
+    return new ConstraintSatisfactionAction<DatanodeID>(
+        new SleepAction(currentTest, i, minDuration, maxDuration),
+        new CountdownConstraint(count));
+  }
+
+  /**
+   * Same as
+   * createCountdownSleepAction(currentTest, i, duration, duration+1, count).
+   */
+  public static ConstraintSatisfactionAction<DatanodeID> createCountdownSleepAction(
+      String currentTest, int i, long duration, int count) {
+    return createCountdownSleepAction(currentTest, i, duration, duration+1,
+        count);
   }
 }

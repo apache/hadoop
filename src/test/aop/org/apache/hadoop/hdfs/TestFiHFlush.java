@@ -18,17 +18,14 @@
 
 package org.apache.hadoop.hdfs;
 
-import org.junit.Test;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fi.FiHFlushTestUtil;
 import org.apache.hadoop.fi.FiTestUtil;
 import org.apache.hadoop.fi.FiHFlushTestUtil.DerrAction;
 import org.apache.hadoop.fi.FiHFlushTestUtil.HFlushTest;
-import org.eclipse.jdt.core.dom.ThisExpression;
-
-import java.io.IOException;
+import org.junit.Test;
 
 /** Class provides basic fault injection tests according to the test plan
     of HDFS-265
