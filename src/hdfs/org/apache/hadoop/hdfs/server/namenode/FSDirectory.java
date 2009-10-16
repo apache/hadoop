@@ -262,8 +262,8 @@ class FSDirectory implements FSConstants, Closeable {
       INodeFile fileNode = (INodeFile) inodes[inodes.length-1];
 
       // check quota limits and updated space consumed
-      updateCount(inodes, inodes.length-1, 0, 
-                  fileNode.getPreferredBlockSize()*fileNode.getReplication());
+      updateCount(inodes, inodes.length-1, 0,
+          fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
       
       // associate the new list of blocks with this file
       namesystem.blocksMap.addINode(block, fileNode);
@@ -363,9 +363,11 @@ class FSDirectory implements FSConstants, Closeable {
       // check the validation of the source
       if (srcInodes[srcInodes.length-1] == null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                     +"failed to rename "+src+" to "+dst+ " because source does not exist");
+            + "failed to rename " + src + " to " + dst
+            + " because source does not exist");
         return false;
-      } else if (srcInodes.length == 1) {
+      } 
+      if (srcInodes.length == 1) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
             +"failed to rename "+src+" to "+dst+ " because source is the root");
         return false;
@@ -374,71 +376,78 @@ class FSDirectory implements FSConstants, Closeable {
         dst += Path.SEPARATOR + new Path(src).getName();
       }
       
-      // remove source
-      INode srcChild = null;
-      try {
-        srcChild = removeChild(srcInodes, srcInodes.length-1);
-      } catch (IOException e) {
-        // srcChild == null; go to next if statement
+      // check the validity of the destination
+      if (dst.equals(src)) {
+        return true;
       }
-      if (srcChild == null) {
+      // dst cannot be directory or a file under src
+      if (dst.startsWith(src) && 
+          dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-            +"failed to rename "+src+" to "+dst+ " because the source can not be removed");
+            + "failed to rename " + src + " to " + dst
+            + " because destination starts with src");
         return false;
       }
-
-      String srcChildName = srcChild.getLocalName();
       
-      // check the validity of the destination
-      INode dstChild = null;
-      QuotaExceededException failureByQuota = null;
-
       byte[][] dstComponents = INode.getPathComponents(dst);
       INode[] dstInodes = new INode[dstComponents.length];
       rootDir.getExistingPathINodes(dstComponents, dstInodes);
-      if (dstInodes[dstInodes.length-1] != null) { //check if destination exists
+      if (dstInodes[dstInodes.length-1] != null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                                      +"failed to rename "+src+" to "+dst+ 
                                      " because destination exists");
-      } else if (dstInodes[dstInodes.length-2] == null) { // check if its parent exists
+        return false;
+      }
+      if (dstInodes[dstInodes.length-2] == null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
             +"failed to rename "+src+" to "+dst+ 
-            " because destination's parent does not exists");
+            " because destination's parent does not exist");
+        return false;
       }
-      else {
-        // add to the destination
-        srcChild.setLocalName(dstComponents[dstInodes.length-1]);
-        try {
-          // add it to the namespace
-          dstChild = addChild(dstInodes, dstInodes.length-1, srcChild, false);
-        } catch (QuotaExceededException qe) {
-          failureByQuota = qe;
-        }
-      }
-      if (dstChild != null) {
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
-            +src+" is renamed to "+dst);
-        }
-
-        // update modification time of dst and the parent of src
-        srcInodes[srcInodes.length-2].setModificationTime(timestamp);
-        dstInodes[dstInodes.length-2].setModificationTime(timestamp);
-        return true;
-      } else {
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-            +"failed to rename "+src+" to "+dst);
-        try {
-          // put it back
-          srcChild.setLocalName(srcChildName);
-          addChild(srcInodes, srcInodes.length-1, srcChild, false);
-        } catch (IOException ignored) {}
-        if (failureByQuota != null) {
-          throw failureByQuota;
-        } else {
+      
+      // Ensure dst has quota to accommodate rename
+      verifyQuotaForRename(srcInodes,dstInodes);
+      
+      INode dstChild = null;
+      INode srcChild = null;
+      String srcChildName = null;
+      try {
+        // remove src
+        srcChild = removeChild(srcInodes, srcInodes.length-1);
+        if (srcChild == null) {
+          NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + "failed to rename " + src + " to " + dst
+              + " because the source can not be removed");
           return false;
         }
+        srcChildName = srcChild.getLocalName();
+        srcChild.setLocalName(dstComponents[dstInodes.length-1]);
+        
+        // add src to the destination
+        dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
+            srcChild, -1, false);
+        if (dstChild != null) {
+          srcChild = null;
+          if (NameNode.stateChangeLog.isDebugEnabled()) {
+            NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: " + src
+                    + " is renamed to " + dst);
+          }
+          // update modification time of dst and the parent of src
+          srcInodes[srcInodes.length-2].setModificationTime(timestamp);
+          dstInodes[dstInodes.length-2].setModificationTime(timestamp);
+          return true;
+        }
+      } finally {
+        if (dstChild == null && srcChild != null) {
+          // put it back
+          srcChild.setLocalName(srcChildName);
+          addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, srcChild, -1,
+              false);
+        }
       }
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+          +"failed to rename "+src+" to "+dst);
+      return false;
     }
   }
 
@@ -483,7 +492,7 @@ class FSDirectory implements FSConstants, Closeable {
       // check disk quota
       long dsDelta = (replication - oldReplication[0]) *
            (fileNode.diskspaceConsumed()/oldReplication[0]);
-      updateCount(inodes, inodes.length-1, 0, dsDelta);
+      updateCount(inodes, inodes.length-1, 0, dsDelta, true);
 
       fileNode.setReplication(replication);
       fileBlocks = fileNode.getBlocks();
@@ -828,7 +837,7 @@ class FSDirectory implements FSConstants, Closeable {
         throw new FileNotFoundException(path + 
                                         " does not exist under rootDir.");
       }
-      updateCount(inodes, len-1, nsDelta, dsDelta);
+      updateCount(inodes, len-1, nsDelta, dsDelta, true);
     }
   }
   
@@ -838,10 +847,11 @@ class FSDirectory implements FSConstants, Closeable {
    * @param numOfINodes the number of inodes to update starting from index 0
    * @param nsDelta the delta change of namespace
    * @param dsDelta the delta change of diskspace
+   * @param checkQuota if true then check if quota is exceeded
    * @throws QuotaExceededException if the new count violates any quota limit
    */
   private void updateCount(INode[] inodes, int numOfINodes, 
-                           long nsDelta, long dsDelta)
+                           long nsDelta, long dsDelta, boolean checkQuota)
                            throws QuotaExceededException {
     if (!ready) {
       //still intializing. do not check or update quotas.
@@ -850,28 +860,27 @@ class FSDirectory implements FSConstants, Closeable {
     if (numOfINodes>inodes.length) {
       numOfINodes = inodes.length;
     }
-    // check existing components in the path  
-    int i=0;
+    if (checkQuota) {
+      verifyQuota(inodes, numOfINodes, nsDelta, dsDelta, null);
+    }
+    for(int i = 0; i < numOfINodes; i++) {
+      if (inodes[i].isQuotaSet()) { // a directory with quota
+        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
+        node.updateNumItemsInTree(nsDelta, dsDelta);
+      }
+    }
+  }
+  
+  /** 
+   * update quota of each inode and check to see if quota is exceeded. 
+   * See {@link #updateCount(INode[], int, long, long, boolean)}
+   */ 
+  private void updateCountNoQuotaCheck(INode[] inodes, int numOfINodes, 
+                           long nsDelta, long dsDelta) {
     try {
-      for(; i < numOfINodes; i++) {
-        if (inodes[i].isQuotaSet()) { // a directory with quota
-          INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-          node.updateNumItemsInTree(nsDelta, dsDelta);
-        }
-      }
+      updateCount(inodes, numOfINodes, nsDelta, dsDelta, false);
     } catch (QuotaExceededException e) {
-      e.setPathName(getFullPathName(inodes, i));
-      // undo updates
-      for( ; i-- > 0; ) {
-        try {
-          if (inodes[i].isQuotaSet()) { // a directory with quota
-            INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-            node.updateNumItemsInTree(-nsDelta, -dsDelta);
-          }
-        } catch (IOException ingored) {
-        }
-      }
-      throw e;
+      NameNode.LOG.warn("FSDirectory.updateCountNoQuotaCheck - unexpected ", e);
     }
   }
   
@@ -965,7 +974,7 @@ class FSDirectory implements FSConstants, Closeable {
       long timestamp) throws QuotaExceededException {
     inodes[pos] = addChild(inodes, pos, 
         new INodeDirectory(name, permission, timestamp),
-        inheritPermission );
+        -1, inheritPermission );
   }
   
   /** Add a node child to the namespace. The full path name of the node is src.
@@ -983,33 +992,105 @@ class FSDirectory implements FSConstants, Closeable {
                       inheritPermission);
     }
   }
+
+  /**
+   * Verify quota for adding or moving a new INode with required 
+   * namespace and diskspace to a given position.
+   *  
+   * @param inodes INodes corresponding to a path
+   * @param pos position where a new INode will be added
+   * @param nsDelta needed namespace
+   * @param dsDelta needed diskspace
+   * @param commonAncestor Last node in inodes array that is a common ancestor
+   *          for a INode that is being moved from one location to the other.
+   *          Pass null if a node is not being moved.
+   * @throws QuotaExceededException if quota limit is exceeded.
+   */
+  private void verifyQuota(INode[] inodes, int pos, long nsDelta, long dsDelta,
+      INode commonAncestor) throws QuotaExceededException {
+    if (pos>inodes.length) {
+      pos = inodes.length;
+    }
+    int i = pos - 1;
+    try {
+      // check existing components in the path  
+      for(; i >= 0; i--) {
+        if (commonAncestor == inodes[i]) {
+          // Moving an existing node. Stop checking for quota when common
+          // ancestor is reached
+          return;
+        }
+        if (inodes[i].isQuotaSet()) { // a directory with quota
+          INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
+          node.verifyQuota(nsDelta, dsDelta);
+        }
+      }
+    } catch (QuotaExceededException e) {
+      e.setPathName(getFullPathName(inodes, i));
+      throw e;
+    }
+  }
   
-  /** Add a node child to the inodes at index pos. 
-   * Its ancestors are stored at [0, pos-1]. 
-   * QuotaExceededException is thrown if it violates quota limit */
-  private <T extends INode> T addChild(INode[] pathComponents, int pos, T child,
-      boolean inheritPermission) throws QuotaExceededException {
-    return addChild(pathComponents, pos, child, -1, inheritPermission);
+  /**
+   * Verify quota for rename operation where srcInodes[srcInodes.length-1] moves
+   * dstInodes[dstInodes.length-1]
+   * 
+   * @param srcInodes directory from where node is being moved.
+   * @param dstInodes directory to where node is moved to.
+   * @throws QuotaExceededException if quota limit is exceeded.
+   */
+  private void verifyQuotaForRename(INode[] srcInodes, INode[]dstInodes)
+      throws QuotaExceededException {
+    INode srcInode = srcInodes[srcInodes.length - 1];
+    INode commonAncestor = null;
+    for(int i =0;srcInodes[i] == dstInodes[i]; i++) {
+      commonAncestor = srcInodes[i];
+    }
+    INode.DirCounts counts = new INode.DirCounts();
+    srcInode.spaceConsumedInTree(counts);
+    verifyQuota(dstInodes, dstInodes.length - 1, counts.getNsCount(),
+            counts.getDsCount(), commonAncestor);
   }
   
   /** Add a node child to the inodes at index pos. 
    * Its ancestors are stored at [0, pos-1]. 
    * QuotaExceededException is thrown if it violates quota limit */
-  private <T extends INode> T addChild(INode[] pathComponents, int pos, T child,
-       long childDiskspace, boolean inheritPermission) throws QuotaExceededException {
+  private <T extends INode> T addChild(INode[] pathComponents, int pos,
+      T child, long childDiskspace, boolean inheritPermission,
+      boolean checkQuota) throws QuotaExceededException {
     INode.DirCounts counts = new INode.DirCounts();
     child.spaceConsumedInTree(counts);
     if (childDiskspace < 0) {
       childDiskspace = counts.getDsCount();
     }
-    updateCount(pathComponents, pos, counts.getNsCount(), childDiskspace);
+    updateCount(pathComponents, pos, counts.getNsCount(), childDiskspace,
+        checkQuota);
     T addedNode = ((INodeDirectory)pathComponents[pos-1]).addChild(
         child, inheritPermission);
     if (addedNode == null) {
-      updateCount(pathComponents, pos, 
-                  -counts.getNsCount(), -childDiskspace);
+      updateCount(pathComponents, pos, -counts.getNsCount(), 
+          -childDiskspace, true);
     }
     return addedNode;
+  }
+
+  private <T extends INode> T addChild(INode[] pathComponents, int pos,
+      T child, long childDiskspace, boolean inheritPermission)
+      throws QuotaExceededException {
+    return addChild(pathComponents, pos, child, childDiskspace,
+        inheritPermission, true);
+  }
+  
+  private <T extends INode> T addChildNoQuotaCheck(INode[] pathComponents,
+      int pos, T child, long childDiskspace, boolean inheritPermission) {
+    T inode = null;
+    try {
+      inode = addChild(pathComponents, pos, child, childDiskspace,
+          inheritPermission, false);
+    } catch (QuotaExceededException e) {
+      NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e); 
+    }
+    return inode;
   }
   
   /** Remove an inode at index pos from the namespace.
@@ -1017,14 +1098,13 @@ class FSDirectory implements FSConstants, Closeable {
    * Count of each ancestor with quota is also updated.
    * Return the removed node; null if the removal fails.
    */
-  private INode removeChild(INode[] pathComponents, int pos)
-  throws QuotaExceededException {
+  private INode removeChild(INode[] pathComponents, int pos) {
     INode removedNode = 
       ((INodeDirectory)pathComponents[pos-1]).removeChild(pathComponents[pos]);
     if (removedNode != null) {
       INode.DirCounts counts = new INode.DirCounts();
       removedNode.spaceConsumedInTree(counts);
-      updateCount(pathComponents, pos,
+      updateCountNoQuotaCheck(pathComponents, pos,
                   -counts.getNsCount(), -counts.getDsCount());
     }
     return removedNode;

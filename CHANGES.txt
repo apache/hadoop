@@ -20,6 +20,12 @@ Release 0.20.2 - Unreleased
     HDFS-686. NullPointerException is thrown while merging edit log and image.
     (hairong)
 
+    HDFS-677. Rename failure when both source and destination quota exceeds
+    results in deletion of source. (suresh)
+
+    HDFS-709. Fix TestDFSShell failure due to rename bug introduced by 
+    HDFS-677. (suresh)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
