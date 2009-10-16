@@ -3405,16 +3405,6 @@ public class TestFromClientSide {
     }
   }
 
-  /**
-   * For HADOOP-2579
-   * @throws IOException 
-   */
-  @Test (expected=TableNotFoundException.class)
-  public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
-    new HTable(TEST_UTIL.getConfiguration(),
-        "testTableNotFoundExceptionWithoutAnyTables");
-  }
-
   @Test
   public void testGetClosestRowBefore() throws IOException {
     final byte [] tableAname = Bytes.toBytes("testGetClosestRowBefore");
@@ -3463,16 +3453,5 @@ public class TestFromClientSide {
     result = table.getRowOrBefore(Bytes.add(row,one), HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
     assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
-  }
-
-  /**
-   * For HADOOP-2579
-   * @throws IOException 
-   */
-  @Test (expected=TableExistsException.class)
-  public void testTableNotFoundExceptionWithATable() throws IOException {
-    final byte [] name = Bytes.toBytes("testTableNotFoundExceptionWithATable");
-    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
-    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
   }
 }

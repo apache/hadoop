@@ -30,7 +30,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * 
+ * Test versions.
+ * Does shutdown in middle of test to prove versions work across restart.
  */
 public class TestGetRowVersions extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetRowVersions.class);

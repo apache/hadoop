@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Tests HTablePool
+ * Tests HTablePool.
  */
 public class TestHTablePool extends HBaseTestCase {
 
@@ -104,5 +104,4 @@ public class TestHTablePool extends HBaseTestCase {
     assertSame(table1, sameTable1);
     assertSame(table2, sameTable2);
   }
-
 }
