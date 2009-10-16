@@ -123,6 +123,7 @@ Release 0.21.0 - Unreleased
    HBASE-1907  Version all client writables
 
   OPTIMIZATIONS
+   HBASE-410   [testing] Speed up the test suite
 
 
 Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
