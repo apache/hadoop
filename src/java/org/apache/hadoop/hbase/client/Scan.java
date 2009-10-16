@@ -72,6 +72,8 @@ import org.apache.hadoop.io.WritableFactories;
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan implements Writable {
+  private static final byte SCAN_VERSION = (byte)1;
+
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
@@ -435,6 +437,10 @@ public class Scan implements Writable {
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
+    int version = in.readByte();
+    if (version > (int)SCAN_VERSION) {
+      throw new IOException("version not supported");
+    }
     this.startRow = Bytes.readByteArray(in);
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
@@ -463,6 +469,7 @@ public class Scan implements Writable {
 
   public void write(final DataOutput out)
   throws IOException {
+    out.writeByte(SCAN_VERSION);
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);

@@ -63,6 +63,8 @@ import org.apache.hadoop.io.Writable;
  * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.
  */
 public class Result implements Writable {
+  private static final byte RESULT_VERSION = (byte)1;
+
   private KeyValue [] kvs = null;
   private NavigableMap<byte[], 
      NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
@@ -446,6 +448,11 @@ public class Result implements Writable {
   
   public static void writeArray(final DataOutput out, Result [] results)
   throws IOException {
+    // Write version when writing array form.
+    // This assumes that results are sent to the client as Result[], so we
+    // have an opportunity to handle version differences without affecting
+    // efficiency.
+    out.writeByte(RESULT_VERSION);
     if(results == null || results.length == 0) {
       out.writeInt(0);
       return;
@@ -477,6 +484,14 @@ public class Result implements Writable {
   
   public static Result [] readArray(final DataInput in)
   throws IOException {
+    // Read version for array form.
+    // This assumes that results are sent to the client as Result[], so we
+    // have an opportunity to handle version differences without affecting
+    // efficiency.
+    int version = in.readByte();
+    if (version > RESULT_VERSION) {
+      throw new IOException("version not supported");
+    }
     int numResults = in.readInt();
     if(numResults == 0) {
       return new Result[0];

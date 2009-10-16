@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
 public class Put implements HeapSize, Writable, Row, Comparable<Row> {
+  private static final byte PUT_VERSION = (byte)1;
+
   private byte [] row = null;
   private long timestamp = HConstants.LATEST_TIMESTAMP;
   private long lockId = -1L;
@@ -316,6 +318,10 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
+    int version = in.readByte();
+    if (version > PUT_VERSION) {
+      throw new IOException("version not supported");
+    }
     this.row = Bytes.readByteArray(in);
     this.timestamp = in.readLong();
     this.lockId = in.readLong();
@@ -341,6 +347,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   
   public void write(final DataOutput out)
   throws IOException {
+    out.writeByte(PUT_VERSION);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.timestamp);
     out.writeLong(this.lockId);

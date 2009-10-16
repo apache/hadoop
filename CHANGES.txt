@@ -120,6 +120,7 @@ Release 0.21.0 - Unreleased
    HBASE-1885  Simplify use of IndexedTable outside Java API
                (Kevin Patterson via Stack)
    HBASE-1903  Enable DEBUG by default
+   HBASE-1907  Version all client writables
 
   OPTIMIZATIONS
 

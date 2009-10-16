@@ -60,6 +60,8 @@ import org.apache.hadoop.io.Writable;
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
 public class Get implements Writable {
+  private static final byte GET_VERSION = (byte)1;
+
   private byte [] row = null;
   private long lockId = -1L;
   private int maxVersions = 1;
@@ -319,6 +321,10 @@ public class Get implements Writable {
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
+    int version = in.readByte();
+    if (version > GET_VERSION) {
+      throw new IOException("unsupported version");
+    }
     this.row = Bytes.readByteArray(in);
     this.lockId = in.readLong();
     this.maxVersions = in.readInt();
@@ -349,6 +355,7 @@ public class Get implements Writable {
 
   public void write(final DataOutput out)
   throws IOException {
+    out.writeByte(GET_VERSION);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.lockId);
     out.writeInt(this.maxVersions);

@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * timestamp.  The constructor timestamp is not referenced.
  */
 public class Delete implements Writable, Row, Comparable<Row> {
+  private static final byte DELETE_VERSION = (byte)1;
+
   private byte [] row = null;
   // This ts is only used when doing a deleteRow.  Anything less, 
   private long ts;
@@ -304,6 +306,10 @@ public class Delete implements Writable, Row, Comparable<Row> {
   
   //Writable
   public void readFields(final DataInput in) throws IOException {
+    int version = in.readByte();
+    if (version > DELETE_VERSION) {
+      throw new IOException("version not supported");
+    }
     this.row = Bytes.readByteArray(in);
     this.ts = in.readLong();
     this.lockId = in.readLong();
@@ -323,6 +329,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
   }  
   
   public void write(final DataOutput out) throws IOException {
+    out.writeByte(DELETE_VERSION);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.ts);
     out.writeLong(this.lockId);
