@@ -30,7 +30,10 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
-  
+
+    HADOOP-6293. Fix FsShell -text to work on filesystems other than the
+    default. (cdouglas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
