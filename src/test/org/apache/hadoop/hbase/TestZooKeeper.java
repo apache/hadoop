@@ -35,9 +35,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
-/**
- *
- */
 public class TestZooKeeper extends HBaseClusterTestCase {
   private static class EmptyWatcher implements Watcher {
     public static EmptyWatcher instance = new EmptyWatcher();
