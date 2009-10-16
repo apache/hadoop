@@ -124,6 +124,7 @@ public class HLog implements HConstants, Syncable {
   private volatile long lastLogFlushTime;
   private final boolean append;
   private final Method syncfs;
+  private final short replicationLevel;
   private final static Object [] NO_ARGS = new Object []{};
 
   /*
@@ -211,6 +212,8 @@ public class HLog implements HConstants, Syncable {
       conf.getInt("hbase.regionserver.flushlogentries", 100);
     this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
       this.fs.getDefaultBlockSize());
+    this.replicationLevel = (short) conf.getInt("hbase.regionserver.hlog.replication",
+        this.fs.getDefaultReplication());
     // Roll at 95% of block size.
     float multi = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f);
     this.logrollsize = (long)(this.blocksize * multi);
@@ -442,7 +445,7 @@ public class HLog implements HConstants, Syncable {
     SequenceFile.Writer writer =
       SequenceFile.createWriter(this.fs, this.conf, path, keyClass,
       valueClass, fs.getConf().getInt("io.file.buffer.size", 4096),
-      fs.getDefaultReplication(), this.blocksize,
+      this.replicationLevel, this.blocksize,
       SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
       new Metadata());
     // Get at the private FSDataOutputStream inside in SequenceFile so we can
