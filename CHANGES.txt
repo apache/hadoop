@@ -27,6 +27,9 @@ Trunk (unreleased changes)
     HADOOP-6204. Implementing aspects development and fault injeciton
     framework for Hadoop (cos)
 
+    HADOOP-6312. Remove unnecessary debug logging in Configuration constructor.
+    (Aaron Kimball via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
