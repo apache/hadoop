@@ -1000,7 +1000,7 @@ public class BlockManager {
                                DatanodeDescriptor node,
                                DatanodeDescriptor delNodeHint)
   throws IOException {
-    BlockInfo storedBlock = blocksMap.getStoredBlock(block);
+    BlockInfo storedBlock = findStoredBlock(block.getBlockId());
     if (storedBlock == null || storedBlock.getINode() == null) {
       // If this block does not belong to anyfile, then we are done.
       NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
@@ -1666,6 +1666,18 @@ public class BlockManager {
 
   void removeBlockFromMap(Block block) {
     blocksMap.removeBlock(block);
+  }
+  
+  /**
+   * Update the block with the new generation stamp and new length.
+   * 
+   * @param block block
+   * @param newGS new generation stamp
+   * @param newLen new block size
+   * @return the stored block in the blocks map
+   */
+  BlockInfo updateBlock(Block block, long newGS, long newLen) {
+    return blocksMap.updateBlock(block, newGS, newLen);
   }
   
   int getCapacity() {

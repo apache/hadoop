@@ -1102,7 +1102,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     // construct a RBW replica with the new GS
     File blkfile = replicaInfo.getBlockFile();
     FSVolume v = volumes.getNextVolume(estimateBlockLen);
-    File newBlkFile = v.createRbwFile(replicaInfo);
+    File newBlkFile = new File(v.rbwDir, replicaInfo.getBlockName());
     File oldmeta = replicaInfo.getMetaFile();
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(
         replicaInfo.getBlockId(), replicaInfo.getNumBytes(), newGS,
