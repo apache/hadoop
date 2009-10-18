@@ -46,9 +46,18 @@ public interface InternalScanner extends Closeable {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException
    */
-  public boolean next(List<KeyValue> results)
-  throws IOException;
-  
+  public boolean next(List<KeyValue> results) throws IOException;
+
+  /**
+   * Grab the next row's worth of values with a limit on the number of values
+   * to return. 
+   * @param results
+   * @param limit
+   * @return true if more rows exist after this one, false if scanner is done
+   * @throws IOException
+   */
+  public boolean next(List<KeyValue> result, int limit) throws IOException;
+
   /**
    * Closes the scanner and releases any resources it has allocated
    * @throws IOException

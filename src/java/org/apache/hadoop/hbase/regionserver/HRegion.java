@@ -1679,9 +1679,12 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private final byte [] stopRow;
     private Filter filter;
     private List<KeyValue> results = new ArrayList<KeyValue>();
+    private int batch;
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
       this.filter = scan.getFilter();
+      this.batch = scan.getBatch();
+
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
       } else {
@@ -1711,14 +1714,14 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
     }
 
-    public boolean next(List<KeyValue> outResults) throws IOException {
+    public boolean next(List<KeyValue> outResults, int limit) throws IOException {
       if (closing.get() || closed.get()) {
         close();
         throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closing=" + closing.get() + " or closed=" + closed.get());
       }
       results.clear();
-      boolean returnResult = nextInternal();
+      boolean returnResult = nextInternal(limit);
       if (!returnResult && filter != null && filter.filterRow()) {
         results.clear();
       }
@@ -1728,6 +1731,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         return false;
       }
       return returnResult;
+    }
+
+    public boolean next(List<KeyValue> outResults) throws IOException {
+      // apply the batching limit by default
+      return next(outResults, batch);
     }
 
     /*
@@ -1741,7 +1749,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
      * @return true if there are more rows, false if scanner is done
      * @throws IOException
      */
-    private boolean nextInternal() throws IOException {
+    private boolean nextInternal(int limit) throws IOException {
       byte [] currentRow = null;
       boolean filterCurrentRow = false;
       while (true) {
@@ -1774,7 +1782,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           currentRow = row;
           continue;
         }
-        this.storeHeap.next(results);
+        this.storeHeap.next(results, limit);
+        if (limit > 0 && results.size() == limit) {
+          return true;
+        }
       }
     }
 

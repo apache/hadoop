@@ -121,8 +121,9 @@ Release 0.21.0 - Unreleased
                (Kevin Patterson via Stack)
    HBASE-1903  Enable DEBUG by default
    HBASE-1907  Version all client writables
-   HBASE-1914  hlog should be able to set replication level for the log indendently
-               from any other files
+   HBASE-1914  hlog should be able to set replication level for the log
+               indendently from any other files
+   HBASE-1537  Intra-row scanning
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

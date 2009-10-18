@@ -66,6 +66,9 @@ import org.apache.hadoop.io.WritableFactories;
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
  * <p>
+ * To limit the maximum number of values returned for each call to next(),
+ * execute {@link #setBatch(int) setBatch}.
+ * <p>
  * To add a filter, execute {@link #setFilter(org.apache.hadoop.hbase.filter.Filter) setFilter}.
  * <p>
  * Expert: To explicitly disable server-side block caching for this scan, 
@@ -77,6 +80,7 @@ public class Scan implements Writable {
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
+  private int batch = -1;
   private int caching = -1;
   private boolean cacheBlocks = true;
   private Filter filter = null;
@@ -125,6 +129,7 @@ public class Scan implements Writable {
     startRow = scan.getStartRow();
     stopRow  = scan.getStopRow();
     maxVersions = scan.getMaxVersions();
+    batch = scan.getBatch();
     caching = scan.getCaching();
     cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
@@ -235,6 +240,14 @@ public class Scan implements Writable {
   }
 
   /**
+   * Set the maximum number of values to return for each call to next()
+   * @param batch the maximum number of values
+   */
+  public void setBatch(int batch) {
+    this.batch = batch;
+  }
+
+  /**
    * Set the number of rows for caching that will be passed to scanners.
    * If not set, the default setting from {@link HTable#getScannerCaching()} will apply.
    * Higher caching values will enable faster scanners but will use more memory.
@@ -319,6 +332,13 @@ public class Scan implements Writable {
   } 
 
   /**
+   * @return maximum number of values to return for a single call to next()
+   */
+  public int getBatch() {
+    return this.batch;
+  }
+
+  /**
    * @return caching the number of rows fetched when calling next on a scanner
    */
   public int getCaching() {
@@ -381,6 +401,8 @@ public class Scan implements Writable {
     sb.append(Bytes.toString(this.stopRow));
     sb.append(", maxVersions=");
     sb.append("" + this.maxVersions);
+    sb.append(", batch=");
+    sb.append("" + this.batch);
     sb.append(", caching=");
     sb.append("" + this.caching);
     sb.append(", cacheBlocks=");
@@ -444,6 +466,7 @@ public class Scan implements Writable {
     this.startRow = Bytes.readByteArray(in);
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
+    this.batch = in.readInt();
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
     if(in.readBoolean()) {
@@ -473,6 +496,7 @@ public class Scan implements Writable {
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
+    out.writeInt(this.batch);
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);
     if(this.filter == null) {
