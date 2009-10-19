@@ -128,6 +128,7 @@ Release 0.21.0 - Unreleased
    HBASE-1914  hlog should be able to set replication level for the log
                indendently from any other files
    HBASE-1537  Intra-row scanning
+   HBASE-1918  Don't do DNS resolving in .META. scanner for each row
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

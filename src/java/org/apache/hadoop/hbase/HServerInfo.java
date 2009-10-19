@@ -73,7 +73,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.infoPort = other.getInfoPort();
     this.name = other.getName();
   }
-  
+
   /**
    * @return the load
    */
@@ -228,8 +228,14 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   public static String getServerName(String serverAddress, long startCode) {
     String name = null;
     if (serverAddress != null) {
-      HServerAddress address = new HServerAddress(serverAddress);
-      name = getServerName(address.getHostname(), address.getPort(), startCode);
+      int colonIndex = serverAddress.lastIndexOf(':');
+      if(colonIndex < 0) {
+        throw new IllegalArgumentException("Not a host:port pair: " + serverAddress);
+      }
+      String host = serverAddress.substring(0, colonIndex);
+      int port =
+        Integer.valueOf(serverAddress.substring(colonIndex + 1)).intValue();
+      name = getServerName(host, port, startCode);
     }
     return name;
   }
