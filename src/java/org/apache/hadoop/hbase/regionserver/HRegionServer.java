@@ -1236,7 +1236,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   /** @return the HLog */
-  HLog getLog() {
+  public HLog getLog() {
     return this.hlog;
   }
 
