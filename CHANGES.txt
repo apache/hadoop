@@ -129,6 +129,7 @@ Release 0.21.0 - Unreleased
                indendently from any other files
    HBASE-1537  Intra-row scanning
    HBASE-1918  Don't do DNS resolving in .META. scanner for each row
+   HBASE-1756  Refactor HLog (changing package first)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
