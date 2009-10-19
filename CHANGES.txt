@@ -32,6 +32,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-1070. Prevent a deadlock in the fair scheduler servlet.
     (Todd Lipcon via cdouglas)
 
+    HADOOP-5759. Fix for  IllegalArgumentException when CombineFileInputFormat
+    is used as job InputFormat. (Amareshwari Sriramadasu via zshao)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
