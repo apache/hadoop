@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.wal;
 
 /**
  * Mechanism by which the HLog requests a log roll

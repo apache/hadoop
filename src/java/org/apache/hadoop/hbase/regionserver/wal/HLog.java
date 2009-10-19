@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -59,6 +59,10 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
+import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -105,13 +109,14 @@ import org.apache.hadoop.util.Progressable;
  * rolling is not. To prevent log rolling taking place during this period, a
  * separate reentrant lock is used.
  * 
- * <p>To read an HLog, call {@link #getReader(Path)}.
+ * <p>To read an HLog, call {@link #getReader(org.apache.hadoop.fs.FileSystem,
+ * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
  *
  */
 public class HLog implements HConstants, Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
   private static final String HLOG_DATFILE = "hlog.dat.";
-  static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
+  public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
   private final FileSystem fs;
   private final Path dir;
@@ -274,7 +279,7 @@ public class HLog implements HConstants, Syncable {
    * @param newvalue We'll set log edit/sequence number to this value if it
    * is greater than the current value.
    */
-  void setSequenceNumber(final long newvalue) {
+  public void setSequenceNumber(final long newvalue) {
     for (long id = this.logSeqNum.get(); id < newvalue &&
         !this.logSeqNum.compareAndSet(id, newvalue); id = this.logSeqNum.get()) {
       // This could spin on occasion but better the occasional spin than locking
@@ -306,7 +311,7 @@ public class HLog implements HConstants, Syncable {
    *
    * @return If lots of logs, flush the returned region so next time through
    * we can clean logs. Returns null if nothing to flush.
-   * @throws FailedLogCloseException
+   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
   public byte [] rollWriter() throws FailedLogCloseException, IOException {
@@ -428,7 +433,7 @@ public class HLog implements HConstants, Syncable {
    * can only see up to the sync that happened before this file was opened.
    * Will require us doing up our own WAL Reader if we want to keep up with
    * a syncing Writer.
-   * @param path
+   * @param p
    * @return A WAL Reader.  Close when done with it.
    * @throws IOException
    */
@@ -729,7 +734,7 @@ public class HLog implements HConstants, Syncable {
     this.unflushedEntries.set(0);
   }
 
-  void optionalSync() {
+  public void optionalSync() {
     if (!this.closed) {
       long now = System.currentTimeMillis();
       synchronized (updateLock) {
@@ -819,11 +824,11 @@ public class HLog implements HConstants, Syncable {
    * completion of a cache-flush. Otherwise the log-seq-id for the flush will
    * not appear in the correct logfile.
    *
-   * @return sequence ID to pass {@link #completeCacheFlush(Text, Text, long)}
-   * @see #completeCacheFlush(Text, Text, long)
+   * @return sequence ID to pass {@link #completeCacheFlush(byte[], byte[], long)}
+   * @see #completeCacheFlush(byte[], byte[], long)
    * @see #abortCacheFlush()
    */
-  long startCacheFlush() {
+  public long startCacheFlush() {
     this.cacheFlushLock.lock();
     return obtainSeqNum();
   }
@@ -838,7 +843,7 @@ public class HLog implements HConstants, Syncable {
    * @param logSeqId
    * @throws IOException
    */
-  void completeCacheFlush(final byte [] regionName, final byte [] tableName,
+  public void completeCacheFlush(final byte [] regionName, final byte [] tableName,
     final long logSeqId)
   throws IOException {
     try {
@@ -871,7 +876,7 @@ public class HLog implements HConstants, Syncable {
    * currently is a restart of the regionserver so the snapshot content dropped
    * by the failure gets restored to the memstore.
    */
-  void abortCacheFlush() {
+  public void abortCacheFlush() {
     this.cacheFlushLock.unlock();
   }
 
@@ -942,7 +947,7 @@ public class HLog implements HConstants, Syncable {
        conf.getClass("hbase.regionserver.hlog.keyclass", HLogKey.class);
   }
   
-   static HLogKey newKey(HBaseConfiguration conf) throws IOException {
+  public static HLogKey newKey(HBaseConfiguration conf) throws IOException {
     Class<? extends HLogKey> keyClass = getKeyClass(conf);
     try {
       return keyClass.newInstance();

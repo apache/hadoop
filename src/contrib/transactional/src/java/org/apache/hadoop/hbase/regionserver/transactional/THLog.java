@@ -30,9 +30,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.regionserver.HLog;
-import org.apache.hadoop.hbase.regionserver.HLogKey;
-import org.apache.hadoop.hbase.regionserver.LogRollListener;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
 import org.apache.hadoop.io.SequenceFile;
 
 /**

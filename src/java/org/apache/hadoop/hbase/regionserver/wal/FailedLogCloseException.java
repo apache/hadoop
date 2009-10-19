@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 
@@ -25,7 +25,7 @@ import java.io.IOException;
  * Thrown when we fail close of the write-ahead-log file.
  * Package private.  Only used inside this package.
  */
-class FailedLogCloseException extends IOException {
+public class FailedLogCloseException extends IOException {
   private static final long serialVersionUID = 1759152841462990925L;
 
   /**

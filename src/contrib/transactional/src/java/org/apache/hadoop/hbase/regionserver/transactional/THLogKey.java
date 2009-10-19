@@ -23,7 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.regionserver.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 
 public class THLogKey extends HLogKey {
 

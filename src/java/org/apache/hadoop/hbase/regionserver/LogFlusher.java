@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 /**
  * LogFlusher is a Chore that wakes every threadWakeInterval and calls
@@ -38,7 +39,7 @@ public class LogFlusher extends Chore {
   private final AtomicReference<HLog> log =
     new AtomicReference<HLog>(null);
   
-  LogFlusher(final int period, final AtomicBoolean stop) {
+  public LogFlusher(final int period, final AtomicBoolean stop) {
     super(period, stop);
   }
   
