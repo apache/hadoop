@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.PipelineTest;
 import org.apache.hadoop.fi.FiHFlushTestUtil.HFlushTest;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -46,12 +47,14 @@ public aspect HFlushAspects {
         LOG.info("No pipeline is built");
         return;
     }
-    if (DataTransferTestUtil.getPipelineTest() == null) {
+    PipelineTest pt = DataTransferTestUtil.getPipelineTest();
+    if (pt == null) {
         LOG.info("No test has been initialized");    
         return;
     }
-    for (int i=0; i<nodes.length; i++) {
-        ((HFlushTest)DataTransferTestUtil.getPipelineTest()).fiCallHFlush.run(nodes[i]);
-    }
+    if (pt instanceof HFlushTest)
+      for (int i=0; i<nodes.length; i++) {
+        ((HFlushTest)pt).fiCallHFlush.run(nodes[i]);
+      }
   }
 }

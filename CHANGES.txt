@@ -288,6 +288,9 @@ Release 0.21.0 - Unreleased
     tests and changed SleepAction to support uniform random sleeping over an
     interval.  (szetszwo)
 
+    HDFS-713. Need to properly check the type of the test class from an aspect
+    (cos)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
