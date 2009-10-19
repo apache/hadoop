@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.util;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -93,10 +92,7 @@ public class Bytes {
   /**
    * Byte array comparator class.
    */
-  public static class ByteArrayComparator 
-      implements RawComparator<byte []>, Serializable {
-    private static final long serialVersionUID = 1L;
-
+  public static class ByteArrayComparator implements RawComparator<byte []> {
     /**
      * Constructor
      */

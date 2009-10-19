@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
@@ -63,7 +62,7 @@ import org.apache.hadoop.io.Writable;
  * <p>TODO: Group Key-only comparators and operations into a Key class, just
  * for neatness sake, if can figure what to call it.
  */
-public class KeyValue implements Writable, HeapSize, Cloneable {
+public class KeyValue implements Writable, HeapSize {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
   /**
@@ -1225,11 +1224,9 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * A {@link KVComparator} for <code>-ROOT-</code> catalog table
    * {@link KeyValue}s.
    */
-  public static class RootComparator extends MetaComparator 
-      implements Serializable {
-    private static final long serialVersionUID = 1L;
+  public static class RootComparator extends MetaComparator {
     private final KeyComparator rawcomparator = new RootKeyComparator();
-
+    
     public KeyComparator getRawComparator() {
       return this.rawcomparator;
     }
@@ -1244,9 +1241,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * A {@link KVComparator} for <code>.META.</code> catalog table
    * {@link KeyValue}s.
    */
-  public static class MetaComparator extends KVComparator
-      implements Serializable {
-    private static final long serialVersionUID = 1L;
+  public static class MetaComparator extends KVComparator {
     private final KeyComparator rawcomparator = new MetaKeyComparator();
 
     public KeyComparator getRawComparator() {
@@ -1265,9 +1260,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * considered the same as far as this Comparator is concerned.
    * Hosts a {@link KeyComparator}.
    */
-  public static class KVComparator implements java.util.Comparator<KeyValue>,
-      Serializable {
-    private static final long serialVersionUID = 1L;
+  public static class KVComparator implements java.util.Comparator<KeyValue> {
     private final KeyComparator rawcomparator = new KeyComparator();
 
     /**
@@ -1564,10 +1557,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * Compare key portion of a {@link KeyValue} for keys in <code>-ROOT-<code>
    * table.
    */
-  public static class RootKeyComparator extends MetaKeyComparator 
-      implements Serializable {
-    private static final long serialVersionUID = 1L;
-
+  public static class RootKeyComparator extends MetaKeyComparator {
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       // Rows look like this: .META.,ROW_FROM_META,RID
@@ -1610,10 +1600,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   /**
    * Comparator that compares row component only of a KeyValue.
    */
-  public static class RowComparator implements Comparator<KeyValue>,
-      Serializable {
-    private static final long serialVersionUID = 1L;
-
+  public static class RowComparator implements Comparator<KeyValue> {
     final KVComparator comparator;
 
     public RowComparator(final KVComparator c) {
@@ -1629,10 +1616,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
    * Compare key portion of a {@link KeyValue} for keys in <code>.META.</code>
    * table.
    */
-  public static class MetaKeyComparator extends KeyComparator
-      implements Serializable {
-    private static final long serialVersionUID = 1L;
-
+  public static class MetaKeyComparator extends KeyComparator {
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       //        LOG.info("META " + Bytes.toString(left, loffset, llength) +
@@ -1689,10 +1673,7 @@ public class KeyValue implements Writable, HeapSize, Cloneable {
   /**
    * Compare key portion of a {@link KeyValue}.
    */
-  public static class KeyComparator implements RawComparator<byte []>,
-      Serializable {
-    private static final long serialVersionUID = 1L;
-
+  public static class KeyComparator implements RawComparator<byte []> {
     volatile boolean ignoreTimestamp = false;
     volatile boolean ignoreType = false;
 
