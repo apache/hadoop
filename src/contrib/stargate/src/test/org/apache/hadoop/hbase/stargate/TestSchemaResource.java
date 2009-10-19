@@ -53,6 +53,7 @@ public class TestSchemaResource extends MiniClusterTestCase {
 
   @Override
   protected void setUp() throws Exception {
+    super.setUp();
     admin = new HBaseAdmin(conf);
     client = new Client(new Cluster().add("localhost", testServletPort));
   }

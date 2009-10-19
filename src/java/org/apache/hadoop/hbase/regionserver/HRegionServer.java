@@ -565,7 +565,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
               toDo.clear();
               continue;
             }
-          } catch (Exception e) {
+          } catch (Exception e) { // FindBugs REC_CATCH_EXCEPTION
             if (e instanceof IOException) {
               e = RemoteExceptionHandler.checkIOException((IOException) e);
             }
@@ -1222,11 +1222,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // queue at time iterator was taken out.  Apparently goes from oldest.
     for (ToDoEntry e: this.toDo) {
       HMsg msg = e.msg;
-      if (msg == null) {
+      if (msg != null) {
+        if (msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
+          addProcessingMessage(msg.getRegionInfo());
+        }
+      } else {
         LOG.warn("Message is empty: " + e);
-      }
-      if (e.msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
-        addProcessingMessage(e.msg.getRegionInfo());
       }
     }
   }
@@ -1243,7 +1244,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public void stop() {
     this.stopRequested.set(true);
     synchronized(this) {
-      notifyAll(); // Wakes run() if it is sleeping
+      // Wakes run() if it is sleeping
+      notifyAll(); // FindBugs NN_NAKED_NOTIFY  
     }
   }
   
@@ -1845,9 +1847,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     long scannerId = -1L;
     scannerId = rand.nextLong();
     String scannerName = String.valueOf(scannerId);
-    synchronized(scanners) {
-      scanners.put(scannerName, s);
-    }
+    scanners.put(scannerName, s);
     this.leases.
       createLease(scannerName, new ScannerListener(scannerName));
     return scannerId;
@@ -1900,7 +1900,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
         null: results.toArray(new Result[0]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
-        this.scanners.remove(scannerId);
+        String scannerName = String.valueOf(scannerId);
+        this.scanners.remove(scannerName);
       }
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1911,10 +1912,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       checkOpen();
       requestCount.incrementAndGet();
       String scannerName = String.valueOf(scannerId);
-      InternalScanner s = null;
-      synchronized(scanners) {
-        s = scanners.remove(scannerName);
-      }
+      InternalScanner s = scanners.remove(scannerName);
       if (s != null) {
         s.close();
         this.leases.cancelLease(scannerName);
@@ -1937,10 +1935,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     
     public void leaseExpired() {
       LOG.info("Scanner " + this.scannerName + " lease expired");
-      InternalScanner s = null;
-      synchronized(scanners) {
-        s = scanners.remove(this.scannerName);
-      }
+      InternalScanner s = scanners.remove(this.scannerName);
       if (s != null) {
         try {
           s.close();
@@ -1965,7 +1960,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
       HRegion region = getRegion(regionName);
       region.delete(delete, lid, writeToWAL);
     } catch(WrongRegionException ex) {
+      // ignore
     } catch (NotServingRegionException ex) {
+      // ignore
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -2029,9 +2026,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     long lockId = -1L;
     lockId = rand.nextLong();
     String lockName = String.valueOf(lockId);
-    synchronized(rowlocks) {
-      rowlocks.put(lockName, r);
-    }
+    rowlocks.put(lockName, r);
     this.leases.
       createLease(lockName, new RowLockListener(lockName, region));
     return lockId;
@@ -2050,10 +2045,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       return null;
     }
     String lockName = String.valueOf(lockId);
-    Integer rl = null;
-    synchronized (rowlocks) {
-      rl = rowlocks.get(lockName);
-    }
+    Integer rl = rowlocks.get(lockName);
     if (rl == null) {
       throw new IOException("Invalid row lock");
     }
@@ -2079,10 +2071,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     try {
       HRegion region = getRegion(regionName);
       String lockName = String.valueOf(lockId);
-      Integer r = null;
-      synchronized(rowlocks) {
-        r = rowlocks.remove(lockName);
-      }
+      Integer r = rowlocks.remove(lockName);
       if(r == null) {
         throw new UnknownRowLockException(lockName);
       }
@@ -2112,10 +2101,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     public void leaseExpired() {
       LOG.info("Row Lock " + this.lockName + " lease expired");
-      Integer r = null;
-      synchronized(rowlocks) {
-        r = rowlocks.remove(this.lockName);
-      }
+      Integer r = rowlocks.remove(this.lockName);
       if(r != null) {
         region.releaseRowLock(r);
       }

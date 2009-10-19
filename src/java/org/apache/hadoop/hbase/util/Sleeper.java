@@ -74,7 +74,7 @@ public class Sleeper {
         Thread.sleep(waitTime);
         woke = System.currentTimeMillis();
         long slept = woke - now;
-        if (slept > (10 * this.period)) {
+        if (slept > (10L * this.period)) {
           LOG.warn("We slept " + slept + "ms, ten times longer than scheduled: " +
             this.period);
         }

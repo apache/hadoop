@@ -467,7 +467,7 @@ public class HBaseClient {
 
       DataOutputBuffer d=null;
       try {
-        synchronized (this.out) {
+        synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + " sending #" + call.id);
           
@@ -617,6 +617,7 @@ public class HBaseClient {
      * @param call
      */
     public synchronized void callComplete(ParallelCall call) {
+      // FindBugs IS2_INCONSISTENT_SYNC
       values[call.index] = call.value;            // store the value
       count++;                                    // count it
       if (count == size)                          // if all values are in

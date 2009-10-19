@@ -9,7 +9,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
-  final int VERSIONS = 2;
+  final static int VERSIONS = 2;
   
   public void testCheckColumn_Ok() {
     //Create a WildcardColumnTracker
@@ -89,7 +89,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     
     try {
       for(byte [] qualifier : qualifiers) {
-        MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length);
+        tracker.checkColumn(qualifier, 0, qualifier.length);
       }
     } catch (Exception e) {
       ok = true;

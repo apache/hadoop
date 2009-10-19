@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -92,7 +93,10 @@ public class Bytes {
   /**
    * Byte array comparator class.
    */
-  public static class ByteArrayComparator implements RawComparator<byte []> {
+  public static class ByteArrayComparator 
+      implements RawComparator<byte []>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     /**
      * Constructor
      */
@@ -281,10 +285,9 @@ public class Bytes {
   }
 
   public static String toStringBinary(final byte [] b, int off, int len) {
-    String result = null;
+    StringBuilder result = new StringBuilder();
     try {
       String first = new String(b, off, len, "ISO-8859-1");
-      result = "";
       for (int i = 0; i < first.length() ; ++i ) {
         int ch = first.charAt(i) & 0xFF;
         if ( (ch >= '0' && ch <= '9')
@@ -295,15 +298,15 @@ public class Bytes {
             || ch == '-'
             || ch == ':'
             || ch == '.') {
-          result += first.charAt(i);
+          result.append(first.charAt(i));
         } else {
-          result += String.format("\\x%02X", ch);
+          result.append(String.format("\\x%02X", ch));
         }
       }
     } catch ( UnsupportedEncodingException e) {
       e.printStackTrace();
     }
-    return result;
+    return result.toString();
   }
 
   private static boolean isHexDigit(char c) {
@@ -638,7 +641,7 @@ public class Bytes {
   public static byte[] toBytes(short val) {
     byte[] b = new byte[SIZEOF_SHORT];
     b[1] = (byte)(val);
-    val >>>= 8;
+    val >>= 8;
     b[0] = (byte)(val);
     return b;
   }
@@ -693,7 +696,7 @@ public class Bytes {
       return offset;
     }
     bytes[offset+1] = (byte)(val);
-    val >>>= 8;
+    val >>= 8;
     bytes[offset] = (byte)(val);
     return offset + SIZEOF_SHORT;
   }

@@ -590,7 +590,7 @@ public abstract class HBaseTestCase extends TestCase {
         if (res_value == null) {
           fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) + 
               " at timestamp " + timestamp + "\" was expected to be \"" + 
-              value + " but was null");
+              Bytes.toStringBinary(value) + " but was null");
         }
         if (res_value != null) {
           assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +

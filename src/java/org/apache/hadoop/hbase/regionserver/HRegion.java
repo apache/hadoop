@@ -962,7 +962,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
     synchronized (this) {
-      notifyAll();
+      notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
     
     if (LOG.isDebugEnabled()) {
@@ -1651,12 +1651,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   
   @Override
   public boolean equals(Object o) {
+    if (!(o instanceof HRegion)) {
+      return false;
+    }
     return this.hashCode() == ((HRegion)o).hashCode();
   }
   
   @Override
   public int hashCode() {
-    return this.regionInfo.getRegionName().hashCode();
+    return Bytes.hashCode(this.regionInfo.getRegionName());
   }
   
   @Override

@@ -20,12 +20,8 @@
 
 package org.apache.hadoop.hbase.thrift.generated;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
 import org.apache.thrift.*;
@@ -37,15 +33,12 @@ import org.apache.thrift.protocol.*;
  * name already exists
  */
 public class AlreadyExists extends Exception implements TBase, java.io.Serializable, Cloneable {
+  private static final long serialVersionUID = 1L;
   private static final TStruct STRUCT_DESC = new TStruct("AlreadyExists");
   private static final TField MESSAGE_FIELD_DESC = new TField("message", TType.STRING, (short)1);
 
   public String message;
   public static final int MESSAGE = 1;
-
-  private final Isset __isset = new Isset();
-  private static final class Isset implements java.io.Serializable {
-  }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
     put(MESSAGE, new FieldMetaData("message", TFieldRequirementType.DEFAULT, 
@@ -215,7 +208,6 @@ public class AlreadyExists extends Exception implements TBase, java.io.Serializa
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("AlreadyExists(");
-    boolean first = true;
 
     sb.append("message:");
     if (this.message == null) {
@@ -223,7 +215,6 @@ public class AlreadyExists extends Exception implements TBase, java.io.Serializa
     } else {
       sb.append(this.message);
     }
-    first = false;
     sb.append(")");
     return sb.toString();
   }

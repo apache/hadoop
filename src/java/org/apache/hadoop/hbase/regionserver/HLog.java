@@ -373,7 +373,6 @@ public class HLog implements HConstants, Syncable {
    *         this.end = in.getPos() + length;
    */
   private static class WALReader extends SequenceFile.Reader {
-    private long length;
     
     WALReader(final FileSystem fs, final Path p, final Configuration c)
     throws IOException {
@@ -937,9 +936,10 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
-   static Class<? extends HLogKey> getKeyClass(HBaseConfiguration conf) {
-     return (Class<? extends HLogKey>) conf
-        .getClass("hbase.regionserver.hlog.keyclass", HLogKey.class);
+  @SuppressWarnings("unchecked")
+  static Class<? extends HLogKey> getKeyClass(HBaseConfiguration conf) {
+     return (Class<? extends HLogKey>) 
+       conf.getClass("hbase.regionserver.hlog.keyclass", HLogKey.class);
   }
   
    static HLogKey newKey(HBaseConfiguration conf) throws IOException {
@@ -1344,7 +1344,7 @@ public class HLog implements HConstants, Syncable {
   
   static class HLogWriter extends SequenceFile.Writer {
     public HLogWriter(FileSystem arg0, Configuration arg1, Path arg2,
-        Class arg3, Class arg4, int arg5, short arg6, long arg7,
+        Class<?> arg3, Class<?> arg4, int arg5, short arg6, long arg7,
         Progressable arg8, Metadata arg9) throws IOException {
       super(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }

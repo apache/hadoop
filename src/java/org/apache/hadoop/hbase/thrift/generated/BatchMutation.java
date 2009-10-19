@@ -23,10 +23,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -35,6 +34,7 @@ import org.apache.thrift.protocol.*;
  * A BatchMutation object is used to apply a number of Mutations to a single row.
  */
 public class BatchMutation implements TBase, java.io.Serializable, Cloneable {
+  private static final long serialVersionUID = 1L;
   private static final TStruct STRUCT_DESC = new TStruct("BatchMutation");
   private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)1);
   private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)2);
@@ -43,10 +43,6 @@ public class BatchMutation implements TBase, java.io.Serializable, Cloneable {
   public static final int ROW = 1;
   public List<Mutation> mutations;
   public static final int MUTATIONS = 2;
-
-  private final Isset __isset = new Isset();
-  private static final class Isset implements java.io.Serializable {
-  }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
     put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
@@ -323,7 +319,7 @@ public class BatchMutation implements TBase, java.io.Serializable, Cloneable {
     if (this.row == null) {
       sb.append("null");
     } else {
-      sb.append(this.row);
+      sb.append(Bytes.toStringBinary(this.row));
     }
     first = false;
     if (!first) sb.append(", ");

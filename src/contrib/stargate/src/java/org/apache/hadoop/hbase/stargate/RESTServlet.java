@@ -43,8 +43,8 @@ public class RESTServlet extends ServletAdaptor {
 
   private static RESTServlet instance;
 
-  private final HBaseConfiguration conf;
-  private final HTablePool pool;
+  private transient final HBaseConfiguration conf;
+  private transient final HTablePool pool;
   protected Map<String,Integer> maxAgeMap =
     Collections.synchronizedMap(new HashMap<String,Integer>());
 

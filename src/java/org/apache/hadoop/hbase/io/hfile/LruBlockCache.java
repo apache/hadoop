@@ -216,7 +216,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     this.size = new AtomicLong(this.overhead);
     if(evictionThread) {
       this.evictionThread = new EvictionThread(this);
-      this.evictionThread.start();
+      this.evictionThread.start(); // FindBugs SC_START_IN_CTOR
     } else {
       this.evictionThread = null;
     }
@@ -327,11 +327,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
       
       // Instantiate priority buckets
       BlockBucket bucketSingle = new BlockBucket(bytesToFree, blockSize, 
-          singleSize(), "single");
+          singleSize());
       BlockBucket bucketMulti = new BlockBucket(bytesToFree, blockSize, 
-          multiSize(), "multi");
+          multiSize());
       BlockBucket bucketMemory = new BlockBucket(bytesToFree, blockSize, 
-          memorySize(), "memory");
+          memorySize());
       
       // Scan entire map putting into appropriate buckets
       for(CachedBlock cachedBlock : map.values()) {
@@ -366,7 +366,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
         long overflow = bucket.overflow();
         if(overflow > 0) {
           long bucketBytesToFree = Math.min(overflow,
-            (long)Math.ceil((bytesToFree - bytesFreed) / remainingBuckets));
+            (bytesToFree - bytesFreed) / remainingBuckets);
           bytesFreed += bucket.free(bucketBytesToFree);
         } 
         remainingBuckets--;
@@ -401,14 +401,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
     private CachedBlockQueue queue;
     private long totalSize = 0;
     private long bucketSize;
-    String name;
     
-    public BlockBucket(long bytesToFree, long blockSize, long bucketSize, 
-        String name) {
+    public BlockBucket(long bytesToFree, long blockSize, long bucketSize) {
       this.bucketSize = bucketSize;
       queue = new CachedBlockQueue(bytesToFree, blockSize);
       totalSize = 0;
-      this.name = name;
     }
     
     public void add(CachedBlock block) {
@@ -519,7 +516,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
     public void evict() {
       synchronized(this) {
-        this.notify();
+        this.notify(); // FindBugs NN_NAKED_NOTIFY
       }
     }
   }
@@ -644,8 +641,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
   
   public static long calculateOverhead(long maxSize, long blockSize, int concurrency){
+    // FindBugs ICAST_INTEGER_MULTIPLY_CAST_TO_LONG
     return CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP +
-        ((int)Math.ceil(maxSize*1.2/blockSize) 
+        ((long)Math.ceil(maxSize*1.2/blockSize) 
             * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
         (concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }

@@ -117,7 +117,7 @@ public class TestHFileOutputFormat extends HBaseTestCase {
         }
 
         public float getProgress() throws IOException, InterruptedException {
-          return (ROWSPERSPLIT - this.counter) / this.counter;
+          return ((float)(ROWSPERSPLIT - this.counter) / (float)this.counter);
         }
 
         public void initialize(InputSplit arg0, TaskAttemptContext arg1)

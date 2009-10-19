@@ -173,4 +173,14 @@ implements Writable, Comparable<TableSplit> {
     return Bytes.compareTo(getStartRow(), split.getStartRow());
   }
   
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || !(o instanceof TableSplit)) {
+      return false;
+    }
+    return Bytes.equals(tableName, ((TableSplit)o).tableName) &&
+      Bytes.equals(startRow, ((TableSplit)o).startRow) &&
+      Bytes.equals(endRow, ((TableSplit)o).endRow) &&
+      regionLocation.equals(((TableSplit)o).regionLocation);
+  }
 }

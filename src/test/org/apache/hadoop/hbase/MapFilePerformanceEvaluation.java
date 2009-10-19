@@ -330,7 +330,8 @@ public class MapFilePerformanceEvaluation {
     }
     
     private ImmutableBytesWritable getGaussianRandomRow() {
-      int r = (int) randomData.nextGaussian(totalRows / 2, totalRows / 10);
+      int r = (int) randomData.nextGaussian((double)totalRows / 2.0,
+          (double)totalRows / 10.0);
       return format(r, key);
     }
     

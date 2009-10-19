@@ -118,7 +118,7 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
   
   @Override
   public int hashCode() {
-    int result = this.regionName.hashCode();
+    int result = Bytes.hashCode(this.regionName);
     result ^= this.logSeqNum;
     result ^= this.writeTime;
     return result;

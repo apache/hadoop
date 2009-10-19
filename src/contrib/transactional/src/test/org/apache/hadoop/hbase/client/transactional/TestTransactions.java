@@ -45,10 +45,8 @@ public class TestTransactions extends HBaseClusterTestCase {
 
   private static final String TABLE_NAME = "table1";
 
-  private static final byte[] FAMILY_COLON = Bytes.toBytes("family:");
   private static final byte[] FAMILY = Bytes.toBytes("family");
   private static final byte[] QUAL_A = Bytes.toBytes("a");
-  private static final byte[] COL_A = Bytes.toBytes("family:a");
 
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");

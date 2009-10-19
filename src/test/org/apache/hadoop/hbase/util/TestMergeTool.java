@@ -215,7 +215,7 @@ public class TestMergeTool extends HBaseTestCase {
         Result result = merged.get(get, null);
         assertEquals(1, result.size());
         byte [] bytes = result.sorted()[0].getValue();
-        assertNotNull(rows[i][j].toString(), bytes);
+        assertNotNull(Bytes.toStringBinary(rows[i][j]), bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }
     }

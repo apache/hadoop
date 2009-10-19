@@ -405,7 +405,7 @@ public class HTable implements HTableInterface {
         new ServerCallable<Boolean>(connection, tableName, delete.getRow()) {
           public Boolean call() throws IOException {
             server.delete(location.getRegionInfo().getRegionName(), delete);
-            return null;
+            return null; // FindBugs NP_BOOLEAN_RETURN_NULL
           }
         }
     );
@@ -639,7 +639,7 @@ public class HTable implements HTableInterface {
         public Boolean call() throws IOException {
           server.unlockRow(location.getRegionInfo().getRegionName(),
               rl.getLockId());
-          return null;
+          return null; // FindBugs NP_BOOLEAN_RETURN_NULL
         }
       }
     );

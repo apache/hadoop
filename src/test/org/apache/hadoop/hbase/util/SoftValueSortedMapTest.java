@@ -26,11 +26,11 @@ public class SoftValueSortedMapTest {
   private static void testMap(SortedMap<Integer, Integer> map) {
     System.out.println("Testing " + map.getClass());
     for(int i = 0; i < 1000000; i++) {
-      map.put(new Integer(i), new Integer(i));
+      map.put(i, i);
     }
     System.out.println(map.size());
     @SuppressWarnings("unused")
-    byte[] block = new byte[849*1024*1024]; // 10 MB
+    byte[] block = new byte[849*1024*1024]; // FindBugs DLS_DEAD_LOCAL_STORE
     System.out.println(map.size());
   }
   

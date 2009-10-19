@@ -120,7 +120,11 @@ public class TransactionalRegion extends HRegion {
       final HRegionInfo regionInfo, final FlushRequester flushListener,
       final Leases transactionalLeases) {
     super(basedir, log, fs, conf, regionInfo, flushListener);
-    this.hlog = (THLog) log;
+    if (log instanceof THLog) {
+      this.hlog = (THLog) log;
+    } else {
+      throw new RuntimeException("log is not THLog");
+    }
     oldTransactionFlushTrigger = conf.getInt(OLD_TRANSACTION_FLUSH,
         DEFAULT_OLD_TRANSACTION_FLUSH);
     this.transactionLeases = transactionalLeases;

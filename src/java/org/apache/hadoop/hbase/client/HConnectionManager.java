@@ -197,7 +197,7 @@ public class HConnectionManager implements HConstants {
      * Get this watcher's ZKW, instanciate it if necessary.
      * @return ZKW
      */
-    public ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
+    public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
       if(zooKeeperWrapper == null) {
         zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
       } 
@@ -323,6 +323,7 @@ public class HConnectionManager implements HConstants {
             
             if (tryMaster.isMasterRunning()) {
               this.master = tryMaster;
+              this.masterLock.notifyAll();
               break;
             }
             
@@ -340,7 +341,7 @@ public class HConnectionManager implements HConstants {
 
           // Cannot connect to master or it is not running. Sleep & retry
           try {
-            Thread.sleep(getPauseTime(tries));
+            this.masterLock.wait(getPauseTime(tries));
           } catch (InterruptedException e) {
             // continue
           }
@@ -1231,10 +1232,8 @@ public class HConnectionManager implements HConstants {
         masterChecked = false;
       }
       if (stopProxy) {
-        synchronized (servers) {
-          for (HRegionInterface i: servers.values()) {
-            HBaseRPC.stopProxy(i);
-          }
+        for (HRegionInterface i: servers.values()) {
+          HBaseRPC.stopProxy(i);
         }
       }
     }

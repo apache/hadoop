@@ -373,7 +373,7 @@ public class GetDeleteTracker implements DeleteTracker {
    * Fields are public because they are accessed often, directly, and only
    * within this class.
    */
-  protected class Delete {
+  protected static class Delete {
     byte [] buffer;
     int qualifierOffset;
     int qualifierLength;

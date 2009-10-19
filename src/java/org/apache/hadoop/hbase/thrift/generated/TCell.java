@@ -19,14 +19,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -38,6 +35,7 @@ import org.apache.thrift.protocol.*;
  * note of temporal data. Cell is used all the way from HStore up to HTable.
  */
 public class TCell implements TBase, java.io.Serializable, Cloneable {
+  private static final long serialVersionUID = 1L;
   private static final TStruct STRUCT_DESC = new TStruct("TCell");
   private static final TField VALUE_FIELD_DESC = new TField("value", TType.STRING, (short)1);
   private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)2);
@@ -49,6 +47,7 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     public boolean timestamp = false;
   }
 
@@ -166,7 +165,7 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
       return getValue();
 
     case TIMESTAMP:
-      return new Long(getTimestamp());
+      return getTimestamp();
 
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -288,7 +287,7 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
     if (this.value == null) {
       sb.append("null");
     } else {
-      sb.append(this.value);
+      sb.append(Bytes.toStringBinary(this.value));
     }
     first = false;
     if (!first) sb.append(", ");

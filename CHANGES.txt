@@ -71,6 +71,7 @@ Release 0.21.0 - Unreleased
    HBASE-1912  When adding a secondary index to an existing table, it will
                cause NPE during re-indexing (Mingjui Ray Liao via Andrew
                Purtell)
+   HBASE-1916  FindBugs and javac warnings cleanup
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -34,7 +34,6 @@ public class ScanQueryMatcher extends QueryMatcher {
   // Optimization so we can skip lots of compares when we decide to skip
   // to the next row.
   private boolean stickyNextRow;
-  private KeyValue stopKey = null;
 
   /**
    * Constructs a QueryMatcher for a Scan.
@@ -52,7 +51,6 @@ public class ScanQueryMatcher extends QueryMatcher {
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
-    this.stopKey = KeyValue.createFirstOnRow(scan.getStopRow());
     this.filter = scan.getFilter();
     
     // Single branch to deal with two types of reads (columns vs all in family)

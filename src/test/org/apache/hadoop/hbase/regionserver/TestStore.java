@@ -47,7 +47,7 @@ public class TestStore extends TestCase {
   long id = System.currentTimeMillis();
   Get get = new Get(row);
 
-  private final String DIR = "test/build/data/TestStore/";
+  private static final String DIR = "test/build/data/TestStore/";
 
   /**
    * Setup

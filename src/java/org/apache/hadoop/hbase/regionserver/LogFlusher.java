@@ -43,18 +43,14 @@ public class LogFlusher extends Chore {
   }
   
   void setHLog(HLog log) {
-    synchronized (log) {
-      this.log.set(log);
-    }
+    this.log.set(log);
   }
 
   @Override
   protected void chore() {
-    synchronized (log) {
-      HLog hlog = log.get();
-      if (hlog != null) {
-        hlog.optionalSync();
-      }
+    HLog hlog = log.get();
+    if (hlog != null) {
+      hlog.optionalSync();
     }
   }
 }

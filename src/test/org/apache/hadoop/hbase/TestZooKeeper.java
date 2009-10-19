@@ -106,7 +106,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance, sessionID, password);
     zk.close();
 
-    Thread.sleep(sessionTimeout * 3);
+    Thread.sleep(sessionTimeout * 3L);
 
     System.err.println("ZooKeeper should have timed out");
     connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
@@ -129,7 +129,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
       ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance, sessionID, password);
       zk.close();
 
-      Thread.sleep(sessionTimeout * 3);
+      Thread.sleep(sessionTimeout * 3L);
 
       new HTable(conf, HConstants.META_TABLE_NAME);
   

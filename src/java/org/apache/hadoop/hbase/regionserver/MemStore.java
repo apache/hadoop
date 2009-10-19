@@ -420,7 +420,7 @@ public class MemStore implements HeapSize {
    * Immutable data structure to hold member found in set and the set it was
    * found in.  Include set because it is carrying context.
    */
-  private class Member {
+  private static class Member {
     final KeyValue kv;
     final NavigableSet<KeyValue> set;
     Member(final NavigableSet<KeyValue> s, final KeyValue kv) {
@@ -628,9 +628,9 @@ public class MemStore implements HeapSize {
     boolean cacheNextRow() {
       // Prevent snapshot being cleared while caching a row.
       lock.readLock().lock();
-      this.result.clear();
-      this.idx = 0;
       try {
+        this.result.clear();
+        this.idx = 0;
         // Look at each set, kvset and snapshot.
         // Both look for matching entries for this.current row returning what
         // they
@@ -781,7 +781,6 @@ public class MemStore implements HeapSize {
     // TODO: x32 vs x64
     long size = 0;
     final int count = 10000;
-    byte [] column = Bytes.toBytes("col:umn");
     byte [] fam = Bytes.toBytes("col");
     byte [] qf = Bytes.toBytes("umn");
     byte [] empty = new byte[0];

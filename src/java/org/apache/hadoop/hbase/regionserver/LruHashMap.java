@@ -208,7 +208,7 @@ implements HeapSize, Map<K,V> {
    * @return currently used memory in bytes
    */
   public long getMemUsed() {
-    return (memTotal - memFree);
+    return (memTotal - memFree); // FindBugs IS2_INCONSISTENT_SYNC
   }
   
   /**
@@ -228,7 +228,7 @@ implements HeapSize, Map<K,V> {
    * @return number of misses
    */
   public long getMissCount() {
-    return missCount;
+    return missCount; // FindBugs IS2_INCONSISTENT_SYNC
   }
   
   /**
@@ -253,7 +253,6 @@ implements HeapSize, Map<K,V> {
    * @return actual amount of memory freed in bytes
    */
   public synchronized long freeMemory(long requestedAmount) throws Exception {
-    long minMemory = getMinimumUsage();
     if(requestedAmount > (getMemUsed() - getMinimumUsage())) {
       return clearAll();
     }
@@ -656,7 +655,6 @@ implements HeapSize, Map<K,V> {
    */
   private long clearAll() {
     Entry cur;
-    Entry prev;
     long freedMemory = 0;
     for(int i=0; i<entries.length; i++) {
       cur = entries[i];
@@ -828,7 +826,7 @@ implements HeapSize, Map<K,V> {
    */
   public Set<Entry<K,V>> entryTableSet() {
     Set<Entry<K,V>> entrySet = new HashSet<Entry<K,V>>();
-    Entry [] table = entries;
+    Entry [] table = entries; // FindBugs IS2_INCONSISTENT_SYNC
     for(int i=0;i<table.length;i++) {
       for(Entry e = table[i]; e != null; e = e.next) {
         entrySet.add(e);

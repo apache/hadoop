@@ -76,7 +76,7 @@ public final class Compression {
   public static enum Algorithm {
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
-      private CompressionCodec lzoCodec;
+      private transient CompressionCodec lzoCodec;
 
       @Override
       CompressionCodec getCodec() {
@@ -84,7 +84,7 @@ public final class Compression {
           Configuration conf = new Configuration();
           conf.setBoolean("hadoop.native.lib", true);
           try {
-            Class externalCodec =
+            Class<?> externalCodec =
                 ClassLoader.getSystemClassLoader().loadClass("com.hadoop.compression.lzo.LzoCodec");
             lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
           } catch (ClassNotFoundException e) {
@@ -95,7 +95,7 @@ public final class Compression {
       }
     },
     GZ("gz") {
-      private GzipCodec codec;
+      private transient GzipCodec codec;
 
       @Override
       DefaultCodec getCodec() {

@@ -64,6 +64,8 @@ public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends
   static final String ROWKEY_NAME = "key";
   static final String INDEX_DIR = "testindex";
 
+  static final Random rand = new Random();
+
   /** default constructor */
   public DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex() {
     super(Bytes.toString(INPUT_FAMILY));
@@ -77,6 +79,7 @@ public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends
     if (conf != null) {
       FileUtil.fullyDelete(new File(conf.get("hadoop.tmp.dir")));
     }
+    super.tearDown();
   }
 
   /**
@@ -194,7 +197,7 @@ public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends
     }
 
     Path localDir = new Path(getUnitTestdir(getName()), "index_" +
-      Integer.toString(new Random().nextInt()));
+      Integer.toString(rand.nextInt()));
     this.fs.copyToLocalFile(new Path(INDEX_DIR), localDir);
     FileSystem localfs = FileSystem.getLocal(conf);
     FileStatus [] indexDirs = localfs.listStatus(localDir);

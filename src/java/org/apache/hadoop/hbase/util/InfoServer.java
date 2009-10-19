@@ -23,10 +23,8 @@ import java.util.Map;
 
 import org.apache.hadoop.http.HttpServer;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
-import org.mortbay.jetty.handler.HandlerCollection;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.webapp.WebAppContext;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal

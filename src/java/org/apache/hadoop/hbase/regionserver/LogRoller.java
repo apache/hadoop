@@ -74,7 +74,7 @@ class LogRoller extends Thread implements LogRollListener {
           LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
         }
       }
-      rollLock.lock();          // Don't interrupt us. We're working
+      rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
         byte [] regionToFlush = server.getLog().rollWriter();

@@ -19,14 +19,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -35,6 +32,7 @@ import org.apache.thrift.protocol.*;
  * A Mutation object is used to either update or delete a column-value.
  */
 public class Mutation implements TBase, java.io.Serializable, Cloneable {
+  private static final long serialVersionUID = 1L;
   private static final TStruct STRUCT_DESC = new TStruct("Mutation");
   private static final TField IS_DELETE_FIELD_DESC = new TField("isDelete", TType.BOOL, (short)1);
   private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)2);
@@ -49,6 +47,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     public boolean isDelete = false;
   }
 
@@ -203,7 +202,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
   public Object getFieldValue(int fieldID) {
     switch (fieldID) {
     case ISDELETE:
-      return new Boolean(isIsDelete());
+      return Boolean.valueOf(isIsDelete());
 
     case COLUMN:
       return getColumn();
@@ -358,7 +357,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     if (this.column == null) {
       sb.append("null");
     } else {
-      sb.append(this.column);
+      sb.append(Bytes.toStringBinary(this.column));
     }
     first = false;
     if (!first) sb.append(", ");
@@ -366,7 +365,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     if (this.value == null) {
       sb.append("null");
     } else {
-      sb.append(this.value);
+      sb.append(Bytes.toStringBinary(this.value));
     }
     first = false;
     sb.append(")");

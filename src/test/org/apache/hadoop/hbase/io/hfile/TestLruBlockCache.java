@@ -484,43 +484,37 @@ public class TestLruBlockCache extends TestCase {
   }
   
   private long calculateBlockSize(long maxSize, int numBlocks) {
-    long roughBlockSize = (long)Math.ceil(maxSize/numBlocks);
+    long roughBlockSize = maxSize / numBlocks;
     int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
     long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
         ClassSize.CONCURRENT_HASHMAP +
         (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
         (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
-    long negateBlockSize = (long)Math.ceil(totalOverhead/numEntries);
+    long negateBlockSize = (long)(totalOverhead/numEntries);
     negateBlockSize += CachedBlock.PER_BLOCK_OVERHEAD;
     return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*0.99f));
   }
   
   private long calculateBlockSizeDefault(long maxSize, int numBlocks) {
-    long roughBlockSize = (long)Math.ceil(maxSize/numBlocks);
+    long roughBlockSize = maxSize / numBlocks;
     int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
     long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
         ClassSize.CONCURRENT_HASHMAP +
         (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
         (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
-    long negateBlockSize = (long)Math.ceil(totalOverhead/numEntries);
+    long negateBlockSize = totalOverhead / numEntries;
     negateBlockSize += CachedBlock.PER_BLOCK_OVERHEAD;
     return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*
         LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
   }
   
-  private class Block implements HeapSize {
+  private static class Block implements HeapSize {
     String blockName;
     ByteBuffer buf;
-    boolean inMemory;
-    
+
     Block(String blockName, int size) {
-      this(blockName,size,false);
-    }
-    
-    Block(String blockName, int size, boolean inMemory) {
       this.blockName = blockName;
       this.buf = ByteBuffer.allocate(size);
-      this.inMemory = inMemory;
     }
     
     public long heapSize() {

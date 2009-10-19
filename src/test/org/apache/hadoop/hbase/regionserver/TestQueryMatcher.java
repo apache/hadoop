@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestQueryMatcher extends HBaseTestCase
 implements HConstants {
-  private final boolean PRINT = false;
+  private static final boolean PRINT = false;
   
   private byte [] row1;
   private byte [] row2;
@@ -46,7 +46,6 @@ implements HConstants {
   private byte [] col3;
   private byte [] col4;
   private byte [] col5;
-  private byte [] col6;
 
   private byte [] data;
 
@@ -55,7 +54,8 @@ implements HConstants {
   long ttl = Long.MAX_VALUE;
   KeyComparator rowComparator;
 
-  public void setUp(){
+  public void setUp() throws Exception {
+    super.setUp();
     row1 = Bytes.toBytes("row1");
     row2 = Bytes.toBytes("row2");
     fam1 = Bytes.toBytes("fam1");
@@ -65,7 +65,6 @@ implements HConstants {
     col3 = Bytes.toBytes("col3");
     col4 = Bytes.toBytes("col4");
     col5 = Bytes.toBytes("col5");
-    col6 = Bytes.toBytes("col6");
 
     data = Bytes.toBytes("data");
 

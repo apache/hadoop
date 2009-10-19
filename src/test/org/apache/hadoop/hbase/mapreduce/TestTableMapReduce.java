@@ -232,8 +232,8 @@ public class TestTableMapReduce extends MultiRegionTable {
         if (first.compareTo(second) != 0) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("second key is not the reverse of first. row=" +
-                r.getRow() + ", first value=" + first + ", second value=" +
-                second);
+                Bytes.toStringBinary(r.getRow()) + ", first value=" + first +
+                ", second value=" + second);
           }
           fail();
         }

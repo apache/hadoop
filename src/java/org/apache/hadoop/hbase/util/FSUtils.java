@@ -301,11 +301,15 @@ public class FSUtils {
       // should be regions.  Then in each region, should only be family
       // directories.  Under each of these, should be one file only.
       Path d = tableDirs[i].getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
+        continue;
+      }
       FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
       for (int j = 0; j < regionDirs.length; j++) {
         Path dd = regionDirs[j].getPath();
-        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
+          continue;
+        }
         // Else its a region name.  Now look in region for families.
         FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
         for (int k = 0; k < familyDirs.length; k++) {
@@ -360,11 +364,15 @@ public class FSUtils {
       // only be family directories.  Under each of these, should be a mapfile
       // and info directory and in these only one file.
       Path d = tableDirs[i].getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) continue;
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
+        continue;
+      }
       FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
       for (int j = 0; j < regionDirs.length; j++) {
         Path dd = regionDirs[j].getPath();
-        if (dd.equals(HConstants.HREGION_COMPACTIONDIR_NAME)) continue;
+        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
+          continue;
+        }
         // Else its a region name.  Now look in region for families.
         FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
         for (int k = 0; k < familyDirs.length; k++) {

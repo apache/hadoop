@@ -46,8 +46,10 @@ public class RandomSeek {
       String [] parts = str.split(",");
       l.add(parts[0] + ":" + parts[1] + ":" + parts[2]);
     }
+    istream.close();
     return l;
   }
+
   private static String randKey(List<String> keys) {
     Random r = new Random();
     //return keys.get(r.nextInt(keys.size()));

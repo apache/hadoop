@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
@@ -62,7 +63,7 @@ import org.apache.hadoop.io.Writable;
  * <p>TODO: Group Key-only comparators and operations into a Key class, just
  * for neatness sake, if can figure what to call it.
  */
-public class KeyValue implements Writable, HeapSize {
+public class KeyValue implements Writable, HeapSize, Cloneable {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
   /**
@@ -430,7 +431,7 @@ public class KeyValue implements Writable, HeapSize {
     int keylength = (int)longkeylength;
     // Value length
     vlength = value == null? 0 : vlength;
-    if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) {
+    if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) { // FindBugs INT_VACUOUS_COMPARISON
       throw new IllegalArgumentException("Valuer > " + 
           HConstants.MAXIMUM_VALUE_LENGTH);
     }
@@ -501,6 +502,9 @@ public class KeyValue implements Writable, HeapSize {
   // Needed doing 'contains' on List.  Only compares the key portion, not the
   // value.
   public boolean equals(Object other) {
+    if (!(other instanceof KeyValue)) {
+      return false;
+    }
     KeyValue kv = (KeyValue)other;
     // Comparing bytes should be fine doing equals test.  Shouldn't have to
     // worry about special .META. comparators doing straight equals.
@@ -508,6 +512,16 @@ public class KeyValue implements Writable, HeapSize {
         getKeyOffset(), getKeyLength(),
       kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength()) == 0;
     return result;
+  }
+
+  public int hashCode() {
+    byte[] b = getBuffer();
+    int start = getOffset(), end = getOffset() + getLength();
+    int h = b[start++];
+    for (int i = start; i < end; i++) {
+      h = (h * 13) ^ b[i];
+    }
+    return h;
   }
 
   //---------------------------------------------------------------------------
@@ -1211,9 +1225,11 @@ public class KeyValue implements Writable, HeapSize {
    * A {@link KVComparator} for <code>-ROOT-</code> catalog table
    * {@link KeyValue}s.
    */
-  public static class RootComparator extends MetaComparator {
+  public static class RootComparator extends MetaComparator 
+      implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final KeyComparator rawcomparator = new RootKeyComparator();
-    
+
     public KeyComparator getRawComparator() {
       return this.rawcomparator;
     }
@@ -1228,7 +1244,9 @@ public class KeyValue implements Writable, HeapSize {
    * A {@link KVComparator} for <code>.META.</code> catalog table
    * {@link KeyValue}s.
    */
-  public static class MetaComparator extends KVComparator {
+  public static class MetaComparator extends KVComparator
+      implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final KeyComparator rawcomparator = new MetaKeyComparator();
 
     public KeyComparator getRawComparator() {
@@ -1247,7 +1265,9 @@ public class KeyValue implements Writable, HeapSize {
    * considered the same as far as this Comparator is concerned.
    * Hosts a {@link KeyComparator}.
    */
-  public static class KVComparator implements java.util.Comparator<KeyValue> {
+  public static class KVComparator implements java.util.Comparator<KeyValue>,
+      Serializable {
+    private static final long serialVersionUID = 1L;
     private final KeyComparator rawcomparator = new KeyComparator();
 
     /**
@@ -1544,7 +1564,10 @@ public class KeyValue implements Writable, HeapSize {
    * Compare key portion of a {@link KeyValue} for keys in <code>-ROOT-<code>
    * table.
    */
-  public static class RootKeyComparator extends MetaKeyComparator {
+  public static class RootKeyComparator extends MetaKeyComparator 
+      implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       // Rows look like this: .META.,ROW_FROM_META,RID
@@ -1587,7 +1610,10 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * Comparator that compares row component only of a KeyValue.
    */
-  public static class RowComparator implements Comparator<KeyValue> {
+  public static class RowComparator implements Comparator<KeyValue>,
+      Serializable {
+    private static final long serialVersionUID = 1L;
+
     final KVComparator comparator;
 
     public RowComparator(final KVComparator c) {
@@ -1603,7 +1629,10 @@ public class KeyValue implements Writable, HeapSize {
    * Compare key portion of a {@link KeyValue} for keys in <code>.META.</code>
    * table.
    */
-  public static class MetaKeyComparator extends KeyComparator {
+  public static class MetaKeyComparator extends KeyComparator
+      implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       //        LOG.info("META " + Bytes.toString(left, loffset, llength) +
@@ -1660,7 +1689,10 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * Compare key portion of a {@link KeyValue}.
    */
-  public static class KeyComparator implements RawComparator<byte []> {
+  public static class KeyComparator implements RawComparator<byte []>,
+      Serializable {
+    private static final long serialVersionUID = 1L;
+
     volatile boolean ignoreTimestamp = false;
     volatile boolean ignoreType = false;
 

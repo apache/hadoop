@@ -322,10 +322,6 @@ public class TestHFileSeek extends TestCase {
           OptionBuilder.withLongOpt("block").withArgName("size-in-KB").hasArg()
               .withDescription("minimum block size (in KB)").create('b');
 
-      Option seed =
-          OptionBuilder.withLongOpt("seed").withArgName("long-int").hasArg()
-              .withDescription("specify the seed").create('S');
-
       Option operation =
           OptionBuilder.withLongOpt("operation").withArgName("r|w|rw").hasArg()
               .withDescription(

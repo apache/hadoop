@@ -2753,7 +2753,7 @@ public class TestFromClientSide {
     }
     byte [][] ret = new byte[n][];
     for(int i=0;i<n;i++) {
-      byte [] tail = Bytes.toBytes(new Integer(i).toString());
+      byte [] tail = Bytes.toBytes(Integer.toString(i));
       ret[i] = Bytes.add(base, tail);
     }
     return ret;

@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -127,7 +128,10 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     return next(result, -1);
   }
 
-  private class KVScannerComparator implements Comparator<KeyValueScanner> {
+  private static class KVScannerComparator
+      implements Comparator<KeyValueScanner>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private KVComparator kvComparator;
     /**
      * Constructor

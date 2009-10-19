@@ -214,8 +214,6 @@ public class HFilePerformanceEvaluation {
   }
   
   static abstract class ReadBenchmark extends RowOrientedBenchmark {
-    ImmutableBytesWritable key = new ImmutableBytesWritable();
-    ImmutableBytesWritable value = new ImmutableBytesWritable();
     
     protected HFile.Reader reader;
     
@@ -350,7 +348,8 @@ public class HFilePerformanceEvaluation {
     }
 
     private byte [] getGaussianRandomRowBytes() {
-      int r = (int) randomData.nextGaussian(totalRows / 2, totalRows / 10);
+      int r = (int) randomData.nextGaussian((double)totalRows / 2.0,
+          (double)totalRows / 10.0);
       return format(r);
     }
   }

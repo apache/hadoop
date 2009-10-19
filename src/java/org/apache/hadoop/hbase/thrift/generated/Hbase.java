@@ -23,10 +23,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -2570,15 +2569,12 @@ public class Hbase {
   }
 
   public static class enableTable_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("enableTable_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
     public static final int TABLENAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -2748,15 +2744,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("enableTable_args(");
-      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -2769,15 +2763,12 @@ public class Hbase {
   }
 
   public static class enableTable_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("enableTable_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -2947,7 +2938,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("enableTable_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -2955,7 +2945,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -2968,15 +2957,12 @@ public class Hbase {
   }
 
   public static class disableTable_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("disableTable_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
     public static final int TABLENAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -3146,15 +3132,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("disableTable_args(");
-      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -3167,15 +3151,12 @@ public class Hbase {
   }
 
   public static class disableTable_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("disableTable_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -3345,7 +3326,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("disableTable_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -3353,7 +3333,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -3366,15 +3345,12 @@ public class Hbase {
   }
 
   public static class isTableEnabled_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("isTableEnabled_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
     public static final int TABLENAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -3544,15 +3520,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("isTableEnabled_args(");
-      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -3565,6 +3539,7 @@ public class Hbase {
   }
 
   public static class isTableEnabled_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("isTableEnabled_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.BOOL, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -3576,6 +3551,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean success = false;
     }
 
@@ -3835,15 +3811,12 @@ public class Hbase {
   }
 
   public static class compact_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("compact_args");
     private static final TField TABLE_NAME_OR_REGION_NAME_FIELD_DESC = new TField("tableNameOrRegionName", TType.STRING, (short)1);
 
     public byte[] tableNameOrRegionName;
     public static final int TABLENAMEORREGIONNAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAMEORREGIONNAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
@@ -4013,15 +3986,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("compact_args(");
-      boolean first = true;
 
       sb.append("tableNameOrRegionName:");
       if (this.tableNameOrRegionName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableNameOrRegionName);
+        sb.append(Bytes.toStringBinary(this.tableNameOrRegionName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -4034,15 +4005,12 @@ public class Hbase {
   }
 
   public static class compact_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final TStruct STRUCT_DESC = new TStruct("compact_result");
+    private static final long serialVersionUID = 1L;
+   private static final TStruct STRUCT_DESC = new TStruct("compact_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -4212,7 +4180,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("compact_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -4220,7 +4187,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -4233,15 +4199,12 @@ public class Hbase {
   }
 
   public static class majorCompact_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("majorCompact_args");
     private static final TField TABLE_NAME_OR_REGION_NAME_FIELD_DESC = new TField("tableNameOrRegionName", TType.STRING, (short)1);
 
     public byte[] tableNameOrRegionName;
     public static final int TABLENAMEORREGIONNAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAMEORREGIONNAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
@@ -4411,15 +4374,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("majorCompact_args(");
-      boolean first = true;
 
       sb.append("tableNameOrRegionName:");
       if (this.tableNameOrRegionName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableNameOrRegionName);
+        sb.append(Bytes.toStringBinary(this.tableNameOrRegionName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -4432,15 +4393,12 @@ public class Hbase {
   }
 
   public static class majorCompact_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("majorCompact_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -4610,7 +4568,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("majorCompact_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -4618,7 +4575,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -4631,6 +4587,7 @@ public class Hbase {
   }
 
   public static class getTableNames_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getTableNames_args");
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
@@ -4732,8 +4689,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("getTableNames_args(");
-      boolean first = true;
-
       sb.append(")");
       return sb.toString();
     }
@@ -4746,6 +4701,7 @@ public class Hbase {
   }
 
   public static class getTableNames_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getTableNames_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -4754,10 +4710,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -5055,15 +5007,12 @@ public class Hbase {
   }
 
   public static class getColumnDescriptors_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getColumnDescriptors_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
     public static final int TABLENAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -5233,15 +5182,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("getColumnDescriptors_args(");
-      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -5254,6 +5201,7 @@ public class Hbase {
   }
 
   public static class getColumnDescriptors_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getColumnDescriptors_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.MAP, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -5262,10 +5210,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -5572,15 +5516,12 @@ public class Hbase {
   }
 
   public static class getTableRegions_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getTableRegions_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
     public static final int TABLENAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -5750,15 +5691,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("getTableRegions_args(");
-      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -5771,6 +5710,7 @@ public class Hbase {
   }
 
   public static class getTableRegions_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getTableRegions_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -5779,10 +5719,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -6081,6 +6017,7 @@ public class Hbase {
   }
 
   public static class createTable_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("createTable_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField COLUMN_FAMILIES_FIELD_DESC = new TField("columnFamilies", TType.LIST, (short)2);
@@ -6089,10 +6026,6 @@ public class Hbase {
     public static final int TABLENAME = 1;
     public List<ColumnDescriptor> columnFamilies;
     public static final int COLUMNFAMILIES = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -6369,7 +6302,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -6392,6 +6325,7 @@ public class Hbase {
   }
 
   public static class createTable_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("createTable_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
@@ -6403,10 +6337,6 @@ public class Hbase {
     public static final int IA = 2;
     public AlreadyExists exist;
     public static final int EXIST = 3;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -6741,15 +6671,12 @@ public class Hbase {
   }
 
   public static class deleteTable_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteTable_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
     public static final int TABLENAME = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -6919,15 +6846,13 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteTable_args(");
-      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -6940,15 +6865,12 @@ public class Hbase {
   }
 
   public static class deleteTable_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteTable_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -7118,7 +7040,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteTable_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -7126,7 +7047,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -7139,6 +7059,7 @@ public class Hbase {
   }
 
   public static class get_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("get_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -7150,10 +7071,6 @@ public class Hbase {
     public static final int ROW = 2;
     public byte[] column;
     public static final int COLUMN = 3;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -7457,7 +7374,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -7465,7 +7382,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toString(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -7473,7 +7390,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(this.column);
+        sb.append(Bytes.toStringBinary(this.column));
       }
       first = false;
       sb.append(")");
@@ -7488,6 +7405,7 @@ public class Hbase {
   }
 
   public static class get_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("get_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -7496,10 +7414,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -7798,6 +7712,7 @@ public class Hbase {
   }
 
   public static class getVer_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getVer_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -7815,6 +7730,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean numVersions = false;
     }
 
@@ -8014,7 +7930,7 @@ public class Hbase {
         return getColumn();
 
       case NUMVERSIONS:
-        return new Integer(getNumVersions());
+        return getNumVersions();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -8182,7 +8098,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8190,7 +8106,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8198,7 +8114,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(this.column);
+        sb.append(Bytes.toStringBinary(this.column));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8217,6 +8133,7 @@ public class Hbase {
   }
 
   public static class getVer_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getVer_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -8225,10 +8142,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -8527,6 +8440,7 @@ public class Hbase {
   }
 
   public static class getVerTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getVerTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -8547,6 +8461,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
       public boolean numVersions = false;
     }
@@ -8784,10 +8699,10 @@ public class Hbase {
         return getColumn();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       case NUMVERSIONS:
-        return new Integer(getNumVersions());
+        return getNumVersions();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -8977,7 +8892,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8985,7 +8900,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8993,7 +8908,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(this.column);
+        sb.append(Bytes.toStringBinary(this.column));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -9016,6 +8931,7 @@ public class Hbase {
   }
 
   public static class getVerTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getVerTs_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -9024,10 +8940,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -9326,6 +9238,7 @@ public class Hbase {
   }
 
   public static class getRow_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRow_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -9334,10 +9247,6 @@ public class Hbase {
     public static final int TABLENAME = 1;
     public byte[] row;
     public static final int ROW = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -9577,7 +9486,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -9585,7 +9494,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       sb.append(")");
@@ -9600,6 +9509,7 @@ public class Hbase {
   }
 
   public static class getRow_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRow_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -9608,10 +9518,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -9910,6 +9816,7 @@ public class Hbase {
   }
 
   public static class getRowWithColumns_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumns_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -9921,10 +9828,6 @@ public class Hbase {
     public static final int ROW = 2;
     public List<byte[]> columns;
     public static final int COLUMNS = 3;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -10264,7 +10167,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10272,7 +10175,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10295,6 +10198,7 @@ public class Hbase {
   }
 
   public static class getRowWithColumns_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumns_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -10303,10 +10207,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -10605,6 +10505,7 @@ public class Hbase {
   }
 
   public static class getRowTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRowTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -10619,7 +10520,8 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
-      public boolean timestamp = false;
+      private static final long serialVersionUID = 1L;
+      private boolean timestamp;
     }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
@@ -10777,7 +10679,7 @@ public class Hbase {
         return getRow();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -10922,7 +10824,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10930,7 +10832,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10949,6 +10851,7 @@ public class Hbase {
   }
 
   public static class getRowTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRowTs_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -10957,10 +10860,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -11259,6 +11158,7 @@ public class Hbase {
   }
 
   public static class getRowWithColumnsTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumnsTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -11276,6 +11176,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
     }
 
@@ -11495,7 +11396,7 @@ public class Hbase {
         return getColumns();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -11679,7 +11580,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -11687,7 +11588,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -11714,6 +11615,7 @@ public class Hbase {
   }
 
   public static class getRowWithColumnsTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumnsTs_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -11722,10 +11624,6 @@ public class Hbase {
     public static final int SUCCESS = 0;
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -12024,6 +11922,7 @@ public class Hbase {
   }
 
   public static class mutateRow_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRow_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -12035,10 +11934,6 @@ public class Hbase {
     public static final int ROW = 2;
     public List<Mutation> mutations;
     public static final int MUTATIONS = 3;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -12379,7 +12274,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -12387,7 +12282,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -12410,6 +12305,7 @@ public class Hbase {
   }
 
   public static class mutateRow_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRow_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
@@ -12418,10 +12314,6 @@ public class Hbase {
     public static final int IO = 1;
     public IllegalArgument ia;
     public static final int IA = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -12684,6 +12576,7 @@ public class Hbase {
   }
 
   public static class mutateRowTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -12701,6 +12594,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
     }
 
@@ -12920,7 +12814,7 @@ public class Hbase {
         return getMutations();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -13105,7 +12999,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -13113,7 +13007,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -13140,6 +13034,7 @@ public class Hbase {
   }
 
   public static class mutateRowTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowTs_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
@@ -13148,10 +13043,6 @@ public class Hbase {
     public static final int IO = 1;
     public IllegalArgument ia;
     public static final int IA = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -13414,6 +13305,7 @@ public class Hbase {
   }
 
   public static class mutateRows_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRows_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_BATCHES_FIELD_DESC = new TField("rowBatches", TType.LIST, (short)2);
@@ -13422,10 +13314,6 @@ public class Hbase {
     public static final int TABLENAME = 1;
     public List<BatchMutation> rowBatches;
     public static final int ROWBATCHES = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -13702,7 +13590,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -13725,6 +13613,7 @@ public class Hbase {
   }
 
   public static class mutateRows_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRows_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
@@ -13733,10 +13622,6 @@ public class Hbase {
     public static final int IO = 1;
     public IllegalArgument ia;
     public static final int IA = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -13999,6 +13884,7 @@ public class Hbase {
   }
 
   public static class mutateRowsTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowsTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_BATCHES_FIELD_DESC = new TField("rowBatches", TType.LIST, (short)2);
@@ -14013,6 +13899,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
     }
 
@@ -14191,7 +14078,7 @@ public class Hbase {
         return getRowBatches();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -14353,7 +14240,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -14380,6 +14267,7 @@ public class Hbase {
   }
 
   public static class mutateRowsTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowsTs_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
@@ -14388,10 +14276,6 @@ public class Hbase {
     public static final int IO = 1;
     public IllegalArgument ia;
     public static final int IA = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -14654,6 +14538,7 @@ public class Hbase {
   }
 
   public static class atomicIncrement_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("atomicIncrement_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -14671,6 +14556,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean value = false;
     }
 
@@ -14870,7 +14756,7 @@ public class Hbase {
         return getColumn();
 
       case VALUE:
-        return new Long(getValue());
+        return getValue();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -15038,7 +14924,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15046,7 +14932,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15054,7 +14940,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(this.column);
+        sb.append(Bytes.toStringBinary(this.column));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15073,6 +14959,7 @@ public class Hbase {
   }
 
   public static class atomicIncrement_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("atomicIncrement_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I64, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -15087,6 +14974,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean success = false;
     }
 
@@ -15239,7 +15127,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Long(getSuccess());
+        return getSuccess();
 
       case IO:
         return getIo();
@@ -15418,6 +15306,7 @@ public class Hbase {
   }
 
   public static class deleteAll_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAll_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -15429,10 +15318,6 @@ public class Hbase {
     public static final int ROW = 2;
     public byte[] column;
     public static final int COLUMN = 3;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -15736,7 +15621,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15744,7 +15629,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15752,7 +15637,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(this.column);
+        sb.append(Bytes.toStringBinary(this.column));
       }
       first = false;
       sb.append(")");
@@ -15767,15 +15652,12 @@ public class Hbase {
   }
 
   public static class deleteAll_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAll_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -15945,7 +15827,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAll_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -15953,7 +15834,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -15966,6 +15846,7 @@ public class Hbase {
   }
 
   public static class deleteAllTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -15983,6 +15864,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
     }
 
@@ -16182,7 +16064,7 @@ public class Hbase {
         return getColumn();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -16350,7 +16232,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16358,7 +16240,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16366,7 +16248,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(this.column);
+        sb.append(Bytes.toStringBinary(this.column));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16385,15 +16267,12 @@ public class Hbase {
   }
 
   public static class deleteAllTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllTs_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -16563,7 +16442,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllTs_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -16571,7 +16449,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -16584,6 +16461,7 @@ public class Hbase {
   }
 
   public static class deleteAllRow_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRow_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -16592,10 +16470,6 @@ public class Hbase {
     public static final int TABLENAME = 1;
     public byte[] row;
     public static final int ROW = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -16835,7 +16709,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16843,7 +16717,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       sb.append(")");
@@ -16858,15 +16732,12 @@ public class Hbase {
   }
 
   public static class deleteAllRow_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRow_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -17036,7 +16907,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRow_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -17044,7 +16914,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -17057,6 +16926,7 @@ public class Hbase {
   }
 
   public static class deleteAllRowTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRowTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
@@ -17071,6 +16941,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
     }
 
@@ -17229,7 +17100,7 @@ public class Hbase {
         return getRow();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -17374,7 +17245,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17382,7 +17253,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(this.row);
+        sb.append(Bytes.toStringBinary(this.row));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17401,15 +17272,12 @@ public class Hbase {
   }
 
   public static class deleteAllRowTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRowTs_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
     public static final int IO = 1;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
@@ -17579,7 +17447,6 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRowTs_result(");
-      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -17587,7 +17454,6 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -17600,6 +17466,7 @@ public class Hbase {
   }
 
   public static class scannerOpen_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpen_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
@@ -17611,10 +17478,6 @@ public class Hbase {
     public static final int STARTROW = 2;
     public List<byte[]> columns;
     public static final int COLUMNS = 3;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -17954,7 +17817,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17962,7 +17825,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(this.startRow);
+        sb.append(Bytes.toStringBinary(this.startRow));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17985,6 +17848,7 @@ public class Hbase {
   }
 
   public static class scannerOpen_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpen_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -17996,6 +17860,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean success = false;
     }
 
@@ -18110,7 +17975,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Integer(getSuccess());
+        return getSuccess();
 
       case IO:
         return getIo();
@@ -18255,6 +18120,7 @@ public class Hbase {
   }
 
   public static class scannerOpenWithStop_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStop_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
@@ -18269,10 +18135,6 @@ public class Hbase {
     public static final int STOPROW = 3;
     public List<byte[]> columns;
     public static final int COLUMNS = 4;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -18676,7 +18538,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -18684,7 +18546,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(this.startRow);
+        sb.append(Bytes.toStringBinary(this.startRow));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -18692,7 +18554,7 @@ public class Hbase {
       if (this.stopRow == null) {
         sb.append("null");
       } else {
-        sb.append(this.stopRow);
+        sb.append(Bytes.toStringBinary(this.stopRow));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -18715,6 +18577,7 @@ public class Hbase {
   }
 
   public static class scannerOpenWithStop_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStop_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -18726,6 +18589,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean success = false;
     }
 
@@ -18840,7 +18704,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Integer(getSuccess());
+        return getSuccess();
 
       case IO:
         return getIo();
@@ -18985,6 +18849,7 @@ public class Hbase {
   }
 
   public static class scannerOpenWithPrefix_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithPrefix_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_AND_PREFIX_FIELD_DESC = new TField("startAndPrefix", TType.STRING, (short)2);
@@ -18996,10 +18861,6 @@ public class Hbase {
     public static final int STARTANDPREFIX = 2;
     public List<byte[]> columns;
     public static final int COLUMNS = 3;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
@@ -19339,7 +19200,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -19347,7 +19208,7 @@ public class Hbase {
       if (this.startAndPrefix == null) {
         sb.append("null");
       } else {
-        sb.append(this.startAndPrefix);
+        sb.append(Bytes.toStringBinary(this.startAndPrefix));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -19370,6 +19231,7 @@ public class Hbase {
   }
 
   public static class scannerOpenWithPrefix_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithPrefix_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -19381,6 +19243,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean success = false;
     }
 
@@ -19495,7 +19358,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Integer(getSuccess());
+        return getSuccess();
 
       case IO:
         return getIo();
@@ -19640,6 +19503,7 @@ public class Hbase {
   }
 
   public static class scannerOpenTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
@@ -19657,6 +19521,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
     }
 
@@ -19876,7 +19741,7 @@ public class Hbase {
         return getColumns();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -20060,7 +19925,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20068,7 +19933,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(this.startRow);
+        sb.append(Bytes.toStringBinary(this.startRow));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20095,6 +19960,7 @@ public class Hbase {
   }
 
   public static class scannerOpenTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenTs_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -20106,6 +19972,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean success = false;
     }
 
@@ -20220,7 +20087,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Integer(getSuccess());
+        return getSuccess();
 
       case IO:
         return getIo();
@@ -20365,6 +20232,7 @@ public class Hbase {
   }
 
   public static class scannerOpenWithStopTs_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStopTs_args");
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
@@ -20385,6 +20253,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean timestamp = false;
     }
 
@@ -20645,7 +20514,7 @@ public class Hbase {
         return getColumns();
 
       case TIMESTAMP:
-        return new Long(getTimestamp());
+        return getTimestamp();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -20852,7 +20721,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(this.tableName);
+        sb.append(Bytes.toString(this.tableName));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20860,7 +20729,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(this.startRow);
+        sb.append(Bytes.toStringBinary(this.startRow));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20868,7 +20737,7 @@ public class Hbase {
       if (this.stopRow == null) {
         sb.append("null");
       } else {
-        sb.append(this.stopRow);
+        sb.append(Bytes.toStringBinary(this.stopRow));
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20895,6 +20764,7 @@ public class Hbase {
   }
 
   public static class scannerOpenWithStopTs_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStopTs_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -20906,6 +20776,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean success = false;
     }
 
@@ -21020,7 +20891,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Integer(getSuccess());
+        return getSuccess();
 
       case IO:
         return getIo();
@@ -21165,6 +21036,7 @@ public class Hbase {
   }
 
   public static class scannerGet_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerGet_args");
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
 
@@ -21173,6 +21045,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean id = false;
     }
 
@@ -21249,7 +21122,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case ID:
-        return new Integer(getId());
+        return getId();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -21342,11 +21215,8 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerGet_args(");
-      boolean first = true;
-
       sb.append("id:");
       sb.append(this.id);
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -21359,6 +21229,7 @@ public class Hbase {
   }
 
   public static class scannerGet_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerGet_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -21370,10 +21241,6 @@ public class Hbase {
     public static final int IO = 1;
     public IllegalArgument ia;
     public static final int IA = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -21744,6 +21611,7 @@ public class Hbase {
   }
 
   public static class scannerGetList_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerGetList_args");
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
     private static final TField NB_ROWS_FIELD_DESC = new TField("nbRows", TType.I32, (short)2);
@@ -21755,6 +21623,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean id = false;
       public boolean nbRows = false;
     }
@@ -21869,10 +21738,10 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case ID:
-        return new Integer(getId());
+        return getId();
 
       case NBROWS:
-        return new Integer(getNbRows());
+        return getNbRows();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -22008,6 +21877,7 @@ public class Hbase {
   }
 
   public static class scannerGetList_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerGetList_result");
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
@@ -22019,10 +21889,6 @@ public class Hbase {
     public static final int IO = 1;
     public IllegalArgument ia;
     public static final int IA = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
@@ -22393,6 +22259,7 @@ public class Hbase {
   }
 
   public static class scannerClose_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerClose_args");
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
 
@@ -22401,6 +22268,7 @@ public class Hbase {
 
     private final Isset __isset = new Isset();
     private static final class Isset implements java.io.Serializable {
+      private static final long serialVersionUID = 1L;
       public boolean id = false;
     }
 
@@ -22477,7 +22345,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case ID:
-        return new Integer(getId());
+        return getId();
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -22570,11 +22438,8 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerClose_args(");
-      boolean first = true;
-
       sb.append("id:");
       sb.append(this.id);
-      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -22587,6 +22452,7 @@ public class Hbase {
   }
 
   public static class scannerClose_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final long serialVersionUID = 1L;
     private static final TStruct STRUCT_DESC = new TStruct("scannerClose_result");
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
@@ -22595,10 +22461,6 @@ public class Hbase {
     public static final int IO = 1;
     public IllegalArgument ia;
     public static final int IA = 2;
-
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-    }
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 

@@ -28,7 +28,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -58,7 +57,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class LocalHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
   private final HMaster master;
-  private final List<RegionServerThread> regionThreads;
+  private final List<RegionServerThread> regionThreads =
+    new ArrayList<RegionServerThread>();
   private final static int DEFAULT_NO = 1;
   /** local mode */
   public static final String LOCAL = "local";
@@ -95,8 +95,8 @@ public class LocalHBaseCluster implements HConstants {
     // port '0' so there won't be clashes over default port as unit tests
     // start/stop ports at different times during the life of the test.
     conf.set(REGIONSERVER_PORT, "0");
-    this.regionThreads = new ArrayList<RegionServerThread>();
-    regionServerClass = (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
+    regionServerClass = (Class<? extends HRegionServer>)
+      conf.getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
     for (int i = 0; i < noRegionServers; i++) {
       addRegionServer();
     }
@@ -286,9 +286,7 @@ public class LocalHBaseCluster implements HConstants {
         }
       }
     }
-    LOG.info("Shutdown " +
-      ((this.regionThreads != null)? this.master.getName(): "0 masters") +
-      " " + this.regionThreads.size() + " region server(s)");
+    LOG.info("Shutdown " + this.regionThreads.size() + " region server(s)");
   }
 
   /**

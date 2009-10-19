@@ -1064,10 +1064,6 @@ public class HFile {
 
       public int blockFetches = 0;
 
-      public Scanner(Reader r) {
-        this.reader = r;
-      }
-      
       public Scanner(Reader r, boolean cacheBlocks) {
         this.reader = r;
         this.cacheBlocks = cacheBlocks;

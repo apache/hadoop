@@ -32,7 +32,8 @@ public class TestScanDeleteTracker extends HBaseTestCase implements HConstants {
   private long timestamp = 10L;
   private byte deleteType = 0;
   
-  public void setUp(){
+  public void setUp() throws Exception {
+    super.setUp();
     sdt = new ScanDeleteTracker();
   }
   

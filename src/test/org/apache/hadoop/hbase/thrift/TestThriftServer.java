@@ -261,7 +261,6 @@ public class TestThriftServer extends HBaseClusterTestCase {
     handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
 
     time1 += 1;
-    time2 += 1;
 
     // Test a scanner on all rows and all columns, no timestamp
     int scanner1 = handler.scannerOpen(tableAname, rowAname, getColumnList(true, true));

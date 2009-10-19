@@ -2,11 +2,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
@@ -16,7 +13,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestKeyValueHeap extends HBaseTestCase
 implements HConstants {
-  private final boolean PRINT = false;
+  private static final boolean PRINT = false;
   
   List<Scanner> scanners = new ArrayList<Scanner>();
 
@@ -33,17 +30,15 @@ implements HConstants {
   private byte [] col4;
   private byte [] col5;
 
-  public void setUp(){
+  public void setUp() throws Exception {
+    super.setUp();
     data = Bytes.toBytes("data");
-
     row1 = Bytes.toBytes("row1");
     fam1 = Bytes.toBytes("fam1");
     col1 = Bytes.toBytes("col1");
-
     row2 = Bytes.toBytes("row2");
     fam2 = Bytes.toBytes("fam2");
     col2 = Bytes.toBytes("col2");
-
     col3 = Bytes.toBytes("col3");
     col4 = Bytes.toBytes("col4");
     col5 = Bytes.toBytes("col5");
@@ -159,14 +154,12 @@ implements HConstants {
     
   }
 
-  private class Scanner implements KeyValueScanner {
-    private Set<KeyValue> scan =
-      new TreeSet<KeyValue>((Comparator)KeyValue.COMPARATOR);
+  private static class Scanner implements KeyValueScanner {
     private Iterator<KeyValue> iter;
     private KeyValue current;
 
     public Scanner(List<KeyValue> list) {
-      Collections.sort(list, (Comparator)KeyValue.COMPARATOR);
+      Collections.sort(list, KeyValue.COMPARATOR);
       iter = list.iterator();
       if(iter.hasNext()){
         current = iter.next();

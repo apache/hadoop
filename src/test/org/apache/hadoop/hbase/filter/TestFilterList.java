@@ -152,7 +152,6 @@ public class TestFilterList extends TestCase {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PrefixFilter(Bytes.toBytes("yyy")));
     filters.add(new PageFilter(MAX_PAGES));
-    RegexStringComparator rsc;
     Filter filterMPONE =
         new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
     /* Filter must do all below steps:

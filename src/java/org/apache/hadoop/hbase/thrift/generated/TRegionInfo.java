@@ -19,14 +19,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -35,6 +32,7 @@ import org.apache.thrift.protocol.*;
  * A TRegionInfo contains information about an HTable region.
  */
 public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
+  private static final long serialVersionUID = 1L;
   private static final TStruct STRUCT_DESC = new TStruct("TRegionInfo");
   private static final TField START_KEY_FIELD_DESC = new TField("startKey", TType.STRING, (short)1);
   private static final TField END_KEY_FIELD_DESC = new TField("endKey", TType.STRING, (short)2);
@@ -55,6 +53,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     public boolean id = false;
     public boolean version = false;
   }
@@ -289,13 +288,13 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
       return getEndKey();
 
     case ID:
-      return new Long(getId());
+      return getId();
 
     case NAME:
       return getName();
 
     case VERSION:
-      return new Byte(getVersion());
+      return getVersion();
 
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -485,7 +484,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     if (this.startKey == null) {
       sb.append("null");
     } else {
-      sb.append(this.startKey);
+      sb.append(Bytes.toStringBinary(this.startKey));
     }
     first = false;
     if (!first) sb.append(", ");
@@ -493,7 +492,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     if (this.endKey == null) {
       sb.append("null");
     } else {
-      sb.append(this.endKey);
+      sb.append(Bytes.toStringBinary(this.endKey));
     }
     first = false;
     if (!first) sb.append(", ");
@@ -505,7 +504,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     if (this.name == null) {
       sb.append("null");
     } else {
-      sb.append(this.name);
+      sb.append(Bytes.toStringBinary(this.name));
     }
     first = false;
     if (!first) sb.append(", ");

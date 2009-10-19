@@ -208,7 +208,7 @@ public class MiniClusterTestCase extends TestCase {
     stopDFS();
   }
 
-  class MiniClusterShutdownThread extends Thread {
+  static class MiniClusterShutdownThread extends Thread {
     public void run() {
       stopMiniCluster();
       Path path = new Path(

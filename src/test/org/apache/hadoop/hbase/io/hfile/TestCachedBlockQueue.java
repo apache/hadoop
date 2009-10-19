@@ -122,7 +122,7 @@ public class TestCachedBlockQueue extends TestCase {
     
   }
   
-  private class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
+  private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
   {
     public CachedBlock(long heapSize, String name, long accessTime) {
       super(name,

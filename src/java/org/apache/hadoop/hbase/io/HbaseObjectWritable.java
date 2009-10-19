@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.*;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -214,6 +213,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
   private static class NullInstance extends Configured implements Writable {
     Class<?> declaredClass;
     /** default constructor for writable */
+    @SuppressWarnings("unused")
     public NullInstance() { super(null); }
     
     /**

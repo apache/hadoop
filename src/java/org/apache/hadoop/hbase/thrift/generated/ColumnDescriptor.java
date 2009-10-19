@@ -19,14 +19,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -37,6 +34,7 @@ import org.apache.thrift.protocol.*;
  * used as input when creating a table or adding a column.
  */
 public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable {
+  private static final long serialVersionUID = 1L;
   private static final TStruct STRUCT_DESC = new TStruct("ColumnDescriptor");
   private static final TField NAME_FIELD_DESC = new TField("name", TType.STRING, (short)1);
   private static final TField MAX_VERSIONS_FIELD_DESC = new TField("maxVersions", TType.I32, (short)2);
@@ -69,6 +67,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
 
   private final Isset __isset = new Isset();
   private static final class Isset implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     public boolean maxVersions = false;
     public boolean inMemory = false;
     public boolean bloomFilterVectorSize = false;
@@ -468,28 +467,28 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
       return getName();
 
     case MAXVERSIONS:
-      return new Integer(getMaxVersions());
+      return Integer.valueOf(getMaxVersions());
 
     case COMPRESSION:
       return getCompression();
 
     case INMEMORY:
-      return new Boolean(isInMemory());
+      return Boolean.valueOf(isInMemory());
 
     case BLOOMFILTERTYPE:
       return getBloomFilterType();
 
     case BLOOMFILTERVECTORSIZE:
-      return new Integer(getBloomFilterVectorSize());
+      return Integer.valueOf(getBloomFilterVectorSize());
 
     case BLOOMFILTERNBHASHES:
-      return new Integer(getBloomFilterNbHashes());
+      return Integer.valueOf(getBloomFilterNbHashes());
 
     case BLOCKCACHEENABLED:
-      return new Boolean(isBlockCacheEnabled());
+      return Boolean.valueOf(isBlockCacheEnabled());
 
     case TIMETOLIVE:
-      return new Integer(getTimeToLive());
+      return Integer.valueOf(getTimeToLive());
 
     default:
       throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -767,7 +766,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable, Cloneable 
     if (this.name == null) {
       sb.append("null");
     } else {
-      sb.append(this.name);
+      sb.append(Bytes.toString(this.name));
     }
     first = false;
     if (!first) sb.append(", ");

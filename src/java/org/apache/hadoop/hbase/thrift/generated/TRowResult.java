@@ -19,14 +19,11 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -35,6 +32,7 @@ import org.apache.thrift.protocol.*;
  * Holds row name and then a map of columns to cells.
  */
 public class TRowResult implements TBase, java.io.Serializable, Cloneable {
+  private static final long serialVersionUID = 1L;
   private static final TStruct STRUCT_DESC = new TStruct("TRowResult");
   private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)1);
   private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.MAP, (short)2);
@@ -43,10 +41,6 @@ public class TRowResult implements TBase, java.io.Serializable, Cloneable {
   public static final int ROW = 1;
   public Map<byte[],TCell> columns;
   public static final int COLUMNS = 2;
-
-  private final Isset __isset = new Isset();
-  private static final class Isset implements java.io.Serializable {
-  }
 
   public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
     put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
@@ -331,7 +325,7 @@ public class TRowResult implements TBase, java.io.Serializable, Cloneable {
     if (this.row == null) {
       sb.append("null");
     } else {
-      sb.append(this.row);
+      sb.append(Bytes.toStringBinary(this.row));
     }
     first = false;
     if (!first) sb.append(", ");

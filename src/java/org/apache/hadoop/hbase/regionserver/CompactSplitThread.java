@@ -30,12 +30,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
@@ -114,9 +112,9 @@ class CompactSplitThread extends Thread implements HConstants {
       } catch (InterruptedException ex) {
         continue;
       } catch (IOException ex) {
-        LOG.error("Compaction/Split failed" +
-            (r != null ? (" for region " + r.getRegionNameAsString()) : ""),
-            RemoteExceptionHandler.checkIOException(ex));
+        LOG.error("Compaction/Split failed for region " +
+            r.getRegionNameAsString(),
+          RemoteExceptionHandler.checkIOException(ex));
         if (!server.checkFileSystem()) {
           break;
         }

@@ -305,7 +305,7 @@ public abstract class HBaseServer {
       while (running) {
         SelectionKey key = null;
         try {
-          selector.select();
+          selector.select(); // FindBugs IS2_INCONSISTENT_SYNC
           Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
           while (iter.hasNext()) {
             key = iter.next();
@@ -875,7 +875,7 @@ public abstract class HBaseServer {
       dataLengthBuffer = null;
       if (!channel.isOpen())
         return;
-      try {socket.shutdownOutput();} catch(Exception e) {}
+      try {socket.shutdownOutput();} catch(Exception e) {} // FindBugs DE_MIGHT_IGNORE
       if (channel.isOpen()) {
         try {channel.close();} catch(Exception e) {}
       }
