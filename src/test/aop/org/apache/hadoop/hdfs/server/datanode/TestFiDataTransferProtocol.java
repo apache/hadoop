@@ -300,4 +300,49 @@ public class TestFiDataTransferProtocol {
     final String methodName = FiTestUtil.getMethodName();
     runCallReceivePacketTest(methodName, 2, new DoosAction(methodName, 2));
   }
+
+  private static void runPipelineCloseTest(String methodName,
+      Action<DatanodeID> a) throws IOException {
+    FiTestUtil.LOG.info("Running " + methodName + " ...");
+    final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
+        .initTest();
+    t.fiPipelineClose.set(a);
+    write1byte(methodName);
+  }
+
+  /**
+   * Pipeline close:
+   * DN0 throws an OutOfMemoryException
+   * right after it received a close request from client.
+   * Client gets an IOException and determine DN0 bad.
+   */
+  @Test
+  public void pipeline_Fi_44() throws IOException {
+    final String methodName = FiTestUtil.getMethodName();
+    runPipelineCloseTest(methodName, new OomAction(methodName, 0));
+  }
+
+  /**
+   * Pipeline close:
+   * DN1 throws an OutOfMemoryException
+   * right after it received a close request from client.
+   * Client gets an IOException and determine DN1 bad.
+   */
+  @Test
+  public void pipeline_Fi_45() throws IOException {
+    final String methodName = FiTestUtil.getMethodName();
+    runPipelineCloseTest(methodName, new OomAction(methodName, 1));
+  }
+
+  /**
+   * Pipeline close:
+   * DN2 throws an OutOfMemoryException
+   * right after it received a close request from client.
+   * Client gets an IOException and determine DN2 bad.
+   */
+  @Test
+  public void pipeline_Fi_46() throws IOException {
+    final String methodName = FiTestUtil.getMethodName();
+    runPipelineCloseTest(methodName, new OomAction(methodName, 2));
+  }
 }

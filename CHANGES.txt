@@ -284,12 +284,15 @@ Release 0.21.0 - Unreleased
     HDFS-705. Create an adapter to access some of package-private methods of
     DataNode from tests (cos)
 
-    HDFS-710. Added actions with constraints to the pipeline fault injection
-    tests and changed SleepAction to support uniform random sleeping over an
+    HDFS-710. Add actions with constraints to the pipeline fault injection
+    tests and change SleepAction to support uniform random sleeping over an
     interval.  (szetszwo)
 
     HDFS-713. Need to properly check the type of the test class from an aspect
     (cos)
+
+    HDFS-716. Define a pointcut for pipeline close and add a few fault
+    injection tests.  (szetszwo)
 
   BUG FIXES
 

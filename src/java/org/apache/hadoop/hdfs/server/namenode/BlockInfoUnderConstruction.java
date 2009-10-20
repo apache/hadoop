@@ -110,6 +110,18 @@ class BlockInfoUnderConstruction extends BlockInfo {
       // Sufficient to rely on super's implementation
       return (this == obj) || super.equals(obj);
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public String toString() {
+      final StringBuilder b = new StringBuilder(getClass().getSimpleName());
+      b.append("[")
+       .append(expectedLocation)
+       .append("|")
+       .append(state)
+       .append("]");
+      return b.toString();
+    }
   }
 
   /**
@@ -255,11 +267,10 @@ class BlockInfoUnderConstruction extends BlockInfo {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    final StringBuilder b = new StringBuilder(getClass().getSimpleName());
-    b.append("{")
-     .append("\n  blockUCState=").append(blockUCState)
-     .append("\n  replicas=").append(replicas)
-     .append("\n  primaryNodeIndex=").append(primaryNodeIndex)
+    final StringBuilder b = new StringBuilder(super.toString());
+    b.append("{blockUCState=").append(blockUCState)
+     .append(", primaryNodeIndex=").append(primaryNodeIndex)
+     .append(", replicas=").append(replicas)
      .append("}");
     return b.toString();
   }

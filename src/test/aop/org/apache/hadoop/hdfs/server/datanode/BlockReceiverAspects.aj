@@ -22,9 +22,9 @@ import java.io.OutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.ProbabilityModel;
+import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
 /**
@@ -55,6 +55,31 @@ public aspect BlockReceiverAspects {
       Thread.dumpStack();
       throw new DiskOutOfSpaceException ("FI: injected fault point at " + 
         thisJoinPoint.getStaticPart( ).getSourceLocation());
+    }
+  }
+
+  pointcut pipelineClose(BlockReceiver blockreceiver, long offsetInBlock, long seqno,
+      boolean lastPacketInBlock, int len, int endOfHeader) :
+    call (* BlockReceiver.receivePacket(long, long, boolean, int, int))
+      && this(blockreceiver)
+      && args(offsetInBlock, seqno, lastPacketInBlock, len, endOfHeader);
+
+  before(BlockReceiver blockreceiver, long offsetInBlock, long seqno,
+      boolean lastPacketInBlock, int len, int endOfHeader
+      ) throws IOException : pipelineClose(blockreceiver, offsetInBlock, seqno,
+          lastPacketInBlock, len, endOfHeader) {
+    if (len == 0) {
+      LOG.info("FI: pipelineClose, offsetInBlock=" + offsetInBlock
+          + ", seqno=" + seqno
+          + ", lastPacketInBlock=" + lastPacketInBlock
+          + ", len=" + len
+          + ", endOfHeader=" + endOfHeader);
+  
+      final DataTransferTest test = DataTransferTestUtil.getDataTransferTest();
+      if (test != null) {
+        test.fiPipelineClose.run(
+            blockreceiver.getDataNode().getDatanodeRegistration());
+      }
     }
   }
 }

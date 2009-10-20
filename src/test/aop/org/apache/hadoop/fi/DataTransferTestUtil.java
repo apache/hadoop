@@ -65,6 +65,10 @@ public class DataTransferTestUtil {
     /** Simulate action for the statusRead pointcut */
     public final ActionContainer<DatanodeID> fiStatusRead
         = new ActionContainer<DatanodeID>();
+    /** Simulate action for the pipelineClose pointcut */
+    public final ActionContainer<DatanodeID> fiPipelineClose
+        = new ActionContainer<DatanodeID>();
+
     /** Verification action for the pipelineInitNonAppend pointcut */
     public final ActionContainer<Integer> fiPipelineInitErrorNonAppend
         = new ActionContainer<Integer>();

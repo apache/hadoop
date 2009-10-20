@@ -431,6 +431,15 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     int endOfHeader = buf.position();
     buf.reset();
     
+    return receivePacket(offsetInBlock, seqno, lastPacketInBlock, len, endOfHeader);
+  }
+
+  /** 
+   * Receives and processes a packet. It can contain many chunks.
+   * returns the number of data bytes that the packet has.
+   */
+  private int receivePacket(long offsetInBlock, long seqno,
+      boolean lastPacketInBlock, int len, int endOfHeader) throws IOException {
     if (LOG.isDebugEnabled()){
       LOG.debug("Receiving one packet for block " + block +
                 " of length " + len +
