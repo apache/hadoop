@@ -235,12 +235,12 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
       String host = serverAddress.substring(0, colonIndex);
       int port =
         Integer.valueOf(serverAddress.substring(colonIndex + 1)).intValue();
-      name = getServerName(host, port, startCode);
+
       HServerAddress address = new HServerAddress(serverAddress);
       if(!address.getHostname().equals(host)) {
         System.out.println("HBASE-1918 debug : " + address.getHostname() + " != " + host);
       }
-      
+      name = getServerName(host, port, startCode);
     }
     return name;
   }
