@@ -400,8 +400,9 @@ class RegionManager implements HConstants {
       // make sure root isnt assigned here first.
       // if so return 'empty list'
       // by definition there is no way this could be a ROOT region (since it's
-      // unassigned) so just make sure it isn't hosting META regions.
-      if (!isMetaServer) {
+      // unassigned) so just make sure it isn't hosting META regions (unless
+      // it's the only server left).
+      if (!isMetaServer || isSingleServer) {
         regionsToAssign.add(rootState);
       }
       return regionsToAssign;

@@ -72,6 +72,7 @@ Release 0.21.0 - Unreleased
                cause NPE during re-indexing (Mingjui Ray Liao via Andrew
                Purtell)
    HBASE-1916  FindBugs and javac warnings cleanup
+   HBASE-1908  ROOT not reassigned if only one regionserver left
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
