@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.io.WritableComparable;
 
@@ -40,6 +42,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private int infoPort;
   private String serverName = null;
   private String name;
+  private static Map<String,String> dnsCache = new HashMap<String,String>();
 
   /** default constructor - used by Writable */
   public HServerInfo() {
@@ -235,11 +238,11 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
       String host = serverAddress.substring(0, colonIndex);
       int port =
         Integer.valueOf(serverAddress.substring(colonIndex + 1)).intValue();
-
-      HServerAddress address = new HServerAddress(serverAddress);
-      if(!address.getHostname().equals(host)) {
-        System.out.println("HBASE-1918 debug : " + address.getHostname() + " != " + host);
+      if(!dnsCache.containsKey(host)) {
+        HServerAddress address = new HServerAddress(serverAddress);
+        dnsCache.put(host, address.getHostname());
       }
+      host = dnsCache.get(host);
       name = getServerName(host, port, startCode);
     }
     return name;
