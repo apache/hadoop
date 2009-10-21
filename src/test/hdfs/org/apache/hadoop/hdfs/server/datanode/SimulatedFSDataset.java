@@ -31,8 +31,8 @@ import javax.management.StandardMBean;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
@@ -197,7 +197,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
 
     @Override
-    synchronized public BlockWriteStreams createStreams() throws IOException {
+    synchronized public BlockWriteStreams createStreams(boolean isCreate, 
+        int bytesPerChunk, int checksumSize) throws IOException {
       if (finalized) {
         throw new IOException("Trying to write to a finalized replica "
             + theBlock);
@@ -615,24 +616,11 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     // nothing to check for simulated data set
   }
 
-  public synchronized long getChannelPosition(Block b, 
-                                              BlockWriteStreams stream)
+  @Override
+  public synchronized void adjustCrcChannelPosition(Block b,
+                                              BlockWriteStreams stream, 
+                                              int checksumSize)
                                               throws IOException {
-    BInfo binfo = blockMap.get(b);
-    if (binfo == null) {
-      throw new IOException("No such Block " + b );
-    }
-    return binfo.getNumBytes();
-  }
-
-  public synchronized void setChannelPosition(Block b, BlockWriteStreams stream, 
-                                              long dataOffset, long ckOffset)
-                                              throws IOException {
-    BInfo binfo = blockMap.get(b);
-    if (binfo == null) {
-      throw new IOException("No such Block " + b );
-    }
-    binfo.setBytesOnDisk(dataOffset);
   }
 
   /** 

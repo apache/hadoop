@@ -53,8 +53,12 @@ interface ReplicaInPipelineInterface extends Replica {
    * Create output streams for writing to this replica, 
    * one for block file and one for CRC file
    * 
+   * @param isCreate if it is for creation
+   * @param bytePerChunk number of bytes per CRC chunk
+   * @param checksumSize number of bytes per checksum
    * @return output streams for writing
    * @throws IOException if any error occurs
    */
-  public BlockWriteStreams createStreams() throws IOException;
+  public BlockWriteStreams createStreams(boolean isCreate,
+      int bytesPerChunk, int checksumSize) throws IOException;
 }

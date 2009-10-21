@@ -124,6 +124,8 @@ public class TestFileAppend3 extends junit.framework.TestCase {
       out.close();
     }
 
+    AppendTestUtil.check(fs, p, len1);
+
     //   Reopen file to append quarter block of data. Close file.
     final int len2 = (int)BLOCK_SIZE/4; 
     {
@@ -299,5 +301,60 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
     //c. Reopen file and read 25687+5877 bytes of data from file. Close file.
     AppendTestUtil.check(fs, p, len1 + len2);
+  }
+  
+  /** Append to a partial CRC chunk and 
+   * the first write does not fill up the partial CRC trunk
+   * *
+   * @throws IOException
+   */
+  public void testAppendToPartialChunk() throws IOException {
+    final Path p = new Path("/partialChunk/foo");
+    final int fileLen = 513;
+    System.out.println("p=" + p);
+    
+    byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
+
+    // create a new file.
+    FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, 1);
+
+    // create 1 byte file
+    stm.write(fileContents, 0, 1);
+    stm.close();
+    System.out.println("Wrote 1 byte and closed the file " + p);
+
+    // append to file
+    stm = fs.append(p);
+    // Append to a partial CRC trunk
+    stm.write(fileContents, 1, 1);
+    stm.sync();
+    // The partial CRC trunk is not full yet and close the file
+    stm.close();
+    System.out.println("Append 1 byte and closed the file " + p);
+
+    // write the remainder of the file
+    stm = fs.append(p);
+
+    // ensure getPos is set to reflect existing size of the file
+    assertEquals(2, stm.getPos());
+
+    // append to a partial CRC trunk
+    stm.write(fileContents, 2, 1);
+    // The partial chunk is not full yet, force to send a packet to DN
+    stm.sync();
+    System.out.println("Append and flush 1 byte");
+    // The partial chunk is not full yet, force to send another packet to DN
+    stm.write(fileContents, 3, 2);
+    stm.sync();
+    System.out.println("Append and flush 2 byte");
+
+    // fill up the partial chunk and close the file
+    stm.write(fileContents, 5, fileLen-5);
+    stm.close();
+    System.out.println("Flush 508 byte and closed the file " + p);
+
+    // verify that entire file is good
+    AppendTestUtil.checkFullFile(fs, p, fileLen,
+        fileContents, "Failed to append to a partial chunk");
   }
 }

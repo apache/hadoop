@@ -3422,16 +3422,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         waitAndQueuePacket(currentPacket);
         currentPacket = null;
 
-        // If this was the first write after reopening a file, then the above
-        // write filled up any partial chunk. Tell the summer to generate full 
+        // If the reopened file did not end at chunk boundary and the above
+        // write filled up its partial chunk. Tell the summer to generate full 
         // crc chunks from now on.
-        if (appendChunk) {
+        if (appendChunk && bytesCurBlock%bytesPerChecksum == 0) {
           appendChunk = false;
           resetChecksumChunk(bytesPerChecksum);
         }
-        int psize = Math.min((int)(blockSize-bytesCurBlock), writePacketSize);
-        computePacketChunkSize(psize, bytesPerChecksum);
-        
+
+        if (!appendChunk) {
+          int psize = Math.min((int)(blockSize-bytesCurBlock), writePacketSize);
+          computePacketChunkSize(psize, bytesPerChecksum);
+        }
         //
         // if encountering a block boundary, send an empty packet to 
         // indicate the end of block and reset bytesCurBlock.

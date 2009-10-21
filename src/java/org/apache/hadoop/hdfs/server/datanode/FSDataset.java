@@ -27,6 +27,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -1337,37 +1338,18 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /**
-   * Retrieves the offset in the block to which the
-   * the next write will write data to.
+   * Sets the offset in the meta file so that the
+   * last checksum will be overwritten.
    */
-  public long getChannelPosition(Block b, BlockWriteStreams streams) 
-                                 throws IOException {
-    FileOutputStream file = (FileOutputStream) streams.dataOut;
-    return file.getChannel().position();
-  }
-
-  /**
-   * Sets the offset in the block to which the
-   * the next write will write data to.
-   */
-  public void setChannelPosition(Block b, BlockWriteStreams streams, 
-                                 long dataOffset, long ckOffset) 
-                                 throws IOException {
-    long size = 0;
-    synchronized (this) {
-      size = getReplicaInfo(b).getBlockFile().length();
-    }
-    if (size < dataOffset) {
-      String msg = "Trying to change block file offset of block " + b +
-                     " to " + dataOffset +
-                     " but actual size of file is " +
-                     size;
-      throw new IOException(msg);
-    }
-    FileOutputStream file = (FileOutputStream) streams.dataOut;
-    file.getChannel().position(dataOffset);
-    file = (FileOutputStream) streams.checksumOut;
-    file.getChannel().position(ckOffset);
+  public void adjustCrcChannelPosition(Block b, BlockWriteStreams streams, 
+      int checksumSize) throws IOException {
+    FileOutputStream file = (FileOutputStream) streams.checksumOut;
+    FileChannel channel = file.getChannel();
+    long oldPos = channel.position();
+    long newPos = oldPos - checksumSize;
+    DataNode.LOG.info("Changing meta file offset of block " + b + " from " + 
+        oldPos + " to " + newPos);
+    channel.position(newPos);
   }
 
   synchronized File createTmpFile( FSVolume vol, Block blk ) throws IOException {

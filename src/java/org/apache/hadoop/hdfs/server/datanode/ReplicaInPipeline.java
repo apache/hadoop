@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.DataChecksum;
 
 /** 
  * This class defines a replica in a pipeline, which
@@ -160,7 +161,8 @@ class ReplicaInPipeline extends ReplicaInfo
   }
   
   @Override // ReplicaInPipelineInterface
-  public BlockWriteStreams createStreams() throws IOException {
+  public BlockWriteStreams createStreams(boolean isCreate, 
+      int bytesPerChunk, int checksumSize) throws IOException {
     File blockFile = getBlockFile();
     File metaFile = getMetaFile();
     if (DataNode.LOG.isDebugEnabled()) {
@@ -169,6 +171,17 @@ class ReplicaInPipeline extends ReplicaInfo
       DataNode.LOG.debug("writeTo metafile is " + metaFile +
                          " of size " + metaFile.length());
     }
+    long blockDiskSize = 0L;
+    long crcDiskSize = 0L;
+    if (!isCreate) { // check on disk file
+      blockDiskSize = bytesOnDisk;
+      crcDiskSize = BlockMetadataHeader.getHeaderSize() +
+      (blockDiskSize+bytesPerChunk-1)/bytesPerChunk*checksumSize;
+      if (blockDiskSize>0 && 
+          (blockDiskSize>blockFile.length() || crcDiskSize>metaFile.length())) {
+        throw new IOException("Corrupted block: " + this);
+      }
+    }
     FileOutputStream blockOut = null;
     FileOutputStream crcOut = null;
     try {
@@ -176,6 +189,10 @@ class ReplicaInPipeline extends ReplicaInfo
           new RandomAccessFile( blockFile, "rw" ).getFD() );
       crcOut = new FileOutputStream(
           new RandomAccessFile( metaFile, "rw" ).getFD() );
+      if (!isCreate) {
+        blockOut.getChannel().position(blockDiskSize);
+        crcOut.getChannel().position(crcDiskSize);
+      }
       return new BlockWriteStreams(blockOut, crcOut);
     } catch (IOException e) {
       IOUtils.closeStream(blockOut);

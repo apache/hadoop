@@ -306,27 +306,15 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public void shutdown();
 
   /**
-   * Returns the current offset in the data stream.
-   * @param b
-   * @param stream The stream to the data file and checksum file
-   * @return the position of the file pointer in the data stream
-   * @throws IOException
-   */
-  public long getChannelPosition(Block b, BlockWriteStreams stream) throws IOException;
-
-  /**
-   * Sets the file pointer of the data stream and checksum stream to
-   * the specified values.
-   * @param b
+   * Sets the file pointer of the checksum stream so that the last checksum
+   * will be overwritten
+   * @param b block
    * @param stream The stream for the data file and checksum file
-   * @param dataOffset The position to which the file pointre for the data stream
-   *        should be set
-   * @param ckOffset The position to which the file pointre for the checksum stream
-   *        should be set
+   * @param checksumSize number of bytes each checksum has
    * @throws IOException
    */
-  public void setChannelPosition(Block b, BlockWriteStreams stream, long dataOffset,
-                                 long ckOffset) throws IOException;
+  public void adjustCrcChannelPosition(Block b, BlockWriteStreams stream, 
+      int checksumSize) throws IOException;
 
   /**
    * checks how many valid storage volumes are there in the DataNode
