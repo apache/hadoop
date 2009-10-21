@@ -138,7 +138,7 @@ public class HFile {
   /**
    * Maximum length of key in HFile.
    */
-  public final static int MAXIMUM_KEY_LENGTH = 64 * 1024;
+  public final static int MAXIMUM_KEY_LENGTH = Integer.MAX_VALUE;
   
   /**
    * Default blocksize for hfile.
