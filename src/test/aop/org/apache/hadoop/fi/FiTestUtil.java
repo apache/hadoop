@@ -40,7 +40,19 @@ public class FiTestUtil {
   };
 
   /**
-   * Return a random integer uniformly distributed in the interval [min,max).
+   * Return a random integer uniformly distributed over the interval [min,max).
+   */
+  public static int nextRandomInt(final int min, final int max) {
+    final int d = max - min;
+    if (d <= 0) {
+      throw new IllegalArgumentException("d <= 0, min=" + min + ", max=" + max);
+    }
+    return d == 1? min: min + RANDOM.get().nextInt(d);
+  }
+
+  /**
+   * Return a random integer, with type long,
+   * uniformly distributed over the interval [min,max).
    * Assume max - min <= Integer.MAX_VALUE.
    */
   public static long nextRandomLong(final long min, final long max) {

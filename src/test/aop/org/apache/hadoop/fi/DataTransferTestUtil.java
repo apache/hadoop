@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fi;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,8 +66,14 @@ public class DataTransferTestUtil {
     /** Simulate action for the statusRead pointcut */
     public final ActionContainer<DatanodeID> fiStatusRead
         = new ActionContainer<DatanodeID>();
+    /** Simulate action for the pipelineAck pointcut */
+    public final ActionContainer<DatanodeID> fiPipelineAck
+        = new ActionContainer<DatanodeID>();
     /** Simulate action for the pipelineClose pointcut */
     public final ActionContainer<DatanodeID> fiPipelineClose
+        = new ActionContainer<DatanodeID>();
+    /** Simulate action for the blockFileClose pointcut */
+    public final ActionContainer<DatanodeID> fiBlockFileClose
         = new ActionContainer<DatanodeID>();
 
     /** Verification action for the pipelineInitNonAppend pointcut */
@@ -175,6 +182,34 @@ public class DataTransferTestUtil {
         FiTestUtil.LOG.info(s);
         throw new DiskOutOfSpaceException(s);
       }
+    }
+  }
+
+  /** Throws an IOException. */
+  public static class IoeAction extends DataNodeAction {
+    private final String error; 
+
+    /** Create an action for datanode i in the pipeline. */
+    public IoeAction(String currentTest, int i, String error) {
+      super(currentTest, i);
+      this.error = error;
+    }
+
+    @Override
+    public void run(DatanodeID id) throws IOException {
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(id);
+      if (p.contains(index, id)) {
+        final String s = toString(id);
+        FiTestUtil.LOG.info(s);
+        throw new IOException(s);
+      }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String toString() {
+      return error + " " + super.toString();
     }
   }
 

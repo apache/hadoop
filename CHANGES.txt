@@ -295,7 +295,10 @@ Release 0.21.0 - Unreleased
     (cos)
 
     HDFS-716. Define a pointcut for pipeline close and add a few fault
-    injection tests.  (szetszwo)
+    injection tests to simulate out of memory problem.  (szetszwo)
+
+    HDFS-719. Add 6 fault injection tests for pipeline close to simulate slow
+    datanodes and disk errors.  (szetszwo)
 
   BUG FIXES
 

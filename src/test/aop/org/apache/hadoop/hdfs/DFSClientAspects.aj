@@ -23,8 +23,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
+import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream.DataStreamer;
-
 import org.junit.Assert;
 
 /** Aspects for DFSClient */
@@ -85,4 +85,12 @@ public aspect DFSClientAspects {
     }
   }
 
+  pointcut pipelineClose(DFSOutputStream out):
+    call(void flushInternal())
+    && withincode (void DFSOutputStream.close())
+    && this(out);
+
+  before(DFSOutputStream out) : pipelineClose(out) {
+    LOG.info("FI: before pipelineClose:");
+  }
 }

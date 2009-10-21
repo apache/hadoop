@@ -24,6 +24,7 @@ import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.FiTestUtil;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.fi.DataTransferTestUtil.DoosAction;
+import org.apache.hadoop.fi.DataTransferTestUtil.IoeAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.OomAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.SleepAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.VerificationAction;
@@ -32,11 +33,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -310,6 +310,37 @@ public class TestFiDataTransferProtocol {
     write1byte(methodName);
   }
 
+  private static void run41_43(String name, int i) throws IOException {
+    runPipelineCloseTest(name, new SleepAction(name, i, 3000));
+  }
+  
+  /**
+   * Pipeline close with DN0 very slow but it won't lead to timeout.
+   * Client finishes close successfully.
+   */
+  @Test
+  public void pipeline_Fi_41() throws IOException {
+    run41_43(FiTestUtil.getMethodName(), 0);
+  }
+
+  /**
+   * Pipeline close with DN1 very slow but it won't lead to timeout.
+   * Client finishes close successfully.
+   */
+  @Test
+  public void pipeline_Fi_42() throws IOException {
+    run41_43(FiTestUtil.getMethodName(), 1);
+  }
+
+  /**
+   * Pipeline close with DN2 very slow but it won't lead to timeout.
+   * Client finishes close successfully.
+   */
+  @Test
+  public void pipeline_Fi_43() throws IOException {
+    run41_43(FiTestUtil.getMethodName(), 2);
+  }
+
   /**
    * Pipeline close:
    * DN0 throws an OutOfMemoryException
@@ -344,5 +375,49 @@ public class TestFiDataTransferProtocol {
   public void pipeline_Fi_46() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
     runPipelineCloseTest(methodName, new OomAction(methodName, 2));
+  }
+
+  private static void runBlockFileCloseTest(String methodName,
+      Action<DatanodeID> a) throws IOException {
+    FiTestUtil.LOG.info("Running " + methodName + " ...");
+    final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
+        .initTest();
+    t.fiBlockFileClose.set(a);
+    write1byte(methodName);
+  }
+
+  private static void run49_51(String name, int i) throws IOException {
+    runBlockFileCloseTest(name, new IoeAction(name, i, "DISK ERROR"));
+  }
+
+  /**
+   * Pipeline close:
+   * DN0 throws a disk error exception when it is closing the block file.
+   * Client gets an IOException and determine DN0 bad.
+   */
+  @Test
+  public void pipeline_Fi_49() throws IOException {
+    run49_51(FiTestUtil.getMethodName(), 0);
+  }
+
+
+  /**
+   * Pipeline close:
+   * DN1 throws a disk error exception when it is closing the block file.
+   * Client gets an IOException and determine DN1 bad.
+   */
+  @Test
+  public void pipeline_Fi_50() throws IOException {
+    run49_51(FiTestUtil.getMethodName(), 1);
+  }
+
+  /**
+   * Pipeline close:
+   * DN2 throws a disk error exception when it is closing the block file.
+   * Client gets an IOException and determine DN2 bad.
+   */
+  @Test
+  public void pipeline_Fi_51() throws IOException {
+    run49_51(FiTestUtil.getMethodName(), 2);
   }
 }
