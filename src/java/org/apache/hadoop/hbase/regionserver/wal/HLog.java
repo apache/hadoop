@@ -354,7 +354,6 @@ public class HLog implements HConstants, Syncable {
         }
         this.numEntries.set(0);
         this.editsSize.set(0);
-        updateLock.notifyAll();
       }
     } finally {
       this.cacheFlushLock.unlock();
@@ -600,7 +599,6 @@ public class HLog implements HConstants, Syncable {
           LOG.debug("closing hlog writer in " + this.dir.toString());
         }
         this.writer.close();
-        updateLock.notifyAll();
       }
     } finally {
       cacheFlushLock.unlock();
@@ -657,8 +655,9 @@ public class HLog implements HConstants, Syncable {
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
       boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
       doWrite(logKey, logEdit, sync, logKey.getWriteTime());
+
+      this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
-      updateLock.notifyAll();
     }
     if (this.editsSize.get() > this.logrollsize) {
       if (listener != null) {
@@ -710,7 +709,9 @@ public class HLog implements HConstants, Syncable {
         doWrite(logKey, kv, sync, now);
         this.numEntries.incrementAndGet();
       }
-      updateLock.notifyAll();
+
+      // Only count 1 row as an unflushed entry.
+      this.unflushedEntries.incrementAndGet();
     }
     if (this.editsSize.get() > this.logrollsize) {
         requestLogRoll();
@@ -718,39 +719,44 @@ public class HLog implements HConstants, Syncable {
   }
 
   public void sync() throws IOException {
-    lastLogFlushTime = System.currentTimeMillis();
-    if (this.append && syncfs != null) {
-      try {
-        this.syncfs.invoke(this.writer, NO_ARGS);
-      } catch (Exception e) {
-        throw new IOException("Reflection", e);
-      }
-    } else {
-      this.writer.sync();
-      // Above is sequencefile.writer sync.  It doesn't actually synce the
-      // backing stream.  Need to do the below to do that.
-      if (this.writer_out != null) this.writer_out.sync();
-    }
-    this.unflushedEntries.set(0);
+    sync(false);
   }
 
-  public void optionalSync() {
-    if (!this.closed) {
-      long now = System.currentTimeMillis();
-      synchronized (updateLock) {
-        if (((now - this.optionalFlushInterval) > this.lastLogFlushTime) &&
-            this.unflushedEntries.get() > 0) {
-          try {
-            sync();
-          } catch (IOException e) {
-            LOG.error("Error flushing hlog", e);
+  /**
+   * Multiple threads will call sync() at the same time, only the winner
+   * will actually flush if there is any race or build up.
+   *
+   * @param force sync regardless (for meta updates) if there is data
+   * @throws IOException
+   */
+  public void sync(boolean force) throws IOException {
+    synchronized (this.updateLock) {
+      if (this.closed)
+        return;
+
+      if (this.unflushedEntries.get() == 0)
+        return; // win
+
+      if (force || this.unflushedEntries.get() > this.flushlogentries) {
+        try {
+          lastLogFlushTime = System.currentTimeMillis();
+          if (this.append && syncfs != null) {
+            try {
+              this.syncfs.invoke(this.writer, NO_ARGS);
+            } catch (Exception e) {
+              throw new IOException("Reflection", e);
+            }
+          } else {
+            this.writer.sync();
+            if (this.writer_out != null)
+              this.writer_out.sync();
           }
+          this.unflushedEntries.set(0);
+        } catch (IOException e) {
+          LOG.fatal("Could not append. Requesting close of hlog", e);
+          requestLogRoll();
+          throw e;
         }
-      }
-      long took = System.currentTimeMillis() - now;
-      if (took > 1000) {
-        LOG.warn(Thread.currentThread().getName() + " took " + took +
-          "ms optional sync'ing hlog; editcount=" + this.numEntries.get());
       }
     }
   }
@@ -770,9 +776,6 @@ public class HLog implements HConstants, Syncable {
     try {
       this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
       this.writer.append(logKey, logEdit);
-      if (sync || this.unflushedEntries.incrementAndGet() >= flushlogentries) {
-        sync();
-      }
       long took = System.currentTimeMillis() - now;
       if (took > 1000) {
         LOG.warn(Thread.currentThread().getName() + " took " + took +
@@ -858,7 +861,6 @@ public class HLog implements HConstants, Syncable {
         if (seq != null && logSeqId >= seq.longValue()) {
           this.lastSeqWritten.remove(regionName);
         }
-        updateLock.notifyAll();
       }
     } finally {
       this.cacheFlushLock.unlock();

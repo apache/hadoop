@@ -63,7 +63,7 @@ Release 0.21.0 - Unreleased
                Filters client-side
    HBASE-1890  hbase-1506 where assignment is done at regionserver doesn't
                 work
-   HBASE-1889  ClassNotFoundException on trunk for REST
+   HBASE-1889 ClassNotFoundException on trunk for REST
    HBASE-1905  Remove unused config. hbase.hstore.blockCache.blockSize
    HBASE-1906  FilterList of prefix and columnvalue not working properly with
                deletes and multiple values
@@ -73,6 +73,8 @@ Release 0.21.0 - Unreleased
                Purtell)
    HBASE-1916  FindBugs and javac warnings cleanup
    HBASE-1908  ROOT not reassigned if only one regionserver left
+   HBASE-1915  HLog.sync is called way too often, needs to be only called 1x per
+               RPC
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

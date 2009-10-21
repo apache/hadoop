@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,7 +52,11 @@ public class LogFlusher extends Chore {
   protected void chore() {
     HLog hlog = log.get();
     if (hlog != null) {
-      hlog.optionalSync();
+      try {
+        hlog.sync(true); // force a flush
+      } catch (IOException e) {
+        LOG.error("LogFlusher got exception while syncing: " + e);
+      }
     }
   }
 }

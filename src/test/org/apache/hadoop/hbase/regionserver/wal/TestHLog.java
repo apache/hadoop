@@ -48,6 +48,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     this.conf.setBoolean("dfs.support.append", true);
     // Make block sizes small.
     this.conf.setInt("dfs.blocksize", 1024 * 1024);
+    this.conf.setInt("hbase.regionserver.flushlogentries", 1);
     cluster = new MiniDFSCluster(conf, 3, true, (String[])null);
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
@@ -125,8 +126,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     assertEquals(bytes.length, read);
     out.close();
     in.close();
-    // To be sure, set our flush to be at 100 edits.
-    this.conf.setInt("hbase.regionserver.flushlogentries", 100);
     Path subdir = new Path(this.dir, "hlogdir");
     HLog wal = new HLog(this.fs, subdir, this.conf, null);
     final int total = 20;

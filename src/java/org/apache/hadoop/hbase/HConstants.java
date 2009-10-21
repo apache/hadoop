@@ -223,7 +223,7 @@ public interface HConstants {
   /**
    * Max length a row can have because of the limitation in TFile.
    */
-  static final int MAX_ROW_LENGTH = 1024*64;
+  static final int MAX_ROW_LENGTH = Short.MAX_VALUE;
   
   /** When we encode strings, we always specify UTF8 encoding */
   static final String UTF8_ENCODING = "UTF-8";
