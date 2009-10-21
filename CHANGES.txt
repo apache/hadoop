@@ -1122,6 +1122,8 @@ Release 0.21.0 - Unreleased
     HADOOP-6286. Fix bugs in related to URI handling in glob methods in 
     FileContext. (Boris Shkolnik via suresh)
 
+    HADOOP-6292. Update native libraries guide. (Corinne Chandel via cdouglas)
+
 Release 0.20.2 - Unreleased
 
     HADOOP-6231. Allow caching of filesystem instances to be disabled on a
