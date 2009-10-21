@@ -1084,6 +1084,13 @@ Trunk (unreleased changes)
 
 Release 0.20.2 - Unreleased
 
+  NEW FEATURES
+
+    HADOOP-6218. Adds a feature where TFile can be split by Record
+    Sequence number. (Hong Tang and Raghu Angadi via ddas)
+
+  BUG FIXES
+
     HADOOP-6231. Allow caching of filesystem instances to be disabled on a
     per-instance basis. (tomwhite)
 
