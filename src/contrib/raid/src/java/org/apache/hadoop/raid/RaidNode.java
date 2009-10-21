@@ -19,6 +19,7 @@
 package org.apache.hadoop.raid;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.util.Collection;
 import java.util.List;
 import java.util.LinkedList;
@@ -56,6 +57,14 @@ import org.apache.hadoop.raid.protocol.RaidProtocol.ReturnStatus;
  * A {@link RaidNode} that implements 
  */
 public class RaidNode implements RaidProtocol {
+
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+    Configuration.addDefaultResource("mapred-default.xml");
+    Configuration.addDefaultResource("mapred-site.xml");
+  }
+
   public static final Log LOG = LogFactory.getLog( "org.apache.hadoop.raid.RaidNode");
   public static final long SLEEP_TIME = 10000L; // 10 seconds
   public static final int DEFAULT_PORT = 60000;
@@ -712,7 +721,7 @@ public class RaidNode implements RaidProtocol {
           ins[i].seek(blockSize * (startBlock + i));
         }
 
-        generateParity(ins,out,blockSize,bufs,xor);
+        generateParity(ins,out,blockSize,bufs,xor, reporter);
         
         // close input file handles
         for (int i = 0; i < ins.length; i++) {
@@ -769,7 +778,7 @@ public class RaidNode implements RaidProtocol {
   }
   
   private static void generateParity(FSDataInputStream[] ins, FSDataOutputStream fout, 
-      long parityBlockSize, byte[] bufs, byte[] xor) throws IOException {
+      long parityBlockSize, byte[] bufs, byte[] xor, Reporter reporter) throws IOException {
     
     int bufSize;
     if ((bufs == null) || (bufs.length == 0)){
@@ -796,6 +805,11 @@ public class RaidNode implements RaidProtocol {
 
       // read all remaining blocks and xor them into the buffer
       for (int i = 1; i < ins.length; i++) {
+
+        // report progress to Map-reduce framework
+        if (reporter != null) {
+          reporter.progress();
+        }
         
         int actualRead = readInputUntilEnd(ins[i], bufs, toRead);
         
@@ -911,7 +925,7 @@ public class RaidNode implements RaidProtocol {
     byte[] bufs = new byte[bufSize];
     byte[] xor = new byte[bufSize];
    
-    generateParity(ins,fout,corruptBlockSize,bufs,xor);
+    generateParity(ins,fout,corruptBlockSize,bufs,xor,null);
     
     // close all files
     fout.close();
@@ -1055,12 +1069,17 @@ public class RaidNode implements RaidProtocol {
                         info.getName() + " has already been procesed.");
                 continue;
               }
-              LOG.info("Purging obsolete parity files for policy " + 
-                        info.getName() + " " + destp);
 
               FileSystem srcFs = info.getSrcPath().getFileSystem(conf);
-              FileStatus stat = destFs.getFileStatus(destp);
+              FileStatus stat = null;
+              try {
+                stat = destFs.getFileStatus(destp);
+              } catch (FileNotFoundException e) {
+                // do nothing, leave stat = null;
+              }
               if (stat != null) {
+                LOG.info("Purging obsolete parity files for policy " + 
+                          info.getName() + " " + destp);
                 recursePurge(srcFs, destFs, destinationPrefix, stat);
               }
 

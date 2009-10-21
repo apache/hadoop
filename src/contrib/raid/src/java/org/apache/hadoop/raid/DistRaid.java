@@ -39,6 +39,8 @@ public class DistRaid {
   static final String JOB_DIR_LABEL = NAME + ".job.dir";
   static final String OP_LIST_LABEL = NAME + ".op.list";
   static final String OP_COUNT_LABEL = NAME + ".op.count";
+  static final int   OP_LIST_BLOCK_SIZE = 32 * 1024 * 1024; // block size of control file
+  static final short OP_LIST_REPLICATION = 10; // replication factor of control file
 
   private static final long OP_PER_MAP = 100;
   private static final int MAX_MAPS_PER_NODE = 20;
@@ -287,6 +289,10 @@ public class DistRaid {
     jobconf.set(JOB_DIR_LABEL, jobdir.toString());
     Path log = new Path(jobdir, "_logs");
 
+    // The control file should have small size blocks. This helps
+    // in spreading out the load from mappers that will be spawned.
+    jobconf.setInt("dfs.blocks.size",  OP_LIST_BLOCK_SIZE);
+
     FileOutputFormat.setOutputPath(jobconf, log);
     LOG.info("log=" + log);
 
@@ -314,6 +320,7 @@ public class DistRaid {
       if (opWriter != null) {
         opWriter.close();
       }
+      fs.setReplication(opList, OP_LIST_REPLICATION); // increase replication for control file
     }
     raidPolicyPathPairList.clear();
     

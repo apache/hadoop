@@ -22,6 +22,9 @@ Trunk (unreleased changes)
     HDFS-646. Fix test-patch failure by adding test-contrib ant target.
     (gkesavan)
 
+    HDFS-695. RaidNode should read in configuration from hdfs-site.xml.
+    (dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

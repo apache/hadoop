@@ -60,7 +60,6 @@ public class TestRaidPurge extends TestCase {
       "test-raid.xml").getAbsolutePath();
   final static long RELOAD_INTERVAL = 1000;
   final static Log LOG = LogFactory.getLog("org.apache.hadoop.raid.TestRaidNode");
-  final Random rand = new Random();
 
   {
     ((Log4JLogger)RaidNode.LOG).getLogger().setLevel(Level.ALL);
