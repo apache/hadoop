@@ -596,9 +596,6 @@ Release 0.21.0 - Unreleased
     HADOOP-6224. Add a method to WritableUtils performing a bounded read of an
     encoded String. (Jothi Padmanabhan via cdouglas)
 
-    HADOOP-6231. Allow caching of filesystem instances to be disabled on a
-    per-instance basis. (tomwhite)
-
     HADOOP-6133. Add a caching layer to Configuration::getClassByName to
     alleviate a performance regression introduced in a compatibility layer.
     (Todd Lipcon via cdouglas)
@@ -931,10 +928,6 @@ Release 0.21.0 - Unreleased
 
     HADOOP-5809. Fix job submission, broken by errant directory creation.
     (Sreekanth Ramakrishnan and Jothi Padmanabhan via cdouglas)
-
-    HADOOP-5759. Fix for  IllegalArgumentException when 
-    CombineFileInputFormat is used as job InputFormat.
-    (Amareshwari Sriramadasu via dhruba)
 
     HADOOP-5635. Change distributed cache to work with other distributed file
     systems. (Andrew Hitchcock via tomwhite)
