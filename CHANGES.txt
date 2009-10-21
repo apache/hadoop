@@ -10,9 +10,6 @@ Trunk (unreleased changes)
     hadoop-config.sh so that it allows setting java command options for
     JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
 
-    HADOOP-6218. Adds a feature where TFile can be split by Record
-    Sequence number. (Hong Tang and Raghu Angadi via ddas)
-
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
@@ -1118,6 +1115,13 @@ Release 0.21.0 - Unreleased
     HADOOP-6292. Update native libraries guide. (Corinne Chandel via cdouglas)
 
 Release 0.20.2 - Unreleased
+
+  NEW FEATURES
+
+    HADOOP-6218. Adds a feature where TFile can be split by Record
+    Sequence number. (Hong Tang and Raghu Angadi via ddas)
+
+  BUG FIXES
 
     HADOOP-6231. Allow caching of filesystem instances to be disabled on a
     per-instance basis. (tomwhite)
