@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Release 0.20.2 - Unreleased
 
+  NEW FEATURES
+
+    HADOOP-6218. Adds a feature where TFile can be split by Record
+    Sequence number. (Hong Tang and Raghu Angadi via ddas)
+
   BUG FIXES
 
     MAPREDUCE-112. Add counters for reduce input, output records to the new API.

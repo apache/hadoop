@@ -668,10 +668,10 @@ public class TFile {
    * TFile Reader. Users may only read TFiles by creating TFile.Reader.Scanner.
    * objects. A scanner may scan the whole TFile ({@link Reader#createScanner()}
    * ) , a portion of TFile based on byte offsets (
-   * {@link Reader#createScanner(long, long)}), or a portion of TFile with keys
+   * {@link Reader#createScannerByByteRange(long, long)}), or a portion of TFile with keys
    * fall in a certain key range (for sorted TFile only,
-   * {@link Reader#createScanner(byte[], byte[])} or
-   * {@link Reader#createScanner(RawComparable, RawComparable)}).
+   * {@link Reader#createScannerByKey(byte[], byte[])} or
+   * {@link Reader#createScannerByKey(RawComparable, RawComparable)}).
    */
   public static class Reader implements Closeable {
     // The underlying BCFile reader.
@@ -985,6 +985,16 @@ public class TFile {
       return new Location(blkIndex, 0);
     }
 
+    Location getLocationByRecordNum(long recNum) throws IOException {
+      checkTFileDataIndex();
+      return tfileIndex.getLocationByRecordNum(recNum);
+    }
+
+    long getRecordNumByLocation(Location location) throws IOException {
+      checkTFileDataIndex();
+      return tfileIndex.getRecordNumByLocation(location);      
+    }
+    
     int compareKeys(byte[] a, int o1, int l1, byte[] b, int o2, int l2) {
       if (!isSorted()) {
         throw new RuntimeException("Cannot compare keys for unsorted TFiles.");
@@ -1015,6 +1025,21 @@ public class TFile {
       return new Location(blockIndex, 0);
     }
 
+    /**
+     * Get the RecordNum for the first key-value pair in a compressed block
+     * whose byte offset in the TFile is greater than or equal to the specified
+     * offset.
+     * 
+     * @param offset
+     *          the user supplied offset.
+     * @return the RecordNum to the corresponding entry. If no such entry
+     *         exists, it returns the total entry count.
+     * @throws IOException
+     */
+    public long getRecordNumNear(long offset) throws IOException {
+      return getRecordNumByLocation(getLocationNear(offset));
+    }
+    
     /**
      * Get a sample key that is within a block whose starting offset is greater
      * than or equal to the specified offset.
@@ -1057,7 +1082,7 @@ public class TFile {
      *         contains zero key-value pairs even if length is positive.
      * @throws IOException
      */
-    public Scanner createScanner(long offset, long length) throws IOException {
+    public Scanner createScannerByByteRange(long offset, long length) throws IOException {
       return new Scanner(this, offset, offset + length);
     }
 
@@ -1073,10 +1098,31 @@ public class TFile {
      * @return The actual coverage of the returned scanner will cover all keys
      *         greater than or equal to the beginKey and less than the endKey.
      * @throws IOException
+     * 
+     * @deprecated Use {@link #createScannerByKey(byte[], byte[])} instead.
      */
+    @Deprecated
     public Scanner createScanner(byte[] beginKey, byte[] endKey)
+      throws IOException {
+      return createScannerByKey(beginKey, endKey);
+    }
+    
+    /**
+     * Get a scanner that covers a portion of TFile based on keys.
+     * 
+     * @param beginKey
+     *          Begin key of the scan (inclusive). If null, scan from the first
+     *          key-value entry of the TFile.
+     * @param endKey
+     *          End key of the scan (exclusive). If null, scan up to the last
+     *          key-value entry of the TFile.
+     * @return The actual coverage of the returned scanner will cover all keys
+     *         greater than or equal to the beginKey and less than the endKey.
+     * @throws IOException
+     */
+    public Scanner createScannerByKey(byte[] beginKey, byte[] endKey)
         throws IOException {
-      return createScanner((beginKey == null) ? null : new ByteArray(beginKey,
+      return createScannerByKey((beginKey == null) ? null : new ByteArray(beginKey,
           0, beginKey.length), (endKey == null) ? null : new ByteArray(endKey,
           0, endKey.length));
     }
@@ -1093,14 +1139,57 @@ public class TFile {
      * @return The actual coverage of the returned scanner will cover all keys
      *         greater than or equal to the beginKey and less than the endKey.
      * @throws IOException
+     * 
+     * @deprecated Use {@link #createScannerByKey(RawComparable, RawComparable)}
+     *             instead.
      */
+    @Deprecated
     public Scanner createScanner(RawComparable beginKey, RawComparable endKey)
+        throws IOException {
+      return createScannerByKey(beginKey, endKey);
+    }
+
+    /**
+     * Get a scanner that covers a specific key range.
+     * 
+     * @param beginKey
+     *          Begin key of the scan (inclusive). If null, scan from the first
+     *          key-value entry of the TFile.
+     * @param endKey
+     *          End key of the scan (exclusive). If null, scan up to the last
+     *          key-value entry of the TFile.
+     * @return The actual coverage of the returned scanner will cover all keys
+     *         greater than or equal to the beginKey and less than the endKey.
+     * @throws IOException
+     */
+    public Scanner createScannerByKey(RawComparable beginKey, RawComparable endKey)
         throws IOException {
       if ((beginKey != null) && (endKey != null)
           && (compareKeys(beginKey, endKey) >= 0)) {
         return new Scanner(this, beginKey, beginKey);
       }
       return new Scanner(this, beginKey, endKey);
+    }
+
+    /**
+     * Create a scanner that covers a range of records.
+     * 
+     * @param beginRecNum
+     *          The RecordNum for the first record (inclusive).
+     * @param endRecNum
+     *          The RecordNum for the last record (exclusive). To scan the whole
+     *          file, either specify endRecNum==-1 or endRecNum==getEntryCount().
+     * @return The TFile scanner that covers the specified range of records.
+     * @throws IOException
+     */
+    public Scanner createScannerByRecordNum(long beginRecNum, long endRecNum)
+        throws IOException {
+      if (beginRecNum < 0) beginRecNum = 0;
+      if (endRecNum < 0 || endRecNum > getEntryCount()) {
+        endRecNum = getEntryCount();
+      }
+      return new Scanner(this, getLocationByRecordNum(beginRecNum),
+          getLocationByRecordNum(endRecNum));
     }
 
     /**
@@ -1522,6 +1611,15 @@ public class TFile {
         return new Entry();
       }
 
+      /**
+       * Get the RecordNum corresponding to the entry pointed by the cursor.
+       * @return The RecordNum corresponding to the entry pointed by the cursor.
+       * @throws IOException
+       */
+      public long getRecordNum() throws IOException {
+        return reader.getRecordNumByLocation(currentLocation);
+      }
+      
       /**
        * Internal API. Comparing the key at cursor to user-specified key.
        * 
@@ -2020,8 +2118,10 @@ public class TFile {
     final static String BLOCK_NAME = "TFile.index";
     private ByteArray firstKey;
     private final ArrayList<TFileIndexEntry> index;
+    private final ArrayList<Long> recordNumIndex;
     private final BytesComparator comparator;
-
+    private long sum = 0;
+    
     /**
      * For reading from file.
      * 
@@ -2030,6 +2130,7 @@ public class TFile {
     public TFileIndex(int entryCount, DataInput in, BytesComparator comparator)
         throws IOException {
       index = new ArrayList<TFileIndexEntry>(entryCount);
+      recordNumIndex = new ArrayList<Long>(entryCount);
       int size = Utils.readVInt(in); // size for the first key entry.
       if (size > 0) {
         byte[] buffer = new byte[size];
@@ -2051,6 +2152,8 @@ public class TFile {
               new TFileIndexEntry(new DataInputStream(new ByteArrayInputStream(
                   buffer, 0, size)));
           index.add(idx);
+          sum += idx.entries();
+          recordNumIndex.add(sum);
         }
       } else {
         if (entryCount != 0) {
@@ -2082,6 +2185,12 @@ public class TFile {
       return ret;
     }
 
+    /**
+     * @param key
+     *          input key.
+     * @return the ID of the first block that contains key > input key. Or -1
+     *         if no such block exists.
+     */
     public int upperBound(RawComparable key) {
       if (comparator == null) {
         throw new RuntimeException("Cannot search in unsorted TFile");
@@ -2103,13 +2212,26 @@ public class TFile {
      */
     public TFileIndex(BytesComparator comparator) {
       index = new ArrayList<TFileIndexEntry>();
+      recordNumIndex = new ArrayList<Long>();
       this.comparator = comparator;
     }
 
     public RawComparable getFirstKey() {
       return firstKey;
     }
+    
+    public Reader.Location getLocationByRecordNum(long recNum) {
+      int idx = Utils.upperBound(recordNumIndex, recNum);
+      long lastRecNum = (idx == 0)? 0: recordNumIndex.get(idx-1);
+      return new Reader.Location(idx, recNum-lastRecNum);
+    }
 
+    public long getRecordNumByLocation(Reader.Location location) {
+      int blkIndex = location.getBlockIndex();
+      long lastRecNum = (blkIndex == 0) ? 0: recordNumIndex.get(blkIndex-1);
+      return lastRecNum + location.getRecordIndex();
+    }
+    
     public void setFirstKey(byte[] key, int offset, int length) {
       firstKey = new ByteArray(new byte[length]);
       System.arraycopy(key, offset, firstKey.buffer(), 0, length);
@@ -2124,6 +2246,8 @@ public class TFile {
 
     public void addEntry(TFileIndexEntry keyEntry) {
       index.add(keyEntry);
+      sum += keyEntry.entries();
+      recordNumIndex.add(sum);
     }
 
     public TFileIndexEntry getEntry(int bid) {
