@@ -46,7 +46,8 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
   private KVScannerComparator comparator;
 
   /**
-   * Constructor
+   * Constructor.  This KeyValueHeap will handle closing of passed in 
+   * KeyValueScanners.
    * @param scanners
    * @param comparator
    */
@@ -57,6 +58,8 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     for (KeyValueScanner scanner : scanners) {
       if (scanner.peek() != null) {
         this.heap.add(scanner);
+      } else {
+        scanner.close();
       }
     }
     this.current = heap.poll();
