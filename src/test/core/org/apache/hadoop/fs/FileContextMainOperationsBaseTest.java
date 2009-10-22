@@ -56,11 +56,35 @@ public abstract class FileContextMainOperationsBaseTest  {
   private static String TEST_DIR_AXA = "test/hadoop/axa";
   private static String TEST_DIR_AXX = "test/hadoop/axx";
   
-  private static String TEST_ROOT_DIR =
-    System.getProperty("test.build.data", "/tmp");
+  static  final String LOCAL_FS_ROOT_URI = "file:///tmp/test";
   
-  protected Path getTestRootPath(String pathString) {
-    return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
+  static final String TEST_ROOT_DIR = 
+    System.getProperty("test.build.data", "build/test/data").replace(' ', '_');
+  
+  
+  /** 
+   * we need to store the absRootDir because some tests may do a setWd and
+   * the TEST_ROOT_DIR may itself be relative.
+   */
+  String absTestRootDir = null;
+  protected String getAbsoluteTestRootDir() throws IOException {
+    if (absTestRootDir == null) {
+      if (TEST_ROOT_DIR.startsWith("/")) {
+        absTestRootDir = TEST_ROOT_DIR;
+      } else {
+        absTestRootDir = getDefaultWorkingDirectory().toString() +  "/"  + 
+                      TEST_ROOT_DIR; 
+      }
+    }
+    return absTestRootDir;
+  }
+  
+  protected Path getTestRootDir() throws IOException {
+    return fc.makeQualified(new Path(getAbsoluteTestRootDir()));
+  }
+  
+  protected Path getTestRootPath(String pathString) throws IOException {
+    return fc.makeQualified(new Path(getAbsoluteTestRootDir(), pathString));
   }
 
   
@@ -75,7 +99,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   //A test filter with returns any path containing a "b" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
     public boolean accept(Path file) {
-      if(file.toString().contains("x") || file.toString().contains("X"))
+      if(file.getName().contains("x") || file.toString().contains("X"))
         return true;
       else
         return false;
@@ -97,6 +121,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   @After
   public void tearDown() throws Exception {
     fc.delete(getTestRootPath("test"), true);
+    fc.delete(new Path(LOCAL_FS_ROOT_URI), true);
   }
   
   protected static int getBlockSize() {
@@ -130,7 +155,9 @@ public abstract class FileContextMainOperationsBaseTest  {
   @Test
   public void testWorkingDirectory() throws Exception {
 
-    Path workDir = getDefaultWorkingDirectory();
+    // First we cd to our test root
+    Path workDir = new Path(getTestRootDir(), new Path("test"));
+    fc.setWorkingDirectory(workDir);
     Assert.assertEquals(workDir, fc.getWorkingDirectory());
 
     fc.setWorkingDirectory(new Path("."));
@@ -140,8 +167,14 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertEquals(workDir.getParent(), fc.getWorkingDirectory());
     
     // cd using a relative path
+
+    // Go back to our test root
+    workDir = new Path(getTestRootDir(), new Path("test"));
+    fc.setWorkingDirectory(workDir);
+    Assert.assertEquals(workDir, fc.getWorkingDirectory());
+    
     Path relativeDir = new Path("existingDir1");
-    Path absoluteDir = new Path(workDir.getParent(),"existingDir1");
+    Path absoluteDir = new Path(workDir,"existingDir1");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(relativeDir);
     Assert.assertEquals(absoluteDir,
@@ -166,7 +199,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     }
     
     // Try a URI
-    absoluteDir = new Path("file:///tmp/existingDir");
+
+    absoluteDir = new Path(LOCAL_FS_ROOT_URI + "/existingDir");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
@@ -930,7 +964,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertEquals("Source exists", srcExists, fc.exists(src));
     Assert.assertEquals("Destination exists", dstExists, fc.exists(dst));
   }
-  private boolean containsPath(Path path, FileStatus[] filteredPaths) {
+  private boolean containsPath(Path path, FileStatus[] filteredPaths)
+    throws IOException {
     for(int i = 0; i < filteredPaths.length; i ++) { 
       if(getTestRootPath(path.toString()).equals(filteredPaths[i].getPath())) 
         return true;

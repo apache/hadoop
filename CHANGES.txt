@@ -1082,6 +1082,9 @@ Trunk (unreleased changes)
 
     HADOOP-6292. Update native libraries guide. (Corinne Chandel via cdouglas)
 
+    HADOOP-6327. FileContext tests should not use /tmp and should clean up
+    files.  (Sanjay Radia via szetszwo)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
