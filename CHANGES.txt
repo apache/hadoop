@@ -25,6 +25,9 @@ Trunk (unreleased changes)
     HDFS-695. RaidNode should read in configuration from hdfs-site.xml.
     (dhruba)
 
+    HDFS-726. Eclipse .classpath template has outdated jar files and is
+    missing some new ones. (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
