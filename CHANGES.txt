@@ -76,6 +76,7 @@ Release 0.21.0 - Unreleased
    HBASE-1915  HLog.sync is called way too often, needs to be only called 1x per
                RPC
    HBASE-1777  column length is not checked before saved to memstore
+   HBASE-1925  IllegalAccessError: Has not been initialized (getMaxSequenceId)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -550,10 +550,10 @@ public class Store implements HConstants, HeapSize {
             flushed += this.memstore.heapSizeChange(kv, true);
           }
         }
-        // B. Write out the log sequence number that corresponds to this output
-        // MapFile.  The MapFile is current up to and including logCacheFlushId.
-        StoreFile.appendMetadata(writer, logCacheFlushId);
       } finally {
+        // Write out the log sequence number that corresponds to this output
+        // hfile.  The hfile is current up to and including logCacheFlushId.
+        StoreFile.appendMetadata(writer, logCacheFlushId);
         writer.close();
       }
     }
