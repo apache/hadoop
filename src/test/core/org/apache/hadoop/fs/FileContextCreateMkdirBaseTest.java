@@ -52,8 +52,9 @@ public class FileContextCreateMkdirBaseTest {
    
   protected static FileContext fc;
   static final String TEST_ROOT_DIR = new Path(System.getProperty(
-      "test.build.data", "/tmp")).toString().replace(' ', '_')
+      "test.build.data", "build/test/data")).toString().replace(' ', '_')
       + "/test";
+  
   
   protected Path getTestRootRelativePath(String pathString) {
     return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
