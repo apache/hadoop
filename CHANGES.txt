@@ -431,6 +431,9 @@ Release 0.21.0 - Unreleased
     HDFS-679. Appending to a partial chunk incorrectly assumes the
     first packet fills up the partial chunk. (hairong)
 
+    HDFS-722. Fix callCreateBlockWriteStream pointcut in FSDatasetAspects.
+    (szetszwo)
+
 Release 0.20.2 - Unreleased
 
   BUG FIXES

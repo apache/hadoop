@@ -36,7 +36,7 @@ public aspect FSDatasetAspects {
     execution (* FSDataset.getBlockFile(..)) && !within(FSDatasetAspects +);
 
   pointcut callCreateBlockWriteStream(ReplicaInPipeline repl) : 
-    call (BlockWriteStreams createStreams())
+    call (BlockWriteStreams createStreams(..))
     && target (repl)
       && !within(FSDatasetAspects +);
 
