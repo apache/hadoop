@@ -82,7 +82,7 @@ public class ZooKeeperWrapper implements HConstants {
                             ZOOKEEPER_CONFIG_NAME);
     }
 
-    int sessionTimeout = conf.getInt("zookeeper.session.timeout", 10 * 1000);
+    int sessionTimeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
     try {
       zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     } catch (IOException e) {

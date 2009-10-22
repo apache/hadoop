@@ -77,6 +77,7 @@ Release 0.21.0 - Unreleased
                RPC
    HBASE-1777  column length is not checked before saved to memstore
    HBASE-1925  IllegalAccessError: Has not been initialized (getMaxSequenceId)
+   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10 secs!
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
