@@ -40,4 +40,12 @@ public class NameNodeAdapter {
     return namenode.getNamesystem().getBlockLocations(
         src, offset, length, false);
   }
+
+  /**
+   * Refresh block queue counts on the name-node.
+   * @param namenode to proxy the invocation to
+   */
+  public static void refreshBlockCounts(NameNode namenode) {
+    namenode.getNamesystem().blockManager.updateState();
+  }
 }
