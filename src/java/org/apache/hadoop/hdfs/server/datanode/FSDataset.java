@@ -58,6 +58,7 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.io.IOUtils;
 
@@ -172,26 +173,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       //now pick a child randomly for creating a new set of subdirs.
       lastChildIdx = random.nextInt(children.length);
       return children[ lastChildIdx ].addBlock(b, src, true, false); 
-    }
-
-    /** Find the metadata file for the specified block file.
-     * Return the generation stamp from the name of the metafile.
-     */
-    long getGenerationStampFromFile(File[] listdir, File blockFile) {
-      String blockName = blockFile.getName();
-      for (int j = 0; j < listdir.length; j++) {
-        String path = listdir[j].getName();
-        if (!path.startsWith(blockName)) {
-          continue;
-        }
-        if (blockFile == listdir[j]) {
-          continue;
-        }
-        return Block.getGenerationStamp(listdir[j].getName());
-      }
-      DataNode.LOG.warn("Block " + blockFile + 
-                        " does not have a metafile!");
-      return Block.GRANDFATHER_GENERATION_STAMP;
     }
 
     void getVolumeMap(ReplicasMap volumeMap, FSVolume volume) 
@@ -722,7 +703,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     DataNode.LOG.warn("Block " + blockFile + 
                       " does not have a metafile!");
-    return Block.GRANDFATHER_GENERATION_STAMP;
+    return GenerationStamp.GRANDFATHER_GENERATION_STAMP;
   }
 
   /** Find the corresponding meta data file from a given block file */
@@ -1799,7 +1780,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
       final long diskGS = diskMetaFile != null && diskMetaFile.exists() ?
           Block.getGenerationStamp(diskMetaFile.getName()) :
-            Block.GRANDFATHER_GENERATION_STAMP;
+            GenerationStamp.GRANDFATHER_GENERATION_STAMP;
 
       if (diskFile == null || !diskFile.exists()) {
         if (memBlockInfo == null) {
@@ -1889,7 +1870,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           // as the block file, then use the generation stamp from it
           long gs = diskMetaFile != null && diskMetaFile.exists()
               && diskMetaFile.getParent().equals(memFile.getParent()) ? diskGS
-              : Block.GRANDFATHER_GENERATION_STAMP;
+              : GenerationStamp.GRANDFATHER_GENERATION_STAMP;
 
           DataNode.LOG.warn("Updating generation stamp for block " + blockId
               + " from " + memBlockInfo.getGenerationStamp() + " to " + gs);

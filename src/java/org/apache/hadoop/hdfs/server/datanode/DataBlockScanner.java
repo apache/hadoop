@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -373,7 +374,7 @@ class DataBlockScanner implements Runnable {
   static private class LogEntry {
     long blockId = -1;
     long verificationTime = -1;
-    long genStamp = Block.GRANDFATHER_GENERATION_STAMP;
+    long genStamp = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     
     /**
      * The format consists of single line with multiple entries. each 

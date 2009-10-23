@@ -145,7 +145,7 @@ public class TestGetBlocks extends TestCase {
     assertTrue(getException);
   }
  
-  public void testGenerationStampWildCard() {
+  public void testBlockKey() {
     Map<Block, Long> map = new HashMap<Block, Long>();
     final Random RAN = new Random();
     final long seed = RAN.nextLong();
@@ -160,7 +160,7 @@ public class TestGetBlocks extends TestCase {
     System.out.println("map=" + map.toString().replace(",", "\n  "));
     
     for(int i = 0; i < blkids.length; i++) {
-      Block b = new Block(blkids[i], 0, GenerationStamp.WILDCARD_STAMP);
+      Block b = new Block(blkids[i], 0, GenerationStamp.GRANDFATHER_GENERATION_STAMP);
       Long v = map.get(b);
       System.out.println(b + " => " + v);
       assertEquals(blkids[i], v.longValue());

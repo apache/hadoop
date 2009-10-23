@@ -40,10 +40,6 @@ public class Block implements Writable, Comparable<Block> {
        });
   }
 
-  // generation stamp of blocks that pre-date the introduction of
-  // a generation stamp.
-  public static final long GRANDFATHER_GENERATION_STAMP = 0;
-
   public static final Pattern blockFilePattern = Pattern
       .compile(BLOCK_FILE_PREFIX + "(-??\\d++)$");
   public static final Pattern metaFilePattern = Pattern
@@ -70,7 +66,7 @@ public class Block implements Writable, Comparable<Block> {
   public static long getGenerationStamp(String metaFile) {
     Matcher m = metaFilePattern.matcher(metaFile);
     return m.matches() ? Long.parseLong(m.group(2))
-        : GRANDFATHER_GENERATION_STAMP;
+        : GenerationStamp.GRANDFATHER_GENERATION_STAMP;
   }
 
   /**
@@ -91,9 +87,13 @@ public class Block implements Writable, Comparable<Block> {
     set(blkid, len, generationStamp);
   }
 
-  public Block(final long blkid) {this(blkid, 0, GenerationStamp.WILDCARD_STAMP);}
+  public Block(final long blkid) {
+    this(blkid, 0, GenerationStamp.GRANDFATHER_GENERATION_STAMP);
+  }
 
-  public Block(Block blk) {this(blk.blockId, blk.numBytes, blk.generationStamp);}
+  public Block(Block blk) {
+    this(blk.blockId, blk.numBytes, blk.generationStamp);
+  }
 
   /**
    * Find the blockid from the given filename
@@ -164,32 +164,13 @@ public class Block implements Writable, Comparable<Block> {
     }
   }
 
-  /////////////////////////////////////
-  // Comparable
-  /////////////////////////////////////
-  static void validateGenerationStamp(long generationstamp) {
-    if (generationstamp == GenerationStamp.WILDCARD_STAMP) {
-      throw new IllegalStateException("generationStamp (=" + generationstamp
-          + ") == GenerationStamp.WILDCARD_STAMP");
-    }    
-  }
-
-  /** {@inheritDoc} */
+  @Override // Comparable
   public int compareTo(Block b) {
-    //Wildcard generationStamp is NOT ALLOWED here
-    validateGenerationStamp(this.generationStamp);
-    validateGenerationStamp(b.generationStamp);
-
-    if (blockId < b.blockId) {
-      return -1;
-    } else if (blockId == b.blockId) {
-      return GenerationStamp.compare(generationStamp, b.generationStamp);
-    } else {
-      return 1;
-    }
+    return blockId < b.blockId ? -1 :
+           blockId > b.blockId ? 1 : 0;
   }
 
-  /** {@inheritDoc} */
+  @Override // Object
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -197,14 +178,10 @@ public class Block implements Writable, Comparable<Block> {
     if (!(o instanceof Block)) {
       return false;
     }
-    final Block that = (Block)o;
-    //Wildcard generationStamp is ALLOWED here
-    return this.blockId == that.blockId
-      && GenerationStamp.equalsWithWildcard(
-          this.generationStamp, that.generationStamp);
+    return compareTo((Block)o) == 0;
   }
 
-  /** {@inheritDoc} */
+  @Override // Object
   public int hashCode() {
     //GenerationStamp is IRRELEVANT and should not be used here
     return (int)(blockId^(blockId>>>32));

@@ -86,25 +86,6 @@ class BlocksMap {
   }
 
   /**
-   * Update the old block with the new generation stamp and new length.
-   * 
-   * After update, the block has a newer generation stamp so it requires 
-   * to remove the old entry first and reinsert the entry
-   * 
-   * @param block block
-   * @param newGS new generation stamp
-   * @param newLen new block size
-   * @return the stored block in the map
-   */
-  BlockInfo updateBlock(Block block, long newGS, long newLen) {
-    BlockInfo blockInfo = map.remove(block);
-    blockInfo.setGenerationStamp(newGS);
-    blockInfo.setNumBytes(newLen);
-    map.put(blockInfo, blockInfo);
-    return blockInfo;
-  }
-  
-  /**
    * Remove the block from the block map;
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.

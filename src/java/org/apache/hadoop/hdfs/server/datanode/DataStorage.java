@@ -32,8 +32,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.FileUtil.HardLink;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -498,7 +498,7 @@ public class DataStorage extends Storage {
     if (matcher.matches()) {
       //return the current metadata file name
       return FSDataset.getMetaFileName(matcher.group(1),
-                                       Block.GRANDFATHER_GENERATION_STAMP); 
+          GenerationStamp.GRANDFATHER_GENERATION_STAMP); 
     }
     return oldFileName;
   }

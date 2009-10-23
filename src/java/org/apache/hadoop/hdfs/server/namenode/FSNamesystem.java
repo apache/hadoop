@@ -3971,13 +3971,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       LOG.warn(msg);
       throw new IOException(msg);
     }
-    
-    // Remove old block from the raw map in blocks map. 
-    // This does not change any other value of the oldblockinfo
-    // This always have to be done
-    // because the generation stamp of this block is changing.
-    blockManager.updateBlock(oldBlock, 
-        newBlock.getGenerationStamp(), newBlock.getNumBytes());
+
+    // Update old block with the new generation stamp and new length
+    blockinfo.setGenerationStamp(newBlock.getGenerationStamp());
+    blockinfo.setNumBytes(newBlock.getNumBytes());
 
     // find the DatanodeDescriptor objects
     DatanodeDescriptor[] descriptors = null;

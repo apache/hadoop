@@ -156,7 +156,7 @@ public class TestFileCorruption extends TestCase {
       return null;
     }
     long blockId = Long.parseLong(blockFileName.substring("blk_".length()));
-    long blockTimeStamp = GenerationStamp.WILDCARD_STAMP;
+    long blockTimeStamp = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     for (idx=0; idx < blocks.length; idx++) {
       String fileName = blocks[idx].getName();
       if (fileName.startsWith(blockFileName) && fileName.endsWith(".meta")) {

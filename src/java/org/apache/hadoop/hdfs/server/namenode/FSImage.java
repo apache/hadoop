@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -1077,7 +1078,7 @@ public class FSImage extends Storage {
             blocks[j] = new Block();
             if (-14 < imgVersion) {
               blocks[j].set(in.readLong(), in.readLong(), 
-                            Block.GRANDFATHER_GENERATION_STAMP);
+                            GenerationStamp.GRANDFATHER_GENERATION_STAMP);
             } else {
               blocks[j].readFields(in);
             }

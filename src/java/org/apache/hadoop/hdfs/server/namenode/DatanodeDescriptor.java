@@ -468,7 +468,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
         + " replicaState = " + rState);
 
     // find block by blockId
-    BlockInfo storedBlock = blockManager.findStoredBlock(block.getBlockId());
+    BlockInfo storedBlock = blockManager.blocksMap.getStoredBlock(block);
     if(storedBlock == null) {
       // If blocksMap does not contain reported block id,
       // the replica should be removed from the data-node.
@@ -485,14 +485,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
       switch(storedBlock.getBlockUCState()) {
       case COMPLETE:
       case COMMITTED:
-        // This is a temporary hack until Block.equals() and compareTo()
-        // are changed not to take into account the generation stamp for searching
-        // in  blocksMap
-        if(storedBlock.getGenerationStamp() != block.getGenerationStamp()) {
-          toInvalidate.add(new Block(block));
-          return storedBlock;
-        }
-
         if(storedBlock.getGenerationStamp() != block.getGenerationStamp()
             || storedBlock.getNumBytes() != block.getNumBytes())
           isCorrupt = true;

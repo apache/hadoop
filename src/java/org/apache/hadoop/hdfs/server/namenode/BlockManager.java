@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
@@ -1000,7 +999,7 @@ public class BlockManager {
                                DatanodeDescriptor node,
                                DatanodeDescriptor delNodeHint)
   throws IOException {
-    BlockInfo storedBlock = findStoredBlock(block.getBlockId());
+    BlockInfo storedBlock = blocksMap.getStoredBlock(block);
     if (storedBlock == null || storedBlock.getINode() == null) {
       // If this block does not belong to anyfile, then we are done.
       NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
@@ -1469,14 +1468,6 @@ public class BlockManager {
     return blocksMap.getStoredBlock(block);
   }
 
-  /**
-   * Find the block by block ID.
-   */
-  BlockInfo findStoredBlock(long blockId) {
-    Block wildcardBlock = new Block(blockId, 0, GenerationStamp.WILDCARD_STAMP);
-    return blocksMap.getStoredBlock(wildcardBlock);
-  }
-
   /* updates a block in under replication queue */
   void updateNeededReplications(Block block, int curReplicasDelta,
       int expectedReplicasDelta) {
@@ -1667,19 +1658,7 @@ public class BlockManager {
   void removeBlockFromMap(Block block) {
     blocksMap.removeBlock(block);
   }
-  
-  /**
-   * Update the block with the new generation stamp and new length.
-   * 
-   * @param block block
-   * @param newGS new generation stamp
-   * @param newLen new block size
-   * @return the stored block in the blocks map
-   */
-  BlockInfo updateBlock(Block block, long newGS, long newLen) {
-    return blocksMap.updateBlock(block, newGS, newLen);
-  }
-  
+
   int getCapacity() {
     synchronized(namesystem) {
       return blocksMap.getCapacity();

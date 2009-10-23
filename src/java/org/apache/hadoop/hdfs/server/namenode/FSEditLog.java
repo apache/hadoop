@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -1251,7 +1252,8 @@ public class FSEditLog {
         blk.readFields(in);
       } else {
         oldblk.readFields(in);
-        blk.set(oldblk.blkid, oldblk.len, Block.GRANDFATHER_GENERATION_STAMP);
+        blk.set(oldblk.blkid, oldblk.len,
+                GenerationStamp.GRANDFATHER_GENERATION_STAMP);
       }
       if(isFileUnderConstruction && i == numBlocks-1)
         blocks[i] = new BlockInfoUnderConstruction(blk, replication);
