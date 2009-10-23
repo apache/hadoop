@@ -311,6 +311,8 @@ Release 0.21.0 - Unreleased
 
     HDFS-616. Create functional tests for new design of the block report. (cos)
     
+    HDFS-584. Fail the fault-inject build if any advices are mis-bound. (cos)
+    
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
