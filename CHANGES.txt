@@ -7,6 +7,11 @@ Release 0.20.2 - Unreleased
     HADOOP-6218. Adds a feature where TFile can be split by Record
     Sequence number. (Hong Tang and Raghu Angadi via ddas)
 
+  IMPROVEMENTS
+
+    HDFS-127. Reset failure count in DFSClient for each block acquiring
+    operation.  (Igor Bolotin via szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-112. Add counters for reduce input, output records to the new API.
