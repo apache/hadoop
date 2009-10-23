@@ -439,6 +439,11 @@ Release 0.21.0 - Unreleased
 
 Release 0.20.2 - Unreleased
 
+  IMPROVEMENTS
+
+    HDFS-127. Reset failure count in DFSClient for each block acquiring
+    operation.  (Igor Bolotin via szetszwo)
+
   BUG FIXES
 
     HDFS-686. NullPointerException is thrown while merging edit log and image.

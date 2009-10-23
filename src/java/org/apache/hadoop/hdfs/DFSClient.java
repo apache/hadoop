@@ -1879,6 +1879,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       //
       DatanodeInfo chosenNode = null;
       int refetchToken = 1; // only need to get a new access token once
+      failures = 0;
+      
       while (true) {
         //
         // Compute desired block
@@ -2108,6 +2110,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       //
       Socket dn = null;
       int refetchToken = 1; // only need to get a new access token once
+      failures = 0;
       
       while (true) {
         // cached block locations may have been updated by chooseDataNode()
