@@ -205,8 +205,7 @@ public class TestScanner extends HBaseTestCase {
       
       // Write information to the meta table
 
-      Put put = new Put(ROW_KEY);
-      put.setTimeStamp(System.currentTimeMillis());
+      Put put = new Put(ROW_KEY, System.currentTimeMillis(), null);
 
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteStream);
@@ -236,8 +235,7 @@ public class TestScanner extends HBaseTestCase {
  
       HServerAddress address = new HServerAddress("foo.bar.com:1234");
 
-      put = new Put(ROW_KEY);
-      put.setTimeStamp(System.currentTimeMillis());
+      put = new Put(ROW_KEY, System.currentTimeMillis(), null);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
           Bytes.toBytes(address.toString()));
 
@@ -275,8 +273,7 @@ public class TestScanner extends HBaseTestCase {
 
       address = new HServerAddress("bar.foo.com:4321");
       
-      put = new Put(ROW_KEY);
-      put.setTimeStamp(System.currentTimeMillis());
+      put = new Put(ROW_KEY, System.currentTimeMillis(), null);
 
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
           Bytes.toBytes(address.toString()));

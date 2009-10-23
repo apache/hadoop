@@ -78,10 +78,21 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * @param rowLock previously acquired row lock, or null
    */
   public Put(byte [] row, RowLock rowLock) {
+      this(row, HConstants.LATEST_TIMESTAMP, rowLock);
+  }
+  
+  /**
+   * Create a Put operation for the specified row, using a given timestamp, and an existing row lock.
+   * @param row row key
+   * @param ts timestamp
+   * @param rowLock previously acquired row lock, or null
+   */
+  public Put(byte [] row, long ts, RowLock rowLock) {
     if(row == null || row.length > HConstants.MAX_ROW_LENGTH) {
       throw new IllegalArgumentException("Row key is invalid");
     }
     this.row = Arrays.copyOf(row, row.length);
+    this.timestamp = ts;
     if(rowLock != null) {
       this.lockId = rowLock.getLockId();
     }
@@ -92,13 +103,14 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * @param putToCopy put to copy
    */
   public Put(Put putToCopy) {
-    this(putToCopy.getRow(), putToCopy.getRowLock());
+    this(putToCopy.getRow(), putToCopy.timestamp, putToCopy.getRowLock());
     this.familyMap = 
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte [], List<KeyValue>> entry :
       putToCopy.getFamilyMap().entrySet()) {
       this.familyMap.put(entry.getKey(), entry.getValue());
     }
+    this.writeToWAL = putToCopy.writeToWAL;
   }
 
   /**
@@ -203,15 +215,6 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    */
   public long getTimeStamp() {
     return this.timestamp;
-  }
-  
-  /**
-   * Method for setting the timestamp
-   * @param timestamp
-   */
-  public Put setTimeStamp(long timestamp) {
-    this.timestamp = timestamp;
-    return this;
   }
   
   /**

@@ -58,8 +58,7 @@ public class TestGetRowVersions extends HBaseClusterTestCase {
 
   /** @throws Exception */
   public void testGetRowMultipleVersions() throws Exception {
-    Put put = new Put(ROW);
-    put.setTimeStamp(TIMESTAMP1);
+    Put put = new Put(ROW, TIMESTAMP1, null);
     put.add(CONTENTS, CONTENTS, VALUE1);
     this.table.put(put);
     // Shut down and restart the HBase cluster
@@ -70,8 +69,7 @@ public class TestGetRowVersions extends HBaseClusterTestCase {
     // Make a new connection
     this.table = new HTable(conf, TABLE_NAME);
     // Overwrite previous value
-    put = new Put(ROW);
-    put.setTimeStamp(TIMESTAMP2);
+    put = new Put(ROW, TIMESTAMP2, null);
     put.add(CONTENTS, CONTENTS, VALUE2);
     this.table.put(put);
     // Now verify that getRow(row, column, latest) works

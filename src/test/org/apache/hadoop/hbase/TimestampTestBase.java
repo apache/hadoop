@@ -241,10 +241,7 @@ public class TimestampTestBase extends HBaseTestCase {
   public static void put(final Incommon loader, final byte [] bytes,
     final long ts)
   throws IOException {
-    Put put = new Put(ROW);
-    if(ts != HConstants.LATEST_TIMESTAMP) {
-      put.setTimeStamp(ts);
-    }
+    Put put = new Put(ROW, ts, null);
     put.add(FAMILY_NAME, QUALIFIER_NAME, bytes);
     loader.put(put);
   }

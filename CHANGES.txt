@@ -4,6 +4,9 @@ Release 0.21.0 - Unreleased
    HBASE-1822  Remove the deprecated APIs
    HBASE-1848  Fixup shell for HBASE-1822
    HBASE-1854  Remove the Region Historian
+   HBASE-1930  Put.setTimeStamp misleading (doesn't change timestamp on
+               existing KeyValues, not copied in copy constructor)
+               (Dave Latham via Stack)
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew

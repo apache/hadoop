@@ -71,8 +71,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
         HRegion.createHRegion(this.INFOS[i], this.testDir, this.conf);
       // Insert data
       for (int j = 0; j < TIMESTAMPS.length; j++) {
-        Put put = new Put(ROWS[i]);
-        put.setTimeStamp(TIMESTAMPS[j]);
+        Put put = new Put(ROWS[i], TIMESTAMPS[j], null);
         put.add(HConstants.CATALOG_FAMILY, null, TIMESTAMPS[j], 
             Bytes.toBytes(TIMESTAMPS[j]));
         REGIONS[i].put(put);

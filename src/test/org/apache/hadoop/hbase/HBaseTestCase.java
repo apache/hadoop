@@ -300,9 +300,11 @@ public abstract class HBaseTestCase extends TestCase {
             break EXIT;
           }
           try {
-            Put put = new Put(t);
+            Put put;
             if(ts != -1) {
-              put.setTimeStamp(ts);
+              put = new Put(t, ts, null);
+            } else {
+              put = new Put(t);
             }
             try {
               StringBuilder sb = new StringBuilder();

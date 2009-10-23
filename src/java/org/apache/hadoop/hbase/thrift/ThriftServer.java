@@ -441,8 +441,7 @@ public class ThriftServer {
       HTable table = null;
       try {
         table = getTable(tableName);
-        Put put = new Put(row);
-        put.setTimeStamp(timestamp);
+        Put put = new Put(row, timestamp, null);
 
         Delete delete = new Delete(row);
 
@@ -488,8 +487,7 @@ public class ThriftServer {
         byte[] row = batch.row;
         List<Mutation> mutations = batch.mutations;
         Delete delete = new Delete(row);
-        Put put = new Put(row);
-        put.setTimeStamp(timestamp);
+        Put put = new Put(row, timestamp, null);
         for (Mutation m : mutations) {
           byte[][] famAndQf = KeyValue.parseColumn(m.column);
           if (m.isDelete) {
