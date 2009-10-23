@@ -78,14 +78,7 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
   @Override
   protected DatumReader getReader(Map<String, String> metadata) {
     try {
-      Class<SpecificRecord> clazz = (Class<SpecificRecord>)
-        getClassFromMetadata(metadata);
-      String prefix =  
-        ((clazz.getEnclosingClass() == null 
-            || "null".equals(clazz.getEnclosingClass().getName())) ? 
-              clazz.getPackage().getName() + "." 
-              : (clazz.getEnclosingClass().getName() + "$"));
-      return new ReflectDatumReader(ReflectData.get().getSchema(clazz), prefix);
+      return new ReflectDatumReader(getClassFromMetadata(metadata));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
