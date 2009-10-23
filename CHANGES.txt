@@ -437,6 +437,9 @@ Release 0.21.0 - Unreleased
     HDFS-722. Fix callCreateBlockWriteStream pointcut in FSDatasetAspects.
     (szetszwo)
 
+    HDFS-690. TestAppend2#testComplexAppend failed on "Too many open files".
+    (hairong)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS

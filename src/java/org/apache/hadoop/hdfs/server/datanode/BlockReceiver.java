@@ -816,7 +816,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             }
             Packet pkt = ackQueue.getFirst();
             long expected = pkt.seqno;
-            notifyAll();
             LOG.debug("PacketResponder " + numTargets +
                       " for block " + block + 
                       " acking for packet " + expected);
@@ -847,7 +846,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             replyOut.writeLong(expected);
             SUCCESS.write(replyOut);
             replyOut.flush();
-            ackQueue.removeFirst();
+            // remove the packet from the ack queue
+            removeAckHead();
+            // update the bytes acked
             if (pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
               replicaInfo.setBytesAcked(pkt.lastByteInBlock);
             }
@@ -923,7 +924,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                   }
                   pkt = ackQueue.getFirst();
                   expected = pkt.seqno;
-                  notifyAll();
                   LOG.debug("PacketResponder " + numTargets + " seqno = " + seqno);
                   if (seqno != expected) {
                     throw new IOException("PacketResponder " + numTargets +
@@ -1017,8 +1017,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                       " responded other status " + " for seqno " + expected);
 
             if (pkt != null) {
-              // remove the packet from the queue
-              ackQueue.removeFirst();
+              // remove the packet from the ack queue
+              removeAckHead();
               // update bytes acked
               if (success && pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
                 replicaInfo.setBytesAcked(pkt.lastByteInBlock);
@@ -1056,6 +1056,16 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
       LOG.info("PacketResponder " + numTargets + 
                " for block " + block + " terminating");
+    }
+    
+    /**
+     * Remove a packet from the head of the ack queue
+     * 
+     * This should be called only when the ack queue is not empty
+     */
+    private synchronized void removeAckHead() {
+      ackQueue.removeFirst();
+      notifyAll();
     }
   }
   
