@@ -58,6 +58,7 @@ public class TestHDFSFileContextMainOperations extends
   
   @Before
   public void setUp() throws Exception {
+    super.setUp();
   }
   
   @Override

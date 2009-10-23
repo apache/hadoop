@@ -440,6 +440,9 @@ Release 0.21.0 - Unreleased
     HDFS-690. TestAppend2#testComplexAppend failed on "Too many open files".
     (hairong)
 
+    HDFS-725. Support the build error fix for HADOOP-6327.  (Sanjay Radia via
+    szetszwo)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
