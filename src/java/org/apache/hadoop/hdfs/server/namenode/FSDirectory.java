@@ -29,9 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -367,7 +371,9 @@ class FSDirectory implements Closeable {
 
   /**
    * @see #unprotectedRenameTo(String, String, long)
+   * @deprecated Use {@link #renameTo(String, String, Rename...)} instead.
    */
+  @Deprecated
   boolean renameTo(String src, String dst) throws QuotaExceededException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
@@ -381,15 +387,33 @@ class FSDirectory implements Closeable {
     return true;
   }
 
-  /** Change a path name
+  /**
+   * @see #unprotectedRenameTo(String, String, long, Options.Rename...)
+   */
+  void renameTo(String src, String dst, Options.Rename... options)
+      throws IOException {
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: " + src
+          + " to " + dst);
+    }
+    waitForReady();
+    long now = FSNamesystem.now();
+    unprotectedRenameTo(src, dst, now, options);
+    fsImage.getEditLog().logRename(src, dst, now, options);
+  }
+
+  /**
+   * Change a path name
    * 
    * @param src source path
    * @param dst destination path
    * @return true if rename succeeds; false otherwise
    * @throws QuotaExceededException if the operation violates any quota limit
+   * @deprecated See {@link #renameTo(String, String)}
    */
-  boolean unprotectedRenameTo(String src, String dst, long timestamp) 
-  throws QuotaExceededException {
+  @Deprecated
+  boolean unprotectedRenameTo(String src, String dst, long timestamp)
+      throws QuotaExceededException {
     synchronized (rootDir) {
       INode[] srcInodes = rootDir.getExistingPathINodes(src);
 
@@ -462,8 +486,8 @@ class FSDirectory implements Closeable {
         if (dstChild != null) {
           srcChild = null;
           if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: " + src
-                    + " is renamed to " + dst);
+            NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: " 
+                + src + " is renamed to " + dst);
           }
           // update modification time of dst and the parent of src
           srcInodes[srcInodes.length-2].setModificationTime(timestamp);
@@ -481,6 +505,171 @@ class FSDirectory implements Closeable {
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           +"failed to rename "+src+" to "+dst);
       return false;
+    }
+  }
+
+  /**
+   * Rename src to dst.
+   * See {@link DistributedFileSystem#rename(Path, Path, Options.Rename...)}
+   * for details related to rename semantics.
+   * 
+   * @param src source path
+   * @param dst destination path
+   * @param timestamp modification time
+   * @param options Rename options
+   * @throws IOException if the operation violates any quota limit
+   */
+  void unprotectedRenameTo(String src, String dst, long timestamp,
+      Options.Rename... options) throws IOException {
+    boolean overwrite = false;
+    if (null != options) {
+      for (Rename option : options) {
+        if (option == Rename.OVERWRITE) {
+          overwrite = true;
+        }
+      }
+    }
+    String error = null;
+    synchronized (rootDir) {
+      final INode[] srcInodes = rootDir.getExistingPathINodes(src);
+      final INode srcInode = srcInodes[srcInodes.length - 1];
+      // validate source
+      if (srcInode == null) {
+        error = "rename source " + src + " is not found.";
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new FileNotFoundException(error);
+      }
+      if (srcInodes.length == 1) {
+        error = "rename source cannot be the root";
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new IOException(error);
+      }
+
+      // validate of the destination
+      if (dst.equals(src)) {
+        return;
+      }
+      // dst cannot be a directory or a file under src
+      if (dst.startsWith(src) && 
+          dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
+        error = "Rename destination " + dst
+            + " is a directory or file under source " + src;
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new IOException(error);
+      }
+      final byte[][] dstComponents = INode.getPathComponents(dst);
+      final INode[] dstInodes = new INode[dstComponents.length];
+      rootDir.getExistingPathINodes(dstComponents, dstInodes);
+      INode dstInode = dstInodes[dstInodes.length - 1];
+      if (dstInodes.length == 1) {
+        error = "rename destination cannot be the root";
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new IOException(error);
+      }
+      if (dstInode != null) { // Destination exists
+        if (dstInode.isDirectory() != srcInode.isDirectory()) {
+          error = "Source " + src + " Destination " + dst
+              + " both should be either file or directory";
+          NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + error);
+          throw new IOException(error);
+        }
+        if (!overwrite) { // If destination exists, overwrite flag must be true
+          error = "rename destination " + dst + " already exists";
+          NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + error);
+          throw new FileAlreadyExistsException(error);
+        }
+        List<INode> children = dstInode.isDirectory() ? 
+            ((INodeDirectory) dstInode).getChildrenRaw() : null;
+        if (children != null && children.size() != 0) {
+          error = "rename cannot overwrite non empty destination directory "
+              + dst;
+          NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + error);
+          throw new IOException(error);
+        }
+      }
+      if (dstInodes[dstInodes.length - 2] == null) {
+        error = "rename destination parent " + dst + " not found.";
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new FileNotFoundException(error);
+      }
+      if (!dstInodes[dstInodes.length - 2].isDirectory()) {
+        error = "rename destination parent " + dst + " is a file.";
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new ParentNotDirectoryException(error);
+      }
+
+      // Ensure dst has quota to accommodate rename
+      verifyQuotaForRename(srcInodes, dstInodes);
+      INode removedSrc = removeChild(srcInodes, srcInodes.length - 1);
+      if (removedSrc == null) {
+        error = "Failed to rename " + src + " to " + dst
+            + " because the source can not be removed";
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new IOException(error);
+      }
+      final String srcChildName = removedSrc.getLocalName();
+      String dstChildName = null;
+      INode removedDst = null;
+      try {
+        if (dstInode != null) { // dst exists remove it
+          removedDst = removeChild(dstInodes, dstInodes.length - 1);
+          dstChildName = removedDst.getLocalName();
+        }
+
+        INode dstChild = null;
+        removedSrc.setLocalName(dstComponents[dstInodes.length - 1]);
+        // add src as dst to complete rename
+        dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
+            removedSrc, -1, false);
+
+        if (dstChild != null) {
+          removedSrc = null;
+          if (NameNode.stateChangeLog.isDebugEnabled()) {
+            NameNode.stateChangeLog
+                .debug("DIR* FSDirectory.unprotectedRenameTo: " + src
+                    + " is renamed to " + dst);
+          }
+          srcInodes[srcInodes.length - 2].setModificationTime(timestamp);
+          dstInodes[dstInodes.length - 2].setModificationTime(timestamp);
+
+          // Collect the blocks and remove the lease for previous dst
+          if (removedDst != null) {
+            INode rmdst = removedDst;
+            removedDst = null;
+            List<Block> collectedBlocks = new ArrayList<Block>();
+            int filecount = rmdst.collectSubtreeBlocksAndClear(collectedBlocks);
+            incrDeletedFileCount(filecount);
+            getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+          }
+          return;
+        }
+      } finally {
+        if (removedSrc != null) {
+          // Rename failed - restore src
+          removedSrc.setLocalName(srcChildName);
+          addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, removedSrc, -1,
+              false);
+        }
+        if (removedDst != null) {
+          // Rename failed - restore dst
+          removedDst.setLocalName(dstChildName);
+          addChildNoQuotaCheck(dstInodes, dstInodes.length - 1, removedDst, -1,
+              false);
+        }
+      }
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+          + "failed to rename " + src + " to " + dst);
+      throw new IOException("rename from " + src + " to " + dst + " failed.");
     }
   }
 
@@ -1084,6 +1273,10 @@ class FSDirectory implements Closeable {
    */
   private void verifyQuota(INode[] inodes, int pos, long nsDelta, long dsDelta,
       INode commonAncestor) throws QuotaExceededException {
+    if (nsDelta <= 0 && dsDelta <= 0) {
+      // if quota is being freed or not being consumed
+      return;
+    }
     if (pos>inodes.length) {
       pos = inodes.length;
     }
@@ -1122,10 +1315,21 @@ class FSDirectory implements Closeable {
     for(int i =0;srcInodes[i] == dstInodes[i]; i++) {
       commonAncestor = srcInodes[i];
     }
-    INode.DirCounts counts = new INode.DirCounts();
-    srcInode.spaceConsumedInTree(counts);
-    verifyQuota(dstInodes, dstInodes.length - 1, counts.getNsCount(),
-            counts.getDsCount(), commonAncestor);
+    INode.DirCounts srcCounts = new INode.DirCounts();
+    srcInode.spaceConsumedInTree(srcCounts);
+    long nsDelta = srcCounts.getNsCount();
+    long dsDelta = srcCounts.getDsCount();
+    
+    // Reduce the required quota by dst that is being removed
+    INode dstInode = dstInodes[dstInodes.length - 1];
+    if (dstInode != null) {
+      INode.DirCounts dstCounts = new INode.DirCounts();
+      dstInode.spaceConsumedInTree(dstCounts);
+      nsDelta -= dstCounts.getNsCount();
+      dsDelta -= dstCounts.getDsCount();
+    }
+    verifyQuota(dstInodes, dstInodes.length - 1, nsDelta, dsDelta,
+        commonAncestor);
   }
   
   /** Add a node child to the inodes at index pos. 

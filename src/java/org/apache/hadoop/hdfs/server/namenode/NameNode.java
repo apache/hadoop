@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
@@ -697,8 +698,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.getPreferredBlockSize(filename);
   }
     
-  /**
-   */
+  /** {@inheritDoc} */
+  @Deprecated
+  @Override
   public boolean rename(String src, String dst) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
     if (!checkPathLength(dst)) {
@@ -710,6 +712,19 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       myMetrics.numFilesRenamed.inc();
     }
     return ret;
+  }
+  
+
+  /** {@inheritDoc} */
+  @Override
+  public void rename(String src, String dst, Options.Rename... options) throws IOException {
+    stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    if (!checkPathLength(dst)) {
+      throw new IOException("rename: Pathname too long.  Limit " 
+                            + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+    }
+    namesystem.renameTo(src, dst, options);
+    myMetrics.numFilesRenamed.inc();
   }
 
   /**

@@ -71,6 +71,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -658,12 +659,29 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   /**
    * Rename file or directory.
-   * See {@link ClientProtocol#rename(String, String)}. 
+   * See {@link ClientProtocol#rename(String, String)}.
+   * @deprecated Use {@link #rename(String, String, Options.Rename...)} instead.
    */
+  @Deprecated
   public boolean rename(String src, String dst) throws IOException {
     checkOpen();
     try {
       return namenode.rename(src, dst);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     NSQuotaExceededException.class,
+                                     DSQuotaExceededException.class);
+    }
+  }
+
+  /**
+   * Rename file or directory.
+   * See {@link ClientProtocol#rename(String, String, Options.Rename...)}
+   */
+  public void rename(String src, String dst, Options.Rename... options) throws IOException {
+    checkOpen();
+    try {
+      namenode.rename(src, dst, options);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,

@@ -91,9 +91,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -20;
+  public static final int LAYOUT_VERSION = -21;
   // Current version: 
-  // -20: DataNode adds a "rbw" sub directory to data directory
-  //      current dir contains "finalized" subdir for finalized replicas
-  //      and "rbw" subdir for replicas being written to.
+  // -21: Added new rename operation to edit log
 }

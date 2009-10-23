@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
@@ -173,7 +174,10 @@ public class TestDFSClientRetries extends TestCase {
 
     public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {}
 
+    @Deprecated
     public boolean rename(String src, String dst) throws IOException { return false; }
+    
+    public void rename(String src, String dst, Rename... options) throws IOException { }
 
     public boolean delete(String src) throws IOException { return false; }
 

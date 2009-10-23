@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -57,7 +60,7 @@ import org.mortbay.log.Log;
 public class FSEditLog {
   public  static final byte OP_INVALID = -1;
   private static final byte OP_ADD = 0;
-  private static final byte OP_RENAME = 1;  // rename
+  private static final byte OP_RENAME_OLD = 1;  // rename
   private static final byte OP_DELETE = 2;  // delete
   private static final byte OP_MKDIR = 3;   // create directory
   private static final byte OP_SET_REPLICATION = 4; // set replication
@@ -74,6 +77,7 @@ public class FSEditLog {
   private static final byte OP_CLEAR_NS_QUOTA = 12; // clear namespace quota
   private static final byte OP_TIMES = 13; // sets mod & access time on a file
   private static final byte OP_SET_QUOTA = 14; // sets name and disk quotas.
+  private static final byte OP_RENAME = 15;  // new rename
   /* 
    * The following operations are used to control remote edit log streams,
    * and not logged into file streams.
@@ -408,6 +412,7 @@ public class FSEditLog {
     return numEdits;
   }
 
+  @SuppressWarnings("deprecation")
   int loadEditRecords(int logVersion, DataInputStream in,
                              boolean closeOnExit) throws IOException {
     FSNamesystem fsNamesys = fsimage.getFSNamesystem();
@@ -417,9 +422,9 @@ public class FSEditLog {
     String clientMachine = null;
     String path = null;
     int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
-        numOpRename = 0, numOpSetRepl = 0, numOpMkDir = 0,
+        numOpRenameOld = 0, numOpSetRepl = 0, numOpMkDir = 0,
         numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
-        numOpTimes = 0, numOpOther = 0;
+        numOpTimes = 0, numOpRename = 0, numOpOther = 0;
     try {
       while (true) {
         long timestamp = 0;
@@ -540,8 +545,8 @@ public class FSEditLog {
           fsDir.unprotectedSetReplication(path, replication, null);
           break;
         } 
-        case OP_RENAME: {
-          numOpRename++;
+        case OP_RENAME_OLD: {
+          numOpRenameOld++;
           int length = in.readInt();
           if (length != 3) {
             throw new IOException("Incorrect data format. " 
@@ -672,6 +677,26 @@ public class FSEditLog {
           fsDir.unprotectedSetTimes(path, mtime, atime, true);
           break;
         }
+        case OP_RENAME: {
+          if (logVersion > -21) {
+            throw new IOException("Unexpected opcode " + opcode
+                + " for version " + logVersion);
+          }
+          numOpRename++;
+          int length = in.readInt();
+          if (length != 3) {
+            throw new IOException("Incorrect data format. " 
+                                  + "Mkdir operation.");
+          }
+          String s = FSImage.readString(in);
+          String d = FSImage.readString(in);
+          timestamp = readLong(in);
+          Rename[] options = readRenameOptions(in);
+          FileStatus dinfo = fsDir.getFileInfo(d);
+          fsDir.unprotectedRenameTo(s, d, timestamp, options);
+          fsNamesys.changeLease(s, d, dinfo);
+          break;
+        }
         default: {
           throw new IOException("Never seen opcode " + opcode);
         }
@@ -683,12 +708,14 @@ public class FSEditLog {
     }
     if (FSImage.LOG.isDebugEnabled()) {
       FSImage.LOG.debug("numOpAdd = " + numOpAdd + " numOpClose = " + numOpClose 
-          + " numOpDelete = " + numOpDelete + " numOpRename = " + numOpRename 
+          + " numOpDelete = " + numOpDelete 
+          + " numOpRenameOld = " + numOpRenameOld 
           + " numOpSetRepl = " + numOpSetRepl + " numOpMkDir = " + numOpMkDir
           + " numOpSetPerm = " + numOpSetPerm 
           + " numOpSetOwner = " + numOpSetOwner
           + " numOpSetGenStamp = " + numOpSetGenStamp 
           + " numOpTimes = " + numOpTimes
+          + " numOpRename = " + numOpRename
           + " numOpOther = " + numOpOther);
     }
     return numEdits;
@@ -933,7 +960,19 @@ public class FSEditLog {
       new DeprecatedUTF8(src),
       new DeprecatedUTF8(dst),
       FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_RENAME, new ArrayWritable(DeprecatedUTF8.class, info));
+    logEdit(OP_RENAME_OLD, new ArrayWritable(DeprecatedUTF8.class, info));
+  }
+  
+  /** 
+   * Add rename record to edit log
+   */
+  void logRename(String src, String dst, long timestamp, Options.Rename... options) {
+    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
+      new DeprecatedUTF8(src),
+      new DeprecatedUTF8(dst),
+      FSEditLog.toLogLong(timestamp)};
+    logEdit(OP_RENAME, new ArrayWritable(DeprecatedUTF8.class, info),
+        toBytesWritable(options));
   }
   
   /** 
@@ -1442,5 +1481,26 @@ public class FSEditLog {
       "Not a backup node corresponds to a backup stream";
     processIOError(errorStreams, true);
     return regAllowed;
+  }
+  
+  static Rename[] readRenameOptions(DataInputStream in) throws IOException {
+    BytesWritable writable = new BytesWritable();
+    writable.readFields(in);
+    
+    byte[] bytes = writable.getBytes();
+    Rename[] options = new Rename[bytes.length];
+    
+    for (int i = 0; i < bytes.length; i++) {
+      options[i] = Rename.valueOf(bytes[i]);
+    }
+    return options;
+  }
+  
+  static BytesWritable toBytesWritable(Options.Rename... options) {
+    byte[] bytes = new byte[options.length];
+    for (int i = 0; i < options.length; i++) {
+      bytes[i] = options[i].value();
+    }
+    return new BytesWritable(bytes);
   }
 }

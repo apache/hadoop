@@ -61,6 +61,8 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.io.IOUtils;
@@ -1443,8 +1445,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   // are made, edit namespace and return to client.
   ////////////////////////////////////////////////////////////////
 
-  /** Change the indicated filename. */
-  public boolean renameTo(String src, String dst) throws IOException {
+  /** 
+   * Change the indicated filename. 
+   * @deprecated Use {@link #renameTo(String, String, Options.Rename...)} instead.
+   */
+  @Deprecated
+  boolean renameTo(String src, String dst) throws IOException {
     boolean status = renameToInternal(src, dst);
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
@@ -1456,6 +1462,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return status;
   }
 
+  /** @deprecated See {@link #renameTo(String, String)} */
+  @Deprecated
   private synchronized boolean renameToInternal(String src, String dst
       ) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst);
@@ -1481,7 +1489,46 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
     return false;
   }
+  
 
+  /** Rename src to dst */
+  void renameTo(String src, String dst, Options.Rename... options)
+      throws IOException {
+    renameToInternal(src, dst, options);
+    getEditLog().logSync();
+    if (auditLog.isInfoEnabled()) {
+      StringBuilder cmd = new StringBuilder("rename options=");
+      for (Rename option : options) {
+        cmd.append(option.value()).append(" ");
+      }
+      final FileStatus stat = dir.getFileInfo(dst);
+      logAuditEvent(UserGroupInformation.getCurrentUGI(), Server.getRemoteIp(),
+                    cmd.toString(), src, dst, stat);
+    }
+  }
+
+  private synchronized void renameToInternal(String src, String dst,
+      Options.Rename... options) throws IOException {
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options - "
+          + src + " to " + dst);
+    }
+    if (isInSafeMode()) {
+      throw new SafeModeException("Cannot rename " + src, safeMode);
+    }
+    if (!DFSUtil.isValidName(dst)) {
+      throw new IOException("Invalid name: " + dst);
+    }
+    if (isPermissionEnabled) {
+      checkParentAccess(src, FsAction.WRITE);
+      checkAncestorAccess(dst, FsAction.WRITE);
+    }
+
+    FileStatus dinfo = dir.getFileInfo(dst);
+    dir.renameTo(src, dst, options);
+    changeLease(src, dst, dinfo); // update lease with new filename
+  }
+  
   /**
    * Remove the indicated filename from namespace. If the filename 
    * is a directory (non empty) and recursive is set to false then throw exception.

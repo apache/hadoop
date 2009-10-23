@@ -567,6 +567,7 @@ public class NNThroughputBenchmark {
       super.parseArguments(args);
     }
 
+    @SuppressWarnings("deprecation")
     void generateInputs(int[] opsPerThread) throws IOException {
       // create files using opsPerThread
       String[] createArgs = new String[] {
@@ -668,6 +669,7 @@ public class NNThroughputBenchmark {
       }
     }
 
+    @SuppressWarnings("deprecation")
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();

@@ -21,9 +21,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -44,9 +46,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 50: change LocatedBlocks to include last block information.
+   * 51: New rename method with support of destination overwrite for the use of
+   * {@link FileContext}
    */
-  public static final long versionID = 50L;
+  public static final long versionID = 51L;
   
   ///////////////////////////////////////
   // File contents
@@ -227,7 +230,6 @@ public interface ClientProtocol extends VersionedProtocol {
   ///////////////////////////////////////
   /**
    * Rename an item in the file system namespace.
-   * 
    * @param src existing file or directory name.
    * @param dst new name.
    * @return true if successful, or false if the old name does not exist
@@ -235,9 +237,33 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException if the new name is invalid.
    * @throws QuotaExceededException if the rename would violate 
    *                                any quota restriction
+   * @deprecated Use {@link #rename(String, String, Options.Rename...)} instead.
    */
+  @Deprecated
   public boolean rename(String src, String dst) throws IOException;
 
+  /**
+   * Rename src to dst.
+   * <ul>
+   * <li>Fails if src is a file and dst is a directory.
+   * <li>Fails if src is a directory and dst is a file.
+   * <li>Fails if the parent of dst does not exist or is a file.
+   * </ul>
+   * <p>
+   * Without OVERWRITE option, rename fails if the dst already exists.
+   * With OVERWRITE option, rename overwrites the dst, if it is a file 
+   * or an empty directory. Rename fails if dst is a non-empty directory.
+   * <p>
+   * This implementation of rename is atomic.
+   * <p>
+   * @param src existing file or directory name.
+   * @param dst new name.
+   * @param options Rename options
+   * @throws IOException if rename failed
+   */
+  public void rename(String src, String dst, Options.Rename... options)
+      throws IOException;
+  
   /**
    * Delete the given file or directory from the file system.
    * <p>

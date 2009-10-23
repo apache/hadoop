@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.fs.Options;
 
 
 /****************************************************************
@@ -245,18 +246,23 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.setReplication(getPathName(src), replication);
   }
 
-  /**
-   * Rename files/dirs
-   */
+  /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
     return dfs.rename(getPathName(src), getPathName(dst));
   }
 
-  /**
-   * requires a boolean check to delete a non 
-   * empty directory recursively.
+  /** 
+   * {@inheritDoc}
+   * This rename operation is guaranteed to be atomic.
    */
+  @SuppressWarnings("deprecation")
+  @Override
+  public void rename(Path src, Path dst, Options.Rename... options) throws IOException {
+    dfs.rename(getPathName(src), getPathName(dst), options);
+  }
+  
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
    return dfs.delete(getPathName(f), recursive);

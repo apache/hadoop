@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     implements offline erasure-coding.  It can be used to reduce the 
     total storage requirements of HDFS.  (dhruba)
 
+    HDFS-654. Add support new atomic rename functionality in HDFS for 
+    supporting rename in FileContext. (suresh)
+
   IMPROVEMENTS
     
     HDFS-704. Unify build property names to facilitate cross-projects
