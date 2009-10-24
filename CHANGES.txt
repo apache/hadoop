@@ -1087,6 +1087,8 @@ Trunk (unreleased changes)
     HADOOP-6327. FileContext tests should not use /tmp and should clean up
     files.  (Sanjay Radia via szetszwo)
 
+    HADOOP-6318. Upgrade to Avro 1.2.0.  (cutting)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES

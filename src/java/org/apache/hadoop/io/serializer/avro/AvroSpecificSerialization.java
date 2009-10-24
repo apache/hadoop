@@ -48,9 +48,7 @@ public class AvroSpecificSerialization
   @Override
   protected DatumReader getReader(Map<String, String> metadata) {
     try {
-      Class<SpecificRecord> clazz = (Class<SpecificRecord>)
-        getClassFromMetadata(metadata);
-      return new SpecificDatumReader(clazz.newInstance().getSchema());
+      return new SpecificDatumReader(getClassFromMetadata(metadata));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
