@@ -17,6 +17,7 @@
 <project name="aspects">
   <property name="build-fi.dir" value="${basedir}/build-fi"/>
   <property name="hadoop-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
+  <property name="compile-inject.output" value="${build-fi.dir}/compile-fi.log"/>
   <property name="aspectversion" value="1.6.4"/>
   <property file="${basedir}/build.properties"/>
 
@@ -53,12 +54,26 @@
       deprecation="${javac.deprecation}">
       <classpath refid="test.classpath"/>
     </iajc>
+    <loadfile property="injection.failure" srcfile="${compile-inject.output}">
+      <filterchain>
+        <linecontainsregexp>
+          <regexp pattern='iajc.*warning'/>
+        </linecontainsregexp>
+      </filterchain>
+    </loadfile>
+    <fail if="injection.failure">
+      Broken binding of advises: ${line.separator}${injection.failure}
+    </fail>
     <echo message="Weaving of aspects is finished"/>
   </target>
 
   <target name="injectfaults" 
   	description="Instrument classes with faults and other AOP advices">
-    <subant buildpath="${basedir}" target="compile-fault-inject">
+    <!--mkdir to prevent <subant> failure in case the folder has been removed-->
+    <mkdir dir="${build-fi.dir}"/>
+    <delete file="${compile-inject.output}"/>
+    <subant buildpath="${basedir}" target="compile-fault-inject"
+    	output="${compile-inject.output}">
       <property name="build.dir" value="${build-fi.dir}"/>
     </subant>
   </target>
