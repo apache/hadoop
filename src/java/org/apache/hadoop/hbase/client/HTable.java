@@ -834,36 +834,6 @@ public class HTable implements HTableInterface {
       return s;
     }
 
-    /**
-     * @param endKey
-     * @return Returns true if the passed region endkey is judged beyond
-     * filter.
-     */
-    private boolean filterSaysStop(final byte [] endKey) {
-      if (scan.getStopRow().length > 0) {
-        // there is a stop row, check to see if we are past it.
-        byte [] stopRow = scan.getStopRow();
-        int cmp = Bytes.compareTo(stopRow, 0, stopRow.length,
-            endKey, 0, endKey.length);
-        if (cmp <= 0) {
-          // stopRow <= endKey (endKey is equals to or larger than stopRow)
-          // This is a stop.
-          return true;
-        }
-      }
-
-      if(!scan.hasFilter()) {
-        return false;
-      }
-
-      if (scan.getFilter() != null) {
-        // Let the filter see current row.
-        scan.getFilter().filterRowKey(endKey, 0, endKey.length);
-        return scan.getFilter().filterAllRemaining();
-      }
-      return false; //unlikely.
-    }
-
     public Result next() throws IOException {
       // If the scanner is closed but there is some rows left in the cache,
       // it will first empty it before returning null
@@ -897,12 +867,14 @@ public class HTable implements HTableInterface {
             }
             // Else, its signal from depths of ScannerCallable that we got an
             // NSRE on a next and that we need to reset the scanner.
-            this.scan.setStartRow(this.lastResult.getRow());
-            // Clear region as flag to nextScanner to use this.scan.startRow.
+            if (this.lastResult != null) {
+              this.scan.setStartRow(this.lastResult.getRow());
+              // Skip first row returned.  We already let it out on previous
+              // invocation.
+              skipFirst = true;
+            }
+            // Clear region
             this.currentRegion = null;
-            // Skip first row returned.  We already let it out on previous
-            // invocation.
-            skipFirst = true;
             continue;
           } catch (IOException e) {
             if (e instanceof UnknownScannerException &&
