@@ -1184,10 +1184,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
-    synchronized void close() {
-      while (!pendingCreates.isEmpty()) {
-        String src = pendingCreates.firstKey();
-        OutputStream out = pendingCreates.remove(src);
+    void close() {
+      while (true) {
+        String src;
+        OutputStream out;
+        synchronized (this) {
+          if (pendingCreates.isEmpty()) {
+            return;
+          }
+          src = pendingCreates.firstKey();
+          out = pendingCreates.remove(src);
+        }
         if (out != null) {
           try {
             out.close();
