@@ -456,8 +456,6 @@ Release 0.21.0 - Unreleased
     HDFS-725. Support the build error fix for HADOOP-6327.  (Sanjay Radia via
     szetszwo)
 
-    HDFS-723. Fix deadlock in DFSClient#DFSOutputStream. (hairong)
-
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
@@ -478,6 +476,8 @@ Release 0.20.2 - Unreleased
 
     HDFS-579. Fix DfsTask to follow the semantics of 0.19, regarding non-zero
     return values as failures. (Christian Kunz via cdouglas)
+
+    HDFS-723. Fix deadlock in DFSClient#DFSOutputStream. (hairong)
 
 Release 0.20.1 - 2009-09-01
 
