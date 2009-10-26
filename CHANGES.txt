@@ -49,6 +49,8 @@ Release 0.20.2 - Unreleased
     count at the start of each block in Hadoop archives. (Ben Slusky, Tom
     White, and Mahadev Konar via cdouglas)
 
+    HDFS-723. Fix deadlock in DFSClient#DFSOutputStream. (hairong)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
