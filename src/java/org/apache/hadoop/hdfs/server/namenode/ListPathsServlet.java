@@ -152,7 +152,12 @@ public class ListPathsServlet extends DfsServlet {
       while (!pathstack.empty()) {
         String p = pathstack.pop();
         try {
-          for (FileStatus i : nnproxy.getListing(p)) {
+          FileStatus[] listing = nnproxy.getListing(p);
+          if (listing == null) {
+            LOG.warn("ListPathsServlet - Path " + p + " does not exist");
+            continue;
+          }
+          for (FileStatus i : listing) {
             if (exclude.matcher(i.getPath().getName()).matches()
                 || !filter.matcher(i.getPath().getName()).matches()) {
               continue;

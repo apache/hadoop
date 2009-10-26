@@ -456,6 +456,8 @@ Release 0.21.0 - Unreleased
     HDFS-725. Support the build error fix for HADOOP-6327.  (Sanjay Radia via
     szetszwo)
 
+    HDFS-625. Fix NullPointerException thrown from ListPathServlet. (suresh)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
