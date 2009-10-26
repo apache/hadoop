@@ -312,6 +312,9 @@ Release 0.21.0 - Unreleased
     HDFS-616. Create functional tests for new design of the block report. (cos)
     
     HDFS-584. Fail the fault-inject build if any advices are mis-bound. (cos)
+
+    HDFS-730. Add 4 fault injection tests to simulate non-responsive datanode
+    and out-of-memory problem for pipeline close ack.  (szetszwo)
     
   BUG FIXES
 

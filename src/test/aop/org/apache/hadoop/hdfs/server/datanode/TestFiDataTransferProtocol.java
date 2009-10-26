@@ -22,13 +22,17 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.FiTestUtil;
+import org.apache.hadoop.fi.DataTransferTestUtil.DataNodeAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
+import org.apache.hadoop.fi.DataTransferTestUtil.DatanodeMarkingAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.DoosAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.IoeAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.OomAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.SleepAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.VerificationAction;
 import org.apache.hadoop.fi.FiTestUtil.Action;
+import org.apache.hadoop.fi.FiTestUtil.ConstraintSatisfactionAction;
+import org.apache.hadoop.fi.FiTestUtil.MarkerConstraint;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -313,6 +317,40 @@ public class TestFiDataTransferProtocol {
   private static void run41_43(String name, int i) throws IOException {
     runPipelineCloseTest(name, new SleepAction(name, i, 3000));
   }
+
+  private static void runPipelineCloseAck(String name, int i, DataNodeAction a
+      ) throws IOException {
+    FiTestUtil.LOG.info("Running " + name + " ...");
+    final DataTransferTest t = (DataTransferTest)DataTransferTestUtil.initTest();
+    final MarkerConstraint marker = new MarkerConstraint(name);
+    t.fiPipelineClose.set(new DatanodeMarkingAction(name, i, marker));
+    t.fiPipelineAck.set(new ConstraintSatisfactionAction<DatanodeID>(a, marker));
+    write1byte(name);
+  }
+
+  private static void run39_40(String name, int i) throws IOException {
+    runPipelineCloseAck(name, i, new SleepAction(name, i, 0));
+  }
+
+  /**
+   * Pipeline close:
+   * DN1 never responses after received close ack DN2.
+   * Client gets an IOException and determine DN1 bad.
+   */
+  @Test
+  public void pipeline_Fi_39() throws IOException {
+    run39_40(FiTestUtil.getMethodName(), 1);
+  }
+
+  /**
+   * Pipeline close:
+   * DN0 never responses after received close ack DN1.
+   * Client gets an IOException and determine DN0 bad.
+   */
+  @Test
+  public void pipeline_Fi_40() throws IOException {
+    run39_40(FiTestUtil.getMethodName(), 0);
+  }
   
   /**
    * Pipeline close with DN0 very slow but it won't lead to timeout.
@@ -375,6 +413,32 @@ public class TestFiDataTransferProtocol {
   public void pipeline_Fi_46() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
     runPipelineCloseTest(methodName, new OomAction(methodName, 2));
+  }
+
+  private static void run47_48(String name, int i) throws IOException {
+    runPipelineCloseAck(name, i, new OomAction(name, i));
+  }
+
+  /**
+   * Pipeline close:
+   * DN1 throws an OutOfMemoryException right after
+   * it received a close ack from DN2.
+   * Client gets an IOException and determine DN1 bad.
+   */
+  @Test
+  public void pipeline_Fi_47() throws IOException {
+    run47_48(FiTestUtil.getMethodName(), 1);
+  }
+
+  /**
+   * Pipeline close:
+   * DN0 throws an OutOfMemoryException right after
+   * it received a close ack from DN1.
+   * Client gets an IOException and determine DN0 bad.
+   */
+  @Test
+  public void pipeline_Fi_48() throws IOException {
+    run47_48(FiTestUtil.getMethodName(), 0);
   }
 
   private static void runBlockFileCloseTest(String methodName,

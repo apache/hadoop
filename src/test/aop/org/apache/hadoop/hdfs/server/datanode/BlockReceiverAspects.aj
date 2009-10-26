@@ -47,11 +47,11 @@ public privileged aspect BlockReceiverAspects {
 	
   before(BlockReceiver blockreceiver
       ) throws IOException : callReceivePacket(blockreceiver) {
-    LOG.info("FI: callReceivePacket");
+    final DatanodeRegistration dr = blockreceiver.getDataNode().getDatanodeRegistration();
+    LOG.info("FI: callReceivePacket, datanode=" + dr.getName());
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null)
-      dtTest.fiCallReceivePacket.run(
-          blockreceiver.getDataNode().getDatanodeRegistration());
+      dtTest.fiCallReceivePacket.run(dr);
 
     if (ProbabilityModel.injectCriteria(BlockReceiver.class.getSimpleName())) {
       LOG.info("Before the injection point");
@@ -73,7 +73,7 @@ public privileged aspect BlockReceiverAspects {
           lastPacketInBlock, len, endOfHeader) {
     if (len == 0) {
       final DatanodeRegistration dr = blockreceiver.getDataNode().getDatanodeRegistration();
-      LOG.info("FI: pipelineClose, datanode=" + dr
+      LOG.info("FI: pipelineClose, datanode=" + dr.getName()
           + ", offsetInBlock=" + offsetInBlock
           + ", seqno=" + seqno
           + ", lastPacketInBlock=" + lastPacketInBlock

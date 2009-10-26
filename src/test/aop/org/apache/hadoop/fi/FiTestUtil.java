@@ -174,4 +174,32 @@ public class FiTestUtil {
       action.run(parameter);
     }
   }
+
+  /** A MarkerConstraint is satisfied if it is marked. */
+  public static class MarkerConstraint implements Constraint {
+    private final String name;
+    private boolean marked = false;
+
+    /** Construct an object. */
+    public MarkerConstraint(String name) {
+      this.name = name;
+    }
+
+    /** Set marker to be marked. */
+    public void mark() {
+      marked = true;
+      LOG.info("Marking this " + this);
+    }
+
+    /** Is the marker marked? */
+    @Override
+    public boolean isSatisfied() {
+      return marked;
+    }
+
+    /** {@inheritDoc} */
+    public String toString() {
+      return getClass().getSimpleName() + "[" + name + ": " + marked + "]";
+    }
+  }
 }

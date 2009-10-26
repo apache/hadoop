@@ -25,6 +25,7 @@ import org.apache.hadoop.fi.FiTestUtil.Action;
 import org.apache.hadoop.fi.FiTestUtil.ActionContainer;
 import org.apache.hadoop.fi.FiTestUtil.ConstraintSatisfactionAction;
 import org.apache.hadoop.fi.FiTestUtil.CountdownConstraint;
+import org.apache.hadoop.fi.FiTestUtil.MarkerConstraint;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -137,13 +138,41 @@ public class DataTransferTestUtil {
 
     /** {@inheritDoc} */
     public String toString() {
-      return currentTest + ", index=" + index;
+      return getClass().getSimpleName() + ":" + currentTest
+          + ", index=" + index;
     }
 
     /** return a String with this object and the datanodeID. */
     String toString(DatanodeID datanodeID) {
       return "FI: " + this + ", datanode="
           + datanodeID.getName();
+    }
+  }
+
+  /** An action to set a marker if the DatanodeID is matched. */
+  public static class DatanodeMarkingAction extends DataNodeAction {
+    private final MarkerConstraint marker;
+
+    /** Construct an object. */
+    public DatanodeMarkingAction(String currentTest, int index,
+        MarkerConstraint marker) {
+      super(currentTest, index);
+      this.marker = marker;
+    }
+
+    /** Set the marker if the DatanodeID is matched. */
+    @Override
+    public void run(DatanodeID datanodeid) throws IOException {
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(datanodeid);
+      if (p.contains(index, datanodeid)) {
+        marker.mark();
+      }
+    }
+
+    /** {@inheritDoc} */
+    public String toString() {
+      return super.toString() + ", " + marker;
     }
   }
 
@@ -273,8 +302,8 @@ public class DataTransferTestUtil {
     /** {@inheritDoc} */
     @Override
     public String toString() {
-      return super.toString()
-          + ", duration = [" + minDuration + "," + maxDuration + ")";
+      return super.toString() + ", duration="
+          + (maxDuration <= 0? "infinity": "[" + minDuration + ", " + maxDuration + ")");
     }
   }
 
