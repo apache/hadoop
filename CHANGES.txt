@@ -318,6 +318,8 @@ Release 0.21.0 - Unreleased
     HDFS-730. Add 4 fault injection tests to simulate non-responsive datanode
     and out-of-memory problem for pipeline close ack.  (szetszwo)
     
+    HDFS-728. Create a comprehensive functional test for append. (hairong)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
