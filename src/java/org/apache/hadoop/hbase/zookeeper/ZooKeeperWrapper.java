@@ -449,7 +449,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @param address HServerAddress of master.
    * @return true if operation succeeded, false otherwise.
    */
-  public boolean writeMasterAddress(HServerAddress address) {
+  public boolean writeMasterAddress(final HServerAddress address) {
     if (!ensureParentExists(masterElectionZNode)) {
       return false;
     }

@@ -33,14 +33,15 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   
   private long expire;
   protected final HMaster master;
-  protected final int numRetries;
+  final int leaseTimeout;
   
   protected RegionServerOperation(HMaster master) {
     this.master = master;
-    this.numRetries = master.numRetries;
+    this.leaseTimeout = this.master.getConfiguration().
+      getInt("hbase.master.lease.period", 120 * 1000);
     // Set the future time at which we expect to be released from the
     // DelayQueue we're inserted in on lease expiration.
-    this.expire = System.currentTimeMillis() + this.master.leaseTimeout / 2;
+    this.expire = whenToExpire();
   }
 
   public long getDelay(TimeUnit unit) {
@@ -54,13 +55,17 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   }
   
   protected void requeue() {
-    this.expire = System.currentTimeMillis() + this.master.leaseTimeout / 2;
-    master.delayedToDoQueue.put(this);
+    this.expire = whenToExpire();
+    this.master.requeue(this);
   }
-  
+
+  private long whenToExpire() {
+    return System.currentTimeMillis() + this.leaseTimeout / 2;
+  }
+
   protected boolean rootAvailable() {
     boolean available = true;
-    if (master.getRootRegionLocation() == null) {
+    if (this.master.getRegionManager().getRootRegionLocation() == null) {
       available = false;
       requeue();
     }
@@ -69,9 +74,9 @@ abstract class RegionServerOperation implements Delayed, HConstants {
 
   protected boolean metaTableAvailable() {
     boolean available = true;
-    if ((master.regionManager.numMetaRegions() !=
-      master.regionManager.numOnlineMetaRegions()) ||
-      master.regionManager.metaRegionsInTransition()) {
+    if ((master.getRegionManager().numMetaRegions() !=
+      master.getRegionManager().numOnlineMetaRegions()) ||
+      master.getRegionManager().metaRegionsInTransition()) {
       // We can't proceed because not all of the meta regions are online.
       // We can't block either because that would prevent the meta region
       // online message from being processed. In order to prevent spinning
@@ -79,9 +84,9 @@ abstract class RegionServerOperation implements Delayed, HConstants {
       // other threads the opportunity to get the meta regions on-line.
       if (LOG.isDebugEnabled()) {
         LOG.debug("numberOfMetaRegions: " + 
-            master.regionManager.numMetaRegions() +
+            master.getRegionManager().numMetaRegions() +
             ", onlineMetaRegions.size(): " + 
-            master.regionManager.numOnlineMetaRegions());
+            master.getRegionManager().numOnlineMetaRegions());
         LOG.debug("Requeuing because not all meta regions are online");
       }
       available = false;

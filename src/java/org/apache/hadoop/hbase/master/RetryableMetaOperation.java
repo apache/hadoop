@@ -50,19 +50,20 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
   protected RetryableMetaOperation(MetaRegion m, HMaster master) {
     this.m = m;
     this.master = master;
-    this.sleeper = new Sleeper(master.threadWakeFrequency, master.closed);
+    this.sleeper = new Sleeper(this.master.getThreadWakeFrequency(),
+      this.master.getClosed());
   }
   
   protected T doWithRetries()
   throws IOException, RuntimeException {
     List<IOException> exceptions = new ArrayList<IOException>();
-    for (int tries = 0; tries < this.master.numRetries; tries++) {
-      if (this.master.closed.get()) {
+    for (int tries = 0; tries < this.master.getNumRetries(); tries++) {
+      if (this.master.isClosed()) {
         return null;
       }
       try {
         this.server =
-          this.master.connection.getHRegionConnection(m.getServer());
+          this.master.getServerConnection().getHRegionConnection(m.getServer());
         return this.call();
       } catch (IOException e) {
         if (e instanceof TableNotFoundException ||
@@ -73,7 +74,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
         if (e instanceof RemoteException) {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         }
-        if (tries == master.numRetries - 1) {
+        if (tries == this.master.getNumRetries() - 1) {
           if (LOG.isDebugEnabled()) {
             StringBuilder message = new StringBuilder(
                 "Trying to contact region server for regionName '" + 

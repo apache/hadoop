@@ -31,7 +31,7 @@ class RootScanner extends BaseScanner {
    * @param master
    */
   public RootScanner(HMaster master) {
-    super(master, true, master.metaRescanInterval, master.shutdownRequested);
+    super(master, true, master.getShutdownRequested());
   }
 
   /**
@@ -42,16 +42,16 @@ class RootScanner extends BaseScanner {
    * @return True if successfully scanned.
    */
   private boolean scanRoot() {
-    master.waitForRootRegionLocation();
-    if (master.closed.get()) {
+    master.getRegionManager().waitForRootRegionLocation();
+    if (master.isClosed()) {
       return false;
     }
 
     try {
       // Don't interrupt us while we're working
       synchronized(scannerLock) {
-        if (master.getRootRegionLocation() != null) {
-          scanRegion(new MetaRegion(master.getRootRegionLocation(),
+        if (master.getRegionManager().getRootRegionLocation() != null) {
+          scanRegion(new MetaRegion(master.getRegionManager().getRootRegionLocation(),
             HRegionInfo.ROOT_REGIONINFO));
         }
       }

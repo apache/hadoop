@@ -34,6 +34,14 @@ import org.apache.hadoop.io.Writable;
  * by the region affected.  HMsg may also carry optional message.
  */
 public class HMsg implements Writable {
+  public static final HMsg REGIONSERVER_QUIESCE =
+    new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
+  public static final HMsg REGIONSERVER_STOP =
+    new HMsg(Type.MSG_REGIONSERVER_STOP);
+  public static final HMsg CALL_SERVER_STARTUP =
+    new HMsg(Type.MSG_CALL_SERVER_STARTUP);
+  public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
+
   /**
    * Message types sent between master and regionservers
    */

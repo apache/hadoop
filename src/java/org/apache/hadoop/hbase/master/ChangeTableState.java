@@ -89,15 +89,15 @@ class ChangeTableState extends TableOperation {
         LOG.debug("Removed server and startcode from row and set online=" +
           this.online + ": " + i.getRegionNameAsString());
       }
-      synchronized (master.regionManager) {
+      synchronized (master.getRegionManager()) {
         if (this.online) {
           // Bring offline regions on-line
-          if (!this.master.regionManager.regionIsOpening(i.getRegionNameAsString())) {
-            this.master.regionManager.setUnassigned(i, false);
+          if (!this.master.getRegionManager().regionIsOpening(i.getRegionNameAsString())) {
+            this.master.getRegionManager().setUnassigned(i, false);
           }
         } else {
           // Prevent region from getting assigned.
-          this.master.regionManager.removeRegion(i);
+          this.master.getRegionManager().removeRegion(i);
         }
       }
     }
@@ -106,7 +106,7 @@ class ChangeTableState extends TableOperation {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Processing regions currently being served");
     }
-    synchronized (this.master.regionManager) {
+    synchronized (this.master.getRegionManager()) {
       for (Map.Entry<String, HashSet<HRegionInfo>> e:
           this.servedRegions.entrySet()) {
         String serverName = e.getKey();
@@ -122,7 +122,7 @@ class ChangeTableState extends TableOperation {
               " to setClosing list");
           }
           // this marks the regions to be closed
-          this.master.regionManager.setClosing(serverName, i, true);
+          this.master.getRegionManager().setClosing(serverName, i, true);
         }
       }
     }

@@ -15,10 +15,10 @@
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
-  HServerAddress rootLocation = master.getRootRegionLocation();
-  Map<byte [], MetaRegion> onlineRegions = master.getOnlineMetaRegions();
+  HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
+  Map<byte [], MetaRegion> onlineRegions = master.getRegionManager().getOnlineMetaRegions();
   Map<String, HServerInfo> serverToServerInfos =
-    master.getServersToServerInfo();
+    master.getServerManager().getServersToServerInfo();
   int interval = conf.getInt("hbase.regionserver.msginterval", 3000)/1000;
   if (interval == 0) {
       interval = 1;
@@ -46,8 +46,8 @@
 <tr><td>Hadoop Version</td><td><%= org.apache.hadoop.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
 <tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
 <tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>
-<tr><td>Load average</td><td><%= master.getAverageLoad() %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
-<tr><td>Regions On FS</td><td><%= master.countRegionsOnFS() %></td><td>Number of regions on FileSystem. Rough count.</td></tr>
+<tr><td>Load average</td><td><%= master.getServerManager().getAverageLoad() %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
+<tr><td>Regions On FS</td><td><%= master.getRegionManager().countRegionsOnFS() %></td><td>Number of regions on FileSystem. Rough count.</td></tr>
 <tr><td>Zookeeper Quorum</td><td><%= master.getZooKeeperWrapper().getQuorumServers() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
 </table>
 

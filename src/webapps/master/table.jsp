@@ -24,9 +24,9 @@
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
   Map<HServerAddress, HServerInfo> serverAddressToServerInfos =
-      master.getServerAddressToServerInfo();
+      master.getServerManager().getServerAddressToServerInfo();
   String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
-  HServerAddress rootLocation = master.getRootRegionLocation();
+  HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -102,7 +102,7 @@
 %>
 <%= tableHeader %>
 <%
-  Map<byte [], MetaRegion> onlineRegions = master.getOnlineMetaRegions();
+  Map<byte [], MetaRegion> onlineRegions = master.getRegionManager().getOnlineMetaRegions();
   for (MetaRegion meta: onlineRegions.values()) {
     int infoPort = serverAddressToServerInfos.get(meta.getServer()).getInfoPort();
     String url = "http://" + meta.getServer().getHostname() + ":" + infoPort + "/";

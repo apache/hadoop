@@ -46,10 +46,9 @@ public class MasterMetrics implements Updater {
   private final MetricsIntValue cluster_requests =
     new MetricsIntValue("cluster_requests", registry);
 
-  public MasterMetrics() {
+  public MasterMetrics(final String name) {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "master");
-    String name = Thread.currentThread().getName();
     metricsRecord.setTag("Master", name);
     context.registerUpdater(this);
     JvmMetrics.init("Master", name);

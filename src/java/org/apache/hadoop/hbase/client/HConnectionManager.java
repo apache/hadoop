@@ -697,7 +697,7 @@ public class HConnectionManager implements HConstants {
         }
       
         try{
-          Thread.sleep(getPauseTime(tries));              
+          Thread.sleep(getPauseTime(tries));
         } catch (InterruptedException e){
           // continue
         }

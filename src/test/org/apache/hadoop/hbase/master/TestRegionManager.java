@@ -42,16 +42,18 @@ public class TestRegionManager extends HBaseClusterTestCase {
      HRegionInfo regionInfoX = new HRegionInfo(tableDesc, startKeyX, endKeyX);
    
    
-     master.regionManager.offlineMetaRegion(startKey0);
-     master.regionManager.putMetaRegionOnline(meta0);
-     master.regionManager.putMetaRegionOnline(meta1);
-     master.regionManager.putMetaRegionOnline(meta2);
+     master.getRegionManager().offlineMetaRegion(startKey0);
+     master.getRegionManager().putMetaRegionOnline(meta0);
+     master.getRegionManager().putMetaRegionOnline(meta1);
+     master.getRegionManager().putMetaRegionOnline(meta2);
    
 //    for (byte[] b : master.regionManager.getOnlineMetaRegions().keySet()) {
 //      System.out.println("FROM TEST KEY " + b +"  " +new String(b));
 //    }
 
-     assertEquals(metaRegionInfo1.getStartKey(), master.regionManager.getFirstMetaRegionForRegion(regionInfoX).getStartKey());
-     assertEquals(metaRegionInfo1.getRegionName(), master.regionManager.getFirstMetaRegionForRegion(regionInfoX).getRegionName());
+     assertEquals(metaRegionInfo1.getStartKey(),
+       master.getRegionManager().getFirstMetaRegionForRegion(regionInfoX).getStartKey());
+     assertEquals(metaRegionInfo1.getRegionName(),
+      master.getRegionManager().getFirstMetaRegionForRegion(regionInfoX).getRegionName());
    }
 }

@@ -113,9 +113,10 @@ abstract class BaseScanner extends Chore implements HConstants {
   // mid-scan
   final Object scannerLock = new Object();
   
-  BaseScanner(final HMaster master, final boolean rootRegion, final int period,
+  BaseScanner(final HMaster master, final boolean rootRegion,
       final AtomicBoolean stop) {
-    super(period, stop);
+    super(master.getConfiguration().
+        getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000), stop);
     this.rootRegion = rootRegion;
     this.master = master;
     this.initialScanComplete = false;
@@ -153,7 +154,8 @@ abstract class BaseScanner extends Chore implements HConstants {
     List<byte []> emptyRows = new ArrayList<byte []>();
     int rows = 0;
     try {
-      regionServer = master.connection.getHRegionConnection(region.getServer());
+      regionServer =
+        this.master.getServerConnection().getHRegionConnection(region.getServer());
       Scan s = new Scan().addFamily(HConstants.CATALOG_FAMILY);
       // Make this scan do a row at a time otherwise, data can be stale.
       s.setCaching(1);
@@ -179,7 +181,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         rows += 1;
       }
       if (rootRegion) {
-        this.master.regionManager.setNumMetaRegions(rows);
+        this.master.getRegionManager().setNumMetaRegions(rows);
       }
     } catch (IOException e) {
       if (e instanceof RemoteException) {
@@ -282,7 +284,8 @@ abstract class BaseScanner extends Chore implements HConstants {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " (encoded=" + parent.getEncodedName() +
         ") because daughter splits no longer hold references");
-      HRegion.deleteRegion(this.master.fs, this.master.rootdir, parent);
+      HRegion.deleteRegion(this.master.getFileSystem(),
+        this.master.getRootDir(), parent);
       HRegion.removeRegionFromMETA(srvr, metaRegionName,
         parent.getRegionName());
       result = true;
@@ -313,15 +316,15 @@ abstract class BaseScanner extends Chore implements HConstants {
       return result;
     }
     Path tabledir =
-      new Path(this.master.rootdir, split.getTableDesc().getNameAsString());
+      new Path(this.master.getRootDir(), split.getTableDesc().getNameAsString());
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
       // Look for reference files.  Call listStatus with an anonymous
       // instance of PathFilter.
       LOG.debug("Looking for reference files in: " + p);
-      FileStatus [] ps = this.master.fs.listStatus(p,
-          new PathFilter () {
+      FileStatus [] ps =
+        this.master.getFileSystem().listStatus(p, new PathFilter () {
             public boolean accept(Path path) {
               LOG.debug("isReference: " + path);
               return StoreFile.isReference(path);
@@ -390,18 +393,18 @@ abstract class BaseScanner extends Chore implements HConstants {
       serverName = HServerInfo.getServerName(sa, sc);
     }
     HServerInfo storedInfo = null;
-    synchronized (this.master.regionManager) {
+    synchronized (this.master.getRegionManager()) {
       /* We don't assign regions that are offline, in transition or were on
        * a dead server. Regions that were on a dead server will get reassigned
        * by ProcessServerShutdown
        */
       if (info.isOffline() ||
-        this.master.regionManager.regionIsInTransition(info.getRegionNameAsString()) ||
-          (serverName != null && this.master.serverManager.isDead(serverName))) {
+        this.master.getRegionManager().regionIsInTransition(info.getRegionNameAsString()) ||
+          (serverName != null && this.master.getServerManager().isDead(serverName))) {
         return;
       }
       if (serverName != null) {
-        storedInfo = this.master.serverManager.getServerInfo(serverName);
+        storedInfo = this.master.getServerManager().getServerInfo(serverName);
       }
 
       // If we can't find the HServerInfo, then add it to the list of
@@ -414,7 +417,7 @@ abstract class BaseScanner extends Chore implements HConstants {
             ", startCode=" + sc + " unknown.");
         }
         // Now get the region assigned
-        this.master.regionManager.setUnassigned(info, true);
+        this.master.getRegionManager().setUnassigned(info, true);
       }
     }
   }

@@ -61,7 +61,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     assertNull(zooKeeperRootAddress);
 
     HMaster master = cluster.getMaster();
-    HServerAddress masterRootAddress = master.getRootRegionLocation();
+    HServerAddress masterRootAddress = master.getRegionManager().getRootRegionLocation();
     assertNull(masterRootAddress);
 
     new HTable(conf, HConstants.META_TABLE_NAME);
@@ -72,7 +72,7 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     zooKeeperRootAddress = zooKeeper.readRootRegionLocation();
     assertNotNull(zooKeeperRootAddress);
 
-    masterRootAddress = master.getRootRegionLocation();
+    masterRootAddress = master.getRegionManager().getRootRegionLocation();
     assertEquals(masterRootAddress, zooKeeperRootAddress);
   }
 

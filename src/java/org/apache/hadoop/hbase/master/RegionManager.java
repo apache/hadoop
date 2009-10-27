@@ -50,8 +50,8 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
  */ 
-class RegionManager implements HConstants {
+public class RegionManager implements HConstants {
   protected static final Log LOG = LogFactory.getLog(RegionManager.class);
   
   private AtomicReference<HServerAddress> rootRegionLocation =
@@ -170,7 +170,7 @@ class RegionManager implements HConstants {
   
   void reassignRootRegion() {
     unsetRootRegion();
-    if (!master.shutdownRequested.get()) {
+    if (!master.getShutdownRequested().get()) {
       synchronized (regionsInTransition) {
         RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO);
         s.setUnassigned();
@@ -193,7 +193,7 @@ class RegionManager implements HConstants {
   void assignRegions(HServerInfo info, HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
     HServerLoad thisServersLoad = info.getLoad();
-    boolean isSingleServer = master.serverManager.numServers() == 1;
+    boolean isSingleServer = this.master.numServers() == 1;
 
     // figure out what regions need to be assigned and aren't currently being
     // worked on elsewhere.
@@ -278,7 +278,7 @@ class RegionManager implements HConstants {
             // No other servers with same load.
             // Split regions over all available servers
             nregions = (int) Math.ceil((1.0 * nRegionsToAssign)/
-                (1.0 * master.serverManager.numServers()));
+                (1.0 * this.master.numServers()));
           }
         } else {
           // Assign all regions to this server
@@ -354,12 +354,7 @@ class RegionManager implements HConstants {
     final HServerLoad thisServersLoad) {
     SortedMap<HServerLoad, Set<String>> lightServers =
       new TreeMap<HServerLoad, Set<String>>();
-
-    // Get all the servers who are more lightly loaded than this one.
-    synchronized (master.serverManager.loadToServers) {
-      lightServers.putAll(master.serverManager.loadToServers.headMap(thisServersLoad));
-    }
-
+    this.master.getLightServers(thisServersLoad, lightServers);
     // Examine the list of servers that are more lightly loaded than this one.
     // Pretend that we will assign regions to these more lightly loaded servers
     // until they reach load equal with ours. Then, see how many regions are left
@@ -445,9 +440,9 @@ class RegionManager implements HConstants {
     
     SortedMap<HServerLoad, Set<String>> heavyServers =
       new TreeMap<HServerLoad, Set<String>>();
-    synchronized (master.serverManager.loadToServers) {
+    synchronized (master.getLoadToServers()) {
       heavyServers.putAll(
-        master.serverManager.loadToServers.tailMap(referenceLoad));
+        master.getLoadToServers().tailMap(referenceLoad));
     }
     int nservers = 0;
     for (Map.Entry<HServerLoad, Set<String>> e : heavyServers.entrySet()) {
@@ -545,19 +540,19 @@ class RegionManager implements HConstants {
    */
   public int countRegionsOnFS() throws IOException {
     int regions = 0;
-    FileStatus[] tableDirs =
-      master.fs.listStatus(master.rootdir, new TableDirFilter());
+    FileStatus [] tableDirs =
+      this.master.getFileSystem().listStatus(this.master.getRootDir(), new TableDirFilter());
     FileStatus[] regionDirs;
     RegionDirFilter rdf = new RegionDirFilter();
     for(FileStatus tabledir : tableDirs) {
       if(tabledir.isDir()) {
-        regionDirs = master.fs.listStatus(tabledir.getPath(), rdf);
+        regionDirs = this.master.getFileSystem().listStatus(tabledir.getPath(), rdf);
         regions += regionDirs.length;
       }
     }
     return regions;
   }
-  
+
   /**
    * @return Read-only map of online regions.
    */
@@ -700,7 +695,8 @@ class RegionManager implements HConstants {
     int prefixlen = META_REGION_PREFIX.length;
     if (row.length > prefixlen &&
      Bytes.compareTo(META_REGION_PREFIX, 0, prefixlen, row, 0, prefixlen) == 0) {
-    	return new MetaRegion(this.master.getRootRegionLocation(), HRegionInfo.ROOT_REGIONINFO);
+    	return new MetaRegion(this.master.getRegionManager().getRootRegionLocation(),
+    	  HRegionInfo.ROOT_REGIONINFO);
     }
     return this.onlineMetaRegions.floorEntry(row).getValue();
   }
@@ -719,7 +715,7 @@ class RegionManager implements HConstants {
       byte [] metaRegionName) 
   throws IOException {
     // 2. Create the HRegion
-    HRegion region = HRegion.createHRegion(newRegion, master.rootdir,
+    HRegion region = HRegion.createHRegion(newRegion, this.master.getRootDir(),
       master.getConfiguration());
 
     // 3. Insert into meta
@@ -786,10 +782,8 @@ class RegionManager implements HConstants {
   }
 
   public boolean isRootServer(HServerAddress server) {
-    if (master.getRootRegionLocation() != null
-        && server.equals(master.getRootRegionLocation()))
-      return true;
-    return false;
+    return this.master.getRegionManager().getRootRegionLocation() != null &&
+      server.equals(master.getRegionManager().getRootRegionLocation());
   }
 
   /**
@@ -801,13 +795,11 @@ class RegionManager implements HConstants {
    */
   public List<byte[]> listMetaRegionsForServer(HServerAddress server) {
     List<byte[]> metas = new ArrayList<byte[]>();
-
     for ( MetaRegion region : onlineMetaRegions.values() ) {
       if (server.equals(region.getServer())) {
         metas.add(region.getStartKey());
       }
     }
-
     return metas;
   }
 
@@ -859,8 +851,8 @@ class RegionManager implements HConstants {
 
     // check to see if ROOT and/or .META. are on this server, reassign them.
     // use master.getRootRegionLocation.
-    if (master.getRootRegionLocation() != null &&
-        server.equals(master.getRootRegionLocation())) {
+    if (master.getRegionManager().getRootRegionLocation() != null &&
+        server.equals(master.getRegionManager().getRootRegionLocation())) {
       LOG.info("Offlined ROOT server: " + server);
       reassignRootRegion();
       hasMeta = true;
@@ -1097,7 +1089,7 @@ class RegionManager implements HConstants {
     if (safeMode) {
       if(isInitialMetaScanComplete() && regionsInTransition.size() == 0 &&
          tellZooKeeperOutOfSafeMode()) {
-        master.connection.unsetRootRegionLocation();
+        master.getServerConnection().unsetRootRegionLocation();
         safeMode = false;
         LOG.info("exiting safe mode");
       } else {
@@ -1121,13 +1113,13 @@ class RegionManager implements HConstants {
    */
   public void waitForRootRegionLocation() {
     synchronized (rootRegionLocation) {
-      while (!master.closed.get() && rootRegionLocation.get() == null) {
+      while (!master.isClosed() && rootRegionLocation.get() == null) {
         // rootRegionLocation will be filled in when we get an 'open region'
         // regionServerReport message from the HRegionServer that has been
         // allocated the ROOT region below.
         try {
           // Cycle rather than hold here in case master is closed meantime.
-          rootRegionLocation.wait(this.master.threadWakeFrequency);
+          rootRegionLocation.wait(this.master.getThreadWakeFrequency());
         } catch (InterruptedException e) {
           // continue
         }
@@ -1341,7 +1333,7 @@ class RegionManager implements HConstants {
     void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
         ArrayList<HMsg> returnMsgs) {
       HServerLoad servLoad = info.getLoad();
-      double avg = master.serverManager.getAverageLoad();
+      double avg = master.getAverageLoad();
 
       // nothing to balance if server load not more then average load
       if(servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) {
@@ -1392,8 +1384,8 @@ class RegionManager implements HConstants {
     private int balanceToLowloaded(String srvName, HServerLoad srvLoad, 
         double avgLoad) {
 
-      SortedMap<HServerLoad, Set<String>> loadToServers = 
-        master.serverManager.getLoadToServers();
+      SortedMap<HServerLoad, Set<String>> loadToServers =
+        master.getLoadToServers();
       // check if server most loaded
       if (!loadToServers.get(loadToServers.lastKey()).contains(srvName))
         return 0;

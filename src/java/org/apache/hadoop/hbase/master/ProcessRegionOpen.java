@@ -66,7 +66,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
       return true;
     }
     HRegionInterface server =
-        master.connection.getHRegionConnection(getMetaRegion().getServer());
+        master.getServerConnection().getHRegionConnection(getMetaRegion().getServer());
     LOG.info(regionInfo.getRegionNameAsString() + " open on " +
         serverInfo.getServerAddress().toString());
 
@@ -80,31 +80,31 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(metaRegionName) + " with startcode=" +
       serverInfo.getStartCode() + ", server=" + serverInfo.getServerAddress());
-    synchronized (master.regionManager) {
+    synchronized (master.getRegionManager()) {
       if (isMetaTable) {
         // It's a meta region.
         MetaRegion m =
             new MetaRegion(new HServerAddress(serverInfo.getServerAddress()),
                 regionInfo);
-        if (!master.regionManager.isInitialMetaScanComplete()) {
+        if (!master.getRegionManager().isInitialMetaScanComplete()) {
           // Put it on the queue to be scanned for the first time.
           if (LOG.isDebugEnabled()) {
             LOG.debug("Adding " + m.toString() + " to regions to scan");
           }
-          master.regionManager.addMetaRegionToScan(m);
+          master.getRegionManager().addMetaRegionToScan(m);
         } else {
           // Add it to the online meta regions
           if (LOG.isDebugEnabled()) {
             LOG.debug("Adding to onlineMetaRegions: " + m.toString());
           }
-          master.regionManager.putMetaRegionOnline(m);
+          master.getRegionManager().putMetaRegionOnline(m);
           // Interrupting the Meta Scanner sleep so that it can
           // process regions right away
-          master.regionManager.metaScannerThread.interrupt();
+          master.getRegionManager().metaScannerThread.interrupt();
         }
       }
       // If updated successfully, remove from pending list.
-      master.regionManager.removeRegion(regionInfo);
+      master.getRegionManager().removeRegion(regionInfo);
       return true;
     }
   }

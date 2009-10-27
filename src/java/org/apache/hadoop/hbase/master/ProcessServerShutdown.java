@@ -55,12 +55,10 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   private static class ToDoEntry {
     boolean regionOffline;
-    final byte [] row;
     final HRegionInfo info;
 
-    ToDoEntry(final byte [] row, final HRegionInfo info) {
+    ToDoEntry(final HRegionInfo info) {
       this.regionOffline = false;
-      this.row = row;
       this.info = info;
     }
   }
@@ -76,7 +74,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     this.logSplit = false;
     this.rootRescanned = false;
     this.oldLogDir =
-      new Path(master.rootdir, HLog.getHLogDirectoryName(serverInfo));
+      new Path(master.getRootDir(), HLog.getHLogDirectoryName(serverInfo));
 
     // check to see if I am responsible for either ROOT or any of the META tables.
 
@@ -84,15 +82,15 @@ class ProcessServerShutdown extends RegionServerOperation {
   }
 
   private void closeMetaRegions() {
-    isRootServer = master.regionManager.isRootServer(deadServerAddress);
+    isRootServer = master.getRegionManager().isRootServer(deadServerAddress);
     if (isRootServer) {
-      master.regionManager.unsetRootRegion();
+      master.getRegionManager().unsetRootRegion();
     }
-    List<byte[]> metaStarts = master.regionManager.listMetaRegionsForServer(deadServerAddress);
+    List<byte[]> metaStarts = master.getRegionManager().listMetaRegionsForServer(deadServerAddress);
 
     metaRegions = new ArrayList<MetaRegion>();
     for (byte [] region : metaStarts) {
-      MetaRegion r = master.regionManager.offlineMetaRegion(region);
+      MetaRegion r = master.getRegionManager().offlineMetaRegion(region);
       metaRegions.add(r);
     }
   }
@@ -153,22 +151,22 @@ class ProcessServerShutdown extends RegionServerOperation {
           continue;
         }
 
-        synchronized (master.regionManager) {
+        synchronized (master.getRegionManager()) {
           if (info.isMetaTable()) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("removing meta region " +
                   Bytes.toString(info.getRegionName()) +
               " from online meta regions");
             }
-            master.regionManager.offlineMetaRegion(info.getStartKey());
+            master.getRegionManager().offlineMetaRegion(info.getStartKey());
           }
 
-          ToDoEntry todo = new ToDoEntry(row, info);
+          ToDoEntry todo = new ToDoEntry(info);
           toDoList.add(todo);
 
-          if (master.regionManager.isOfflined(info.getRegionNameAsString()) ||
+          if (master.getRegionManager().isOfflined(info.getRegionNameAsString()) ||
               info.isOffline()) {
-            master.regionManager.removeRegion(info);
+            master.getRegionManager().removeRegion(info);
             // Mark region offline
             if (!info.isOffline()) {
               todo.regionOffline = true;
@@ -209,7 +207,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     // Get regions reassigned
     for (HRegionInfo info: regions) {
-      master.regionManager.setUnassigned(info, true);
+      master.getRegionManager().setUnassigned(info, true);
     }
   }
 
@@ -221,7 +219,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
         LOG.debug("process server shutdown scanning root region on " +
-            master.getRootRegionLocation().getBindAddress());
+            master.getRegionManager().getRootRegionLocation().getBindAddress());
       }
       Scan scan = new Scan();
       scan.addFamily(CATALOG_FAMILY);
@@ -258,20 +256,21 @@ class ProcessServerShutdown extends RegionServerOperation {
       ": logSplit: " +
       logSplit + ", rootRescanned: " + rootRescanned +
       ", numberOfMetaRegions: " + 
-      master.regionManager.numMetaRegions() +
+      master.getRegionManager().numMetaRegions() +
       ", onlineMetaRegions.size(): " + 
-      master.regionManager.numOnlineMetaRegions());
+      master.getRegionManager().numOnlineMetaRegions());
     if (!logSplit) {
       // Process the old log file
-      if (master.fs.exists(oldLogDir)) {
-        if (!master.regionManager.splitLogLock.tryLock()) {
+      if (this.master.getFileSystem().exists(oldLogDir)) {
+        if (!master.getRegionManager().splitLogLock.tryLock()) {
           return false;
         }
         try {
-          HLog.splitLog(master.rootdir, oldLogDir, master.fs,
-            master.getConfiguration());
+          HLog.splitLog(master.getRootDir(), oldLogDir,
+            this.master.getFileSystem(),
+            this.master.getConfiguration());
         } finally {
-          master.regionManager.splitLogLock.unlock();
+          master.getRegionManager().splitLogLock.unlock();
         }
       }
       logSplit = true;
@@ -281,14 +280,14 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     if (this.isRootServer) {
       LOG.info("ProcessServerShutdown reassigning ROOT region");
-      master.regionManager.reassignRootRegion();
+      master.getRegionManager().reassignRootRegion();
 
       isRootServer = false;  // prevent double reassignment... heh.
     }
 
     for (MetaRegion metaRegion : metaRegions) {
       LOG.info("ProcessServerShutdown setting to unassigned: " + metaRegion.toString());
-      master.regionManager.setUnassigned(metaRegion.getRegionInfo(), true);
+      master.getRegionManager().setUnassigned(metaRegion.getRegionInfo(), true);
     }
     // one the meta regions are online, "forget" about them.  Since there are explicit
     // checks below to make sure meta/root are online, this is likely to occur.
@@ -304,7 +303,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     if (!rootRescanned) {
       // Scan the ROOT region
       Boolean result = new ScanRootRegion(
-          new MetaRegion(master.getRootRegionLocation(),
+          new MetaRegion(master.getRegionManager().getRootRegionLocation(),
               HRegionInfo.ROOT_REGIONINFO), this.master).doWithRetries();
       if (result == null) {
         // Master is closing - give up
@@ -313,7 +312,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("process server shutdown scanning root region on " +
-          master.getRootRegionLocation().getBindAddress() + 
+          master.getRegionManager().getRootRegionLocation().getBindAddress() + 
           " finished " + Thread.currentThread().getName());
       }
       rootRescanned = true;
@@ -325,7 +324,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       return true;
     }
 
-    List<MetaRegion> regions = master.regionManager.getListOfOnlineMetaRegions();
+    List<MetaRegion> regions = master.getRegionManager().getListOfOnlineMetaRegions();
     for (MetaRegion r: regions) {
       Boolean result = new ScanMetaRegions(r, this.master).doWithRetries();
       if (result == null) {
@@ -337,7 +336,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
     }
     // Remove this server from dead servers list.  Finished splitting logs.
-    this.master.serverManager.removeDeadServer(deadServer);
+    this.master.getServerManager().removeDeadServer(deadServer);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removed " + deadServer + " from deadservers Map");
     }

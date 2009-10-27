@@ -62,12 +62,12 @@ abstract class TableOperation implements HConstants {
     if (!Bytes.equals(HConstants.META_TABLE_NAME, this.tableName)) {
       // We can not access any meta region if they have not already been
       // assigned and scanned.
-      if (master.regionManager.metaScannerThread.waitForMetaRegionsOrClose()) {
+      if (master.getRegionManager().metaScannerThread.waitForMetaRegionsOrClose()) {
         // We're shutting down. Forget it.
         throw new MasterNotRunningException(); 
       }
     }
-    this.metaRegions = master.regionManager.getMetaRegionsForTable(tableName);
+    this.metaRegions = master.getRegionManager().getMetaRegionsForTable(tableName);
   }
 
   private class ProcessTableOperation extends RetryableMetaOperation<Boolean> {
@@ -152,7 +152,7 @@ abstract class TableOperation implements HConstants {
 
   void process() throws IOException {
     // Prevent meta scanner from running
-    synchronized(master.regionManager.metaScannerThread.scannerLock) {
+    synchronized(master.getRegionManager().metaScannerThread.scannerLock) {
       for (MetaRegion m: metaRegions) {
         new ProcessTableOperation(m, master).doWithRetries();
       }
@@ -162,7 +162,7 @@ abstract class TableOperation implements HConstants {
   protected boolean isBeingServed(String serverName) {
     boolean result = false;
     if (serverName != null && serverName.length() > 0) {
-      HServerInfo s = master.serverManager.getServerInfo(serverName);
+      HServerInfo s = master.getServerManager().getServerInfo(serverName);
       result = s != null;
     }
     return result;

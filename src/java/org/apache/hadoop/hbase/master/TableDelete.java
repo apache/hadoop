@@ -61,7 +61,8 @@ class TableDelete extends TableOperation {
       // Delete the region
       try {
         HRegion.removeRegionFromMETA(server, m.getRegionName(), i.getRegionName());
-        HRegion.deleteRegion(this.master.fs, this.master.rootdir, i);
+        HRegion.deleteRegion(this.master.getFileSystem(),
+          this.master.getRootDir(), i);
       
       } catch (IOException e) {
         LOG.error("failed to delete region " + Bytes.toString(i.getRegionName()),
@@ -70,6 +71,7 @@ class TableDelete extends TableOperation {
     }
     
     // delete the table's folder from fs.
-    master.fs.delete(new Path(master.rootdir, Bytes.toString(tableName)), true);
+    this.master.getFileSystem().delete(new Path(this.master.getRootDir(),
+      Bytes.toString(this.tableName)), true);
   }
 }

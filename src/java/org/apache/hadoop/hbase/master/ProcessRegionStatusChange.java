@@ -51,7 +51,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
         available = false;
       }
     } else {
-      if (!master.regionManager.isInitialRootScanComplete() ||
+      if (!master.getRegionManager().isInitialRootScanComplete() ||
           !metaTableAvailable()) {
         // The root region has not been scanned or the meta table is not
         // available so we can't proceed.
@@ -66,11 +66,11 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected MetaRegion getMetaRegion() {
     if (isMetaTable) {
       this.metaRegionName = HRegionInfo.ROOT_REGIONINFO.getRegionName();
-      this.metaRegion = new MetaRegion(master.getRootRegionLocation(),
+      this.metaRegion = new MetaRegion(master.getRegionManager().getRootRegionLocation(),
           HRegionInfo.ROOT_REGIONINFO);
     } else {
       this.metaRegion =
-        master.regionManager.getFirstMetaRegionForRegion(regionInfo);
+        master.getRegionManager().getFirstMetaRegionForRegion(regionInfo);
       if (this.metaRegion != null) {
         this.metaRegionName = this.metaRegion.getRegionName();
       }

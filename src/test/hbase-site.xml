@@ -37,6 +37,15 @@
     before running a retry of a failed get, region lookup, etc.</description>
   </property>
   <property>
+    <name>hbase.client.retries.number</name>
+    <value>4</value>
+    <description>Maximum retries.  Used as maximum for all retryable
+    operations such as fetching of the root region from root region
+    server, getting a cell's value, starting a row update, etc.
+    Default: 10.
+    </description>
+  </property>
+  <property>
     <name>hbase.master.meta.thread.rescanfrequency</name>
     <value>10000</value>
     <description>How long the HMaster sleeps (in milliseconds) between scans of

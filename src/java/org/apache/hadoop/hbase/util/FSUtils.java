@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -217,22 +218,62 @@ public class FSUtils {
    * Verifies root directory path is a valid URI with a scheme
    * 
    * @param root root directory path
+   * @return Passed <code>root</code> argument.
    * @throws IOException if not a valid URI with a scheme
    */
-  public static void validateRootPath(Path root) throws IOException {
+  public static Path validateRootPath(Path root) throws IOException {
     try {
       URI rootURI = new URI(root.toString());
       String scheme = rootURI.getScheme();
       if (scheme == null) {
-        throw new IOException("Root directory does not contain a scheme");
+        throw new IOException("Root directory does not have a scheme");
       }
+      return root;
     } catch (URISyntaxException e) {
-      IOException io = new IOException("Root directory path is not a valid URI");
+      IOException io = new IOException("Root directory path is not a valid " +
+        "URI -- check your " + HConstants.HBASE_DIR + " configuration");
       io.initCause(e);
       throw io;
     }
   }
-  
+
+  /**
+   * Verify and qualify rootdir in <code>conf</code>.  Does not test for
+   * existence of the rootdir.
+   * @param conf.
+   * @return Verified and qualified rootdir.
+   * @throws IOException
+   */
+  public static Path verifyAndQualifyRootDir(final HBaseConfiguration conf)
+  throws IOException {
+    Path dir = FSUtils.getRootDir(conf, false);
+    return FileSystem.get(conf).makeQualified(FSUtils.validateRootPath(dir));
+  }
+
+  /**
+   * If DFS, check safe mode and if so, wait until we clear it.
+   * @param conf
+   * @param wait Sleep between retries
+   * @throws IOException
+   */
+  public static void waitOnSafeMode(final HBaseConfiguration conf,
+    final long wait)
+  throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    if (!(fs instanceof DistributedFileSystem)) return;
+    DistributedFileSystem dfs = (DistributedFileSystem)fs;
+    // Make sure dfs is not in safe mode
+    String message = "Waiting for dfs to exit safe mode...";
+    while (dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET)) {
+      LOG.info(message);
+      try {
+        Thread.sleep(wait);
+      } catch (InterruptedException e) {
+        //continue
+      }
+    }
+  }
+
   /**
    * Return the 'path' component of a Path.  In Hadoop, Path is an URI.  This
    * method returns the 'path' component of a Path's URI: e.g. If a Path is
@@ -254,10 +295,22 @@ public class FSUtils {
    * @throws IOException 
    */
   public static Path getRootDir(final HBaseConfiguration c) throws IOException {
+    return getRootDir(c, true);
+  }
+
+  /**
+   * @param c
+   * @param test If true, test for presence and throw exception if not present.
+   * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> as a
+   * Path.
+   * @throws IOException 
+   */
+  public static Path getRootDir(final HBaseConfiguration c, final boolean test)
+  throws IOException {
     FileSystem fs = FileSystem.get(c);
     // Get root directory of HBase installation
     Path rootdir = fs.makeQualified(new Path(c.get(HConstants.HBASE_DIR)));
-    if (!fs.exists(rootdir)) {
+    if (test && !fs.exists(rootdir)) {
       String message = "HBase root directory " + rootdir.toString() +
         " does not exist.";
       LOG.error(message);

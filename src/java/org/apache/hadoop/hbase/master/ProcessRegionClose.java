@@ -75,7 +75,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
               // set of regions in transition
               HRegion.offlineRegionInMETA(server, metaRegionName,
                   regionInfo);
-              master.regionManager.removeRegion(regionInfo);
+              master.getRegionManager().removeRegion(regionInfo);
             }
             return true;
           }
@@ -85,7 +85,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
     } else if (reassignRegion) {
       LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
       // we are reassigning the region eventually, so set it unassigned
-      master.regionManager.setUnassigned(regionInfo, false);
+      master.getRegionManager().setUnassigned(regionInfo, false);
     } else {
       LOG.info("Region was neither offlined, or asked to be reassigned, what gives: " +
       regionInfo.getRegionNameAsString());
