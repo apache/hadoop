@@ -582,15 +582,8 @@ public class ServerManager implements HConstants {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
           this.master.getRegionManager().setOpen(region.getRegionNameAsString());
-          // Queue up an update to note the region location.  Do inside
-          // a retry loop in case interrupted.
-          boolean succeeded = false;
-          for (int i = 0; i < 10; i++) {
-            this.master.queue(new ProcessRegionOpen(master, serverInfo, region));
-          }
-          if (!succeeded) {
-            LOG.warn("FAILED ADDING OPEN TO TODO QUEUE: " + serverInfo);
-          }
+          // Queue up an update to note the region location.
+          this.master.queue(new ProcessRegionOpen(master, serverInfo, region));
         }
       }
     }
