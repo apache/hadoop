@@ -404,9 +404,8 @@
     <name>zookeeper.retries</name>
     <value>5</value>
     <description>How many times to retry connections to ZooKeeper. Used for
-      reading/writing root region location, checking/writing out of safe mode.
-      Used together with ${zookeeper.pause} in an exponential backoff fashion
-      when making queries to ZooKeeper.
+      reading/writing root region location.  Used together with ${zookeeper.pause}
+      in an exponential backoff fashion when making queries to ZooKeeper.
     </description>
   </property>
   <property>
@@ -433,16 +432,6 @@
       the master and read by clients and region servers. If a relative path is
       given, the parent folder will be ${zookeeper.znode.parent}. By default,
       this means the root location is stored at /hbase/root-region-server.
-    </description>
-  </property>
-  <property>
-    <name>zookeeper.znode.safemode</name>
-    <value>safe-mode</value>
-    <description>Path to ephemeral ZNode signifying cluster is out of safe mode.
-      This is created by the master when scanning is done. Clients wait for this
-      node before querying the cluster. If a relative path is given, the parent
-      folder will be ${zookeeper.znode.parent}. By default, this means the safe
-      mode flag is stored at /hbase/safe-mode.
     </description>
   </property>
 

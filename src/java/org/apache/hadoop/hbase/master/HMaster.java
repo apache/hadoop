@@ -157,16 +157,18 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public HMaster(HBaseConfiguration conf) throws IOException {
     this.conf = conf;
-    this.fs = FileSystem.get(this.conf);
-    this.rootdir = getAndCheckRootDir(this.conf, this.fs);
-    // Set back into the configuration the qualified rootdir path.
-    this.conf.set(HConstants.HBASE_DIR, rootdir.toString());
-    // Set filesystem to be that of this.rootdir.
+    // Set filesystem to be that of this.rootdir else we get complaints about
+    // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
+    // default localfs.  Presumption is that rootdir is fully-qualified before
+    // we get to here with appropriate fs scheme.
+    this.rootdir = FSUtils.getRootDir(this.conf);
     this.conf.set("fs.defaultFS", this.rootdir.toString());
+    this.fs = FileSystem.get(this.conf);
+    checkRootDir(this.rootdir, this.conf, this.fs);
 
     // Get my address and create an rpc server instance.  The rpc-server port
     // can be ephemeral...ensure we have the correct info
-    HServerAddress a = new HServerAddress(getMyAddress());
+    HServerAddress a = new HServerAddress(getMyAddress(this.conf));
     this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(),
       a.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
@@ -198,19 +200,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   /*
-   * Get the rootdir.  Make sure its wholesome before returning.
+   * Get the rootdir.  Make sure its wholesome and exists before returning.
+   * @param rd
    * @param conf
    * @param fs
-   * @return Fully qualified path to wholesome hbase root dir.
+   * @return hbase.rootdir (after checks for existence and bootstrapping if
+   * needed populating the directory with necessary bootup files).
    * @throws IOException
    */
-  private Path getAndCheckRootDir(final HBaseConfiguration c,
+  private static Path checkRootDir(final Path rd, final HBaseConfiguration c,
     final FileSystem fs)
   throws IOException {
-    Path rd = FSUtils.verifyAndQualifyRootDir(c);
     // If FS is in safe mode wait till out of it.
     FSUtils.waitOnSafeMode(c, c.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000));
-
     // Filesystem is good. Go ahead and check for hbase.rootdir.
     if (!fs.exists(rd)) {
       fs.mkdirs(rd);
@@ -225,21 +227,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return rd;
   }
 
-  /*
-   * @return This masters' address.
-   * @throws UnknownHostException
-   */
-  private String getMyAddress() throws UnknownHostException {
-    // Find out our address up in DNS.
-    String addressStr = DNS.getDefaultHost(
-      conf.get("hbase.master.dns.interface","default"),
-      conf.get("hbase.master.dns.nameserver","default"));
-    addressStr += ":" +
-      this.conf.get(MASTER_PORT, Integer.toString(DEFAULT_MASTER_PORT));
-    return addressStr;
-  }
-
-  private void bootstrap(final Path rd, final HBaseConfiguration c)
+  private static void bootstrap(final Path rd, final HBaseConfiguration c)
   throws IOException {
     LOG.info("BOOTSTRAP: creating ROOT and first META regions");
     try {
@@ -271,10 +259,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @param hri Set all family block caching to <code>b</code>
    * @param b
    */
-  private void setBlockCaching(final HRegionInfo hri, final boolean b) {
+  private static void setBlockCaching(final HRegionInfo hri, final boolean b) {
     for (HColumnDescriptor hcd: hri.getTableDesc().families.values()) {
       hcd.setBlockCacheEnabled(b);
     }
+  }
+
+  /*
+   * @return This masters' address.
+   * @throws UnknownHostException
+   */
+  private static String getMyAddress(final HBaseConfiguration c)
+  throws UnknownHostException {
+    // Find out our address up in DNS.
+    String s = DNS.getDefaultHost(c.get("hbase.master.dns.interface","default"),
+      c.get("hbase.master.dns.nameserver","default"));
+    s += ":" + c.get(MASTER_PORT, Integer.toString(DEFAULT_MASTER_PORT));
+    return s;
   }
 
   /**

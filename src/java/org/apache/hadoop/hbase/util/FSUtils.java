@@ -238,19 +238,6 @@ public class FSUtils {
   }
 
   /**
-   * Verify and qualify rootdir in <code>conf</code>.  Does not test for
-   * existence of the rootdir.
-   * @param conf.
-   * @return Verified and qualified rootdir.
-   * @throws IOException
-   */
-  public static Path verifyAndQualifyRootDir(final HBaseConfiguration conf)
-  throws IOException {
-    Path dir = FSUtils.getRootDir(conf, false);
-    return FileSystem.get(conf).makeQualified(FSUtils.validateRootPath(dir));
-  }
-
-  /**
    * If DFS, check safe mode and if so, wait until we clear it.
    * @param conf
    * @param wait Sleep between retries
@@ -290,35 +277,14 @@ public class FSUtils {
 
   /**
    * @param c
-   * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> as a
-   * Path.
+   * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> from
+   * configuration as a Path.
    * @throws IOException 
    */
   public static Path getRootDir(final HBaseConfiguration c) throws IOException {
-    return getRootDir(c, true);
+    return new Path(c.get(HConstants.HBASE_DIR));
   }
 
-  /**
-   * @param c
-   * @param test If true, test for presence and throw exception if not present.
-   * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> as a
-   * Path.
-   * @throws IOException 
-   */
-  public static Path getRootDir(final HBaseConfiguration c, final boolean test)
-  throws IOException {
-    FileSystem fs = FileSystem.get(c);
-    // Get root directory of HBase installation
-    Path rootdir = fs.makeQualified(new Path(c.get(HConstants.HBASE_DIR)));
-    if (test && !fs.exists(rootdir)) {
-      String message = "HBase root directory " + rootdir.toString() +
-        " does not exist.";
-      LOG.error(message);
-      throw new FileNotFoundException(message);
-    }
-    return rootdir;
-  }
-  
   /**
    * Checks if root region exists
    * 
