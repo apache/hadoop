@@ -62,7 +62,6 @@ public class ZooKeeperWrapper implements HConstants {
 
   private final String parentZNode;
   private final String rootRegionZNode;
-  private final String outOfSafeModeZNode;
   private final String rsZNode;
   private final String masterElectionZNode;
   public final String clusterStateZNode;
@@ -94,8 +93,6 @@ public class ZooKeeperWrapper implements HConstants {
 
     String rootServerZNodeName = conf.get("zookeeper.znode.rootserver",
                                           "root-region-server");
-    String outOfSafeModeZNodeName = conf.get("zookeeper.znode.safemode",
-                                             "safe-mode");
     String rsZNodeName = conf.get("zookeeper.znode.rs", "rs");
     String masterAddressZNodeName = conf.get("zookeeper.znode.master",
       "master");
@@ -103,7 +100,6 @@ public class ZooKeeperWrapper implements HConstants {
     "shutdown");
     
     rootRegionZNode = getZNode(parentZNode, rootServerZNodeName);
-    outOfSafeModeZNode = getZNode(parentZNode, outOfSafeModeZNodeName);
     rsZNode = getZNode(parentZNode, rsZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode = getZNode(parentZNode, stateZNodeName);
@@ -169,7 +165,6 @@ public class ZooKeeperWrapper implements HConstants {
     StringBuilder sb = new StringBuilder();
     sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
     sb.append("\n  Cluster up? ").append(exists(clusterStateZNode));
-    sb.append("\n  In safe mode? ").append(!checkOutOfSafeMode());
     sb.append("\n  Master address: ").append(readMasterAddress(null));
     sb.append("\n  Region server holding ROOT: ").append(readRootRegionLocation());
     sb.append("\n  Region servers:");
@@ -469,42 +464,6 @@ public class ZooKeeperWrapper implements HConstants {
     return false;
   }
 
-  /**
-   * Check if we're out of safe mode. Being out of safe mode is signified by an
-   * ephemeral ZNode existing in ZooKeeper.
-   * @return true if we're out of safe mode, false otherwise.
-   */
-  public boolean checkOutOfSafeMode() {
-    if (!ensureParentExists(outOfSafeModeZNode)) {
-      return false;
-    }
-
-    return checkExistenceOf(outOfSafeModeZNode);
-  }
-
-  /**
-   * Create ephemeral ZNode signifying that we're out of safe mode.
-   * @return true if ephemeral ZNode created successfully, false otherwise.
-   */
-  public boolean writeOutOfSafeMode() {
-    if (!ensureParentExists(outOfSafeModeZNode)) {
-      return false;
-    }
-
-    try {
-      zooKeeper.create(outOfSafeModeZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
-                       CreateMode.EPHEMERAL);
-      LOG.debug("Wrote out of safe mode");
-      return true;
-    } catch (InterruptedException e) {
-      LOG.warn("Failed to create out of safe mode in ZooKeeper: " + e);
-    } catch (KeeperException e) {
-      LOG.warn("Failed to create out of safe mode in ZooKeeper: " + e);
-    }
-
-    return false;
-  }
-  
   /**
    * Write in ZK this RS startCode and address.
    * Ensures that the full path exists.

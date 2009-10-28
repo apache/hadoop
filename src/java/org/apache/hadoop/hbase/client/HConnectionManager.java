@@ -907,10 +907,7 @@ public class HConnectionManager implements HConstants {
         while (rootRegionAddress == null && localTimeouts < numRetries) {
           // Don't read root region until we're out of safe mode so we know
           // that the meta regions have been assigned.
-          boolean outOfSafeMode = zk.checkOutOfSafeMode();
-          if (outOfSafeMode) {
-            rootRegionAddress = zk.readRootRegionLocation();
-          }
+          rootRegionAddress = zk.readRootRegionLocation();
           if (rootRegionAddress == null) {
             try {
               if (LOG.isDebugEnabled()) {

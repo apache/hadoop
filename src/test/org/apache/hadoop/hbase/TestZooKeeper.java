@@ -54,9 +54,6 @@ public class TestZooKeeper extends HBaseClusterTestCase {
   public void testWritesRootRegionLocation() throws IOException {
     ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
 
-    boolean outOfSafeMode = zooKeeper.checkOutOfSafeMode();
-    assertFalse(outOfSafeMode);
-
     HServerAddress zooKeeperRootAddress = zooKeeper.readRootRegionLocation();
     assertNull(zooKeeperRootAddress);
 
@@ -66,25 +63,11 @@ public class TestZooKeeper extends HBaseClusterTestCase {
 
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    outOfSafeMode = zooKeeper.checkOutOfSafeMode();
-    assertTrue(outOfSafeMode);
-
     zooKeeperRootAddress = zooKeeper.readRootRegionLocation();
     assertNotNull(zooKeeperRootAddress);
 
     masterRootAddress = master.getRegionManager().getRootRegionLocation();
     assertEquals(masterRootAddress, zooKeeperRootAddress);
-  }
-
-  /**
-   * @throws IOException
-   */
-  public void testParentExists() throws IOException {
-    String oldValue = conf.get("zookeeper.znode.safemode");
-    conf.set("zookeeper.znode.safemode", "/a/b/c/d/e");
-    ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
-    assertTrue(zooKeeper.writeOutOfSafeMode());
-    conf.set("zookeeper.znode.safemode", oldValue);
   }
 
   /**

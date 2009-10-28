@@ -66,9 +66,7 @@ public class RegionManager implements HConstants {
   
   private AtomicReference<HServerAddress> rootRegionLocation =
     new AtomicReference<HServerAddress>(null);
-  
-  private volatile boolean safeMode = true;
-  
+
   final Lock splitLogLock = new ReentrantLock();
   
   private final RootScanner rootScannerThread;
@@ -201,11 +199,7 @@ public class RegionManager implements HConstants {
       regionsAwaitingAssignment(info.getServerAddress(), isSingleServer);
     if (regionsToAssign.size() == 0) {
       // There are no regions waiting to be assigned.
-      if (!inSafeMode()) {
-        // We only do load balancing once all regions are assigned.
-        // This prevents churn while the cluster is starting up.
-        loadBalancer.loadBalancing(info, mostLoadedRegions, returnMsgs);
-      }
+      this.loadBalancer.loadBalancing(info, mostLoadedRegions, returnMsgs);
     } else {
       // if there's only one server, just give it all the regions
       if (isSingleServer) {
@@ -1066,39 +1060,6 @@ public class RegionManager implements HConstants {
     return metaScannerThread.isInitialScanComplete();
   }
 
-  private boolean tellZooKeeperOutOfSafeMode() {
-    for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      if (zooKeeperWrapper.writeOutOfSafeMode()) {
-        return true;
-      }
-
-      sleep(attempt);
-    }
-
-    LOG.error("Failed to tell ZooKeeper we're out of safe mode after " +
-              zooKeeperNumRetries + " retries");
-
-    return false;
-  }
-
-  /** 
-   * @return true if the initial meta scan is complete and there are no
-   * unassigned or pending regions
-   */
-  public boolean inSafeMode() {
-    if (safeMode) {
-      if(isInitialMetaScanComplete() && regionsInTransition.size() == 0 &&
-         tellZooKeeperOutOfSafeMode()) {
-        master.getServerConnection().unsetRootRegionLocation();
-        safeMode = false;
-        LOG.info("exiting safe mode");
-      } else {
-        LOG.info("in safe mode");
-      }
-    }
-    return safeMode;
-  }
-  
   /** 
    * Get the root region location.
    * @return HServerAddress describing root region server.

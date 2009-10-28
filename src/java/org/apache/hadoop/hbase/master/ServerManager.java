@@ -575,10 +575,8 @@ public class ServerManager implements HConstants {
 
           // Store the Root Region location (in memory)
           HServerAddress rootServer = serverInfo.getServerAddress();
-          if (this.master.getRegionManager().inSafeMode()) {
-            this.master.getServerConnection().setRootRegionLocation(
-                new HRegionLocation(region, rootServer));
-          }
+          this.master.getServerConnection().setRootRegionLocation(
+            new HRegionLocation(region, rootServer));
           this.master.getRegionManager().setRootRegionLocation(rootServer);
         } else {
           // Note that the table has been assigned and is waiting for the

@@ -486,15 +486,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
                 !restart && !stopRequested.get() && i < msgs.length;
                 i++) {
               LOG.info(msgs[i].toString());
-              if (safeMode.get()) {
-                if (zooKeeperWrapper.checkOutOfSafeMode()) {
-                  this.connection.unsetRootRegionLocation();
-                  synchronized (safeMode) {
-                    safeMode.set(false);
-                    safeMode.notifyAll();
-                  }
-                }
-              }
+              this.connection.unsetRootRegionLocation();
               switch(msgs[i].getType()) {
               case MSG_CALL_SERVER_STARTUP:
                 // We the MSG_CALL_SERVER_STARTUP on startup but we can also

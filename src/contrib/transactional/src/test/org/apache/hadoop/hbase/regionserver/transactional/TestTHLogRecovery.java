@@ -86,10 +86,9 @@ public class TestTHLogRecovery extends HBaseClusterTestCase {
 
   @Override
   protected void setUp() throws Exception {
-    /*FileSystem lfs = FileSystem.getLocal(conf);
+    FileSystem lfs = FileSystem.getLocal(conf);
     Path p = new Path(conf.get(HConstants.HBASE_DIR));
     if (lfs.exists(p)) lfs.delete(p, true);
-    */
     super.setUp();
 
     HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
