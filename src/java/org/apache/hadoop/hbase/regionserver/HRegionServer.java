@@ -157,7 +157,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   final int numRetries;
   protected final int threadWakeFrequency;
   private final int msgInterval;
-  private final int serverLeaseTimeout;
 
   protected final int numRegionsToReport;
   
@@ -259,8 +258,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
-    this.serverLeaseTimeout =
-      conf.getInt("hbase.master.lease.period", 120 * 1000);
 
     sleeper = new Sleeper(this.msgInterval, this.stopRequested);
 
@@ -444,11 +441,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
           }
         }
         long now = System.currentTimeMillis();
-        if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
-          // It has been way too long since we last reported to the master.
-          LOG.warn("unable to report to master for " + (now - lastMsg) +
-            " milliseconds - retrying");
-        }
         // Send messages to the master IF this.msgInterval has elapsed OR if
         // we have something to tell (and we didn't just fail sending master).
         if ((now - lastMsg) >= msgInterval ||
@@ -1324,13 +1316,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
         }
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
-      } catch (Leases.LeaseStillHeldException e) {
-        LOG.info("Lease " + e.getName() + " already held on master. Check " +
-          "DNS configuration so that all region servers are" +
-          "reporting their true IPs and not 127.0.0.1. Otherwise, this" +
-          "problem should resolve itself after the lease period of " +
-          this.conf.get("hbase.master.lease.period")
-          + " seconds expires over on the master");
       } catch (IOException e) {
         LOG.warn("error telling master we are up", e);
       }

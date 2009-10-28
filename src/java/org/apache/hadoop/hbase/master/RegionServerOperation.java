@@ -33,12 +33,12 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   
   private long expire;
   protected final HMaster master;
-  final int leaseTimeout;
+  final int delay;
   
   protected RegionServerOperation(HMaster master) {
     this.master = master;
-    this.leaseTimeout = this.master.getConfiguration().
-      getInt("hbase.master.lease.period", 120 * 1000);
+    this.delay = this.master.getConfiguration().
+      getInt("hbase.server.thread.wakefrequency", 10 * 1000);
     // Set the future time at which we expect to be released from the
     // DelayQueue we're inserted in on lease expiration.
     this.expire = whenToExpire();
@@ -60,7 +60,7 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   }
 
   private long whenToExpire() {
-    return System.currentTimeMillis() + this.leaseTimeout / 2;
+    return System.currentTimeMillis() + this.delay;
   }
 
   protected boolean rootAvailable() {

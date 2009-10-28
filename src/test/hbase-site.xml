@@ -68,15 +68,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.lease.period</name>
-    <value>6000</value>
-    <description>Length of time the master will wait before timing out a region
-    server lease. Since region servers report in every second (see above), this
-    value has been reduced so that the master will notice a dead region server
-    sooner. The default is 30 seconds.
-    </description>
-  </property>
-  <property>
     <name>hbase.master.info.port</name>
     <value>-1</value>
     <description>The port for the hbase master web UI

@@ -1885,7 +1885,6 @@ public class TestHRegion extends HBaseTestCase {
     conf.setInt("hbase.hstore.compactionThreshold", 2);
     
     // Make lease timeout longer, lease checks less frequent
-    conf.setInt("hbase.master.lease.period", 10 * 1000);
     conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
     
     conf.setInt("hbase.regionserver.lease.period", 10 * 1000);

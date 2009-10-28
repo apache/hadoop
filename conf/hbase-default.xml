@@ -79,14 +79,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.lease.period</name>
-    <value>120000</value>
-    <description>HMaster server lease period in milliseconds. Default is
-    120 seconds.  Region servers must report in within this period else
-    they are considered dead.  On loaded cluster, may need to up this
-    period.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.port</name>
     <value>60020</value>
     <description>The port an HBase region server binds to.
