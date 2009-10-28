@@ -2331,14 +2331,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return pos;
     }
 
-    /**
+    /** Return the size of the remaining available bytes
+     * if the size is less than or equal to {@link Integer#MAX_VALUE},
+     * otherwise, return {@link Integer#MAX_VALUE}.
      */
     @Override
     public synchronized int available() throws IOException {
       if (closed) {
         throw new IOException("Stream closed");
       }
-      return (int) (getFileLength() - pos);
+
+      final long remaining = getFileLength() - pos;
+      return remaining <= Integer.MAX_VALUE? (int)remaining: Integer.MAX_VALUE;
     }
 
     /**

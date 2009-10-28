@@ -31,8 +31,6 @@ Trunk (unreleased changes)
     HDFS-726. Eclipse .classpath template has outdated jar files and is
     missing some new ones. (cos)
 
-    HDFS-735. TestReadWhileWriting has wrong line termination symbols (cos)
-
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -461,6 +459,11 @@ Release 0.21.0 - Unreleased
     szetszwo)
 
     HDFS-625. Fix NullPointerException thrown from ListPathServlet. (suresh)
+
+    HDFS-735. TestReadWhileWriting has wrong line termination symbols (cos)
+
+    HDFS-691. Fix an overflow error in DFSClient.DFSInputStream.available().
+    (szetszwo)
 
 Release 0.20.2 - Unreleased
 
