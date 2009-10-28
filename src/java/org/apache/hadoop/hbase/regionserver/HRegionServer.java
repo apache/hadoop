@@ -91,8 +91,6 @@ import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.LogFlusher;
-import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -207,7 +205,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // eclipse warning when accessed by inner classes
   protected volatile HLog hlog;
   LogRoller hlogRoller;
-  LogFlusher hlogFlusher;
   
   // limit compactions while starting up
   CompactionLimitThread compactionLimitThread;
@@ -328,10 +325,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     
     // Log rolling thread
     this.hlogRoller = new LogRoller(this);
-    
-    // Log flushing thread
-    this.hlogFlusher =
-      new LogFlusher(this.threadWakeFrequency, this.stopRequested);
     
     // Background thread to check for major compactions; needed if region
     // has not gotten updates in a while.  Make it run at a lesser frequency.
@@ -518,7 +511,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
                   try {
                     serverInfo.setStartCode(System.currentTimeMillis());
                     hlog = setupHLog();
-                    this.hlogFlusher.setHLog(hlog);
                   } catch (IOException e) {
                     this.abortRequested = true;
                     this.stopRequested.set(true);
@@ -616,7 +608,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
     cacheFlusher.interruptIfNecessary();
-    hlogFlusher.interrupt();
     compactSplitThread.interruptIfNecessary();
     hlogRoller.interruptIfNecessary();
     this.majorCompactionChecker.interrupt();
@@ -746,7 +737,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.hlog = setupHLog();
-      this.hlogFlusher.setHLog(hlog);
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       startServiceThreads();
@@ -1130,8 +1120,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
     };
     Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller",
-        handler);
-    Threads.setDaemonThreadRunning(this.hlogFlusher, n + ".logFlusher",
         handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
