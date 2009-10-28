@@ -759,8 +759,9 @@ public class HLog implements HConstants, Syncable {
         LOG.error("Error while syncing, requesting close of hlog ", e);
         requestLogRoll();
       } catch (InterruptedException e) {
-        LOG.debug(getName() + "interrupted while waiting for sync requests",e );
+        LOG.debug(getName() + "interrupted while waiting for sync requests");
       } finally {
+        syncDone.signalAll();
         lock.unlock();
         LOG.info(getName() + " exiting");
       }
@@ -792,7 +793,7 @@ public class HLog implements HConstants, Syncable {
     }
   }
 
-  public void sync() throws IOException {
+  public void sync(){
     sync(false);
   }
 
@@ -800,11 +801,11 @@ public class HLog implements HConstants, Syncable {
    * This method calls the LogSyncer in order to group commit the sync
    * with other threads.
    * @param force For catalog regions, force the sync to happen
-   * @throws IOException
    */
-  public void sync(boolean force) throws IOException {
-    // Set force sync if force is true and forceSync is false
-    forceSync.compareAndSet(!forceSync.get() && force, true);
+  public void sync(boolean force) {
+    // Set to force only if it was false and force == true
+    // It is reset to false after sync
+    forceSync.compareAndSet(!forceSync.get() && !force, true);
     logSyncerThread.addToSyncQueue();
   }
 
