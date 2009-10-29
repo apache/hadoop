@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
-import agilejson.TOJSON;
-
 /**
  * HTableDescriptor contains the name of an HTable, and its
  * column families.
@@ -369,7 +367,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /** @return name of table */
-  @TOJSON
   public byte [] getName() {
     return name;
   }
@@ -603,7 +600,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return Collections.unmodifiableSet(this.families.keySet());
   }
   
-  @TOJSON(fieldName = "columns")
   public HColumnDescriptor[] getColumnFamilies() {
     return getFamilies().toArray(new HColumnDescriptor[0]);
   }
