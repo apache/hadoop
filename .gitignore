@@ -32,6 +32,8 @@ conf/hadoop-policy.xml
 conf/capacity-scheduler.xml
 conf/mapred-queue-acls.xml
 docs/api/
+ivy/hadoop-core.xml
+ivy/hadoop-core-test.xml
 ivy/ivy-*.jar
 ivy/maven-ant-tasks-*.jar
 logs/
