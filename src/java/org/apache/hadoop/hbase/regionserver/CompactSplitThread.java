@@ -70,13 +70,6 @@ class CompactSplitThread extends Thread implements HConstants {
   
   @Override
   public void run() {
-    while (!this.server.isStopRequested()) {
-      try {
-        Thread.sleep(this.frequency);
-      } catch (InterruptedException ex) {
-        continue;
-      }
-    }
     int count = 0;
     while (!this.server.isStopRequested()) {
       HRegion r = null;

@@ -133,16 +133,9 @@ class MemStoreFlusher extends Thread implements FlushRequester {
   @Override
   public void run() {
     while (!this.server.isStopRequested()) {
-      try {
-        Thread.sleep(threadWakeFrequency);
-      } catch (InterruptedException ex) {
-        continue;
-      }
-    }
-    while (!server.isStopRequested()) {
       HRegion r = null;
       try {
-        r = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+        r = this.flushQueue.poll(this.threadWakeFrequency, TimeUnit.MILLISECONDS);
         if (r == null) {
           continue;
         }
@@ -162,8 +155,8 @@ class MemStoreFlusher extends Thread implements FlushRequester {
         }
       }
     }
-    regionsInQueue.clear();
-    flushQueue.clear();
+    this.regionsInQueue.clear();
+    this.flushQueue.clear();
     LOG.info(getName() + " exiting");
   }
   

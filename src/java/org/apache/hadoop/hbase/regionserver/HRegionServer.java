@@ -202,9 +202,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // eclipse warning when accessed by inner classes
   protected volatile HLog hlog;
   LogRoller hlogRoller;
-  
-  // limit compactions while starting up
-  CompactionLimitThread compactionLimitThread;
 
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
@@ -858,48 +855,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return this.fsOk;
   }
 
-  /**
-   * Thread that gradually ups compaction limit.
-   */
-  private class CompactionLimitThread extends Thread {
-    protected CompactionLimitThread() {}
-
-    @Override
-    public void run() {
-      // Slowly increase per-cycle compaction limit, finally setting it to
-      // unlimited (-1)
-      int compactionCheckInterval = 
-        conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
-            20 * 1000);
-      final int limitSteps[] = {
-        1, 1, 1, 1,
-        2, 2, 2, 2, 2, 2,
-        3, 3, 3, 3, 3, 3, 3, 3, 
-        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-        -1
-      };
-      for (int i = 0; i < limitSteps.length; i++) {
-        // Just log changes.
-        if (compactSplitThread.getLimit() != limitSteps[i] &&
-            LOG.isDebugEnabled()) {
-          LOG.debug("setting compaction limit to " + limitSteps[i]);
-        }
-        compactSplitThread.setLimit(limitSteps[i]);
-        try {
-          Thread.sleep(compactionCheckInterval);
-        } catch (InterruptedException ex) {
-          // unlimit compactions before exiting
-          compactSplitThread.setLimit(-1);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(this.getName() + " exiting on interrupt");
-          }
-          return;
-        }
-      }
-      LOG.info("compactions no longer limited");
-    }
-  }
-
   /*
    * Thread to shutdown the region server in an orderly manner.  This thread
    * is registered as a shutdown hook in the HRegionServer constructor and is
@@ -1129,10 +1084,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
         }
       } 
     }
-
-    this.compactionLimitThread = new CompactionLimitThread();
-    Threads.setDaemonThreadRunning(this.compactionLimitThread, n +
-      ".compactionLimitThread", handler);
 
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
@@ -2083,7 +2034,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * @return true if a stop has been requested.
    */
   public boolean isStopRequested() {
-    return stopRequested.get();
+    return this.stopRequested.get();
   }
 
   /**

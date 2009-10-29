@@ -99,7 +99,6 @@ public class TestLogRolling extends HBaseClusterTestCase {
   private void startAndWriteData() throws Exception {
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
-
     this.server = cluster.getRegionThreads().get(0).getRegionServer();
     this.log = server.getLog();
     
@@ -109,15 +108,12 @@ public class TestLogRolling extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     HTable table = new HTable(conf, tableName);
-
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
       put.add(HConstants.CATALOG_FAMILY, null, value);
       table.put(put);
-
       if (i % 32 == 0) {
         // After every 32 writes sleep to let the log roller run
-
         try {
           Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -126,14 +122,14 @@ public class TestLogRolling extends HBaseClusterTestCase {
       }
     }
   }
-  
+
   /**
    * Tests that logs are deleted
    * 
    * @throws Exception
    */
   public void testLogRolling() throws Exception {
-    tableName = getName();
+    this.tableName = getName();
     try {
       startAndWriteData();
       LOG.info("after writing there are " + log.getNumLogFiles() + " log files");
@@ -158,5 +154,4 @@ public class TestLogRolling extends HBaseClusterTestCase {
       throw e;
     }
   }
-
 }
