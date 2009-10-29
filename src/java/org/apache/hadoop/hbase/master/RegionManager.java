@@ -125,8 +125,6 @@ public class RegionManager implements HConstants {
     regionsToFlush = Collections.synchronizedSortedMap(
         new TreeMap<byte[],Pair<HRegionInfo,HServerAddress>>
         (Bytes.BYTES_COMPARATOR));
-
-  private final ZooKeeperWrapper zooKeeperWrapper;
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
@@ -143,7 +141,6 @@ public class RegionManager implements HConstants {
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
 
-    zooKeeperWrapper = master.getZooKeeperWrapper();
     zooKeeperNumRetries = conf.getInt(ZOOKEEPER_RETRIES, DEFAULT_ZOOKEEPER_RETRIES);
     zooKeeperPause = conf.getInt(ZOOKEEPER_PAUSE, DEFAULT_ZOOKEEPER_PAUSE);
 
@@ -602,8 +599,8 @@ public class RegionManager implements HConstants {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
-    zooKeeperWrapper.clearRSDirectory();
-    zooKeeperWrapper.close();
+    master.getZooKeeperWrapper().clearRSDirectory();
+    master.getZooKeeperWrapper().close();
   }
   
   /**
@@ -1121,7 +1118,7 @@ public class RegionManager implements HConstants {
 
   private void writeRootRegionLocationToZooKeeper(HServerAddress address) {
     for (int attempt = 0; attempt < zooKeeperNumRetries; ++attempt) {
-      if (zooKeeperWrapper.writeRootRegionLocation(address)) {
+      if (master.getZooKeeperWrapper().writeRootRegionLocation(address)) {
         return;
       }
 

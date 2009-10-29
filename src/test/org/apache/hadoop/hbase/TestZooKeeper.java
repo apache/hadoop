@@ -95,41 +95,46 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
   }
 
-  public void testRegionServerSessionExpired() {
-    try {
-      this.conf.setBoolean("hbase.regionserver.restart.on.zk.expire", true);
-      new HTable(conf, HConstants.META_TABLE_NAME);
-  
-      ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
-      String quorumServers = zkw.getQuorumServers();
-      int sessionTimeout = 5 * 1000; // 5 seconds
+  public void testRegionServerSessionExpired() throws Exception{
+    this.conf.setBoolean("hbase.regionserver.restart.on.zk.expire", true);
+    new HTable(conf, HConstants.META_TABLE_NAME);
+    HRegionServer rs = cluster.getRegionServer(0);
+    sessionExpirationHelper(rs.getZooKeeperWrapper());
+  }
 
-      HRegionServer rs = cluster.getRegionServer(0);
-      ZooKeeperWrapper rsZK = rs.getZooKeeperWrapper();
-      long sessionID = rsZK.getSessionID();
-      byte[] password = rsZK.getSessionPassword();
-  
-      ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance, sessionID, password);
-      zk.close();
+  public void testMasterSessionExpired() throws Exception {
+    new HTable(conf, HConstants.META_TABLE_NAME);
+    HMaster master = cluster.getMaster();
+    sessionExpirationHelper(master.getZooKeeperWrapper());
+  }
 
-      Thread.sleep(sessionTimeout * 3L);
+  public void sessionExpirationHelper(ZooKeeperWrapper nodeZK) throws Exception{
+    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+    String quorumServers = zkw.getQuorumServers();
+    int sessionTimeout = 5 * 1000; // 5 seconds
 
-      new HTable(conf, HConstants.META_TABLE_NAME);
-  
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      HTableDescriptor desc = new HTableDescriptor("test");
-      HColumnDescriptor family = new HColumnDescriptor("fam");
-      desc.addFamily(family);
-      admin.createTable(desc);
-  
-      HTable table = new HTable("test");
-      Put put = new Put(Bytes.toBytes("testrow"));
-      put.add(Bytes.toBytes("fam"), Bytes.toBytes("col"), Bytes.toBytes("testdata"));
-      table.put(put);
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
+    byte[] password = nodeZK.getSessionPassword();
+    long sessionID = nodeZK.getSessionID();
+
+    ZooKeeper zk = new ZooKeeper(quorumServers,
+        sessionTimeout, EmptyWatcher.instance, sessionID, password);
+    zk.close();
+
+    Thread.sleep(sessionTimeout * 3L);
+
+    new HTable(conf, HConstants.META_TABLE_NAME);
+
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTableDescriptor desc = new HTableDescriptor("test");
+    HColumnDescriptor family = new HColumnDescriptor("fam");
+    desc.addFamily(family);
+    admin.createTable(desc);
+
+    HTable table = new HTable("test");
+    Put put = new Put(Bytes.toBytes("testrow"));
+    put.add(Bytes.toBytes("fam"), Bytes.toBytes("col"), Bytes.toBytes("testdata"));
+    table.put(put);
+
   }
   
   public void testMultipleZK() {

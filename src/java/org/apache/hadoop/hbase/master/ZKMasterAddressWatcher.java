@@ -41,13 +41,14 @@ import org.apache.zookeeper.Watcher.Event.EventType;
  */
 class ZKMasterAddressWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZKMasterAddressWatcher.class);
-  private final ZooKeeperWrapper zookeeper;
+
+  private ZooKeeperWrapper zookeeper;
   private final AtomicBoolean requestShutdown;
 
   /**
    * Create this watcher using passed ZooKeeperWrapper instance.
    * @param zk ZooKeeper
-   * @param requestShutdown Flag to set to request shutdown.
+   * @param flag Flag to set to request shutdown.
    */
   ZKMasterAddressWatcher(final ZooKeeperWrapper zk, final AtomicBoolean flag) {
     this.requestShutdown = flag;
@@ -98,17 +99,30 @@ class ZKMasterAddressWatcher implements Watcher {
    * address (or until cluster shutdown).
    * @param address Address whose format is HServerAddress.toString
    */
-  void writeAddressToZooKeeper(final HServerAddress address) {
-    while (true) {
+  boolean writeAddressToZooKeeper(
+      final HServerAddress address, boolean retry) {
+    do {
       waitForMasterAddressAvailability();
       // Check if we need to shutdown instead of taking control
-      if (this.requestShutdown.get()) return;
+      if (this.requestShutdown.get()) {
+        LOG.debug("Won't start Master because cluster is shuting down");
+        return false;
+      }
       if(this.zookeeper.writeMasterAddress(address)) {
         this.zookeeper.setClusterState(true);
         // Watch our own node
         this.zookeeper.readMasterAddress(this);
-        return;
+        return true;
       }
-    }
+    } while(retry);
+    return false;
+  }
+
+  /**
+   * Reset the ZK in case a new connection is required
+   * @param zookeeper new instance
+   */
+  public void setZookeeper(ZooKeeperWrapper zookeeper) {
+    this.zookeeper = zookeeper;
   }
 }

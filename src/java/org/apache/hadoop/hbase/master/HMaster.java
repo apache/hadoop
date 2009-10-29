@@ -126,7 +126,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   // Metrics is set when we call run.
   private final MasterMetrics metrics;
   // Our zk client.
-  private final ZooKeeperWrapper zooKeeperWrapper;
+  private ZooKeeperWrapper zooKeeperWrapper;
   // Watcher for master address and for cluster shutdown.
   private final ZKMasterAddressWatcher zkMasterAddressWatcher;
   // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
@@ -187,7 +187,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
     this.zkMasterAddressWatcher =
       new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.shutdownRequested);
-    this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address);
+    this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
     
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
@@ -1131,8 +1131,26 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       (event.getType().equals(EventType.NodeDeleted) && 
         event.getPath().equals(this.zooKeeperWrapper.getMasterElectionZNode())) &&
         !shutdownRequested.get()) {
-      LOG.error("Master lost its znode, killing itself now");
-      System.exit(1);
+
+      LOG.info("Master lost its znode, trying to get a new one");
+
+      // Can we still be the master? If not, goodbye
+
+      zooKeeperWrapper.close();
+      try {
+        zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
+        this.zkMasterAddressWatcher.setZookeeper(zooKeeperWrapper);
+        if(!this.zkMasterAddressWatcher.
+            writeAddressToZooKeeper(this.address,false)) {
+          throw new Exception("Another Master is currently active");
+        }
+
+        // Verify the cluster to see if anything happened while we were away
+        joinCluster();
+      } catch (Exception e) {
+        LOG.error("Killing master because of", e);
+        System.exit(1);
+      }
     }
   }
 
