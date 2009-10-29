@@ -28,7 +28,7 @@
     <conf name="default" extends="master,runtime"/>
     <conf name="master" description="contains the artifact but no dependencies"/>
     <conf name="runtime" description="runtime but not the artifact"
-      extends="client,server,s3-server,kfs"/>
+      extends="client,server,s3-server,kfs,mandatory,jetty,ftp"/>
 
     <conf name="mandatory" description="contains the critical  dependencies"
       extends="commons-logging,log4j"/>
@@ -46,22 +46,19 @@
     <conf name="s3-server" description="dependencies for running on S3/EC2 infrastructure"
       extends="s3-client,server"/>
     <conf name="kfs" description="dependencies for KFS file system support"/>
-    <conf name="ftp" description="dependencies for workign with FTP filesytems"
+    <conf name="ftp" description="dependencies for workign with FTP filesytems" 
               extends="mandatory"/>
    <conf name="jetty" description="Jetty provides the in-VM HTTP daemon" extends="commons-logging"/>
 
+   <conf name="common" extends="runtime,mandatory,httpclient,ftp,jetty"
+		      description="common artifacts"/>
+    <!--Testing pulls in everything-->
+   <conf name="test" extends="master,common" description="the classpath needed to run tests"/>
+
     <!--Private configurations. -->
 
-    <conf name="common" visibility="private" extends="runtime,mandatory,httpclient,ftp,jetty"
-		      description="common artifacts"/>
     <conf name="javadoc" visibility="private" description="artiracts required while performing doc generation"
       extends="common,mandatory,jetty,lucene"/>
-    <!--Testing pulls in everything-->
-    <conf name="test" extends="common,s3-server,kfs" visibility="private"
-      description="the classpath needed to run tests"/>
-
-    <conf name="test-hdfswithmr" extends="test" visibility="private"
-      description="the classpath needed to run tests"/>
 
     <conf name="releaseaudit" visibility="private"
 	description="Artifacts required for releaseaudit target"/>
@@ -276,7 +273,7 @@
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
       rev="${jackson.version}"
-      conf="common->default"/>
+      conf="common->default"/> 
     <dependency org="com.thoughtworks.paranamer"
       name="paranamer"
       rev="${paranamer.version}"
@@ -296,5 +293,4 @@
       conf="common->default">
     </dependency>
     </dependencies>
-
 </ivy-module>

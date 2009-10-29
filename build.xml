@@ -18,7 +18,8 @@
 -->
 
 <project name="Hadoop-Core" default="compile" 
-   xmlns:ivy="antlib:org.apache.ivy.ant"> 
+   xmlns:ivy="antlib:org.apache.ivy.ant"
+   xmlns:artifact="urn:maven-artifact-ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
@@ -27,7 +28,7 @@
  
   <property name="Name" value="Hadoop-core"/>
   <property name="name" value="hadoop-core"/>
-  <property name="version" value="0.21.0-dev"/>
+  <property name="version" value="0.21.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
@@ -123,10 +124,16 @@
 
 	
   <!-- IVY properteis set here -->
+  <property name="ivy.repo.dir" value="${user.home}/ivyrepo" />
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+  <property name="asfrepo" value="https://repository.apache.org/content/repositories/snapshots"/>
+  <property name="mvnrepo" value="http://repo2.maven.org/maven2"/>
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
-  <property name="ivy_repo_url" value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
+  <property name="ant_task.jar" location="${ivy.dir}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="ant_task_repo_url" 
+     value="${mvnrepo}/org/apache/maven/maven-ant-tasks/${ant-task.version}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="ivy_repo_url" value="${mvnrepo}/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
   <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
   <property name="ivy.org" value="org.apache.hadoop"/>
   <property name="build.dir" location="build" />
@@ -134,17 +141,20 @@
   <property name="build.ivy.dir" location="${build.dir}/ivy" />
   <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
   <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
-  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
-  <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
-  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-core-${version}.pom" />
-  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar" />
+  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report"/>
+  <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven"/>
+  <property name="pom.xml" location="${build.ivy.maven.dir}/pom.xml"/>
+  <property name="hadoop-core.pom" location="${ivy.dir}/hadoop-core.xml"/>
+  <property name="build.ivy.maven.core.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar"/>
+  <property name="hadoop-core-test.pom" location="${ivy.dir}/hadoop-core-test.xml" />
+  <property name="build.ivy.maven.core-test.jar" location="${build.ivy.maven.dir}/hadoop-core-test-${version}.jar"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.module" location="hadoop-core" />
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
-  <property name="ivy.publish.pattern" value="hadoop-core-[revision].[ext]"/>
+  <property name="ivy.publish.pattern" value="[artifact]-[revision].[ext]"/>
   <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
   <property name="hadoop-core-test.jar" location="${build.dir}/${test.final.name}.jar" />
 
@@ -365,7 +375,7 @@
   </target>
 
   <target name="compile-contrib" depends="compile-core">
-     <subant target="compile">
+     <subant target="compile" inheritall="true">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
@@ -647,7 +657,7 @@
   </target>
 
   <target name="test-contrib" depends="compile, compile-core-test" description="Run contrib unit tests">
-    <subant target="test">
+    <subant target="test" inheritall="true">
        <property name="version" value="${version}"/>
        <property name="clover.jar" value="${clover.jar}"/>
        <fileset file="${contrib.dir}/build.xml"/>
@@ -664,7 +674,7 @@
   </target>
 
   <target name="test" depends="jar-test,test-core" description="Run all unit tests">
-    <subant target="test-contrib">	 
+    <subant target="test-contrib" inheritall="true">	 
       <fileset dir="." includes="build.xml"/>
     </subant>
   </target>
@@ -683,7 +693,8 @@
   <!-- ================================================================== -->
   <!-- Run optional third-party tool targets                              --> 
   <!-- ================================================================== -->
-  <target name="checkstyle" depends="ivy-retrieve-checkstyle,check-for-checkstyle" if="checkstyle.present" description="Run optional third-party tool targets">
+  <target name="checkstyle" depends="ivy-retrieve-checkstyle,check-for-checkstyle" if="checkstyle.present" 
+       description="Run optional third-party tool targets">
        <taskdef resource="checkstyletask.properties">
          <classpath refid="checkstyle-classpath"/>
        </taskdef>
@@ -751,7 +762,8 @@
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
   
-  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. 
+       To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
     <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
 	  failonerror="true">
       <env key="JAVA_HOME" value="${java5.home}"/>
@@ -766,8 +778,8 @@
     <antcall target="cn-docs"/>
   </target>
 
-  <target name="cn-docs" depends="forrest.check, init" 
-       description="Generate forrest-based Chinese documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." 
+  <target name="cn-docs" depends="forrest.check, init" description="Generate forrest-based Chinese documentation. 
+        To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." 
         if="forrest.home">
     <exec dir="${src.docs.cn}" executable="${forrest.home}/bin/forrest" failonerror="true">
       <env key="LANG" value="en_US.utf8"/>
@@ -782,11 +794,13 @@
   </target>
 
   <target name="forrest.check" unless="forrest.home" depends="java5.check">
-    <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
+    <fail message="'forrest.home' is not defined. Please pass 
+      -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
   </target>
 
   <target name="java5.check" unless="java5.home">
-    <fail message="'java5.home' is not defined.  Forrest requires Java 5.  Please pass -Djava5.home=&lt;base of Java 5 distribution&gt; to Ant on the command-line." />
+    <fail message="'java5.home' is not defined.  Forrest requires Java 5.  
+       Please pass -Djava5.home=&lt;base of Java 5 distribution&gt; to Ant on the command-line." />
   </target>
 	
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
@@ -801,8 +815,7 @@
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} Developer API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
-      maxmemory="${javadoc.maxmemory}"
-      >
+      maxmemory="${javadoc.maxmemory}">
         <packageset dir="${java.src.dir}"/>
 	<packageset dir="src/contrib/failmon/src/java/"/> 
 
@@ -847,8 +860,7 @@
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
-      maxmemory="${javadoc.maxmemory}"
-      >
+      maxmemory="${javadoc.maxmemory}">
         <packageset dir="${java.src.dir}"/>
 	<packageset dir="src/contrib/failmon/src/java/"/> 
 	
@@ -957,7 +969,7 @@
 	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
 
-    <subant target="package">
+    <subant target="package" inheritall="true">
       <!--Pass down the version in case its needed again and the target
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
@@ -1057,7 +1069,7 @@
 	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
 
-    <subant target="package">
+    <subant target="package" inheritall="true">
       <!--Pass down the version in case its needed again and the target
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
@@ -1111,6 +1123,60 @@
       </param.listofitems>
     </macro_tar>
   </target>
+  
+  <target name="ant-task-download" description="To download mvn-ant-task" unless="offline">
+    <get src="${ant_task_repo_url}" dest="${ant_task.jar}" usetimestamp="true"/>
+  </target>
+
+  <target name="mvn-taskdef" depends="ant-task-download">
+     <path id="mvn-ant-task.classpath" path="${ant_task.jar}"/> 
+     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
+         uri="urn:maven-artifact-ant"
+         classpathref="mvn-ant-task.classpath"/>
+  </target>   
+
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version" 
+     description="To install hadoop core and test jars to local filesystem's m2 cache">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
+     <artifact:install file="${hadoop-core.jar}">
+        <pom refid="hadoop.core"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-core-test.jar}">
+        <pom refid="hadoop.core.test"/>
+     </artifact:install>
+  </target>
+
+  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test, set-version"
+     description="To deploy hadoop core and test jar's to apache snapshot's repository">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
+
+     <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
+     <artifact:deploy file="${hadoop-core.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
+         <pom refid="hadoop.core"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-core-test.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
+         <pom refid="hadoop.core.test"/>
+     </artifact:deploy>
+  </target>
+  
+  <target name="set-version">
+    <delete file="${basedir}/ivy/hadoop-core.xml"/>
+    <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-core-template.xml" tofile="${basedir}/ivy/hadoop-core.xml"/>
+    <copy file="${basedir}/ivy/hadoop-core-test-template.xml" tofile="${basedir}/ivy/hadoop-core-test.xml"/>
+    <replaceregexp byline="true">
+      <regexp pattern="@version"/>
+      <substitution expression="${version}"/>
+      <fileset dir="${basedir}/ivy">
+        <include name="hadoop-core.xml"/>
+        <include name="hadoop-core-test.xml"/>
+      </fileset>
+    </replaceregexp>
+  </target>
 
   <!-- ================================================================== -->
   <!-- Perform audit activities for the release                           -->
@@ -1140,8 +1206,15 @@
   <!-- ================================================================== -->
   <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
+    <delete file="${basedir}/ivy/hadoop-core.xml"/>
+    <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
+  </target>
+
+  <target name="veryclean" depends="clean" description="Delete mvn ant task jar and ivy ant taks jar">
+    <delete file="${ant_task.jar}"/>
+    <delete file="${ivy.jar}"/>
   </target>
 
   <!-- ================================================================== -->
@@ -1149,12 +1222,13 @@
   <!-- Using subant instead of ant as a workaround for 30569              -->
   <!-- ================================================================== -->
   <target name="clean-contrib">
-     <subant target="clean">        
+     <subant target="clean" inheritall="true">        
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
   </target>
 	
- <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
+ <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover. 
+     To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
 
 <target name="clover.setup" if="clover.enabled">
    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
@@ -1304,7 +1378,9 @@
     <!--Configure Ivy by reading in the settings file
         If anyone has already read in a settings file into this settings ID, it gets priority
     -->
-    <ivy:configure settingsid="${ant.project.name}.ivy.settings" file="${ivysettings.xml}" override='false'/>
+    <ivy:configure settingsid="${ant.project.name}.ivy.settings" file="${ivysettings.xml}" override='false'
+      realm="Sonatype Nexus Repository Manager"/>
+
   </target>
 
   <target name="ivy-resolve" depends="ivy-init">
@@ -1317,10 +1393,6 @@
 
   <target name="ivy-resolve-releaseaudit" depends="ivy-init">
     <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="releaseaudit"/>
-  </target>
-
-  <target name="ivy-resolve-test-hdfswithmr" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="test-hdfswithmr" />
   </target>
 
   <target name="ivy-resolve-test" depends="ivy-init">
@@ -1353,7 +1425,7 @@
   </target>
 
   <target name="ivy-retrieve-jdiff" depends="ivy-resolve-jdiff"
-    description="Retrieve Ivy-managed artifacts for the javadoc configurations">
+    description="Retrieve Ivy-managed artifacts for the jdiff configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
     <ivy:cachepath pathid="jdiff-classpath" conf="jdiff"/>
@@ -1364,13 +1436,6 @@
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
     <ivy:cachepath pathid="javadoc-classpath" conf="javadoc"/>
-  </target>
-
-  <target name="ivy-retrieve-test-hdfswithmr" depends="ivy-resolve-test-hdfswithmr"
-    description="Retrieve Ivy-managed artifacts for the test configurations">
-    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
-    <ivy:cachepath pathid="ivy-test.classpath" conf="test-hdfswithmr"/>
   </target>
 
   <target name="ivy-retrieve-test" depends="ivy-resolve-test"
@@ -1402,68 +1467,4 @@
     </echo>
   </target>
 
-  <target name="assert-hadoop-jar-exists" depends="ivy-init">
-    <fail>
-      <condition >
-        <not>
-          <available file="${hadoop-core.jar}" />
-        </not>
-      </condition>
-      Not found: ${hadoop-core.jar}
-      Please run the target "jar" in the main build file
-    </fail>
-
-  </target>
-
-  <target name="ready-to-publish" depends="jar,assert-hadoop-jar-exists,ivy-resolve"/>
-
-  <target name="ivy-publish-local" depends="ready-to-publish,ivy-resolve">
-    <ivy:publish
-      settingsRef="${ant.project.name}.ivy.settings"
-      resolver="local"
-      pubrevision="${version}"
-      overwrite="true"
-      artifactspattern="${build.dir}/${ivy.publish.pattern}" />
-  </target>
-
-
-  <!-- this is here for curiosity, to see how well the makepom task works
-  Answer: it depends whether you want transitive dependencies excluded or not
-  -->
-  <target name="makepom" depends="ivy-resolve">
-    <ivy:makepom settingsRef="${ant.project.name}.ivy.settings"
-      ivyfile="ivy.xml"
-      pomfile="${build.ivy.maven.dir}/generated.pom">
-      <ivy:mapping conf="default" scope="default"/>
-      <ivy:mapping conf="master" scope="master"/>
-      <ivy:mapping conf="runtime" scope="runtime"/>
-    </ivy:makepom>
-  </target>
-
-
-  <target name="copy-jar-to-maven" depends="ready-to-publish">
-    <copy file="${hadoop-core.jar}"
-      tofile="${build.ivy.maven.jar}"/>
-    <checksum file="${build.ivy.maven.jar}" algorithm="md5"/>
-  </target>
-
-  <target name="copypom" depends="ivy-init-dirs">
-
-   <presetdef name="expandingcopy" >
-    <copy overwrite="true">
-      <filterchain>
-        <expandproperties/>
-      </filterchain>
-    </copy>
-   </presetdef>
-
-   <expandingcopy file="ivy/hadoop-core.pom"
-      tofile="${build.ivy.maven.pom}"/>
-   <checksum file="${build.ivy.maven.pom}" algorithm="md5"/>
-  </target>
-
-  <target name="maven-artifacts" depends="copy-jar-to-maven,copypom" />
-
-  <target name="published" depends="ivy-publish-local,maven-artifacts">
-  </target>
 </project>
