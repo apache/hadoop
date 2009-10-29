@@ -22,6 +22,14 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
+    <dependency org="org.apache.hadoop"
+      name="hadoop-core"
+      rev="${hadoop-core.version}"
+      conf="common->default"/>
+    <dependency org="org.apache.hadoop"
+      name="hadoop-core-test"
+      rev="${hadoop-core.version}"
+      conf="common->default"/>
     <dependency org="commons-cli"
       name="commons-cli"
       rev="${commons-cli.version}"

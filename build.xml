@@ -18,6 +18,7 @@
 -->
 
 <project name="Hadoop-Hdfs" default="compile" 
+   xmlns:artifact="urn:maven-artifact-ant"
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -27,9 +28,7 @@
  
   <property name="Name" value="Hadoop-Hdfs"/>
   <property name="name" value="hadoop-hdfs"/>
-  <property name="version" value="0.22.0-dev"/>
-  <property name="hadoop-core.version" value="0.22.0-dev"/>
-  <property name="hadoop-mr.version" value="0.22.0-dev"/>
+  <property name="version" value="0.22.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
   <property name="ant.final.name" value="${name}-ant-${version}"/>
@@ -89,7 +88,6 @@
   <property name="test.junit.maxmemory" value="512m" />
 
   <property name="test.hdfs.build.classes" value="${test.build.dir}/classes"/>
-  <property name="test.hdfs.with.mr.classpath.id" value="test.hdfs.with.mr.classpath"/>
 
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
   <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
@@ -132,7 +130,10 @@
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
-  <property name="ivy_repo_url" value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
+  <property name="mvn.repo" value="http://repo2.maven.org/maven2"/>
+  <property name="ivy_repo_url" value="${mvn.repo}/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
+  <property name="ant_task.jar" location="${ivy.dir}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="ant_task_repo_url" value="${mvn.repo}/org/apache/maven/maven-ant-tasks/${ant-task.version}/maven-ant-tasks-${ant-task.version}.jar"/>
   <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
   <property name="ivy.org" value="org.apache.hadoop"/>
   <property name="build.dir" location="build" />
@@ -140,10 +141,13 @@
   <property name="build.ivy.dir" location="${build.dir}/ivy" />
   <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
   <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
+  <property name="test.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/test"/>
   <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
   <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
   <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-hdfs-${version}.pom" />
   <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-hdfs-${version}.jar" />
+  <property name="hadoop-hdfs.pom" location="${ivy.dir}/hadoop-hdfs.xml"/>
+  <property name="hadoop-hdfs-test.pom" location="${ivy.dir}/hadoop-hdfs-test.xml"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
@@ -151,6 +155,7 @@
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-hdfs-[revision].[ext]"/>
   <property name="hadoop-hdfs.jar" location="${build.dir}/${final.name}.jar" />
+  <property name="hadoop-hdfs-test.jar" location="${build.dir}/${test.hdfs.final.name}.jar" />
   <property name="hadoop-hdfs-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
 
   <!-- jdiff.home property set -->
@@ -172,7 +177,6 @@
   <!-- the normal classpath -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
-    <pathelement path="${lib.dir}/hadoop-core-${hadoop-core.version}.jar"/>
     <pathelement location="${conf.dir}"/>
     <path refid="ivy-common.classpath"/>
   </path>
@@ -1044,6 +1048,18 @@
     <delete dir="${build.dir}"/>
     <delete dir="${build-fi.dir}"/>
     <delete dir="${docs.src}/build"/>
+    <delete file="${hadoop-hdfs.pom}"/>
+    <delete file="${hadoop-hdfs-test.pom}"/>
+  </target>
+
+  <target name="veryclean" depends="clean" description="veryclean.  Delete ant maven task and ivy jars">
+    <delete file="${ant_task.jar}"/>
+    <delete file="${ivy.jar}"/>
+  </target>
+
+  <target name="clean-cache" depends="clean" description="Clean. Delete ivy cache">
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-core"/>
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-core-test"/>
   </target>
 
   <!-- ================================================================== -->
@@ -1202,6 +1218,73 @@
     <get src="${ivy_repo_url}" dest="${ivy.jar}" usetimestamp="true"/>
   </target>
 
+  <target name="ant-task-download" description="To download mvn-ant-task" unless="offline">
+    <get src="${ant_task_repo_url}" dest="${ant_task.jar}" usetimestamp="true"/>
+  </target>
+
+  <target name="mvn-taskdef" depends="ant-task-download">
+     <path id="mvn-ant-task.classpath" path="${ant_task.jar}"/> 
+     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
+         uri="urn:maven-artifact-ant" classpathref="mvn-ant-task.classpath"/>
+  </target>   
+
+  
+  <target name="mvn-install-hdfs" depends="mvn-taskdef,jar,set-version">
+     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
+     <artifact:install file="${hadoop-hdfs.jar}">
+        <pom refid="hadoop.hdfs"/>
+     </artifact:install>
+  </target>
+
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-hdfs-test,set-version">
+     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
+     <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
+     <artifact:install file="${hadoop-hdfs.jar}">
+        <pom refid="hadoop.hdfs"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-hdfs-test.jar}">
+        <pom refid="hadoop.hdfs.test"/>
+     </artifact:install>
+  </target>
+
+  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-hdfs-test, set-version">
+     <property name="repourl" value="https://repository.apache.org/content/repositories/snapshots" />
+     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
+     <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
+
+     <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
+     <artifact:deploy file="${hadoop-hdfs.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${repourl}"/>
+         <pom refid="hadoop.hdfs"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-hdfs-test.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${repourl}"/>
+         <pom refid="hadoop.hdfs.test"/>
+     </artifact:deploy>
+  </target>
+  
+  <target name="set-version">
+    <delete file="${basedir}/ivy/hadoop-hdfs.xml"/>
+    <delete file="${basedir}/ivy/hadoop-hdfs-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-template.xml" tofile="${basedir}/ivy/hadoop-hdfs.xml"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-test-template.xml" tofile="${basedir}/ivy/hadoop-hdfs-test.xml"/>
+    <replaceregexp byline="true">
+      <regexp pattern="@version"/>
+      <substitution expression="${version}"/>
+      <fileset dir="${basedir}/ivy">
+        <include name="hadoop-hdfs.xml"/>
+      </fileset>
+    </replaceregexp>
+    <replaceregexp byline="true">
+      <regexp pattern="@version"/>
+      <substitution expression="${version}"/>
+      <fileset dir="${basedir}/ivy">
+        <include name="hadoop-hdfs-test.xml"/>
+      </fileset>
+    </replaceregexp>
+  </target>
+ 
+
   <!--
   To avoid Ivy leaking things across big projects, always load Ivy in the same classloader.
   Also note how we skip loading Ivy if it is already there, just to make sure all is well.
@@ -1317,69 +1400,4 @@
     </echo>
   </target>
 
-  <target name="assert-hadoop-jar-exists" depends="ivy-init">
-    <fail>
-      <condition >
-        <not>
-          <available file="${hadoop-hdfs.jar}" />
-        </not>
-      </condition>
-      Not found: ${hadoop-hdfs.jar}
-      Please run the target "jar" in the main build file
-    </fail>
-
-  </target>
-
-  <target name="ready-to-publish" depends="jar,assert-hadoop-jar-exists,ivy-resolve"/>
-
-  <target name="ivy-publish-local" depends="ready-to-publish,ivy-resolve">
-    <ivy:publish
-      settingsRef="${ant.project.name}.ivy.settings"
-      resolver="local"
-      pubrevision="${version}"
-      overwrite="true"
-      artifactspattern="${build.dir}/${ivy.publish.pattern}" />
-  </target>
-
-
-  <!-- this is here for curiosity, to see how well the makepom task works
-  Answer: it depends whether you want transitive dependencies excluded or not
-  -->
-  <target name="makepom" depends="ivy-resolve">
-    <ivy:makepom settingsRef="${ant.project.name}.ivy.settings"
-      ivyfile="ivy.xml"
-      pomfile="${build.ivy.maven.dir}/generated.pom">
-      <ivy:mapping conf="default" scope="default"/>
-      <ivy:mapping conf="master" scope="master"/>
-      <ivy:mapping conf="runtime" scope="runtime"/>
-    </ivy:makepom>
-  </target>
-
-
-  <target name="copy-jar-to-maven" depends="ready-to-publish">
-    <copy file="${hadoop-hdfs.jar}"
-      tofile="${build.ivy.maven.jar}"/>
-    <checksum file="${build.ivy.maven.jar}" algorithm="md5"/>
-  </target>
-
-  <target name="copypom" depends="ivy-init-dirs">
-
-   <presetdef name="expandingcopy" >
-    <copy overwrite="true">
-      <filterchain>
-        <expandproperties/>
-      </filterchain>
-    </copy>
-   </presetdef>
-
-   <expandingcopy file="ivy/hadoop-hdfs.pom"
-      tofile="${build.ivy.maven.pom}"/>
-   <checksum file="${build.ivy.maven.pom}" algorithm="md5"/>
-  </target>
-
-  <target name="maven-artifacts" depends="copy-jar-to-maven,copypom" />
-
-  <target name="published" depends="ivy-publish-local,maven-artifacts">
-
-  </target>
 </project>
