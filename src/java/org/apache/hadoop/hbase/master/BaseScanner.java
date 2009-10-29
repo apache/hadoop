@@ -320,13 +320,12 @@ abstract class BaseScanner extends Chore implements HConstants {
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
+      if (!this.master.getFileSystem().exists(p)) continue;
       // Look for reference files.  Call listStatus with an anonymous
       // instance of PathFilter.
-      LOG.debug("Looking for reference files in: " + p);
       FileStatus [] ps =
         this.master.getFileSystem().listStatus(p, new PathFilter () {
             public boolean accept(Path path) {
-              LOG.debug("isReference: " + path);
               return StoreFile.isReference(path);
             }
           }
