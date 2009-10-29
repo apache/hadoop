@@ -28,6 +28,8 @@ conf/hadoop-site.xml
 conf/hdfs-site.xml
 conf/hadoop-policy.xml
 docs/api/
+ivy/ivy-*.jar
+ivy/maven-ant-tasks-*.jar
 logs/
 src/docs/build
 src/docs/cn/build
