@@ -46,10 +46,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 51: New rename method with support of destination overwrite for the use of
-   * {@link FileContext}
+   * 52: adding concat() API
    */
-  public static final long versionID = 51L;
+  public static final long versionID = 52L;
   
   ///////////////////////////////////////
   // File contents
@@ -241,6 +240,17 @@ public interface ClientProtocol extends VersionedProtocol {
    */
   @Deprecated
   public boolean rename(String src, String dst) throws IOException;
+
+  /**
+   * moves blocks from srcs to trg and delete srcs
+   * 
+   * @param trg existing file
+   * @param srcs - list of existing files (same block size, same replication)
+   * @throws IOException if some arguments are invalid
+   * @throws QuotaExceededException if the rename would violate 
+   *                                any quota restriction
+   */
+  public void concat(String trg, String [] srcs) throws IOException;
 
   /**
    * Rename src to dst.

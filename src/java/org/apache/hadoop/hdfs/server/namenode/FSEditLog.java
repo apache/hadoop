@@ -24,6 +24,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -45,13 +47,11 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
-import org.mortbay.log.Log;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -78,6 +78,8 @@ public class FSEditLog {
   private static final byte OP_TIMES = 13; // sets mod & access time on a file
   private static final byte OP_SET_QUOTA = 14; // sets name and disk quotas.
   private static final byte OP_RENAME = 15;  // new rename
+  private static final byte OP_CONCAT_DELETE = 16; // concat files.
+
   /* 
    * The following operations are used to control remote edit log streams,
    * and not logged into file streams.
@@ -424,7 +426,7 @@ public class FSEditLog {
     int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
         numOpRenameOld = 0, numOpSetRepl = 0, numOpMkDir = 0,
         numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
-        numOpTimes = 0, numOpRename = 0, numOpOther = 0;
+        numOpTimes = 0, numOpRename = 0, numOpConcatDelete = 0, numOpOther = 0;
     try {
       while (true) {
         long timestamp = 0;
@@ -545,6 +547,27 @@ public class FSEditLog {
           fsDir.unprotectedSetReplication(path, replication, null);
           break;
         } 
+        case OP_CONCAT_DELETE: {
+          if (logVersion > -22) {
+            throw new IOException("Unexpected opcode " + opcode
+                + " for version " + logVersion);
+          }
+          numOpConcatDelete++;
+          int length = in.readInt();
+          if (length < 3) { // trg, srcs.., timestam
+            throw new IOException("Incorrect data format. " 
+                                  + "Mkdir operation.");
+          }
+          String trg = FSImage.readString(in);
+          int srcSize = length - 1 - 1; //trg and timestamp
+          String [] srcs = new String [srcSize];
+          for(int i=0; i<srcSize;i++) {
+            srcs[i]= FSImage.readString(in);
+          }
+          timestamp = readLong(in);
+          fsDir.unprotectedConcat(trg, srcs);
+          break;
+        }
         case OP_RENAME_OLD: {
           numOpRenameOld++;
           int length = in.readInt();
@@ -715,6 +738,7 @@ public class FSEditLog {
           + " numOpSetOwner = " + numOpSetOwner
           + " numOpSetGenStamp = " + numOpSetGenStamp 
           + " numOpTimes = " + numOpTimes
+          + " numOpConcatDelete  = " + numOpConcatDelete
           + " numOpRename = " + numOpRename
           + " numOpOther = " + numOpOther);
     }
@@ -755,7 +779,7 @@ public class FSEditLog {
     ArrayList<EditLogOutputStream> errorStreams = null;
     long start = FSNamesystem.now();
     for(EditLogOutputStream eStream : editStreams) {
-      Log.debug("loggin edits into " + eStream.getName()  + " stream");
+      FSImage.LOG.debug("loggin edits into " + eStream.getName()  + " stream");
       if(!eStream.isOperationSupported(op))
         continue;
       try {
@@ -1005,7 +1029,22 @@ public class FSEditLog {
     DeprecatedUTF8 g = new DeprecatedUTF8(groupname == null? "": groupname);
     logEdit(OP_SET_OWNER, new DeprecatedUTF8(src), u, g);
   }
-
+  
+  /**
+   * concat(trg,src..) log
+   */
+  void logConcat(String trg, String [] srcs, long timestamp) {
+    int size = 1 + srcs.length + 1; // trg, srcs, timestamp
+    DeprecatedUTF8 info[] = new DeprecatedUTF8[size];
+    int idx = 0;
+    info[idx++] = new DeprecatedUTF8(trg);
+    for(int i=0; i<srcs.length; i++) {
+      info[idx++] = new DeprecatedUTF8(srcs[i]);
+    }
+    info[idx] = FSEditLog.toLogLong(timestamp);
+    logEdit(OP_CONCAT_DELETE, new ArrayWritable(DeprecatedUTF8.class, info));
+  }
+  
   /** 
    * Add delete file record to edit log
    */

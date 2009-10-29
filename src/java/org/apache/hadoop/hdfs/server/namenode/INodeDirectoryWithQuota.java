@@ -88,7 +88,7 @@ class INodeDirectoryWithQuota extends INodeDirectory {
    * @param dsQuota diskspace quota to be set
    *                                
    */
-  void setQuota(long newNsQuota, long newDsQuota) throws QuotaExceededException {
+  void setQuota(long newNsQuota, long newDsQuota) {
     nsQuota = newNsQuota;
     dsQuota = newDsQuota;
   }
@@ -120,6 +120,16 @@ class INodeDirectoryWithQuota extends INodeDirectory {
   void updateNumItemsInTree(long nsDelta, long dsDelta) {
     nsCount += nsDelta;
     diskspace += dsDelta;
+  }
+  
+  /** Update the size of the tree
+   * 
+   * @param nsDelta the change of the tree size
+   * @param dsDelta change to disk space occupied
+   **/
+  void unprotectedUpdateNumItemsInTree(long nsDelta, long dsDelta) {
+    nsCount = nsCount + nsDelta;
+    diskspace = diskspace + dsDelta;
   }
   
   /** 

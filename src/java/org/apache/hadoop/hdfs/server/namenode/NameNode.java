@@ -714,7 +714,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return ret;
   }
   
-
+  /** 
+   * {@inheritDoc}
+   */
+  public void concat(String trg, String[] src) throws IOException {
+    namesystem.concat(trg, src);
+  }
+  
   /** {@inheritDoc} */
   @Override
   public void rename(String src, String dst, Options.Rename... options) throws IOException {

@@ -764,6 +764,146 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
     return lb;
   }
+  
+  /**
+   * Moves all the blocks from srcs and appends them to trg
+   * To avoid rollbacks we will verify validitity of ALL of the args
+   * before we start actual move.
+   * @param target
+   * @param srcs
+   * @throws IOException
+   */
+  public void concat(String target, String [] srcs) throws IOException{
+    FSNamesystem.LOG.debug("concat " + Arrays.toString(srcs) + " to " + target);
+    // check safe mode
+    if (isInSafeMode()) {
+      throw new SafeModeException("concat: cannot concat " + target, safeMode);
+    }
+    
+    // verify args
+    if(target.isEmpty()) {
+      throw new IllegalArgumentException("concat: trg file name is empty");
+    }
+    if(srcs == null || srcs.length == 0) {
+      throw new IllegalArgumentException("concat:  srcs list is empty or null");
+    }
+    
+    // curretnly we require all the files to be in the same dir
+    String trgParent = 
+      target.substring(0, target.lastIndexOf(Path.SEPARATOR_CHAR));
+    for(String s : srcs) {
+      String srcParent = s.substring(0, s.lastIndexOf(Path.SEPARATOR_CHAR));
+      if(! srcParent.equals(trgParent)) {
+        throw new IllegalArgumentException
+           ("concat:  srcs and target shoould be in same dir");
+      }
+    }
+    
+    synchronized(this) {
+      // write permission for the target
+      if (isPermissionEnabled) {
+        checkPathAccess(target, FsAction.WRITE);
+
+        // and srcs
+        for(String aSrc: srcs) {
+          checkPathAccess(aSrc, FsAction.READ); // read the file
+          checkParentAccess(aSrc, FsAction.WRITE); // for delete 
+        }
+      }
+
+
+      // to make sure no two files are the same
+      Set<INode> si = new HashSet<INode>();
+
+      // we put the following prerequisite for the operation
+      // replication and blocks sizes should be the same for ALL the blocks
+      // check the target
+      INode inode = dir.getFileINode(target);
+
+      if(inode == null) {
+        throw new IllegalArgumentException("concat: trg file doesn't exist");
+      }
+      if(inode.isUnderConstruction()) {
+        throw new IllegalArgumentException("concat: trg file is uner construction");
+      }
+
+      INodeFile trgInode = (INodeFile) inode;
+
+      // per design trg shouldn't be empty and all the blocks same size
+      if(trgInode.blocks.length == 0) {
+        throw new IllegalArgumentException("concat: "+ target + " file is empty");
+      }
+
+      long blockSize = trgInode.preferredBlockSize;
+
+      // check the end block to be full
+      if(blockSize != trgInode.blocks[trgInode.blocks.length-1].getNumBytes()) {
+        throw new IllegalArgumentException(target + " blocks size should be the same");
+      }
+
+      si.add(trgInode);
+      short repl = trgInode.blockReplication;
+
+      // now check the srcs
+      boolean endSrc = false; // final src file doesn't have to have full end block
+      for(int i=0; i<srcs.length; i++) {
+        String src = srcs[i];
+        if(i==srcs.length-1)
+          endSrc=true;
+
+        INodeFile srcInode = dir.getFileINode(src);
+
+        if(src.isEmpty() 
+            || srcInode == null
+            || srcInode.isUnderConstruction()
+            || srcInode.blocks.length == 0) {
+          throw new IllegalArgumentException("concat: file " + src + 
+          " is invalid or empty or underConstruction");
+        }
+
+        // check replication and blocks size
+        if(repl != srcInode.blockReplication) {
+          throw new IllegalArgumentException(src + " and " + target + " " +
+              "should have same replication: "
+              + repl + " vs. " + srcInode.blockReplication);
+        }
+
+        //boolean endBlock=false;
+        // verify that all the blocks are of the same length as target
+        // should be enough to check the end blocks
+        int idx = srcInode.blocks.length-1;
+        if(endSrc)
+          idx = srcInode.blocks.length-2; // end block of endSrc is OK not to be full
+        if(idx >= 0 && srcInode.blocks[idx].getNumBytes() != blockSize) {
+          throw new IllegalArgumentException("concat: blocks sizes of " + 
+              src + " and " + target + " should all be the same");
+        }
+
+        si.add(srcInode);
+      }
+
+      // make sure no two files are the same
+      if(si.size() < srcs.length+1) { // trg + srcs
+        // it means at least two files are the same
+        throw new IllegalArgumentException("at least two files are the same");
+      }
+
+      NameNode.stateChangeLog.debug("DIR* NameSystem.concat: " + 
+          Arrays.toString(srcs) + " to " + target);
+
+      dir.concatInternal(target,srcs);
+    }
+    getEditLog().logSync();
+   
+    
+    if (auditLog.isInfoEnabled()) {
+      final FileStatus stat = dir.getFileInfo(target);
+      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "concat", Arrays.toString(srcs), target, stat);
+    }
+   
+  }
 
   /**
    * stores the modification and access time for this inode. 

@@ -13,6 +13,9 @@ Trunk (unreleased changes)
     HDFS-654. Add support new atomic rename functionality in HDFS for 
     supporting rename in FileContext. (suresh)
 
+    HDFS-222. Support for concatenating of files into a single file
+    without copying. (Boris Shkolnik via hairong)
+
   IMPROVEMENTS
     
     HDFS-704. Unify build property names to facilitate cross-projects

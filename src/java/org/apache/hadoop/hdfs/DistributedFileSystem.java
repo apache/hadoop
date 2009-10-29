@@ -245,6 +245,23 @@ public class DistributedFileSystem extends FileSystem {
                                ) throws IOException {
     return dfs.setReplication(getPathName(src), replication);
   }
+  
+  /**
+   * THIS IS DFS only operations, it is not part of FileSystem
+   * move blocks from srcs to trg
+   * and delete srcs afterwards
+   * all blocks should be the same size
+   * @param trg existing file to append to
+   * @param psrcs list of files (same block size, same replication)
+   * @throws IOException
+   */
+  public void concat(Path trg, Path [] psrcs) throws IOException {
+    String [] srcs = new String [psrcs.length];
+    for(int i=0; i<psrcs.length; i++) {
+      srcs[i] = getPathName(psrcs[i]);
+    }
+    dfs.concat(getPathName(trg), srcs);
+  }
 
   /** {@inheritDoc} */
   @SuppressWarnings("deprecation")

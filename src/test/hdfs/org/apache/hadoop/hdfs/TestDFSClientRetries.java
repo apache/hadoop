@@ -177,6 +177,8 @@ public class TestDFSClientRetries extends TestCase {
     @Deprecated
     public boolean rename(String src, String dst) throws IOException { return false; }
     
+    public void concat(String trg, String[] srcs) throws IOException {  }
+
     public void rename(String src, String dst, Rename... options) throws IOException { }
 
     public boolean delete(String src) throws IOException { return false; }

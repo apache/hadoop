@@ -789,7 +789,71 @@ class FSDirectory implements Closeable {
       }
     }
   }
+
+  /**
+   * 
+   * @param target
+   * @param srcs
+   * @throws IOException
+   */
+  public void concatInternal(String target, String [] srcs) throws IOException{
+    synchronized(rootDir) {
+      // actual move
+      waitForReady();
+
+      unprotectedConcat(target, srcs);
+      // do the commit
+      fsImage.getEditLog().logConcat(target, srcs, FSNamesystem.now());
+    }
+  }
+  
+
+  
+  /**
+   * Concat all the blocks from srcs to trg
+   * and delete the srcs files
+   * @param trg target file to move the blocks to
+   * @param srcs list of file to move the blocks from
+   * Must be public because also called from EditLogs
+   * NOTE: - it does not update quota (not needed for concat)
+   */
+  public void unprotectedConcat(String target, String [] srcs) throws IOException {
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
+    }
+    // do the move
     
+    INode [] trgINodes =  getExistingPathINodes(target);
+    INodeFile trgInode = (INodeFile) trgINodes[trgINodes.length-1];
+    INodeDirectory trgParent = (INodeDirectory)trgINodes[trgINodes.length-2];
+    
+    INodeFile [] allSrcInodes = new INodeFile[srcs.length];
+    int i = 0;
+    int totalBlocks = 0;
+    for(String src : srcs) {
+      INodeFile srcInode = getFileINode(src);
+      allSrcInodes[i++] = srcInode;
+      totalBlocks += srcInode.blocks.length;  
+    }
+    trgInode.appendBlocks(allSrcInodes, totalBlocks); // copy the blocks
+    
+    // since we are in the same dir - we can use same parent to remove files
+    int count = 0;
+    for(INodeFile nodeToRemove: allSrcInodes) {
+      if(nodeToRemove == null) continue;
+      
+      nodeToRemove.blocks = null;
+      trgParent.removeChild(nodeToRemove);
+      count++;
+    }
+    
+    long now = FSNamesystem.now();
+    trgInode.setModificationTime(now);
+    trgParent.setModificationTime(now);
+    // update quota on the parent directory ('count' files removed, 0 space)
+    unprotectedUpdateCount(trgINodes, trgINodes.length-1, - count, 0);
+  }
+
   /**
    * Delete the target directory and collect the blocks under it
    * 
@@ -1129,6 +1193,24 @@ class FSDirectory implements Closeable {
       updateCount(inodes, numOfINodes, nsDelta, dsDelta, false);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.updateCountNoQuotaCheck - unexpected ", e);
+    }
+  }
+  
+  /**
+   * updates quota without verification
+   * callers responsibility is to make sure quota is not exceeded
+   * @param inodes
+   * @param numOfINodes
+   * @param nsDelta
+   * @param dsDelta
+   */
+   void unprotectedUpdateCount(INode[] inodes, int numOfINodes, 
+                                      long nsDelta, long dsDelta) {
+    for(int i=0; i < numOfINodes; i++) {
+      if (inodes[i].isQuotaSet()) { // a directory with quota
+        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
+        node.unprotectedUpdateNumItemsInTree(nsDelta, dsDelta);
+      }
     }
   }
   

@@ -96,7 +96,7 @@ import org.apache.hadoop.io.WritableUtils;
 class ImageLoaderCurrent implements ImageLoader {
   protected final DateFormat dateFormat = 
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
-  private static int [] versions = {-16, -17, -18, -19, -20, -21};
+  private static int [] versions = {-16, -17, -18, -19, -20, -21, -22};
   private int imageVersion = 0;
 
   /* (non-Javadoc)
