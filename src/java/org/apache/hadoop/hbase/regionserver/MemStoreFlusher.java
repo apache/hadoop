@@ -132,7 +132,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
   
   @Override
   public void run() {
-    while (!this.server.isStopRequested() && this.server.isInSafeMode()) {
+    while (!this.server.isStopRequested()) {
       try {
         Thread.sleep(threadWakeFrequency);
       } catch (InterruptedException ex) {

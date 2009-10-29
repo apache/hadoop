@@ -126,8 +126,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   
   protected final AtomicBoolean quiesced = new AtomicBoolean(false);
 
-  protected final AtomicBoolean safeMode = new AtomicBoolean(true);
-
   // Go down hard.  Used if file system becomes unavailable and also in
   // debugging and unit tests.
   protected volatile boolean abortRequested;
@@ -861,28 +859,15 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   /**
-   * Thread for toggling safemode after some configurable interval.
+   * Thread that gradually ups compaction limit.
    */
   private class CompactionLimitThread extends Thread {
     protected CompactionLimitThread() {}
 
     @Override
     public void run() {
-      // First wait until we exit safe mode
-      synchronized (safeMode) {
-        while(safeMode.get()) {
-          LOG.debug("Waiting to exit safe mode");
-          try {
-            safeMode.wait();
-          } catch (InterruptedException e) {
-            // ignore
-          }
-        }
-      }
-
-      // now that safemode is off, slowly increase the per-cycle compaction
-      // limit, finally setting it to unlimited (-1)
-
+      // Slowly increase per-cycle compaction limit, finally setting it to
+      // unlimited (-1)
       int compactionCheckInterval = 
         conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
             20 * 1000);
@@ -1145,16 +1130,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
       } 
     }
 
-    // Set up the safe mode handler if safe mode has been configured.
-    if (!conf.getBoolean("hbase.regionserver.safemode", true)) {
-      safeMode.set(false);
-      compactSplitThread.setLimit(-1);
-      LOG.debug("skipping safe mode");
-    } else {
-      this.compactionLimitThread = new CompactionLimitThread();
-      Threads.setDaemonThreadRunning(this.compactionLimitThread, n + ".safeMode",
-        handler);
-    }
+    this.compactionLimitThread = new CompactionLimitThread();
+    Threads.setDaemonThreadRunning(this.compactionLimitThread, n +
+      ".compactionLimitThread", handler);
 
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
@@ -2106,13 +2084,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
    */
   public boolean isStopRequested() {
     return stopRequested.get();
-  }
-
-  /**
-   * @return true if the region server is in safe mode
-   */
-  public boolean isInSafeMode() {
-    return safeMode.get();
   }
 
   /**
