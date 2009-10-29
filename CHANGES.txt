@@ -144,6 +144,7 @@ Release 0.21.0 - Unreleased
    HBASE-1926  Remove unused xmlenc jar from trunk
    HBASE-1936  HLog group commit
    HBASE-1921  When the Master's session times out and there's only one, cluster is wedged
+   HBASE-1942  Update hadoop jars in trunk; update to r831142
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
