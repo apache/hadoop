@@ -505,8 +505,8 @@ Release 0.21.0 - Unreleased
     TestNameEditsConfig, TestStartup and TestStorageRestore.
     (Jakob Homan via shv)
 
-    HADOOP-5438. Provide a single FileSystem method to create or open-for-append
-    to a file.  (He Yongqiang via dhruba)
+    HADOOP-5438. Provide a single FileSystem method to create or 
+    open-for-append to a file.  (He Yongqiang via dhruba)
 
     HADOOP-5472. Change DistCp to support globbing of input paths.  (Dhruba
     Borthakur and Rodrigo Schmidt via szetszwo)
@@ -579,7 +579,8 @@ Release 0.21.0 - Unreleased
     HADOOP-6160. Fix releaseaudit target to run on specific directories.
     (gkesavan)
     
-    HADOOP-6169. Removing deprecated method calls in TFile. (hong tang via mahadev)
+    HADOOP-6169. Removing deprecated method calls in TFile. (hong tang via 
+    mahadev)
 
     HADOOP-6176. Add a couple package private methods to AccessTokenHandler
     for testing.  (Kan Zhang via szetszwo)
@@ -627,6 +628,9 @@ Release 0.21.0 - Unreleased
     Collins via szetszwo)
 
     HADOOP-6329. Add build-fi directory to the ignore lists.  (szetszwo)
+
+    HADOOP-5107. Use Maven ant tasks to publish the subproject jars.
+    (Giridharan Kesavan via omalley)
 
   OPTIMIZATIONS
 
