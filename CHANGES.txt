@@ -475,6 +475,10 @@ Release 0.20.2 - Unreleased
     HDFS-127. Reset failure count in DFSClient for each block acquiring
     operation.  (Igor Bolotin via szetszwo)
 
+    HDFS-737. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Pandey via suresh)
+    
   BUG FIXES
 
     HDFS-686. NullPointerException is thrown while merging edit log and image.

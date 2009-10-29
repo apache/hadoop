@@ -193,6 +193,11 @@ public class BlockManager {
         chooseSourceDatanode(block, containingNodes, numReplicas);
         int usableReplicas = numReplicas.liveReplicas() +
                              numReplicas.decommissionedReplicas();
+       
+        if (block instanceof BlockInfo) {
+          String fileName = ((BlockInfo)block).getINode().getFullPathName();
+          out.print(fileName + ": ");
+        }
         // l: == live:, d: == decommissioned c: == corrupt e: == excess
         out.print(block + ((usableReplicas > 0)? "" : " MISSING") + 
                   " (replicas:" +
