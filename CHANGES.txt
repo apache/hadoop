@@ -246,6 +246,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6240. Add new FileContext rename operation that posix compliant
     that allows overwriting existing destination. (suresh)
 
+    HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
+    flush APIs to application users. (Hairong Kuang via suresh)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
