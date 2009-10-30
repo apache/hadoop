@@ -3495,23 +3495,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
   
-    /**
-     * @deprecated As of HDFS 0.21.0, replaced by hflush
-     * @see #hflush()
-     */
+    @Override
     @Deprecated
     public synchronized void sync() throws IOException {
       hflush();
     }
     
     /**
-     * All data is flushed out to datanodes.
+     * flushes out to all replicas of the block. 
+     * The data is in the buffers of the DNs 
+     * but not neccessary on the DN's OS buffers. 
+     *
      * It is a synchronous operation. When it returns,
      * it gurantees that flushed data become visible to new readers. 
      * It is not guaranteed that data has been flushed to 
      * persistent store on the datanode. 
      * Block allocations are persisted on namenode.
      */
+    @Override
     public synchronized void hflush() throws IOException {
       checkOpen();
       isClosed();
@@ -3561,6 +3562,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
+    /**
+     * The expected semantics is all data have flushed out to all replicas 
+     * and all replicas have done posix fsync equivalent - ie the OS has 
+     * flushed it to the disk device (but the disk may have it in its cache).
+     * 
+     * Right now by default it is implemented as hflush
+     */
+    @Override
+    public synchronized void hsync() throws IOException {
+      hflush();
+    }
+    
     /**
      * Waits till all existing data is flushed and confirmations 
      * received from datanodes. 

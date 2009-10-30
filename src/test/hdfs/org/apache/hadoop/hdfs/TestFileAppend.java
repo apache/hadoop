@@ -189,14 +189,14 @@ public class TestFileAppend extends TestCase {
       // write to file
       int mid = AppendTestUtil.FILE_SIZE /2;
       stm.write(fileContents, 0, mid);
-      stm.sync();
+      stm.hflush();
       System.out.println("Wrote and Flushed first part of file.");
 
       // write the remainder of the file
       stm.write(fileContents, mid, AppendTestUtil.FILE_SIZE - mid);
       System.out.println("Written second part of file");
-      stm.sync();
-      stm.sync();
+      stm.hflush();
+      stm.hflush();
       System.out.println("Wrote and Flushed second part of file.");
 
       // verify that full blocks are sane
@@ -244,7 +244,7 @@ public class TestFileAppend extends TestCase {
       int start = 0;
       for (start = 0; (start + 29) < AppendTestUtil.FILE_SIZE; ) {
         stm.write(fileContents, start, 29);
-        stm.sync();
+        stm.hflush();
         start += 29;
       }
       stm.write(fileContents, start, AppendTestUtil.FILE_SIZE -start);

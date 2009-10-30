@@ -203,7 +203,7 @@ public class TestAccessTokenWithDFS extends TestCase {
       stm = fs.append(fileToAppend);
       int mid = rawData.length - 1;
       stm.write(rawData, 1, mid - 1);
-      stm.sync();
+      stm.hflush();
 
       /*
        * wait till token used in stm expires
@@ -255,7 +255,7 @@ public class TestAccessTokenWithDFS extends TestCase {
       // write a partial block
       int mid = rawData.length - 1;
       stm.write(rawData, 0, mid);
-      stm.sync();
+      stm.hflush();
 
       /*
        * wait till token used in stm expires

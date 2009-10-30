@@ -59,7 +59,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file1);
       TestFileCreation.writeFile(stm1, 1000);
-      stm1.sync();
+      stm1.hflush();
 
       // create file2.
       Path file2 = new Path("/file2");
@@ -67,7 +67,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file2);
       TestFileCreation.writeFile(stm2, 1000);
-      stm2.sync();
+      stm2.hflush();
 
       // rm dir
       fs.delete(dir, true);

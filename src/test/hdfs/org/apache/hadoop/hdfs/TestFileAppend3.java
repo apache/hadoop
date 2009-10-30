@@ -236,7 +236,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     FSDataOutputStream out = fs.append(p);
     final int len2 = (int)BLOCK_SIZE/2; 
     AppendTestUtil.write(out, len1, len2);
-    out.sync();
+    out.hflush();
     
     //c. Rename file to file.new.
     final Path pnew = new Path(p + ".new");
@@ -327,7 +327,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     stm = fs.append(p);
     // Append to a partial CRC trunk
     stm.write(fileContents, 1, 1);
-    stm.sync();
+    stm.hflush();
     // The partial CRC trunk is not full yet and close the file
     stm.close();
     System.out.println("Append 1 byte and closed the file " + p);
@@ -341,11 +341,11 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     // append to a partial CRC trunk
     stm.write(fileContents, 2, 1);
     // The partial chunk is not full yet, force to send a packet to DN
-    stm.sync();
+    stm.hflush();
     System.out.println("Append and flush 1 byte");
     // The partial chunk is not full yet, force to send another packet to DN
     stm.write(fileContents, 3, 2);
-    stm.sync();
+    stm.hflush();
     System.out.println("Append and flush 2 byte");
 
     // fill up the partial chunk and close the file

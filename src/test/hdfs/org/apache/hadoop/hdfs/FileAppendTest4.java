@@ -99,7 +99,7 @@ public class FileAppendTest4 {
           // append flushedBytes bytes to the file
           out = fs.append(p);
           out.write(contents, oldFileLen, flushedBytes1);
-          out.sync();
+          out.hflush();
 
           // write another flushedBytes2 bytes to the file
           out.write(contents, oldFileLen + flushedBytes1, flushedBytes2);

@@ -96,7 +96,7 @@ public class TestDatanodeRestart {
       new Random().nextBytes(writeBuf);
       out = fs.create(src);
       out.write(writeBuf);
-      out.sync();
+      out.hflush();
       DataNode dn = cluster.getDataNodes().get(0);
       for (FSVolume volume : ((FSDataset)dn.data).volumes.volumes) {
         File currentDir = volume.getDir().getParentFile();

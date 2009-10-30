@@ -47,7 +47,7 @@ public class TestAbandonBlock extends junit.framework.TestCase {
       for(int i = 0; i < 1024; i++) {
         fout.write(123);
       }
-      fout.sync();
+      fout.hflush();
   
       //try reading the block by someone
       final DFSClient dfsclient = new DFSClient(NameNode.getAddress(CONF), CONF);

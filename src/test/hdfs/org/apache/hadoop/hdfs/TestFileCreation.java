@@ -512,7 +512,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // write two full blocks.
       writeFile(stm, numBlocks * blockSize);
-      stm.sync();
+      stm.hflush();
 
       // rename file wile keeping it open.
       Path fileRenamed = new Path("/filestatusRenamed.dat");
@@ -880,7 +880,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   /**
-   * Create a file, write something, fsync but not close.
+   * Create a file, write something, hflush but not close.
    * Then change lease period and wait for lease recovery.
    * Finally, read the block directly from each Datanode and verify the content.
    */
@@ -905,7 +905,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       final Path fpath = new Path(f);
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
       out.write("something".getBytes());
-      out.sync();
+      out.hflush();
 
       // set the soft and hard limit to be 1 second so that the
       // namenode triggers lease recovery
@@ -991,7 +991,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       final Path fpath = new Path(f);
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
       out.write("something_dhruba".getBytes());
-      out.sync();    // ensure that block is allocated
+      out.hflush();    // ensure that block is allocated
 
       // shutdown last datanode in pipeline.
       cluster.stopDataNode(2);

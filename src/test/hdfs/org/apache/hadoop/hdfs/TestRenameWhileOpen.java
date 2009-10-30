@@ -71,7 +71,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file1);
       TestFileCreation.writeFile(stm1);
-      stm1.sync();
+      stm1.hflush();
 
       // create file2.
       Path dir2 = new Path("/user/dir2");
@@ -80,7 +80,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file2);
       TestFileCreation.writeFile(stm2);
-      stm2.sync();
+      stm2.hflush();
 
       // move dir1 while file1 is open
       Path dir3 = new Path("/user/dir3");
@@ -155,7 +155,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file1);
       TestFileCreation.writeFile(stm1);
-      stm1.sync();
+      stm1.hflush();
 
       // create file2.
       Path dir2 = new Path("/user/dir2");
@@ -164,7 +164,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file2);
       TestFileCreation.writeFile(stm2);
-      stm2.sync();
+      stm2.hflush();
 
       // move dir1 while file1 is open
       Path dir3 = new Path("/user/dir3");
@@ -228,7 +228,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: " +
                          "Created file " + file1);
       TestFileCreation.writeFile(stm1);
-      stm1.sync();
+      stm1.hflush();
 
       Path dir2 = new Path("/user/dir2");
       fs.mkdirs(dir2);
@@ -291,7 +291,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file1);
       TestFileCreation.writeFile(stm1);
-      stm1.sync();
+      stm1.hflush();
 
       Path dir2 = new Path("/user/dir2");
 

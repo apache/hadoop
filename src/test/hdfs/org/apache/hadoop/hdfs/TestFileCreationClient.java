@@ -129,7 +129,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
         for(; running; i++) {
           System.out.println(getName() + " writes " + i);
           out.write(i);
-          out.sync();
+          out.hflush();
           sleep(100);
         }
       }

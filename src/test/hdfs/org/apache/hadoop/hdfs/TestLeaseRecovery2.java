@@ -79,9 +79,9 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       System.out.println("size=" + size);
       stm.write(buffer, 0, size);
 
-      // sync file
-      AppendTestUtil.LOG.info("sync");
-      stm.sync();
+      // hflush file
+      AppendTestUtil.LOG.info("hflush");
+      stm.hflush();
       AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
       dfs.dfs.leasechecker.interruptAndJoin();
 
