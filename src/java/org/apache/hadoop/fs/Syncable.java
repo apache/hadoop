@@ -20,11 +20,23 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 
-/** This interface declare the sync() operation. */
+/** This interface for flush/sync operation. */
 public interface Syncable {
   /**
-   * Synchronize all buffer with the underlying devices.
-   * @throws IOException
+   * @deprecated As of HADOOP 0.21.0, replaced by hflush
+   * @see #hflush()
    */
-  public void sync() throws IOException;
+  @Deprecated  public void sync() throws IOException;
+  
+  /** Flush out the data in client's user buffer. After the return of
+   * this call, new readers will see the data.
+   * @throws IOException if any error occurs
+   */
+  public void hflush() throws IOException;
+  
+  /** Similar to posix fsync, flush out the data in client's user buffer 
+   * all the way to the disk device (but the disk may have it in its cache).
+   * @throws IOException if error occurs
+   */
+  public void hsync() throws IOException;
 }

@@ -209,6 +209,9 @@ Trunk (unreleased changes)
     HADOOP-6205. Implementing aspects development and fault injeciton
     framework for Hadoop (cos)
 
+    HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
+    flush APIs to application users. (Hairong Kuang via suresh)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

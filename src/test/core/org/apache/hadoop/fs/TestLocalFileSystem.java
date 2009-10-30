@@ -111,6 +111,43 @@ public class TestLocalFileSystem extends TestCase {
     }
   }
 
+  /**
+   * test Syncable interface on raw local file system
+   * @throws IOException
+   */
+  public void testSyncable() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf).getRawFileSystem();
+    Path file = new Path(TEST_ROOT_DIR, "syncable");
+    FSDataOutputStream out = fs.create(file);;
+    final int bytesWritten = 1;
+    byte[] expectedBuf = new byte[] {'0', '1', '2', '3'};
+    try {
+      out.write(expectedBuf, 0, 1);
+      out.hflush();
+      verifyFile(fs, file, bytesWritten, expectedBuf);
+      out.write(expectedBuf, bytesWritten, expectedBuf.length-bytesWritten);
+      out.hsync();
+      verifyFile(fs, file, expectedBuf.length, expectedBuf);
+    } finally {
+      out.close();
+    }
+  }
+  
+  private void verifyFile(FileSystem fs, Path file, int bytesToVerify, 
+      byte[] expectedBytes) throws IOException {
+    FSDataInputStream in = fs.open(file);
+    try {
+      byte[] readBuf = new byte[bytesToVerify];
+      in.readFully(readBuf, 0, bytesToVerify);
+      for (int i=0; i<bytesToVerify; i++) {
+        assertEquals(expectedBytes[i], readBuf[i]);
+      }
+    } finally {
+      in.close();
+    }
+  }
+  
   public void testCopy() throws IOException {
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);

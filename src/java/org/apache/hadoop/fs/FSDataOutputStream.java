@@ -91,10 +91,29 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
     return wrappedStream;
   }
 
-  /** {@inheritDoc} */
+  @Override  // Syncable
+  @Deprecated
   public void sync() throws IOException {
     if (wrappedStream instanceof Syncable) {
       ((Syncable)wrappedStream).sync();
+    }
+  }
+  
+  @Override  // Syncable
+  public void hflush() throws IOException {
+    if (wrappedStream instanceof Syncable) {
+      ((Syncable)wrappedStream).hflush();
+    } else {
+      wrappedStream.flush();
+    }
+  }
+  
+  @Override  // Syncable
+  public void hsync() throws IOException {
+    if (wrappedStream instanceof Syncable) {
+      ((Syncable)wrappedStream).hsync();
+    } else {
+      wrappedStream.flush();
     }
   }
 }
