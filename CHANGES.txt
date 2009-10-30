@@ -1139,6 +1139,9 @@ Release 0.21.0 - Unreleased
     -libjars and -archives options and fix Path to support URI with fragment.
     (Amareshwari Sriramadasu via szetszwo)
 
+    HADOOP-6344. Fix rm and rmr immediately delete files rather than sending 
+    to trash, if a user is over-quota. (Jakob Homan via suresh)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
