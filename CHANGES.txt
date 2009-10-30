@@ -233,14 +233,15 @@ Release 0.21.0 - Unreleased
     HDFS-563. Simplify the codes in FSNamesystem.getBlockLocations(..).
     (szetszwo)
 
-    HDFS-581. Introduce an iterator over blocks in the block report array. (shv)
+    HDFS-581. Introduce an iterator over blocks in the block report array.(shv)
 
     HDFS-549. Add a new target, run-with-fault-inject-testcaseonly, which
     allows an execution of non-FI tests in FI-enable environment.  (Konstantin
     Boudnik via szetszwo)
 
-    HDFS-173. Namenode will not block until a large directory deletion completes.
-    It allows other operations when the deletion is in progress. (suresh)
+    HDFS-173. Namenode will not block until a large directory deletion 
+    completes. It allows other operations when the deletion is in progress. 
+    (suresh)
 
     HDFS-551. Create new functional test for a block report. (Konstantin
     Boudnik via hairong)
@@ -323,8 +324,11 @@ Release 0.21.0 - Unreleased
 
     HDFS-728. Create a comprehensive functional test for append. (hairong)
 
-    HDFS-736. commitBlockSynchronization() updates block GS and length in-place.
-    (shv)
+    HDFS-736. commitBlockSynchronization() updates block GS and length 
+    in-place. (shv)
+
+    HADOOP-5107. Use Maven ant tasks to publish the subproject jars.
+    (Giridharan Kesavan via omalley)
 
   BUG FIXES
 

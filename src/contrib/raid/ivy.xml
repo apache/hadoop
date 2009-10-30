@@ -20,7 +20,7 @@
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
     <description>
-        Hadoop Core
+        Hadoop HDFS Raid Contrib
     </description>
   </info>
   <configurations defaultconfmapping="default">
@@ -82,6 +82,11 @@
   <dependencies>
 
  <!--used client side-->
+    
+    <dependency org="org.apache.hadoop"
+      name="hadoop-core"
+      rev="${hadoop-core.version}"
+      conf="client->default"/>
     <dependency org="commons-cli"
       name="commons-cli"
       rev="${commons-cli.version}"
