@@ -816,11 +816,11 @@ public class HLog implements HConstants, Syncable {
    */
   protected void hflush() throws IOException {
     synchronized (this.updateLock) {
-      if (this.closed)
+      if (this.closed) {
         return;
-
+      }
       if (this.forceSync ||
-          this.unflushedEntries.get() > this.flushlogentries) {
+          this.unflushedEntries.get() >= this.flushlogentries) {
         try {
           this.writer.sync();
           if (this.writer_out != null) {
