@@ -229,7 +229,7 @@ class IndexedRegion extends TransactionalRegion {
   @Override
   public void delete(Delete delete, final Integer lockid, boolean writeToWAL)
       throws IOException {
-
+    // First remove the existing indexes.
     if (!getIndexes().isEmpty()) {
       // Need all columns
       NavigableSet<byte[]> neededColumns = getColumnsForIndexes(getIndexes());
@@ -251,13 +251,17 @@ class IndexedRegion extends TransactionalRegion {
       for (IndexSpecification indexSpec : getIndexes()) {
         removeOldIndexEntry(indexSpec, delete.getRow(), oldColumnValues);
       }
+    }
+    
+    super.delete(delete, lockid, writeToWAL);
 
-      // Handle if there is still a version visible.
-      if (delete.getTimeStamp() != HConstants.LATEST_TIMESTAMP) {
-        get.setTimeRange(1, delete.getTimeStamp());
-        oldRow = super.get(get, lockid);
-        SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(oldRow);
-        
+    if (!getIndexes().isEmpty()) {
+      Get get = new Get(delete.getRow());
+      
+      // Rebuild index if there is still a version visible.
+      Result currentRow = super.get(get, lockid);
+      if (!currentRow.isEmpty()) {
+        SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentRow);
         for (IndexSpecification indexSpec : getIndexes()) {
           if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, currentColumnValues)) {
             updateIndex(indexSpec, delete.getRow(), currentColumnValues);
@@ -265,7 +269,7 @@ class IndexedRegion extends TransactionalRegion {
         }
       }
     }
-    super.delete(delete, lockid, writeToWAL);
+   
   }
 
   private SortedMap<byte[], byte[]> convertToValueMap(Result result) {

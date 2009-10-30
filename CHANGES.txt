@@ -84,6 +84,8 @@ Release 0.21.0 - Unreleased
    HBASE-1927  Scanners not closed properly in certain circumstances
    HBASE-1934  NullPointerException in ClientScanner (Andrew Purtell via Stack)
    HBASE-1946  Unhandled exception at regionserver (Dmitriy Lyfar via Stack)
+   HBASE-1682  IndexedRegion does not properly handle deletes
+               (Andrew McCall via Clint Morgan and Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
