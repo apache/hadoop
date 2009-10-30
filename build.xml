@@ -1052,7 +1052,8 @@
     <delete file="${hadoop-hdfs-test.pom}"/>
   </target>
 
-  <target name="veryclean" depends="clean" description="veryclean.  Delete ant maven task and ivy jars">
+  <target name="veryclean" depends="clean-cache,clean" 
+          description="veryclean.  Delete ant maven task and ivy jars">
     <delete file="${ant_task.jar}"/>
     <delete file="${ivy.jar}"/>
   </target>
