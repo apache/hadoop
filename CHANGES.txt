@@ -249,6 +249,10 @@ Release 0.21.0 - Unreleased
     HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
     flush APIs to application users. (Hairong Kuang via suresh)
 
+    Hadoop-6223. Add new file system interface AbstractFileSystem with
+    implementation of some file systems that delegate to old FileSystem.
+    (Sanjay Radia via suresh)
+
   IMPROVEMENTS
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information

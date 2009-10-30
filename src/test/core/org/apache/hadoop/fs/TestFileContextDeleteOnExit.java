@@ -70,8 +70,8 @@ public class TestFileContextDeleteOnExit {
   }
   
   private void checkDeleteOnExitData(int size, FileContext fc, Path... paths) {
-    Assert.assertEquals(size, FileContext.deleteOnExit.size());
-    Set<Path> set = FileContext.deleteOnExit.get(fc);
+    Assert.assertEquals(size, FileContext.DELETE_ON_EXIT.size());
+    Set<Path> set = FileContext.DELETE_ON_EXIT.get(fc);
     Assert.assertEquals(paths.length, (set == null ? 0 : set.size()));
     for (Path path : paths) {
       Assert.assertTrue(set.contains(path));
@@ -87,7 +87,7 @@ public class TestFileContextDeleteOnExit {
     checkDeleteOnExitData(1, fc, file1);
     
     // Ensure shutdown hook is added
-    Assert.assertTrue(Runtime.getRuntime().removeShutdownHook(FileContext.finalizer));
+    Assert.assertTrue(Runtime.getRuntime().removeShutdownHook(FileContext.FINALIZER));
     
     Path file2 = getTestPath("dir1/file2");
     createFile(fc, file2);
@@ -101,8 +101,8 @@ public class TestFileContextDeleteOnExit {
     
     // trigger deleteOnExit and ensure the registered
     // paths are cleaned up
-    FileContext.finalizer.start();
-    FileContext.finalizer.join();
+    FileContext.FINALIZER.start();
+    FileContext.FINALIZER.join();
     checkDeleteOnExitData(0, fc, new Path[0]);
     Assert.assertFalse(fc.exists(file1));
     Assert.assertFalse(fc.exists(file2));

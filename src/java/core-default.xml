@@ -163,6 +163,19 @@
 </property>
 
 <property>
+  <name>fs.AbstractFileSystem.file.impl</name>
+  <value>org.apache.hadoop.fs.local.LocalFs</value>
+  <description>The AbstractFileSystem for file: uris.</description>
+</property>
+
+
+<property>
+  <name>fs.AbstractFileSystem.hdfs.impl</name>
+  <value>org.apache.hadoop.fs.Hdfs</value>
+  <description>The FileSystem for hdfs: uris.</description>
+</property>
+
+<property>
   <name>fs.s3.impl</name>
   <value>org.apache.hadoop.fs.s3.S3FileSystem</value>
   <description>The FileSystem for s3: uris.</description>

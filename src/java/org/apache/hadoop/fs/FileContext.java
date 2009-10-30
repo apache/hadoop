@@ -37,13 +37,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Progressable;
 
 /**
  * The FileContext class provides an interface to the application writer for
@@ -51,81 +50,102 @@ import org.apache.hadoop.util.Progressable;
  * It provides a set of methods for the usual operation: create, open, 
  * list, etc 
  * 
- * *** Path Names ***
+ * <p>
+ * <b> *** Path Names *** </b>
+ * <p>
  * 
  * The Hadoop filesystem supports a URI name space and URI names.
  * It offers a a forest of filesystems that can be referenced using fully
  * qualified URIs.
- * 
  * Two common Hadoop filesystems implementations are
- *   the local filesystem: file:///path
- *   the hdfs filesystem hdfs://nnAddress:nnPort/path
- *   
+ * <ul>
+ * <li> the local filesystem: file:///path
+ * <li> the hdfs filesystem hdfs://nnAddress:nnPort/path
+ * </ul>  
  * While URI names are very flexible, it requires knowing the name or address
  * of the server. For convenience one often wants to access the default system
- * in your environment without knowing its name/address. This has an
+ * in one's environment without knowing its name/address. This has an
  * additional benefit that it allows one to change one's default fs
- *  (say your admin moves you from cluster1 to cluster2).
- *  
- * Too facilitate this Hadoop supports a notion of a default filesystem.
+ *  (e.g. admin moves application from cluster1 to cluster2).
+ *  <p>
+ * To facilitate this, Hadoop supports a notion of a default filesystem.
  * The user can set his default filesystem, although this is
- * typically set up for you in your environment in your default config.
+ * typically set up for you in your environment via your default config.
  * A default filesystem implies a default scheme and authority; slash-relative
  * names (such as /for/bar) are resolved relative to that default FS.
  * Similarly a user can also have working-directory-relative names (i.e. names
  * not starting with a slash). While the working directory is generally in the
- * same default FS, the wd can be in a different FS; in particular, changing
- * the default filesystem DOES NOT change the working directory,
- * 
+ * same default FS, the wd can be in a different FS.
+ * <p>
  *  Hence Hadoop path names can be one of:
- *       fully qualified URI:  scheme://authority/path
- *       slash relative names: /path    - relative to the default filesystem
- *       wd-relative names:    path        - relative to the working dir
- *       
- *       Relative paths with scheme (scheme:foo/bar) are illegal
- *  
- *  ****The Role of the FileContext and configuration defaults****
+ *  <ul>
+ *  <li> fully qualified URI:  scheme://authority/path
+ *  <li> slash relative names: /path    - relative to the default filesystem
+ *  <li> wd-relative names:    path        - relative to the working dir
+ *  </ul>   
+ *  Relative paths with scheme (scheme:foo/bar) are illegal.
+ *  <p>
+ *  <b>****The Role of the FileContext and configuration defaults****</b>
+ *  <p>
  *  The FileContext provides file namespace context for resolving file names;
  *  it also contains the umask for permissions, In that sense it is like the
  *  per-process file-related state in Unix system.
- *  These, in general, are obtained from the default configuration file
- *  in your environment,  (@see {@link Configuration}
- *  
+ *  These two properties
+ *  <ul> 
+ *  <li> default file system i.e your slash)
+ *  <li> umask
+ *  </ul>
+ *   in general, are obtained from the default configuration file
+ *  in your environment,  (@see {@link Configuration}).
  *  No other configuration parameters are obtained from the default config as 
  *  far as the file context layer is concerned. All filesystem instances
  *  (i.e. deployments of filesystems) have default properties; we call these
  *  server side (SS) defaults. Operation like create allow one to select many 
- *  properties: either pass them in as explicit parameters or 
- *  one can choose to used the SS properties.
- *  
+ *  properties: either pass them in as explicit parameters or use
+ *  the SS properties.
+ *  <p>
  *  The filesystem related SS defaults are
- *    - the home directory (default is "/user/<userName>")
- *    - the initial wd (only for local fs)
- *    - replication factor
- *    - block size
- *    - buffer size
- *    - bytesPerChecksum (if used).
+ *  <ul>
+ *  <li> the home directory (default is "/user/userName")
+ *  <li> the initial wd (only for local fs)
+ *  <li> replication factor
+ *  <li> block size
+ *  <li> buffer size
+ *  <li> bytesPerChecksum (if used).
+ *  </ul>
  *
- * 
- * *** Usage Model for the FileContext class ***
- * 
+ * <p>
+ * <b> *** Usage Model for the FileContext class *** </b>
+ * <p>
  * Example 1: use the default config read from the $HADOOP_CONFIG/core.xml.
- *            Unspecified values come from core-defaults.xml in the release jar.
- *            
- *     myFiles = getFileContext(); // uses the default config 
- *     myFiles.create(path, ...);
- *     myFiles.setWorkingDir(path)
- *     myFiles.open (path, ...);   
- *     
- * Example 2: Use a specific config, ignoring $HADOOP_CONFIG
- *    configX = someConfigSomeOnePassedToYou.
- *    myFContext = getFileContext(configX); //configX not changed but passeddown
- *    myFContext.create(path, ...);
- *    myFContext.setWorkingDir(path)
- *                                             
- * Other ways of creating new FileContexts:
- *   getLocalFSFileContext(...)  // local filesystem is the default FS
- *   getLocalFileContext(URI, ...) // where specified URI is default FS.
+ *   Unspecified values come from core-defaults.xml in the release jar.
+ *  <ul>  
+ *  <li> myFContext = FileContext.getFileContext(); // uses the default config
+ *                                                // which has your default FS 
+ *  <li>  myFContext.create(path, ...);
+ *  <li>  myFContext.setWorkingDir(path)
+ *  <li>  myFContext.open (path, ...);  
+ *  </ul>  
+ * Example 2: Get a FileContext with a specific URI as the default FS
+ *  <ul>  
+ *  <li> myFContext = FileContext.getFileContext(URI)
+ *  <li> myFContext.create(path, ...);
+ *   ...
+ * </ul> 
+ * Example 3: FileContext with local file system as the default
+ *  <ul> 
+ *  <li> myFContext = FileContext.getLocalFSFileContext()
+ *  <li> myFContext.create(path, ...);
+ *  <li> ...
+ *  </ul> 
+ * Example 4: Use a specific config, ignoring $HADOOP_CONFIG
+ *  Generally you should not need use a config unless you are doing
+ *   <ul> 
+ *   <li> configX = someConfigSomeOnePassedToYou.
+ *   <li> myFContext = getFileContext(configX); //configX not changed but passeddown
+ *   <li> myFContext.create(path, ...);
+ *   <li>...
+ *  </ul>                                          
  *    
  */
 
@@ -135,41 +155,44 @@ import org.apache.hadoop.util.Progressable;
 public final class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
+  public static final FsPermission DEFAULT_PERM = FsPermission.getDefault();
   
   /**
-   * List of files that should be deleted on JVM shutdown
+   * List of files that should be deleted on JVM shutdown.
    */
-  final static Map<FileContext, Set<Path>> deleteOnExit = 
+  static final Map<FileContext, Set<Path>> DELETE_ON_EXIT = 
     new IdentityHashMap<FileContext, Set<Path>>();
 
-  /** JVM shutdown hook thread */
-  final static FileContextFinalizer finalizer = 
+  /** JVM shutdown hook thread. */
+  static final FileContextFinalizer FINALIZER = 
     new FileContextFinalizer();
+  
+  private static final PathFilter DEFAULT_FILTER = new PathFilter() {
+    public boolean accept(final Path file) {
+      return true;
+    }
+  };
   
   /**
    * The FileContext is defined by.
    *  1) defaultFS (slash)
    *  2) wd
    *  3) umask
-   *
    */   
-  private final FileSystem defaultFS; // the default FS for this FileContext.
+  private final AbstractFileSystem defaultFS; //default FS for this FileContext.
   private Path workingDir;          // Fully qualified
   private FsPermission umask;
-  private final Configuration conf; // passed to the filesystem below
-                                  // When we move to new AbstractFileSystem
-                                  // then it is not really needed except for
-                                  // undocumented config vars;
+  private final Configuration conf;
 
-  private FileContext(final FileSystem defFs, final FsPermission theUmask, 
-      final Configuration aConf) {
+  private FileContext(final AbstractFileSystem defFs,
+    final FsPermission theUmask, final Configuration aConf) {
     defaultFS = defFs;
     umask = FsPermission.getUMask(aConf);
     conf = aConf;
     /*
      * Init the wd.
      * WorkingDir is implemented at the FileContext layer 
-     * NOT at the FileSystem layer. 
+     * NOT at the AbstractFileSystem layer. 
      * If the DefaultFS, such as localFilesystem has a notion of
      *  builtin WD, we use that as the initial WD.
      *  Otherwise the WD is initialized to the home directory.
@@ -205,21 +228,20 @@ public final class FileContext {
    * Delete all the paths that were marked as delete-on-exit.
    */
   static void processDeleteOnExit() {
-    synchronized (deleteOnExit) {
-      Set<Entry<FileContext, Set<Path>>> set = deleteOnExit.entrySet();
+    synchronized (DELETE_ON_EXIT) {
+      Set<Entry<FileContext, Set<Path>>> set = DELETE_ON_EXIT.entrySet();
       for (Entry<FileContext, Set<Path>> entry : set) {
         FileContext fc = entry.getKey();
         Set<Path> paths = entry.getValue();
         for (Path path : paths) {
           try {
             fc.delete(path, true);
-          }
-          catch (IOException e) {
+          } catch (IOException e) {
             LOG.warn("Ignoring failure to deleteOnExit for path " + path);
           }
         }
       }
-      deleteOnExit.clear();
+      DELETE_ON_EXIT.clear();
     }
   }
   
@@ -241,30 +263,27 @@ public final class FileContext {
    * @return the filesystem of the path
    * @throws IOException
    */
-  private FileSystem getFSofPath(final Path absOrFqPath) throws IOException {
+  private AbstractFileSystem getFSofPath(final Path absOrFqPath)
+    throws IOException {
     checkNotSchemeWithRelative(absOrFqPath);
     if (!absOrFqPath.isAbsolute() && absOrFqPath.toUri().getScheme() == null) {
       throw new IllegalArgumentException(
           "FileContext Bug: path is relative");
     }
-    
-    // TBD cleanup this impl once we create a new FileSystem to replace current
-    // one - see HADOOP-6223.
+
     try { 
       // Is it the default FS for this FileContext?
       defaultFS.checkPath(absOrFqPath);
       return defaultFS;
     } catch (Exception e) { // it is different FileSystem
-      return FileSystem.get(absOrFqPath.toUri(), conf);
+      return AbstractFileSystem.get(absOrFqPath.toUri(), conf);
     }
   }
   
   
   /**
    * Protected Static Factory methods for getting a FileContexts
-   * that take a FileSystem as input. To be used for testing.
-   * Protected since new FileSystem will be protected.
-   * Note new file contexts are created for each call.
+   * that take a AbstractFileSystem as input. To be used for testing.
    */
   
   /**
@@ -276,27 +295,24 @@ public final class FileContext {
    * @return new FileContext with specifed FS as default.
    * @throws IOException if the filesystem with specified cannot be created
    */
-  protected static FileContext getFileContext(final FileSystem defFS,
+  protected static FileContext getFileContext(final AbstractFileSystem defFS,
                     final Configuration aConf) throws IOException {
     return new FileContext(defFS, FsPermission.getUMask(aConf), aConf);
   }
   
   /**
-   * Create a FileContext for specified FileSystem using the default config.
+   * Create a FileContext for specified filesystem using the default config.
    * 
    * @param defaultFS
-   * @return a FileSystem for the specified URI
-   * @throws IOException if the filesysem with specified cannot be created
+   * @return a FileContext with the specified AbstractFileSystem
+   *                 as the default FS.
+   * @throws IOException if the filesystem with specified cannot be created
    */
-  protected static FileContext getFileContext(final FileSystem defaultFS)
-    throws IOException {
+  protected static FileContext getFileContext(
+    final AbstractFileSystem defaultFS) throws IOException {
     return getFileContext(defaultFS, new Configuration());
   }
  
- 
-  public static final URI LOCAL_FS_URI = URI.create("file:///");
-  public static final FsPermission DEFAULT_PERM = FsPermission.getDefault();
-  
   /**
    * Static Factory methods for getting a FileContext.
    * Note new file contexts are created for each call.
@@ -310,7 +326,7 @@ public final class FileContext {
    * The keys relevant to the FileContext layer are extracted at time of
    * construction. Changes to the config after the call are ignore
    * by the FileContext layer. 
-   * The conf is passed to lower layers like FileSystem and HDFS which
+   * The conf is passed to lower layers like AbstractFileSystem and HDFS which
    * pick up their own config variables.
    */
    
@@ -320,7 +336,7 @@ public final class FileContext {
    * Unspecified key-values for config are defaulted from core-defaults.xml
    * in the release jar.
    * 
-   * @throws IOException if default FileSystem in the config  cannot be created
+   * @throws IOException if default filesystem in the config  cannot be created
    */
   public static FileContext getFileContext() throws IOException {
     return getFileContext(new Configuration());
@@ -334,7 +350,7 @@ public final class FileContext {
    */
   public static FileContext getLocalFSFileContext() throws IOException {
     if (localFsSingleton == null) {
-      localFsSingleton = getFileContext(LOCAL_FS_URI); 
+      localFsSingleton = getFileContext(FsConstants.LOCAL_FS_URI); 
     }
     return localFsSingleton;
   }
@@ -344,7 +360,7 @@ public final class FileContext {
    * Create a FileContext for specified URI using the default config.
    * 
    * @param defaultFsUri
-   * @return a FileSystem for the specified URI
+   * @return a FileContext with the specified URI as the default FS.
    * @throws IOException if the filesysem with specified cannot be created
    */
   public static FileContext getFileContext(final URI defaultFsUri)
@@ -362,15 +378,18 @@ public final class FileContext {
    */
   public static FileContext getFileContext(final URI defaultFsUri,
                     final Configuration aConf) throws IOException {
-    return getFileContext(FileSystem.get(defaultFsUri,  aConf), aConf);
+    return getFileContext(AbstractFileSystem.get(defaultFsUri,  aConf), aConf);
   }
 
   /**
    * Create a FileContext using the passed config.
+   * Generally it is better to use {@link #getFileContext(URI, Configuration)}
+   * instead of this one.
+   * 
    * 
    * @param aConf
    * @return new FileContext
-   * @throws IOException  if default FileSystem in the config  cannot be created
+   * @throws IOException  if default filesystem in the config  cannot be created
    */
   public static FileContext getFileContext(final Configuration aConf)
     throws IOException {
@@ -385,14 +404,14 @@ public final class FileContext {
    */
   public static FileContext getLocalFSFileContext(final Configuration aConf)
     throws IOException {
-    return getFileContext(LOCAL_FS_URI, aConf);
+    return getFileContext(FsConstants.LOCAL_FS_URI, aConf);
   }
 
   /* This method is needed for tests. */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable /* return type will change to AFS once
                                   HADOOP-6223 is completed */
-  protected FileSystem getDefaultFileSystem() {
+  protected AbstractFileSystem getDefaultFileSystem() {
     return defaultFS;
   }
   
@@ -463,59 +482,49 @@ public final class FileContext {
    * @param f the file name to open
    * @param createFlag gives the semantics  of create: overwrite, append etc.
    * @param opts  - varargs of CreateOpt:
-   *     Progress - to report progress on the operation - default null
-   *     Permission - umask is applied against permisssion:
-   *                  default FsPermissions:getDefault()
-   *                  @see #setPermission(Path, FsPermission)
-   *     CreateParent - create missing parent path
-   *                  default is to not create parents
-   *     
-   *                The defaults for the following are  SS defaults of the
-   *                file server implementing the tart path.
-   *                Not all parameters make sense for all kinds of filesystem
+   * <ul>
+   * <li>   Progress - to report progress on the operation - default null
+   * <li>   Permission - umask is applied against permisssion:
+   *                  default is FsPermissions:getDefault()
+
+   * <li>   CreateParent - create missing parent path; default is to not
+   *                   create parents
+   * <li> The defaults for the following are  SS defaults of the
+   *      file server implementing the target path. 
+   *      Not all parameters make sense for all kinds of filesystem
    *                - eg. localFS ignores Blocksize, replication, checksum
-   *    BufferSize - buffersize used in FSDataOutputStream
-   *    Blocksize - block size for file blocks
-   *    ReplicationFactor - replication for blocks
-   *    BytesPerChecksum - bytes per checksum
-   *                     
-   *    
+   * <ul>
+   * <li>  BufferSize - buffersize used in FSDataOutputStream
+   * <li>  Blocksize - block size for file blocks
+   * <li>  ReplicationFactor - replication for blocks
+   * <li>  BytesPerChecksum - bytes per checksum
+   * </ul>
+   * </ul>
+   *                       
    * @throws IOException
+   * 
+   * @see #setPermission(Path, FsPermission)
    */
-  @SuppressWarnings("deprecation") // call to primitiveCreate
   public FSDataOutputStream create(final Path f,
-                                    final EnumSet<CreateFlag> createFlag,
-                                    CreateOpts... opts)
+                                   final EnumSet<CreateFlag> createFlag,
+                                   Options.CreateOpts... opts)
     throws IOException {
     Path absF = fixRelativePart(f);
-    FileSystem fsOfAbsF = getFSofPath(absF);
+    AbstractFileSystem fsOfAbsF = getFSofPath(absF);
 
     // If one of the options is a permission, extract it & apply umask
     // If not, add a default Perms and apply umask;
-    // FileSystem#create
+    // AbstractFileSystem#create
 
-    FsPermission permission = null;
+    CreateOpts.Perms permOpt = 
+      (CreateOpts.Perms) CreateOpts.getOpt(CreateOpts.Perms.class, opts);
+    FsPermission permission = (permOpt != null) ? permOpt.getValue() :
+                                      FsPermission.getDefault();
+    permission = permission.applyUMask(umask);
 
-    if (opts != null) {
-      for (int i = 0; i < opts.length; ++i) {
-        if (opts[i] instanceof CreateOpts.Perms) {
-          if (permission != null) 
-            throw new IllegalArgumentException("multiple permissions varargs");
-          permission = ((CreateOpts.Perms) opts[i]).getValue();
-          opts[i] = CreateOpts.perms(permission.applyUMask(umask));
-        }
-      }
-    }
-
-    CreateOpts[] theOpts = opts;
-    if (permission == null) { // no permission was set
-      CreateOpts[] newOpts = new CreateOpts[opts.length + 1];
-      System.arraycopy(opts, 0, newOpts, 0, opts.length);
-      newOpts[opts.length] = 
-        CreateOpts.perms(FsPermission.getDefault().applyUMask(umask));
-      theOpts = newOpts;
-    }
-    return fsOfAbsF.primitiveCreate(absF, createFlag, theOpts);
+    CreateOpts[] updatedOpts = 
+                      CreateOpts.setOpt(CreateOpts.perms(permission), opts);
+    return fsOfAbsF.create(absF, createFlag, updatedOpts);
   }
   
   /**
@@ -529,14 +538,13 @@ public final class FileContext {
    * @throws IOException when operation fails not authorized or 
    *   if parent does not exist and createParent is false.
    */
-  @SuppressWarnings("deprecation") // call to primitiveMkdir
   public void mkdir(final Path dir, final FsPermission permission,
       final boolean createParent)
     throws IOException {
     Path absDir = fixRelativePart(dir);
     FsPermission absFerms = (permission == null ? 
           FsPermission.getDefault() : permission).applyUMask(umask);
-    getFSofPath(absDir).primitiveMkdir(absDir, absFerms, createParent);
+    getFSofPath(absDir).mkdir(absDir, absFerms, createParent);
   }
 
   /**
@@ -615,15 +623,15 @@ public final class FileContext {
    * @param dst new path after rename
    * @throws IOException on failure
    */
-  @SuppressWarnings("deprecation")
-  public void rename(final Path src, final Path dst, final Rename... options)
-    throws IOException {
+
+  public void rename(final Path src, final Path dst,
+      final Options.Rename... options) throws IOException {
     final Path absSrc  = fixRelativePart(src);
     final Path absDst = fixRelativePart(dst);
-    FileSystem srcFS = getFSofPath(absSrc);
-    FileSystem dstFS = getFSofPath(absDst);
+    AbstractFileSystem srcFS = getFSofPath(absSrc);
+    AbstractFileSystem dstFS = getFSofPath(absDst);
     if(!srcFS.getUri().equals(dstFS.getUri())) {
-      throw new IOException("Renames across FileSystems not supported");
+      throw new IOException("Renames across AbstractFileSystems not supported");
     }
     srcFS.rename(absSrc, absDst, options);
   }
@@ -750,10 +758,10 @@ public final class FileContext {
    */
   public FsStatus getFsStatus(final Path f) throws IOException {
     if (f == null) {
-      return defaultFS.getStatus(null);
+      return defaultFS.getFsStatus(null);
     }
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).getStatus(absF);
+    return getFSofPath(absF).getFsStatus(absF);
   }
   
   /**
@@ -827,15 +835,15 @@ public final class FileContext {
     if (!exists(f)) {
       return false;
     }
-    synchronized (deleteOnExit) {
-      if (deleteOnExit.isEmpty() && !finalizer.isAlive()) {
-        Runtime.getRuntime().addShutdownHook(finalizer);
+    synchronized (DELETE_ON_EXIT) {
+      if (DELETE_ON_EXIT.isEmpty() && !FINALIZER.isAlive()) {
+        Runtime.getRuntime().addShutdownHook(FINALIZER);
       }
       
-      Set<Path> set = deleteOnExit.get(this);
+      Set<Path> set = DELETE_ON_EXIT.get(this);
       if (set == null) {
         set = new TreeSet<Path>();
-        deleteOnExit.put(this, set);
+        DELETE_ON_EXIT.put(this, set);
       }
       set.add(f);
     }
@@ -876,6 +884,31 @@ public final class FileContext {
         }
       }
       return results.toArray(new FileStatus[results.size()]);
+    }
+    
+    
+    /**
+     * Return the {@link ContentSummary} of path f.
+     * @param f
+     * @return the {@link ContentSummary} of path f.
+     * @throws IOException
+     */
+    public ContentSummary getContentSummary(Path f) throws IOException {
+      FileStatus status = FileContext.this.getFileStatus(f);
+      if (!status.isDir()) {
+        // f is a file
+        return new ContentSummary(status.getLen(), 1, 0);
+      }
+      // f is a directory
+      long[] summary = {0, 0, 1};
+      for(FileStatus s : FileContext.this.listStatus(f)) {
+        ContentSummary c = s.isDir() ? getContentSummary(s.getPath()) :
+                                       new ContentSummary(s.getLen(), 1, 0);
+        summary[0] += c.getLength();
+        summary[1] += c.getFileCount();
+        summary[2] += c.getDirectoryCount();
+      }
+      return new ContentSummary(summary[0], summary[1], summary[2]);
     }
     
     /**
@@ -1020,25 +1053,22 @@ public final class FileContext {
      * @return an array of FileStatus objects
      * @throws IOException if any I/O error occurs when fetching file status
      */
-    public FileStatus[] globStatus(final Path pathPattern, final PathFilter filter)
-      throws IOException {
-      
+    public FileStatus[] globStatus(final Path pathPattern,
+        final PathFilter filter) throws IOException {
+      URI uri = getFSofPath(fixRelativePart(pathPattern)).getUri();
+
       String filename = pathPattern.toUri().getPath();
-      
+
       List<String> filePatterns = GlobExpander.expand(filename);
       if (filePatterns.size() == 1) {
-        Path p = fixRelativePart(pathPattern);
-        FileSystem fs = getFSofPath(p);
-        URI uri = fs.getUri();
-        return globStatusInternal(uri, p, filter);
+        Path absPathPattern = fixRelativePart(pathPattern);
+        return globStatusInternal(uri, new Path(absPathPattern.toUri()
+            .getPath()), filter);
       } else {
         List<FileStatus> results = new ArrayList<FileStatus>();
-        for (String filePattern : filePatterns) {
-          Path p = new Path(filePattern);
-          p = fixRelativePart(p);
-          FileSystem fs = getFSofPath(p);
-          URI uri = fs.getUri();
-          FileStatus[] files = globStatusInternal(uri, p, filter);
+        for (String iFilePattern : filePatterns) {
+          Path iAbsFilePattern = fixRelativePart(new Path(iFilePattern));
+          FileStatus[] files = globStatusInternal(uri, iAbsFilePattern, filter);
           for (FileStatus file : files) {
             results.add(file);
           }
@@ -1047,36 +1077,45 @@ public final class FileContext {
       }
     }
 
+    /**
+     * 
+     * @param uri for all the inPathPattern
+     * @param inPathPattern - without the scheme & authority (take from uri)
+     * @param filter
+     * @return
+     * @throws IOException
+     */
     private FileStatus[] globStatusInternal(
         final URI uri, final Path inPathPattern, final PathFilter filter)
       throws IOException {
       Path[] parents = new Path[1];
       int level = 0;
       
-      // comes in as full path, but just in case
-      final Path pathPattern = fixRelativePart(inPathPattern);
+      assert(inPathPattern.toUri().getScheme() == null &&
+          inPathPattern.toUri().getAuthority() == null && 
+          inPathPattern.isUriPathAbsolute());
+
       
-      String filename = pathPattern.toUri().getPath();
+      String filename = inPathPattern.toUri().getPath();
       
       // path has only zero component
       if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
-        Path p = pathPattern.makeQualified(uri, null);
+        Path p = inPathPattern.makeQualified(uri, null);
         return getFileStatus(new Path[]{p});
       }
 
       // path has at least one component
       String[] components = filename.split(Path.SEPARATOR);
-      // get the first component
-      if (pathPattern.isAbsolute()) {
-        parents[0] = new Path(Path.SEPARATOR);
-        level = 1;
-      } else {
-        parents[0] = new Path(Path.CUR_DIR);
-      }
+      
+      // Path is absolute, first component is "/" hence first component
+      // is the uri root
+      parents[0] = new Path(new Path(uri), new Path("/"));
+      level = 1;
 
       // glob the paths that match the parent path, ie. [0, components.length-1]
       boolean[] hasGlob = new boolean[]{false};
-      Path[] relParentPaths = globPathsLevel(parents, components, level, hasGlob);
+      Path[] relParentPaths = 
+        globPathsLevel(parents, components, level, hasGlob);
       FileStatus[] results;
       
       if (relParentPaths == null || relParentPaths.length == 0) {
@@ -1212,12 +1251,6 @@ public final class FileContext {
     }
   }
 
-  private static final PathFilter DEFAULT_FILTER = new PathFilter() {
-    public boolean accept(final Path file) {
-      return true;
-    }
-  };
-  
   /* A class that could decide if a string matches the glob or not */
   private static class GlobFilter implements PathFilter {
     private PathFilter userFilter = DEFAULT_FILTER;
@@ -1401,7 +1434,7 @@ public final class FileContext {
   }
 
   /**
-   * Deletes all the paths in deleteOnExit on JVM shutdown
+   * Deletes all the paths in deleteOnExit on JVM shutdown.
    */
   static class FileContextFinalizer extends Thread {
     public synchronized void run() {

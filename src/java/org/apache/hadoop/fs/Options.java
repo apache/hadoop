@@ -33,7 +33,7 @@ public final class Options {
     public static BlockSize blockSize(long bs) { 
       return new BlockSize(bs);
     }
-    public static BufferSize bufferSize(short bs) { 
+    public static BufferSize bufferSize(int bs) { 
       return new BufferSize(bs);
     }
     public static ReplicationFactor repFac(short rf) { 
@@ -52,7 +52,7 @@ public final class Options {
       return new CreateParent(false);
     }
     
-    static class BlockSize extends CreateOpts {
+    public static class BlockSize extends CreateOpts {
       private final long blockSize;
       protected BlockSize(long bs) {
         if (bs <= 0) {
@@ -61,10 +61,10 @@ public final class Options {
         }
         blockSize = bs; 
       }
-      long getValue() { return blockSize; }
+      public long getValue() { return blockSize; }
     }
     
-    static class ReplicationFactor extends CreateOpts {
+    public static class ReplicationFactor extends CreateOpts {
       private final short replication;
       protected ReplicationFactor(short rf) { 
         if (rf <= 0) {
@@ -73,22 +73,22 @@ public final class Options {
         }
         replication = rf;
       }
-      short getValue() { return replication; }
+      public short getValue() { return replication; }
     }
     
-    static class BufferSize extends CreateOpts {
+    public static class BufferSize extends CreateOpts {
       private final int bufferSize;
-      protected BufferSize(short bs) {
+      protected BufferSize(int bs) {
         if (bs <= 0) {
           throw new IllegalArgumentException(
                         "Buffer size must be greater than 0");
         }
         bufferSize = bs; 
       }
-      int getValue() { return bufferSize; }
+      public int getValue() { return bufferSize; }
     }
     
-    static class BytesPerChecksum extends CreateOpts {
+    public static class BytesPerChecksum extends CreateOpts {
       private final int bytesPerChecksum;
       protected BytesPerChecksum(short bpc) { 
         if (bpc <= 0) {
@@ -97,10 +97,10 @@ public final class Options {
         }
         bytesPerChecksum = bpc; 
       }
-      int getValue() { return bytesPerChecksum; }
+      public int getValue() { return bytesPerChecksum; }
     }
     
-    static class Perms extends CreateOpts {
+    public static class Perms extends CreateOpts {
       private final FsPermission permissions;
       protected Perms(FsPermission perm) { 
         if(perm == null) {
@@ -108,10 +108,10 @@ public final class Options {
         }
         permissions = perm; 
       }
-      FsPermission getValue() { return permissions; }
+      public FsPermission getValue() { return permissions; }
     }
     
-    static class Progress extends CreateOpts {
+    public static class Progress extends CreateOpts {
       private final Progressable progress;
       protected Progress(Progressable prog) { 
         if(prog == null) {
@@ -119,14 +119,65 @@ public final class Options {
         }
         progress = prog;
       }
-      Progressable getValue() { return progress; }
+      public Progressable getValue() { return progress; }
     }
     
-    static class CreateParent extends CreateOpts {
-      private final Boolean createParent;
+    public static class CreateParent extends CreateOpts {
+      private final boolean createParent;
       protected CreateParent(boolean createPar) {
         createParent = createPar;}
-      Boolean getValue() { return createParent; }
+      public boolean getValue() { return createParent; }
+    }
+
+    
+    /**
+     * Get an option of desired type
+     * @param theClass is the desired class of the opt
+     * @param opts - not null - at least one opt must be passed
+     * @return an opt from one of the opts of type theClass.
+     *   returns null if there isn't any
+     */
+    protected static CreateOpts getOpt(Class<? extends CreateOpts> theClass,  CreateOpts ...opts) {
+      if (opts == null) {
+        throw new IllegalArgumentException("Null opt");
+      }
+      CreateOpts result = null;
+      for (int i = 0; i < opts.length; ++i) {
+        if (opts[i].getClass() == theClass) {
+          if (result != null) 
+            throw new IllegalArgumentException("multiple blocksize varargs");
+          result = opts[i];
+        }
+      }
+      return result;
+    }
+    /**
+     * set an option
+     * @param newValue  the option to be set
+     * @param opts  - the option is set into this array of opts
+     * @return updated CreateOpts[] == opts + newValue
+     */
+    protected static <T extends CreateOpts> CreateOpts[] setOpt(T newValue,
+        CreateOpts ...opts) {
+      boolean alreadyInOpts = false;
+      if (opts != null) {
+        for (int i = 0; i < opts.length; ++i) {
+          if (opts[i].getClass() == newValue.getClass()) {
+            if (alreadyInOpts) 
+              throw new IllegalArgumentException("multiple opts varargs");
+            alreadyInOpts = true;
+            opts[i] = newValue;
+          }
+        }
+      }
+      CreateOpts[] resultOpt = opts;
+      if (!alreadyInOpts) { // no newValue in opt
+        CreateOpts[] newOpts = new CreateOpts[opts.length + 1];
+        System.arraycopy(opts, 0, newOpts, 0, opts.length);
+        newOpts[opts.length] = newValue;
+        resultOpt = newOpts;
+      }
+      return resultOpt;
     }
   }
 
