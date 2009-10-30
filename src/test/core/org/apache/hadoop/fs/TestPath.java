@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.*;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.apache.hadoop.conf.Configuration;
+
 import junit.framework.TestCase;
 
 public class TestPath extends TestCase {
@@ -28,6 +33,8 @@ public class TestPath extends TestCase {
     toStringTest("/foo/bar");
     toStringTest("foo");
     toStringTest("foo/bar");
+    toStringTest("/foo/bar#boo");
+    toStringTest("foo/bar#boo");
     boolean emptyException = false;
     try {
       toStringTest("");
@@ -43,6 +50,8 @@ public class TestPath extends TestCase {
       toStringTest("c:foo/bar");
       toStringTest("c:foo/bar");
       toStringTest("c:/foo/bar");
+      toStringTest("C:/foo/bar#boo");
+      toStringTest("C:foo/bar#boo");
     }
   }
 
@@ -148,5 +157,25 @@ public class TestPath extends TestCase {
     assertEquals("foo://bar/baz", new Path("foo://bar/","/baz").toString()); 
   }
 
+  public void testURI() throws URISyntaxException, IOException {
+    URI uri = new URI("file:///bar#baz");
+    Path path = new Path(uri);
+    assertTrue(uri.equals(new URI(path.toString())));
+    
+    FileSystem fs = path.getFileSystem(new Configuration());
+    assertTrue(uri.equals(new URI(fs.makeQualified(path).toString())));
+    
+    // uri without hash
+    URI uri2 = new URI("file:///bar/baz");
+    assertTrue(
+      uri2.equals(new URI(fs.makeQualified(new Path(uri2)).toString())));
+    assertEquals("foo://bar/baz#boo", new Path("foo://bar/", new Path(new URI(
+        "/baz#boo"))).toString());
+    assertEquals("foo://bar/baz/fud#boo", new Path(new Path(new URI(
+        "foo://bar/baz#bud")), new Path(new URI("fud#boo"))).toString());
+    // if the child uri is absolute path
+    assertEquals("foo://bar/fud#boo", new Path(new Path(new URI(
+        "foo://bar/baz#bud")), new Path(new URI("/fud#boo"))).toString());
+ }
 
 }

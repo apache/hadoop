@@ -1128,6 +1128,10 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6318. Upgrade to Avro 1.2.0.  (cutting)
 
+    HADOOP-6334.  Fix GenericOptionsParser to understand URI for -files,
+    -libjars and -archives options and fix Path to support URI with fragment.
+    (Amareshwari Sriramadasu via szetszwo)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
