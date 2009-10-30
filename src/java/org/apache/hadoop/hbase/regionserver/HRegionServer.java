@@ -439,7 +439,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         // Send messages to the master IF this.msgInterval has elapsed OR if
         // we have something to tell (and we didn't just fail sending master).
         if ((now - lastMsg) >= msgInterval ||
-            (outboundArray.length == 0 && !this.outboundMsgs.isEmpty())) {
+            ((outboundArray == null || outboundArray.length == 0) && !this.outboundMsgs.isEmpty())) {
           try {
             doMetrics();
             MemoryUsage memory =
