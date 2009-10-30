@@ -148,6 +148,7 @@ Release 0.21.0 - Unreleased
    HBASE-1942  Update hadoop jars in trunk; update to r831142
    HBASE-1943  Remove AgileJSON; unused
    HBASE-1944  Add a "deferred log flush" attribute to HTD
+   HBASE-1945  Remove META and ROOT memcache size bandaid 
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
