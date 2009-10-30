@@ -35,7 +35,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.Condition;
@@ -127,7 +126,7 @@ public class HLog implements HConstants, Syncable {
   private final short replicationLevel;
 
   // used to indirectly tell syncFs to force the sync
-  private final AtomicBoolean forceSync = new AtomicBoolean(false);
+  private boolean forceSync = false;
 
   /*
    * Current log file.
@@ -771,7 +770,7 @@ public class HLog implements HConstants, Syncable {
      * This method first signals the thread that there's a sync needed
      * and then waits for it to happen before returning.
      */
-    public void addToSyncQueue() {
+    public void addToSyncQueue(boolean force) {
 
       // Don't bother if somehow our append was already synced
       if (unflushedEntries.get() == 0) {
@@ -779,6 +778,9 @@ public class HLog implements HConstants, Syncable {
       }
       lock.lock();
       try {
+        if(force) {
+          forceSync = true;
+        }
         // Wake the thread
         queueEmpty.signal();
 
@@ -803,10 +805,7 @@ public class HLog implements HConstants, Syncable {
    * @param force For catalog regions, force the sync to happen
    */
   public void sync(boolean force) {
-    // Set to force only if it was false and force == true
-    // It is reset to false after sync
-    forceSync.compareAndSet(!forceSync.get() && !force, true);
-    logSyncerThread.addToSyncQueue();
+    logSyncerThread.addToSyncQueue(force);
   }
 
   /**
@@ -820,14 +819,14 @@ public class HLog implements HConstants, Syncable {
       if (this.closed)
         return;
 
-      if (this.forceSync.get() ||
+      if (this.forceSync ||
           this.unflushedEntries.get() > this.flushlogentries) {
         try {
           this.writer.sync();
           if (this.writer_out != null) {
             this.writer_out.sync();
           }
-          this.forceSync.compareAndSet(true, false);
+          this.forceSync = false;
           this.unflushedEntries.set(0);
         } catch (IOException e) {
           LOG.fatal("Could not append. Requesting close of hlog", e);
