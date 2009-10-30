@@ -3154,8 +3154,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     @Override
     public void close() throws IOException {
-      if(closed)
-        return;
+      if (closed) {
+        IOException e = lastException;
+        if (e == null)
+          return;
+        else
+          throw e;
+      }
       closeInternal();
       leasechecker.remove(src);
       
