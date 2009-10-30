@@ -1655,7 +1655,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       cacheFlusher.reclaimMemStoreMemory();
       region.put(put, getLockFromId(put.getLockId()));
 
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
+      this.syncWal(region);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1666,11 +1666,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Count of Puts processed.
     int i = 0;
     checkOpen();
-    boolean isMetaRegion = false;
+    HRegion region = null;
     try {
-      HRegion region = getRegion(regionName);
-      isMetaRegion = region.getRegionInfo().isMetaRegion();
-      
+      region = getRegion(regionName);
       this.cacheFlusher.reclaimMemStoreMemory();
       Integer[] locks = new Integer[puts.length];
       for (i = 0; i < puts.length; i++) {
@@ -1681,19 +1679,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     } catch (WrongRegionException ex) {
       LOG.debug("Batch puts: " + i, ex);
+      return i;
     } catch (NotServingRegionException ex) {
+      return i;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
     // All have been processed successfully.
 
-    this.hlog.sync(isMetaRegion);
-
-    if (i == puts.length) {
-      return -1;
-    } else {
-      return i;
-    }
+    this.syncWal(region);
+    return -1;
   }
 
   /**
@@ -1722,7 +1717,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       boolean retval = region.checkAndPut(row, family, qualifier, value, put,
           getLockFromId(put.getLockId()), true);
 
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
+      this.syncWal(region);
       return retval;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -1871,7 +1866,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       HRegion region = getRegion(regionName);
       region.delete(delete, lid, writeToWAL);
 
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
+      this.syncWal(region);
     } catch (WrongRegionException ex) {
     } catch (NotServingRegionException ex) {
       // ignore
@@ -1885,13 +1880,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Count of Deletes processed.
     int i = 0;
     checkOpen();
-    boolean isMetaRegion = false;
+    HRegion region = null;
     try {
       boolean writeToWAL = true;
       this.cacheFlusher.reclaimMemStoreMemory();
       Integer[] locks = new Integer[deletes.length];
-      HRegion region = getRegion(regionName);
-      isMetaRegion = region.getRegionInfo().isMetaRegion();
+      region = getRegion(regionName);
 
       for (i = 0; i < deletes.length; i++) {
         this.requestCount.incrementAndGet();
@@ -1907,8 +1901,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       throw convertThrowableToIOE(cleanup(t));
     }
 
-    this.hlog.sync(isMetaRegion);
-    // All have been processed successfully.
+    this.syncWal(region);
     return -1;
   }
 
@@ -2348,7 +2341,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       long retval = region.incrementColumnValue(row, family, qualifier, amount,
           writeToWAL);
 
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
+      syncWal(region);
 
       return retval;
     } catch (IOException e) {
@@ -2370,6 +2363,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
   /** {@inheritDoc} */
   public HServerInfo getHServerInfo() throws IOException {
     return serverInfo;
+  }
+
+  // Sync the WAL if the table permits it
+  private void syncWal(HRegion region) {
+    if(!region.getTableDesc().isDeferredLogFlush()) {
+      this.hlog.sync(region.getRegionInfo().isMetaRegion());
+    }
   }
 
   /**

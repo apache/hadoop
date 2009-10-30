@@ -147,6 +147,7 @@ Release 0.21.0 - Unreleased
    HBASE-1921  When the Master's session times out and there's only one, cluster is wedged
    HBASE-1942  Update hadoop jars in trunk; update to r831142
    HBASE-1943  Remove AgileJSON; unused
+   HBASE-1944  Add a "deferred log flush" attribute to HTD
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

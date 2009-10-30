@@ -75,6 +75,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final ImmutableBytesWritable IS_META_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(IS_META));
 
+  public static final String DEFERRED_LOG_FLUSH = "DEFERRED_LOG_FLUSH";
+  public static final ImmutableBytesWritable DEFERRED_LOG_FLUSH_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(DEFERRED_LOG_FLUSH));
+
 
   // The below are ugly but better than creating them each time till we
   // replace booleans being saved as Strings with plain booleans.  Need a
@@ -89,6 +93,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final int DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64;
   
   public static final int DEFAULT_MAX_FILESIZE = 1024*1024*256;
+
+  public static final boolean DEFAULT_DEFERRED_LOG_FLUSH = false;
     
   private volatile Boolean meta = null;
   private volatile Boolean root = null;
@@ -364,6 +370,21 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public void setReadOnly(final boolean readOnly) {
     setValue(READONLY_KEY, readOnly? TRUE: FALSE);
+  }
+
+  /**
+   * @return true if that table's log is hflush by other means
+   */
+  public boolean isDeferredLogFlush() {
+    return isSomething(DEFERRED_LOG_FLUSH_KEY, DEFAULT_DEFERRED_LOG_FLUSH);
+  }
+
+  /**
+   * @param isDeferredLogFlush true if that table's log is hlfush by oter means
+   * only.
+   */
+  public void setDeferredLogFlush(final boolean isDeferredLogFlush) {
+    setValue(DEFERRED_LOG_FLUSH_KEY, isDeferredLogFlush? TRUE: FALSE);
   }
 
   /** @return name of table */
