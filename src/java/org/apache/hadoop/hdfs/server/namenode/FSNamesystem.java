@@ -2047,19 +2047,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           + ", closeFile=" + closeFile
           + ", deleteBlock=" + deleteblock
           + ")");
-    final BlockInfo oldblockinfo = blockManager.getStoredBlock(lastblock);
-    if (oldblockinfo == null) {
+    final BlockInfo storedBlock = blockManager.getStoredBlock(lastblock);
+    if (storedBlock == null) {
       throw new IOException("Block (=" + lastblock + ") not found");
     }
-    INodeFile iFile = oldblockinfo.getINode();
-    if (!iFile.isUnderConstruction() || oldblockinfo.isComplete()) {
+    INodeFile iFile = storedBlock.getINode();
+    if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
       throw new IOException("Unexpected block (=" + lastblock
           + ") since the file (=" + iFile.getLocalName()
           + ") is not under construction");
     }
 
     long recoveryId =
-      ((BlockInfoUnderConstruction)oldblockinfo).getBlockRecoveryId();
+      ((BlockInfoUnderConstruction)storedBlock).getBlockRecoveryId();
     if(recoveryId != newgenerationstamp) {
       throw new IOException("The recovery id " + newgenerationstamp
           + " does not match current recovery id "
@@ -2068,21 +2068,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
 
-
-    // Remove old block from blocks map. This always have to be done
-    // because the generation stamp of this block is changing.
-    blockManager.removeBlockFromMap(oldblockinfo);
-
     if (deleteblock) {
       pendingFile.removeLastBlock(lastblock);
+      blockManager.removeBlockFromMap(storedBlock);
     }
     else {
-      // update last block, construct newblockinfo and add it to the blocks map
-      lastblock.set(lastblock.getBlockId(), newlength, newgenerationstamp);
-      BlockInfoUnderConstruction newblockinfo = 
-        new BlockInfoUnderConstruction(
-            lastblock, pendingFile.getReplication());
-      blockManager.addINode(newblockinfo, pendingFile);
+      // update last block
+      storedBlock.setGenerationStamp(newgenerationstamp);
+      storedBlock.setNumBytes(newlength);
 
       // find the DatanodeDescriptor objects
       // There should be no locations in the blockManager till now because the
@@ -2099,11 +2092,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         // Otherwise fsck will report these blocks as MISSING, especially if the
         // blocksReceived from Datanodes take a long time to arrive.
         for (int i = 0; i < descriptors.length; i++) {
-          descriptors[i].addBlock(newblockinfo);
+          descriptors[i].addBlock(storedBlock);
         }
       }
-      // add locations into the INodeUnderConstruction
-      pendingFile.setLastBlock(newblockinfo, descriptors);
+      // add pipeline locations into the INodeUnderConstruction
+      pendingFile.setLastBlock(storedBlock, descriptors);
     }
 
     // If this commit does not want to close the file, persist
@@ -2119,7 +2112,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
 
     // commit the last block
-    blockManager.commitLastBlock(pendingFile, lastblock);
+    blockManager.commitLastBlock(pendingFile, storedBlock);
 
     //remove lease, close file
     finalizeINodeFileUnderConstruction(src, pendingFile);

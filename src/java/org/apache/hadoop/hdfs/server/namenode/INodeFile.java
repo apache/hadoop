@@ -218,19 +218,6 @@ class INodeFile extends INode {
     return blocks[blocks.length - 2];
   }
 
-  // SHV !!! this is not used anywhere - remove
-  INodeFileUnderConstruction toINodeFileUnderConstruction(
-      String clientName, String clientMachine, DatanodeDescriptor clientNode
-      ) throws IOException {
-    if (isUnderConstruction()) {
-      return (INodeFileUnderConstruction)this;
-    }
-    return new INodeFileUnderConstruction(name,
-        blockReplication, modificationTime, preferredBlockSize,
-        blocks, getPermissionStatus(),
-        clientName, clientMachine, clientNode);
-  }
-
   /**
    * Get the last block of the file.
    * Make sure it has the right type.

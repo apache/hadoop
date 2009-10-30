@@ -318,8 +318,11 @@ Release 0.21.0 - Unreleased
 
     HDFS-730. Add 4 fault injection tests to simulate non-responsive datanode
     and out-of-memory problem for pipeline close ack.  (szetszwo)
-    
+
     HDFS-728. Create a comprehensive functional test for append. (hairong)
+
+    HDFS-736. commitBlockSynchronization() updates block GS and length in-place.
+    (shv)
 
   BUG FIXES
 
