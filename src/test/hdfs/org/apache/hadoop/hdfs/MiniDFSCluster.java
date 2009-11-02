@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -71,7 +72,7 @@ public class MiniDFSCluster {
       this.dnArgs = args;
     }
   }
-
+  private URI myUri = null;
   private Configuration conf;
   private NameNode nameNode;
   private int numDataNodes;
@@ -289,6 +290,20 @@ public class MiniDFSCluster {
     startDataNodes(conf, numDataNodes, manageDataDfsDirs, 
                     operation, racks, hosts, simulatedCapacities);
     waitClusterUp();
+    String myUriStr = "hdfs://localhost:"+ Integer.toString(this.getNameNodePort());
+    try {
+      this.myUri = new URI(myUriStr);
+    } catch (URISyntaxException e) {
+      NameNode.LOG.warn("unexpected URISyntaxException: " + e );
+    }
+  }
+  
+  /**
+   * 
+   * @return URI of this MiniDFSCluster
+   */
+  public URI getURI() {
+    return myUri;
   }
 
   /**

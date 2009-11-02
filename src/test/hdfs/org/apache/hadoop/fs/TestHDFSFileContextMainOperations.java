@@ -19,9 +19,11 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 import javax.security.auth.login.LoginException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -42,10 +44,11 @@ public class TestHDFSFileContextMainOperations extends
   private static Path defaultWorkingDirectory;
   
   @BeforeClass
-  public static void clusterSetupAtBegining()
-                                    throws IOException, LoginException  {
-    cluster = new MiniDFSCluster(new HdfsConfiguration(), 2, true, null);
-    fc = FileContext.getFileContext(cluster.getFileSystem());
+  public static void clusterSetupAtBegining() throws IOException,
+      LoginException, URISyntaxException {
+    Configuration conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster(conf, 2, true, null);
+    fc = FileContext.getFileContext(cluster.getURI(), conf);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UnixUserGroupInformation.login().getUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);

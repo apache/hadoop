@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -418,9 +419,23 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * namenode, and then reads from all the right places.  Creates
    * inner subclass of InputStream that does the right out-of-band
    * work.
+   * @deprecated Use {@link #open(String, int, boolean)} instead.
    */
-  DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
+  @Deprecated
+  public DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
                       FileSystem.Statistics stats
+      ) throws IOException {
+    return open(src, buffersize, verifyChecksum);
+  }
+  
+
+  /**
+   * Create an input stream that obtains a nodelist from the
+   * namenode, and then reads from all the right places.  Creates
+   * inner subclass of InputStream that does the right out-of-band
+   * work.
+   */
+  public DFSInputStream open(String src, int buffersize, boolean verifyChecksum
       ) throws IOException {
     checkOpen();
     //    Get block info from namenode
@@ -594,11 +609,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                              int bytesPerChecksum)
     throws IOException {
     checkOpen();
-    if (absPermission == null) {
-      absPermission = 
-        FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf));
-    } 
-    LOG.debug(src + ": masked=" + absPermission);
     OutputStream result = new DFSOutputStream(src, absPermission,
         flag, createParent, replication, blockSize, progress, buffersize,
         bytesPerChecksum);
@@ -757,7 +767,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @return The checksum 
    * @see DistributedFileSystem#getFileChecksum(Path)
    */
-  MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
+  public MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
     checkOpen();
     return getFileChecksum(src, namenode, socketFactory, socketTimeout);    
   }
@@ -2374,8 +2384,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
     
-  static class DFSDataInputStream extends FSDataInputStream {
-    DFSDataInputStream(DFSInputStream in)
+  public static class DFSDataInputStream extends FSDataInputStream {
+    public DFSDataInputStream(DFSInputStream in)
       throws IOException {
       super(in);
     }

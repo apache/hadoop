@@ -191,6 +191,7 @@ public class DistributedFileSystem extends FileSystem {
     this.verifyChecksum = verifyChecksum;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     return new DFSClient.DFSDataInputStream(

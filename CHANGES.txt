@@ -139,6 +139,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-731. Support new Syncable interface in HDFS. (hairong)
 
+    HDFS-702. Add HDFS implementation of AbstractFileSystem. 
+    (Sanjay Radio via suresh)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
