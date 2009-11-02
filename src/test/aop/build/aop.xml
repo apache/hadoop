@@ -31,8 +31,10 @@
   	Later on one can run 'ant jar-fault-inject' to create
   	Hadoop jar file with instrumented classes
   -->
-  <target name="compile-fault-inject" 
-  	depends="compile-core-classes, compile-tests">
+  <!-- Target -classes-compilation has to be defined in build.xml and
+  needs to depend on classes compilation and test classes compilation
+  targets. This is a poor man parametrization for targets -->
+  <target name="compile-fault-inject" depends="-classes-compilation" >
     <!-- AspectJ task definition -->
     <taskdef
       resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">

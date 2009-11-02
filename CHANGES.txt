@@ -1142,6 +1142,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6344. Fix rm and rmr immediately delete files rather than sending 
     to trash, if a user is over-quota. (Jakob Homan via suresh)
 
+    HADOOP-6347. run-test-core-fault-inject runs a test case twice if
+    -Dtestcase is set (cos)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
