@@ -843,8 +843,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               lastPacket = true;
             }
 
-            replyOut.writeLong(expected);
-            SUCCESS.write(replyOut);
+            ackReply(expected);
             replyOut.flush();
             // remove the packet from the ack queue
             removeAckHead();
@@ -869,6 +868,14 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
       LOG.info("PacketResponder " + numTargets + 
                " for block " + block + " terminating");
+    }
+
+    // This method is introduced to facilitate testing. Otherwise
+    // there was a little chance to bind an AspectJ advice to such a sequence
+    // of calls
+    private void ackReply(long expected) throws IOException {
+      replyOut.writeLong(expected);
+      SUCCESS.write(replyOut);
     }
 
     /**
@@ -984,8 +991,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             }
 
             // send my status back to upstream datanode
-            replyOut.writeLong(expected); // send seqno upstream
-            SUCCESS.write(replyOut);
+            ackReply(expected);
 
             LOG.debug("PacketResponder " + numTargets + 
                       " for block " + block +

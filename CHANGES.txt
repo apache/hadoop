@@ -330,6 +330,8 @@ Release 0.21.0 - Unreleased
     HADOOP-5107. Use Maven ant tasks to publish the subproject jars.
     (Giridharan Kesavan via omalley)
 
+    HDFS-521. Create new tests for pipeline (cos)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 

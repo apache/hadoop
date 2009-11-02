@@ -24,8 +24,12 @@ import java.io.OutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.PipelineTest;
 import org.apache.hadoop.fi.ProbabilityModel;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
+import org.apache.hadoop.hdfs.server.datanode.BlockReceiver.PacketResponder;
+import org.apache.hadoop.hdfs.PipelinesTestUtil.PipelinesTest;
+import org.apache.hadoop.hdfs.PipelinesTestUtil.NodeBytes;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
@@ -34,7 +38,7 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
  * This aspect takes care about faults injected into datanode.BlockReceiver 
  * class 
  */
-public privileged aspect BlockReceiverAspects {
+privileged public aspect BlockReceiverAspects {
   public static final Log LOG = LogFactory.getLog(BlockReceiverAspects.class);
 
   pointcut callReceivePacket(BlockReceiver blockreceiver) :
@@ -60,6 +64,107 @@ public privileged aspect BlockReceiverAspects {
         thisJoinPoint.getStaticPart( ).getSourceLocation());
     }
   }
+  
+  // Pointcuts and advises for TestFiPipelines  
+  pointcut callSetNumBytes(BlockReceiver br, long offset) : 
+    call (void ReplicaInPipelineInterface.setNumBytes(long)) 
+    && withincode (int BlockReceiver.receivePacket(long, long, boolean, int, int))
+    && args(offset) 
+    && this(br);
+  
+  after(BlockReceiver br, long offset) : callSetNumBytes(br, offset) {
+    LOG.debug("FI: Received bytes To: " + br.datanode.dnRegistration.getStorageID() + ": " + offset);
+    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
+    if (pTest == null) {
+      LOG.debug("FI: no pipeline has been found in receiving");
+      return;
+    }
+    if (!(pTest instanceof PipelinesTest)) {
+      return;
+    }
+    NodeBytes nb = new NodeBytes(br.datanode.dnRegistration, offset);
+    try {
+      ((PipelinesTest)pTest).fiCallSetNumBytes.run(nb);
+    } catch (IOException e) {
+      LOG.fatal("FI: no exception is expected here!");
+    }
+  }
+  
+  // Pointcuts and advises for TestFiPipelines  
+  pointcut callSetBytesAcked(PacketResponder pr, long acked) : 
+    call (void ReplicaInPipelineInterface.setBytesAcked(long)) 
+    && withincode (void PacketResponder.run())
+    && args(acked) 
+    && this(pr);
+
+  pointcut callSetBytesAckedLastDN(PacketResponder pr, long acked) : 
+    call (void ReplicaInPipelineInterface.setBytesAcked(long)) 
+    && withincode (void PacketResponder.lastDataNodeRun())
+    && args(acked) 
+    && this(pr);
+  
+  after (PacketResponder pr, long acked) : callSetBytesAcked (pr, acked) {
+    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
+    if (pTest == null) {
+      LOG.debug("FI: no pipeline has been found in acking");
+      return;
+    }
+    LOG.debug("FI: Acked total bytes from: " + 
+        pr.receiver.datanode.dnRegistration.getStorageID() + ": " + acked);
+    if (pTest instanceof PipelinesTest) {
+      bytesAckedService((PipelinesTest)pTest, pr, acked);
+    }
+  }
+  after (PacketResponder pr, long acked) : callSetBytesAckedLastDN (pr, acked) {
+    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
+    if (pTest == null) {
+      LOG.debug("FI: no pipeline has been found in acking");
+      return;
+    }
+    LOG.debug("FI: Acked total bytes from (last DN): " + 
+        pr.receiver.datanode.dnRegistration.getStorageID() + ": " + acked);
+    if (pTest instanceof PipelinesTest) {
+      bytesAckedService((PipelinesTest)pTest, pr, acked); 
+    }
+  }
+  
+  private void bytesAckedService 
+      (final PipelinesTest pTest, final PacketResponder pr, final long acked) {
+    NodeBytes nb = new NodeBytes(pr.receiver.datanode.dnRegistration, acked);
+    try {
+      pTest.fiCallSetBytesAcked.run(nb);
+    } catch (IOException e) {
+      LOG.fatal("No exception should be happening at this point");
+      assert false;
+    }
+  }
+  
+  pointcut preventAckSending () :
+    call (void ackReply(long)) 
+    && within (PacketResponder);
+
+  static int ackCounter = 0;
+  void around () : preventAckSending () {
+    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
+
+    if (pTest == null) { 
+      LOG.debug("FI: remove first ack as expected");
+      proceed();
+      return;
+    }
+    if (!(pTest instanceof PipelinesTest)) {
+      LOG.debug("FI: remove first ack as expected");
+      proceed();
+      return;
+    }
+    if (((PipelinesTest)pTest).getSuspend()) {
+        LOG.debug("FI: suspend the ack");
+        return;
+    }
+    LOG.debug("FI: remove first ack as expected");
+    proceed();
+  }
+  // End of pointcuts and advises for TestFiPipelines  
 
   pointcut pipelineClose(BlockReceiver blockreceiver, long offsetInBlock, long seqno,
       boolean lastPacketInBlock, int len, int endOfHeader) :

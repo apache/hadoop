@@ -22,13 +22,15 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.PipelineTest;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream.DataStreamer;
+import org.apache.hadoop.hdfs.PipelinesTestUtil.PipelinesTest;
 import org.junit.Assert;
 
 /** Aspects for DFSClient */
-public aspect DFSClientAspects {
+privileged public aspect DFSClientAspects {
   public static final Log LOG = LogFactory.getLog(DFSClientAspects.class);
 
   pointcut callCreateBlockOutputStream(DataStreamer datastreamer):
@@ -92,5 +94,20 @@ public aspect DFSClientAspects {
 
   before(DFSOutputStream out) : pipelineClose(out) {
     LOG.info("FI: before pipelineClose:");
+  }
+
+  pointcut checkAckQueue(DFSClient.DFSOutputStream.Packet cp):
+    call (void DFSClient.DFSOutputStream.waitAndQueuePacket(
+            DFSClient.DFSOutputStream.Packet))
+    && withincode (void DFSClient.DFSOutputStream.writeChunk(..))
+    && args(cp);
+
+  after(DFSClient.DFSOutputStream.Packet cp) : checkAckQueue (cp) {
+    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
+    if (pTest != null && pTest instanceof PipelinesTest) {
+      LOG.debug("FI: Recording packet # " + cp.seqno
+          + " where queuing has occurred");
+      ((PipelinesTest) pTest).setVerified(cp.seqno);
+    }
   }
 }

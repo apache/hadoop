@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -28,12 +24,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /** Test reading from hdfs while a file is being written. */
 public class TestReadWhileWriting {
@@ -48,10 +47,10 @@ public class TestReadWhileWriting {
   
   /** Test reading while writing. */
   @Test
-  public void testReadWhileWriting() throws Exception {
+  public void pipeline_02_03() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     //enable append
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
 
     // create cluster
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
