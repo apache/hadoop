@@ -1501,6 +1501,15 @@ public class Store implements HConstants, HeapSize {
       this.lock.readLock().unlock();
     }
   }
+
+  /**
+   * See if there's too much store files in this store
+   * @return true if number of store files is greater than
+   *  the number defined in compactionThreshold
+   */
+  public boolean hasTooManyStoreFiles() {
+    return this.storefiles.size() > this.compactionThreshold;
+  }
   
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +

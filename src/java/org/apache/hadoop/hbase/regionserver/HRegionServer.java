@@ -1428,10 +1428,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if (region == null) {
       try {
         region = instantiateRegion(regionInfo);
-        // Startup a compaction early if one is needed, if region has references.
-        if (region.hasReferences()) {
+        // Startup a compaction early if one is needed, if region has references
+        // or if a store has too many store files
+        if (region.hasReferences() || region.hasTooManyStoreFiles()) {
           this.compactSplitThread.compactionRequested(region,
-            "Region has references on open");
+            region.hasReferences() ? "Region has references on open" :
+                                     "Region has too many store files");
         }
       } catch (Throwable e) {
         Throwable t = cleanup(e,

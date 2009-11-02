@@ -2502,6 +2502,20 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   }
 
   /**
+   * Checks every store to see if one has too many
+   * store files
+   * @return true if any store has too many store files
+   */
+  public boolean hasTooManyStoreFiles() {
+    for(Store store : stores.values()) {
+      if(store.hasTooManyStoreFiles()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Facility for dumping and compacting catalog tables.
    * Only does catalog tables since these are only tables we for sure know
    * schema on.  For usage run:
