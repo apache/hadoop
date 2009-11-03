@@ -21,6 +21,9 @@ Trunk (unreleased changes)
     HDFS-704. Unify build property names to facilitate cross-projects
     modifications (cos)
 
+    HDFS-703. Replace current fault injection implementation with one
+    from (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES

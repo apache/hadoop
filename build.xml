@@ -259,6 +259,8 @@
 
   </target>
 
+  <import file="${test.src.dir}/aop/build/aop.xml"/>
+
   <target name="compile-hdfs-classes" depends="init">
     <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
        <classpath refid="classpath"/>
@@ -305,127 +307,6 @@
     </copy>
   </target>
 
-  <!--All Fault Injection (FI) related targets are located in this session -->
-  
-  <!-- Weaving aspects in place
-  	Later on one can run 'ant jar-fault-inject' to create
-  	Hadoop jar file with instrumented classes
-  -->
-  <property name="compile-inject.output" value="${build-fi.dir}/compile-fi.log"/>
-  <target name="compile-fault-inject" depends="compile-core, compile-hdfs-test">
-    <!-- AspectJ task definition -->
-    <taskdef
-        resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
-      <classpath>
-        <pathelement location="${common.ivy.lib.dir}/aspectjtools-1.6.4.jar"/>
-      </classpath>
-    </taskdef>
-    <echo message="Start weaving aspects in place"/>
-    <iajc
-      encoding="${build.encoding}" 
-      srcdir="${java.src.dir};${build.src};${test.src.dir}/aop" 
-      includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
-      destDir="${build.classes}"
-      debug="${javac.debug}"
-      target="${javac.version}"
-      source="${javac.version}"
-      deprecation="${javac.deprecation}">
-      <classpath refid="test.classpath"/>
-    </iajc>
-    <loadfile property="injection.failure" srcfile="${compile-inject.output}">
-      <filterchain>
-        <linecontainsregexp>
-          <regexp pattern='iajc.*warning'/>
-        </linecontainsregexp>
-      </filterchain>
-    </loadfile>
-    <fail if="injection.failure">
-      Broken binding of advises: ${line.separator}${injection.failure}
-    </fail>
-    <echo message="Weaving of aspects is finished"/>
-  </target>
-
-  <target name="injectfaults"
-          description="Instrument HDFS classes with faults and other AOP advices">
-    <!--mkdir to prevent <subant> failure in case the folder has been removed-->
-    <mkdir dir="${build-fi.dir}"/>
-    <delete file="${compile-inject.output}"/>
-    <subant buildpath="${basedir}" target="compile-fault-inject"
-            output="${compile-inject.output}">
-      <property name="build.dir" value="${build-fi.dir}"/>
-    </subant>
-  </target>
-
-  <!--At this moment there's no special FI test suite thus the normal tests are -->
-  <!--being executed with faults injected in place-->
-
-  <!--This target is not included into the the top level list of target
-  for it serves a special "regression" testing purpose of non-FI tests in
-  FI environment -->
-  <target name="run-with-fault-inject-testcaseonly">
-    <fail unless="testcase">Can't run this target without -Dtestcase setting!
-    </fail>
-    <subant buildpath="build.xml" target="run-test-hdfs-fault-inject">
-    	<property name="special.fi.testcasesonly" value="yes"/>
-    </subant>
-  </target>
-
-  <target name="run-test-hdfs-fault-inject" depends="injectfaults"
-          description="Run Fault Injection related hdfs tests">
-    <subant buildpath="build.xml" target="run-test-hdfs">
-      <property name="build.dir" value="${build-fi.dir}"/>
-      <property name="test.fault.inject" value="yes"/>
-      <property name="test.include" value="TestFi*"/>
-    </subant>
-  </target>
-
-  <!-- ================================================================== -->
-  <!-- Make hadoop-fi.jar including all Fault Iinjected artifacts         -->
-  <!-- ================================================================== -->
-  <!--                                                                    -->
-  <!-- ================================================================== -->
-  <target name="jar-fault-inject" description="Make hadoop-fi.jar">
-    <subant buildpath="build.xml" target="create-jar-fault-inject">
-      <property name="build.dir" value="${build-fi.dir}"/>
-    </subant>
-  </target>
-
-  <target name="create-jar-fault-inject" depends="injectfaults">
-    <jar jarfile="${hadoop-hdfs-fi.jar}"
-         basedir="${build.classes}">
-      <manifest>
-        <section name="org/apache/hadoop">
-          <attribute name="Implementation-Title" value="${ant.project.name}"/>
-          <attribute name="Implementation-Version" value="${version}"/>
-          <attribute name="Implementation-Vendor" value="Apache"/>
-        </section>
-      </manifest>
-      <fileset file="${conf.dir}/commons-logging.properties"/>
-      <fileset file="${conf.dir}/log4j.properties"/>
-      <fileset file="${conf.dir}/hadoop-metrics.properties"/>
-      <fileset file="${test.src.dir}/fi-site.xml"/>
-      <zipfileset dir="${build.webapps}" prefix="webapps"/>
-    </jar>
-  </target>
-
-  <!-- ================================================================== -->
-  <!-- Make test jar files including all Fault Injected artifacts         -->
-  <!-- ================================================================== -->
-  <!--                                                                    -->
-  <!-- ================================================================== -->
-
-  <target name="jar-test-fault-inject" depends="jar-hdfs-test-fault-inject"
-          description="Make hadoop-test.jar files"/>
-
-  <target name="jar-hdfs-test-fault-inject" description="Make hadoop-test-fi.jar">
-    <subant buildpath="build.xml" target="jar-hdfs-test">
-      <property name="build.dir" value="${build-fi.dir}"/>
-      <property name="test.hdfs.final.name" value="${name}-test-${version}-fi"/>
-    </subant>
-  </target>
-
-  <!--End of Fault Injection (FI) related session-->
-
   <target name="compile-core" depends="clover, compile-hdfs-classes" description="Compile"/> 
 
   <target name="compile-contrib" depends="compile-core">
@@ -456,6 +337,7 @@
       <fileset file="${conf.dir}/log4j.properties"/>
       <fileset file="${conf.dir}/hadoop-metrics.properties"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
+      <fileset file="${jar.extra.properties.list}" />
     </jar>
   </target>
 
@@ -514,6 +396,53 @@
     </jar>
   </target>
 
+  <!-- ================================================================== -->
+  <!-- Fault injection customization section.
+       These targets ought to be copied over to other projects and modified
+       as needed -->
+  <!-- ================================================================== -->
+  <!-- "Implementing" a target dependecy from aop.xml -->
+  <target name="-classes-compilation"
+    depends="compile-hdfs-classes, compile-hdfs-test"/>
+
+  <target name="jar-test-fault-inject" depends="jar-hdfs-test-fault-inject"
+          description="Make hadoop-test.jar files"/>
+
+  <target name="run-test-hdfs-fault-inject" depends="injectfaults" 
+	  description="Run full set of the unit tests with fault injection">
+    <macro-run-tests-fault-inject target.name="run-test-hdfs"
+      testcasesonly="false"/>
+  </target>
+
+  <target name="jar-hdfs-test-fault-inject" depends="injectfaults" 
+    description="Make hadoop-hdfs-test-fi.jar">
+    <macro-jar-test-fault-inject
+      target.name="jar-hdfs-test"
+      jar.final.name="test.hdfs.final.name"
+      jar.final.value="${name}-test-${version}-fi" />
+  </target>
+
+  <target name="jar-fault-inject" depends="injectfaults" 
+    description="Make hadoop-fi.jar">
+    <macro-jar-fault-inject
+      target.name="jar"
+      jar.final.name="final.name"
+      jar.final.value="${final.name}-fi" />
+  </target>
+
+  <!--This target is not included into the the top level list of target
+  for it serves a special "regression" testing purpose of non-FI tests in
+  FI environment -->
+  <target name="run-fault-inject-with-testcaseonly" depends="injectfaults">
+    <fail unless="testcase">Can't run this target without -Dtestcase setting!
+    </fail>
+    <macro-run-tests-fault-inject target.name="run-test-hdfs" 
+      testcasesonly="true"/>
+  </target>
+  <!-- ================================================================== -->
+  <!-- End of Fault injection customization section                       -->
+  <!-- ================================================================== -->
+
   <condition property="tests.notestcase">
     <and>
       <isfalse value="${test.fault.inject}"/>
@@ -536,10 +465,14 @@
       <isset property="testcase" />
     </and>
   </condition>
+  <condition property="tests.testcaseonly.fi">
+    <istrue value="${special.fi.testcasesonly}" />
+  </condition>
   <condition property="tests.testcase.fi">
     <and>
       <istrue value="${test.fault.inject}" />
       <isset property="testcase" />
+      <isfalse value="${special.fi.testcasesonly}" />
     </and>
   </condition>
 
@@ -598,8 +531,7 @@
         </batchtest>
         <!--The following batch is for very special occasions only when
         a non-FI tests are needed to be executed against FI-environment -->
-        <batchtest todir="${test.build.dir}" if="special.fi.testcasesonly">
-          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
+        <batchtest todir="${test.build.dir}" if="tests.testcaseonly.fi">
           <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
