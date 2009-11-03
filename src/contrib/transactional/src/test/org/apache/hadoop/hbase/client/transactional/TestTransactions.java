@@ -169,6 +169,30 @@ public class TestTransactions extends HBaseClusterTestCase {
     Assert.assertEquals(Bytes.toString(ROW2), Bytes.toString(result.getRow()));
     Assert.assertEquals(row2Value, Bytes.toInt(result.value()));
   }
+  
+  public void testPutPutScan() throws IOException {
+    TransactionState transactionState = transactionManager.beginTransaction();
+
+    int row2Value = 199;
+    table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, Bytes
+        .toBytes(row2Value)));
+    
+    row2Value = 299;
+    table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, Bytes
+        .toBytes(row2Value)));
+
+    ResultScanner scanner = table.getScanner(transactionState, new Scan()
+        .addFamily(FAMILY));
+
+    Result result = scanner.next();
+    Assert.assertNotNull(result);
+    Assert.assertEquals(Bytes.toString(ROW1), Bytes.toString(result.getRow()));
+
+    result = scanner.next();
+    Assert.assertNotNull(result);
+    Assert.assertEquals(Bytes.toString(ROW2), Bytes.toString(result.getRow()));
+    Assert.assertEquals(row2Value, Bytes.toInt(result.value()));
+  }
 
   // Read from ROW1,COL_A and put it in ROW2_COLA and ROW3_COLA
   private TransactionState makeTransaction1() throws IOException {

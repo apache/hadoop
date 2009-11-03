@@ -138,6 +138,14 @@ class TransactionState {
   }
 
   void addWrite(final Put write) {
+    byte [] now = Bytes.toBytes(System.currentTimeMillis());
+      // HAVE to manually set the KV timestamps
+      for (List<KeyValue> kvs : write.getFamilyMap().values()) {
+          for (KeyValue kv : kvs) {
+            kv.updateLatestStamp(now);
+          }
+      }
+
     puts.add(write);
   }
   
