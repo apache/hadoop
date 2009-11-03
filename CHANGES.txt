@@ -639,6 +639,9 @@ Release 0.21.0 - Unreleased
     HADOOP-5107. Use Maven ant tasks to publish the subproject jars.
     (Giridharan Kesavan via omalley)
 
+    HADOOP-6343. Log unexpected throwable object caught in RPC.  (Jitendra Nath
+    Pandey via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
