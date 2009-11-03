@@ -87,7 +87,7 @@ public class TestRename {
     }
     cluster = new MiniDFSCluster(CONF, 1, format, null);
     cluster.waitClusterUp();
-    fc = FileContext.getFileContext(cluster.getFileSystem());
+    fc = FileContext.getFileContext(cluster.getURI(), CONF);
   }
 
   /**

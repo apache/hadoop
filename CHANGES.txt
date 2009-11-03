@@ -34,6 +34,8 @@ Trunk (unreleased changes)
     HDFS-726. Eclipse .classpath template has outdated jar files and is
     missing some new ones. (cos)
 
+    HDFS-750. Fix build failure due to TestRename. (suresh)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
