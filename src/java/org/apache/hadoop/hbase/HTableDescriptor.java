@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -98,6 +99,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     
   private volatile Boolean meta = null;
   private volatile Boolean root = null;
+  private Boolean isDeferredLog = null;
 
   // Key is hash of the family name.
   public final Map<byte [], HColumnDescriptor> families =
@@ -374,8 +376,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * @return true if that table's log is hflush by other means
    */
-  public boolean isDeferredLogFlush() {
-    return isSomething(DEFERRED_LOG_FLUSH_KEY, DEFAULT_DEFERRED_LOG_FLUSH);
+  public synchronized boolean isDeferredLogFlush() {
+    if(this.isDeferredLog == null) {
+      this.isDeferredLog =
+          isSomething(DEFERRED_LOG_FLUSH_KEY, DEFAULT_DEFERRED_LOG_FLUSH);
+    }
+    return this.isDeferredLog;
   }
 
   /**
