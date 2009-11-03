@@ -89,6 +89,7 @@ Release 0.21.0 - Unreleased
    HBASE-1953  Overhaul of overview.html (html fixes, typos, consistency) -
                no content changes (Lars Francke via Stack)
    HBASE-1954  Transactional scans do not see newest put (Clint Morgan via Stack)
+   HBASE-1919  code: HRS.delete seems to ignore exceptions it shouldnt
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

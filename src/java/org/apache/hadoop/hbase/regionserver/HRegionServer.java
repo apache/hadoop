@@ -1869,9 +1869,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       region.delete(delete, lid, writeToWAL);
 
       this.syncWal(region);
-    } catch (WrongRegionException ex) {
-    } catch (NotServingRegionException ex) {
-      // ignore
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
