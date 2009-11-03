@@ -26,8 +26,25 @@
 
 <h2>Table of Contents</h2>
 <ul>
-<li><a href="#requirements">Requirements</a></li>
-<li><a href="#getting_started" >Getting Started</a></li>
+<li>
+  <a href="#requirements">Requirements</a>
+  <ul>
+    <li><a href="#windows">Windows</a></li>
+  </ul>
+</li>
+<li>
+  <a href="#getting_started" >Getting Started</a>
+  <ul>
+    <li><a href="#standalone">Standalone</a></li>
+    <li>
+      <a href="#distributed">Distributed Operation: Pseudo- and Fully-distributed modes</a>
+      <ul>
+        <li><a href="#pseudo-distrib">Pseudo-distributed</a></li>
+        <li><a href="#fully-distrib">Fully-distributed</a></li>
+      </ul>
+    </li>
+  </ul>
+</li>
 <li><a href="#runandconfirm">Running and Confirming Your Installation</a></li>
 <li><a href="#upgrading" >Upgrading</a></li>
 <li><a href="#client_example">Example API Usage</a></li>
@@ -36,60 +53,59 @@
 
 <h2><a name="requirements">Requirements</a></h2>
 <ul>
-  <li>Java 1.6.x, preferably from <a href="http://www.java.com/en/download/">Sun</a>.
-  Use the latest version available.
+  <li>Java 1.6.x, preferably from <a href="http://www.java.com/download/">Sun</a>. Use the latest version available.</li>
+  <li>This version of HBase will only run on <a href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</a>.</li>
+  <li><i>ssh</i> must be installed and <i>sshd</i> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
+   You must be able to ssh to all nodes, including your local node, using passwordless login
+   (Google "ssh passwordless login").
+</li>
+  <li>
+    HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
+    HBase keeps the location of its root table, who the current master is, and what regions are
+    currently participating in the cluster in ZooKeeper.
+    Clients and Servers now must know their <em>ZooKeeper Quorum locations</em> before
+    they can do anything else (Usually they pick up this information from configuration
+    supplied on their CLASSPATH). By default, HBase will manage a single ZooKeeper instance for you.
+    In <em>standalone</em> and <em>pseudo-distributed</em> modes this is usually enough, but for
+    <em>fully-distributed</em> mode you should configure a ZooKeeper quorum (more info below).
   </li>
-  <li>This version of HBase will only run on <a href="http://hadoop.apache.org/core/releases.html">Hadoop 0.20.x</a>.  
+  <li>Hosts must be able to resolve the fully-qualified domain name of the master.</li>
+  <li>
+    HBase currently is a file handle hog. The usual default of 1024 on *nix systems is insufficient
+    if you are loading any significant amount of data into regionservers.
+    See the <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>
+    for how to up the limit. Also, as of 0.18.x Hadoop DataNodes have an upper-bound on the number of threads they will
+    support (<code>dfs.datanode.max.xcievers</code>). The default is 256 threads. Up this limit on your hadoop cluster.
   </li>
   <li>
-    ssh must be installed and sshd must be running to use Hadoop's
-    scripts to manage remote Hadoop daemons.
+    The clocks on cluster members should be in basic alignments. Some skew is tolerable but
+    wild skew could generate odd behaviors. Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
+    on your cluster, or an equivalent.
   </li>
-      <li>HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
-      Clients and Servers now must know where their ZooKeeper Quorum locations before
-      they can do anything else (Usually they pick up this information from configuration
-      supplied on their CLASSPATH).  By default, HBase will manage a single ZooKeeper instance for you.
-      In basic standalone and pseudo-distributed modes this is usually enough, but for fully
-      distributed mode you should configure a ZooKeeper quorum (more info below).
-      In addition ZooKeeper changes how some core HBase configuration is done.
+  <li>
+    HBase servers put up 10 listeners for incoming connections by default.
+    Up this number if you have a dataset of any substance by setting <code>hbase.regionserver.handler.count</code>
+    in your <code>hbase-site.xml</code>.
+  </li>
+  <li>This is the current list of patches we recommend you apply to your running Hadoop cluster:
+    <ul>
+      <li>
+        <a href="https://issues.apache.org/jira/browse/HDFS-630">HDFS-630: <em>"In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block"</em></a>.
+        Dead DataNodes take ten minutes to timeout at NameNode.
+        In the meantime the NameNode can still send DFSClients to the dead DataNode as host for
+        a replicated block. DFSClient can get stuck on trying to get block from a
+        dead node. This patch allows DFSClients pass NameNode lists of known dead DataNodes.
       </li>
-  <li>Hosts must be able to resolve the fully-qualified domain name of the master.</li>
-  <li>HBase currently is a file handle hog.  The usual default of
-  1024 on *nix systems is insufficient if you are loading any significant
-  amount of data into regionservers.  See the
-  <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>
-  for how to up the limit.  Also, as of 0.18.x hadoop, datanodes have an upper-bound
-      on the number of threads they will support (<code>dfs.datanode.max.xcievers</code>).
-      Default is 256.  Up this limit on your hadoop cluster.
-      <li>The clocks on cluster members should be in basic alignments.  Some skew is tolerable but
-      wild skew can generate odd behaviors.  Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
-      on your cluster, or an equivalent.</li>
-      <li>HBase servers put up 10 listeners for incoming connections by default.  Up this
-      number if you have a dataset of any substance by setting hbase.regionserver.handler.count
-      in your hbase-site.xml.</li>
-      <li>This is a list of patches we recommend you apply to your running Hadoop cluster:
-      <ul>
-      <li><a hef="https://issues.apache.org/jira/browse/HADOOP-4681">HADOOP-4681/HDFS-127 <i>"DFSClient block read failures cause open DFSInputStream to become unusable"</i></a>. This patch will help with the ever-popular, "No live nodes contain current block".
-      The hadoop version bundled with hbase has this patch applied.  Its an HDFS client
-      fix so this should do for usual usage but if your cluster is missing the patch,
-      and in particular if calling hbase from a mapreduce job, you may run into this
-      issue.
-      </li>
-      <li><a hef="https://issues.apache.org/jira/browse/HDFS-630">HDFS-630 <i> "In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block"</i></a>. Dead datanodes take ten minutes to timeout at namenode.
-      Meantime the namenode can still send DFSClients to the dead datanode as host for
-      a replicated block.  DFSClient can get stuck on trying to get block from a
-      dead node. This patch allows DFSClients pass namenode lists of known
-      dead datanodes. 
-</li>
-      </ul>
-      </li>
+    </ul>
+  </li>
 </ul>
-<h3>Windows</h3>
+
+<h3><a name="windows">Windows</a></h3>
 If you are running HBase on Windows, you must install <a href="http://cygwin.com/">Cygwin</a>.
-Additionally, it is <emph>strongly recommended</emph> that you add or append to the following
+Additionally, it is <em>strongly recommended</em> that you add or append to the following
 environment variables. If you install Cygwin in a location that is not <code>C:\cygwin</code> you
 should modify the following appropriately.
-<p>
+
 <blockquote>
 <pre>
 HOME=c:\cygwin\home\jim
@@ -99,49 +115,46 @@ PATH=C:\cygwin\bin;%JAVA_HOME%\bin;%ANT_HOME%\bin; other windows stuff
 SHELL=/bin/bash
 </pre>
 </blockquote>
-For additional information, see the
-<a href="http://hadoop.apache.org/core/docs/current/quickstart.html">Hadoop Quick Start Guide</a>
-</p>
+For additional information, see the <a href="http://hadoop.apache.org/common/docs/current/quickstart.html">Hadoop Quick Start Guide</a>
+
+
 <h2><a name="getting_started" >Getting Started</a></h2>
-<p>
-What follows presumes you have obtained a copy of HBase,
+<p>What follows presumes you have obtained a copy of HBase,
 see <a href="http://hadoop.apache.org/hbase/releases.html">Releases</a>, and are installing
-for the first time. If upgrading your
-HBase instance, see <a href="#upgrading">Upgrading</a>.
-</p>
-<p>Three modes are described: standalone, pseudo-distributed (where all servers are run on
-a single host), and distributed.  If new to hbase start by following the standalone instruction.
-</p>
-<p>
-Whatever your mode, define <code>${HBASE_HOME}</code> to be the location of the root of your HBase installation, e.g. 
-<code>/user/local/hbase</code>.  Edit <code>${HBASE_HOME}/conf/hbase-env.sh</code>.  In this file you can
-set the heapsize for HBase, etc.  At a minimum, set <code>JAVA_HOME</code> to point at the root of
-your Java installation.
-</p>
-<h3><a name="standalone">Standalone Mode</a></h3>
-<p>
-If you are running a standalone operation, there should be nothing further to configure; proceed to
-<a href=#runandconfirm>Running and Confirming Your Installation</a>.  If you are running a distributed 
-operation, continue reading.
+for the first time. If upgrading your HBase instance, see <a href="#upgrading">Upgrading</a>.</p>
+
+<p>Three modes are described: <em>standalone</em>, <em>pseudo-distributed</em> (where all servers are run on
+a single host), and <em>fully-distributed</em>. If new to HBase start by following the standalone instructions.
 </p>
 
-<h3><a name="distributed">Distributed Operation: Pseudo- and Fully-Distributed Modes</a></h3>
-<p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS).
-See the Hadoop <a href="http://lucene.apache.org/hadoop/api/overview-summary.html#overview_description">
-requirements and instructions</a> for how to set up a DFS.
+<p>Begin by reading <a href=#requirements>Requirements</a>.
 </p>
+<p>Whatever your mode, define <code>${HBASE_HOME}</code> to be the location of the root of your HBase installation, e.g.
+<code>/user/local/hbase</code>. Edit <code>${HBASE_HOME}/conf/hbase-env.sh</code>. In this file you can
+set the heapsize for HBase, etc. At a minimum, set <code>JAVA_HOME</code> to point at the root of
+your Java installation.</p>
 
-<h4><a name="pseudo-distrib">Pseudo-Distributed Operation</a></h4>
-<p>A pseudo-distributed operation is simply a distributed operation run on a single host.  
-Once you have confirmed your DFS setup, configuring HBase for use on one host requires modification of 
-<code>${HBASE_HOME}/conf/hbase-site.xml</code>, which needs to be pointed at the running Hadoop DFS instance.  
-Use <code>hbase-site.xml</code> to override the properties defined in 
-<code>${HBASE_HOME}/conf/hbase-default.xml</code> (<code>hbase-default.xml</code> itself 
-should never be modified).  At a minimum the <code>hbase.rootdir</code> property should be redefined 
-in <code>hbase-site.xml</code> to point HBase at the Hadoop filesystem to use.  For example, adding the property 
-below to your <code>hbase-site.xml</code> says that HBase should use the <code>/hbase</code> directory in the 
-HDFS whose namenode is at port 9000 on your local machine:
-</p>
+<h3><a name="standalone">Standalone mode</a></h3>
+<p>If you are running a standalone operation, there should be nothing further to configure; proceed to
+<a href="#runandconfirm">Running and Confirming Your Installation</a>. If you are running a distributed
+operation, continue reading.</p>
+
+<h3><a name="distributed">Distributed Operation: Pseudo- and Fully-distributed modes</a></h3>
+<p>Distributed modes require an instance of the <em>Hadoop Distributed File System</em> (DFS).
+See the Hadoop <a href="http://hadoop.apache.org/common/docs/r0.20.1/api/overview-summary.html#overview_description">
+requirements and instructions</a> for how to set up a DFS.</p>
+
+<h4><a name="pseudo-distrib">Pseudo-distributed mode</a></h4>
+<p>A pseudo-distributed mode is simply a distributed mode run on a single host.
+Once you have confirmed your DFS setup, configuring HBase for use on one host requires modification of
+<code>${HBASE_HOME}/conf/hbase-site.xml</code>, which needs to be pointed at the running Hadoop DFS instance.
+Use <code>hbase-site.xml</code> to override the properties defined in
+<code>${HBASE_HOME}/conf/hbase-default.xml</code> (<code>hbase-default.xml</code> itself
+should never be modified). At a minimum the <code>hbase.rootdir</code> property should be redefined
+in <code>hbase-site.xml</code> to point HBase at the Hadoop filesystem to use. For example, adding the property
+below to your <code>hbase-site.xml</code> says that HBase should use the <code>/hbase</code> directory in the
+HDFS whose namenode is at port 9000 on your local machine:</p>
+<blockquote>
 <pre>
 &lt;configuration&gt;
   ...
@@ -154,17 +167,20 @@ HDFS whose namenode is at port 9000 on your local machine:
   ...
 &lt;/configuration&gt;
 </pre>
-<p>Note: Let hbase create the directory.  If you don't, you'll get warning saying hbase
-needs a migration run because the directory is missing files expected by hbase (it'll
-create them if you let it).
-</p>
+</blockquote>
 
-<h3><a name="fully-distrib">Fully-Distributed Operation</a></h3>
+<p>Note: Let HBase create the directory. If you don't, you'll get warning saying HBase
+needs a migration run because the directory is missing files expected by HBase (it'll
+create them if you let it).</p>
+<p>Also Note: Above we bind to localhost.  This means that a remote client cannot
+connect.  Amend accordingly, if you want to connect from a remote location.</p>
+
+<h4><a name="fully-distrib">Fully-Distributed Operation</a></h4>
 <p>For running a fully-distributed operation on more than one host, the following
 configurations must be made <i>in addition</i> to those described in the
-<a href="#pseudo-distrib">pseudo-distributed operation</a> section above.
-In this mode, a ZooKeeper cluster is required.</p>  
-<p>In <code>hbase-site.xml</code>, set <code>hbase.cluster.distributed</code> to 'true'. 
+<a href="#pseudo-distrib">pseudo-distributed operation</a> section above.</p>
+
+<p>In <code>hbase-site.xml</code>, set <code>hbase.cluster.distributed</code> to <code>true</code>.</p>
 <blockquote>
 <pre>
 &lt;configuration&gt;
@@ -181,65 +197,56 @@ In this mode, a ZooKeeper cluster is required.</p>
 &lt;/configuration&gt;
 </pre>
 </blockquote>
-</p>
-<p>
-In fully-distributed operation, you probably want to change your <code>hbase.rootdir</code> 
-from localhost to the name of the node running the HDFS namenode.  In addition
-to <code>hbase-site.xml</code> changes, a fully-distributed operation requires that you 
-modify <code>${HBASE_HOME}/conf/regionservers</code>.  
-The <code>regionserver</code> file lists all hosts running HRegionServers, one host per line
-(This file in HBase is like the hadoop slaves file at <code>${HADOOP_HOME}/conf/slaves</code>).
-</p>
-<p>
-A distributed HBase depends on a running ZooKeeper cluster.
-HBase can manage a ZooKeeper cluster for you, or you can manage it on your own
-and point HBase to it.
-To toggle this option, use the <code>HBASE_MANAGES_ZK</code> variable in <code>
-${HBASE_HOME}/conf/hbase-env.sh</code>.
+
+<p>In fully-distributed mode, you probably want to change your <code>hbase.rootdir</code>
+from localhost to the name of the node running the HDFS NameNode. In addition
+to <code>hbase-site.xml</code> changes, a fully-distributed mode requires that you
+modify <code>${HBASE_HOME}/conf/regionservers</code>.
+The <code>regionserver</code> file lists all hosts running <code>HRegionServer</code>s, one host per line
+(This file in HBase is like the Hadoop slaves file at <code>${HADOOP_HOME}/conf/slaves</code>).</p>
+
+<p>A distributed HBase depends on a running ZooKeeper cluster. All participating nodes and clients
+need to be able to get to the running ZooKeeper cluster.
+HBase by default manages a ZooKeeper cluster for you, or you can manage it on your own and point HBase to it.
+To toggle HBase management of ZooKeeper, use the <code>HBASE_MANAGES_ZK</code> variable in <code>${HBASE_HOME}/conf/hbase-env.sh</code>.
 This variable, which defaults to <code>true</code>, tells HBase whether to
-start/stop the ZooKeeper quorum servers alongside the rest of the servers.
-</p>
-<p>
-To point HBase at an existing ZooKeeper cluster, add your <code>zoo.cfg</code>
-to the <code>CLASSPATH</code>.
+start/stop the ZooKeeper quorum servers alongside the rest of the servers.</p>
+
+<p>When HBase manages the ZooKeeper cluster, you can specify ZooKeeper configuration
+using its canonical <code>zoo.cfg</code> file (see below), or 
+just specify ZookKeeper options directly in the <code>${HBASE_HOME}/conf/hbase-site.xml</code>
+(If new to ZooKeeper, go the path of specifying your configuration in HBase's hbase-site.xml).
+Every ZooKeeper configuration option has a corresponding property in the HBase hbase-site.xml
+XML configuration file named <code>hbase.zookeeper.property.OPTION</code>.
+For example, the <code>clientPort</code> setting in ZooKeeper can be changed by
+setting the <code>hbase.zookeeper.property.clientPort</code> property.
+For the full list of available properties, see ZooKeeper's <code>zoo.cfg</code>.
+For the default values used by HBase, see <code>${HBASE_HOME}/conf/hbase-default.xml</code>.</p>
+
+<p>At minimum, you should set the list of servers that you want ZooKeeper to run
+on using the <code>hbase.zookeeper.quorum</code> property.
+This property defaults to <code>localhost</code> which is not suitable for a
+fully distributed HBase (it binds to the local machine only and remote clients
+will not be able to connect).
+It is recommended to run a ZooKeeper quorum of 3, 5 or 7 machines, and give each
+ZooKeeper server around 1GB of RAM, and if possible, its own dedicated disk.
+For very heavily loaded clusters, run ZooKeeper servers on separate machines from the
+Region Servers (DataNodes and TaskTrackers).</p>
+
+<p>To point HBase at an existing ZooKeeper cluster, add 
+a suitably configured <code>zoo.cfg</code> to the <code>CLASSPATH</code>.
 HBase will see this file and use it to figure out where ZooKeeper is.
-Additionally set <code>HBASE_MANAGES_ZK</code> in <code> ${HBASE_HOME}/conf/hbase-env.sh</code>
- to <code>false</code> so that HBase doesn't mess with your ZooKeeper setup:
+Additionally set <code>HBASE_MANAGES_ZK</code> in <code>${HBASE_HOME}/conf/hbase-env.sh</code>
+to <code>false</code> so that HBase doesn't mess with your ZooKeeper setup:</p>
 <pre>
    ...
   # Tell HBase whether it should manage it's own instance of Zookeeper or not.
   export HBASE_MANAGES_ZK=false
 </pre>
-For more information about setting up a ZooKeeper cluster on your own, see
-the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html">Getting Started Guide</a>.
-HBase currently uses ZooKeeper version 3.2.0, so any cluster setup with a 3.x.x
-version of ZooKeeper should work.
-</p>
-<p>
-To have HBase manage the ZooKeeper cluster, you can use a <code>zoo.cfg</code>
- file as above, or edit the options directly in the <code>${HBASE_HOME}/conf/hbase-site.xml</code>.
-Every option from the <code>zoo.cfg</code> has a corresponding property in the
-XML configuration file named <code>hbase.zookeeper.property.OPTION</code>.
-For example, the <code>clientPort</code> setting in ZooKeeper can be changed by
-setting the <code>hbase.zookeeper.property.clientPort</code> property.
-For the full list of available properties, see ZooKeeper's <code>zoo.cfg</code>.
-For the default values used by HBase, see <code>${HBASE_HOME}/conf/hbase-default.xml</code>.
-</p>
-<p>
-At minimum, you should set the list of servers that you want ZooKeeper to run
-on using the <code>hbase.zookeeper.quorum</code> property.
-This property defaults to <code>localhost</code> which is not suitable for a 
-fully distributed HBase.
-It is recommended to run a ZooKeeper quorum of 5 or 7 machines, and give each
-server around 1GB to ensure that they don't swap.
-It is also recommended to run the ZooKeeper servers on separate machines from
-the Region Servers with their own disks.
-If this is not easily doable for you, choose 5 of your region servers to run the
-ZooKeeper servers on.
-</p>
-<p>
-As an example, to have HBase manage a ZooKeeper quorum on nodes
-rs{1,2,3,4,5}.example.com, bound to port 2222 (the default is 2181), use:
+
+<p>As an example, to have HBase manage a ZooKeeper quorum on nodes
+<em>rs{1,2,3,4,5}.example.com</em>, bound to port 2222 (the default is 2181), use:</p>
+<blockquote>
 <pre>
   ${HBASE_HOME}/conf/hbase-env.sh:
 
@@ -273,77 +280,93 @@ rs{1,2,3,4,5}.example.com, bound to port 2222 (the default is 2181), use:
     ...
   &lt;/configuration&gt;
 </pre>
-</p>
-<p>
-When HBase manages ZooKeeper, it will start/stop the ZooKeeper servers as a part
+</blockquote>
+
+<p>When HBase manages ZooKeeper, it will start/stop the ZooKeeper servers as a part
 of the regular start/stop scripts. If you would like to run it yourself, you can
-do:
-<pre>
-  ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
-</pre>
-Note that you can use HBase in this manner to spin up a ZooKeeper cluster,
+do:</p>
+<blockquote>
+<pre>${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper</pre>
+</blockquote>
+
+<p>Note that you can use HBase in this manner to spin up a ZooKeeper cluster,
 unrelated to HBase. Just make sure to set <code>HBASE_MANAGES_ZK</code> to
 <code>false</code> if you want it to stay up so that when HBase shuts down it
-doesn't take ZooKeeper with it.
-</p>
+doesn't take ZooKeeper with it.</p>
 
-<p>Of note, if you have made <i>HDFS client configuration</i> on your hadoop cluster, HBase will not
-see this configuration unless you do one of the following:
+<p>For more information about setting up a ZooKeeper cluster on your own, see
+the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html">Getting Started Guide</a>.
+HBase currently uses ZooKeeper version 3.2.0, so any cluster setup with a 3.x.x version of ZooKeeper should work.</p>
+
+<p>Of note, if you have made <em>HDFS client configuration</em> on your Hadoop cluster, HBase will not
+see this configuration unless you do one of the following:</p>
 <ul>
-    <li>Add a pointer to your <code>HADOOP_CONF_DIR</code> to <code>CLASSPATH</code> in <code>hbase-env.sh</code></li>
-    <li>Add a copy of <code>hdfs-site.xml</code> (or <code>hadoop-site.xml</code>) to <code>${HBASE_HOME}/conf</code>, or</li>
-    <li>If only a small set of HDFS client configurations, add them to <code>hbase-site.xml</code></li>
+  <li>Add a pointer to your <code>HADOOP_CONF_DIR</code> to <code>CLASSPATH</code> in <code>hbase-env.sh</code>.</li>
+  <li>Add a copy of <code>hdfs-site.xml</code> (or <code>hadoop-site.xml</code>) to <code>${HBASE_HOME}/conf</code>, or</li>
+  <li>if only a small set of HDFS client configurations, add them to <code>hbase-site.xml</code>.</li>
 </ul>
-An example of such an HDFS client configuration is <code>dfs.replication</code>.  If for example,
-you want to run with a replication factor of 5, hbase will create files with the default of 3 unless 
-you do the above to make the configuration available to HBase.
-</p>
+
+<p>An example of such an HDFS client configuration is <code>dfs.replication</code>. If for example,
+you want to run with a replication factor of 5, hbase will create files with the default of 3 unless
+you do the above to make the configuration available to HBase.</p>
 
 <h2><a name="runandconfirm">Running and Confirming Your Installation</a></h2>
-<p>If you are running in standalone, non-distributed mode, HBase by default uses
-the local filesystem.</p>
+<p>If you are running in standalone, non-distributed mode, HBase by default uses the local filesystem.</p>
 
 <p>If you are running a distributed cluster you will need to start the Hadoop DFS daemons and
-ZooKeeper Quorum
-before starting HBase and stop the daemons after HBase has shut down.</p>
-<p>Start and 
-stop the Hadoop DFS daemons by running <code>${HADOOP_HOME}/bin/start-dfs.sh</code>.
+ZooKeeper Quorum before starting HBase and stop the daemons after HBase has shut down.</p>
+
+<p>Start and stop the Hadoop DFS daemons by running <code>${HADOOP_HOME}/bin/start-dfs.sh</code>.
 You can ensure it started properly by testing the put and get of files into the Hadoop filesystem.
 HBase does not normally use the mapreduce daemons.  These do not need to be started.</p>
 
 <p>Start up your ZooKeeper cluster.</p>
 
-<p>Start HBase with the following command:
-</p>
-<pre>
-${HBASE_HOME}/bin/start-hbase.sh
+<p>Start HBase with the following command:</p>
+<blockquote>
+<pre>${HBASE_HOME}/bin/start-hbase.sh</pre>
+</blockquote>
+
+<p>Once HBase has started, enter <code>${HBASE_HOME}/bin/hbase shell</code> to obtain a
+shell against HBase from which you can execute commands.
+Type 'help' at the shells' prompt to get a list of commands.
+Test your running install by creating tables, inserting content, viewing content, and then dropping your tables.
+For example:
+<blockquote>
+<pre>hbase&gt; # Type "help" to see shell help screen
+hbase&gt; help
+hbase&gt; # To create a table named "mylittletable" with a column family of "mylittlecolumnfamily", type
+hbase&gt; create "mylittletable", "mylittlecolumnfamily"
+hbase&gt; # To see the schema for you just created "mylittletable" table and its single "mylittlecolumnfamily", type
+hbase&gt; describe "mylittletable"
+hbase&gt; # To add a row whose id is "x", to the column "mylittlecolumnfamily:x" with a value of 'x', do
+hbase&gt; put "mylittletable", "x"
+hbase&gt; # To get the cell just added, do
+hbase&gt; get "mylittletable", "x"
+hbase&gt; # To scan you new table, do
+hbase&gt; scan "mylittletable"
 </pre>
-<p>
-Once HBase has started, enter <code>${HBASE_HOME}/bin/hbase shell</code> to obtain a 
-shell against HBase from which you can execute commands.  
-Test your installation by creating, viewing, and dropping 
-To stop HBase, exit the HBase shell and enter:
-</p>
-<pre>
-${HBASE_HOME}/bin/stop-hbase.sh
-</pre>
-<p>
-If you are running a distributed operation, be sure to wait until HBase has shut down completely 
-before stopping the Hadoop daemons.
-</p>
-<p>
-The default location for logs is <code>${HBASE_HOME}/logs</code>.
-</p>
-<p>HBase also puts up a UI listing vital attributes.  By default its deployed on the master host
-at port 60010 (HBase regionservers listen on port 60020 by default and put up an informational
+</blockquote>
+
+To stop HBase, exit the HBase shell and enter:</p>
+<blockquote>
+<pre>${HBASE_HOME}/bin/stop-hbase.sh</pre>
+</blockquote>
+
+<p>If you are running a distributed operation, be sure to wait until HBase has shut down completely
+before stopping the Hadoop daemons.</p>
+
+<p>The default location for logs is <code>${HBASE_HOME}/logs</code>.</p>
+
+<p>HBase also puts up a UI listing vital attributes. By default its deployed on the master host
+at port 60010 (HBase RegionServers listen on port 60020 by default and put up an informational
 http server at 60030).</p>
 
 <h2><a name="upgrading" >Upgrading</a></h2>
 <p>After installing a new HBase on top of data written by a previous HBase version, before
 starting your cluster, run the <code>${HBASE_DIR}/bin/hbase migrate</code> migration script.
 It will make any adjustments to the filesystem data under <code>hbase.rootdir</code> necessary to run
-the HBase version. It does not change your install unless you explicitly ask it to.
-</p>
+the HBase version. It does not change your install unless you explicitly ask it to.</p>
 
 <h2><a name="client_example">Example API Usage</a></h2>
 For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summary.html#package_description">org.apache.hadoop.hbase.client</a> documentation.

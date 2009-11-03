@@ -86,6 +86,8 @@ Release 0.21.0 - Unreleased
    HBASE-1946  Unhandled exception at regionserver (Dmitriy Lyfar via Stack)
    HBASE-1682  IndexedRegion does not properly handle deletes
                (Andrew McCall via Clint Morgan and Stack)
+   HBASE-1953  Overhaul of overview.html (html fixes, typos, consistency) -
+               no content changes (Lars Francke via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
