@@ -88,6 +88,7 @@ Release 0.21.0 - Unreleased
                (Andrew McCall via Clint Morgan and Stack)
    HBASE-1953  Overhaul of overview.html (html fixes, typos, consistency) -
                no content changes (Lars Francke via Stack)
+   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
