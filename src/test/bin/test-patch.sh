@@ -690,10 +690,10 @@ setup
 checkAuthor
 RESULT=$?
 
-checkTests
 if [[ $HUDSON == "true" ]] ; then
   cleanUpXml
 fi
+checkTests
 (( RESULT = RESULT + $? ))
 applyPatch
 if [[ $? != 0 ]] ; then
