@@ -102,20 +102,25 @@ public class GetDeleteTracker implements DeleteTracker {
     int ret = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
         this.delete.buffer, this.delete.qualifierOffset, 
         this.delete.qualifierLength);
-    if (ret <= -1) {
-      // Have not reached the next delete yet
-      return false;
-    } else if(ret >= 1) {
-      // Deletes an earlier column, need to move down deletes
-      if(this.iterator.hasNext()) {
-        this.delete = this.iterator.next();
-      } else {
-        this.delete = null;
+    while (ret != 0) {
+      if (ret <= -1) {
+        // Have not reached the next delete yet
         return false;
-      }
-      return isDeleted(buffer, qualifierOffset, qualifierLength, timestamp);
-    }
+      } else if (ret >= 1) {
+        // Deletes an earlier column, need to move down deletes
+        if (this.iterator.hasNext()) {
+          this.delete = this.iterator.next();
+        } else {
+          this.delete = null;
+          return false;
+        }
+        ret = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
+            this.delete.buffer, this.delete.qualifierOffset,
+            this.delete.qualifierLength);
 
+      }
+    }
+   
     // Check Timestamp
     if(timestamp > this.delete.timestamp) {
       return false;

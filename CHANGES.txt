@@ -90,6 +90,8 @@ Release 0.21.0 - Unreleased
                no content changes (Lars Francke via Stack)
    HBASE-1954  Transactional scans do not see newest put (Clint Morgan via Stack)
    HBASE-1919  code: HRS.delete seems to ignore exceptions it shouldnt
+   HBASE-1951  Stack overflow when calling HTable.checkAndPut() 
+               when deleting a lot of values
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
