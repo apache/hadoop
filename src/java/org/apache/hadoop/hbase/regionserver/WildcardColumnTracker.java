@@ -89,94 +89,57 @@ public class WildcardColumnTracker implements ColumnTracker {
    * @return MatchCode telling QueryMatcher what action to take
    */
   public MatchCode checkColumn(byte [] bytes, int offset, int length) {
+    boolean recursive = false;
+    do {
 
-    // Nothing to match against, add to new and include
-    if(this.column == null && this.newColumn == null) {
-      newColumns.add(new ColumnCount(bytes, offset, length, 1));
-      this.newColumn = newColumns.get(newIndex);
-      return MatchCode.INCLUDE;
-    }
-    
-    // Nothing old, compare against new
-    if(this.column == null && this.newColumn != null) {
-      int ret = Bytes.compareTo(newColumn.getBuffer(), newColumn.getOffset(), 
-          newColumn.getLength(), bytes, offset, length);
-      
-      // Same column
-      if(ret == 0) {
-        if(newColumn.increment() > this.maxVersions) {
-          return MatchCode.SKIP;
-        }
-        return MatchCode.INCLUDE;
-      }
-      
-      // Specified column is bigger than current column
-      // Move down current column and check again
-      if(ret <= -1) {
-        if(++newIndex == newColumns.size()) {
-          // No more, add to end and include
-          newColumns.add(new ColumnCount(bytes, offset, length, 1));
-          this.newColumn = newColumns.get(newIndex);
-          return MatchCode.INCLUDE;
-        }
+      // Nothing to match against, add to new and include
+      if(this.column == null && this.newColumn == null) {
+        newColumns.add(new ColumnCount(bytes, offset, length, 1));
         this.newColumn = newColumns.get(newIndex);
-        return checkColumn(bytes, offset, length);
-      }
-      
-      // ret >= 1
-      // Specified column is smaller than current column
-      // Nothing to match against, add to new and include
-      newColumns.add(new ColumnCount(bytes, offset, length, 1));
-      this.newColumn = newColumns.get(++newIndex);
-      return MatchCode.INCLUDE;
-    }
-    
-    // Nothing new, compare against old
-    if(this.newColumn == null && this.column != null) {
-      int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(), 
-          column.getLength(), bytes, offset, length);
-      
-      // Same column
-      if(ret == 0) {
-        if(column.increment() > this.maxVersions) {
-          return MatchCode.SKIP;
-        }
         return MatchCode.INCLUDE;
       }
-      
-      // Specified column is bigger than current column
-      // Move down current column and check again
-      if(ret <= -1) {
-        if(++index == columns.size()) {
-          // No more, add to new and include (new was empty prior to this)
-          newColumns.add(new ColumnCount(bytes, offset, length, 1));
-          this.newColumn = newColumns.get(newIndex);
-          this.column = null;
+
+      // Nothing old, compare against new
+      if(this.column == null && this.newColumn != null) {
+        int ret = Bytes.compareTo(newColumn.getBuffer(), newColumn.getOffset(),
+            newColumn.getLength(), bytes, offset, length);
+
+        // Same column
+        if(ret == 0) {
+          if(newColumn.increment() > this.maxVersions) {
+            return MatchCode.SKIP;
+          }
           return MatchCode.INCLUDE;
         }
-        this.column = columns.get(index);
-        return checkColumn(bytes, offset, length);
-      }
-      
-      // ret >= 1
-      // Specified column is smaller than current column
-      // Nothing to match against, add to new and include
-      newColumns.add(new ColumnCount(bytes, offset, length, 1));
-      this.newColumn = newColumns.get(newIndex);
-      return MatchCode.INCLUDE;
-    }
 
-    if (column != null && newColumn != null) {
-      // There are new and old, figure which to check first
-      int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(), 
-        column.getLength(), newColumn.getBuffer(), newColumn.getOffset(), 
-        newColumn.getLength());
-        
-      // Old is smaller than new, compare against old
-      if(ret <= -1) {
-        ret = Bytes.compareTo(column.getBuffer(), column.getOffset(), 
-          column.getLength(), bytes, offset, length);
-      
+        // Specified column is bigger than current column
+        // Move down current column and check again
+        if(ret <= -1) {
+          if(++newIndex == newColumns.size()) {
+            // No more, add to end and include
+            newColumns.add(new ColumnCount(bytes, offset, length, 1));
+            this.newColumn = newColumns.get(newIndex);
+            return MatchCode.INCLUDE;
+          }
+          this.newColumn = newColumns.get(newIndex);
+          //return checkColumn(bytes, offset, length);
+          recursive = true;
+          continue;
+        }
+
+        // ret >= 1
+        // Specified column is smaller than current column
+        // Nothing to match against, add to new and include
+        newColumns.add(new ColumnCount(bytes, offset, length, 1));
+        this.newColumn = newColumns.get(++newIndex);
+        return MatchCode.INCLUDE;
+      }
+
+      // Nothing new, compare against old
+      if(this.newColumn == null && this.column != null) {
+        int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(),
+            column.getLength(), bytes, offset, length);
+
         // Same column
         if(ret == 0) {
           if(column.increment() > this.maxVersions) {
@@ -184,57 +147,105 @@ public class WildcardColumnTracker implements ColumnTracker {
           }
           return MatchCode.INCLUDE;
         }
-      
+
         // Specified column is bigger than current column
         // Move down current column and check again
         if(ret <= -1) {
           if(++index == columns.size()) {
+            // No more, add to new and include (new was empty prior to this)
+            newColumns.add(new ColumnCount(bytes, offset, length, 1));
+            this.newColumn = newColumns.get(newIndex);
             this.column = null;
-          } else {
-            this.column = columns.get(index);
+            return MatchCode.INCLUDE;
           }
-          return checkColumn(bytes, offset, length);
+          this.column = columns.get(index);
+          //return checkColumn(bytes, offset, length);
+          recursive = true;
+          continue;
         }
-      
+
+        // ret >= 1
+        // Specified column is smaller than current column
+        // Nothing to match against, add to new and include
+        newColumns.add(new ColumnCount(bytes, offset, length, 1));
+        this.newColumn = newColumns.get(newIndex);
+        return MatchCode.INCLUDE;
+      }
+
+      if (column != null && newColumn != null) {
+        // There are new and old, figure which to check first
+        int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(),
+          column.getLength(), newColumn.getBuffer(), newColumn.getOffset(),
+          newColumn.getLength());
+
+        // Old is smaller than new, compare against old
+        if(ret <= -1) {
+          ret = Bytes.compareTo(column.getBuffer(), column.getOffset(),
+            column.getLength(), bytes, offset, length);
+
+          // Same column
+          if(ret == 0) {
+            if(column.increment() > this.maxVersions) {
+              return MatchCode.SKIP;
+            }
+            return MatchCode.INCLUDE;
+          }
+
+          // Specified column is bigger than current column
+          // Move down current column and check again
+          if(ret <= -1) {
+            if(++index == columns.size()) {
+              this.column = null;
+            } else {
+              this.column = columns.get(index);
+            }
+            //return checkColumn(bytes, offset, length);
+            recursive = true;
+            continue;
+          }
+
+          // ret >= 1
+          // Specified column is smaller than current column
+          // Nothing to match against, add to new and include
+          newColumns.add(new ColumnCount(bytes, offset, length, 1));
+          return MatchCode.INCLUDE;
+        }
+      }
+
+      if (newColumn != null) {
+        // Cannot be equal, so ret >= 1
+        // New is smaller than old, compare against new
+        int ret = Bytes.compareTo(newColumn.getBuffer(), newColumn.getOffset(),
+          newColumn.getLength(), bytes, offset, length);
+
+        // Same column
+        if(ret == 0) {
+          if(newColumn.increment() > this.maxVersions) {
+            return MatchCode.SKIP;
+          }
+          return MatchCode.INCLUDE;
+        }
+
+        // Specified column is bigger than current column
+        // Move down current column and check again
+        if(ret <= -1) {
+          if(++newIndex == newColumns.size()) {
+            this.newColumn = null;
+          } else {
+            this.newColumn = newColumns.get(newIndex);
+          }
+          //return checkColumn(bytes, offset, length);
+          recursive = true;
+          continue;
+        }
+
         // ret >= 1
         // Specified column is smaller than current column
         // Nothing to match against, add to new and include
         newColumns.add(new ColumnCount(bytes, offset, length, 1));
         return MatchCode.INCLUDE;
       }
-    }
-
-    if (newColumn != null) {
-      // Cannot be equal, so ret >= 1
-      // New is smaller than old, compare against new
-      int ret = Bytes.compareTo(newColumn.getBuffer(), newColumn.getOffset(), 
-        newColumn.getLength(), bytes, offset, length);
-    
-      // Same column
-      if(ret == 0) {
-        if(newColumn.increment() > this.maxVersions) {
-          return MatchCode.SKIP;
-        }
-        return MatchCode.INCLUDE;
-      }
-    
-      // Specified column is bigger than current column
-      // Move down current column and check again
-      if(ret <= -1) {
-        if(++newIndex == newColumns.size()) {
-          this.newColumn = null;
-        } else {
-          this.newColumn = newColumns.get(newIndex);
-        }
-        return checkColumn(bytes, offset, length);
-      }
-    
-      // ret >= 1
-      // Specified column is smaller than current column
-      // Nothing to match against, add to new and include
-      newColumns.add(new ColumnCount(bytes, offset, length, 1));
-      return MatchCode.INCLUDE;
-    }
+    } while(recursive);
 
     // No match happened, add to new and include
     newColumns.add(new ColumnCount(bytes, offset, length, 1));
