@@ -94,6 +94,8 @@ Release 0.21.0 - Unreleased
                when deleting a lot of values
    HBASE-1781  Weird behavior of WildcardColumnTracker.checkColumn(), 
                looks like recursive loop
+   HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
+               broken (Gary Helmling via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

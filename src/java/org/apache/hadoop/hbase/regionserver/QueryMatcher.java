@@ -231,8 +231,10 @@ public class QueryMatcher {
      */
     long timestamp = Bytes.toLong(bytes, offset);
     if(isExpired(timestamp)) {
-      // reached the expired part, for scans, this indicates we're done.
-      return MatchCode.NEXT;  // done_row
+      /* KeyValue is expired, skip but don't early out since a non-expired
+       * kv could come next.
+       */
+      return MatchCode.SKIP;  // go to next kv
     }
     offset += Bytes.SIZEOF_LONG;
 

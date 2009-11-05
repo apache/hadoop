@@ -122,9 +122,8 @@ public class ScanQueryMatcher extends QueryMatcher {
     
     long timestamp = kv.getTimestamp();
     if (isExpired(timestamp)) {
-      // done, the rest wil also be expired as well.
-      stickyNextRow = true;
-      return MatchCode.SEEK_NEXT_ROW;
+      // done, the rest of this column will also be expired as well.
+      return MatchCode.SEEK_NEXT_COL;
     }
 
     byte type = kv.getType();
