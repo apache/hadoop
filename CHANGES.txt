@@ -54,6 +54,9 @@ Release 0.20.2 - Unreleased
     HDFS-732. DFSClient.DFSOutputStream.close() should throw an exception if
     the stream cannot be closed successfully.  (szetszwo)
 
+    MAPREDUCE-1163. Remove unused, hard-coded paths from libhdfs. (Allen
+    Wittenauer via cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
