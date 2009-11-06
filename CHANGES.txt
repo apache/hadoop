@@ -39,6 +39,8 @@ Trunk (unreleased changes)
 
     HDFS-750. Fix build failure due to TestRename. (suresh)
 
+    HDFS-733. TestBlockReport fails intermittently. (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
