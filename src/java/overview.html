@@ -55,10 +55,11 @@
 <ul>
   <li>Java 1.6.x, preferably from <a href="http://www.java.com/download/">Sun</a>. Use the latest version available.</li>
   <li>This version of HBase will only run on <a href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</a>.</li>
-  <li><i>ssh</i> must be installed and <i>sshd</i> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
+  <li>
+    <em>ssh</em> must be installed and <em>sshd</em> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
    You must be able to ssh to all nodes, including your local node, using passwordless login
    (Google "ssh passwordless login").
-</li>
+  </li>
   <li>
     HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
     HBase keeps the location of its root table, who the current master is, and what regions are
@@ -87,7 +88,8 @@
     Up this number if you have a dataset of any substance by setting <code>hbase.regionserver.handler.count</code>
     in your <code>hbase-site.xml</code>.
   </li>
-  <li>This is the current list of patches we recommend you apply to your running Hadoop cluster:
+  <li>
+    This is the current list of patches we recommend you apply to your running Hadoop cluster:
     <ul>
       <li>
         <a href="https://issues.apache.org/jira/browse/HDFS-630">HDFS-630: <em>"In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block"</em></a>.
@@ -101,10 +103,10 @@
 </ul>
 
 <h3><a name="windows">Windows</a></h3>
-If you are running HBase on Windows, you must install <a href="http://cygwin.com/">Cygwin</a>.
+<p>If you are running HBase on Windows, you must install <a href="http://cygwin.com/">Cygwin</a>.
 Additionally, it is <em>strongly recommended</em> that you add or append to the following
 environment variables. If you install Cygwin in a location that is not <code>C:\cygwin</code> you
-should modify the following appropriately.
+should modify the following appropriately.</p>
 
 <blockquote>
 <pre>
@@ -115,7 +117,8 @@ PATH=C:\cygwin\bin;%JAVA_HOME%\bin;%ANT_HOME%\bin; other windows stuff
 SHELL=/bin/bash
 </pre>
 </blockquote>
-For additional information, see the <a href="http://hadoop.apache.org/common/docs/current/quickstart.html">Hadoop Quick Start Guide</a>
+
+<p>For additional information, see the <a href="http://hadoop.apache.org/common/docs/current/quickstart.html">Hadoop Quick Start Guide</a></p>
 
 
 <h2><a name="getting_started" >Getting Started</a></h2>
@@ -124,11 +127,10 @@ see <a href="http://hadoop.apache.org/hbase/releases.html">Releases</a>, and are
 for the first time. If upgrading your HBase instance, see <a href="#upgrading">Upgrading</a>.</p>
 
 <p>Three modes are described: <em>standalone</em>, <em>pseudo-distributed</em> (where all servers are run on
-a single host), and <em>fully-distributed</em>. If new to HBase start by following the standalone instructions.
-</p>
+a single host), and <em>fully-distributed</em>. If new to HBase start by following the standalone instructions.</p>
 
-<p>Begin by reading <a href=#requirements>Requirements</a>.
-</p>
+<p>Begin by reading <a href="#requirements">Requirements</a>.</p>
+
 <p>Whatever your mode, define <code>${HBASE_HOME}</code> to be the location of the root of your HBase installation, e.g.
 <code>/user/local/hbase</code>. Edit <code>${HBASE_HOME}/conf/hbase-env.sh</code>. In this file you can
 set the heapsize for HBase, etc. At a minimum, set <code>JAVA_HOME</code> to point at the root of
@@ -177,7 +179,7 @@ connect.  Amend accordingly, if you want to connect from a remote location.</p>
 
 <h4><a name="fully-distrib">Fully-Distributed Operation</a></h4>
 <p>For running a fully-distributed operation on more than one host, the following
-configurations must be made <i>in addition</i> to those described in the
+configurations must be made <em>in addition</em> to those described in the
 <a href="#pseudo-distrib">pseudo-distributed operation</a> section above.</p>
 
 <p>In <code>hbase-site.xml</code>, set <code>hbase.cluster.distributed</code> to <code>true</code>.</p>
@@ -238,11 +240,13 @@ a suitably configured <code>zoo.cfg</code> to the <code>CLASSPATH</code>.
 HBase will see this file and use it to figure out where ZooKeeper is.
 Additionally set <code>HBASE_MANAGES_ZK</code> in <code>${HBASE_HOME}/conf/hbase-env.sh</code>
 to <code>false</code> so that HBase doesn't mess with your ZooKeeper setup:</p>
+<blockquote>
 <pre>
    ...
   # Tell HBase whether it should manage it's own instance of Zookeeper or not.
   export HBASE_MANAGES_ZK=false
 </pre>
+</blockquote>
 
 <p>As an example, to have HBase manage a ZooKeeper quorum on nodes
 <em>rs{1,2,3,4,5}.example.com</em>, bound to port 2222 (the default is 2181), use:</p>
@@ -310,6 +314,7 @@ see this configuration unless you do one of the following:</p>
 you want to run with a replication factor of 5, hbase will create files with the default of 3 unless
 you do the above to make the configuration available to HBase.</p>
 
+
 <h2><a name="runandconfirm">Running and Confirming Your Installation</a></h2>
 <p>If you are running in standalone, non-distributed mode, HBase by default uses the local filesystem.</p>
 
@@ -331,9 +336,10 @@ HBase does not normally use the mapreduce daemons.  These do not need to be star
 shell against HBase from which you can execute commands.
 Type 'help' at the shells' prompt to get a list of commands.
 Test your running install by creating tables, inserting content, viewing content, and then dropping your tables.
-For example:
+For example:</p>
 <blockquote>
-<pre>hbase&gt; # Type "help" to see shell help screen
+<pre>
+hbase&gt; # Type "help" to see shell help screen
 hbase&gt; help
 hbase&gt; # To create a table named "mylittletable" with a column family of "mylittlecolumnfamily", type
 hbase&gt; create "mylittletable", "mylittlecolumnfamily"
@@ -348,7 +354,7 @@ hbase&gt; scan "mylittletable"
 </pre>
 </blockquote>
 
-To stop HBase, exit the HBase shell and enter:</p>
+<p>To stop HBase, exit the HBase shell and enter:</p>
 <blockquote>
 <pre>${HBASE_HOME}/bin/stop-hbase.sh</pre>
 </blockquote>
@@ -369,7 +375,7 @@ It will make any adjustments to the filesystem data under <code>hbase.rootdir</c
 the HBase version. It does not change your install unless you explicitly ask it to.</p>
 
 <h2><a name="client_example">Example API Usage</a></h2>
-For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summary.html#package_description">org.apache.hadoop.hbase.client</a> documentation.
+<p>For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summary.html#package_description">org.apache.hadoop.hbase.client</a> documentation.</p>
 
 <p>If your client is NOT Java, consider the Thrift or REST libraries.</p>
 
