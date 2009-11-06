@@ -10,6 +10,10 @@ Trunk (unreleased changes)
     hadoop-config.sh so that it allows setting java command options for
     JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
 
+    HADOOP-6337. Updates FilterInitializer class to be more visible,
+    and the init of the class is made to take a Configuration argument.
+    (Jakob Homan via ddas)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
