@@ -96,6 +96,7 @@ Release 0.21.0 - Unreleased
                looks like recursive loop
    HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
                broken (Gary Helmling via Stack)
+   HBASE-1957  Get-s can't set a Filter
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

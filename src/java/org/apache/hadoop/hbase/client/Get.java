@@ -28,12 +28,14 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
 
 /**
  * Used to perform Get operations on a single row.
@@ -330,7 +332,8 @@ public class Get implements Writable {
     this.maxVersions = in.readInt();
     boolean hasFilter = in.readBoolean();
     if (hasFilter) {
-      this.filter = (Filter)HbaseObjectWritable.readObject(in, null);
+      this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
+      this.filter.readFields(in);
     }
     this.tr = new TimeRange();
     tr.readFields(in);
@@ -363,7 +366,8 @@ public class Get implements Writable {
       out.writeBoolean(false);
     } else {
       out.writeBoolean(true);
-      HbaseObjectWritable.writeObject(out, this.filter, Filter.class, null);
+      Bytes.writeByteArray(out, Bytes.toBytes(filter.getClass().getName()));
+      filter.write(out);
     }
     tr.write(out);
     out.writeInt(familyMap.size());
@@ -381,5 +385,16 @@ public class Get implements Writable {
         }
       }
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Writable createForName(String className) {
+    try {
+      Class<? extends Writable> clazz =
+        (Class<? extends Writable>) Class.forName(className);
+      return WritableFactories.newInstance(clazz, new Configuration());
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Can't find class " + className);
+    }    
   }
 }
