@@ -825,6 +825,44 @@ public class RegionManager implements HConstants {
   }
 
   /**
+   * Is this server assigned to transition the ROOT table. HBASE-1928
+   *
+   * @param server Server
+   * @return true if server is transitioning the ROOT table
+   */
+  public boolean isRootServerCandidate(final String server) {
+    for (RegionState s : regionsInTransition.values()) {
+      if (s.getRegionInfo().isRootRegion()
+          && !s.isUnassigned()
+          && s.getServerName() != null
+          && s.getServerName().equals(server)) {
+        // Has an outstanding root region to be assigned.
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Is this server assigned to transition a META table. HBASE-1928
+   *
+   * @param server Server
+   * @return if this server was transitioning a META table then a not null HRegionInfo pointing to it
+   */
+  public HRegionInfo getMetaServerRegionInfo(final String server) {
+    for (RegionState s : regionsInTransition.values()) {
+      if (s.getRegionInfo().isMetaRegion()
+          && !s.isUnassigned()
+          && s.getServerName() != null
+          && s.getServerName().equals(server)) {
+        // Has an outstanding meta region to be assigned.
+        return s.getRegionInfo();
+      }
+    }
+    return null;
+  }
+
+  /**
    * Call to take this metaserver offline for immediate reassignment.  Used only
    * when we know a region has shut down cleanly.
    *

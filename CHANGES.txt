@@ -97,6 +97,9 @@ Release 0.21.0 - Unreleased
    HBASE-1949  KeyValue expiration by Time-to-Live during major compaction is
                broken (Gary Helmling via Stack)
    HBASE-1957  Get-s can't set a Filter
+   HBASE-1928  ROOT and META tables stay in transition state (making the system
+               not usable) if the designated regionServer dies before the
+               assignment is complete (Yannis Pavlidis via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

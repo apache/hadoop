@@ -86,12 +86,26 @@ class ProcessServerShutdown extends RegionServerOperation {
     if (isRootServer) {
       master.getRegionManager().unsetRootRegion();
     }
+    else {
+        //HBASE-1928: Check whether this server has been transitioning the ROOT table
+        isRootServer = master.getRegionManager().isRootServerCandidate (deadServer);
+        if (isRootServer) {
+          master.getRegionManager().unsetRootRegion();
+        }
+    }
+
     List<byte[]> metaStarts = master.getRegionManager().listMetaRegionsForServer(deadServerAddress);
 
     metaRegions = new ArrayList<MetaRegion>();
     for (byte [] region : metaStarts) {
       MetaRegion r = master.getRegionManager().offlineMetaRegion(region);
       metaRegions.add(r);
+    }
+
+    //HBASE-1928: Check whether this server has been transitioning the META table
+    HRegionInfo metaServerRegionInfo = master.getRegionManager().getMetaServerRegionInfo (deadServer);
+    if (metaServerRegionInfo != null) {
+      metaRegions.add (new MetaRegion (deadServerAddress, metaServerRegionInfo));
     }
   }
 

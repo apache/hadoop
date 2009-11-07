@@ -636,6 +636,19 @@ public class ServerManager implements HConstants {
     if (info != null) {
       LOG.info("Removing server's info " + serverName);
       this.master.getRegionManager().offlineMetaServer(info.getServerAddress());
+
+      //HBASE-1928: Check whether this server has been transitioning the ROOT table
+      if (this.master.getRegionManager().isRootServerCandidate (serverName)) {
+         this.master.getRegionManager().unsetRootRegion();
+         this.master.getRegionManager().reassignRootRegion();
+      }
+
+      //HBASE-1928: Check whether this server has been transitioning the META table
+      HRegionInfo metaServerRegionInfo = this.master.getRegionManager().getMetaServerRegionInfo (serverName);
+      if (metaServerRegionInfo != null) {
+         this.master.getRegionManager().setUnassigned(metaServerRegionInfo, true);
+      }
+
       infoUpdated = true;
       // update load information
       updateLoadToServers(serverName, this.serversToLoad.remove(serverName));
