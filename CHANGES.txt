@@ -169,6 +169,7 @@ Release 0.21.0 - Unreleased
                you end up with lots of store files
    HBASE-1829  Make use of start/stop row in TableInputFormat
                (Lars George via Stack)
+   HBASE-1867  Tool to regenerate an hbase table from the data files
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
