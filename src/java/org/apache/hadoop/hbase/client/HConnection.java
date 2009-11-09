@@ -111,6 +111,11 @@ public interface HConnection {
   throws IOException;
   
   /**
+   * Allows flushing the region cache.
+   */
+  public void clearRegionCache(); 
+  
+  /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in, ignoring any value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in

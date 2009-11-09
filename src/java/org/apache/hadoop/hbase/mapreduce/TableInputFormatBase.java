@@ -20,17 +20,18 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -269,29 +270,40 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
+    Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
+    if (keys == null || keys.getFirst() == null || 
+        keys.getFirst().length == 0) {
+      throw new IOException("Expecting at least one region.");
+    }
     if (table == null) {
       throw new IOException("No table was provided.");
     }
-    byte [][] startKeys = table.getStartKeys();
-    if (startKeys == null || startKeys.length == 0) {
-      throw new IOException("Expecting at least one region.");
+    int count = 0;
+    List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length); 
+    for (int i = 0; i < keys.getFirst().length; i++) {
+      String regionLocation = table.getRegionLocation(keys.getFirst()[i]).
+        getServerAddress().getHostname();
+      byte[] startRow = scan.getStartRow();
+      byte[] stopRow = scan.getStopRow();
+      // determine if the given start an stop key fall into the region
+      if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
+           Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
+          (stopRow.length == 0 || 
+           Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)) {
+        byte[] splitStart = startRow.length == 0 || 
+          Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ? 
+            keys.getFirst()[i] : startRow;
+        byte[] splitStop = stopRow.length == 0 || 
+          Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0 ? 
+            keys.getSecond()[i] : stopRow;
+        InputSplit split = new TableSplit(table.getTableName(),
+          splitStart, splitStop, regionLocation);
+        splits.add(split);
+        if (LOG.isDebugEnabled()) 
+          LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
+      }
     }
-    int realNumSplits = startKeys.length;
-    InputSplit[] splits = new InputSplit[realNumSplits];
-    int middle = startKeys.length / realNumSplits;
-    int startPos = 0;
-    for (int i = 0; i < realNumSplits; i++) {
-      int lastPos = startPos + middle;
-      lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
-      String regionLocation = table.getRegionLocation(startKeys[startPos]).
-        getServerAddress().getHostname(); 
-      splits[i] = new TableSplit(this.table.getTableName(),
-        startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
-          HConstants.EMPTY_START_ROW, regionLocation);
-      LOG.info("split: " + i + "->" + splits[i]);
-      startPos = lastPos;
-    }
-    return Arrays.asList(splits);
+    return splits;
   }
 
   /**

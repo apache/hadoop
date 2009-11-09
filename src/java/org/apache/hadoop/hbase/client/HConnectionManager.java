@@ -836,6 +836,13 @@ public class HConnectionManager implements HConstants {
       return result;
     }
 
+    /**
+     * Allows flushing the region cache.
+     */
+    public void clearRegionCache() {
+     cachedRegionLocations.clear();  
+    }
+    
     /*
      * Put a newly discovered HRegionLocation into the cache.
      */

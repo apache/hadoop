@@ -167,6 +167,8 @@ Release 0.21.0 - Unreleased
    HBASE-1945  Remove META and ROOT memcache size bandaid 
    HBASE-1947  If HBase starts/stops often in less than 24 hours, 
                you end up with lots of store files
+   HBASE-1829  Make use of start/stop row in TableInputFormat
+               (Lars George via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
