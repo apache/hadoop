@@ -42,6 +42,8 @@
   <property name="contrib.dir" value="${basedir}/src/contrib"/>
   <property name="docs.src" value="${basedir}/src/docs"/>
   <property name="changes.src" value="${docs.src}/changes"/>
+  <property name="c++.src" value="${basedir}/src/c++"/>
+  <property name="c++.libhdfs.src" value="${c++.src}/libhdfs"/>
 
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build-fi.dir" value="${basedir}/build-fi"/>
@@ -58,12 +60,15 @@
             value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
   <property name="jvm.arch" 
             value="${sun.arch.data.model}"/>
+  <property name="build.c++" value="${build.dir}/c++-build/${build.platform}"/>
+  <property name="build.c++.libhdfs" value="${build.c++}/libhdfs"/>
 
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.javadoc.timestamp" value="${build.javadoc}/index.html" />
   <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
+  <property name="install.c++" value="${build.dir}/c++/${build.platform}"/>
 
   <property name="test.src.dir" value="${basedir}/src/test"/>
   <property name="test.lib.dir" value="${basedir}/src/test/lib"/>
@@ -91,6 +96,9 @@
 
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
   <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
+
+  <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
+  <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
 
   <property name="web.src.dir" value="${basedir}/src/web"/>
   <property name="src.webapps" value="${basedir}/src/webapps"/>
@@ -309,7 +317,7 @@
 
   <target name="compile-core" depends="clover, compile-hdfs-classes" description="Compile"/> 
 
-  <target name="compile-contrib" depends="compile-core">
+  <target name="compile-contrib" depends="compile-core,compile-c++-libhdfs">
      <subant target="compile">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
@@ -570,7 +578,7 @@
     <fail if="testsfailed">Tests failed!</fail>
   </target>
 
-  <target name="test" depends="jar-test, test-core" description="Run all unit tests">
+  <target name="test" depends="test-c++-libhdfs, jar-test, test-core" description="Run all unit tests">
     <subant target="test-contrib">
       <fileset file="${basedir}/build.xml"/>
      </subant>
@@ -1003,6 +1011,74 @@
      <subant target="clean">        
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
+  </target>
+
+ <target name="test-c++-libhdfs" depends="compile-c++-libhdfs, compile-core" if="islibhdfs">
+    <delete dir="${test.libhdfs.dir}"/>
+    <mkdir dir="${test.libhdfs.dir}"/>
+    <mkdir dir="${test.libhdfs.dir}/logs"/>
+    <mkdir dir="${test.libhdfs.dir}/hdfs/name"/>
+
+    <exec dir="${build.c++.libhdfs}" executable="${make.cmd}" failonerror="true">
+        <env key="OS_NAME" value="${os.name}"/>
+        <env key="OS_ARCH" value="${os.arch}"/>
+        <env key="JVM_ARCH" value="${jvm.arch}"/>
+        <env key="LIBHDFS_BUILD_DIR" value="${build.c++.libhdfs}"/>
+        <env key="HADOOP_HOME" value="${basedir}"/>
+        <env key="HADOOP_CONF_DIR" value="${test.libhdfs.conf.dir}"/>
+        <env key="HADOOP_LOG_DIR" value="${test.libhdfs.dir}/logs"/>
+        <env key="LIBHDFS_SRC_DIR" value="${c++.libhdfs.src}"/>
+        <env key="LIBHDFS_INSTALL_DIR" value="${install.c++}/lib"/>  
+        <env key="LIB_DIR" value="${common.ivy.lib.dir}"/>
+		<arg value="test"/>
+    </exec>
+  </target>
+
+ <target name="create-c++-configure" depends="init" if="compile.c++">
+    <antcall target="create-c++-configure-libhdfs"/>
+  </target>
+
+  <target name="create-c++-configure-libhdfs" depends="check-c++-libhdfs" if="islibhdfs">
+    <exec executable="autoreconf" dir="${c++.libhdfs.src}" 
+          searchpath="yes" failonerror="yes">
+       <arg value="-if"/>
+    </exec>
+  </target>
+
+  <target name="check-c++-libhdfs">
+    <condition property="islibhdfs">
+      <and>
+        <isset property="compile.c++"/>
+        <isset property="libhdfs"/>
+      </and>
+    </condition>
+  </target>
+
+  <target name="check-c++-makefile-libhdfs" depends="init,check-c++-libhdfs" if="islibhdfs">
+    <condition property="need.c++.libhdfs.makefile">
+       <not> <available file="${build.c++.libhdfs}/Makefile"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-c++-libhdfs-makefile" depends="check-c++-makefile-libhdfs" 
+                                           if="need.c++.libhdfs.makefile">
+    <mkdir dir="${build.c++.libhdfs}"/>
+    <chmod file="${c++.libhdfs.src}/configure" perm="ugo+x"/>
+    <exec executable="${c++.libhdfs.src}/configure" dir="${build.c++.libhdfs}"
+          failonerror="yes">
+      <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>
+      <env key="JVM_ARCH" value="${jvm.arch}"/>
+      <arg value="--prefix=${install.c++}"/>
+    </exec>
+  </target>
+
+  <target name="compile-c++-libhdfs" depends="create-c++-libhdfs-makefile" if="islibhdfs">
+    <exec executable="${make.cmd}" dir="${build.c++.libhdfs}" searchpath="yes"
+          failonerror="yes">
+      <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>
+      <env key="JVM_ARCH" value="${jvm.arch}"/>
+      <arg value="install"/>
+    </exec>
   </target>
 
   <target name="compile-ant-tasks" depends="compile-core">

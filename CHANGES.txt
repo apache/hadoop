@@ -41,6 +41,9 @@ Trunk (unreleased changes)
 
     HDFS-733. TestBlockReport fails intermittently. (cos)
 
+    HDFS-712. Move libhdfs from mapreduce subproject to hdfs subproject.
+    (Eli Collins via dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
