@@ -73,7 +73,7 @@ fs.mkdirs(tableDir) unless fs.exists(tableDir)
 # Start. Per hfile, move it, and insert an entry in catalog table.
 families = fs.listStatus(outputdir, OutputLogFilter.new())
 throw IOError.new("Can do one family only") if families.length > 1
-# Read meta on all files. Put in map keyed by end key.
+# Read meta on all files. Put in map keyed by start key.
 map = TreeMap.new(Bytes::ByteArrayComparator.new())
 family = families[0]
 # Make sure this subdir exists under table
@@ -84,12 +84,13 @@ for hfile in hfiles
   reader = HFile::Reader.new(fs, hfile.getPath(), nil, false)
   begin
     fileinfo = reader.loadFileInfo() 
-    lastkey = reader.getLastKey()
-    # Last key is row/column/ts.  We just want the row part.
-    rowlen = Bytes.toShort(lastkey)
-    LOG.info(count.to_s + " read lastrow of " +
-      Bytes.toString(lastkey[2, rowlen]) + " from " + hfile.getPath().toString())
-    map.put(lastkey[2, rowlen], [hfile, fileinfo])
+    firstkey = reader.getFirstKey()
+    # First key is row/column/ts.  We just want the row part.
+    rowlen = Bytes.toShort(firstkey)
+    firstkeyrow = firstkey[2, rowlen] 
+    LOG.info(count.to_s + " read firstkey of " +
+      Bytes.toString(firstkeyrow) + " from " + hfile.getPath().toString())
+    map.put(firstkeyrow, [hfile, fileinfo])
     count = count + 1
   ensure
     reader.close()
@@ -106,18 +107,16 @@ hcd = HColumnDescriptor.new(familyName)
 htd = HTableDescriptor.new(tableName)
 htd.addFamily(hcd)
 previouslastkey = HConstants::EMPTY_START_ROW
-count = 0
-for i in map.keySet()
+count = map.size()
+for i in map.descendingIterator()
   tuple = map.get(i)
-  startkey = previouslastkey
-  count = 1 + count
-  lastkey = i
-  if count == map.size()
-    # Then we are at last key. Set it to special indicator
-    lastkey = HConstants::EMPTY_START_ROW
-  end
-  previouslastkey = lastkey
-  hri = HRegionInfo.new(htd, startkey, lastkey)  
+  startkey = i
+  count = count - 1
+  # If last time through loop, set start row as EMPTY_START_ROW
+  startkey = HConstants::EMPTY_START_ROW unless count > 0
+  # Next time around, lastkey is this startkey
+  hri = HRegionInfo.new(htd, startkey, previouslastkey)  
+  previouslastkey = startkey 
   LOG.info(hri.toString())
   hfile = tuple[0].getPath()
   rdir = Path.new(Path.new(tableDir, hri.getEncodedName().to_s), familyName)

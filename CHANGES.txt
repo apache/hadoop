@@ -100,6 +100,7 @@ Release 0.21.0 - Unreleased
    HBASE-1928  ROOT and META tables stay in transition state (making the system
                not usable) if the designated regionServer dies before the
                assignment is complete (Yannis Pavlidis via Stack)
+   HBASE-1962  Bulk loading script makes regions incorrectly (loadtable.rb)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
