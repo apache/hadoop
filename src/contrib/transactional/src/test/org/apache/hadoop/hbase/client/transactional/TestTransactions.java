@@ -176,6 +176,11 @@ public class TestTransactions extends HBaseClusterTestCase {
     int row2Value = 199;
     table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, Bytes
         .toBytes(row2Value)));
+    try {
+      Thread.sleep(500);
+    } catch (InterruptedException ex) {
+      // just ignore
+    }
     
     row2Value = 299;
     table.put(transactionState, new Put(ROW2).add(FAMILY, QUAL_A, Bytes

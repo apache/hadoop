@@ -101,6 +101,9 @@ Release 0.21.0 - Unreleased
                not usable) if the designated regionServer dies before the
                assignment is complete (Yannis Pavlidis via Stack)
    HBASE-1962  Bulk loading script makes regions incorrectly (loadtable.rb)
+   HBASE-1966  Apply the fix from site/ to remove the forrest dependency on java5
+   HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails sometimes
+               Temporary fix
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
