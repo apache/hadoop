@@ -44,6 +44,8 @@ Trunk (unreleased changes)
     HDFS-712. Move libhdfs from mapreduce subproject to hdfs subproject.
     (Eli Collins via dhruba)
 
+    HDFS-757. Enable Unit test for HDFS Raid. (dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

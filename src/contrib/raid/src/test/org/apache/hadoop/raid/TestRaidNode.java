@@ -77,6 +77,7 @@ public class TestRaidNode extends TestCase {
     conf.set("raid.config.file", CONFIG_FILE);
     conf.setBoolean("raid.config.reload", true);
     conf.setLong("raid.config.reload.interval", RELOAD_INTERVAL);
+    conf.setBoolean("dfs.permissions.enabled", true);
 
     // scan all policies once every 5 second
     conf.setLong("raid.policy.rescan.interval", 5000);
