@@ -278,7 +278,7 @@ public class TestTableInputFormatScan {
   @Test
   public void testScanOPPToEmpty() 
   throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("opp", null, null);
+    testScan("opp", null, "zzz");
   }
   
   /**
@@ -291,7 +291,7 @@ public class TestTableInputFormatScan {
   @Test
   public void testScanYYXToEmpty() 
   throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("yyx", null, null);
+    testScan("yyx", null, "zzz");
   }
 
   /**
@@ -304,7 +304,7 @@ public class TestTableInputFormatScan {
   @Test
   public void testScanYYYToEmpty() 
   throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("yyy", null, null);
+    testScan("yyy", null, "zzz");
   }
 
   /**
@@ -317,7 +317,7 @@ public class TestTableInputFormatScan {
   @Test
   public void testScanYZYToEmpty() 
   throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("yzy", null, null);
+    testScan("yzy", null, "zzz");
   }
 
   /**
