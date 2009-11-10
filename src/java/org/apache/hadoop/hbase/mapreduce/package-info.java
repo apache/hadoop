@@ -67,7 +67,9 @@ directory and the hbase conf into the job jars top-level directory.
 <h2><a name="sink">HBase as MapReduce job data source and sink</a></h2>
 
 <p>HBase can be used as a data source, {@link org.apache.hadoop.hbase.mapreduce.TableInputFormat TableInputFormat},
-and data sink, {@link org.apache.hadoop.hbase.mapreduce.TableOutputFormat TableOutputFormat}, for MapReduce jobs.
+and data sink, {@link org.apache.hadoop.hbase.mapreduce.TableOutputFormat TableOutputFormat}
+or {@link org.apache.hadoop.hbase.mapreduce.MultiTableOutputFormat MultiTableOutputFormat},
+for MapReduce jobs.
 Writing MapReduce jobs that read or write HBase, you'll probably want to subclass
 {@link org.apache.hadoop.hbase.mapreduce.TableMapper TableMapper} and/or
 {@link org.apache.hadoop.hbase.mapreduce.TableReducer TableReducer}.  See the do-nothing

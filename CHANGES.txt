@@ -76,11 +76,12 @@ Release 0.21.0 - Unreleased
                Purtell)
    HBASE-1916  FindBugs and javac warnings cleanup
    HBASE-1908  ROOT not reassigned if only one regionserver left
-   HBASE-1915  HLog.sync is called way too often, needs to be only called 1x per
-               RPC
+   HBASE-1915  HLog.sync is called way too often, needs to be only called one
+               time per RPC
    HBASE-1777  column length is not checked before saved to memstore
    HBASE-1925  IllegalAccessError: Has not been initialized (getMaxSequenceId)
-   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10 secs!
+   HBASE-1929  If hbase-default.xml is not in CP, zk session timeout is 10
+               seconds!
    HBASE-1927  Scanners not closed properly in certain circumstances
    HBASE-1934  NullPointerException in ClientScanner (Andrew Purtell via Stack)
    HBASE-1946  Unhandled exception at regionserver (Dmitriy Lyfar via Stack)
@@ -88,7 +89,8 @@ Release 0.21.0 - Unreleased
                (Andrew McCall via Clint Morgan and Stack)
    HBASE-1953  Overhaul of overview.html (html fixes, typos, consistency) -
                no content changes (Lars Francke via Stack)
-   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via Stack)
+   HBASE-1954  Transactional scans do not see newest put (Clint Morgan via
+               Stack)
    HBASE-1919  code: HRS.delete seems to ignore exceptions it shouldnt
    HBASE-1951  Stack overflow when calling HTable.checkAndPut() 
                when deleting a lot of values
@@ -101,9 +103,10 @@ Release 0.21.0 - Unreleased
                not usable) if the designated regionServer dies before the
                assignment is complete (Yannis Pavlidis via Stack)
    HBASE-1962  Bulk loading script makes regions incorrectly (loadtable.rb)
-   HBASE-1966  Apply the fix from site/ to remove the forrest dependency on java5
-   HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails sometimes
-               Temporary fix
+   HBASE-1966  Apply the fix from site/ to remove the forrest dependency on
+               Java 5
+   HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails
+               sometimes -- Temporary fix
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -164,7 +167,8 @@ Release 0.21.0 - Unreleased
    HBASE-1756  Refactor HLog (changing package first)
    HBASE-1926  Remove unused xmlenc jar from trunk
    HBASE-1936  HLog group commit
-   HBASE-1921  When the Master's session times out and there's only one, cluster is wedged
+   HBASE-1921  When the Master's session times out and there's only one,
+               cluster is wedged
    HBASE-1942  Update hadoop jars in trunk; update to r831142
    HBASE-1943  Remove AgileJSON; unused
    HBASE-1944  Add a "deferred log flush" attribute to HTD
@@ -174,8 +178,10 @@ Release 0.21.0 - Unreleased
    HBASE-1829  Make use of start/stop row in TableInputFormat
                (Lars George via Stack)
    HBASE-1867  Tool to regenerate an hbase table from the data files
-   HBASE-1904  Add tutorilal for installing HBase on Windows using Cygwin as
+   HBASE-1904  Add tutorial for installing HBase on Windows using Cygwin as
                a test and development environment (Wim Van Leuven via Stack)
+   HBASE-1963  Output to multiple tables from Hadoop MR without use of HTable
+               (Kevin Peterson via Andrew Purtell)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
