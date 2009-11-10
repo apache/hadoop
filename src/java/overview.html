@@ -103,22 +103,12 @@
 </ul>
 
 <h3><a name="windows">Windows</a></h3>
-<p>If you are running HBase on Windows, you must install <a href="http://cygwin.com/">Cygwin</a>.
-Additionally, it is <em>strongly recommended</em> that you add or append to the following
-environment variables. If you install Cygwin in a location that is not <code>C:\cygwin</code> you
-should modify the following appropriately.</p>
-
-<blockquote>
-<pre>
-HOME=c:\cygwin\home\jim
-ANT_HOME=(wherever you installed ant)
-JAVA_HOME=(wherever you installed java) 
-PATH=C:\cygwin\bin;%JAVA_HOME%\bin;%ANT_HOME%\bin; other windows stuff 
-SHELL=/bin/bash
-</pre>
-</blockquote>
-
-<p>For additional information, see the <a href="http://hadoop.apache.org/common/docs/current/quickstart.html">Hadoop Quick Start Guide</a></p>
+If you are running HBase on Windows, you must install
+<a href="http://cygwin.com/">Cygwin</a>
+to have a *nix-like environment for the shell scripts. The full details
+are explained in 
+the <a href="../cygwin.html">Windows Installation</a>
+guide.
 
 
 <h2><a name="getting_started" >Getting Started</a></h2>
