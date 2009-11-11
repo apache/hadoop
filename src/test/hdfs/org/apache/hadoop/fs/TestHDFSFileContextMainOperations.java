@@ -23,7 +23,6 @@ import java.net.URISyntaxException;
 
 import javax.security.auth.login.LoginException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -42,18 +41,31 @@ public class TestHDFSFileContextMainOperations extends
                                   FileContextMainOperationsBaseTest {
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
+  private static HdfsConfiguration CONF = new HdfsConfiguration();
   
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
-    Configuration conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster(conf, 2, true, null);
-    fc = FileContext.getFileContext(cluster.getURI(), conf);
+    cluster = new MiniDFSCluster(CONF, 2, true, null);
+    cluster.waitClusterUp();
+    fc = FileContext.getFileContext(cluster.getURI(), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UnixUserGroupInformation.login().getUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 
+  private static void restartCluster() throws IOException, LoginException {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
+    cluster = new MiniDFSCluster(CONF, 1, false, null);
+    cluster.waitClusterUp();
+    fc = FileContext.getFileContext(cluster.getURI(), CONF);
+    defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
+        UnixUserGroupInformation.login().getUserName()));
+    fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
+  }
       
   @AfterClass
   public static void ClusterShutdownAtEnd() throws Exception {
@@ -177,6 +189,64 @@ public class TestHDFSFileContextMainOperations extends
     createFile(src);
     rename(src, dst, true, false, true, Rename.OVERWRITE);
     rename(dst, src, true, false, true, Rename.OVERWRITE);
+  }
+  
+  /**
+   * Perform operations such as setting quota, deletion of files, rename and
+   * ensure system can apply edits log during startup.
+   */
+  @Test
+  public void testEditsLogOldRename() throws Exception {
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    Path src1 = getTestRootPath("testEditsLogOldRename/srcdir/src1");
+    Path dst1 = getTestRootPath("testEditsLogOldRename/dstdir/dst1");
+    createFile(src1);
+    fs.mkdirs(dst1.getParent());
+    createFile(dst1);
+    
+    // Set quota so that dst1 parent cannot allow under it new files/directories 
+    fs.setQuota(dst1.getParent(), 2, FSConstants.QUOTA_DONT_SET);
+    // Free up quota for a subsequent rename
+    fs.delete(dst1, true);
+    oldRename(src1, dst1, true, false);
+    
+    // Restart the cluster and ensure the above operations can be
+    // loaded from the edits log
+    restartCluster();
+    fs = (DistributedFileSystem)cluster.getFileSystem();
+    src1 = getTestRootPath("testEditsLogOldRename/srcdir/src1");
+    dst1 = getTestRootPath("testEditsLogOldRename/dstdir/dst1");
+    Assert.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
+    Assert.assertTrue(fs.exists(dst1));    // ensure rename dst exists
+  }
+  
+  /**
+   * Perform operations such as setting quota, deletion of files, rename and
+   * ensure system can apply edits log during startup.
+   */
+  @Test
+  public void testEditsLogRename() throws Exception {
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    Path src1 = getTestRootPath("testEditsLogRename/srcdir/src1");
+    Path dst1 = getTestRootPath("testEditsLogRename/dstdir/dst1");
+    createFile(src1);
+    fs.mkdirs(dst1.getParent());
+    createFile(dst1);
+    
+    // Set quota so that dst1 parent cannot allow under it new files/directories 
+    fs.setQuota(dst1.getParent(), 2, FSConstants.QUOTA_DONT_SET);
+    // Free up quota for a subsequent rename
+    fs.delete(dst1, true);
+    rename(src1, dst1, true, true, false, Rename.OVERWRITE);
+    
+    // Restart the cluster and ensure the above operations can be
+    // loaded from the edits log
+    restartCluster();
+    fs = (DistributedFileSystem)cluster.getFileSystem();
+    src1 = getTestRootPath("testEditsLogRename/srcdir/src1");
+    dst1 = getTestRootPath("testEditsLogRename/dstdir/dst1");
+    Assert.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
+    Assert.assertTrue(fs.exists(dst1));    // ensure rename dst exists
   }
   
   private void oldRename(Path src, Path dst, boolean renameSucceeds,

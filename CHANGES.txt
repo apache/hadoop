@@ -539,3 +539,6 @@ Release 0.20.1 - 2009-09-01
 
     HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
     safe. (Suresh Srinivas and cdouglas)
+
+    HDFS-761. Fix failure to process rename operation from edits log due to 
+    quota verification. (suresh)

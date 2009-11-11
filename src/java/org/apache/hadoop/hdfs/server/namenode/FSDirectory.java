@@ -1355,6 +1355,10 @@ class FSDirectory implements Closeable {
    */
   private void verifyQuota(INode[] inodes, int pos, long nsDelta, long dsDelta,
       INode commonAncestor) throws QuotaExceededException {
+    if (!ready) {
+      // Do not check quota if edits log is still being processed
+      return;
+    }
     if (nsDelta <= 0 && dsDelta <= 0) {
       // if quota is being freed or not being consumed
       return;
@@ -1392,6 +1396,10 @@ class FSDirectory implements Closeable {
    */
   private void verifyQuotaForRename(INode[] srcInodes, INode[]dstInodes)
       throws QuotaExceededException {
+    if (!ready) {
+      // Do not check quota if edits log is still being processed
+      return;
+    }
     INode srcInode = srcInodes[srcInodes.length - 1];
     INode commonAncestor = null;
     for(int i =0;srcInodes[i] == dstInodes[i]; i++) {
