@@ -1008,6 +1008,10 @@ class FSDirectory implements FSConstants, Closeable {
    */
   private void verifyQuota(INode[] inodes, int pos, long nsDelta, long dsDelta,
       INode commonAncestor) throws QuotaExceededException {
+    if (!ready) {
+      // Do not check quota if edits log is still being processed
+      return;
+    }
     if (pos>inodes.length) {
       pos = inodes.length;
     }
@@ -1041,6 +1045,10 @@ class FSDirectory implements FSConstants, Closeable {
    */
   private void verifyQuotaForRename(INode[] srcInodes, INode[]dstInodes)
       throws QuotaExceededException {
+    if (!ready) {
+      // Do not check quota if edits log is still being processed
+      return;
+    }
     INode srcInode = srcInodes[srcInodes.length - 1];
     INode commonAncestor = null;
     for(int i =0;srcInodes[i] == dstInodes[i]; i++) {

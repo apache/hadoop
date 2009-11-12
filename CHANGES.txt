@@ -57,6 +57,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-1163. Remove unused, hard-coded paths from libhdfs. (Allen
     Wittenauer via cdouglas)
 
+    HDFS-761. Fix failure to process rename operation from edits log due to 
+    quota verification. (suresh)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
