@@ -51,6 +51,9 @@ Trunk (unreleased changes)
     HDFS-611. Prevent DataNode heartbeat times from increasing even when
     the DataNode has many blocks to delete. (Zheng Shao via dhruba)
 
+    HDFS-751. Fix TestCrcCorruption to pick up the correct datablocks to
+    corrupt. (dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
