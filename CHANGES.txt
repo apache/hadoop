@@ -60,6 +60,9 @@ Release 0.20.2 - Unreleased
     HDFS-761. Fix failure to process rename operation from edits log due to 
     quota verification. (suresh)
 
+    MAPREDUCE-1068. Fix streaming job to show proper message if file is 
+    is not present. (Amareshwari Sriramadasu via sharad)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
