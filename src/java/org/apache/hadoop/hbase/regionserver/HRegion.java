@@ -1177,8 +1177,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       
       if (writeToWAL) {
         this.log.append(regionInfo.getRegionName(),
-          regionInfo.getTableDesc().getName(), kvs,
-          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
+          regionInfo.getTableDesc().getName(), kvs, now);
       }
       flush = isFlushSize(size);
     } finally {
@@ -1451,8 +1450,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (writeToWAL) {
         long now = System.currentTimeMillis();
         this.log.append(regionInfo.getRegionName(),
-          regionInfo.getTableDesc().getName(), edits,
-          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
+          regionInfo.getTableDesc().getName(), edits, now);
       }
       long size = 0;
       Store store = getStore(family);
@@ -2363,8 +2361,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         List<KeyValue> edits = new ArrayList<KeyValue>(1);
         edits.add(newKv);
         this.log.append(regionInfo.getRegionName(),
-          regionInfo.getTableDesc().getName(), edits,
-          (regionInfo.isMetaRegion() || regionInfo.isRootRegion()), now);
+          regionInfo.getTableDesc().getName(), edits, now);
       }
 
       // Now request the ICV to the store, this will set the timestamp

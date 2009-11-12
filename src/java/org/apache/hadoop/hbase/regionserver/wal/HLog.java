@@ -649,9 +649,7 @@ public class HLog implements HConstants, Syncable {
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
-      boolean sync = regionInfo.isMetaRegion() || regionInfo.isRootRegion();
-      doWrite(logKey, logEdit, sync, logKey.getWriteTime());
-
+      doWrite(logKey, logEdit, logKey.getWriteTime());
       this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
     }
@@ -682,12 +680,11 @@ public class HLog implements HConstants, Syncable {
    * @param regionName
    * @param tableName
    * @param edits
-   * @param sync
    * @param now
    * @throws IOException
    */
   public void append(byte [] regionName, byte [] tableName, List<KeyValue> edits,
-    boolean sync, final long now)
+    final long now)
   throws IOException {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
@@ -702,7 +699,7 @@ public class HLog implements HConstants, Syncable {
       int counter = 0;
       for (KeyValue kv: edits) {
         HLogKey logKey = makeKey(regionName, tableName, seqNum[counter++], now);
-        doWrite(logKey, kv, sync, now);
+        doWrite(logKey, kv, now);
         this.numEntries.incrementAndGet();
       }
 
@@ -808,13 +805,7 @@ public class HLog implements HConstants, Syncable {
     logSyncerThread.addToSyncQueue(force);
   }
 
-  /**
-   * Multiple threads will call sync() at the same time, only the winner
-   * will actually flush if there is any race or build up.
-   *
-   * @throws IOException
-   */
-  protected void hflush() throws IOException {
+  public void hflush() throws IOException {
     synchronized (this.updateLock) {
       if (this.closed) {
         return;
@@ -822,6 +813,7 @@ public class HLog implements HConstants, Syncable {
       if (this.forceSync ||
           this.unflushedEntries.get() >= this.flushlogentries) {
         try {
+          LOG.info("hflush remove");
           this.writer.sync();
           if (this.writer_out != null) {
             this.writer_out.sync();
@@ -837,20 +829,25 @@ public class HLog implements HConstants, Syncable {
     }
   }
 
+  public void hsync() throws IOException {
+    // Not yet implemented up in hdfs so just call hflush.
+    hflush();
+  }
+
   private void requestLogRoll() {
     if (this.listener != null) {
       this.listener.logRollRequested();
     }
   }
   
-  private void doWrite(HLogKey logKey, KeyValue logEdit, boolean sync,
-      final long now)
+  private void doWrite(HLogKey logKey, KeyValue logEdit, final long now)
   throws IOException {
     if (!this.enabled) {
       return;
     }
     try {
       this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
+      if (this.numEntries.get() % this.flushlogentries == 0) LOG.info("edit=" + this.numEntries.get() + ", write=" + logKey.toString());
       this.writer.append(logKey, logEdit);
       long took = System.currentTimeMillis() - now;
       if (took > 1000) {

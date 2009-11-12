@@ -92,7 +92,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
                 System.currentTimeMillis(), column));
             System.out.println("Region " + i + ": " + edit);
             log.append(Bytes.toBytes("" + i), tableName, edit,
-              false, System.currentTimeMillis());
+              System.currentTimeMillis());
           }
         }
         log.rollWriter();
@@ -132,7 +132,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     for (int i = 0; i < total; i++) {
       List<KeyValue> kvs = new ArrayList<KeyValue>();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
-      wal.append(bytes, bytes, kvs, false, System.currentTimeMillis());
+      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
     }
     // Now call sync and try reading.  Opening a Reader before you sync just
     // gives you EOFE.
@@ -150,7 +150,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     for (int i = 0; i < total; i++) {
       List<KeyValue> kvs = new ArrayList<KeyValue>();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
-      wal.append(bytes, bytes, kvs, false, System.currentTimeMillis());
+      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
     }
     reader = HLog.getReader(this.fs, walPath, this.conf);
     count = 0;
@@ -169,7 +169,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     for (int i = 0; i < total; i++) {
       List<KeyValue> kvs = new ArrayList<KeyValue>();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, value));
-      wal.append(bytes, bytes, kvs, false, System.currentTimeMillis());
+      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
     }
     // Now I should have written out lots of blocks.  Sync then read.
     wal.sync();
@@ -238,7 +238,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
             Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
-      log.append(regionName, tableName, cols, false, System.currentTimeMillis());
+      log.append(regionName, tableName, cols, System.currentTimeMillis());
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId);
       log.close();

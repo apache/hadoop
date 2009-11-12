@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import com.sun.corba.se.pept.transport.Connection;
 
 /**
  * Facility for testing HBase. Added as tool to abet junit4 testing.  Replaces

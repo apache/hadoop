@@ -333,7 +333,7 @@ public class Merge extends Configured implements Tool {
    *
    * @throws IOException
    */
-  private int parseArgs(String[] args) {
+  private int parseArgs(String[] args) throws IOException {
     GenericOptionsParser parser =
       new GenericOptionsParser(this.getConf(), args);
     
