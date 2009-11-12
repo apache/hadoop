@@ -24,6 +24,8 @@ Trunk (unreleased changes)
     HDFS-703. Replace current fault injection implementation with one
     from (cos)
 
+    HDFS-754. Reduce ivy console output to ovservable level (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
