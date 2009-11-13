@@ -475,9 +475,11 @@ public class HFile {
     public void append(final byte [] key, final int koffset, final int klength,
         final byte [] value, final int voffset, final int vlength)
     throws IOException {
-      checkKey(key, koffset, klength);
+      boolean dupKey = checkKey(key, koffset, klength);
       checkValue(value, voffset, vlength);
-      checkBlockBoundary();
+      if (!dupKey) {
+        checkBlockBoundary();
+      }
       // Write length of key and value and then actual key and value bytes.
       this.out.writeInt(klength);
       this.keylength += klength;
@@ -499,10 +501,13 @@ public class HFile {
 
     /*
      * @param key Key to check.
+     * @return the flag of duplicate Key or not
      * @throws IOException
      */
-    private void checkKey(final byte [] key, final int offset, final int length)
+    private boolean checkKey(final byte [] key, final int offset, final int length)
     throws IOException {
+      boolean dupKey = false;
+      
       if (key == null || length <= 0) {
         throw new IOException("Key cannot be null or empty");
       }
@@ -511,14 +516,18 @@ public class HFile {
           MAXIMUM_KEY_LENGTH);
       }
       if (this.lastKeyBuffer != null) {
-        if (this.comparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
-            this.lastKeyLength, key, offset, length) > 0) {
+        int keyComp = this.comparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
+            this.lastKeyLength, key, offset, length);        
+        if (keyComp > 0) {
           throw new IOException("Added a key not lexically larger than" +
             " previous key=" + Bytes.toString(key, offset, length) +
             ", lastkey=" + Bytes.toString(this.lastKeyBuffer, this.lastKeyOffset,
                 this.lastKeyLength));
+        } else if (keyComp == 0) {
+          dupKey = true;
         }
       }
+      return dupKey;
     }
 
     private void checkValue(final byte [] value, final int offset,

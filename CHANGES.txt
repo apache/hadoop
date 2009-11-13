@@ -107,6 +107,9 @@ Release 0.21.0 - Unreleased
                Java 5
    HBASE-1967  [Transactional] client.TestTransactions.testPutPutScan fails
                sometimes -- Temporary fix
+   HBASE-1841  If multiple of same key in an hfile and they span blocks, may
+               miss the earlier keys on a lookup
+               (Schubert Zhang via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
