@@ -77,7 +77,7 @@ public class TestSingleColumnValueFilter extends TestCase {
       new RegexStringComparator(QUICK_REGEX));
   }
 
-  private void basicFilterTests(Filter filter)
+  private void basicFilterTests(SingleColumnValueFilter filter)
       throws Exception {
     KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
     assertTrue("basicFilter1", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
@@ -93,6 +93,13 @@ public class TestSingleColumnValueFilter extends TestCase {
     assertTrue("basicFilter4", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
     assertFalse("basicFilterAllRemaining", filter.filterAllRemaining());
     assertTrue("basicFilterNotNull", filter.filterRow());
+    filter.reset();
+    filter.setLatestVersionOnly(false);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
+    assertTrue("basicFilter5", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
+    assertTrue("basicFilter5", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    assertFalse("basicFilterNotNull", filter.filterRow());
   }
 
   private void substrFilterTests(Filter filter) 
@@ -144,7 +151,7 @@ public class TestSingleColumnValueFilter extends TestCase {
    * @throws Exception
    */
   public void testStop() throws Exception {
-    basicFilterTests(basicFilter);
+    basicFilterTests((SingleColumnValueFilter)basicFilter);
     substrFilterTests(substrFilter);
     regexFilterTests(regexFilter);
   }                               
@@ -155,7 +162,7 @@ public class TestSingleColumnValueFilter extends TestCase {
    */                       
   public void testSerialization() throws Exception {
     Filter newFilter = serializationTest(basicFilter);
-    basicFilterTests(newFilter);
+    basicFilterTests((SingleColumnValueFilter)newFilter);
     newFilter = serializationTest(substrFilter);
     substrFilterTests(newFilter);
     newFilter = serializationTest(regexFilter);

@@ -182,6 +182,9 @@ Release 0.21.0 - Unreleased
                a test and development environment (Wim Van Leuven via Stack)
    HBASE-1963  Output to multiple tables from Hadoop MR without use of HTable
                (Kevin Peterson via Andrew Purtell)
+   HBASE-1975  SingleColumnValueFilter: Add ability to match the value of
+               previous versions of the specified column
+               (Jeremiah Jacquet via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

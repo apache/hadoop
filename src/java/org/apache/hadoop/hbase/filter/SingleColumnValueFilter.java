@@ -48,9 +48,12 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * To prevent the entire row from being emitted if the column is not found
  * on a row, use {@link #setFilterIfMissing}.
- * <p>
  * Otherwise, if the column is found, the entire row will be emitted only if
  * the value passes.  If the value fails, the row will be filtered out.
+ * <p>
+ * In order to test values of previous versions (timestamps), set
+ * {@link #setLatestVersionOnly} to false. The default is true, meaning that
+ * only the latest version's value is tested and all previous versions are ignored.
  * <p>
  * To filter based on the value of all scanned columns, use {@link ValueFilter}.
  */
@@ -64,7 +67,8 @@ public class SingleColumnValueFilter implements Filter {
   private boolean foundColumn = false;
   private boolean matchedColumn = false;
   private boolean filterIfMissing = false;
-  
+  private boolean latestVersionOnly = true;
+
   /**
    * Writable constructor, do not use.
    */
@@ -120,7 +124,7 @@ public class SingleColumnValueFilter implements Filter {
     if (this.matchedColumn) {
       // We already found and matched the single column, all keys now pass
       return ReturnCode.INCLUDE;
-    } else if (this.foundColumn) {
+    } else if (this.latestVersionOnly && this.foundColumn) {
       // We found but did not match the single column, skip to next row
       return ReturnCode.NEXT_ROW;
     }
@@ -130,7 +134,7 @@ public class SingleColumnValueFilter implements Filter {
     foundColumn = true;
     if (filterColumnValue(keyValue.getBuffer(),
         keyValue.getValueOffset(), keyValue.getValueLength())) {
-      return ReturnCode.NEXT_ROW;
+      return this.latestVersionOnly? ReturnCode.NEXT_ROW: ReturnCode.INCLUDE;
     }
     this.matchedColumn = true;
     return ReturnCode.INCLUDE;
@@ -196,6 +200,26 @@ public class SingleColumnValueFilter implements Filter {
     this.filterIfMissing = filterIfMissing;
   }
 
+  /**
+   * Get whether only the latest version of the column value should be compared.
+   * If true, the row will be returned if only the latest version of the column
+   * value matches. If false, the row will be returned if any version of the
+   * column value matches. The default is true.
+   */
+  public boolean getLatestVersionOnly() {
+    return latestVersionOnly;
+  }
+
+  /**
+   * Set whether only the latest version of the column value should be compared.
+   * If true, the row will be returned if only the latest version of the column
+   * value matches. If false, the row will be returned if any version of the
+   * column value matches. The default is true.
+   */
+  public void setLatestVersionOnly(boolean latestVersionOnly) {
+    this.latestVersionOnly = latestVersionOnly;
+  }
+
   public void readFields(final DataInput in) throws IOException {
     this.columnFamily = Bytes.readByteArray(in);
     if(this.columnFamily.length == 0) {
@@ -211,6 +235,7 @@ public class SingleColumnValueFilter implements Filter {
     this.foundColumn = in.readBoolean();
     this.matchedColumn = in.readBoolean();
     this.filterIfMissing = in.readBoolean();
+    this.latestVersionOnly = in.readBoolean();
   }
 
   public void write(final DataOutput out) throws IOException {
@@ -222,5 +247,6 @@ public class SingleColumnValueFilter implements Filter {
     out.writeBoolean(foundColumn);
     out.writeBoolean(matchedColumn);
     out.writeBoolean(filterIfMissing);
+    out.writeBoolean(latestVersionOnly);
   }
 }
