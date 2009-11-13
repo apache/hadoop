@@ -45,6 +45,9 @@ Trunk (unreleased changes)
 
     HADOOP-6341. Fix test-patch.sh for checkTests function. (gkesavan)
 
+    HADOOP-6314. Fix "fs -help" for the "-count" commond.  (Ravi Phulari via
+    szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
