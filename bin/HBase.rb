@@ -431,7 +431,7 @@ module HBase
           qualifier = String.from_java_bytes kv.getQualifier()
           column = family + ':' + qualifier
           cell = toString(column, kv, maxlength)
-          @formatter.row([row, "column=%s, ts=%d, %s" % [column, kv.getTimestamp(), cell]])
+          @formatter.row([row, "column=%s, %s" % [column, kv.getTimestamp(), cell]])
         end
       end
       @formatter.footer(now, count)
