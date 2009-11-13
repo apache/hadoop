@@ -111,6 +111,9 @@ Release 0.21.0 - Unreleased
                miss the earlier keys on a lookup
                (Schubert Zhang via Stack)
    HBASE-1977  Add ts and allow setting VERSIONS when scanning in shell
+   HBASE-1979  MurmurHash does not yield the same results as the reference C++
+               implementation when size % 4 >= 2 (Olivier Gillet via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

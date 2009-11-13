@@ -63,13 +63,13 @@ public class MurmurHash extends Hash {
 
     if (left != 0) {
       if (left >= 3) {
-        h ^= data[length - 3] << 16;
+        h ^= data[len_m + 2] << 16;
       }
       if (left >= 2) {
-        h ^= data[length - 2] << 8;
+        h ^= data[len_m + 1] << 8;
       }
       if (left >= 1) {
-        h ^= data[length - 1];
+        h ^= data[len_m];
       }
 
       h *= m;
