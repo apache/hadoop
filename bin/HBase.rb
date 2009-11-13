@@ -384,6 +384,7 @@ module HBase
         timestamp = args["TIMESTAMP"] || nil
         columns = args["COLUMNS"] || getAllColumns()
         cache = args["CACHE_BLOCKS"] || true
+        versions = args["VERSIONS"] || 1
         
         if columns.class == String
           columns = [columns]
@@ -410,6 +411,7 @@ module HBase
           scan.setTimeStamp(timestamp)
         end
         scan.setCacheBlocks(cache)
+        scan.setMaxVersions(versions) if versions > 1
       else
         scan = Scan.new()
       end
@@ -429,7 +431,7 @@ module HBase
           qualifier = String.from_java_bytes kv.getQualifier()
           column = family + ':' + qualifier
           cell = toString(column, kv, maxlength)
-          @formatter.row([row, "column=%s, %s" % [column, cell]])
+          @formatter.row([row, "column=%s, ts=%d, %s" % [column, kv.getTimestamp(), cell]])
         end
       end
       @formatter.footer(now, count)
