@@ -76,6 +76,8 @@
 
     <dependency org="org.apache.lucene" name="lucene-core" rev="${lucene-core.version}" conf="javadoc->default"/> 
 
+    <dependency org="org.mockito" name="mockito-all" rev="${mockito-all.version}" conf="common->master"/>
+
    </dependencies>
   
 </ivy-module>

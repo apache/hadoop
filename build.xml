@@ -353,7 +353,7 @@
     <mkdir dir="${test.hdfs.build.classes}"/>
     <javac 
       encoding="${build.encoding}" 
-      srcdir="${test.src.dir}/hdfs"
+      srcdir="${test.src.dir}/hdfs;${test.src.dir}/unit"
       includes="org/apache/hadoop/**/*.java"
       destdir="${test.hdfs.build.classes}"
       debug="${javac.debug}"
@@ -489,6 +489,7 @@
   <!-- ================================================================== -->
   <macrodef name="macro-test-runner">
     <attribute name="test.file" />
+    <attribute name="suite.type" />
     <sequential>
       <delete dir="${test.build.data}"/>
       <mkdir dir="${test.build.data}"/>
@@ -520,7 +521,7 @@
         </syspropertyset>
         <formatter type="${test.junit.output.format}" />
         <batchtest todir="${test.build.dir}" if="tests.notestcase">
-          <fileset dir="${test.src.dir}/hdfs" excludes="**/${test.exclude}.java">
+          <fileset dir="${test.src.dir}/@{suite.type}" excludes="**/${test.exclude}.java">
              <patternset>
                <includesfile name="@{test.file}"/>
              </patternset>
@@ -532,7 +533,7 @@
             excludes="**/${test.exclude}.java" />
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.testcase">
-          <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
+          <fileset dir="${test.src.dir}/@{suite.type}" includes="**/${testcase}.java"/>
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
           <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
@@ -548,11 +549,15 @@
   </macrodef>
 
   <target name="run-test-hdfs" depends="compile-hdfs-test" description="Run full set of hdfs unit tests">
-    <macro-test-runner test.file="${test.hdfs.all.tests.file}" />
+    <macro-test-runner test.file="${test.hdfs.all.tests.file}" suite.type="hdfs"/>
   </target>
 
   <target name="run-commit-test" depends="compile-hdfs-test" description="Run approximate 10-minute set of unit tests prior to commiting">
-     <macro-test-runner test.file="${test.hdfs.commit.tests.file}" />
+     <macro-test-runner test.file="${test.hdfs.commit.tests.file}" suite.type="hdfs"/>
+  </target>
+
+  <target name="run-test-unit" depends="compile-hdfs-test" description="Run unit tests">
+    <macro-test-runner test.file="${test.hdfs.all.tests.file}" suite.type="unit"/>
   </target>
 
   <target name="checkfailure" if="tests.failed">
@@ -573,6 +578,7 @@
     <delete file="${test.build.dir}/testsfailed"/>
     <property name="continueOnFailure" value="true"/>
     <antcall target="run-test-hdfs"/>
+    <antcall target="run-test-unit"/>
     <antcall target="run-test-hdfs-fault-inject"/>
     <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail>

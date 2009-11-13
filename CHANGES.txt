@@ -26,6 +26,8 @@ Trunk (unreleased changes)
 
     HDFS-754. Reduce ivy console output to ovservable level (cos)
 
+    HDFS-699. Add unit tests framework (Mockito) (cos, Eli Collins)
+
   OPTIMIZATIONS
 
   BUG FIXES
