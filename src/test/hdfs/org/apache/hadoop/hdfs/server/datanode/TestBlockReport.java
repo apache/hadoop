@@ -373,14 +373,14 @@ public class TestBlockReport {
     final int bytesChkSum = 1024 * 1000;
 
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, bytesChkSum);
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 3 * bytesChkSum);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 6 * bytesChkSum);
     shutDownCluster();
     startUpCluster();
 
     try {
       ArrayList<Block> blocks =
-        writeFile(METHOD_NAME, 6 * bytesChkSum, filePath);
-      Block bl = findBlock(filePath, 6 * bytesChkSum);
+        writeFile(METHOD_NAME, 12 * bytesChkSum, filePath);
+      Block bl = findBlock(filePath, 12 * bytesChkSum);
       BlockChecker bc = new BlockChecker(filePath);
       bc.start();
 
@@ -412,16 +412,16 @@ public class TestBlockReport {
     final int bytesChkSum = 1024 * 1000;
 
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, bytesChkSum);
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 3 * bytesChkSum);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 6 * bytesChkSum);
     shutDownCluster();
     startUpCluster();
     // write file and start second node to be "older" than the original
 
     try {
       ArrayList<Block> blocks =
-        writeFile(METHOD_NAME, 6 * bytesChkSum, filePath);
+        writeFile(METHOD_NAME, 12 * bytesChkSum, filePath);
 
-      Block bl = findBlock(filePath, 6 * bytesChkSum);
+      Block bl = findBlock(filePath, 12 * bytesChkSum);
       BlockChecker bc = new BlockChecker(filePath);
       bc.start();
       corruptBlockGS(bl);
