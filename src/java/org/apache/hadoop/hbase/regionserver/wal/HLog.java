@@ -813,7 +813,6 @@ public class HLog implements HConstants, Syncable {
       if (this.forceSync ||
           this.unflushedEntries.get() >= this.flushlogentries) {
         try {
-          LOG.info("hflush remove");
           this.writer.sync();
           if (this.writer_out != null) {
             this.writer_out.sync();
