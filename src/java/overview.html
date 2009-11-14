@@ -97,6 +97,7 @@
         In the meantime the NameNode can still send DFSClients to the dead DataNode as host for
         a replicated block. DFSClient can get stuck on trying to get block from a
         dead node. This patch allows DFSClients pass NameNode lists of known dead DataNodes.
+        Recommended, particularly if your cluster is small.
       </li>
     </ul>
   </li>
