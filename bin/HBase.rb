@@ -431,7 +431,7 @@ module HBase
           qualifier = String.from_java_bytes kv.getQualifier()
           column = family + ':' + qualifier
           cell = toString(column, kv, maxlength)
-          @formatter.row([row, "column=%s, %s" % [column, kv.getTimestamp(), cell]])
+          @formatter.row([row, "column=%s, %s" % [column, cell]])
         end
       end
       @formatter.footer(now, count)
@@ -474,7 +474,7 @@ module HBase
             Bytes.toLong(kv.getValue())]
         end
       end
-      val = Bytes.toStringBinary(kv.getValue())
+      val = "timestamp=" + kv.getTimestamp().to_s + ", value=" + Bytes.toStringBinary(kv.getValue())
       maxlength != -1 ? val[0, maxlength] : val    
     end
   
