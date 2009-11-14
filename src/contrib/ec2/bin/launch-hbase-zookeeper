@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Launch the EC2 HBase Zookeepers.
+
+if [ -z $1 ]; then
+  echo "Cluster name required!"
+  exit 1
+fi
+
+if [ -z $2 ]; then
+  echo "Must specify the number of zookeeper quorum peers to start."
+  exit 1
+fi
+
+CLUSTER=$1
+NO_INSTANCES=$2
+
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hbase-ec2-env.sh
+
+type=$ZOO_INSTANCE_TYPE
+[ -z "$type" ] && type=$INSTANCE_TYPE
+arch=$ZOO_ARCH
+[ -z "$arch" ] && arch=$ARCH
+
+# Finding HBase image
+[ -z "$ZOO_AMI_IMAGE" ] && ZOO_AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION | grep $arch |grep available | awk '{print $2}'`
+
+# Start Zookeeper instances
+
+echo "Starting ZooKeeper quorum ensemble."
+
+peers=""
+public_names=""
+for inst in `seq 1 $NO_INSTANCES` ; do 
+  echo "Starting an AMI with ID $ZOO_AMI_IMAGE (arch $arch) in group $CLUSTER_ZOOKEEPER"
+  INSTANCE=`ec2-run-instances $ZOO_AMI_IMAGE -n 1 -g $CLUSTER_ZOOKEEPER -k ${KEY_NAME} -t $type | grep INSTANCE | awk '{print $2}'`
+  echo -n "Waiting for instance $INSTANCE to start: "
+  while true; do
+    printf "."
+    # get private dns
+    priv=`ec2-describe-instances $INSTANCE | grep running | awk '{print $5}'`
+    if [ ! -z $priv ]; then
+      echo " Started ZooKeeper instance $INSTANCE as ${priv}"
+      break
+    fi
+    sleep 1
+  done
+  peers="$peers $priv"
+  public=`ec2-describe-instances $INSTANCE | grep running | awk '{print $4}'`
+  echo "    Public DNS name is $public."
+  public_names="$public_names $public"
+done
+
+ZOOKEEPER_QUORUM=`echo $peers | sed -e 's/ /,/g'`
+echo $ZOOKEEPER_QUORUM  > $ZOOKEEPER_QUORUM_PATH
+echo "ZooKeeper quorum is $ZOOKEEPER_QUORUM."
+
+# Start Zookeeper quorum
+
+echo "Initializing the ZooKeeper quorum ensemble."
+
+for host in $public_names ; do 
+  echo "    $host"
+  scp $SSH_OPTS "$bin"/hbase-ec2-init-zookeeper-remote.sh "${KEY_NAME}@${host}:/var/tmp"
+  ssh $SSH_OPTS "${KEY_NAME}@${host}" "sh -c \"ZOOKEEPER_QUORUM=\"$ZOOKEEPER_QUORUM\" sh /var/tmp/hbase-ec2-init-zookeeper-remote.sh\""
+done

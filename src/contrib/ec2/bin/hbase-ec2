@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  echo "Usage: hbase-ec2 COMMAND"
+  echo "where COMMAND is one of:"
+  echo "  list                                  list all running HBase EC2 clusters"
+  echo "  launch-cluster <name> <slaves> <zoos> launch a HBase cluster"
+  echo "  launch-zookeeper <name> <zoos>        launch the zookeeper quorum"
+  echo "  launch-master  <name>                 launch or find a cluster master"
+  echo "  launch-slaves  <name> <slaves>        launch the cluster slaves"
+  echo "  terminate-cluster  <name>             terminate all HBase EC2 instances"
+  echo "  delete-cluster <name>                 clean up after a terminated cluster"
+  echo "  login  <name|instance id>             login to the master node"
+  echo "  screen <name|instance id>             start or attach 'screen' on the master"
+  echo "  proxy  <name|instance id>             start a socks proxy on localhost:6666"
+  echo "  push   <name> <file>                  scp a file to the master node"
+  echo "  <shell cmd> <group|instance id>       execute a command on the master"
+  echo "  create-image                          create a HBase AMI"
+  exit 1
+fi
+
+# get arguments
+COMMAND="$1"
+shift
+
+if [ "$COMMAND" = "create-image" ] ; then
+  . "$bin"/create-hbase-image $*
+elif [ "$COMMAND" = "launch-cluster" ] ; then
+  . "$bin"/launch-hbase-cluster $*
+elif [ "$COMMAND" = "launch-zookeeper" ] ; then
+  . "$bin"/launch-hbase-zookeeper $*
+elif [ "$COMMAND" = "launch-master" ] ; then
+  . "$bin"/launch-hbase-master $*
+elif [ "$COMMAND" = "launch-slaves" ] ; then
+  . "$bin"/launch-hbase-slaves $*
+elif [ "$COMMAND" = "delete-cluster" ] ; then
+  . "$bin"/delete-hbase-cluster $*
+elif [ "$COMMAND" = "terminate-cluster" ] ; then
+  . "$bin"/terminate-hbase-cluster $*
+elif [ "$COMMAND" = "list" ] ; then
+  . "$bin"/list-hbase-clusters
+else
+  . "$bin"/cmd-hbase-cluster "$COMMAND" $*
+fi

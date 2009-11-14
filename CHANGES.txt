@@ -192,6 +192,7 @@ Release 0.21.0 - Unreleased
    HBASE-1975  SingleColumnValueFilter: Add ability to match the value of
                previous versions of the specified column
                (Jeremiah Jacquet via Stack)
+   HBASE-1961  HBase EC2 scripts
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
