@@ -97,8 +97,9 @@
         In the meantime the NameNode can still send DFSClients to the dead DataNode as host for
         a replicated block. DFSClient can get stuck on trying to get block from a
         dead node. This patch allows DFSClients pass NameNode lists of known dead DataNodes.
-        Recommended, particularly if your cluster is small. Apply to your hadoop cluster
-        (Its already applied to the hadoop-hdfs jar that is bundled with hbase).
+        Recommended, particularly if your cluster is small. Apply to your hadoop cluster and
+        replace the <code>${HBASE_HOME}/lib/hadoop-hdfs-X.X.X.jar</code> with the built
+        patched version.
       </li>
     </ul>
   </li>
