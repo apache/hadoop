@@ -63,6 +63,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-1068. Fix streaming job to show proper message if file is 
     is not present. (Amareshwari Sriramadasu via sharad)
 
+    HDFS-596. Fix memory leak in hdfsFreeFileInfo() for libhdfs.
+    (Zhang Bingjun via dhruba)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
