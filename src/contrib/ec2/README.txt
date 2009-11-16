@@ -14,5 +14,4 @@ You need both the EC2 API and AMI tools
 
   http://developer.amazonwebservices.com/connect/entry.jspa?externalID=368&categoryID=88
 
-installed and on the path. For Ubuntu, "apt-get install ec2-ami-tools
-ec2-api-tools".  
+installed and on the path. For Ubuntu, "apt-get install ec2-ami-tools ec2-api-tools".  
