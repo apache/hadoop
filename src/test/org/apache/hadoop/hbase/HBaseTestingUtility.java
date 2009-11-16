@@ -44,8 +44,12 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.zookeeper.ZooKeeper;
 
 /**
  * Facility for testing HBase. Added as tool to abet junit4 testing.  Replaces
@@ -377,8 +381,7 @@ public class HBaseTestingUtility {
       meta.delete(new Delete(row));
     }
     // flush cache of regions
-    HBaseAdmin admin = new HBaseAdmin(getConfiguration());
-    HConnection conn = admin.getConnection();
+    HConnection conn = table.getConnection();
     conn.clearRegionCache();
   }
 
@@ -469,5 +472,49 @@ public class HBaseTestingUtility {
     } else if (l instanceof Jdk14Logger) {
       ((Jdk14Logger) l).getLogger().setLevel(java.util.logging.Level.ALL);
     }
+  }
+
+  /**
+   * Expire the Master's session
+   * @throws Exception
+   */
+  public void expireMasterSession() throws Exception {
+    HMaster master = hbaseCluster.getMaster();
+    expireSession(master.getZooKeeperWrapper());
+  }
+
+  /**
+   * Expire a region server's session
+   * @param index which RS
+   * @throws Exception
+   */
+  public void expireRegionServerSession(int index) throws Exception {
+    HRegionServer rs = hbaseCluster.getRegionServer(index);
+    expireSession(rs.getZooKeeperWrapper());
+  }
+
+  public void expireSession(ZooKeeperWrapper nodeZK) throws Exception{
+    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+    String quorumServers = zkw.getQuorumServers();
+    int sessionTimeout = 5 * 1000; // 5 seconds
+
+    byte[] password = nodeZK.getSessionPassword();
+    long sessionID = nodeZK.getSessionID();
+
+    ZooKeeper zk = new ZooKeeper(quorumServers,
+        sessionTimeout, EmptyWatcher.instance, sessionID, password);
+    zk.close();
+
+    Thread.sleep(sessionTimeout * 5L);
+
+    new HTable(conf, HConstants.META_TABLE_NAME);
+  }
+
+  /**
+   * Get the HBase cluster
+   * @return hbase cluster
+   */
+  public MiniHBaseCluster getHbaseCluster() {
+    return hbaseCluster;
   }
 }

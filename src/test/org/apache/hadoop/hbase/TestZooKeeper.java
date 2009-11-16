@@ -19,63 +19,63 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+import org.junit.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
-public class TestZooKeeper extends HBaseClusterTestCase {
-  private static class EmptyWatcher implements Watcher {
-    public static EmptyWatcher instance = new EmptyWatcher();
-    private EmptyWatcher() {}
-    public void process(WatchedEvent event) {}
-  }
+import java.io.IOException;
 
-  @Override
-  protected void setUp() throws Exception {
-    setOpenMetaTable(false);
-    super.setUp();
-  }
+public class TestZooKeeper {
 
-  /** 
-   * @throws IOException
+  private final static HBaseTestingUtility
+      TEST_UTIL = new HBaseTestingUtility();
+
+  private HBaseConfiguration conf;
+  private MiniHBaseCluster cluster;
+
+  /**
+   * @throws java.lang.Exception
    */
-  public void testWritesRootRegionLocation() throws IOException {
-    ZooKeeperWrapper zooKeeper = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
-
-    HServerAddress zooKeeperRootAddress = zooKeeper.readRootRegionLocation();
-    assertNull(zooKeeperRootAddress);
-
-    HMaster master = cluster.getMaster();
-    HServerAddress masterRootAddress = master.getRegionManager().getRootRegionLocation();
-    assertNull(masterRootAddress);
-
-    new HTable(conf, HConstants.META_TABLE_NAME);
-
-    zooKeeperRootAddress = zooKeeper.readRootRegionLocation();
-    assertNotNull(zooKeeperRootAddress);
-
-    masterRootAddress = master.getRegionManager().getRootRegionLocation();
-    assertEquals(masterRootAddress, zooKeeperRootAddress);
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(1);
   }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @Before
+  public void setUp() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
+    cluster = TEST_UTIL.getHbaseCluster();
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @After
+  public void tearDown() throws Exception {}
 
   /**
    * See HBASE-1232 and http://wiki.apache.org/hadoop/ZooKeeper/FAQ#4.
    * @throws IOException
    * @throws InterruptedException
    */
-  public void testClientSessionExpired() throws IOException, InterruptedException {
+  @Test
+  public void testClientSessionExpired()
+      throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
     ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
@@ -86,7 +86,8 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     long sessionID = connectionZK.getSessionID();
     byte[] password = connectionZK.getSessionPassword();
 
-    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance, sessionID, password);
+    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout,
+        EmptyWatcher.instance, sessionID, password);
     zk.close();
 
     Thread.sleep(sessionTimeout * 3L);
@@ -94,56 +95,50 @@ public class TestZooKeeper extends HBaseClusterTestCase {
     System.err.println("ZooKeeper should have timed out");
     connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
   }
-
+  @Test
   public void testRegionServerSessionExpired() throws Exception{
     this.conf.setBoolean("hbase.regionserver.restart.on.zk.expire", true);
     new HTable(conf, HConstants.META_TABLE_NAME);
-    HRegionServer rs = cluster.getRegionServer(0);
-    sessionExpirationHelper(rs.getZooKeeperWrapper());
+    TEST_UTIL.expireRegionServerSession(0);
+    testSanity();
   }
-
+  @Test
   public void testMasterSessionExpired() throws Exception {
     new HTable(conf, HConstants.META_TABLE_NAME);
-    HMaster master = cluster.getMaster();
-    sessionExpirationHelper(master.getZooKeeperWrapper());
+    TEST_UTIL.expireMasterSession();
+    testSanity();
   }
 
-  public void sessionExpirationHelper(ZooKeeperWrapper nodeZK) throws Exception{
-    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
-    String quorumServers = zkw.getQuorumServers();
-    int sessionTimeout = 5 * 1000; // 5 seconds
-
-    byte[] password = nodeZK.getSessionPassword();
-    long sessionID = nodeZK.getSessionID();
-
-    ZooKeeper zk = new ZooKeeper(quorumServers,
-        sessionTimeout, EmptyWatcher.instance, sessionID, password);
-    zk.close();
-
-    Thread.sleep(sessionTimeout * 3L);
-
-    new HTable(conf, HConstants.META_TABLE_NAME);
+  /**
+   * Make sure we can use the cluster
+   * @throws Exception
+   */
+  public void testSanity() throws Exception{
 
     HBaseAdmin admin = new HBaseAdmin(conf);
-    HTableDescriptor desc = new HTableDescriptor("test");
+    String tableName = "test"+System.currentTimeMillis();
+    HTableDescriptor desc =
+        new HTableDescriptor(tableName);
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
     admin.createTable(desc);
 
-    HTable table = new HTable("test");
+    HTable table = new HTable(tableName);
     Put put = new Put(Bytes.toBytes("testrow"));
-    put.add(Bytes.toBytes("fam"), Bytes.toBytes("col"), Bytes.toBytes("testdata"));
+    put.add(Bytes.toBytes("fam"),
+        Bytes.toBytes("col"), Bytes.toBytes("testdata"));
     table.put(put);
 
   }
-  
+
+  @Test
   public void testMultipleZK() {
     try {
       HTable localMeta = new HTable(conf, HConstants.META_TABLE_NAME);
       HBaseConfiguration otherConf = new HBaseConfiguration(conf);
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
       HTable ipMeta = new HTable(conf, HConstants.META_TABLE_NAME);
-      
+
       // dummy, just to open the connection
       localMeta.exists(new Get(HConstants.LAST_ROW));
       ipMeta.exists(new Get(HConstants.LAST_ROW));
