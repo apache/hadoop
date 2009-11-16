@@ -531,6 +531,9 @@ Release 0.20.2 - Unreleased
 
     HDFS-723. Fix deadlock in DFSClient#DFSOutputStream. (hairong)
 
+    HDFS-596. Fix memory leak in hdfsFreeFileInfo() for libhdfs.
+    (Zhang Bingjun via dhruba)
+
 Release 0.20.1 - 2009-09-01
 
   IMPROVEMENTS
