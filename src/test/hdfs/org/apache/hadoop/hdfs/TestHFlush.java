@@ -18,18 +18,17 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataInputStream;
 import static org.junit.Assert.assertEquals;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import java.io.IOException;
 
 /** Class contains a set of tests to verify the correctness of 
- * newly introduced {@link DFSClient#hflush()} method */
+ * newly introduced {@link FSDataOutputStream#hflush()} method */
 public class TestHFlush {
   private final String fName = "hflushtest.dat";
   
@@ -115,9 +114,12 @@ public class TestHFlush {
         System.arraycopy(fileContent, tenth * i, expected, 0, tenth);
         // Open the same file for read. Need to create new reader after every write operation(!)
         is = fileSystem.open(path);
-        is.read(toRead, tenth * i, tenth);
+        is.seek(tenth * i);
+        int readBytes = is.read(toRead, 0, tenth);
+        System.out.println("Has read " + readBytes);
+        assertTrue("Should've get more bytes", (readBytes > 0) && (readBytes <= tenth));
         is.close();
-        checkData(toRead, 0, expected, "Partial verification");
+        checkData(toRead, 0, readBytes, expected, "Partial verification");
       }
       System.out.println("Writing " + (tenth * SECTIONS) + " to " + (tenth * SECTIONS + rounding) + " section to file " + fileName);
       stm.write(fileContent, tenth * SECTIONS, rounding);
@@ -125,10 +127,6 @@ public class TestHFlush {
 
       assertEquals("File size doesn't match ", AppendTestUtil.FILE_SIZE, fileSystem.getFileStatus(path).getLen());
       AppendTestUtil.checkFullFile(fileSystem, path, fileContent.length, fileContent, "hflush()");
-
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
-      throw ioe;
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -136,9 +134,9 @@ public class TestHFlush {
       cluster.shutdown();
     }
   }
-  static void checkData(final byte[] actual, int from,
-                                final byte[] expected, String message) {
-    for (int idx = 0; idx < actual.length; idx++) {
+  static void checkData(final byte[] actual, int from, int len,
+                        final byte[] expected, String message) {
+    for (int idx = 0; idx < len; idx++) {
       assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                    expected[from+idx]+" actual "+actual[idx],
                    expected[from+idx], actual[idx]);

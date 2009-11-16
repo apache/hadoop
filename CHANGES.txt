@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     
     HDFS-774. Intermittent race condition in TestFiPipelines (cos)
 
+    HDFS-741. TestHFlush test doesn't seek() past previously written part of
+    the file (cos, szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
