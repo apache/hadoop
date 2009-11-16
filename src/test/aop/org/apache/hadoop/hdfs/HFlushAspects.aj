@@ -54,7 +54,11 @@ public aspect HFlushAspects {
     }
     if (pt instanceof HFlushTest)
       for (int i=0; i<nodes.length; i++) {
-        ((HFlushTest)pt).fiCallHFlush.run(nodes[i]);
+        try {
+          ((HFlushTest)pt).fiCallHFlush.run(nodes[i]);
+        } catch (IOException ioe) {
+          ((HFlushTest)pt).fiErrorOnCallHFlush.run(i);
+        }
       }
   }
 }

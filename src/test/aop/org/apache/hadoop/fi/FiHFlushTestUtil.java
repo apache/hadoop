@@ -61,5 +61,7 @@ public class FiHFlushTestUtil extends DataTransferTestUtil {
   public static class HFlushTest extends DataTransferTest {
     public final ActionContainer<DatanodeID> fiCallHFlush = 
       new ActionContainer<DatanodeID>();
+    public final ActionContainer<Integer> fiErrorOnCallHFlush = 
+      new ActionContainer<Integer>();
   }
 }

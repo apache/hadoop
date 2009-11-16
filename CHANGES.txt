@@ -61,6 +61,8 @@ Trunk (unreleased changes)
     HDFS-741. TestHFlush test doesn't seek() past previously written part of
     the file (cos, szetszwo)
 
+    HDFS-706. Intermittent failures in TestFiHFlush (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
