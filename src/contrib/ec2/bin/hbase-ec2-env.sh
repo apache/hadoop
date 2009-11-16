@@ -24,6 +24,12 @@ AWS_ACCESS_KEY_ID=
 # Your Amazon AWS secret access key.
 AWS_SECRET_ACCESS_KEY=
 
+# Your AWS private key file -- must begin with 'pk' and end with '.pem'
+EC2_PRIVATE_KEY=
+
+# Your AWS certificate file -- must begin with 'cert' and end with '.pem'
+EC2_CERT=
+
 # Location of EC2 keys.
 # The default setting is probably OK if you set up EC2 following the Amazon Getting Started guide.
 EC2_KEYDIR=`dirname "$EC2_PRIVATE_KEY"`
