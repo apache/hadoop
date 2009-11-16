@@ -55,6 +55,8 @@ Trunk (unreleased changes)
 
     HDFS-751. Fix TestCrcCorruption to pick up the correct datablocks to
     corrupt. (dhruba)
+    
+    HDFS-774. Intermittent race condition in TestFiPipelines (cos)
 
 Release 0.21.0 - Unreleased
 

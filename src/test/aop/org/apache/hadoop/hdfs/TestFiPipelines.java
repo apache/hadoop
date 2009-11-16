@@ -62,13 +62,10 @@ public class TestFiPipelines {
   }
 
   @After
-  public void shutDownCluster() throws IOException {
-    if (fs != null)
-      fs.close();
-    if (cluster != null)
-      cluster.shutdown();
+  synchronized public void shutDownCluster() throws IOException {
+    if (cluster != null) cluster.shutdown();
   }
-  
+
   /**
    * Test initiates and sets actions created by injection framework. The actions
    * work with both aspects of sending acknologment packets in a pipeline.
@@ -194,7 +191,8 @@ public class TestFiPipelines {
         // It has to be done like that, because local version of shutDownCluster()
         // won't work, because it tries to close an instance of FileSystem too.
         // Which is where the waiting is happening.
-        if (cluster !=null ) cluster.shutdown();
+        if (cluster !=null )
+          shutDownCluster();
       } catch (Exception e) {
         e.printStackTrace();
       }
