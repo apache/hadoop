@@ -610,6 +610,9 @@ Trunk (unreleased changes)
     HADOOP-6343. Log unexpected throwable object caught in RPC.  (Jitendra Nath
     Pandey via szetszwo)
 
+    HADOOP-6367. Removes Access Token implementation from common.
+    (Kan Zhang via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a

@@ -1765,12 +1765,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.FS_CLIENT_BUFFER_DIR_KEY});
     Configuration.addDeprecation("hadoop.native.lib", 
                new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
-    Configuration.addDeprecation("dfs.access.token.enable", 
-               new String[]{CommonConfigurationKeys.FS_ACCESS_TOKEN_ENABLE_KEY});
-    Configuration.addDeprecation("dfs.access.key.update.interval", 
-               new String[]{CommonConfigurationKeys.FS_ACCESS_KEY_UPDATE_INTERVAL_KEY});
-    Configuration.addDeprecation("dfs.access.token.lifetime", 
-               new String[]{CommonConfigurationKeys.FS_ACCESS_TOKEN_LIFETIME_KEY});
     Configuration.addDeprecation("fs.default.name", 
                new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
   }
