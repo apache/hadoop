@@ -37,11 +37,11 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Sender;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.AccessToken;
 
 /** Test if a datanode can correctly handle errors during block read/write*/
 public class TestDiskError extends TestCase {
@@ -123,7 +123,7 @@ public class TestDiskError extends TestCase {
           block.getBlock().getGenerationStamp(), 1, 
           BlockConstructionStage.PIPELINE_SETUP_CREATE, 
           0L, 0L, 0L, "", null, new DatanodeInfo[0], 
-          AccessToken.DUMMY_TOKEN);
+          BlockAccessToken.DUMMY_TOKEN);
 
       // write check header
       out.writeByte( 1 );

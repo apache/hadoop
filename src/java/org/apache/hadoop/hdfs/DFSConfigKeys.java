@@ -158,12 +158,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DATANODE_IPC_ADDRESS_KEY = "dfs.datanode.ipc.address";
   public static final String  DFS_DATANODE_IPC_ADDRESS_DEFAULT = "0.0.0.0:50020";
 
-  public static final String  DFS_ACCESS_TOKEN_ENABLE_KEY = "dfs.access.token.enable";
-  public static final boolean DFS_ACCESS_TOKEN_ENABLE_DEFAULT = false;
-  public static final String  DFS_ACCESS_KEY_UPDATE_INTERVAL_KEY = "dfs.access.key.update.interval";
-  public static final int     DFS_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT = 600;
-  public static final String  DFS_ACCESS_TOKEN_LIFETIME_KEY = "dfs.access.token.lifetime";
-  public static final int     DFS_ACCESS_TOKEN_LIFETIME_DEFAULT = 600;
+  public static final String  DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY = "dfs.block.access.token.enable";
+  public static final boolean DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT = false;
+  public static final String  DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY = "dfs.block.access.key.update.interval";
+  public static final long    DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT = 600L;
+  public static final String  DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY = "dfs.block.access.token.lifetime";
+  public static final long    DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT = 600L;
 
   public static final String  DFS_REPLICATION_MAX_KEY = "dfs.replication.max";
   public static final int     DFS_REPLICATION_MAX_DEFAULT = 512;

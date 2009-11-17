@@ -39,6 +39,8 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.AccessTokenHandler;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.io.IOUtils;
@@ -47,8 +49,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessToken;
-import org.apache.hadoop.security.AccessTokenHandler;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
@@ -128,7 +128,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
   @Override
   protected void opReadBlock(DataInputStream in,
       long blockId, long blockGs, long startOffset, long length,
-      String clientName, AccessToken accessToken) throws IOException {
+      String clientName, BlockAccessToken accessToken) throws IOException {
     final Block block = new Block(blockId, 0 , blockGs);
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
@@ -212,7 +212,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       int pipelineSize, BlockConstructionStage stage,
       long newGs, long minBytesRcvd, long maxBytesRcvd,
       String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
-      AccessToken accessToken) throws IOException {
+      BlockAccessToken accessToken) throws IOException {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("writeBlock receive buf size " + s.getReceiveBufferSize() +
@@ -396,7 +396,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    */
   @Override
   protected void opBlockChecksum(DataInputStream in,
-      long blockId, long blockGs, AccessToken accessToken) throws IOException {
+      long blockId, long blockGs, BlockAccessToken accessToken) throws IOException {
     final Block block = new Block(blockId, 0 , blockGs);
     DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
         datanode.socketWriteTimeout));
@@ -455,7 +455,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    */
   @Override
   protected void opCopyBlock(DataInputStream in,
-      long blockId, long blockGs, AccessToken accessToken) throws IOException {
+      long blockId, long blockGs, BlockAccessToken accessToken) throws IOException {
     // Read in the header
     Block block = new Block(blockId, 0, blockGs);
     if (datanode.isAccessTokenEnabled
@@ -526,7 +526,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
   @Override
   protected void opReplaceBlock(DataInputStream in,
       long blockId, long blockGs, String sourceID, DatanodeInfo proxySource,
-      AccessToken accessToken) throws IOException {
+      BlockAccessToken accessToken) throws IOException {
     /* read header */
     final Block block = new Block(blockId, dataXceiverServer.estimateBlockSize,
         blockGs);

@@ -87,6 +87,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.InvalidAccessTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -106,8 +108,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.AccessToken;
-import org.apache.hadoop.security.InvalidAccessTokenException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
@@ -1547,7 +1547,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       checksumSize = this.checksum.getChecksumSize();
     }
 
-    public static BlockReader newBlockReader(Socket sock, String file, long blockId, AccessToken accessToken, 
+    public static BlockReader newBlockReader(Socket sock, String file, long blockId, BlockAccessToken accessToken, 
         long genStamp, long startOffset, long len, int bufferSize) throws IOException {
       return newBlockReader(sock, file, blockId, accessToken, genStamp, startOffset, len, bufferSize,
           true);
@@ -1555,7 +1555,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     /** Java Doc required */
     public static BlockReader newBlockReader( Socket sock, String file, long blockId, 
-                                       AccessToken accessToken,
+                                       BlockAccessToken accessToken,
                                        long genStamp,
                                        long startOffset, long len,
                                        int bufferSize, boolean verifyChecksum)
@@ -1566,7 +1566,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     public static BlockReader newBlockReader( Socket sock, String file,
                                        long blockId, 
-                                       AccessToken accessToken,
+                                       BlockAccessToken accessToken,
                                        long genStamp,
                                        long startOffset, long len,
                                        int bufferSize, boolean verifyChecksum,
@@ -1946,7 +1946,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           NetUtils.connect(s, targetAddr, socketTimeout);
           s.setSoTimeout(socketTimeout);
           Block blk = targetBlock.getBlock();
-          AccessToken accessToken = targetBlock.getAccessToken();
+          BlockAccessToken accessToken = targetBlock.getAccessToken();
           
           blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
               accessToken, 
@@ -2174,7 +2174,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           dn = socketFactory.createSocket();
           NetUtils.connect(dn, targetAddr, socketTimeout);
           dn.setSoTimeout(socketTimeout);
-          AccessToken accessToken = block.getAccessToken();
+          BlockAccessToken accessToken = block.getAccessToken();
               
           int len = (int) (end - start + 1);
               
@@ -2580,7 +2580,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     class DataStreamer extends Daemon {
       private volatile boolean streamerClosed = false;
       private Block block; // its length is number of bytes acked
-      private AccessToken accessToken;
+      private BlockAccessToken accessToken;
       private DataOutputStream blockStream;
       private DataInputStream blockReplyStream;
       private ResponseProcessor response = null;
@@ -3284,7 +3284,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         return nodes;
       }
 
-      AccessToken getAccessToken() {
+      BlockAccessToken getAccessToken() {
         return accessToken;
       }
 
@@ -3734,7 +3734,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     /**
      * Returns the access token currently used by streamer, for testing only
      */
-    AccessToken getAccessToken() {
+    BlockAccessToken getAccessToken() {
       return streamer.getAccessToken();
     }
 

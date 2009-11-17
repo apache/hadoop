@@ -364,6 +364,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-521. Create new tests for pipeline (cos)
 
+    HDFS-764. Places the Block Access token implementation in hdfs project.
+    (Kan Zhang via ddas)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
