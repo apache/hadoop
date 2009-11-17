@@ -41,7 +41,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
 if [[ "$CLUSTER" = "i-*" ]]; then
-  HOST=`ec2-describe-instances $CLUSTER | grep running | awk '{print $4}'`
+  HOST=`ec2-describe-instances $TOOL_OPTS $CLUSTER | grep running | awk '{print $4}'`
   [ -z $HOST ] && echo "Instance still pending or no longer running: $CLUSTER" && exit 1
 else
   [ ! -f $MASTER_IP_PATH ] && echo "Wrong group name, or cluster not launched! $CLUSTER" && exit 1

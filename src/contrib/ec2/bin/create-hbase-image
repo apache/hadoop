@@ -29,20 +29,20 @@ bin=`cd "$bin"; pwd`
 echo "INSTANCE_TYPE is $INSTANCE_TYPE."
 echo "ARCH is $ARCH."
 
-AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION | grep $ARCH | grep available | awk '{print $2}'`
+AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION | grep $ARCH | grep available | awk '{print $2}'`
 
 [ ! -z $AMI_IMAGE ] && echo "AMI already registered, use: ec2-deregister $AMI_IMAGE" && exit 1
 
 echo "Starting a AMI with ID $BASE_AMI_IMAGE."
-OUTPUT=`ec2-run-instances $BASE_AMI_IMAGE -k $KEY_NAME -t $INSTANCE_TYPE`
+OUTPUT=`ec2-run-instances $BASE_AMI_IMAGE $TOOL_OPTS -k $KEY_NAME -t $INSTANCE_TYPE`
 BOOTING_INSTANCE=`echo $OUTPUT | awk '{print $6}'`
 
 echo "Instance is $BOOTING_INSTANCE."
 
-echo "Polling server status (ec2-describe-instances $BOOTING_INSTANCE)"
+echo "Polling server status"
 while true; do
   printf "."
-  HOSTNAME=`ec2-describe-instances $BOOTING_INSTANCE | grep running | awk '{print $4}'`
+  HOSTNAME=`ec2-describe-instances $TOOL_OPTS $BOOTING_INSTANCE | grep running | awk '{print $4}'`
   if [ ! -z $HOSTNAME ]; then
     break;
   fi
@@ -72,6 +72,6 @@ scp $SSH_OPTS $EC2_CERT "root@$HOSTNAME:/mnt"
 ssh $SSH_OPTS "root@$HOSTNAME" "sh -c \"INSTANCE_TYPE=$INSTANCE_TYPE /mnt/create-hbase-image-remote\""
 
 # Register image
-ec2-register $S3_BUCKET/hbase-$HBASE_VERSION-$ARCH.manifest.xml
+ec2-register $TOOL_OPTS $S3_BUCKET/hbase-$HBASE_VERSION-$ARCH.manifest.xml
 
 echo "Terminate with: ec2-terminate-instances $BOOTING_INSTANCE"

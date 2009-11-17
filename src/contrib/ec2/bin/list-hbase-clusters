@@ -23,7 +23,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
 # Finding HBase clusters
-CLUSTERS=`ec2-describe-instances | awk '"RESERVATION" == $1 && $4 ~ /-master$/, "INSTANCE" == $1' | tr '\n' '\t' | grep running | cut -f4 | rev | cut -d'-' -f2- | rev`
+CLUSTERS=`ec2-describe-instances $TOOL_OPTS | awk '"RESERVATION" == $1 && $4 ~ /-master$/, "INSTANCE" == $1' | tr '\n' '\t' | grep running | cut -f4 | rev | cut -d'-' -f2- | rev`
 
 [ -z "$CLUSTERS" ] && echo "No running clusters." && exit 0
 

@@ -35,19 +35,19 @@ if [ -z $AWS_ACCOUNT_ID ]; then
 fi
 
 echo "Testing for existing master in group: $CLUSTER"
-MASTER_EC2_HOST=`ec2-describe-instances | awk '"RESERVATION" == $1 && "'$CLUSTER_MASTER'" == $4, "RESERVATION" == $1 && "'$CLUSTER_MASTER'" != $4'`
+MASTER_EC2_HOST=`ec2-describe-instances $TOOL_OPTS | awk '"RESERVATION" == $1 && "'$CLUSTER_MASTER'" == $4, "RESERVATION" == $1 && "'$CLUSTER_MASTER'" != $4'`
 MASTER_EC2_HOST=`echo "$MASTER_EC2_HOST" | awk '"INSTANCE" == $1 && "running" == $6 {print $4}'`
 
 if [ ! -z "$MASTER_EC2_HOST" ]; then
   echo "Master already running on: $MASTER_EC2_HOST"
-  MASTER_HOST=`ec2-describe-instances $INSTANCE | grep INSTANCE | grep running | grep $MASTER_EC2_HOST | awk '{print $5}'`
+  MASTER_HOST=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep INSTANCE | grep running | grep $MASTER_EC2_HOST | awk '{print $5}'`
   echo $MASTER_HOST > $MASTER_PRIVATE_IP_PATH
   echo $MASTER_EC2_HOST > $MASTER_IP_PATH
   exit 0
 fi
 
 # Finding HBase image
-[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HBASE_VERSION | grep $ARCH | grep available | awk '{print $2}'`
+[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep $HBASE_VERSION | grep $ARCH | grep available | awk '{print $2}'`
 
 # Start a master
 echo "Starting master with AMI $AMI_IMAGE (arch $ARCH)"
@@ -55,12 +55,12 @@ echo "Starting master with AMI $AMI_IMAGE (arch $ARCH)"
 ZOOKEEPER_QUORUM=`cat $ZOOKEEPER_QUORUM_PATH`
 sed -e "s|%ZOOKEEPER_QUORUM%|$ZOOKEEPER_QUORUM|" \
     "$bin"/$USER_DATA_FILE > "$bin"/$USER_DATA_FILE.master
-INSTANCE=`ec2-run-instances $AMI_IMAGE -n 1 -g $CLUSTER_MASTER -k $KEY_NAME -f "$bin"/$USER_DATA_FILE.master -t $INSTANCE_TYPE | grep INSTANCE | awk '{print $2}'`
+INSTANCE=`ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_MASTER -k $KEY_NAME -f "$bin"/$USER_DATA_FILE.master -t $INSTANCE_TYPE | grep INSTANCE | awk '{print $2}'`
 echo -n "Waiting for instance $INSTANCE to start"
 while true; do
   printf "."
   # get private dns
-  MASTER_HOST=`ec2-describe-instances $INSTANCE | grep running | awk '{print $5}'`
+  MASTER_HOST=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep running | awk '{print $5}'`
   if [ ! -z $MASTER_HOST ]; then
     echo " Started as $MASTER_HOST"
     break;
@@ -69,10 +69,10 @@ while true; do
 done
 rm -f "$bin"/$USER_DATA_FILE.master
 
-MASTER_EC2_HOST=`ec2-describe-instances $INSTANCE | grep INSTANCE | grep running | grep $MASTER_HOST | awk '{print $4}'`
+MASTER_EC2_HOST=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep INSTANCE | grep running | grep $MASTER_HOST | awk '{print $4}'`
 echo $MASTER_HOST > $MASTER_PRIVATE_IP_PATH
 echo $MASTER_EC2_HOST > $MASTER_IP_PATH
-MASTER_EC2_ZONE=`ec2-describe-instances $INSTANCE | grep INSTANCE | grep running | grep $MASTER_HOST | awk '{print $11}'`
+MASTER_EC2_ZONE=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep INSTANCE | grep running | grep $MASTER_HOST | awk '{print $11}'`
 echo $MASTER_EC2_ZONE > $MASTER_ZONE_PATH
 
 while true; do

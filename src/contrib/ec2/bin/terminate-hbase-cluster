@@ -30,7 +30,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
 # Finding HBase image
-HBASE_INSTANCES=`ec2-describe-instances | awk '"RESERVATION" == $1 && ("'$CLUSTER'" == $4 || "'$CLUSTER_MASTER'" == $4 || "'$CLUSTER_ZOOKEEPER'" == $4), "RESERVATION" == $1 && ("'$CLUSTER'" != $4 && "'$CLUSTER_MASTER'" != $4 && "'$CLUSTER_ZOOKEEPER'" != $4)'`
+HBASE_INSTANCES=`ec2-describe-instances $TOOL_OPTS | awk '"RESERVATION" == $1 && ("'$CLUSTER'" == $4 || "'$CLUSTER_MASTER'" == $4 || "'$CLUSTER_ZOOKEEPER'" == $4), "RESERVATION" == $1 && ("'$CLUSTER'" != $4 && "'$CLUSTER_MASTER'" != $4 && "'$CLUSTER_ZOOKEEPER'" != $4)'`
 HBASE_INSTANCES=`echo "$HBASE_INSTANCES" | grep INSTANCE | grep running`
 
 [ -z "$HBASE_INSTANCES" ] && echo "No running instances in cluster $CLUSTER." && exit 0
@@ -43,4 +43,4 @@ if [ "$answer" != "yes" ]; then
   exit 1
 fi
 
-ec2-terminate-instances `echo "$HBASE_INSTANCES" | awk '{print $2}'`
+ec2-terminate-instances $TOOL_OPTS `echo "$HBASE_INSTANCES" | awk '{print $2}'`

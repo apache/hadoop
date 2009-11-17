@@ -41,7 +41,7 @@ arch=$ZOO_ARCH
 [ -z "$arch" ] && arch=$ARCH
 
 # Finding HBase image
-[ -z "$ZOO_AMI_IMAGE" ] && ZOO_AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION | grep $arch |grep available | awk '{print $2}'`
+[ -z "$ZOO_AMI_IMAGE" ] && ZOO_AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION | grep $arch |grep available | awk '{print $2}'`
 
 # Start Zookeeper instances
 
@@ -51,12 +51,12 @@ peers=""
 public_names=""
 for inst in `seq 1 $NO_INSTANCES` ; do 
   echo "Starting an AMI with ID $ZOO_AMI_IMAGE (arch $arch) in group $CLUSTER_ZOOKEEPER"
-  INSTANCE=`ec2-run-instances $ZOO_AMI_IMAGE -n 1 -g $CLUSTER_ZOOKEEPER -k ${KEY_NAME} -t $type | grep INSTANCE | awk '{print $2}'`
+  INSTANCE=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k ${KEY_NAME} -t $type | grep INSTANCE | awk '{print $2}'`
   echo -n "Waiting for instance $INSTANCE to start: "
   while true; do
     printf "."
     # get private dns
-    priv=`ec2-describe-instances $INSTANCE | grep running | awk '{print $5}'`
+    priv=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep running | awk '{print $5}'`
     if [ ! -z $priv ]; then
       echo " Started ZooKeeper instance $INSTANCE as ${priv}"
       break
@@ -64,7 +64,7 @@ for inst in `seq 1 $NO_INSTANCES` ; do
     sleep 1
   done
   peers="$peers $priv"
-  public=`ec2-describe-instances $INSTANCE | grep running | awk '{print $4}'`
+  public=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep running | awk '{print $4}'`
   echo "    Public DNS name is $public."
   public_names="$public_names $public"
 done

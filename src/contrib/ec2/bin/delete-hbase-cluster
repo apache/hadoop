@@ -24,8 +24,13 @@ fi
 
 CLUSTER=$1
 
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hbase-ec2-env.sh
+
 # Finding HBase clusters
-CLUSTERS=`ec2-describe-instances | \
+CLUSTERS=`ec2-describe-instances $TOOL_OPTS | \
   awk '"RESERVATION" == $1 && $4 ~ /-master$/, "INSTANCE" == $1' | tr '\n' '\t' | \
   grep "$CLUSTER" | grep running | cut -f4 | rev | cut -d'-' -f2- | rev`
   
@@ -33,11 +38,6 @@ if [ -n "$CLUSTERS" ]; then
   echo "Cluster $CLUSTER has running instances. Please terminate them first."
   exit 0
 fi
-
-# Import variables
-bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
-. "$bin"/hbase-ec2-env.sh
 
 "$bin"/revoke-hbase-cluster-secgroups $CLUSTER
 

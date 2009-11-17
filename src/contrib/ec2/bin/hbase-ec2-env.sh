@@ -45,6 +45,9 @@ PRIVATE_KEY_PATH=`echo "$EC2_KEYDIR"/"id_rsa_$KEY_NAME"`
 # SSH options used when connecting to EC2 instances.
 SSH_OPTS=`echo -q -i "$PRIVATE_KEY_PATH" -o StrictHostKeyChecking=no -o ServerAliveInterval=30`
 
+# Global tool options
+TOOL_OPTS=`echo -K "$EC2_PRIVATE_KEY" -C "$EC2_CERT"`
+
 # The version of HBase to use.
 HBASE_VERSION=0.20.1
 
@@ -55,8 +58,7 @@ HADOOP_VERSION=$HBASE_VERSION
 # The default value is for public images, so can be left if you are using running a public image.
 # Change this value only if you are creating your own (private) AMI
 # so you can store it in a bucket you own.
-#S3_BUCKET=hbase-images
-S3_BUCKET=iridiant-bundles
+S3_BUCKET=hbase-images
 
 # Enable public access web interfaces
 # XXX -- Generally, you do not want to do this
