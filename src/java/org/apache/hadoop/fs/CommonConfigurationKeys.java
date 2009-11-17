@@ -43,15 +43,6 @@ public class CommonConfigurationKeys {
   public static final int     FS_PERMISSIONS_UMASK_DEFAULT = 0022;
   public static final String  FS_DF_INTERVAL_KEY = "fs.df.interval"; 
   public static final long    FS_DF_INTERVAL_DEFAULT = 60000;
-  public static final String  FS_ACCESS_TOKEN_ENABLE_KEY =
-                                       "fs.access.token.enable";
-  public static final boolean FS_ACCESS_TOKEN_ENABLE_DEFAULT = false;
-  public static final String  FS_ACCESS_KEY_UPDATE_INTERVAL_KEY =
-                                       "fs.access.key.update.interval";
-  public static final long    FS_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT = 600;
-  public static final String  FS_ACCESS_TOKEN_LIFETIME_KEY =
-                                       "fs.access.token.lifetime";
-  public static final long    FS_ACCESS_TOKEN_LIFETIME_DEFAULT = 600;
 
 
   //Defaults are not specified for following keys

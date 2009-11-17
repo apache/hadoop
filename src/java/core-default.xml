@@ -270,29 +270,6 @@
 </property>
 
 <property>
-  <name>fs.access.token.enable</name>
-  <value>false</value>
-  <description>
-    If "true", access tokens are used as capabilities for accessing datanodes.
-    If "false", no access tokens are checked on accessing datanodes.
-  </description>
-</property>
-
-<property>
-  <name>fs.access.key.update.interval</name>
-  <value>600</value>
-  <description>
-    Interval in minutes at which namenode updates its access keys.
-  </description>
-</property>
-
-<property>
-  <name>fs.access.token.lifetime</name>
-  <value>600</value>
-  <description>The lifetime of access tokens in minutes.</description>
-</property>
-
-<property>
   <name>fs.s3.block.size</name>
   <value>67108864</value>
   <description>Block size to use when writing files to S3.</description>
