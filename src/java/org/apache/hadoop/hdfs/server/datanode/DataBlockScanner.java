@@ -451,7 +451,6 @@ class DataBlockScanner implements Runnable {
         return;
       } catch (IOException e) {
 
-        totalScanErrors++;
         updateScanStatus(block, ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
@@ -467,6 +466,7 @@ class DataBlockScanner implements Runnable {
                  StringUtils.stringifyException(e));
         
         if (second) {
+          totalScanErrors++;
           datanode.getMetrics().blockVerificationFailures.inc(); 
           handleScanFailure(block);
           return;

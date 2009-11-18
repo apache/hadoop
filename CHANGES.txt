@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     the file (cos, szetszwo)
 
     HDFS-706. Intermittent failures in TestFiHFlush (cos)
+ 
+    HDFS-763. Fix slightly misleading report from DataBlockScanner 
+    about corrupted scans. (dhruba)
 
 Release 0.21.0 - Unreleased
 
