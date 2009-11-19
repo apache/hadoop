@@ -55,7 +55,7 @@ echo "Starting master with AMI $AMI_IMAGE (arch $ARCH)"
 ZOOKEEPER_QUORUM=`cat $ZOOKEEPER_QUORUM_PATH`
 sed -e "s|%ZOOKEEPER_QUORUM%|$ZOOKEEPER_QUORUM|" \
     "$bin"/$USER_DATA_FILE > "$bin"/$USER_DATA_FILE.master
-INSTANCE=`ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_MASTER -k $KEY_NAME -f "$bin"/$USER_DATA_FILE.master -t $INSTANCE_TYPE | grep INSTANCE | awk '{print $2}'`
+INSTANCE=`ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_MASTER -k root -f "$bin"/$USER_DATA_FILE.master -t $INSTANCE_TYPE | grep INSTANCE | awk '{print $2}'`
 echo -n "Waiting for instance $INSTANCE to start"
 while true; do
   printf "."
@@ -76,12 +76,15 @@ MASTER_EC2_ZONE=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep INSTANCE | g
 echo $MASTER_EC2_ZONE > $MASTER_ZONE_PATH
 
 while true; do
-  REPLY=`ssh $SSH_OPTS "$KEY_NAME@$MASTER_EC2_HOST" 'echo "hello"'`
+  REPLY=`ssh $SSH_OPTS "root@$MASTER_EC2_HOST" 'echo "hello"'`
   if [ ! -z $REPLY ]; then
    break;
   fi
   sleep 5
 done
+
+scp $SSH_OPTS $PRIVATE_KEY_PATH "root@$MASTER_EC2_HOST:/root/.ssh/id_rsa"
+ssh $SSH_OPTS "root@$MASTER_EC2_HOST" "chmod 600 /root/.ssh/id_rsa"
 
 MASTER_IP=`dig +short $MASTER_EC2_HOST`
 echo "Master is $MASTER_EC2_HOST, ip is $MASTER_IP, zone is $MASTER_EC2_ZONE."

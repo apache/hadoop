@@ -34,7 +34,7 @@ AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | gr
 [ ! -z $AMI_IMAGE ] && echo "AMI already registered, use: ec2-deregister $AMI_IMAGE" && exit 1
 
 echo "Starting a AMI with ID $BASE_AMI_IMAGE."
-OUTPUT=`ec2-run-instances $BASE_AMI_IMAGE $TOOL_OPTS -k $KEY_NAME -t $INSTANCE_TYPE`
+OUTPUT=`ec2-run-instances $BASE_AMI_IMAGE $TOOL_OPTS -k root -t $INSTANCE_TYPE`
 BOOTING_INSTANCE=`echo $OUTPUT | awk '{print $6}'`
 
 echo "Instance is $BOOTING_INSTANCE."

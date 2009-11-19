@@ -14,23 +14,57 @@ You need both the EC2 API and AMI tools
 
   http://developer.amazonwebservices.com/connect/entry.jspa?externalID=368&categoryID=88
 
-installed and on the path. For Ubuntu, "apt-get install ec2-ami-tools ec2-api-tools".  
+installed and on the path. 
 
-The hbase-ec2-env.sh script requires some configuration:
+When setting up keypairs on EC2, be sure to name your keypair as 'root'. 
 
-- Fill in AWS_ACCOUNT_ID with your EC2 account number
+Quick Start:
 
-- Fill in AWS_ACCESS_KEY_ID with your EC2 access key
+1) Download and unzip the EC2 AMI and API tools zipfiles.
 
-- Fill in AWS_SECRET_ACCESS_KEY with your EC2 secret access key
+   For Ubuntu, "apt-get install ec2-ami-tools ec2-api-tools".
 
-- Fill in KEY_NAME with the SSH keypair you will use
+2) Put the tools on the path and set EC2_HOME in the environment to point to
+   the top level directory of the API tools.
 
-- Fill in EC2_PRIVATE_KEY with the location of your AWS private key file --
-  must begin with 'pk' and end with '.pem'
+3) Configure src/contrib/ec2/bin/hbase-ec2-env.sh
 
-- Fill in EC2_CERT with the location of your AWS certificate -- must begin
-  with 'cert' and end with '.pem'
+   Fill in AWS_ACCOUNT_ID with your EC2 account number.
 
-- Make sure the private part of your AWS SSH keypair exists in the same
-  directory as EC2_PRIVATE_KEY with the name id_rsa_${KEYNAME}
+   Fill in AWS_ACCESS_KEY_ID with your EC2 access key.
+
+   Fill in AWS_SECRET_ACCESS_KEY with your EC2 secret access key.
+
+   Fill in EC2_PRIVATE_KEY with the location of your AWS private key file --
+   must begin with 'pk' and end with '.pem'.
+
+   Fill in EC2_CERT with the location of your AWS certificate -- must begin
+   with 'cert' and end with '.pem'.
+
+   Make sure the private part of your AWS SSH keypair exists in the same
+   directory as EC2_PRIVATE_KEY with the name id_rsa_root.
+
+4) ./bin/hbase-ec2 launch-cluster <name> <nr-zoos> <nr-slaves>, e.g
+
+       ./bin/hbase-ec2 launch-cluster testcluster 3 3
+
+5) Once the above command has finished without error, ./bin/hbase-ec2 login
+   <name>, e.g.
+
+       ./bin/hbase-ec2 login testcluster
+
+6) Check that the cluster is up and functional:
+
+       hbase shell
+       > status 'simple'
+
+   You should see something like:
+
+       3 live servers
+         domU-12-31-39-09-75-11.compute-1.internal:60020 1258653694915
+           requests=0, regions=1, usedHeap=29, maxHeap=987
+         domU-12-31-39-01-AC-31.compute-1.internal:60020 1258653709041
+           requests=0, regions=1, usedHeap=29, maxHeap=987
+         domU-12-31-39-01-B0-91.compute-1.internal:60020 1258653706411
+           requests=0, regions=0, usedHeap=27, maxHeap=987
+       0 dead servers

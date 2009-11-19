@@ -54,6 +54,6 @@ sed -e "s|%MASTER_HOST%|$MASTER_HOST|" \
 
 # Start slaves
 echo "Starting $NO_INSTANCES AMI(s) with ID $AMI_IMAGE (arch $ARCH) in group $CLUSTER in zone $MASTER_ZONE"
-ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n "$NO_INSTANCES" -g "$CLUSTER" -k "$KEY_NAME" -f "$bin"/$USER_DATA_FILE.slave -t "$INSTANCE_TYPE" -z "$MASTER_ZONE" | grep INSTANCE | awk '{print $2}'
+ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n "$NO_INSTANCES" -g "$CLUSTER" -k root -f "$bin"/$USER_DATA_FILE.slave -t "$INSTANCE_TYPE" -z "$MASTER_ZONE" | grep INSTANCE | awk '{print $2}'
 
 rm "$bin"/$USER_DATA_FILE.slave

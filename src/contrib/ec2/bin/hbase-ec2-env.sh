@@ -34,13 +34,9 @@ EC2_CERT=
 # The default setting is probably OK if you set up EC2 following the Amazon Getting Started guide.
 EC2_KEYDIR=`dirname "$EC2_PRIVATE_KEY"`
 
-# The EC2 key name used to launch instances.
-# The default is the value used in the Amazon Getting Started guide.
-KEY_NAME=root
-
 # Where your EC2 private key is stored (created when following the Amazon Getting Started guide).
 # You need to change this if you don't store this with your other EC2 keys.
-PRIVATE_KEY_PATH=`echo "$EC2_KEYDIR"/"id_rsa_$KEY_NAME"`
+PRIVATE_KEY_PATH=`echo "$EC2_KEYDIR"/"id_rsa_root"`
 
 # SSH options used when connecting to EC2 instances.
 SSH_OPTS=`echo -q -i "$PRIVATE_KEY_PATH" -o StrictHostKeyChecking=no -o ServerAliveInterval=30`

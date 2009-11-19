@@ -51,7 +51,7 @@ peers=""
 public_names=""
 for inst in `seq 1 $NO_INSTANCES` ; do 
   echo "Starting an AMI with ID $ZOO_AMI_IMAGE (arch $arch) in group $CLUSTER_ZOOKEEPER"
-  INSTANCE=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k ${KEY_NAME} -t $type | grep INSTANCE | awk '{print $2}'`
+  INSTANCE=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k root -t $type | grep INSTANCE | awk '{print $2}'`
   echo -n "Waiting for instance $INSTANCE to start: "
   while true; do
     printf "."
@@ -79,6 +79,6 @@ echo "Initializing the ZooKeeper quorum ensemble."
 
 for host in $public_names ; do 
   echo "    $host"
-  scp $SSH_OPTS "$bin"/hbase-ec2-init-zookeeper-remote.sh "${KEY_NAME}@${host}:/var/tmp"
-  ssh $SSH_OPTS "${KEY_NAME}@${host}" "sh -c \"ZOOKEEPER_QUORUM=\"$ZOOKEEPER_QUORUM\" sh /var/tmp/hbase-ec2-init-zookeeper-remote.sh\""
+  scp $SSH_OPTS "$bin"/hbase-ec2-init-zookeeper-remote.sh "root@${host}:/var/tmp"
+  ssh $SSH_OPTS "root@${host}" "sh -c \"ZOOKEEPER_QUORUM=\"$ZOOKEEPER_QUORUM\" sh /var/tmp/hbase-ec2-init-zookeeper-remote.sh\""
 done
