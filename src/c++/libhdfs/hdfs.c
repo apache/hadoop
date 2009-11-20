@@ -679,7 +679,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         if (!blockSize) {
             if (invokeMethod(env, &jVal, &jExc, INSTANCE, jConfiguration, 
                              HADOOP_CONF, "getLong", "(Ljava/lang/String;J)J",
-                             jStrBlockSize, 67108864)) {
+                             jStrBlockSize, (jlong)67108864)) {
                 errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
                                            "FileSystem::%s(%s)", method,
                                            signature);

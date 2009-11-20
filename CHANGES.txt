@@ -66,6 +66,8 @@ Trunk (unreleased changes)
     HDFS-763. Fix slightly misleading report from DataBlockScanner 
     about corrupted scans. (dhruba)
 
+    HDFS-727. bug setting block size hdfsOpenFile (Eli Collins via cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
