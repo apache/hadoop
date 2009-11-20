@@ -68,6 +68,8 @@ Trunk (unreleased changes)
 
     HDFS-727. bug setting block size hdfsOpenFile (Eli Collins via cos)
 
+    HDFS-756. libhdfs unit tests do not run. (Eli Collins via cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

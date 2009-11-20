@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -31,6 +32,24 @@ HDFS_TEST=hdfs_test
 HADOOP_LIB_DIR=$HADOOP_HOME/lib
 HADOOP_BIN_DIR=$HADOOP_HOME/bin
 
+COMMON_BUILD_DIR=$HADOOP_HOME/build/ivy/lib/Hadoop-Hdfs/common
+COMMON_JAR=$COMMON_BUILD_DIR/hadoop-core-0.22.0-SNAPSHOT.jar
+
+# If we are running from the hdfs repo we need to create HADOOP_BIN_DIR.  
+# If the bin directory does not and we've got a core jar extract it's
+# bin directory to HADOOP_HOME/bin. The bin scripts hdfs-config.sh and
+# hadoop-config.sh assume the bin directory is named "bin" and that it
+# is located in HADOOP_HOME.
+created_bin_dir=0
+if [ ! -d $HADOOP_BIN_DIR ]; then
+  if [ -f $COMMON_JAR ]; then
+    mkdir $HADOOP_BIN_DIR
+    jar xf $COMMON_JAR bin.tgz
+    tar xfz bin.tgz -C $HADOOP_BIN_DIR
+    created_bin_dir=1
+  fi
+fi
+
 # Manipulate HADOOP_CONF_DIR too
 # which is necessary to circumvent bin/hadoop
 HADOOP_CONF_DIR=$HADOOP_CONF_DIR:$HADOOP_HOME/conf
@@ -61,17 +80,18 @@ for f in $HADOOP_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-for ff in $HADOOP_HOME/*.jar; do 
-  CLASSPATH=${CLASSPATH}:$ff
+for f in $HADOOP_HOME/*.jar; do 
+  CLASSPATH=${CLASSPATH}:$f
 done
-for f in $HADOOP_HOME/lib/jsp-2.0/*.jar; do
+for f in $HADOOP_HOME/lib/jsp-2.1/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-if [ -d "$HADOOP_HOME/build/ivy/lib/Hadoop/common" ]; then
-for f in $HADOOP_HOME/build/ivy/lib/Hadoop/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
+if [ -d "$COMMON_BUILD_DIR" ]; then
+  CLASSPATH=$CLASSPATH:$COMMON_JAR
+  for f in $COMMON_BUILD_DIR/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
 fi
 
 # restore ordinary behaviour
@@ -115,16 +135,19 @@ echo  "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 # Put delays to ensure hdfs is up and running and also shuts down 
 # after the tests are complete
 cd $HADOOP_HOME
-echo Y | $HADOOP_BIN_DIR/hadoop namenode -format &&
-$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start namenode && sleep 2 && 
-$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start datanode && sleep 2 && 
+echo Y | $HADOOP_BIN_DIR/hdfs namenode -format &&
+$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start namenode && sleep 2
+$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start datanode && sleep 2
 sleep 20
-echo CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_INSTALL_DIR/libhdfs.so:$LIB_JVM_DIR/libjvm.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && 
-CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIB_JVM_DIR/libjvm.so:$LIBHDFS_INSTALL_DIR/libhdfs.so:" $LIBHDFS_BUILD_DIR/$HDFS_TEST
+CLASSPATH=$CLASSPATH LD_PRELOAD="$LIB_JVM_DIR/libjvm.so:$LIBHDFS_INSTALL_DIR/libhdfs.so:" $LIBHDFS_BUILD_DIR/$HDFS_TEST
 BUILD_STATUS=$?
 sleep 3
-$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop datanode && sleep 2 && 
+$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop datanode && sleep 2
 $HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop namenode && sleep 2 
+
+if [ $created_bin_dir -eq 1 ]; then
+  rm -rf bin.tgz $HADOOP_BIN_DIR 
+fi
 
 echo exiting with $BUILD_STATUS
 exit $BUILD_STATUS
