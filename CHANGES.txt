@@ -1134,6 +1134,9 @@ Release 0.20.2 - Unreleased
     count at the start of each block in Hadoop archives. (Ben Slusky, Tom
     White, and Mahadev Konar via cdouglas)
 
+    HADOOP-6269. Fix threading issue with defaultResource in Configuration.
+    (Sreekanth Ramakrishnan via cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
