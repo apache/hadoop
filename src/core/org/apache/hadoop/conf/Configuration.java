@@ -42,6 +42,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -162,8 +163,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * List of default Resources. Resources are loaded in the order of the list 
    * entries
    */
-  private static final ArrayList<String> defaultResources = 
-    new ArrayList<String>();
+  private static final CopyOnWriteArrayList<String> defaultResources =
+    new CopyOnWriteArrayList<String>();
   
   static{
     //print deprecation warning if hadoop-site.xml is found in classpath
@@ -1250,7 +1251,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return sb.toString();
   }
 
-  private void toString(ArrayList resources, StringBuffer sb) {
+  private void toString(List resources, StringBuffer sb) {
     ListIterator i = resources.listIterator();
     while (i.hasNext()) {
       if (i.nextIndex() != 0) {
