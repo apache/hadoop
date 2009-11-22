@@ -67,7 +67,17 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 public class HConnectionManager implements HConstants {
   private static final Delete [] DELETE_ARRAY_TYPE = new Delete[0];
   private static final Put [] PUT_ARRAY_TYPE = new Put[0];
-  
+
+  // Register a shutdown hook, one that cleans up RPC and closes zk sessions.
+  static {
+    Runtime.getRuntime().addShutdownHook(new Thread("HCM.shutdownHook") {
+      @Override
+      public void run() {
+        HConnectionManager.deleteAllConnections(true);
+      }
+    });
+  }
+
   /*
    * Not instantiable.
    */

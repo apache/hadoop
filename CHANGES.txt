@@ -114,6 +114,8 @@ Release 0.21.0 - Unreleased
    HBASE-1979  MurmurHash does not yield the same results as the reference C++
                implementation when size % 4 >= 2 (Olivier Gillet via Andrew
                Purtell)
+   HBASE-1999  When HTable goes away, close zk session in shutdown hook or
+               something...
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
