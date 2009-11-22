@@ -116,6 +116,7 @@ Release 0.21.0 - Unreleased
                Purtell)
    HBASE-1999  When HTable goes away, close zk session in shutdown hook or
                something...
+   HBASE-1997  zk tick time bounds maximum zk session time
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

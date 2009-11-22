@@ -386,10 +386,15 @@
   <property>
     <name>zookeeper.session.timeout</name>
     <value>60000</value>
-    <description>ZooKeeper session timeout. This option is not used by HBase
-      directly, it is for the internals of ZooKeeper. HBase merely passes it in
-      whenever a connection is established to ZooKeeper. It is used by ZooKeeper
-      for hearbeats. In milliseconds.
+    <description>ZooKeeper session timeout.
+      HBase passes this to the zk quorum as suggested maximum time for a
+      session.  See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
+      "The client sends a requested timeout, the server responds with the
+      timeout that it can give the client. The current implementation
+      requires that the timeout be a minimum of 2 times the tickTime
+      (as set in the server configuration) and a maximum of 20 times
+      the tickTime." Set the zk ticktime with hbase.zookeeper.property.tickTime.
+      In milliseconds.
     </description>
   </property>
   <property>
@@ -472,9 +477,10 @@
   -->
   <property>
     <name>hbase.zookeeper.property.tickTime</name>
-    <value>2000</value>
+    <value>3000</value>
     <description>Property from ZooKeeper's config zoo.cfg.
-    The number of milliseconds of each tick.
+    The number of milliseconds of each tick.  See
+    zookeeper.session.timeout description.
     </description>
   </property>
   <property>
