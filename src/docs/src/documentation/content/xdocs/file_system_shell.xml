@@ -191,10 +191,16 @@
 		<section>
 			<title>du</title>
 			<p>
-				<code>Usage: hdfs dfs -du URI [URI &#x2026;]</code>
+				<code>Usage: hdfs dfs -du [-s] [-h] URI [URI &#x2026;]</code>
 			</p>
 			<p>
-	     Displays aggregate length of  files contained in the directory or the length of a file in case its just a file.<br/>
+	     Displays sizes of files and directories contained in the given directory or the length of a file in case its just a file.</p>
+             <p>Options:</p>
+             <ul>
+             <li>The <code>-s</code> option will result in an aggregate summary of file lengths being displayed, rather than the individual files.</li>
+             <li>The <code>-h</code> option will format file sizes in a &quot;human-readable&quot; fashion (e.g 64.0m instead of 67108864)</li>
+             </ul>
+             <p>
 	     Example:<br/><code>hdfs dfs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://nn.example.com/user/hadoop/dir1</code><br/>
 	     Exit Code:<br/><code> Returns 0 on success and -1 on error. </code><br/></p>
 		</section>
@@ -206,7 +212,7 @@
 				<code>Usage: hdfs dfs -dus &lt;args&gt;</code>
 			</p>
 			<p>
-	    Displays a summary of file lengths.
+	    Displays a summary of file lengths. This is an alternate form of <code>hdfs dfs -du -s</code>.
 	   </p>
 		</section>
 		
