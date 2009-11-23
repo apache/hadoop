@@ -117,6 +117,7 @@ Release 0.21.0 - Unreleased
    HBASE-1999  When HTable goes away, close zk session in shutdown hook or
                something...
    HBASE-1997  zk tick time bounds maximum zk session time
+   HBASE-2003  [shell] deleteall ignores column if specified
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

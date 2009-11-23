@@ -346,7 +346,7 @@ module HBase
       now = Time.now 
       d = Delete.new(row.to_java_bytes, timestamp, nil)
       split = KeyValue.parseColumn(column.to_java_bytes)
-      d.deleteColumn(split[0], split.length > 1 ? split[1] : nil)
+      d.deleteColumn(split[0], split.length > 1 ? split[1] : nil, timestamp)
       @table.delete(d)
       @formatter.header()
       @formatter.footer(now)
@@ -355,6 +355,10 @@ module HBase
     def deleteall(row, column = nil, timestamp = HConstants::LATEST_TIMESTAMP)
       now = Time.now 
       d = Delete.new(row.to_java_bytes, timestamp, nil)
+      if column != nil
+        split = KeyValue.parseColumn(column.to_java_bytes)
+        d.deleteColumns(split[0], split.length > 1 ? split[1] : nil, timestamp)
+      end
       @table.delete(d)
       @formatter.header()
       @formatter.footer(now)
