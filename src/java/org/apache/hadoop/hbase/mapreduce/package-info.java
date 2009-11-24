@@ -109,8 +109,8 @@ partitioner.
 <h2><a name="bulk">Bulk import writing HFiles directly</a></h2>
 <p>If importing into a new table, its possible to by-pass the HBase API
 and write your content directly to the filesystem properly formatted as
-HBase data files (HFiles).  Your import will run faster, perhaps as much
-as an order of magnitude faster if not more.
+HBase data files (HFiles).  Your import will run faster, perhaps an order of
+magnitude faster if not more.
 </p>
 <p>You will need to write a MapReduce job.  The map task will know how to
 pull from your data source.  Your reduce task will need to be hooked up to
@@ -131,14 +131,20 @@ BUT the sort is scoped to the particular reducer.  Its not a global sort.
 Given the default hash Partitioner, if the keys were 0-4 (inclusive), and you
 had configured two reducers, reducer 0 would have get keys 0, 2 and 4 whereas
 reducer 1 would get keys 1 and 3 (in order).  For your bulk import to work,
-the keys need to be orderd so reducer 0 gets keys 0-2 and reducer 1 gets keys
-3-4 (See TotalOrderPartitioner up in hadoop for more on what this means). 
+the keys need to be ordered so reducer 0 gets keys 0-2 and reducer 1 gets keys
+3-4 (See TotalOrderPartitioner up in hadoop for more on what this means.  See
+how it runs a sampler step first.  You may need to write one of these).
 To achieve total ordering, you will likely need to write a Partitioner
 that is intimate with your tables key namespace and that knows how
-to distribute keys among the reducers so a total order is maintained.
+to distribute keys among the reducers so a total order is maintained.  If your
+keys are distributed with some regularity across a defined key space -- i.e.
+you know the start and end keys -- then the {@link SimpleTotalOrderPartitioner} 
+may be all you need.
 </p>
-<p>See org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat for an example that puts together
-{@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer} and {@link org.apache.hadoop.hbase.mapreduce.HFileOutputFormat}.</p>
+<p>See org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat for an example
+that puts together {@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer},
+{@link SimpleTotalOrderPartitioner}, and
+{@link org.apache.hadoop.hbase.mapreduce.HFileOutputFormat}.</p>
 
 <p>HFileOutputFormat writes HFiles.  When your MapReduce file finishes, in your
 output directory you will have many HFiles.  Run the script <code>bin/loadtable.rb</code>

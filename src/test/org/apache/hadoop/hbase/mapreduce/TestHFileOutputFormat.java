@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -172,6 +173,15 @@ public class TestHFileOutputFormat extends HBaseTestCase {
     job.setMapperClass(TestHFileOutputFormat.PEtoKVMapper.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     job.setMapOutputValueClass(KeyValue.class);
+    // This partitioner doesn't work well for number keys but using it anyways
+    // just to demonstrate how to configure it.
+    job.setPartitionerClass(SimpleTotalOrderPartitioner.class);
+    // Set start and end rows for partitioner.
+    job.getConfiguration().set(SimpleTotalOrderPartitioner.START,
+      Bytes.toString(PerformanceEvaluation.format(0)));
+    int rows = this.conf.getInt("mapred.map.tasks", 1) * ROWSPERSPLIT;
+    job.getConfiguration().set(SimpleTotalOrderPartitioner.END,
+      Bytes.toString(PerformanceEvaluation.format(rows)));
     job.setReducerClass(KeyValueSortReducer.class);
     job.setOutputFormatClass(HFileOutputFormat.class);
     FileOutputFormat.setOutputPath(job, this.testDir);
