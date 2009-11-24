@@ -76,6 +76,9 @@ Trunk (unreleased changes)
 
     HDFS-783. libhdfs tests brakes code coverage runs with Clover (cos)
 
+    HDFS-785. Add Apache license to several namenode unit tests. 
+    (Ravi Phulari via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
