@@ -2585,6 +2585,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       private DataInputStream blockReplyStream;
       private ResponseProcessor response = null;
       private volatile DatanodeInfo[] nodes = null; // list of targets for current block
+      private ArrayList<DatanodeInfo> excludedNodes = new ArrayList<DatanodeInfo>();
       volatile boolean hasError = false;
       volatile int errorIndex = -1;
       private BlockConstructionStage stage;  // block construction stage
@@ -3109,7 +3110,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           success = false;
 
           long startTime = System.currentTimeMillis();
-          lb = locateFollowingBlock(startTime);
+          DatanodeInfo[] w = excludedNodes.toArray(
+              new DatanodeInfo[excludedNodes.size()]);
+          lb = locateFollowingBlock(startTime, w.length > 0 ? w : null);
           block = lb.getBlock();
           block.setNumBytes(0);
           accessToken = lb.getAccessToken();
@@ -3125,12 +3128,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             namenode.abandonBlock(block, src, clientName);
             block = null;
 
+            LOG.info("Excluding datanode " + nodes[errorIndex]);
+            excludedNodes.add(nodes[errorIndex]);
+
             // Connection failed.  Let's wait a little bit and retry
             retry = true;
             try {
               if (System.currentTimeMillis() - startTime > 5000) {
                 LOG.info("Waiting to find target node: " + nodes[0].getName());
               }
+              //TODO fix this timout. Extract it o a constant, maybe make it available from conf
               Thread.sleep(6000);
             } catch (InterruptedException iex) {
             }
@@ -3228,14 +3235,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
       }
 
-      private LocatedBlock locateFollowingBlock(long start) throws IOException {
+      private LocatedBlock locateFollowingBlock(long start,
+          DatanodeInfo[] excludedNodes) throws IOException {
         int retries = conf.getInt("dfs.client.block.write.locateFollowingBlock.retries", 5);
         long sleeptime = 400;
         while (true) {
           long localstart = System.currentTimeMillis();
           while (true) {
             try {
-              return namenode.addBlock(src, clientName, block);
+              return namenode.addBlock(src, clientName, block, excludedNodes);
             } catch (RemoteException e) {
               IOException ue = 
                 e.unwrapRemoteException(FileNotFoundException.class,

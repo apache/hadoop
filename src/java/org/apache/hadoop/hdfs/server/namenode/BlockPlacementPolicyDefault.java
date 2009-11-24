@@ -68,6 +68,17 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
 
   /** {@inheritDoc} */
+  public DatanodeDescriptor[] chooseTarget(String srcPath,
+                                    int numOfReplicas,
+                                    DatanodeDescriptor writer,
+                                    List<DatanodeDescriptor> chosenNodes,
+                                    HashMap<Node, Node> excludedNodes,
+                                    long blocksize) {
+    return chooseTarget(numOfReplicas, writer, chosenNodes, excludedNodes, blocksize);
+  }
+
+
+  /** {@inheritDoc} */
   @Override
   public DatanodeDescriptor[] chooseTarget(FSInodeInfo srcInode,
                                     int numOfReplicas,

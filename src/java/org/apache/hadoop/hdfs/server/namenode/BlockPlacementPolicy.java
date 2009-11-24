@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.ReflectionUtils;
 import java.util.*;
 
@@ -59,6 +60,26 @@ public abstract class BlockPlacementPolicy {
   /**
    * choose <i>numOfReplicas</i> data nodes for <i>writer</i> 
    * to re-replicate a block with size <i>blocksize</i> 
+   * If not, return as many as we can.
+   * 
+   * @param srcPath the file to which this chooseTargets is being invoked.
+   * @param numOfReplicas additional number of replicas wanted.
+   * @param writer the writer's machine, null if not in the cluster.
+   * @param chosenNodes datanodes that have been chosen as targets.
+   * @param excludedNodes: datanodes that should not be considered as targets.
+   * @param blocksize size of the data to be written.
+   * @return array of DatanodeDescriptor instances chosen as target
+   * and sorted as a pipeline.
+   */
+  abstract DatanodeDescriptor[] chooseTarget(String srcPath,
+                                             int numOfReplicas,
+                                             DatanodeDescriptor writer,
+                                             List<DatanodeDescriptor> chosenNodes,
+                                             HashMap<Node, Node> excludedNodes,
+                                             long blocksize);
+
+  /**
+   * choose <i>numOfReplicas</i> data nodes for <i>writer</i>
    * If not, return as many as we can.
    * The base implemenatation extracts the pathname of the file from the
    * specified srcInode, but this could be a costly operation depending on the
@@ -167,4 +188,29 @@ public abstract class BlockPlacementPolicy {
                         new ArrayList<DatanodeDescriptor>(),
                         blocksize);
   }
+
+  /**
+   * choose <i>numOfReplicas</i> nodes for <i>writer</i> to replicate
+   * a block with size <i>blocksize</i>
+   * If not, return as many as we can.
+   * 
+   * @param srcPath a string representation of the file for which chooseTarget is invoked
+   * @param numOfReplicas number of replicas wanted.
+   * @param writer the writer's machine, null if not in the cluster.
+   * @param blocksize size of the data to be written.
+   * @param excludedNodes: datanodes that should not be considered as targets.
+   * @return array of DatanodeDescriptor instances chosen as targets
+   * and sorted as a pipeline.
+   */
+  DatanodeDescriptor[] chooseTarget(String srcPath,
+                                    int numOfReplicas,
+                                    DatanodeDescriptor writer,
+                                    HashMap<Node, Node> excludedNodes,
+                                    long blocksize) {
+    return chooseTarget(srcPath, numOfReplicas, writer,
+                        new ArrayList<DatanodeDescriptor>(),
+                        excludedNodes,
+                        blocksize);
+  }
+
 }

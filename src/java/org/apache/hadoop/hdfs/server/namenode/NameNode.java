@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -73,6 +74,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -612,14 +614,30 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.setOwner(src, username, groupname);
   }
 
-  /**
-   */
+
+  @Override
   public LocatedBlock addBlock(String src, String clientName,
                                Block previous) throws IOException {
+    return addBlock(src, clientName, previous, null);
+  }
+
+  @Override
+  public LocatedBlock addBlock(String src,
+                               String clientName,
+                               Block previous,
+                               DatanodeInfo[] excludedNodes
+                               ) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
                          +src+" for "+clientName);
+    HashMap<Node, Node> excludedNodesSet = null;
+    if (excludedNodes != null) {
+      excludedNodesSet = new HashMap<Node, Node>(excludedNodes.length);
+      for (Node node:excludedNodes) {
+        excludedNodesSet.put(node, node);
+      }
+    }
     LocatedBlock locatedBlock = 
-      namesystem.getAdditionalBlock(src, clientName, previous);
+      namesystem.getAdditionalBlock(src, clientName, previous, excludedNodesSet);
     if (locatedBlock != null)
       myMetrics.numAddBlockOps.inc();
     return locatedBlock;
