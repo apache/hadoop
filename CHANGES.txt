@@ -202,6 +202,7 @@ Release 0.21.0 - Unreleased
                it does
    HBASE-1987  The Put object has no simple read methods for checking what
                has already been added (Ryan Smith via Stack)
+   HBASE-1985  change HTable.delete(ArrayList) to HTable.delete(List)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

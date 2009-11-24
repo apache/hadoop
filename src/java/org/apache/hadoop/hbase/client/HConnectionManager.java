@@ -1107,7 +1107,7 @@ public class HConnectionManager implements HConstants {
        * @return Count of how many added or -1 if all added.
        * @throws IOException
        */
-      int process(final ArrayList<? extends Row> list, final byte[] tableName)
+      int process(final List<? extends Row> list, final byte[] tableName)
       throws IOException {
         byte [] region = getRegionName(tableName, list.get(0).getRow(), false);
         byte [] currentRegion = region;
@@ -1214,7 +1214,7 @@ public class HConnectionManager implements HConstants {
       return b.process(list, tableName);
     }
 
-    public int processBatchOfDeletes(final ArrayList<Delete> list,
+    public int processBatchOfDeletes(final List<Delete> list,
       final byte[] tableName)
     throws IOException {
       if (list.isEmpty()) return 0;

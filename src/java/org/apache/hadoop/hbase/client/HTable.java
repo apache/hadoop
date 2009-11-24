@@ -418,7 +418,7 @@ public class HTable implements HTableInterface {
    * @throws IOException
    * @since 0.20.1
    */
-  public synchronized void delete(final ArrayList<Delete> deletes)
+  public synchronized void delete(final List<Delete> deletes)
   throws IOException {
     int last = 0;
     try {
