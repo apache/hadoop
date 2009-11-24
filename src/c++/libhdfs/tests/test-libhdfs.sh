@@ -17,7 +17,7 @@
 #
 
 #
-# Note: This script depends on 5 environment variables to function correctly:
+# Note: This script depends on 8 environment variables to function correctly:
 # a) CLASSPATH
 # b) HADOOP_HOME
 # c) HADOOP_CONF_DIR 
@@ -25,6 +25,7 @@
 # e) LIBHDFS_BUILD_DIR
 # f) LIBHDFS_INSTALL_DIR
 # g) OS_NAME
+# h) CLOVER_JAR
 # All these are passed by build.xml.
 #
 
@@ -71,6 +72,9 @@ fi
 if [ -d "$HADOOP_HOME/build/test/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/test/classes
 fi
+
+# add Clover jar file needed for code coverage runs
+CLASSPATH=${CLASSPATH}:${CLOVER_JAR};
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=

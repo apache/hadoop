@@ -74,6 +74,8 @@ Trunk (unreleased changes)
 
     HDFS-756. libhdfs unit tests do not run. (Eli Collins via cos)
 
+    HDFS-783. libhdfs tests brakes code coverage runs with Clover (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

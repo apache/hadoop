@@ -1036,6 +1036,7 @@
         <env key="LIBHDFS_SRC_DIR" value="${c++.libhdfs.src}"/>
         <env key="LIBHDFS_INSTALL_DIR" value="${install.c++}/lib"/>  
         <env key="LIB_DIR" value="${common.ivy.lib.dir}"/>
+        <env key="CLOVER_JAR" value="${clover.jar}"/>
 		<arg value="test"/>
     </exec>
   </target>
