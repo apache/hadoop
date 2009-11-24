@@ -200,6 +200,8 @@ Release 0.21.0 - Unreleased
    HBASE-1971  Unit test the full WAL replay cycle
    HBASE-1970  Export does one version only; make it configurable how many
                it does
+   HBASE-1987  The Put object has no simple read methods for checking what
+               has already been added (Ryan Smith via Stack)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

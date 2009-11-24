@@ -132,12 +132,8 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * @param value column value
    */
   public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
-    List<KeyValue> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<KeyValue>(0);
-    }
-    KeyValue kv = new KeyValue(this.row, family, qualifier, ts, 
-      KeyValue.Type.Put, value); 
+    List<KeyValue> list = getKeyValueList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
     familyMap.put(kv.getFamily(), list);
     return this;
@@ -151,10 +147,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    */
   public Put add(KeyValue kv) throws IOException{
     byte [] family = kv.getFamily();
-    List<KeyValue> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<KeyValue>();
-    }
+    List<KeyValue> list = getKeyValueList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length, 
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
@@ -168,7 +161,162 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     familyMap.put(family, list);
     return this;
   }
+
+  /**
+   * Create a KeyValue with this objects row key and the Put identifier.
+   * 
+   * @param family
+   * @param qualifier
+   * @param ts
+   * @param value
+   * @return a KeyValue with this objects row key and the Put identifier.
+   */
+  private KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts,
+      byte[] value) {
+  return  new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put, 
+      value);
+  }
   
+  /**
+   * A convenience method to determine if this object's familyMap contains 
+   * a value assigned to the given family & qualifier.
+   * Both given arguments must match the KeyValue object to return true.
+   * 
+   * @param family
+   * @param qualifier
+   * @return returns true if the given family and qualifier already has an
+   * existing KeyValue object in the family map.
+   */
+  public boolean has(byte [] family, byte [] qualifier) {
+  return has(family, qualifier, this.timestamp, new byte[0], true, true);
+  }
+  
+  /**
+   * A convenience method to determine if this object's familyMap contains 
+   * a value assigned to the given family, qualifier and timestamp.
+   * All 3 given arguments must match the KeyValue object to return true.
+   * 
+   * @param family
+   * @param qualifier
+   * @param ts
+   * @return returns true if the given family, qualifier and timestamp already has an
+   * existing KeyValue object in the family map.
+   */
+  public boolean has(byte [] family, byte [] qualifier, long ts) {
+  return has(family, qualifier, ts, new byte[0], false, true);
+  }
+  
+  /**
+   * A convenience method to determine if this object's familyMap contains 
+   * a value assigned to the given family, qualifier and timestamp.
+   * All 3 given arguments must match the KeyValue object to return true.
+   * 
+   * @param family
+   * @param qualifier
+   * @param value
+   * @return returns true if the given family, qualifier and value already has an
+   * existing KeyValue object in the family map.
+   */
+  public boolean has(byte [] family, byte [] qualifier, byte [] value) {
+    return has(family, qualifier, this.timestamp, value, true, false);
+  }
+  
+  /**
+   * A convenience method to determine if this object's familyMap contains 
+   * the given value assigned to the given family, qualifier and timestamp.
+   * All 4 given arguments must match the KeyValue object to return true.
+   * 
+   * @param family
+   * @param qualifier
+   * @param ts
+   * @param value
+   * @return returns true if the given family, qualifier timestamp and value 
+   * already has an existing KeyValue object in the family map.
+   */
+  public boolean has(byte [] family, byte [] qualifier, long ts, byte [] value) {
+      return has(family, qualifier, ts, value, false, false);
+  }
+  
+  /**
+   * Private method to determine if this object's familyMap contains 
+   * the given value assigned to the given family, qualifier and timestamp
+   * respecting the 2 boolean arguments
+   * 
+   * @param family
+   * @param qualifier
+   * @param ts
+   * @param value
+   * @param ignoreTS
+   * @param ignoreValue
+   * @return returns true if the given family, qualifier timestamp and value 
+   * already has an existing KeyValue object in the family map.
+   */
+  private boolean has(byte [] family, byte [] qualifier, long ts, byte [] value, 
+      boolean ignoreTS, boolean ignoreValue) {
+    List<KeyValue> list = getKeyValueList(family);
+    if (list.size() == 0 ) {
+      return false;
+    }
+    if (!ignoreTS && !ignoreValue) {
+      KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
+      return (list.contains(kv));
+    } else if (ignoreValue) {
+      for (KeyValue kv: list) {
+        if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
+            && kv.getTimestamp() == ts) {
+          return true;
+        }
+      }
+    } else if (ignoreTS) {
+      for (KeyValue kv: list) {
+      if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
+              && Arrays.equals(kv.getValue(), value)) {
+          return true;
+        }
+      }
+    } else {
+      for (KeyValue kv: list) {
+      if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(
+          kv.getQualifier(), qualifier)) {
+          return true;
+        }
+    }
+    }
+    return false;
+  }
+  
+  /**
+   * Returns a list of all KeyValue objects with matching column family and qualifier.
+   * 
+   * @param family
+   * @param qualifier
+   * @return a list of KeyValue objects with the matching family and qualifier, 
+   * returns an empty list if one doesnt exist for the given family.
+   */
+  public List<KeyValue> get(byte[] family, byte[] qualifier) {
+    List<KeyValue> filteredList = new ArrayList<KeyValue>();
+    for (KeyValue kv: getKeyValueList(family)) {
+      if (Arrays.equals(kv.getQualifier(), qualifier)) {
+        filteredList.add(kv);
+      }
+    }
+    return filteredList;
+  }
+
+  /**
+   * Creates an empty list if one doesnt exist for the given column family
+   * or else it returns the associated list of KeyValue objects.
+   * 
+   * @param family
+   * @return a list of KeyValue objects, returns an empty list if one doesnt exist.
+   */
+  private List<KeyValue> getKeyValueList(byte[] family) {
+    List<KeyValue> list = familyMap.get(family);
+    if(list == null) {
+      list = new ArrayList<KeyValue>(0);
+    }
+    return list;
+  }
   
   /**
    * Method for retrieving the put's familyMap
