@@ -102,7 +102,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     public void restart(byte[] firstRow) throws IOException {
       Scan newScan = new Scan(scan);
       newScan.setStartRow(firstRow);
-      this.scanner = this.htable.getScanner(newScan);      
+      this.scanner = this.htable.getScanner(newScan);
     }
 
     /**

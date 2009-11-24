@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.mortbay.log.Log;
 
 /**
  * Export an HBase table.
@@ -80,8 +81,17 @@ public class Export {
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(Exporter.class);
     // TODO: Allow passing filter and subset of rows/columns.
-    TableMapReduceUtil.initTableMapperJob(tableName, new Scan(),
-      Exporter.class, null, null, job);
+    Scan s = new Scan();
+    // Optional arguments.
+    int versions = args.length > 2? Integer.parseInt(args[2]): 1;
+    s.setMaxVersions(versions);
+    long startTime = args.length > 3? Long.parseLong(args[3]): 0L;
+    long endTime = args.length > 4? Long.parseLong(args[4]): Long.MAX_VALUE;
+    s.setTimeRange(startTime, endTime);
+    Log.info("verisons=" + versions + ", starttime=" + startTime +
+      ", endtime=" + endTime);
+    TableMapReduceUtil.initTableMapperJob(tableName, s, Exporter.class, null,
+      null, job);
     // No reducers.  Just write straight to output files.
     job.setNumReduceTasks(0);
     job.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -98,7 +108,8 @@ public class Export {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    System.err.println("Usage: Export <tablename> <outputdir>");
+    System.err.println("Usage: Export <tablename> <outputdir> [<versions> " +
+      "[<starttime> [<endtime>]]]");
   }
 
   /**
@@ -115,6 +126,6 @@ public class Export {
       System.exit(-1);
     }
     Job job = createSubmittableJob(conf, otherArgs);
-    System.exit(job.waitForCompletion(true) ? 0 : 1);
+    System.exit(job.waitForCompletion(true)? 0 : 1);
   }
 }

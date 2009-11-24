@@ -198,6 +198,8 @@ Release 0.21.0 - Unreleased
                (Jeremiah Jacquet via Stack)
    HBASE-1961  HBase EC2 scripts
    HBASE-1971  Unit test the full WAL replay cycle
+   HBASE-1970  Export does one version only; make it configurable how many
+               it does
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

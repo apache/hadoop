@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestStoreScanner extends TestCase {
-
-  final byte [] CF = Bytes.toBytes("cf");
+  private final String CF_STR = "cf";
+  final byte [] CF = Bytes.toBytes(CF_STR);
 
   /**
    * Test utility for building a NavigableSet for scanners.
@@ -50,6 +50,60 @@ public class TestStoreScanner extends TestCase {
     }
     return cols;
   }
+  
+  public void testScanTimeRange() throws IOException {
+    String r1 = "R1";
+    // returns only 1 of these 2 even though same timestamp
+    KeyValue [] kvs = new KeyValue[] {
+        KeyValueTestUtil.create(r1, CF_STR, "a", 1, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create(r1, CF_STR, "a", 2, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create(r1, CF_STR, "a", 3, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create(r1, CF_STR, "a", 4, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create(r1, CF_STR, "a", 5, KeyValue.Type.Put, "dont-care"),
+    };
+    KeyValueScanner [] scanners = new KeyValueScanner[] {
+      new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
+    };
+    Scan scanSpec = new Scan(Bytes.toBytes(r1));
+    scanSpec.setTimeRange(0, 6);
+    scanSpec.setMaxVersions();
+    StoreScanner scan =
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
+        KeyValue.COMPARATOR, getCols("a"), scanners);
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    assertEquals(true, scan.next(results));
+    assertEquals(5, results.size());
+    assertEquals(kvs[kvs.length - 1], results.get(0));
+    // Scan limited TimeRange
+    scanSpec = new Scan(Bytes.toBytes(r1));
+    scanSpec.setTimeRange(1, 3);
+    scanSpec.setMaxVersions();
+    scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
+      KeyValue.COMPARATOR, getCols("a"), scanners);
+    results = new ArrayList<KeyValue>();
+    assertEquals(true, scan.next(results));
+    assertEquals(2, results.size());
+    // Another range.
+    scanSpec = new Scan(Bytes.toBytes(r1));
+    scanSpec.setTimeRange(5, 10);
+    scanSpec.setMaxVersions();
+    scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
+      KeyValue.COMPARATOR, getCols("a"), scanners);
+    results = new ArrayList<KeyValue>();
+    assertEquals(true, scan.next(results));
+    assertEquals(1, results.size());
+    // See how TimeRange and Versions interact.
+    // Another range.
+    scanSpec = new Scan(Bytes.toBytes(r1));
+    scanSpec.setTimeRange(0, 10);
+    scanSpec.setMaxVersions(3);
+    scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
+      KeyValue.COMPARATOR, getCols("a"), scanners);
+    results = new ArrayList<KeyValue>();
+    assertEquals(true, scan.next(results));
+    assertEquals(3, results.size());
+    
+  }
 
   public void testScanSameTimestamp() throws IOException {
     // returns only 1 of these 2 even though same timestamp
@@ -58,8 +112,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
     };
     KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR,
-            kvs)
+      new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
     };
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));

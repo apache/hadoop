@@ -1079,7 +1079,6 @@ public class HLog implements HConstants, Syncable {
           SequenceFile.Reader in = null;
           int count = 0;
           try {
-            long len = fs.getFileStatus(logfiles[i].getPath()).getLen();
             in = HLog.getReader(fs, logfiles[i].getPath(), conf);
             try {
               HLogKey key = newKey(conf);

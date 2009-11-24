@@ -76,7 +76,6 @@ import org.apache.hadoop.io.WritableFactories;
  */
 public class Scan implements Writable {
   private static final byte SCAN_VERSION = (byte)1;
-
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
@@ -180,10 +179,14 @@ public class Scan implements Writable {
   
   /**
    * Get versions of columns only within the specified timestamp range,
-   * [minStamp, maxStamp).
+   * [minStamp, maxStamp).  Note, default maximum versions to return is 1.  If
+   * your time range spans more than one version and you want all versions
+   * returned, up the number of versions beyond the defaut.
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException if invalid time range
+   * @see {@link #setMaxVersions()}
+   * @see {@link #setMaxVersions(int)}
    */
   public Scan setTimeRange(long minStamp, long maxStamp)
   throws IOException {
@@ -192,8 +195,13 @@ public class Scan implements Writable {
   }
   
   /**
-   * Get versions of columns with the specified timestamp.
-   * @param timestamp version timestamp  
+   * Get versions of columns with the specified timestamp. Note, default maximum
+   * versions to return is 1.  If your time range spans more than one version
+   * and you want all versions returned, up the number of versions beyond the
+   * defaut.
+   * @param timestamp version timestamp
+   * @see {@link #setMaxVersions()}
+   * @see {@link #setMaxVersions(int)}
    */
   public Scan setTimeStamp(long timestamp) {
     try {
