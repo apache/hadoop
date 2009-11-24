@@ -182,6 +182,9 @@ Release 0.21.0 - Unreleased
     HDFS-702. Add HDFS implementation of AbstractFileSystem. 
     (Sanjay Radio via suresh)
 
+    HDFS-758. Add decommissioning status page to Namenode Web UI.
+    (Jitendra Nath Pandey via suresh)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
@@ -534,7 +537,7 @@ Release 0.20.2 - Unreleased
 
     HDFS-737. Add full path name of the file to the block information and 
     summary of total number of files, blocks, live and deadnodes to 
-    metasave output. (Jitendra Pandey via suresh)
+    metasave output. (Jitendra Nath Pandey via suresh)
     
   BUG FIXES
 

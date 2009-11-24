@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.mortbay.log.Log;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -1407,12 +1408,38 @@ public class BlockManager {
     return new NumberReplicas(live, count, corrupt, excess);
   }
 
+  private void logBlockReplicationInfo(Block block, DatanodeDescriptor srcNode,
+      NumberReplicas num) {
+    int curReplicas = num.liveReplicas();
+    int curExpectedReplicas = getReplication(block);
+    INode fileINode = blocksMap.getINode(block);
+    Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(block);
+    StringBuffer nodeList = new StringBuffer();
+    while (nodeIter.hasNext()) {
+      DatanodeDescriptor node = nodeIter.next();
+      nodeList.append(node.name);
+      nodeList.append(" ");
+    }
+    FSNamesystem.LOG.info("Block: " + block + ", Expected Replicas: "
+        + curExpectedReplicas + ", live replicas: " + curReplicas
+        + ", corrupt replicas: " + num.corruptReplicas()
+        + ", decommissioned replicas: " + num.decommissionedReplicas()
+        + ", excess replicas: " + num.excessReplicas()
+        + ", Is Open File: " + fileINode.isUnderConstruction()
+        + ", Datanodes having this block: " + nodeList + ", Current Datanode: "
+        + srcNode.name + ", Is current datanode decommissioning: "
+        + srcNode.isDecommissionInProgress());
+  }
+  
   /**
    * Return true if there are any blocks on this node that have not
    * yet reached their replication factor. Otherwise returns false.
    */
   boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
     boolean status = false;
+    int underReplicatedBlocks = 0;
+    int decommissionOnlyReplicas = 0;
+    int underReplicatedInOpenFiles = 0;
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
     while(it.hasNext()) {
       final Block block = it.next();
@@ -1424,15 +1451,25 @@ public class BlockManager {
         int curExpectedReplicas = getReplication(block);
         if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
           if (curExpectedReplicas > curReplicas) {
-            //Set to true only if strictly under-replicated
-            status = true;
+            //Log info about one block for this node which needs replication
+            if (!status) {
+              status = true;
+              logBlockReplicationInfo(block, srcNode, num);
+            }
+            underReplicatedBlocks++;
+            if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
+              decommissionOnlyReplicas++;
+            }
+            if (fileINode.isUnderConstruction()) {
+              underReplicatedInOpenFiles++;
+            }
           }
           if (!neededReplications.contains(block) &&
             pendingReplications.getNumReplicas(block) == 0) {
             //
             // These blocks have been reported from the datanode
             // after the startDecommission method has been executed. These
-            // blocks were in flight when the decommission was started.
+            // blocks were in flight when the decommissioning was started.
             //
             neededReplications.add(block,
                                    curReplicas,
@@ -1442,6 +1479,9 @@ public class BlockManager {
         }
       }
     }
+    srcNode.decommissioningStatus.set(underReplicatedBlocks,
+        decommissionOnlyReplicas, 
+        underReplicatedInOpenFiles);
     return status;
   }
 

@@ -165,6 +165,9 @@ class NamenodeJspHelper {
       ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
       fsn.DFSNodesStatus(live, dead);
 
+      ArrayList<DatanodeDescriptor> decommissioning = fsn
+          .getDecommissioningNodes();
+
       sorterField = request.getParameter("sorter/field");
       sorterOrder = request.getParameter("sorter/order");
       if (sorterField == null)
@@ -217,7 +220,14 @@ class NamenodeJspHelper {
           + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
           + colTxt() + ":" + colTxt() + live.size() + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> "
-          + colTxt() + ":" + colTxt() + dead.size() + "</table></div><br>\n");
+          + colTxt() + ":" + colTxt() + dead.size() + rowTxt() + colTxt()
+          + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
+          + "Decommissioning Nodes</a> "
+          + colTxt() + ":" + colTxt() + decommissioning.size() 
+          + rowTxt() + colTxt()
+          + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
+          + fsn.getUnderReplicatedBlocks()
+          + "</table></div><br>\n");
 
       if (live.isEmpty() && dead.isEmpty()) {
         out.print("There are no datanodes in the cluster");
@@ -282,6 +292,44 @@ class NamenodeJspHelper {
       return ret;
     }
 
+    void generateDecommissioningNodeData(JspWriter out, DatanodeDescriptor d,
+        String suffix, boolean alive, int nnHttpPort) throws IOException {
+      String url = "http://" + d.getHostName() + ":" + d.getInfoPort()
+          + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
+          + URLEncoder.encode("/", "UTF-8");
+
+      String name = d.getHostName() + ":" + d.getPort();
+      if (!name.matches("\\d+\\.\\d+.\\d+\\.\\d+.*"))
+        name = name.replaceAll("\\.[^.:]*", "");
+      int idx = (suffix != null && name.endsWith(suffix)) ? name
+          .indexOf(suffix) : -1;
+
+      out.print(rowTxt() + "<td class=\"name\"><a title=\"" + d.getHost() + ":"
+          + d.getPort() + "\" href=\"" + url + "\">"
+          + ((idx > 0) ? name.substring(0, idx) : name) + "</a>"
+          + ((alive) ? "" : "\n"));
+      if (!alive) {
+        return;
+      }
+
+      long decommRequestTime = d.decommissioningStatus.getStartTime();
+      long timestamp = d.getLastUpdate();
+      long currentTime = System.currentTimeMillis();
+      long hoursSinceDecommStarted = (currentTime - decommRequestTime)/3600000;
+      long remainderMinutes = ((currentTime - decommRequestTime)/60000) % 60;
+      out.print("<td class=\"lastcontact\"> "
+          + ((currentTime - timestamp) / 1000)
+          + "<td class=\"underreplicatedblocks\">"
+          + d.decommissioningStatus.getUnderReplicatedBlocks()
+          + "<td class=\"blockswithonlydecommissioningreplicas\">"
+          + d.decommissioningStatus.getDecommissionOnlyReplicas() 
+          + "<td class=\"underrepblocksinfilesunderconstruction\">"
+          + d.decommissioningStatus.getUnderReplicatedInOpenFiles()
+          + "<td class=\"timesincedecommissionrequest\">"
+          + hoursSinceDecommStarted + " hrs " + remainderMinutes + " mins"
+          + "\n");
+    }
+    
     void generateNodeData(JspWriter out, DatanodeDescriptor d,
         String suffix, boolean alive, int nnHttpPort) throws IOException {
       /*
@@ -432,7 +480,7 @@ class NamenodeJspHelper {
             }
           }
           out.print("</table>\n");
-        } else {
+        } else if (whatNodes.equals("DEAD")) {
 
           out.print("<br> <a name=\"DeadNodes\" id=\"title\"> "
               + " Dead Datanodes : " + dead.size() + "</a><br><br>\n");
@@ -446,6 +494,35 @@ class NamenodeJspHelper {
               generateNodeData(out, dead.get(i), port_suffix, false, nnHttpPort);
             }
 
+            out.print("</table>\n");
+          }
+        } else if (whatNodes.equals("DECOMMISSIONING")) {
+          // Decommissioning Nodes
+          ArrayList<DatanodeDescriptor> decommissioning = nn.getNamesystem()
+              .getDecommissioningNodes();
+          out.print("<br> <a name=\"DecommissioningNodes\" id=\"title\"> "
+              + " Decommissioning Datanodes : " + decommissioning.size()
+              + "</a><br><br>\n");
+          if (decommissioning.size() > 0) {
+            out.print("<table border=1 cellspacing=0> <tr class=\"headRow\"> "
+                + "<th " + nodeHeaderStr("name") 
+                + "> Node <th " + nodeHeaderStr("lastcontact")
+                + "> Last <br>Contact <th "
+                + nodeHeaderStr("underreplicatedblocks")
+                + "> Under Replicated Blocks <th "
+                + nodeHeaderStr("blockswithonlydecommissioningreplicas")
+                + "> Blocks With No <br> Live Replicas <th "
+                + nodeHeaderStr("underrepblocksinfilesunderconstruction")
+                + "> Under Replicated Blocks <br> In Files Under Construction" 
+                + " <th " + nodeHeaderStr("timesincedecommissionrequest")
+                + "> Time Since Decommissioning Started"
+                );
+
+            JspHelper.sortNodeList(decommissioning, "name", "ASC");
+            for (int i = 0; i < decommissioning.size(); i++) {
+              generateDecommissioningNodeData(out, decommissioning.get(i),
+                  port_suffix, true, nnHttpPort);
+            }
             out.print("</table>\n");
           }
         }
