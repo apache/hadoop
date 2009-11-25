@@ -19,7 +19,7 @@ HBASE_HOME=`ls -d /usr/local/hbase-*`
 # Hadoop configuration
 ###############################################################################
 
-cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
+cat > $HADOOP_HOME/conf/core-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
@@ -29,9 +29,36 @@ cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 </property>
 <property>
   <name>fs.default.name</name>
-  <value>hdfs://$MASTER_HOST:50001</value>
+  <value>hdfs://$MASTER_HOST:8020</value>
 </property>
 </configuration>
+EOF
+
+cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<property>
+  <name>fs.default.name</name>
+  <value>hdfs://$MASTER_HOST:8020</value>
+</property>
+</configuration>
+EOF
+
+cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<property>
+  <name>mapred.job.tracker</name>
+  <value>$MASTER_HOST:8021</value>
+</property>
+</configuration>
+EOF
+
+# Update classpath to include HBase jars and config
+cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
+HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.2.1.jar:$HBASE_HOME/conf"
 EOF
 
 # Configure Hadoop for Ganglia
@@ -57,20 +84,8 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
 <property>
-  <name>fs.default.name</name>
-  <value>hdfs://$MASTER_HOST:50001</value>
-</property>
-<property>
-  <name>dfs.replication</name>
-  <value>3</value>
-</property>
-<property>
-  <name>dfs.client.block.write.retries</name>
-  <value>100</value>
-</property>
-<property>
   <name>hbase.rootdir</name>
-  <value>hdfs://$MASTER_HOST:50001/hbase</value>
+  <value>hdfs://$MASTER_HOST:8020/hbase</value>
 </property>
 <property>
   <name>hbase.cluster.distributed</name>
@@ -79,10 +94,6 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <property>
   <name>hbase.zookeeper.quorum</name>
   <value>$ZOOKEEPER_QUORUM</value>
-</property>
-<property>
-  <name>zookeeper.session.timeout</name>
-  <value>60000</value>
 </property>
 <property>
   <name>hbase.regionserver.handler.count</name>
@@ -96,7 +107,29 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
   <name>hbase.hstore.blockingStoreFiles</name>
   <value>15</value>
 </property>
+<property>
+  <name>dfs.replication</name>
+  <value>3</value>
+</property>
+<property>
+  <name>dfs.client.block.write.retries</name>
+  <value>100</value>
+</property>
+<property>
+  <name>zookeeper.session.timeout</name>
+  <value>60000</value>
+</property>
+<property>
+  <name>hbase.tmp.dir</name>
+  <value>/mnt/hbase</value>
+</property>
 </configuration>
+EOF
+
+# Override JVM options
+cat >> $HBASE_HOME/conf/hbase-env.sh <<EOF
+export HBASE_MASTER_OPTS="-XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
+export HBASE_REGIONSERVER_OPTS="-XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
 EOF
 
 # Configure HBase for Ganglia
@@ -123,7 +156,7 @@ echo "root hard nofile 32768" >> /etc/security/limits.conf
 
 # up epoll limits
 # ok if this fails, only valid for kernels 2.6.27+
-sysctl -w fs.epoll.max_user_instances=32768
+sysctl -w fs.epoll.max_user_instances=32768 > /dev/null 2>&1
 
 mkdir -p /mnt/hadoop/logs
 mkdir -p /mnt/hbase/logs
@@ -155,7 +188,9 @@ if [ "$IS_MASTER" = "true" ]; then
 
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
 
-   sleep 10
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
+
+  sleep 10
 
   "$HBASE_HOME"/bin/hbase-daemon.sh start master
 
@@ -173,6 +208,8 @@ else
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
 
   "$HBASE_HOME"/bin/hbase-daemon.sh start regionserver
+
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
 
 fi
 

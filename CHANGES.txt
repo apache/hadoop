@@ -205,6 +205,7 @@ Release 0.21.0 - Unreleased
    HBASE-1985  change HTable.delete(ArrayList) to HTable.delete(List)
    HBASE-1958  Remove "# TODO: PUT BACK !!! "${HADOOP_HOME}"/bin/hadoop
                dfsadmin -safemode wait"
+   HBASE-2009  [EC2] Support mapreduce
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
