@@ -72,6 +72,9 @@ Release 0.20.2 - Unreleased
     HADOOP-6269. Fix threading issue with defaultResource in Configuration.
     (Sreekanth Ramakrishnan via cdouglas)
 
+    MAPREDUCE-1182. Fix overflow in reduce causing allocations to exceed the
+    configured threshold. (cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
