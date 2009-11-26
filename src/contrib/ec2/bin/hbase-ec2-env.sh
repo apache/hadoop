@@ -102,16 +102,12 @@ fi
 
 if [ "$MASTER_INSTANCE_TYPE" = "m1.small" -o "$MASTER_INSTANCE_TYPE" = "c1.medium" ]; then
   MASTER_ARCH='i386'
-  MASTER_AMI_IMAGE="ami-c644a7af"
 else
   MASTER_ARCH='x86_64'
-  MASTER_AMI_IMAGE="ami-f244a79b"
 fi
 
 if [ "$ZOO_INSTANCE_TYPE" = "m1.small" -o "$ZOO_INSTANCE_TYPE" = "c1.medium" ]; then
   ZOO_ARCH='i386'
-  ZOO_AMI_IMAGE="ami-c644a7af"
 else
   ZOO_ARCH='x86_64'
-  ZOO_AMI_IMAGE="ami-f244a79b"
 fi
