@@ -41,7 +41,7 @@ if [ ! -f $MASTER_IP_PATH ]; then
   exit 1
 fi
 
-[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep $HBASE_VERSION | grep $SLAVE_ARCH |grep available | awk '{print $2}'`
+[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep $HBASE_VERSION-$SLAVE_ARCH |grep available | awk '{print $2}'`
 
 MASTER_HOST=`cat $MASTER_PRIVATE_IP_PATH`
 MASTER_ZONE=`cat $MASTER_ZONE_PATH`

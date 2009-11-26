@@ -32,7 +32,7 @@ arch=$SLAVE_ARCH
 echo "INSTANCE_TYPE is $type"
 echo "ARCH is $arch"
 
-AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION | grep $arch | grep available | awk '{print $2}'`
+AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION-$arch | grep available | awk '{print $2}'`
 
 [ ! -z $AMI_IMAGE ] && echo "AMI already registered, use: ec2-deregister $AMI_IMAGE" && exit 1
 
