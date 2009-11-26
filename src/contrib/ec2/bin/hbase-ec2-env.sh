@@ -89,7 +89,7 @@ ZOOKEEPER_QUORUM_PATH=~/.hbase-quorum-$CLUSTER_ZOOKEEPER
 #
 
 # The version number of the installed JDK.
-JAVA_VERSION=1.6.0_16
+JAVA_VERSION=1.6.0_17
 
 # SUPPORTED_ARCHITECTURES = ['i386', 'x86_64']
 if [ "$SLAVE_INSTANCE_TYPE" = "m1.small" -o "$SLAVE_INSTANCE_TYPE" = "c1.medium" ]; then
