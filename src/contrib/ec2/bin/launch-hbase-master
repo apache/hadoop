@@ -29,15 +29,15 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
-type=$MASTER_INSTANCE_TYPE
-[ -z "$type" ] && type=$SLAVE_INSTANCE_TYPE
-arch=$MASTER_ARCH
-[ -z "$arch" ] && arch=$SLAVE_ARCH
-
 if [ -z $AWS_ACCOUNT_ID ]; then
   echo "Please set AWS_ACCOUNT_ID in $bin/hbase-ec2-env.sh."
   exit 1
 fi
+
+type=$MASTER_INSTANCE_TYPE
+[ -z "$type" ] && type=$SLAVE_INSTANCE_TYPE
+arch=$MASTER_ARCH
+[ -z "$arch" ] && arch=$SLAVE_ARCH
 
 echo "Testing for existing master in group: $CLUSTER"
 MASTER_EC2_HOST=`ec2-describe-instances $TOOL_OPTS | awk '"RESERVATION" == $1 && "'$CLUSTER_MASTER'" == $4, "RESERVATION" == $1 && "'$CLUSTER_MASTER'" != $4'`
