@@ -386,6 +386,9 @@ Release 0.21.0 - Unreleased
     HDFS-764. Places the Block Access token implementation in hdfs project.
     (Kan Zhang via ddas)
 
+    HDFS-787. Upgrade some libraries to be consistent with common and 
+    mapreduce. (omalley)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
