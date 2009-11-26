@@ -613,6 +613,9 @@ Trunk (unreleased changes)
     HADOOP-6367. Removes Access Token implementation from common.
     (Kan Zhang via ddas)
 
+    HADOOP-6395. Upgrade some libraries to be consistent across common, hdfs,
+    and mapreduce. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
