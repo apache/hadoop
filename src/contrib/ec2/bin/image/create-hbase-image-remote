@@ -97,8 +97,8 @@ echo '    StrictHostKeyChecking no' >> /etc/ssh/ssh_config
 echo "Installing LZO codec support for HBase"
 cd /usr/local/hbase-${HBASE_VERSION}
 wget -nv http://iridiant.s3.amazonaws.com/hbase/lzo-linux-${HADOOP_VERSION}.tar.gz
-tar xzf /var/tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
-rm /var/tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
+tar xzf lzo-linux-${HADOOP_VERSION}.tar.gz
+rm lzo-linux-${HADOOP_VERSION}.tar.gz
 
 # Bundle and upload image
 cd ~root
