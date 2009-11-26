@@ -19,8 +19,12 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -171,7 +175,61 @@ public class ZooKeeperWrapper implements HConstants {
     for (HServerAddress address : scanRSDirectory()) {
       sb.append("\n    - ").append(address);
     }
+    sb.append("\n  Quorum Server Statistics:");
+    String[] servers = quorumServers.split(",");
+    for (String server : servers) {
+      sb.append("\n    - ").append(server);
+      try {
+        String[] stat = getServerStats(server);
+        for (String s : stat) {
+          sb.append("\n        ").append(s);
+        }
+      } catch (Exception e) {
+        sb.append("\n        ERROR: ").append(e.getMessage());
+      }
+    }
     return sb.toString();
+  }
+  
+  /**
+   * Gets the statistics from the given server. Uses a 1 minute timeout.
+   * 
+   * @param server  The server to get the statistics from.
+   * @return The array of response strings.
+   * @throws IOException When the socket communication fails.
+   */
+  public String[] getServerStats(String server) 
+  throws IOException {
+    return getServerStats(server, 1 * 60 * 1000);
+  }
+  
+  /**
+   * Gets the statistics from the given server.
+   * 
+   * @param server  The server to get the statistics from.
+   * @param timeout  The socket timeout to use.
+   * @return The array of response strings.
+   * @throws IOException When the socket communication fails.
+   */
+  public String[] getServerStats(String server, int timeout) 
+  throws IOException {
+    String[] sp = server.split(":");
+    Socket socket = new Socket(sp[0], 
+      sp.length > 1 ? Integer.parseInt(sp[1]) : 2181);
+    socket.setSoTimeout(timeout);
+    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+    BufferedReader in = new BufferedReader(new InputStreamReader(
+      socket.getInputStream()));
+    out.println("stat");
+    out.flush();
+    ArrayList<String> res = new ArrayList<String>();
+    while (true) {
+      String line = in.readLine();
+      if (line != null) res.add(line);
+      else break;
+    }
+    socket.close();
+    return res.toArray(new String[res.size()]);
   }
 
   private boolean exists(String znode) {
