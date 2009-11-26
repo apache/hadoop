@@ -36,9 +36,9 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
 type=$ZOO_INSTANCE_TYPE
-[ -z "$type" ] && type=$INSTANCE_TYPE
+[ -z "$type" ] && type=$SLAVE_INSTANCE_TYPE
 arch=$ZOO_ARCH
-[ -z "$arch" ] && arch=$ARCH
+[ -z "$arch" ] && arch=$SLAVE_ARCH
 
 # Finding HBase image
 [ -z "$ZOO_AMI_IMAGE" ] && ZOO_AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION | grep $arch |grep available | awk '{print $2}'`

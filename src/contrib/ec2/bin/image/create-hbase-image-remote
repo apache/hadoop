@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Create a Hbase AMI. Runs on the EC2 instance.
 
 # Import variables
@@ -23,8 +22,13 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
-echo "Remote: INSTANCE_TYPE is $INSTANCE_TYPE."
-echo "Remote: ARCH is $ARCH."
+type=$INSTANCE_TYPE
+[ -z "$type" ] && type=$SLAVE_INSTANCE_TYPE
+arch=$ARCH
+[ -z "$arch" ] && arch=$SLAVE_ARCH
+
+echo "Remote: INSTANCE_TYPE is $type"
+echo "Remote: ARCH is $arch"
 
 # Remove environment script since it contains sensitive information
 rm -f "$bin"/hbase-ec2-env.sh
@@ -32,14 +36,14 @@ rm -f "$bin"/hbase-ec2-env.sh
 # Install Java
 echo "Downloading and installing java binary."
 cd /usr/local
-wget -nv -O java.bin $JAVA_BINARY_URL
+wget -nv -O java.bin http://iridiant.s3.amazonaws.com/jdk/jdk-${JAVA_VERSION}-linux-${arch}.bin
 sh java.bin
 rm -f java.bin
 
 # Install tools
 echo "Installing rpms."
 yum -y update
-yum -y install rsync lynx screen ganglia-gmetad ganglia-gmond ganglia-web httpd php
+yum -y install rsync lynx screen ganglia-gmetad ganglia-gmond ganglia-web httpd php lzo-devel
 yum -y clean all
 
 # Install Hadoop
@@ -89,13 +93,20 @@ rm -f /root/.ssh/authorized_keys
 # Ensure logging in to new hosts is seamless.
 echo '    StrictHostKeyChecking no' >> /etc/ssh/ssh_config
 
+# Install LZO for HBase 
+echo "Installing LZO codec support for HBase"
+cd /usr/local/hbase-${HBASE_VERSION}
+wget -nv http://iridiant.s3.amazonaws.com/hbase/lzo-linux-${HADOOP_VERSION}.tar.gz
+tar xzf /var/tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
+rm /var/tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
+
 # Bundle and upload image
 cd ~root
 # Don't need to delete .bash_history since it isn't written until exit.
 df -h
-ec2-bundle-vol -d /mnt -k /mnt/pk*.pem -c /mnt/cert*.pem -u $AWS_ACCOUNT_ID -s 3072 -p hbase-$HBASE_VERSION-$ARCH -r $ARCH
+ec2-bundle-vol -d /mnt -k /mnt/pk*.pem -c /mnt/cert*.pem -u $AWS_ACCOUNT_ID -s 3072 -p hbase-$HBASE_VERSION-$arch -r $arch
 
-ec2-upload-bundle -b $S3_BUCKET -m /mnt/hbase-$HBASE_VERSION-$ARCH.manifest.xml -a $AWS_ACCESS_KEY_ID -s $AWS_SECRET_ACCESS_KEY
+ec2-upload-bundle -b $S3_BUCKET -m /mnt/hbase-$HBASE_VERSION-$arch.manifest.xml -a $AWS_ACCESS_KEY_ID -s $AWS_SECRET_ACCESS_KEY
 
 # End
 echo Done

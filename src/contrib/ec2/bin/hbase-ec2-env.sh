@@ -45,10 +45,10 @@ SSH_OPTS=`echo -q -i "$PRIVATE_KEY_PATH" -o StrictHostKeyChecking=no -o ServerAl
 TOOL_OPTS=`echo -K "$EC2_PRIVATE_KEY" -C "$EC2_CERT"`
 
 # The version of HBase to use.
-HBASE_VERSION=0.20.1
+HBASE_VERSION=0.20.2
 
 # The version of Hadoop to use.
-HADOOP_VERSION=$HBASE_VERSION
+HADOOP_VERSION=0.20.1
 
 # The Amazon S3 bucket where the HBase AMI is stored.
 # The default value is for public images, so can be left if you are using running a public image.
@@ -64,7 +64,10 @@ ENABLE_WEB_PORTS=false
 USER_DATA_FILE=hbase-ec2-init-remote.sh
 
 # Use only c1.xlarge unless you know what you are doing
-INSTANCE_TYPE=${INSTANCE_TYPE:-c1.xlarge}
+MASTER_INSTANCE_TYPE=${MASTER_INSTANCE_TYPE:-c1.xlarge}
+
+# Use only c1.xlarge unless you know what you are doing
+SLAVE_INSTANCE_TYPE=${SLAVE_INSTANCE_TYPE:-c1.xlarge}
 
 # Use only c1.medium unless you know what you are doing
 ZOO_INSTANCE_TYPE=${ZOO_INSTANCE_TYPE:-c1.medium}
@@ -89,17 +92,20 @@ ZOOKEEPER_QUORUM_PATH=~/.hbase-quorum-$CLUSTER_ZOOKEEPER
 JAVA_VERSION=1.6.0_16
 
 # SUPPORTED_ARCHITECTURES = ['i386', 'x86_64']
-# The download URL for the Sun JDK. Visit http://java.sun.com/javase/downloads/index.jsp and get the URL for the "Linux self-extracting file".
-if [ "$INSTANCE_TYPE" = "m1.small" -o "$INSTANCE_TYPE" = "c1.medium" ]; then
-  ARCH='i386'
+if [ "$SLAVE_INSTANCE_TYPE" = "m1.small" -o "$SLAVE_INSTANCE_TYPE" = "c1.medium" ]; then
+  SLAVE_ARCH='i386'
   BASE_AMI_IMAGE="ami-48aa4921"  # ec2-public-images/fedora-8-i386-base-v1.10.manifest.xml
-  AMI_IMAGE="ami-c644a7af"
-  JAVA_BINARY_URL='http://iridiant.s3.amazonaws.com/jdk/jdk-6u16-linux-i586.bin'
 else
-  ARCH='x86_64'
+  SLAVE_ARCH='x86_64'
   BASE_AMI_IMAGE="ami-f61dfd9f"  # ec2-public-images/fedora-8-x86_64-base-v1.10.manifest.xml
-  AMI_IMAGE="ami-f244a79b"
-  JAVA_BINARY_URL='http://iridiant.s3.amazonaws.com/jdk/jdk-6u16-linux-x64.bin'
+fi
+
+if [ "$MASTER_INSTANCE_TYPE" = "m1.small" -o "$MASTER_INSTANCE_TYPE" = "c1.medium" ]; then
+  MASTER_ARCH='i386'
+  MASTER_AMI_IMAGE="ami-c644a7af"
+else
+  MASTER_ARCH='x86_64'
+  MASTER_AMI_IMAGE="ami-f244a79b"
 fi
 
 if [ "$ZOO_INSTANCE_TYPE" = "m1.small" -o "$ZOO_INSTANCE_TYPE" = "c1.medium" ]; then
