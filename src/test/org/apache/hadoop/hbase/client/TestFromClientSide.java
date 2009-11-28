@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -411,10 +412,12 @@ public class TestFromClientSide {
     ht.put(put);
     try {
       conf.setInt("hbase.client.keyvalue.maxsize", 2 * 1024 * 1024);
+      TABLE = Bytes.toBytes("testMaxKeyValueSize2");
+      ht = TEST_UTIL.createTable(TABLE, FAMILY);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.add(FAMILY, QUALIFIER, value);
       ht.put(put);
-      throw new IOException("Inserting a too large KeyValue worked, should throw exception");
+      fail("Inserting a too large KeyValue worked, should throw exception");
     } catch(Exception e) {}
     conf.set("hbase.client.keyvalue.maxsize", oldMaxSize);
   }
@@ -876,13 +879,13 @@ public class TestFromClientSide {
     // Null table name (should NOT work)
     try {
       TEST_UTIL.createTable(null, FAMILY);
-      throw new IOException("Creating a table with null name passed, should have failed");
+      fail("Creating a table with null name passed, should have failed");
     } catch(Exception e) {}
 
     // Null family (should NOT work)
     try {
       TEST_UTIL.createTable(TABLE, (byte[])null);
-      throw new IOException("Creating a table with a null family passed, should fail");
+      fail("Creating a table with a null family passed, should fail");
     } catch(Exception e) {}
     
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -892,7 +895,7 @@ public class TestFromClientSide {
       Put put = new Put((byte[])null);
       put.add(FAMILY, QUALIFIER, VALUE);
       ht.put(put);
-      throw new IOException("Inserting a null row worked, should throw exception");
+      fail("Inserting a null row worked, should throw exception");
     } catch(Exception e) {}
     
     // Null qualifier (should work)
