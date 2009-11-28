@@ -209,6 +209,8 @@ Release 0.21.0 - Unreleased
    HBASE-2012  [EC2] LZO support
    HBASE-2011  Add zktop like output to HBase's master UI (Lars George via
                Andrew Purtell)
+   HBASE-1995  Add configurable max value size check (Lars George via Andrew
+               Purtell)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -62,6 +63,7 @@ public class HTable implements HTableInterface {
   private boolean autoFlush;
   private long currentWriteBufferSize;
   protected int scannerCaching;
+  private int maxKeyValueSize;
 
   /**
    * Creates an object to access a HBase table
@@ -121,6 +123,7 @@ public class HTable implements HTableInterface {
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 1);
+    this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
   }
 
   /**
@@ -602,8 +605,17 @@ public class HTable implements HTableInterface {
    * @throws IllegalArgumentException
    */
   private void validatePut(final Put put) throws IllegalArgumentException{
-    if(put.isEmpty()) {
+    if (put.isEmpty()) {
       throw new IllegalArgumentException("No columns to insert");
+    }
+    if (maxKeyValueSize > 0) {
+      for (List<KeyValue> list : put.getFamilyMap().values()) {
+        for (KeyValue kv : list) {
+          if (kv.getLength() > maxKeyValueSize) {
+            throw new IllegalArgumentException("KeyValue size too large");
+          }
+        }
+      }
     }
   }
 

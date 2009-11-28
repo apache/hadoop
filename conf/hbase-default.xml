@@ -137,6 +137,17 @@
     </description>
   </property>
   <property>
+    <name>hbase.client.keyvalue.maxsize</name>
+    <value>-1</value>
+    <description>Specifies the combined maximum allowed size of a KeyValue
+    instance. This is to set an upper boundary for a single entry saved in a
+    storage file. Since they cannot be split it helps avoiding that a region
+    cannot be split any further because the data is too large. It seems wise
+    to set this to a fraction of the maximum region size. Setting it to zero 
+    or less disables the check.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.lease.period</name>
     <value>60000</value>
     <description>HRegion server lease period in milliseconds. Default is

@@ -32,6 +32,7 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,8 +40,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -398,6 +397,26 @@ public class TestFromClientSide {
     assertTrue("Expected null result", result == null);
     scanner.close();
     System.out.println("Done.");
+  }
+
+  @Test
+  public void testMaxKeyValueSize() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testMaxKeyValueSize");
+    HBaseConfiguration conf = TEST_UTIL.getConfiguration();
+    String oldMaxSize = conf.get("hbase.client.keyvalue.maxsize");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    byte[] value = new byte[4 * 1024 * 1024];
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, value);
+    ht.put(put);
+    try {
+      conf.setInt("hbase.client.keyvalue.maxsize", 2 * 1024 * 1024);
+      put = new Put(ROW);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      throw new IOException("Inserting a too large KeyValue worked, should throw exception");
+    } catch(Exception e) {}
+    conf.set("hbase.client.keyvalue.maxsize", oldMaxSize);
   }
 
   @Test
