@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -91,18 +92,24 @@ public class CodecPool {
    *
    * @param codec the <code>CompressionCodec</code> for which to get the 
    *              <code>Compressor</code>
+   * @param conf the <code>Configuration</code> object which contains confs for creating or reinit the compressor
    * @return <code>Compressor</code> for the given 
    *         <code>CompressionCodec</code> from the pool or a new one
    */
-  public static Compressor getCompressor(CompressionCodec codec) {
+  public static Compressor getCompressor(CompressionCodec codec, Configuration conf) {
     Compressor compressor = borrow(compressorPool, codec.getCompressorType());
     if (compressor == null) {
       compressor = codec.createCompressor();
       LOG.info("Got brand-new compressor");
     } else {
+      compressor.reinit(conf);
       LOG.debug("Got recycled compressor");
     }
     return compressor;
+  }
+  
+  public static Compressor getCompressor(CompressionCodec codec) {
+    return getCompressor(codec, null);
   }
   
   /**

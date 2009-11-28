@@ -455,6 +455,7 @@ public class NativeS3FileSystem extends FileSystem {
     } while (priorLastKey != null);
     
     if (status.isEmpty() &&
+        key.length() > 0 &&
         store.retrieveMetadata(key + FOLDER_SUFFIX) == null) {
       throw new FileNotFoundException("File " + f + " does not exist.");
     }

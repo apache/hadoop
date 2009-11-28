@@ -34,40 +34,16 @@ See http://forrest.apache.org/docs/linking.html for more info.
   
    <docs label="Getting Started"> 
 		<overview   				label="Overview" 					href="index.html" />
-		<quickstart 				label="Quick Start"        		href="quickstart.html" />
+		<quickstart 				label="Single Node Setup"      href="single_node_setup.html" />
 		<setup     					label="Cluster Setup"      		href="cluster_setup.html" />
-		<mapred    				label="Map/Reduce Tutorial" 	href="mapred_tutorial.html" />
   </docs>	
 		
- <docs label="Programming Guides">
-		<commands 				label="Commands"     					href="commands_manual.html" />
-		<distcp    					label="DistCp"       						href="distcp.html" />
-		<native_lib    				label="Native Libraries" 					href="native_libraries.html" />
-		<streaming 				label="Streaming"          				href="streaming.html" />
-		<fair_scheduler 			label="Fair Scheduler" 					href="fair_scheduler.html"/>
-		<cap_scheduler 		label="Capacity Scheduler" 			href="capacity_scheduler.html"/>
+ <docs label="Guides">
+		<fsshell				        label="File System Shell"               href="file_system_shell.html" />
 		<SLA					 	label="Service Level Authorization" 	href="service_level_auth.html"/>
-		<vaidya    					label="Vaidya" 								href="vaidya.html"/>
-		<archives  				label="Archives"     						href="hadoop_archives.html"/>
+		<native_lib    				label="Native Libraries" 					href="native_libraries.html" />
    </docs>
-   
-   <docs label="HDFS">
-		<hdfs_user      				label="User Guide"    							href="hdfs_user_guide.html" />
-		<hdfs_arch     				label="Architecture"  								href="hdfs_design.html" />	
-		<hdfs_fs       	 				label="File System Shell Guide"     		href="hdfs_shell.html" />
-		<hdfs_perm      				label="Permissions Guide"    					href="hdfs_permissions_guide.html" />
-		<hdfs_quotas     			label="Quotas Guide" 							href="hdfs_quota_admin_guide.html" />
-		<hdfs_SLG        			label="Synthetic Load Generator Guide"  href="SLG_user_guide.html" />
-		<hdfs_imageviewer						label="Offline Image Viewer Guide"	href="hdfs_imageviewer.html" />
-		<hdfs_libhdfs   				label="C API libhdfs"         						href="libhdfs.html" /> 
-   </docs> 
-   
-   <docs label="HOD">
-		<hod_user 	label="User Guide" 	href="hod_user_guide.html"/>
-		<hod_admin 	label="Admin Guide" 	href="hod_admin_guide.html"/>
-		<hod_config 	label="Config Guide" 	href="hod_config_guide.html"/> 
-   </docs> 
-   
+
    <docs label="Miscellaneous"> 
 		<api       	label="API Docs"           href="ext:api/index" />
 		<jdiff     	label="API Changes"      href="ext:jdiff/changes" />
@@ -78,24 +54,26 @@ See http://forrest.apache.org/docs/linking.html for more info.
    </docs> 
    
   <external-refs>
-    <site      href="http://hadoop.apache.org/core/"/>
-    <lists     href="http://hadoop.apache.org/core/mailing_lists.html"/>
-    <archive   href="http://mail-archives.apache.org/mod_mbox/hadoop-core-commits/"/>
-    <releases  href="http://hadoop.apache.org/core/releases.html">
+    <site      href="http://hadoop.apache.org/common/"/>
+    <lists     href="http://hadoop.apache.org/common/mailing_lists.html"/>
+    <archive   href="http://mail-archives.apache.org/mod_mbox/hadoop-common-commits/"/>
+    <releases  href="http://hadoop.apache.org/common/releases.html">
       <download href="#Download" />
     </releases>
-    <jira      href="http://hadoop.apache.org/core/issue_tracking.html"/>
-    <wiki      href="http://wiki.apache.org/hadoop/" />
-    <faq       href="http://wiki.apache.org/hadoop/FAQ" />
-    <hadoop-default href="http://hadoop.apache.org/core/docs/current/hadoop-default.html" />
-    <core-default href="http://hadoop.apache.org/core/docs/current/core-default.html" />
-    <hdfs-default href="http://hadoop.apache.org/core/docs/current/hdfs-default.html" />
-    <mapred-default href="http://hadoop.apache.org/core/docs/current/mapred-default.html" />
+    <jira  href="http://hadoop.apache.org/common/issue_tracking.html"/>
+    <wiki  href="http://wiki.apache.org/hadoop/Common" />
+    <faq  href="http://wiki.apache.org/hadoop/Common/FAQ" />
+    
+    <common-default href="http://hadoop.apache.org/common/docs/current/common-default.html" />
+    <hdfs-default href="http://hadoop.apache.org/hdfs/docs/current/hdfs-default.html" />
+    <mapred-default href="http://hadoop.apache.org/mapreduce/docs/current/mapred-default.html" />
+    
     <zlib      href="http://www.zlib.net/" />
     <gzip      href="http://www.gzip.org/" />
     <bzip      href="http://www.bzip.org/" />
     <cygwin    href="http://www.cygwin.com/" />
     <osx       href="http://www.apple.com/macosx" />
+    
     <hod href="">
       <cluster-resources href="http://www.clusterresources.com" />
       <torque href="http://www.clusterresources.com/pages/products/torque-resource-manager.php" />
@@ -109,6 +87,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
       <python href="http://www.python.org" />
       <twisted-python href="http://twistedmatrix.com/trac/" />
     </hod>
+    
     <relnotes href="releasenotes.html" />
     <changes href="changes.html" />
     <jdiff href="jdiff/">

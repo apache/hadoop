@@ -22,8 +22,11 @@ import java.io.*;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.zlib.*;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 
 /**
  * This class creates gzip compressors/decompressors. 
@@ -103,8 +106,9 @@ public class GzipCodec extends DefaultCodec {
     
     /**
      * Allow subclasses to directly set the inflater stream.
+     * @throws IOException
      */
-    protected GzipInputStream(DecompressorStream in) {
+    protected GzipInputStream(DecompressorStream in) throws IOException {
       super(in);
     }
 
@@ -154,7 +158,7 @@ public class GzipCodec extends DefaultCodec {
 
   public Compressor createCompressor() {
     return (ZlibFactory.isNativeZlibLoaded(conf))
-      ? new GzipZlibCompressor()
+      ? new GzipZlibCompressor(conf)
       : null;
   }
 
@@ -204,6 +208,13 @@ public class GzipCodec extends DefaultCodec {
       super(ZlibCompressor.CompressionLevel.DEFAULT_COMPRESSION,
           ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
           ZlibCompressor.CompressionHeader.GZIP_FORMAT, 64*1024);
+    }
+    
+    public GzipZlibCompressor(Configuration conf) {
+      super(ZlibFactory.getCompressionLevel(conf),
+           ZlibFactory.getCompressionStrategy(conf),
+           ZlibCompressor.CompressionHeader.GZIP_FORMAT,
+           64 * 1024);
     }
   }
 

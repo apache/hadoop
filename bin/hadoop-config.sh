@@ -183,7 +183,7 @@ fi
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
 if [ -d "${HADOOP_CORE_HOME}/build/native" -o -d "${HADOOP_CORE_HOME}/lib/native" ]; then
-  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
+  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
   
   if [ -d "$HADOOP_CORE_HOME/build/native" ]; then
     JAVA_LIBRARY_PATH=${HADOOP_CORE_HOME}/build/native/${JAVA_PLATFORM}/lib

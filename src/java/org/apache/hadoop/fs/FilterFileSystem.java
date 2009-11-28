@@ -167,7 +167,11 @@ public class FilterFileSystem extends FileSystem {
   public Path getWorkingDirectory() {
     return fs.getWorkingDirectory();
   }
-
+  
+  protected Path getInitialWorkingDirectory() {
+    return fs.getInitialWorkingDirectory();
+  }
+  
   /** {@inheritDoc} */
   @Override
   public FsStatus getStatus(Path p) throws IOException {
@@ -275,5 +279,20 @@ public class FilterFileSystem extends FileSystem {
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
     fs.setPermission(p, permission);
+  }
+
+  @Override
+  protected FSDataOutputStream primitiveCreate(Path f,
+      FsPermission absolutePermission, EnumSet<CreateFlag> flag,
+      int bufferSize, short replication, long blockSize, Progressable progress, int bytesPerChecksum)
+      throws IOException {
+    return fs.primitiveCreate(f, absolutePermission, flag,
+        bufferSize, replication, blockSize, progress, bytesPerChecksum);
+  }
+
+  @Override
+  protected boolean primitiveMkdir(Path f, FsPermission abdolutePermission)
+      throws IOException {
+    return fs.primitiveMkdir(f, abdolutePermission);
   }
 }

@@ -218,7 +218,7 @@ public abstract class Service extends Configured implements Closeable {
    * Test for a service being in the {@link ServiceState#LIVE} or {@link
    * ServiceState#STARTED}
    *
-   * @return true if the service is in one of the two states.
+   * @return true if the service is in the startup or live states.
    */
   public final boolean isRunning() {
     ServiceState currentState = getServiceState();
@@ -594,7 +594,7 @@ public abstract class Service extends Configured implements Closeable {
   }
 
   /**
-   * Terminate a service that is not null
+   * Terminate a service that is not null, by calling its {@link #closeQuietly()} method
    *
    * @param service a service to terminate
    */
@@ -801,6 +801,10 @@ public abstract class Service extends Configured implements Closeable {
     CLOSED
   }
 
+    /**
+     * This is the interface that state change listeners must implement; when registered they will be notified
+     * after a service has changed state (in the same thread as the service itself).
+     */
   public interface StateChangeListener {
     
     /**

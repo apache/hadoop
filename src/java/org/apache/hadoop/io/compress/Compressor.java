@@ -20,6 +20,8 @@ package org.apache.hadoop.io.compress;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+
 /**
  * Specification of a stream-based 'compressor' which can be  
  * plugged into a {@link CompressionOutputStream} to compress data.
@@ -102,5 +104,13 @@ public interface Compressor {
   /**
    * Closes the compressor and discards any unprocessed input.
    */
-  public void end(); 
+  public void end();
+
+  /**
+   * Prepare the compressor to be used in a new stream with settings defined in
+   * the given Configuration
+   * 
+   * @param conf Configuration from which new setting are fetched
+   */
+  public void reinit(Configuration conf);
 }

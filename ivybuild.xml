@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="hadoop-core" default="published"
+<project name="hadoop-common-ivy" default="published"
   xmlns:ivy="antlib:org.apache.ivy.ant">
 <!--
    Licensed to the Apache Software Foundation (ASF) under one or more
@@ -51,7 +51,7 @@
       value="[conf]/[artifact]-[revision].[ext]"/>
     <!--this is how artifacts that get built are named-->
     <property name="ivy.publish.pattern"
-      value="hadoop--core-[revision].[ext]"/>
+      value="hadoop-common-[revision].[ext]"/>
     <property name="hadoop.jar"
       location="${build.dir}/hadoop-${module}-${hadoop.version}.jar" />
 

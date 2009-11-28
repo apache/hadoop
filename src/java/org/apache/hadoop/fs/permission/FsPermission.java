@@ -17,17 +17,24 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
 /**
  * A class for file/directory permissions.
  */
 public class FsPermission implements Writable {
+  private static final Log LOG = LogFactory.getLog(FsPermission.class);
+  
   static final WritableFactory FACTORY = new WritableFactory() {
     public Writable newInstance() { return new FsPermission(); }
   };
@@ -175,16 +182,29 @@ public class FsPermission implements Writable {
         otheraction.and(umask.otheraction.not()));
   }
 
-  /** umask property label */
-  public static final String UMASK_LABEL = "dfs.umask";
-  public static final int DEFAULT_UMASK = 0022;
+  /** umask property label Deprecated key may be removed in version .23 */
+  public static final String DEPRECATED_UMASK_LABEL = "dfs.umask"; 
+  public static final String UMASK_LABEL = 
+                  CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY;
+  public static final int DEFAULT_UMASK = 
+                  CommonConfigurationKeys.FS_PERMISSIONS_UMASK_DEFAULT;
 
   /** Get the user file creation mask (umask) */
   public static FsPermission getUMask(Configuration conf) {
     int umask = DEFAULT_UMASK;
-    if (conf != null) {
-      umask = conf.getInt(UMASK_LABEL, DEFAULT_UMASK);
+    
+    // Attempt to pull value from configuration, trying new key first and then
+    // deprecated key, along with a warning, if not present
+    if(conf != null) {
+      String confUmask = conf.get(UMASK_LABEL);
+      if(confUmask != null) { // UMASK_LABEL is set
+        if(conf.deprecatedKeyWasSet(DEPRECATED_UMASK_LABEL)) 
+          umask = Integer.parseInt(confUmask); // Evaluate as decimal value
+        else
+          umask = new UmaskParser(confUmask).getUMask();
+      } 
     }
+    
     return new FsPermission((short)umask);
   }
 

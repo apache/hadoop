@@ -19,6 +19,7 @@
 package org.apache.hadoop.io.serializer.avro;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.avro.Schema;
@@ -27,6 +28,7 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.reflect.ReflectDatumReader;
 import org.apache.avro.reflect.ReflectDatumWriter;
+import org.apache.avro.specific.SpecificRecord;
 
 /**
  * Serialization for Avro Reflect classes. For a class to be accepted by this 
@@ -47,9 +49,17 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
 
   private Set<String> packages; 
 
-  public synchronized boolean accept(Class<?> c) {
+  @Override
+  public synchronized boolean accept(Map<String, String> metadata) {
     if (packages == null) {
       getPackages();
+    }
+    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
+      return true;
+    }
+    Class<?> c = getClassFromMetadata(metadata);
+    if (c == null) {
+      return false;
     }
     return AvroReflectSerializable.class.isAssignableFrom(c) || 
       packages.contains(c.getPackage().getName());
@@ -65,24 +75,22 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
     }
   }
 
-  protected DatumReader getReader(Class<Object> clazz) {
+  @Override
+  protected DatumReader getReader(Map<String, String> metadata) {
     try {
-      String prefix =  
-        ((clazz.getEnclosingClass() == null 
-            || "null".equals(clazz.getEnclosingClass().getName())) ? 
-              clazz.getPackage().getName() + "." 
-              : (clazz.getEnclosingClass().getName() + "$"));
-      return new ReflectDatumReader(ReflectData.getSchema(clazz), prefix);
+      return new ReflectDatumReader(getClassFromMetadata(metadata));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
-  protected Schema getSchema(Object t) {
-    return ReflectData.getSchema(t.getClass());
+  @Override
+  protected Schema getSchema(Object t, Map<String, String> metadata) {
+    return ReflectData.get().getSchema(t.getClass());
   }
 
-  protected DatumWriter getWriter(Class<Object> clazz) {
+  @Override
+  protected DatumWriter getWriter(Map<String, String> metadata) {
     return new ReflectDatumWriter();
   }
 

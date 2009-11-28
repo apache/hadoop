@@ -21,6 +21,7 @@ package org.apache.hadoop.util;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * A helper to load the native hadoop code i.e. libhadoop.so.
@@ -72,7 +73,8 @@ public class NativeCodeLoader {
    *         used for this job; <code>false</code> otherwise.
    */
   public boolean getLoadNativeLibraries(Configuration conf) {
-    return conf.getBoolean("hadoop.native.lib", true);
+    return conf.getBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, 
+                           CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_DEFAULT);
   }
   
   /**
@@ -83,7 +85,8 @@ public class NativeCodeLoader {
    */
   public void setLoadNativeLibraries(Configuration conf, 
                                      boolean loadNativeLibraries) {
-    conf.setBoolean("hadoop.native.lib", loadNativeLibraries);
+    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY,
+                    loadNativeLibraries);
   }
 
 }

@@ -26,13 +26,19 @@
 <!--- global properties -->
 
 <property>
+  <name>hadoop.common.configuration.version</name>
+  <value>0.21.0</value>
+  <description>version of this configuration file</description>
+</property>
+
+<property>
   <name>hadoop.tmp.dir</name>
   <value>/tmp/hadoop-${user.name}</value>
   <description>A base for other temporary directories.</description>
 </property>
 
 <property>
-  <name>hadoop.native.lib</name>
+  <name>io.native.lib.available</name>
   <value>true</value>
   <description>Should native hadoop libraries, if present, be used.</description>
 </property>
@@ -101,7 +107,7 @@
 
 <property>
   <name>io.serializations</name>
-  <value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value>
+  <value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization,org.apache.hadoop.io.serializer.avro.AvroGenericSerialization</value>
   <description>A list of serialization classes that can be used for
   obtaining serializers and deserializers.</description>
 </property>
@@ -116,10 +122,18 @@
   </description>
 </property>
 
+<property>
+  <name>io.map.index.skip</name>
+  <value>0</value>
+  <description>Number of index entries to skip between each entry.
+  Zero by default. Setting this to values larger than zero can
+  facilitate opening large MapFiles using less memory.</description>
+</property>
+
 <!-- file system properties -->
 
 <property>
-  <name>fs.default.name</name>
+  <name>fs.defaultFS</name>
   <value>file:///</value>
   <description>The name of the default file system.  A URI whose
   scheme and authority determine the FileSystem implementation.  The
@@ -145,6 +159,19 @@
 <property>
   <name>fs.hdfs.impl</name>
   <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
+  <description>The FileSystem for hdfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.file.impl</name>
+  <value>org.apache.hadoop.fs.local.LocalFs</value>
+  <description>The AbstractFileSystem for file: uris.</description>
+</property>
+
+
+<property>
+  <name>fs.AbstractFileSystem.hdfs.impl</name>
+  <value>org.apache.hadoop.fs.Hdfs</value>
   <description>The FileSystem for hdfs: uris.</description>
 </property>
 
@@ -195,6 +222,12 @@
 </property>
 
 <property>
+  <name>fs.har.impl.disable.cache</name>
+  <value>true</value>
+  <description>Don't cache 'har' filesystem instances.</description>
+</property>
+
+<property>
   <name>fs.checkpoint.dir</name>
   <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
   <description>Determines where on the local filesystem the DFS secondary
@@ -230,7 +263,11 @@
   </description>
 </property>
 
-
+<property>
+  <name>fs.df.interval</name>
+  <value>60000</value>
+  <description>Disk usage statistics refresh interval in msec.</description>
+</property>
 
 <property>
   <name>fs.s3.block.size</name>
@@ -445,7 +482,7 @@
 <!-- Rack Configuration -->
 
 <property>
-  <name>topology.node.switch.mapping.impl</name>
+	<name>net.topology.node.switch.mapping.impl</name>
   <value>org.apache.hadoop.net.ScriptBasedMapping</value>
   <description> The default implementation of the DNSToSwitchMapping. It
     invokes a script specified in topology.script.file.name to resolve
@@ -455,7 +492,7 @@
 </property>
 
 <property>
-  <name>topology.script.file.name</name>
+  <name>net.topology.script.file.name</name>
   <value></value>
   <description> The script name that should be invoked to resolve DNS names to
     NetworkTopology names. Example: the script would take host.foo.bar as an
@@ -464,7 +501,7 @@
 </property>
 
 <property>
-  <name>topology.script.number.args</name>
+  <name>net.topology.script.number.args</name>
   <value>100</value>
   <description> The max number of args that the script configured with 
     topology.script.file.name should be run with. Each arg is an
@@ -472,6 +509,183 @@
   </description>
 </property>
 
+<!-- Local file system -->
+<property>
+  <name>file.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>file.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  file.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>file.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>file.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>file.replication</name>
+  <value>1</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- s3 File System -->
+
+<property>
+  <name>s3.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>s3.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  s3.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>s3.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>s3.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>s3.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- s3native File System -->
+
+<property>
+  <name>s3native.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>s3native.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  s3native.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>s3native.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>s3native.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>s3native.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- Kosmos File System -->
+
+<property>
+  <name>kfs.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>kfs.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  kfs.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>kfs.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>kfs.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>kfs.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- FTP file system -->
+<property>
+  <name>ftp.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>ftp.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  ftp.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>ftp.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>ftp.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>ftp.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
 
 
 </configuration>

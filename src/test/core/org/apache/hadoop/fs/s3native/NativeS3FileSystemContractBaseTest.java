@@ -48,10 +48,13 @@ public abstract class NativeS3FileSystemContractBaseTest
   }
   
   public void testListStatusForRoot() throws Exception {
+    FileStatus[] paths = fs.listStatus(path("/"));
+    assertEquals(0, paths.length);
+    
     Path testDir = path("/test");
     assertTrue(fs.mkdirs(testDir));
     
-    FileStatus[] paths = fs.listStatus(path("/"));
+    paths = fs.listStatus(path("/"));
     assertEquals(1, paths.length);
     assertEquals(path("/test"), paths[0].getPath());
   }

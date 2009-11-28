@@ -367,11 +367,13 @@ public class FsShell extends Configured implements Tool {
     DataOutputBuffer outbuf;
 
     public TextRecordInputStream(FileStatus f) throws IOException {
-      r = new SequenceFile.Reader(fs, f.getPath(), getConf());
-      key = ReflectionUtils.newInstance(r.getKeyClass().asSubclass(WritableComparable.class),
-                                        getConf());
-      val = ReflectionUtils.newInstance(r.getValueClass().asSubclass(Writable.class),
-                                        getConf());
+      final Path fpath = f.getPath();
+      final Configuration lconf = getConf();
+      r = new SequenceFile.Reader(fpath.getFileSystem(lconf), fpath, lconf);
+      key = ReflectionUtils.newInstance(
+          r.getKeyClass().asSubclass(WritableComparable.class), lconf);
+      val = ReflectionUtils.newInstance(
+          r.getValueClass().asSubclass(Writable.class), lconf);
       inbuf = new DataInputBuffer();
       outbuf = new DataOutputBuffer();
     }
@@ -1130,10 +1132,20 @@ public class FsShell extends Configured implements Tool {
     }
     
     if(!skipTrash) {
-      Trash trashTmp = new Trash(srcFs, getConf());
-      if (trashTmp.moveToTrash(src)) {
-        System.out.println("Moved to trash: " + src);
-        return;
+      try {
+	      Trash trashTmp = new Trash(srcFs, getConf());
+        if (trashTmp.moveToTrash(src)) {
+          System.out.println("Moved to trash: " + src);
+          return;
+        }
+      } catch (IOException e) {
+        Exception cause = (Exception) e.getCause();
+        String msg = "";
+        if(cause != null) {
+          msg = cause.getLocalizedMessage();
+        }
+        System.err.println("Problem with Trash." + msg +". Consider using -skipTrash option");        
+        throw e;
       }
     }
     
@@ -1327,7 +1339,7 @@ public class FsShell extends Configured implements Tool {
     String summary = "hadoop fs is the command to execute fs commands. " +
       "The full syntax is: \n\n" +
       "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
-      "[-D <property=value>] [-ls <path>] [-lsr <path>] [-df [<path>]] [-du <path>]\n\t" + 
+      "[-D <property=value>] [-ls <path>] [-lsr <path>] [-df [<path>]] [-du [-s] [-h] <path>]\n\t" +
       "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm [-skipTrash] <src>]\n\t" + 
       "[-rmr [-skipTrash] <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
@@ -1377,17 +1389,20 @@ public class FsShell extends Configured implements Tool {
       "\t\tIf the filesystem has multiple partitions, and no path to a particular partition\n"+
       "\t\tis specified, then the status of the root partitions will be shown.\n";
 
-    String du = "-du <path>: \tShow the amount of space, in bytes, used by the files that \n" +
-      "\t\tmatch the specified file pattern.  Equivalent to the unix\n" + 
-      "\t\tcommand \"du -sb <path>/*\" in case of a directory, \n" +
-      "\t\tand to \"du -b <path>\" in case of a file.\n" +
+    String du = "-du [-s] [-h] <path>: \tShow the amount of space, in bytes, used by the files that \n" +
+      "\t\tmatch the specified file pattern. The following flags are optional:\n" +
+      "\t\t  -s   Rather than showing the size of each individual file that\n" +
+      "\t\t       matches the pattern, shows the total (summary) size.\n" +
+      "\t\t  -h   Formats the sizes of files in a human-readable fashion\n" +
+      "\t\t       rather than a number of bytes.\n" +
+      "\n" + 
+      "\t\tNote that, even without the -s option, this only shows size summaries\n" +
+      "\t\tone level deep into a directory.\n" +
       "\t\tThe output is in the form \n" + 
-      "\t\t\tname(full path) size (in bytes)\n"; 
+      "\t\t\tsize\tname(full path)\n"; 
 
     String dus = "-dus <path>: \tShow the amount of space, in bytes, used by the files that \n" +
-      "\t\tmatch the specified file pattern.  Equivalent to the unix\n" + 
-      "\t\tcommand \"du -sb\"  The output is in the form \n" + 
-      "\t\t\tname(full path) size (in bytes)\n"; 
+      "\t\tmatch the specified file pattern. This is equivalent to -du -s above.\n";
     
     String mv = "-mv <src> <dst>:   Move files that match the specified file pattern <src>\n" +
       "\t\tto a destination <dst>.  When moving multiple files, the \n" +
@@ -1556,7 +1571,7 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chown);
     } else if ("chgrp".equals(cmd)) {
       System.out.println(chgrp);
-    } else if (Count.matches(cmd)) {
+    } else if (Count.NAME.equals(cmd)) {
       System.out.println(Count.DESCRIPTION);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
@@ -1732,7 +1747,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-ls <path>]");
       System.err.println("           [-lsr <path>]");
       System.err.println("           [-df [<path>]]");
-      System.err.println("           [-du <path>]");
+      System.err.println("           [-du [-s] [-h] <path>]");
       System.err.println("           [-dus <path>]");
       System.err.println("           [" + Count.USAGE + "]");
       System.err.println("           [-mv <src> <dst>]");

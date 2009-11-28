@@ -34,6 +34,7 @@ import java.io.OutputStream;
  * </p>
  * @param <T>
  */
+@Deprecated
 public interface Serializer<T> {
   /**
    * <p>Prepare the serializer for writing.</p>

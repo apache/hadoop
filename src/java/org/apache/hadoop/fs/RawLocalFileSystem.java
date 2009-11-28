@@ -46,7 +46,7 @@ public class RawLocalFileSystem extends FileSystem {
   private Path workingDir;
   
   public RawLocalFileSystem() {
-    workingDir = new Path(System.getProperty("user.dir")).makeQualified(this);
+    workingDir = getInitialWorkingDirectory();
   }
   
   /** Convert a path to a File. */
@@ -96,10 +96,10 @@ public class RawLocalFileSystem extends FileSystem {
   }
 
   /*******************************************************
-   * For open()'s FSInputStream
+   * For open()'s FSInputStream.
    *******************************************************/
   class LocalFSFileInputStream extends FSInputStream {
-    FileInputStream fis;
+    private FileInputStream fis;
     private long position;
 
     public LocalFSFileInputStream(Path f) throws IOException {
@@ -180,8 +180,8 @@ public class RawLocalFileSystem extends FileSystem {
   /*********************************************************
    * For create()'s FSOutputStream.
    *********************************************************/
-  class LocalFSFileOutputStream extends OutputStream implements Syncable {
-    FileOutputStream fos;
+  class LocalFSFileOutputStream extends OutputStream {
+    private FileOutputStream fos;
     
     private LocalFSFileOutputStream(Path f, boolean append) throws IOException {
       this.fos = new FileOutputStream(pathToFile(f), append);
@@ -207,13 +207,8 @@ public class RawLocalFileSystem extends FileSystem {
         throw new FSError(e);                // assume native fs error
       }
     }
-
-    /** {@inheritDoc} */
-    public void sync() throws IOException {
-      fos.getFD().sync();      
-    }
   }
-  
+
   /** {@inheritDoc} */
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
@@ -229,7 +224,7 @@ public class RawLocalFileSystem extends FileSystem {
 
   /** {@inheritDoc} */
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
-                                   short replication, long blockSize, Progressable progress)
+    short replication, long blockSize, Progressable progress)
     throws IOException {
     if (exists(f) && !overwrite) {
       throw new IOException("File already exists:"+f);
@@ -245,23 +240,38 @@ public class RawLocalFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
-      Progressable progress) throws IOException {
+    EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+    Progressable progress) throws IOException {
+    return primitiveCreate(f,
+        permission.applyUMask(FsPermission.getUMask(getConf())), flag,
+        bufferSize,  replication,  blockSize,  progress,  -1);
     
-      if(flag.contains(CreateFlag.APPEND)){
-        if (!exists(f)){
-          if(flag.contains(CreateFlag.CREATE))
-            return create(f, false, bufferSize, replication, blockSize, progress);
-        }
-        return append(f, bufferSize, progress);
-    }
-   
-    FSDataOutputStream out = create(f,
-        flag.contains(CreateFlag.OVERWRITE), bufferSize, replication, blockSize, progress);
-    setPermission(f, permission);
-    return out;
+    
+     
   }
   
+
+  @Override
+  protected FSDataOutputStream primitiveCreate(Path f,
+      FsPermission absolutePermission, EnumSet<CreateFlag> flag,
+      int bufferSize, short replication, long blockSize, Progressable progress,
+      int bytesPerChecksum) throws IOException {
+    
+    if(flag.contains(CreateFlag.APPEND)){
+      if (!exists(f)){
+        if(flag.contains(CreateFlag.CREATE)) {
+          return create(f, false, bufferSize, replication, blockSize, null);
+        }
+      }
+      return append(f, bufferSize, null);
+    }
+ 
+    FSDataOutputStream out = create(f, flag.contains(CreateFlag.OVERWRITE),
+                                 bufferSize, replication, blockSize, progress);
+    setPermission(f, absolutePermission);
+    return out;
+  }
+
   public boolean rename(Path src, Path dst) throws IOException {
     if (pathToFile(src).renameTo(pathToFile(dst))) {
       return true;
@@ -289,7 +299,7 @@ public class RawLocalFileSystem extends FileSystem {
     }
     if (localf.isFile()) {
       return new FileStatus[] {
-          new RawLocalFileStatus(localf, getDefaultBlockSize(), this) };
+        new RawLocalFileStatus(localf, getDefaultBlockSize(), this) };
     }
 
     String[] names = localf.list();
@@ -308,8 +318,18 @@ public class RawLocalFileSystem extends FileSystem {
    * treat existence as an error.
    */
   public boolean mkdirs(Path f) throws IOException {
+    if(f == null) {
+      throw new IllegalArgumentException("mkdirs path arg is null");
+    }
     Path parent = f.getParent();
     File p2f = pathToFile(f);
+    if(parent != null) {
+      File parent2f = pathToFile(parent);
+      if(parent2f != null && parent2f.exists() && !parent2f.isDirectory()) {
+        throw new FileAlreadyExistsException("Parent path is not a directory: " 
+            + parent);
+      }
+    }
     return (parent == null || mkdirs(parent)) &&
       (p2f.mkdir() || p2f.isDirectory());
   }
@@ -318,13 +338,25 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     boolean b = mkdirs(f);
-    setPermission(f, permission);
+    if(b) {
+      setPermission(f, permission);
+    }
     return b;
   }
   
+
+  @Override
+  protected boolean primitiveMkdir(Path f, FsPermission absolutePermission)
+    throws IOException {
+    boolean b = mkdirs(f);
+    setPermission(f, absolutePermission);
+    return b;
+  }
+  
+  
   @Override
   public Path getHomeDirectory() {
-    return new Path(System.getProperty("user.home")).makeQualified(this);
+    return this.makeQualified(new Path(System.getProperty("user.home")));
   }
 
   /**
@@ -338,6 +370,11 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public Path getWorkingDirectory() {
     return workingDir;
+  }
+  
+  @Override
+  protected Path getInitialWorkingDirectory() {
+    return this.makeQualified(new Path(System.getProperty("user.dir")));
   }
 
   /** {@inheritDoc} */
@@ -380,7 +417,7 @@ public class RawLocalFileSystem extends FileSystem {
     if (path.exists()) {
       return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(), this);
     } else {
-      throw new FileNotFoundException( "File " + f + " does not exist.");
+      throw new FileNotFoundException("File " + f + " does not exist.");
     }
   }
 
@@ -395,7 +432,7 @@ public class RawLocalFileSystem extends FileSystem {
     
     RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-            f.lastModified(), new Path(f.getPath()).makeQualified(fs));
+            f.lastModified(), fs.makeQualified(new Path(f.getPath())));
     }
     
     @Override
@@ -471,8 +508,8 @@ public class RawLocalFileSystem extends FileSystem {
    * Use the command chown to set owner.
    */
   @Override
-  public void setOwner(Path p, String username, String groupname
-      ) throws IOException {
+  public void setOwner(Path p, String username, String groupname)
+    throws IOException {
     if (username == null && groupname == null) {
       throw new IOException("username == null && groupname == null");
     }
@@ -490,8 +527,8 @@ public class RawLocalFileSystem extends FileSystem {
    * Use the command chmod to set permission.
    */
   @Override
-  public void setPermission(Path p, FsPermission permission
-      ) throws IOException {
+  public void setPermission(Path p, FsPermission permission)
+    throws IOException {
     execCommand(pathToFile(p), Shell.SET_PERMISSION_COMMAND,
         String.format("%05o", permission.toShort()));
   }
@@ -503,4 +540,5 @@ public class RawLocalFileSystem extends FileSystem {
     String output = Shell.execCommand(args);
     return output;
   }
+
 }

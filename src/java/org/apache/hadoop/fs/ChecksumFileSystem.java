@@ -54,7 +54,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   public void setConf(Configuration conf) {
     super.setConf(conf);
     if (conf != null) {
-      bytesPerChecksum = conf.getInt("io.bytes.per.checksum", 512);
+      bytesPerChecksum = conf.getInt(LocalFileSystemConfigKeys.LOCAL_FS_BYTES_PER_CHECKSUM_KEY,
+		                     LocalFileSystemConfigKeys.LOCAL_FS_BYTES_PER_CHECKSUM_DEFAULT);
     }
   }
   
@@ -94,7 +95,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   private int getSumBufferSize(int bytesPerSum, int bufferSize) {
-    int defaultBufferSize = getConf().getInt("io.file.buffer.size", 4096);
+    int defaultBufferSize = getConf().getInt(
+                       LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_KEY,
+                       LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_DEFAULT);
     int proportionalBufferSize = bufferSize / bytesPerSum;
     return Math.max(bytesPerSum,
                     Math.max(proportionalBufferSize, defaultBufferSize));
@@ -119,7 +122,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     
     public ChecksumFSInputChecker(ChecksumFileSystem fs, Path file)
       throws IOException {
-      this(fs, file, fs.getConf().getInt("io.file.buffer.size", 4096));
+      this(fs, file, fs.getConf().getInt(
+                       LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_KEY, 
+                       LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_DEFAULT));
     }
     
     public ChecksumFSInputChecker(ChecksumFileSystem fs, Path file, int bufferSize)
@@ -320,7 +325,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                           Configuration conf)
       throws IOException {
       this(fs, file, overwrite, 
-           conf.getInt("io.file.buffer.size", 4096),
+           conf.getInt(LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_KEY,
+		       LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_DEFAULT),
            replication, blockSize, null);
     }
     

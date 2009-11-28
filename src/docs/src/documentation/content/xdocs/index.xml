@@ -26,12 +26,23 @@
   
   <body>
   <p>
-  The Hadoop Documentation provides the information you need to get started using Hadoop, the Hadoop Distributed File System (HDFS), and Hadoop on Demand (HOD).
-  </p><p>
-Begin with the <a href="quickstart.html">Hadoop Quick Start</a> which shows you how to set up a single-node Hadoop installation. Then move on to the <a href="cluster_setup.html">Hadoop Cluster Setup</a> to learn how to set up a multi-node Hadoop installation. Once your Hadoop installation is in place, try out the <a href="mapred_tutorial.html">Hadoop Map/Reduce Tutorial</a>. 
-  </p><p>
-If you have more questions, you can ask on the <a href="ext:lists">Hadoop Core Mailing Lists</a> or browse the <a href="ext:archive">Mailing List Archives</a>.
-    </p>
+The Hadoop Common Documentation describes the common utilities and libraries that support the other Hadoop subprojects.  
+  </p>
+  <p>
+The Hadoop Common Documentation also includes the information you need to get started using Hadoop. 
+Begin with the Hadoop <a href="single_node_setup.html">Single Node Setup</a> which shows you how to set up a single-node Hadoop installation. 
+Then move on to the Hadoop <a href="cluster_setup.html">Cluster Setup</a> to learn how to set up a multi-node Hadoop installation. 
+</p>
+ <p>
+   Cluster environments commonly work in tandem with MapReduce applications and distributed file systems. 
+   For information about MapReduce see the 
+ <a href="http://hadoop.apache.org/mapreduce/docs/current/index.html">MapReduce Documentation</a>.
+   For information about the Hadoop Distributed File System (HDFS) see the 
+ <a href="http://hadoop.apache.org/hdfs/docs/current/index.html">HDFS Documentation</a>.
+  </p>  
+<p>
+If you have more questions, you can ask on the <a href="ext:lists">Hadoop Common Mailing Lists</a> or browse the <a href="ext:archive">Mailing List Archives</a>.
+</p>
   </body>
   
 </document>

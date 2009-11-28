@@ -22,6 +22,7 @@
 <project name="hadoopbuildcontrib" xmlns:ivy="antlib:org.apache.ivy.ant">
 
   <property name="name" value="${ant.project.name}"/>
+  <dirname property="src.contrib.dir" file="${ant.file.hadoopbuildcontrib}" />
   <property name="root" value="${basedir}"/>
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -29,7 +30,7 @@
   <property file="${user.home}/${name}.build.properties" />
   <property file="${root}/build.properties" />
 
-  <property name="hadoop.root" location="${root}/../../../"/>
+  <property name="hadoop.root" location="${src.contrib.dir}/../../"/>
   <property name="src.dir"  location="${root}/src/java"/>
   <property name="src.test" location="${root}/src/test"/>
   <property name="src.examples" location="${root}/src/examples"/>

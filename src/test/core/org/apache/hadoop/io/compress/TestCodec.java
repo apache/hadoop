@@ -19,31 +19,42 @@ package org.apache.hadoop.io.compress;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
 
-import junit.framework.TestCase;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RandomDatum;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
+import org.apache.hadoop.util.LineReader;
+import org.apache.hadoop.util.ReflectionUtils;
 
-public class TestCodec extends TestCase {
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class TestCodec {
 
   private static final Log LOG= 
     LogFactory.getLog(TestCodec.class);
@@ -51,20 +62,32 @@ public class TestCodec extends TestCase {
   private Configuration conf = new Configuration();
   private int count = 10000;
   private int seed = new Random().nextInt();
-  
+
+  @Test
   public void testDefaultCodec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.DefaultCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.DefaultCodec");
   }
-  
+
+  @Test
   public void testGzipCodec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.GzipCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
-  
+
+  @Test
   public void testBZip2Codec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");
+  }
+
+  @Test
+  public void testGzipCodecWithParam() throws IOException {
+    Configuration conf = new Configuration(this.conf);
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.BEST_COMPRESSION);
+    ZlibFactory.setCompressionStrategy(conf, CompressionStrategy.HUFFMAN_ONLY);
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.GzipCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
 
   private static void codecTest(Configuration conf, int seed, int count, 
@@ -133,6 +156,109 @@ public class TestCodec extends TestCase {
     LOG.info("SUCCESS! Completed checking " + count + " records");
   }
 
+  @Test
+  public void testSplitableCodecs() throws Exception {
+    testSplitableCodec(BZip2Codec.class);
+  }
+
+  private void testSplitableCodec(
+      Class<? extends SplittableCompressionCodec> codecClass)
+      throws IOException {
+    final long DEFLBYTES = 2 * 1024 * 1024;
+    final Configuration conf = new Configuration();
+    final Random rand = new Random();
+    final long seed = rand.nextLong();
+    LOG.info("seed: " + seed);
+    rand.setSeed(seed);
+    SplittableCompressionCodec codec =
+      ReflectionUtils.newInstance(codecClass, conf);
+    final FileSystem fs = FileSystem.getLocal(conf);
+    final FileStatus infile =
+      fs.getFileStatus(writeSplitTestFile(fs, rand, codec, DEFLBYTES));
+    if (infile.getLen() > Integer.MAX_VALUE) {
+      fail("Unexpected compression: " + DEFLBYTES + " -> " + infile.getLen());
+    }
+    final int flen = (int) infile.getLen();
+    final Text line = new Text();
+    final Decompressor dcmp = CodecPool.getDecompressor(codec);
+    try {
+      for (int pos = 0; pos < infile.getLen(); pos += rand.nextInt(flen / 8)) {
+        // read from random positions, verifying that there exist two sequential
+        // lines as written in writeSplitTestFile
+        final SplitCompressionInputStream in =
+          codec.createInputStream(fs.open(infile.getPath()), dcmp,
+              pos, flen, SplittableCompressionCodec.READ_MODE.BYBLOCK);
+        if (in.getAdjustedStart() >= flen) {
+          break;
+        }
+        LOG.info("SAMPLE " + in.getAdjustedStart() + "," + in.getAdjustedEnd());
+        final LineReader lreader = new LineReader(in);
+        lreader.readLine(line); // ignore; likely partial
+        if (in.getPos() >= flen) {
+          break;
+        }
+        lreader.readLine(line);
+        final int seq1 = readLeadingInt(line);
+        lreader.readLine(line);
+        if (in.getPos() >= flen) {
+          break;
+        }
+        final int seq2 = readLeadingInt(line);
+        assertEquals("Mismatched lines", seq1 + 1, seq2);
+      }
+    } finally {
+      CodecPool.returnDecompressor(dcmp);
+    }
+    // remove on success
+    fs.delete(infile.getPath().getParent(), true);
+  }
+
+  private static int readLeadingInt(Text txt) throws IOException {
+    DataInputStream in =
+      new DataInputStream(new ByteArrayInputStream(txt.getBytes()));
+    return in.readInt();
+  }
+
+  /** Write infLen bytes (deflated) to file in test dir using codec.
+   * Records are of the form
+   * &lt;i&gt;&lt;b64 rand&gt;&lt;i+i&gt;&lt;b64 rand&gt;
+   */
+  private static Path writeSplitTestFile(FileSystem fs, Random rand,
+      CompressionCodec codec, long infLen) throws IOException {
+    final int REC_SIZE = 1024;
+    final Path wd = new Path(new Path(
+          System.getProperty("test.build.data", "/tmp")).makeQualified(fs),
+        codec.getClass().getSimpleName());
+    final Path file = new Path(wd, "test" + codec.getDefaultExtension());
+    final byte[] b = new byte[REC_SIZE];
+    final Base64 b64 = new Base64();
+    DataOutputStream fout = null;
+    Compressor cmp = CodecPool.getCompressor(codec);
+    try {
+      fout = new DataOutputStream(codec.createOutputStream(
+            fs.create(file, true), cmp));
+      final DataOutputBuffer dob = new DataOutputBuffer(REC_SIZE * 4 / 3 + 4);
+      int seq = 0;
+      while (infLen > 0) {
+        rand.nextBytes(b);
+        final byte[] b64enc = b64.encode(b); // ensures rand printable, no LF
+        dob.reset();
+        dob.writeInt(seq);
+        System.arraycopy(dob.getData(), 0, b64enc, 0, dob.getLength());
+        fout.write(b64enc);
+        fout.write('\n');
+        ++seq;
+        infLen -= b64enc.length;
+      }
+      LOG.info("Wrote " + seq + " records to " + file);
+    } finally {
+      IOUtils.cleanup(LOG, fout);
+      CodecPool.returnCompressor(cmp);
+    }
+    return file;
+  }
+
+  @Test
   public void testCodecPoolGzipReuse() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean("hadoop.native.lib", true);
@@ -149,19 +275,69 @@ public class TestCodec extends TestCase {
     assertTrue("Got mismatched ZlibCompressor", c2 != CodecPool.getCompressor(gzc));
   }
 
-  public void testSequenceFileDefaultCodec() throws IOException, ClassNotFoundException, 
+  private static void gzipReinitTest(Configuration conf, CompressionCodec codec)
+      throws IOException {
+    // Add codec to cache
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.BEST_COMPRESSION);
+    ZlibFactory.setCompressionStrategy(conf,
+        CompressionStrategy.DEFAULT_STRATEGY);
+    Compressor c1 = CodecPool.getCompressor(codec);
+    CodecPool.returnCompressor(c1);
+    // reset compressor's compression level to perform no compression
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.NO_COMPRESSION);
+    Compressor c2 = CodecPool.getCompressor(codec, conf);
+    // ensure same compressor placed earlier
+    assertTrue("Got mismatched ZlibCompressor", c1 == c2);
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    CompressionOutputStream cos = null;
+    // write trivially compressable data
+    byte[] b = new byte[1 << 15];
+    Arrays.fill(b, (byte) 43);
+    try {
+      cos = codec.createOutputStream(bos, c2);
+      cos.write(b);
+    } finally {
+      if (cos != null) {
+        cos.close();
+      }
+      CodecPool.returnCompressor(c2);
+    }
+    byte[] outbytes = bos.toByteArray();
+    // verify data were not compressed
+    assertTrue("Compressed bytes contrary to configuration",
+               outbytes.length >= b.length);
+  }
+
+  @Test
+  public void testCodecPoolCompressorReinit() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean("hadoop.native.lib", true);
+    if (ZlibFactory.isNativeZlibLoaded(conf)) {
+      GzipCodec gzc = ReflectionUtils.newInstance(GzipCodec.class, conf);
+      gzipReinitTest(conf, gzc);
+    } else {
+      LOG.warn("testCodecPoolCompressorReinit skipped: native libs not loaded");
+    }
+    conf.setBoolean("hadoop.native.lib", false);
+    DefaultCodec dfc = ReflectionUtils.newInstance(DefaultCodec.class, conf);
+    gzipReinitTest(conf, dfc);
+  }
+
+  @Test
+  public void testSequenceFileDefaultCodec() throws IOException, ClassNotFoundException,
       InstantiationException, IllegalAccessException {
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.DefaultCodec", 100);
     sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.DefaultCodec", 1000000);
   }
-  
-  public void testSequenceFileBZip2Codec() throws IOException, ClassNotFoundException, 
+
+  @Test
+  public void testSequenceFileBZip2Codec() throws IOException, ClassNotFoundException,
       InstantiationException, IllegalAccessException {
     sequenceFileCodecTest(conf, 0, "org.apache.hadoop.io.compress.BZip2Codec", 100);
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.BZip2Codec", 100);
     sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.BZip2Codec", 1000000);
   }
-  
+
   private static void sequenceFileCodecTest(Configuration conf, int lines, 
                                 String codecClass, int blockSize) 
     throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -240,10 +416,6 @@ public class TestCodec extends TestCase {
       e.printStackTrace();
     }
     
-  }
-
-  public TestCodec(String name) {
-    super(name);
   }
 
 }

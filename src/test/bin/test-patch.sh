@@ -254,6 +254,15 @@ checkTests () {
   return 0
 }
 
+cleanUpXml () {
+  cd $BASEDIR/conf
+  for file in `ls *.xml.template`
+    do
+      rm -f `basename $file .template`
+    done
+  cd $BASEDIR  
+}
+
 ###############################################################################
 ### Attempt to apply the patch
 applyPatch () {
@@ -681,6 +690,9 @@ setup
 checkAuthor
 RESULT=$?
 
+if [[ $HUDSON == "true" ]] ; then
+  cleanUpXml
+fi
 checkTests
 (( RESULT = RESULT + $? ))
 applyPatch

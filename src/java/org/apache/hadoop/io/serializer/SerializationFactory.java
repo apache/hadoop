@@ -20,11 +20,13 @@ package org.apache.hadoop.io.serializer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.serializer.avro.AvroGenericSerialization;
 import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -32,7 +34,7 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * <p>
- * A factory for {@link Serialization}s.
+ * A factory for {@link SerializationBase}s.
  * </p>
  */
 public class SerializationFactory extends Configured {
@@ -40,7 +42,10 @@ public class SerializationFactory extends Configured {
   private static final Log LOG =
     LogFactory.getLog(SerializationFactory.class.getName());
 
-  private List<Serialization<?>> serializations = new ArrayList<Serialization<?>>();
+  private List<SerializationBase<?>> serializations =
+    new ArrayList<SerializationBase<?>>();
+  private List<SerializationBase<?>> legacySerializations =
+    new ArrayList<SerializationBase<?>>();
   
   /**
    * <p>
@@ -54,7 +59,8 @@ public class SerializationFactory extends Configured {
     for (String serializerName : conf.getStrings("io.serializations", 
       new String[]{WritableSerialization.class.getName(), 
         AvroSpecificSerialization.class.getName(), 
-        AvroReflectSerialization.class.getName()})) {
+        AvroReflectSerialization.class.getName(),
+        AvroGenericSerialization.class.getName()})) {
       add(conf, serializerName);
     }
   }
@@ -62,30 +68,62 @@ public class SerializationFactory extends Configured {
   @SuppressWarnings("unchecked")
   private void add(Configuration conf, String serializationName) {
     try {
-      
-      Class<? extends Serialization> serializionClass =
-        (Class<? extends Serialization>) conf.getClassByName(serializationName);
-      serializations.add((Serialization)
-          ReflectionUtils.newInstance(serializionClass, getConf()));
+      Class<?> serializationClass = conf.getClassByName(serializationName);
+      if (SerializationBase.class.isAssignableFrom(serializationClass)) {
+	serializations.add((SerializationBase)
+	    ReflectionUtils.newInstance(serializationClass, getConf()));	
+      } else if (Serialization.class.isAssignableFrom(serializationClass)) {
+	Serialization serialization = (Serialization)
+	    ReflectionUtils.newInstance(serializationClass, getConf());
+	legacySerializations.add(new LegacySerialization(serialization,
+	    getConf()));	
+      } else {
+	LOG.warn("Serialization class " + serializationName + " is not an " +
+			"instance of Serialization or BaseSerialization.");
+      }
     } catch (ClassNotFoundException e) {
-      LOG.warn("Serilization class not found: " +
+      LOG.warn("Serialization class not found: " +
           StringUtils.stringifyException(e));
     }
   }
 
+  @Deprecated
   public <T> Serializer<T> getSerializer(Class<T> c) {
     return getSerialization(c).getSerializer(c);
   }
 
+  @Deprecated
   public <T> Deserializer<T> getDeserializer(Class<T> c) {
     return getSerialization(c).getDeserializer(c);
   }
 
-  @SuppressWarnings("unchecked")
+  @Deprecated
   public <T> Serialization<T> getSerialization(Class<T> c) {
-    for (Serialization serialization : serializations) {
-      if (serialization.accept(c)) {
-        return (Serialization<T>) serialization;
+    return getSerialization(SerializationBase.getMetadataFromClass(c));
+  }
+  
+  public <T> SerializerBase<T> getSerializer(Map<String, String> metadata) {
+    SerializationBase<T> serialization = getSerialization(metadata);
+    return serialization.getSerializer(metadata);
+  }
+    
+  public <T> DeserializerBase<T> getDeserializer(Map<String, String> metadata) {
+    SerializationBase<T> serialization = getSerialization(metadata);
+    return serialization.getDeserializer(metadata);
+  }
+    
+  @SuppressWarnings("unchecked")
+  public <T> SerializationBase<T> getSerialization(Map<String, String> metadata) {
+    for (SerializationBase serialization : serializations) {
+      if (serialization.accept(metadata)) {
+        return (SerializationBase<T>) serialization;
+      }
+    }
+    // Look in the legacy serializations last, since they ignore
+    // non-class metadata
+    for (SerializationBase serialization : legacySerializations) {
+      if (serialization.accept(metadata)) {
+        return (SerializationBase<T>) serialization;
       }
     }
     return null;

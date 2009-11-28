@@ -26,10 +26,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * This class implements the {@link DNSToSwitchMapping} interface using a 
- * script configured via topology.script.file.name .
+ * script configured via net.topology.script.file.name .
  */
 public final class ScriptBasedMapping extends CachedDNSToSwitchMapping 
 implements Configurable
@@ -41,10 +42,13 @@ implements Configurable
   // script must accept at least this many args
   static final int MIN_ALLOWABLE_ARGS = 1;
   
-  static final int DEFAULT_ARG_COUNT = 100;
+  static final int DEFAULT_ARG_COUNT = 
+                     CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_DEFAULT;
   
-  static final String SCRIPT_FILENAME_KEY = "topology.script.file.name";
-  static final String SCRIPT_ARG_COUNT_KEY = "topology.script.number.args";
+  static final String SCRIPT_FILENAME_KEY = 
+                     CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY ;
+  static final String SCRIPT_ARG_COUNT_KEY = 
+                     CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY ;
   
   public ScriptBasedMapping(Configuration conf) {
     this();

@@ -23,7 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * A collection of factories to create the right 
@@ -58,7 +61,9 @@ public class ZlibFactory {
    *         and can be loaded for this job, else <code>false</code>
    */
   public static boolean isNativeZlibLoaded(Configuration conf) {
-    return nativeZlibLoaded && conf.getBoolean("hadoop.native.lib", true); 
+    return nativeZlibLoaded && conf.getBoolean(
+                          CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, 
+                          CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_DEFAULT);
   }
   
   /**
@@ -106,5 +111,25 @@ public class ZlibFactory {
     return (isNativeZlibLoaded(conf)) ? 
       new ZlibDecompressor() : new BuiltInZlibInflater(); 
   }
-  
+
+  public static void setCompressionStrategy(Configuration conf,
+      CompressionStrategy strategy) {
+    conf.setEnum("zlib.compress.strategy", strategy);
+  }
+
+  public static CompressionStrategy getCompressionStrategy(Configuration conf) {
+    return conf.getEnum("zlib.compress.strategy",
+        CompressionStrategy.DEFAULT_STRATEGY);
+  }
+
+  public static void setCompressionLevel(Configuration conf,
+      CompressionLevel level) {
+    conf.setEnum("zlib.compress.level", level);
+  }
+
+  public static CompressionLevel getCompressionLevel(Configuration conf) {
+    return conf.getEnum("zlib.compress.level",
+        CompressionLevel.DEFAULT_COMPRESSION);
+  }
+
 }

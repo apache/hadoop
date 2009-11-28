@@ -148,6 +148,10 @@ public class FileStatus implements Writable, Comparable {
   public Path getPath() {
     return path;
   }
+  
+  public void setPath(final Path p) {
+    path = p;
+  }
 
   /* These are provided so that these values could be loaded lazily 
    * by a filesystem (e.g. local file system).

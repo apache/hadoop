@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,7 +41,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Options.CreateOpts;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -67,7 +69,10 @@ import org.apache.hadoop.util.ReflectionUtils;
  * implementation is DistributedFileSystem.
  *****************************************************************/
 public abstract class FileSystem extends Configured implements Closeable {
-  public static final String FS_DEFAULT_NAME_KEY = "fs.default.name";
+  public static final String FS_DEFAULT_NAME_KEY = 
+                   CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
+  public static final String DEFAULT_FS = 
+                   CommonConfigurationKeys.FS_DEFAULT_NAME_DEFAULT;
 
   public static final Log LOG = LogFactory.getLog(FileSystem.class);
 
@@ -103,7 +108,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the uri of the default filesystem
    */
   public static URI getDefaultUri(Configuration conf) {
-    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, "file:///")));
+    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
   }
 
   /** Set the default filesystem URI in a configuration.
@@ -181,6 +186,11 @@ public abstract class FileSystem extends Configured implements Closeable {
         return get(defaultUri, conf);              // return default
       }
     }
+    
+    String disableCacheName = String.format("fs.%s.impl.disable.cache", scheme);
+    if (conf.getBoolean(disableCacheName, false)) {
+      return createFileSystem(uri, conf);
+    }
 
     return CACHE.get(uri, conf);
   }
@@ -239,7 +249,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
     checkPath(path);
-    return path.makeQualified(this);
+    return path.makeQualified(this.getUri(), this.getWorkingDirectory());
   }
     
   /** create a file with the provided permission
@@ -358,7 +368,41 @@ public abstract class FileSystem extends Configured implements Closeable {
     String[] host = { "localhost" };
     return new BlockLocation[] { new BlockLocation(name, host, 0, file.getLen()) };
   }
+ 
+
+  /**
+   * Return an array containing hostnames, offset and size of 
+   * portions of the given file.  For a nonexistent 
+   * file or regions, null will be returned.
+   *
+   * This call is most helpful with DFS, where it returns 
+   * hostnames of machines that contain the given file.
+   *
+   * The FileSystem will simply return an elt containing 'localhost'.
+   */
+  public BlockLocation[] getFileBlockLocations(Path p, 
+      long start, long len) throws IOException {
+    if (p == null) {
+      throw new NullPointerException();
+    }
+    FileStatus file = getFileStatus(p);
+    return getFileBlockLocations(file, start, len);
+  }
   
+  /**
+   * Return a set of server default configuration values
+   * @return server default configuration values
+   * @throws IOException
+   */
+  public FsServerDefaults getServerDefaults() throws IOException {
+    Configuration conf = getConf();
+    return new FsServerDefaults(getDefaultBlockSize(), 
+        conf.getInt("io.bytes.per.checksum", 512), 
+        64 * 1024, 
+        getDefaultReplication(), 
+        conf.getInt("io.file.buffer.size", 4096));
+  }
+
   /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open
@@ -536,7 +580,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Opens an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * @param f the file name to open.
-   * @param permission
+   * @param permission - applied against umask
    * @param flag determines the semantic of this create.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
@@ -550,6 +594,183 @@ public abstract class FileSystem extends Configured implements Closeable {
       EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException ;
   
+  /*.
+   * This create has been added to support the FileContext that processes
+   * the permission
+   * with umask before calling this method.
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected FSDataOutputStream primitiveCreate(Path f,
+     FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
+     short replication, long blockSize, Progressable progress,
+     int bytesPerChecksum) throws IOException {
+    
+    // Default impl  assumes that permissions do not matter and 
+    // nor does the bytesPerChecksum  hence
+    // calling the regular create is good enough.
+    // FSs that implement permissions should override this.
+    
+    return this.create(f, absolutePermission, flag, bufferSize, replication,
+        blockSize, progress);
+  }
+  
+  
+  /*.
+   * This create has been added to support the FileContext that passes
+   * an absolute permission with (ie umask was already applied) 
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected FSDataOutputStream primitiveCreate(final Path f,
+      final EnumSet<CreateFlag> createFlag,
+      CreateOpts... opts) throws IOException {
+    checkPath(f);
+    int bufferSize = -1;
+    short replication = -1;
+    long blockSize = -1;
+    int bytesPerChecksum = -1;
+    FsPermission permission = null;
+    Progressable progress = null;
+    Boolean createParent = null;
+ 
+    for (CreateOpts iOpt : opts) {
+      if (CreateOpts.BlockSize.class.isInstance(iOpt)) {
+        if (blockSize != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        blockSize = ((CreateOpts.BlockSize) iOpt).getValue();
+      } else if (CreateOpts.BufferSize.class.isInstance(iOpt)) {
+        if (bufferSize != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        bufferSize = ((CreateOpts.BufferSize) iOpt).getValue();
+      } else if (CreateOpts.ReplicationFactor.class.isInstance(iOpt)) {
+        if (replication != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        replication = ((CreateOpts.ReplicationFactor) iOpt).getValue();
+      } else if (CreateOpts.BytesPerChecksum.class.isInstance(iOpt)) {
+        if (bytesPerChecksum != -1) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        bytesPerChecksum = ((CreateOpts.BytesPerChecksum) iOpt).getValue();
+      } else if (CreateOpts.Perms.class.isInstance(iOpt)) {
+        if (permission != null) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        permission = ((CreateOpts.Perms) iOpt).getValue();
+      } else if (CreateOpts.Progress.class.isInstance(iOpt)) {
+        if (progress != null) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        progress = ((CreateOpts.Progress) iOpt).getValue();
+      } else if (CreateOpts.CreateParent.class.isInstance(iOpt)) {
+        if (createParent != null) {
+          throw new IllegalArgumentException("multiple varargs of same kind");
+        }
+        createParent = ((CreateOpts.CreateParent) iOpt).getValue();
+      } else {
+        throw new IllegalArgumentException("Unkown CreateOpts of type " +
+            iOpt.getClass().getName());
+      }
+    }
+    if (blockSize % bytesPerChecksum != 0) {
+      throw new IllegalArgumentException(
+          "blockSize should be a multiple of checksumsize");
+    }
+    
+    FsServerDefaults ssDef = getServerDefaults();
+    
+    if (blockSize == -1) {
+      blockSize = ssDef.getBlockSize();
+    }
+    if (bufferSize == -1) {
+      bufferSize = ssDef.getFileBufferSize();
+    }
+    if (replication == -1) {
+      replication = ssDef.getReplication();
+    }
+    if (permission == null) {
+      permission = FsPermission.getDefault();
+    }
+    if (createParent == null) {
+      createParent = false;
+    }
+    
+    // Default impl  assumes that permissions do not matter and 
+    // nor does the bytesPerChecksum  hence
+    // calling the regular create is good enough.
+    // FSs that implement permissions should override this.
+
+    if (!createParent) { // parent must exist.
+      // since this.create makes parent dirs automatically
+      // we must throw exception if parent does not exist.
+      final FileStatus stat = getFileStatus(f.getParent());
+      if (stat == null) {
+        throw new FileNotFoundException("Missing parent:" + f);
+      }
+      if (!stat.isDir()) {
+          throw new ParentNotDirectoryException("parent is not a dir:" + f);
+      }
+      // parent does exist - go ahead with create of file.
+    }
+    return this.create(f, permission, createFlag, bufferSize, replication,
+        blockSize, progress);
+  }
+  
+
+  /**
+   * This version of the mkdirs method assumes that the permission is absolute.
+   * It has been added to support the FileContext that processes the permission
+   * with umask before calling this method.
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected boolean primitiveMkdir(Path f, FsPermission absolutePermission)
+    throws IOException {
+    // Default impl is to assume that permissions do not matter and hence
+    // calling the regular mkdirs is good enough.
+    // FSs that implement permissions should override this.
+   return this.mkdirs(f, absolutePermission);
+  }
+
+
+  /**
+   * This version of the mkdirs method assumes that the permission is absolute.
+   * It has been added to support the FileContext that processes the permission
+   * with umask before calling this method.
+   * This a temporary method added to support the transition from FileSystem
+   * to FileContext for user applications.
+   */
+  @Deprecated
+  protected void primitiveMkdir(Path f, FsPermission absolutePermission, 
+                    boolean createParent)
+    throws IOException {
+    
+    if (!createParent) { // parent must exist.
+      // since the this.mkdirs makes parent dirs automatically
+      // we must throw exception if parent does not exist.
+      final FileStatus stat = getFileStatus(f.getParent());
+      if (stat == null) {
+        throw new FileNotFoundException("Missing parent:" + f);
+      }
+      if (!stat.isDir()) {
+          throw new ParentNotDirectoryException("parent is not a dir");
+      }
+      // parent does exist - go ahead with mkdir of leaf
+    }
+    // Default impl is to assume that permissions do not matter and hence
+    // calling the regular mkdirs is good enough.
+    // FSs that implement permissions should override this.
+    if (!this.mkdirs(f, absolutePermission)) {
+      throw new IOException("mkdir of "+ f + " failed");
+    }
+  }
+
 
   /**
    * Creates the given Path as a brand-new zero-length file.  If
@@ -611,9 +832,98 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Renames Path src to Path dst.  Can take place on local fs
    * or remote DFS.
+   * @throws IOException on failure
+   * @return true if rename is successful
    */
   public abstract boolean rename(Path src, Path dst) throws IOException;
-    
+
+  /**
+   * Renames Path src to Path dst
+   * <ul>
+   * <li
+   * <li>Fails if src is a file and dst is a directory.
+   * <li>Fails if src is a directory and dst is a file.
+   * <li>Fails if the parent of dst does not exist or is a file.
+   * </ul>
+   * <p>
+   * If OVERWRITE option is not passed as an argument, rename fails
+   * if the dst already exists.
+   * <p>
+   * If OVERWRITE option is passed as an argument, rename overwrites
+   * the dst if it is a file or an empty directory. Rename fails if dst is
+   * a non-empty directory.
+   * <p>
+   * Note that atomicity of rename is dependent on the file system
+   * implementation. Please refer to the file system documentation for
+   * details. This default implementation is non atomic.
+   * <p>
+   * This method is deprecated since it is a temporary method added to 
+   * support the transition from FileSystem to FileContext for user 
+   * applications.
+   * 
+   * @param src path to be renamed
+   * @param dst new path after rename
+   * @throws IOException on failure
+   */
+  @Deprecated
+  protected void rename(final Path src, final Path dst,
+      final Rename... options) throws IOException {
+    // Default implementation
+    final FileStatus srcStatus = getFileStatus(src);
+    if (srcStatus == null) {
+      throw new FileNotFoundException("rename source " + src + " not found.");
+    }
+
+    boolean overwrite = false;
+    if (null != options) {
+      for (Rename option : options) {
+        if (option == Rename.OVERWRITE) {
+          overwrite = true;
+        }
+      }
+    }
+
+    FileStatus dstStatus;
+    try {
+      dstStatus = getFileStatus(dst);
+    } catch (IOException e) {
+      dstStatus = null;
+    }
+    if (dstStatus != null) {
+      if (srcStatus.isDir() != dstStatus.isDir()) {
+        throw new IOException("Source " + src + " Destination " + dst
+            + " both should be either file or directory");
+      }
+      if (!overwrite) {
+        throw new FileAlreadyExistsException("rename destination " + dst
+            + " already exists.");
+      }
+      // Delete the destination that is a file or an empty directory
+      if (dstStatus.isDir()) {
+        FileStatus[] list = listStatus(dst);
+        if (list != null && list.length != 0) {
+          throw new IOException(
+              "rename cannot overwrite non empty destination directory " + dst);
+        }
+      }
+      delete(dst, false);
+    } else {
+      final Path parent = dst.getParent();
+      final FileStatus parentStatus = getFileStatus(parent);
+      if (parentStatus == null) {
+        throw new FileNotFoundException("rename destination parent " + parent
+            + " not found.");
+      }
+      if (!parentStatus.isDir()) {
+        throw new ParentNotDirectoryException("rename destination parent " + parent
+            + " is a file.");
+      }
+    }
+    if (!rename(src, dst)) {
+      throw new IOException("rename from " + src + " to " + dst + " failed.");
+    }
+  }
+  
   /** Delete a file.
    *
    * @param f the path to delete.
@@ -1123,8 +1433,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The default implementation returns "/user/$USER/".
    */
   public Path getHomeDirectory() {
-    return new Path("/user/"+System.getProperty("user.name"))
-      .makeQualified(this);
+    return this.makeQualified(
+        new Path("/user/"+System.getProperty("user.name")));
   }
 
 
@@ -1141,6 +1451,23 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the directory pathname
    */
   public abstract Path getWorkingDirectory();
+  
+  
+  /**
+   * Note: with the new FilesContext class, getWorkingDirectory()
+   * will be removed. 
+   * The working directory is implemented in FilesContext.
+   * 
+   * Some file systems like LocalFileSystem have an initial workingDir
+   * that we use as the starting workingDir. For other file systems
+   * like HDFS there is no built in notion of an inital workingDir.
+   * 
+   * @return if there is built in notion of workingDir then it
+   * is returned; else a null is returned.
+   */
+  protected Path getInitialWorkingDirectory() {
+    return null;
+  }
 
   /**
    * Call {@link #mkdirs(Path, FsPermission)} with default permission.

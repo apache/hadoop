@@ -4,6 +4,54 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+  NEW FEATURES
+
+    HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
+    hadoop-config.sh so that it allows setting java command options for
+    JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
+
+    HADOOP-6337. Updates FilterInitializer class to be more visible,
+    and the init of the class is made to take a Configuration argument.
+    (Jakob Homan via ddas)
+
+  IMPROVEMENTS
+
+    HADOOP-6283. Improve the exception messages thrown by
+    FileUtil$HardLink.getLinkCount(..).  (szetszwo)
+
+    HADOOP-6279. Add Runtime::maxMemory to JVM metrics. (Todd Lipcon via
+    cdouglas)
+
+    HADOOP-6305. Unify build property names to facilitate cross-projects
+    modifications (cos)
+
+    HADOOP-6204. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
+    HADOOP-6312. Remove unnecessary debug logging in Configuration constructor.
+    (Aaron Kimball via cdouglas)
+
+    HADOOP-6326. Hundson runs should check for AspectJ warnings and report
+    failure if any is present (cos)
+
+    HADOOP-6366. Reduce ivy console output to ovservable level (cos)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-6293. Fix FsShell -text to work on filesystems other than the
+    default. (cdouglas)
+
+    HADOOP-6341. Fix test-patch.sh for checkTests function. (gkesavan)
+
+    HADOOP-6314. Fix "fs -help" for the "-count" commond.  (Ravi Phulari via
+    szetszwo)
+
+Release 0.21.0 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
     HADOOP-4895. Remove deprecated methods DFSClient.getHints(..) and
     DFSClient.isDirectory(..).  (szetszwo)
 
@@ -77,6 +125,16 @@ Trunk (unreleased changes)
     HADOOP-6201. Change FileSystem::listStatus contract to throw
     FileNotFoundException if the directory does not exist, rather than letting
     this be implementation-specific. (Jakob Homan via cdouglas)
+
+    HADOOP-6230. Moved process tree and memory calculator related classes
+    from Common to Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
+
+    HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
+    and suggests using -skpTrash, when moving to trash fails.
+    (Boris Shkolnik via suresh)
+
+    HADOOP-6303. Eclipse .classpath template has outdated jar files and is
+    missing some new ones.  (cos)
 
   NEW FEATURES
 
@@ -161,6 +219,50 @@ Trunk (unreleased changes)
 
     HADOOP-6120. Add support for Avro specific and reflect data.
     (sharad via cutting)
+
+    HADOOP-6226. Moves BoundedByteArrayOutputStream from the tfile package to
+    the io package and makes it available to other users (MAPREDUCE-318). 
+    (Jothi Padmanabhan via ddas)
+
+    HADOOP-6165. Add metadata to Serializations. (tomwhite)
+
+    HADOOP-6105. Adds support for automatically handling deprecation of
+    configuration keys. (V.V.Chaitanya Krishna via yhemanth)
+    
+    HADOOP-6235. Adds new method to FileSystem for clients to get server
+    defaults. (Kan Zhang via suresh)
+
+    HADOOP-6234. Add new option dfs.umaskmode to set umask in configuration
+    to use octal or symbolic instead of decimal. (Jakob Homan via suresh)
+
+    HADOOP-5073. Add annotation mechanism for interface classification.
+    (Jakob Homan via suresh)
+
+    HADOOP-4012. Provide splitting support for bzip2 compressed files. (Abdul
+    Qadeer via cdouglas)
+
+    HADOOP-6246. Add backward compatibility support to use deprecated decimal 
+    umask from old configuration. (Jakob Homan via suresh)
+
+    HADOOP-4952. Add new improved file system interface FileContext for the
+    application writer (Sanjay Radia via suresh)
+
+    HADOOP-6170. Add facility to tunnel Avro RPCs through Hadoop RPCs.
+    This permits one to take advantage of both Avro's RPC versioning
+    features and Hadoop's proven RPC scalability.  (cutting)
+
+    HADOOP-6267. Permit building contrib modules located in external
+    source trees.  (Todd Lipcon via cutting)
+
+    HADOOP-6240. Add new FileContext rename operation that posix compliant
+    that allows overwriting existing destination. (suresh)
+
+    HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
+    flush APIs to application users. (Hairong Kuang via suresh)
+
+    Hadoop-6223. Add new file system interface AbstractFileSystem with
+    implementation of some file systems that delegate to old FileSystem.
+    (Sanjay Radia via suresh)
 
   IMPROVEMENTS
 
@@ -421,8 +523,8 @@ Trunk (unreleased changes)
     TestNameEditsConfig, TestStartup and TestStorageRestore.
     (Jakob Homan via shv)
 
-    HADOOP-5438. Provide a single FileSystem method to create or open-for-append
-    to a file.  (He Yongqiang via dhruba)
+    HADOOP-5438. Provide a single FileSystem method to create or 
+    open-for-append to a file.  (He Yongqiang via dhruba)
 
     HADOOP-5472. Change DistCp to support globbing of input paths.  (Dhruba
     Borthakur and Rodrigo Schmidt via szetszwo)
@@ -495,19 +597,68 @@ Trunk (unreleased changes)
     HADOOP-6160. Fix releaseaudit target to run on specific directories.
     (gkesavan)
     
-    HADOOP-6169. Removing deprecated method calls in TFile. (hong tang via mahadev)
+    HADOOP-6169. Removing deprecated method calls in TFile. (hong tang via 
+    mahadev)
 
     HADOOP-6176. Add a couple package private methods to AccessTokenHandler
     for testing.  (Kan Zhang via szetszwo)
 
-    HADOOP-6182. Fix ReleaseAudit warnings (Giridharan Kesavan and Lee Tucker via gkesavan)
+    HADOOP-6182. Fix ReleaseAudit warnings (Giridharan Kesavan and Lee Tucker
+    via gkesavan)
 
     HADOOP-6173. Change src/native/packageNativeHadoop.sh to package all
     native library files.  (Hong Tang via szetszwo)
 
     HADOOP-6184. Provide an API to dump Configuration in a JSON format.
     (V.V.Chaitanya Krishna via yhemanth)
- 
+
+    HADOOP-6224. Add a method to WritableUtils performing a bounded read of an
+    encoded String. (Jothi Padmanabhan via cdouglas)
+
+    HADOOP-6133. Add a caching layer to Configuration::getClassByName to
+    alleviate a performance regression introduced in a compatibility layer.
+    (Todd Lipcon via cdouglas)
+
+    HADOOP-6252. Provide a method to determine if a deprecated key is set in
+    config file. (Jakob Homan via suresh)
+
+    HADOOP-5879. Read compression level and strategy from Configuration for
+    gzip compression. (He Yongqiang via cdouglas)
+
+    HADOOP-6216. Support comments in host files.  (Ravi Phulari and Dmytro
+    Molkov via szetszwo)
+
+    HADOOP-6217. Update documentation for project split. (Corinne Chandel via 
+    omalley)
+
+    HADOOP-6268. Add ivy jar to .gitignore. (Todd Lipcon via cdouglas)
+
+    HADOOP-6270. Support deleteOnExit in FileContext.  (Suresh Srinivas via
+    szetszwo)
+
+    HADOOP-6233. Rename configuration keys towards API standardization and
+    backward compatibility. (Jithendra Pandey via suresh)
+
+    HADOOP-6260. Add additional unit tests for FileContext util methods.
+    (Gary Murry via suresh).
+
+    HADOOP-6309. Change build.xml to run tests with java asserts.  (Eli
+    Collins via szetszwo)
+
+    HADOOP-6329. Add build-fi directory to the ignore lists.  (szetszwo)
+
+    HADOOP-5107. Use Maven ant tasks to publish the subproject jars.
+    (Giridharan Kesavan via omalley)
+
+    HADOOP-6343. Log unexpected throwable object caught in RPC.  (Jitendra Nath
+    Pandey via szetszwo)
+
+    HADOOP-6367. Removes Access Token implementation from common.
+    (Kan Zhang via ddas)
+
+    HADOOP-6395. Upgrade some libraries to be consistent across common, hdfs,
+    and mapreduce. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
@@ -519,6 +670,15 @@ Trunk (unreleased changes)
 
     HADOOP-6180. NameNode slowed down when many files with same filename
     were moved to Trash. (Boris Shkolnik via hairong)
+
+    HADOOP-6166. Further improve the performance of the pure-Java CRC32
+    implementation. (Tsz Wo (Nicholas), SZE via cdouglas)
+
+    HADOOP-6271. Add recursive and non recursive create and mkdir to 
+    FileContext. (Sanjay Radia via suresh)
+
+    HADOOP-6261. Add URI based tests for FileContext. 
+    (Ravi Pulari via suresh).
 
   BUG FIXES
     
@@ -603,8 +763,9 @@ Trunk (unreleased changes)
 
     HADOOP-5292. Fix NPE in KFS::getBlockLocations. (Sriram Rao via lohit)
 
-    HADOOP-5219. Adds a new property io.seqfile.local.dir for use by SequenceFile,
-    which earlier used mapred.local.dir. (Sharad Agarwal via ddas)
+    HADOOP-5219. Adds a new property io.seqfile.local.dir for use by
+    SequenceFile, which earlier used mapred.local.dir. (Sharad Agarwal
+    via ddas)
 
     HADOOP-5300. Fix ant javadoc-dev target and the typo in the class name
     NameNodeActivtyMBean.  (szetszwo)
@@ -621,7 +782,7 @@ Trunk (unreleased changes)
     HADOOP-5383. Avoid building an unused string in NameNode's 
     verifyReplication(). (Raghu Angadi)
 
-    HADOOP-5347. Create a job output directory for the bbp examples.  (szetszwo)
+    HADOOP-5347. Create a job output directory for the bbp examples. (szetszwo)
 
     HADOOP-5341. Make hadoop-daemon scripts backwards compatible with the
     changes in HADOOP-4868. (Sharad Agarwal via yhemanth)
@@ -727,8 +888,8 @@ Trunk (unreleased changes)
     in the JobTracker to get the FileSystem objects as per the JobTracker's
     configuration. (Amar Kamat via ddas) 
 
-    HADOOP-5648. Not able to generate gridmix.jar on the already compiled version of hadoop.
-    (gkesavan)	
+    HADOOP-5648. Not able to generate gridmix.jar on the already compiled 
+    version of hadoop. (gkesavan)	
 
     HADOOP-5808. Fix import never used javac warnings in hdfs. (szetszwo)
 
@@ -801,10 +962,6 @@ Trunk (unreleased changes)
     HADOOP-5809. Fix job submission, broken by errant directory creation.
     (Sreekanth Ramakrishnan and Jothi Padmanabhan via cdouglas)
 
-    HADOOP-5759. Fix for  IllegalArgumentException when 
-    CombineFileInputFormat is used as job InputFormat.
-    (Amareshwari Sriramadasu via dhruba)
-
     HADOOP-5635. Change distributed cache to work with other distributed file
     systems. (Andrew Hitchcock via tomwhite)
 
@@ -812,7 +969,8 @@ Trunk (unreleased changes)
     in DataBlockScanner.  (Kan Zhang via szetszwo)
 
     HADOOP-4864. Fixes a problem to do with -libjars with multiple jars when
-    client and cluster reside on different OSs. (Amareshwari Sriramadasu via ddas)
+    client and cluster reside on different OSs. (Amareshwari Sriramadasu via 
+    ddas)
 
     HADOOP-5623. Fixes a problem to do with status messages getting overwritten
     in streaming jobs. (Rick Cox and Jothi Padmanabhan via ddas)
@@ -820,8 +978,8 @@ Trunk (unreleased changes)
     HADOOP-5895. Fixes computation of count of merged bytes for logging.
     (Ravi Gummadi via ddas)
 
-    HADOOP-5805. problem using top level s3 buckets as input/output directories.
-    (Ian Nowland via tomwhite)
+    HADOOP-5805. problem using top level s3 buckets as input/output 
+    directories. (Ian Nowland via tomwhite)
    
     HADOOP-5940. trunk eclipse-plugin build fails while trying to copy 
     commons-cli jar from the lib dir (Giridharan Kesavan via gkesavan)
@@ -920,8 +1078,9 @@ Trunk (unreleased changes)
     HADOOP-6123. Add missing classpaths in hadoop-config.sh.  (Sharad Agarwal
     via szetszwo)
 
-    HADOOP-6172. Fix jar file names in hadoop-config.sh and include ${build.src}
-    as a part of the source list in build.xml.  (Hong Tang via szetszwo)
+    HADOOP-6172. Fix jar file names in hadoop-config.sh and include 
+    ${build.src} as a part of the source list in build.xml.  (Hong Tang via 
+    szetszwo)
 
     HADOOP-6124. Fix javac warning detection in test-patch.sh.  (Giridharan
     Kesavan via szetszwo)
@@ -941,7 +1100,97 @@ Trunk (unreleased changes)
     HADOOP-6152. Fix classpath variables in bin/hadoop-config.sh and some
     other scripts.  (Aaron Kimball via szetszwo)
 
-Release 0.20.1 - Unreleased
+    HADOOP-6215. fix GenericOptionParser to deal with -D with '=' in the 
+    value. (Amar Kamat via sharad)
+
+    HADOOP-6227. Fix Configuration to allow final parameters to be set to null
+    and prevent them from being overridden.
+    (Amareshwari Sriramadasu via yhemanth)
+
+    HADOOP-6199. Move io.map.skip.index property to core-default from mapred.
+    (Amareshwari Sriramadasu via cdouglas)
+
+    HADOOP-6229. Attempt to make a directory under an existing file on
+    LocalFileSystem should throw an Exception. (Boris Shkolnik via tomwhite)
+
+    HADOOP-6243. Fix a NullPointerException in processing deprecated keys.
+    (Sreekanth Ramakrishnan via yhemanth)
+
+    HADOOP-6009. S3N listStatus incorrectly returns null instead of empty
+    array when called on empty root. (Ian Nowland via tomwhite)
+
+    HADOOP-6181.  Fix .eclipse.templates/.classpath for avro and jets3t jar
+    files.  (Carlos Valiente via szetszwo)
+
+    HADOOP-6196. Fix a bug in SequenceFile.Reader where syncing within the
+    header would cause the reader to read the sync marker as a record. (Jay
+    Booth via cdouglas)
+
+    HADOOP-6250. Modify test-patch to delete copied XML files before running
+    patch build. (Rahul Kumar Singh via yhemanth)
+
+    HADOOP-6257. Two TestFileSystem classes are confusing
+    hadoop-hdfs-hdfwithmr. (Philip Zeyliger via tomwhite)
+
+    HADOOP-6151. Added a input filter to all of the http servlets that quotes
+    html characters in the parameters, to prevent cross site scripting 
+    attacks. (omalley)
+
+    HADOOP-6274. Fix TestLocalFSFileContextMainOperations test failure.
+    (Gary Murry via suresh).
+
+    HADOOP-6281. Avoid null pointer exceptions when the jsps don't have 
+    paramaters (omalley)
+
+    HADOOP-6285. Fix the result type of the getParameterMap method in the
+    HttpServer.QuotingInputFilter. (omalley)
+
+    HADOOP-6286. Fix bugs in related to URI handling in glob methods in 
+    FileContext. (Boris Shkolnik via suresh)
+
+    HADOOP-6292. Update native libraries guide. (Corinne Chandel via cdouglas)
+
+    HADOOP-6327. FileContext tests should not use /tmp and should clean up
+    files.  (Sanjay Radia via szetszwo)
+
+    HADOOP-6318. Upgrade to Avro 1.2.0.  (cutting)
+
+    HADOOP-6334.  Fix GenericOptionsParser to understand URI for -files,
+    -libjars and -archives options and fix Path to support URI with fragment.
+    (Amareshwari Sriramadasu via szetszwo)
+
+    HADOOP-6344. Fix rm and rmr immediately delete files rather than sending 
+    to trash, if a user is over-quota. (Jakob Homan via suresh)
+
+    HADOOP-6347. run-test-core-fault-inject runs a test case twice if
+    -Dtestcase is set (cos)
+
+    HADOOP-6375. Sync documentation for FsShell du with its implementation.
+    (Todd Lipcon via cdouglas)
+
+Release 0.20.2 - Unreleased
+
+  NEW FEATURES
+
+    HADOOP-6218. Adds a feature where TFile can be split by Record
+    Sequence number. (Hong Tang and Raghu Angadi via ddas)
+
+  BUG FIXES
+
+    HADOOP-6231. Allow caching of filesystem instances to be disabled on a
+    per-instance basis. (tomwhite)
+
+    HADOOP-5759. Fix for IllegalArgumentException when CombineFileInputFormat
+    is used as job InputFormat. (Amareshwari Sriramadasu via dhruba)
+
+    HADOOP-6097. Fix Path conversion in makeQualified and reset LineReader byte
+    count at the start of each block in Hadoop archives. (Ben Slusky, Tom
+    White, and Mahadev Konar via cdouglas)
+
+    HADOOP-6269. Fix threading issue with defaultResource in Configuration.
+    (Sreekanth Ramakrishnan via cdouglas)
+
+Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
 

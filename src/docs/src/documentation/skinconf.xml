@@ -68,7 +68,7 @@ which will be used to configure the chosen Forrest skin.
   <project-name>Hadoop</project-name>
   <project-description>Scalable Computing Platform</project-description>
   <project-url>http://hadoop.apache.org/core/</project-url>
-  <project-logo>images/core-logo.gif</project-logo>
+  <project-logo>images/common-logo.jpg</project-logo>
 
   <!-- group logo -->
   <group-name>Hadoop</group-name>
@@ -146,11 +146,11 @@ which will be used to configure the chosen Forrest skin.
     <!--Headers -->
 	#content h1 {
 	  margin-bottom: .5em;
-	  font-size: 200%; color: black;
+	  font-size: 185%; color: black;
 	  font-family: arial;
 	}  
-    h2, .h3 { font-size: 195%; color: black; font-family: arial; }
-	h3, .h4 { font-size: 140%; color: black; font-family: arial; margin-bottom: 0.5em; }
+    h2, .h3 { font-size: 175%; color: black; font-family: arial; }
+	h3, .h4 { font-size: 135%; color: black; font-family: arial; margin-bottom: 0.5em; }
 	h4, .h5 { font-size: 125%; color: black;  font-style: italic; font-weight: bold; font-family: arial; }
 	h5, h6 { font-size: 110%; color: #363636; font-weight: bold; } 
    

@@ -24,6 +24,7 @@ package org.apache.hadoop.io.serializer;
  * </p>
  * @param <T>
  */
+@Deprecated
 public interface Serialization<T> {
   
   /**
